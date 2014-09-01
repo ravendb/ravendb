@@ -195,7 +195,10 @@ class commandBase {
 			var dbBeingUpdated = request.getResponseHeader("Raven-Database-Load-In-Progress");
             if (dbBeingUpdated) {
                 ajaxTask.reject(request, status, error);
-                router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated)));
+                var currentDb = appUrl.getDatabase();
+                if (currentDb != null && currentDb.name == dbBeingUpdated) {
+                    router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated)));
+                }
             } else if (request.status == 412 && oauthContext.apiKey()) {
                 this.handleOAuth(ajaxTask, request, originalArguments);
             } else {

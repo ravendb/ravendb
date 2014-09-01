@@ -353,7 +353,7 @@ namespace Raven.Database.Actions
                 using (var op = new QueryActions.DatabaseQueryOperation(Database, DocumentsByEntityNameIndex, new IndexQuery
                 {
                     Query = query,
-					PageSize = Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch * 4
+					PageSize = Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch
                 }, actions, linked)
                 {
                     ShouldSkipDuplicateChecking = true
@@ -361,13 +361,11 @@ namespace Raven.Database.Actions
                 {
                     op.Init();
                     if (op.Header.TotalResults == 0 ||
-                        op.Header.TotalResults > (countOfDocuments * 0.25) ||
-                        (op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch * 4))
+                        (op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch))
                     {
-                        // we don't apply this optimization if the total number of results is more than
-                        // 25% of the count of documents (would be easier to just run it regardless).
-                        // or if the number of docs to index is significantly more than the max numbers
-                        // to index in a single batch. The idea here is that we need to keep the amount
+                        // we don't apply this optimization if the total number of results 
+						// to index is more than the max numbers to index in a single batch. 
+						// The idea here is that we need to keep the amount
                         // of memory we use to a manageable level even when introducing a new index to a BIG 
                         // database
                         try

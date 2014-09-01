@@ -39,7 +39,8 @@ namespace Raven.Database.Indexing
 
             // here we try to make sure that the actual facet cache is up to do when we update the index searcher.
             // we use this to ensure that any facets that has been recently queried is warmed up and in the cache
-            if (context.Configuration.PrewarmFacetsOnIndexingMaxAge != TimeSpan.Zero)
+            if (searcher != null && 
+				context.Configuration.PrewarmFacetsOnIndexingMaxAge != TimeSpan.Zero)
             {
                 var usedFacets = old.GetUsedFacets(context.Configuration.PrewarmFacetsOnIndexingMaxAge).ToArray();
 

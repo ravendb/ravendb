@@ -1113,7 +1113,7 @@ namespace Raven.Database.Indexing
 						 {
 							 LastQueryTime = lastQueryTime,
 							 Index = index.Value,
-                             Name = index.Key.ToString(),
+                             Name = index.Value.PublicName,
 							 Priority = stats.Priority,
 							 CreationDate = stats.CreatedTimestamp
 						 }).ToArray();

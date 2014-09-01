@@ -92,6 +92,9 @@ namespace Raven.Database.Server.Tenancy
 
         public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
+			if (Locks.Contains(DisposingLock))
+				throw new ObjectDisposedException("DatabaseLandlord","Server is shutting down, can't access any databases");
+
             if (ResourcesStoresCache.TryGetValue(tenantId, out database))
             {
                 if (database.IsFaulted || database.IsCanceled)
@@ -108,7 +111,7 @@ namespace Raven.Database.Server.Tenancy
             }
 
             if (Locks.Contains(tenantId))
-                throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed");
+                throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed.");
 
             var config = CreateTenantConfiguration(tenantId);
             if (config == null)
@@ -120,8 +123,10 @@ namespace Raven.Database.Server.Tenancy
 
                 AssertLicenseParameters(config);
                 var documentDatabase = new DocumentDatabase(config, transportState);
-                
-                documentDatabase.SpinBackgroundWorkers();
+
+				documentDatabase.SpinBackgroundWorkers();
+				documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
+				documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
@@ -212,5 +217,47 @@ namespace Raven.Database.Server.Tenancy
 
             return dbTask != null && dbTask.Status == TaskStatus.RanToCompletion;
         }
+
+		private void DocumentDatabaseDisposingStarted(object documentDatabase, EventArgs args)
+		{
+			try
+			{
+				var database = documentDatabase as DocumentDatabase;
+				if (database == null)
+				{
+					return;
+				}
+
+				ResourcesStoresCache.Set(database.Name, (dbName) =>
+				{
+					var tcs = new TaskCompletionSource<DocumentDatabase>();
+					tcs.SetException(new ObjectDisposedException(dbName, "Database named " + dbName + " is being disposed right now and cannot be accessed.\r\n" +
+																 "Access will be available when the dispose process will end"));
+					return tcs.Task;
+				});
+			}
+			catch (Exception ex)
+			{
+				Logger.WarnException("Failed to substitute database task with temporary place holder. This should not happen", ex);
+			}
+		}
+
+		private void DocumentDatabaseDisposingEnded(object documentDatabase, EventArgs args)
+		{
+			try
+			{
+				var database = documentDatabase as DocumentDatabase;
+				if (database == null)
+				{
+					return;
+				}
+
+				ResourcesStoresCache.Remove(database.Name);
+			}
+			catch (Exception ex)
+			{
+				Logger.ErrorException("Failed to remove database at the end of the disposal. This should not happen", ex);
+			}
+		}
     }
 }

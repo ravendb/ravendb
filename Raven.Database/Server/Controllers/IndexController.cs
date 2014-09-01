@@ -231,7 +231,7 @@ namespace Raven.Database.Server.Controllers
 			if (viewGenerator == null)
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			return GetMessageWithObject(viewGenerator.SourceCode);
+			return GetMessageWithString(viewGenerator.SourceCode);
 		}
 
 		private HttpResponseMessage DebugIndex(string index)

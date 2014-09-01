@@ -74,14 +74,6 @@ class databases extends viewModelBase {
         // If we have no databases (except system db), show the "create a new database" screen.
         if (this.databases().length === 1) {
             this.newDatabase();
-        } else {
-            // If we have just a few databases, grab the db stats for all of them.
-            // (Otherwise, we'll grab them when we click them.)
-            var few = 20;
-            var enabledDatabases: database[] = this.databases().filter((db: database) => !db.disabled());
-            if (enabledDatabases.length < few) {
-                enabledDatabases.forEach(db => shell.fetchDbStats(db));
-            }
         }
     }
 

@@ -843,6 +843,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					VisitSearch(expression);
 					break;
 				case "OrderByScore":
+					documentQuery.AddOrder(Constants.TemporaryScoreValue, false);
+					VisitExpression(expression.Arguments[0]);
+					break;
+				case "OrderByScoreDescending":
 					documentQuery.AddOrder(Constants.TemporaryScoreValue, true);
 					VisitExpression(expression.Arguments[0]);
 					break;

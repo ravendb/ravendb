@@ -338,7 +338,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var resMsg = new HttpResponseMessage(code)
 			{
-				Content = JsonContent(msg)
+				Content = new StringContent(msg)
 			};
 
 			WriteETag(etag, resMsg);

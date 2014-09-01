@@ -1094,5 +1094,20 @@ namespace Raven.Client
 			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
 			return (IOrderedQueryable<T>)queryable;
 		}
+
+		/// <summary>
+		/// Perform an initial sort by lucene score descending.
+		/// </summary>
+		public static IOrderedQueryable<T> OrderByScoreDescending<T>(this IQueryable<T> self)
+		{
+			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+			Expression expression = self.Expression;
+			if (expression.Type != typeof(IRavenQueryable<T>))
+			{
+				expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+			}
+			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
+			return (IOrderedQueryable<T>)queryable;
+		}
 	}
 }

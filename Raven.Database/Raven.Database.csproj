@@ -228,6 +228,7 @@
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriterSimulator.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationMetricsCountersManager.cs" />
     <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
+    <Compile Include="Plugins\Builtins\DocumentCollectionChangeHandler.cs" />
     <Compile Include="Plugins\Builtins\HighestEtagsPerCollection.cs" />
     <Compile Include="Plugins\IServerStartupTask.cs" />
     <Compile Include="Plugins\Builtins\CustomFunctionsPutTrigger.cs" />
@@ -244,6 +245,7 @@
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\RemoteFileSynchronizationConflictResolver.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LocalFileSynchronizationConflictResolver.cs" />
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationConfig.cs" />
+    <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
     <Compile Include="Smuggler\EmbeddedSmugglerOperations.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
