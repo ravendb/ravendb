@@ -16,7 +16,7 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_2334 : RavenTestBase
 	{
-		[TimeBombedFact(2014,9,1,"This test applies only to esent storage. After 3.0 stable is out and Voron is not enforced as the only storage engine, this test should pass")]
+		[Fact]
 		public void ConcurrentDtcTransactions()
 		{
 			using (var store = NewDocumentStore(requestedStorage: "esent"))
