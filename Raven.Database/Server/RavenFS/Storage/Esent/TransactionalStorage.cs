@@ -14,23 +14,23 @@ using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 
 namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
-    public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
-    {
-	    private readonly InMemoryRavenConfiguration configuration;
+	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
+	{
+		private readonly InMemoryRavenConfiguration configuration;
 
-	    private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
+		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
 		private readonly string database;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
-		private readonly NameValueCollection settings;
 		private readonly TableColumnsCache tableColumnsCache = new TableColumnsCache();
 		private bool disposed;
-
+		private readonly ILog log = LogManager.GetCurrentClassLogger();
 		private JET_INSTANCE instance;
 
 		static TransactionalStorage()
@@ -46,19 +46,18 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			}
 		}
 
-        public TransactionalStorage(InMemoryRavenConfiguration configuration)
-        {
-	        this.configuration = configuration;
-	        settings = configuration.Settings;
-            path = configuration.FileSystem.DataDirectory.ToFullPath();
-            database = Path.Combine(path, "Data.ravenfs");
+		public TransactionalStorage(InMemoryRavenConfiguration configuration)
+		{
+			this.configuration = configuration;
+			path = configuration.FileSystem.DataDirectory.ToFullPath();
+			database = Path.Combine(path, "Data.ravenfs");
 
 			RecoverFromFailedCompact(database);
 
 			new TransactionalStorageConfigurator(configuration).LimitSystemCache();
 
 			CreateInstance(out instance, database + Guid.NewGuid());
-        }
+		}
 
 		public TableColumnsCache TableColumnsCache
 		{
@@ -146,60 +145,64 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 
 		private bool EnsureDatabaseIsCreatedAndAttachToDatabase()
 		{
-				try
+			try
+			{
+				using (var session = new Session(instance))
 				{
-					using (var session = new Session(instance))
-					{
-						Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
-					}
-					return false;
+					Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
 				}
-				catch (EsentErrorException e)
+				return false;
+			}
+			catch (EsentErrorException e)
+			{
+				switch (e.Error)
 				{
-					switch (e.Error)
-					{
-						case JET_err.SecondaryIndexCorrupted:
-							Output("Secondary Index Corrupted detected, attempting to compact...");
+					case JET_err.SecondaryIndexCorrupted:
+						Output("Secondary Index Corrupted detected, attempting to compact...");
+						Api.JetTerm2(instance, TermGrbit.Complete);
+						Compact(configuration, (sesid, snp, snt, data) =>
+						{
+							Output(string.Format("{0}, {1}, {2}, {3}", sesid, snp, snt, data));
+							return JET_err.Success;
+						});
+						CreateInstance(out instance, database + Guid.NewGuid());
+						Api.JetInit(ref instance);
+						using (var session = new Session(instance))
+						{
+							Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
+						}
+						return false;
+					case JET_err.DatabaseDirtyShutdown:
+						try
+						{
 							Api.JetTerm2(instance, TermGrbit.Complete);
-							Compact(configuration, (sesid, snp, snt, data) =>
+							using (var recoverInstance = new Instance("Recovery instance for: " + database))
 							{
-								Output(string.Format("{0}, {1}, {2}, {3}", sesid, snp, snt, data));
-								return JET_err.Success;
-							});
-							CreateInstance(out instance, database + Guid.NewGuid());
-							Api.JetInit(ref instance);
-							using (var session = new Session(instance))
-							{
-								Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
-							}
-							return false;
-						case JET_err.DatabaseDirtyShutdown:
-							try
-							{
-								using (var recoverInstance = new Instance("Recovery instance for: " + database))
+								new TransactionalStorageConfigurator(configuration).ConfigureInstance(recoverInstance.JetInstance, path);
+								recoverInstance.Init();
+								using (var recoverSession = new Session(recoverInstance))
 								{
-									new TransactionalStorageConfigurator(configuration).ConfigureInstance(recoverInstance.JetInstance, path);
-									recoverInstance.Init();
-									using (var recoverSession = new Session(recoverInstance))
-									{
-										Api.JetAttachDatabase(recoverSession, database,
-															  AttachDatabaseGrbit.DeleteCorruptIndexes);
-										Api.JetDetachDatabase(recoverSession, database);
-									}
+									Api.JetAttachDatabase(recoverSession, database,
+														  AttachDatabaseGrbit.DeleteCorruptIndexes);
+									Api.JetDetachDatabase(recoverSession, database);
 								}
 							}
-							catch (Exception)
-							{
-							}
-							using (var session = new Session(instance))
-							{
-								Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
-							}
-							return false;
-					}
-					if (e.Error != JET_err.FileNotFound)
-						throw;
+						}
+						catch (Exception e2)
+						{
+							log.WarnException("Could not recover from dirty shutdown in RavenFS " + database, e2);
+						}
+						CreateInstance(out instance, database + Guid.NewGuid());
+						Api.JetInit(ref instance);
+						using (var session = new Session(instance))
+						{
+							Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
+						}
+						return false;
 				}
+				if (e.Error != JET_err.FileNotFound)
+					throw;
+			}
 
 			using (var session = new Session(instance))
 			{
