@@ -7,6 +7,7 @@ import sys = require("durandal/system");
 
 import forge = require("forge/forge_custom.min");
 import viewModelBase = require("viewmodels/viewModelBase");
+import viewLocator = require("durandal/viewLocator");
 import resource = require("models/resource");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
@@ -94,6 +95,7 @@ class shell extends viewModelBase {
     constructor() {
         super();
 
+        this.preLoadRecentErrorsView();
 		extensions.install();
         oauthContext.enterApiKeyTask = this.setupApiKey();
         oauthContext.enterApiKeyTask.done(() => this.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
@@ -235,6 +237,11 @@ class shell extends viewModelBase {
             console.error(e);
             messagePublisher.reportError("Failed to load routed module!", e);
         };
+    }
+
+    private preLoadRecentErrorsView() {
+        // preload this view as in case of failure server can't serve it.
+        viewLocator.locateView("views/recentErrors");
     }
 
     private activateDatabase(db: database) {
