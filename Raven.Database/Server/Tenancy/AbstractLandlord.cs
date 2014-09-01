@@ -249,7 +249,7 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             var exceptionAggregator = new ExceptionAggregator(Logger, "Failure to dispose landlord");
 			exceptionAggregator.Execute(() =>

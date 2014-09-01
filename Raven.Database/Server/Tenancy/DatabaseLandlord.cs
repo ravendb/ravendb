@@ -22,6 +22,8 @@ namespace Raven.Database.Server.Tenancy
         private const string DATABASES_PREFIX = "Raven/Databases/";
         public override string ResourcePrefix { get { return DATABASES_PREFIX; } }
 
+	    private bool disposing;
+
         public DatabasesLandlord(DocumentDatabase systemDatabase)
         {
             systemConfiguration = systemDatabase.Configuration;
@@ -92,6 +94,9 @@ namespace Raven.Database.Server.Tenancy
 
         public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
+			if (disposing)
+				throw new InvalidOperationException("Server is shutting down.");
+
             if (ResourcesStoresCache.TryGetValue(tenantId, out database))
             {
                 if (database.IsFaulted || database.IsCanceled)
@@ -108,7 +113,7 @@ namespace Raven.Database.Server.Tenancy
             }
 
             if (Locks.Contains(tenantId))
-                throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed");
+                throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed.");
 
             var config = CreateTenantConfiguration(tenantId);
             if (config == null)
@@ -256,5 +261,11 @@ namespace Raven.Database.Server.Tenancy
 				Logger.ErrorException("Failed to remove database at the end of the disposal. This should not happen", ex);
 			}
 		}
+
+	    public override void Dispose()
+	    {
+		    disposing = true;
+		    base.Dispose();
+	    }
     }
 }
