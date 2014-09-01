@@ -22,7 +22,7 @@
             </ul>
         </div>
 
-        <div data-bind="visible: isDeletingDatabase">
+        <div data-bind="if: isDeletingDatabase">
             <div data-bind="visible: resourcesToDelete().length === 1">
                 You can <a href="#" data-bind="attr: { href: exportDatabaseUrl }">export the database</a> if needed.<br />
             </div>
