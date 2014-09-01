@@ -22,8 +22,6 @@ namespace Raven.Database.Server.Tenancy
         private const string DATABASES_PREFIX = "Raven/Databases/";
         public override string ResourcePrefix { get { return DATABASES_PREFIX; } }
 
-	    private bool disposing;
-
         public DatabasesLandlord(DocumentDatabase systemDatabase)
         {
             systemConfiguration = systemDatabase.Configuration;
@@ -94,8 +92,8 @@ namespace Raven.Database.Server.Tenancy
 
         public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
-			if (disposing)
-				throw new InvalidOperationException("Server is shutting down.");
+			if (Locks.Contains(DisposingLock))
+				throw new ObjectDisposedException("DatabaseLandlord","Server is shutting down, can't access any databases");
 
             if (ResourcesStoresCache.TryGetValue(tenantId, out database))
             {
@@ -261,11 +259,5 @@ namespace Raven.Database.Server.Tenancy
 				Logger.ErrorException("Failed to remove database at the end of the disposal. This should not happen", ex);
 			}
 		}
-
-	    public override void Dispose()
-	    {
-		    disposing = true;
-		    base.Dispose();
-	    }
     }
 }

@@ -26,6 +26,8 @@ namespace Raven.Database.Server.Tenancy
     public abstract class AbstractLandlord<TResource> : IDisposable
         where TResource : IDisposable
     {
+	    protected static string DisposingLock = Guid.NewGuid().ToString();
+
         protected static readonly ILog Logger = LogManager.GetCurrentClassLogger();
         public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
         protected readonly ConcurrentSet<string> Locks = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -249,8 +251,10 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public virtual void Dispose()
+        public void Dispose()
         {
+	        Locks.TryAdd(DisposingLock);
+
             var exceptionAggregator = new ExceptionAggregator(Logger, "Failure to dispose landlord");
 			exceptionAggregator.Execute(() =>
 			{

@@ -94,6 +94,9 @@ namespace Raven.Database.Server.Tenancy
 
         public bool TryGetOrCreateResourceStore(string tenantId, out Task<RavenFileSystem> fileSystem)
         {
+			if (Locks.Contains(DisposingLock))
+				throw new ObjectDisposedException("FileSystem", "Server is shutting down, can't access any file systems");
+
             if (ResourcesStoresCache.TryGetValue(tenantId, out fileSystem))
             {
                 if (fileSystem.IsFaulted || fileSystem.IsCanceled)
