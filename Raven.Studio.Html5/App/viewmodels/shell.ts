@@ -56,7 +56,7 @@ class shell extends viewModelBase {
     systemDatabase: database;
     isSystemConnected: KnockoutComputed<boolean>;
     isActiveDatabaseDisabled: KnockoutComputed<boolean>;
-    canShowDatabaseNavbar = ko.computed(() => (shell.databases().length > 1 || !!this.activeDatabase() && this.activeDatabase().isSystem) && this.appUrls.isAreaActive('databases')());
+    canShowDatabaseNavbar = ko.computed(() => !!this.activeDatabase() && this.appUrls.isAreaActive('databases')());
     databasesLoadedTask: JQueryPromise<any>;
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
@@ -64,12 +64,12 @@ class shell extends viewModelBase {
     static fileSystems = ko.observableArray<filesystem>();
     listedFileSystems: KnockoutComputed<filesystem[]>;
     isActiveFileSystemDisabled: KnockoutComputed<boolean>;
-    canShowFileSystemNavbar = ko.computed(() => shell.fileSystems().length > 0 && this.appUrls.isAreaActive('filesystems')());
+    canShowFileSystemNavbar = ko.computed(() => !!this.activeFilesystem() && this.appUrls.isAreaActive('filesystems')());
 
     static counterStorages = ko.observableArray<counterStorage>();
     listedCounterStorages: KnockoutComputed<counterStorage[]>;
     isCounterStorageDisabled: KnockoutComputed<boolean>;
-    canShowCountersNavbar = ko.computed(() => shell.counterStorages().length > 0 && this.appUrls.isAreaActive('counterstorages')());
+    canShowCountersNavbar = ko.computed(() => !!this.activeCounterStorage() && this.appUrls.isAreaActive('counterstorages')());
 
     currentConnectedResource: resource;
     currentAlert = ko.observable<alertArgs>();
@@ -481,25 +481,25 @@ class shell extends viewModelBase {
             .always(() => {
                 var locationHash = window.location.hash;
                 if (locationHash.indexOf(appUrl.forFilesystems()) == 0) { //filesystems section
-                    this.activateResource(appUrl.getFileSystem(), shell.fileSystems);
+                    this.activateResource(appUrl.getFileSystem(), shell.fileSystems, appUrl.forFilesystems());
                 }
                 else if (locationHash.indexOf(appUrl.forCounterStorages()) == 0) { //counter storages section
-                    this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
+                    this.activateResource(appUrl.getCounterStorage(), shell.counterStorages, appUrl.forCounterStorages());
+                }
+                else if ((locationHash.indexOf(appUrl.forAdminSettings()) == -1)) { //databases section
+                    this.activateResource(appUrl.getDatabase(), shell.databases, appUrl.forDatabases);
                 }
             });
     }
 
-    private activateResource(resource: resource, resourceObservableArray: KnockoutObservableArray<any>, activeResource: resource = null) {
-        if (activeResource != null && activeResource.name != '<system>') {
-            activeResource.activate();
-        }
-        else if (resourceObservableArray().length > 0) {
-            var newResource;
-
-            if (resource != null && (newResource = resourceObservableArray.first(rs => rs.name == resource.name)) != null) {
+    private activateResource(resource: resource, resourceObservableArray: KnockoutObservableArray<any>, url) {
+        if (!!resource) {
+            var newResource = resourceObservableArray.first(rs => rs.name == resource.name);
+            if (newResource != null) {
                 newResource.activate();
             } else {
-                resourceObservableArray.first().activate();
+                messagePublisher.reportError("The database " + resource.name + " doesn't exist!");
+                this.navigate(url());
             }
         }
     }
@@ -507,14 +507,14 @@ class shell extends viewModelBase {
     navigateToResourceGroup(resourceHash) {
         shell.disconnectFromResourceChangesApi();
 
-        if (resourceHash == appUrl.forDatabases()) {
-            shell.databases().length == 1 ? this.activeDatabase(null) : this.activateResource(appUrl.getDatabase(), shell.databases, this.activeDatabase());
+        if (resourceHash == appUrl.forDatabases() && !!this.activeDatabase()) {
+            shell.databases().length == 1 ? this.activeDatabase(null) : this.activeDatabase().activate();
         }
-        else if (resourceHash == appUrl.forFilesystems()) {
-            this.activateResource(appUrl.getFileSystem(), shell.fileSystems, this.activeFilesystem());
+        else if (resourceHash == appUrl.forFilesystems() && !!this.activeFilesystem()) {
+            this.activeFilesystem().activate();
         }
-        else if (resourceHash == appUrl.forCounterStorages()) {
-            this.activateResource(appUrl.getCounterStorage(), shell.counterStorages, this.activeCounterStorage());
+        else if (resourceHash == appUrl.forCounterStorages() && !!this.activeCounterStorage()) {
+            this.activeCounterStorage().activate();
         }
 
         this.navigate(resourceHash);
