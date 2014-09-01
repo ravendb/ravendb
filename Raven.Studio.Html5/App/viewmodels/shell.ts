@@ -479,9 +479,6 @@ class shell extends viewModelBase {
                 else if (locationHash.indexOf(appUrl.forCounterStorages()) == 0) { //counter storages section
                     this.activateResource(appUrl.getCounterStorage(), shell.counterStorages);
                 }
-                else if ((locationHash.indexOf(appUrl.forAdminSettings()) == -1) && (shell.databases().length > 1)) { //databases section
-                    this.activateResource(appUrl.getDatabase(), shell.databases);
-                }
             });
     }
 
