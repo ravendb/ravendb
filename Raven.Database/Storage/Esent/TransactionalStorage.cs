@@ -149,16 +149,30 @@ namespace Raven.Storage.Esent
 	                    {
 							Api.JetTerm2(instance, TermGrbit.Complete);
 	                    }
-						catch (EsentDiskIOException e)
+	                    catch (Exception e1)
 						{
 							log.ErrorException(
-								"Could not properly terminate Esent instance because of disk exception. Ignoring this error to allow to shutdown RavenDB instance.",
-								e);
+			                    "Unexpected error occured while terminating Esent Storage. Ignoring this error to allow to shutdown RavenDB instance.",
+			                    e1);
 
-							throw;
+		                    try
+		                    {
+			                    log.Warn(
+				                    "Will now attempt to perform an abrupt shutdown, because asking nicely didn't work. You might need to run defrag on the database to recover potentially lost space (but no data will be lost).");
+			                    Api.JetTerm2(instance, TermGrbit.Abrupt);
 						}
+		                    catch (Exception e2)
+		                    {
                         
+								log.FatalException(
+									"Couldn't shut down the database server even when using abrupt, something is probably wrong and you'll need to restart the server process to access the database",
+									e2);
+		                    }
+	                    }
+	                    finally
+	                    {
                         GC.SuppressFinalize(this);
+	                    }
                     });
 
                 exceptionAggregator.ThrowIfNeeded();
@@ -488,33 +502,33 @@ namespace Raven.Storage.Esent
                                 if (lockTaken == false)
                                     throw new TimeoutException("Could not take upgrade lock after 15 seconds, probably another database is upgrading itself and we can't interupt it midway. Please try again later");
 
-                                do
-                                {
-                                    var updater = Updaters.FirstOrDefault(update => update.Value.FromSchemaVersion == schemaVersion);
-                                    if (updater == null)
-                                        throw new InvalidOperationException(
-                                            string.Format(
-                                                "The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.",
-                                                schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
+                            do
+                            {
+                                var updater = Updaters.FirstOrDefault(update => update.Value.FromSchemaVersion == schemaVersion);
+                                if (updater == null)
+                                    throw new InvalidOperationException(
+                                        string.Format(
+                                            "The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.",
+                                            schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
 
-                                    log.Info("Updating schema from version {0}: ", schemaVersion);
-                                    Console.WriteLine("Updating schema from version {0}: ", schemaVersion);
+                                log.Info("Updating schema from version {0}: ", schemaVersion);
+                                Console.WriteLine("Updating schema from version {0}: ", schemaVersion);
 
-                                    ticker.Start();
+                                ticker.Start();
 
                                     updater.Value.Init(generator, configuration);
-                                    updater.Value.Update(session, dbid, Output);
-                                    schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
+                                updater.Value.Update(session, dbid, Output);
+                                schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
 
-                                    ticker.Stop();
+                                ticker.Stop();
 
-                                } while (schemaVersion != SchemaCreator.SchemaVersion);
-                            }
+                            } while (schemaVersion != SchemaCreator.SchemaVersion);
+                        }
                             finally
                             {
                                 if(lockTaken)
                                     Monitor.Exit(UpdateLocker);
-                            }
+                    }
                         }
                     }
                 });
@@ -745,7 +759,7 @@ namespace Raven.Storage.Esent
 			return accessor;
 	    }
 
-	    public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
+        public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
         {
             if (current.Value == null)
             {
