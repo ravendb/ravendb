@@ -1,4 +1,4 @@
-﻿@font-face {
+@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -6619,6 +6619,12 @@ body {
   top: 0;
   left: 0;
   right: 0;
+}
+.alert-warning h2 {
+  color: white;
+}
+.alert-info h2 {
+  color: white;
 }
 .alert-text {
   overflow: hidden !important;
