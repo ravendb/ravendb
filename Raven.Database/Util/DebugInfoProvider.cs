@@ -271,27 +271,42 @@ namespace Raven.Database.Util
 
 		internal static object GetPrefetchingQueueStatusForDebug(DocumentDatabase database)
 		{
-			var prefetcherDocs = database.IndexingExecuter.PrefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
-			var compareToCollection = new Dictionary<Etag, int>();
+			var result = new List<object>();
 
-			for (int i = 1; i < prefetcherDocs.Length; i++)
-				compareToCollection.Add(prefetcherDocs[i - 1].Etag, prefetcherDocs[i].Etag.CompareTo(prefetcherDocs[i - 1].Etag));
+			int group = -1;
 
-			if (compareToCollection.Any(x => x.Value < 0))
+			foreach (var prefetchingBehavior in database.IndexingExecuter.PrefetchingBehaviors)
 			{
-				return new
+				group++;
+
+				var prefetcherDocs = prefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
+				var compareToCollection = new Dictionary<Etag, int>();
+
+				for (int i = 1; i < prefetcherDocs.Length; i++)
+					compareToCollection.Add(prefetcherDocs[i - 1].Etag, prefetcherDocs[i].Etag.CompareTo(prefetcherDocs[i - 1].Etag));
+
+				if (compareToCollection.Any(x => x.Value < 0))
 				{
-					HasCorrectlyOrderedEtags = true,
+					result.Add(new
+					{
+						ForIndexingGroup = group,
+						HasCorrectlyOrderedEtags = true,
+						EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
+					});
+
+					continue;
+				}
+
+				result.Add(new
+				{
+					ForIndexingGroup = group,
+					HasCorrectlyOrderedEtags = false,
+					IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
 					EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-				};
+				});
 			}
 
-			return new
-			{
-				HasCorrectlyOrderedEtags = false,
-				IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
-				EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-			};
+			return result;
 		}
 	}
 }

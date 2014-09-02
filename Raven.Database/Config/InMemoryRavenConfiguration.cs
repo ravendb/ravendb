@@ -64,7 +64,7 @@ namespace Raven.Database.Config
 			CreateAnalyzersDirectoryIfNotExisting = true;
 
 
-			IndexingScheduler = new FairIndexingSchedulerWithOlderIndexesBias();
+			IndexingClassifier = new DefaultIndexingClassifier();
 
 			Catalog = new AggregateCatalog(new AssemblyCatalog(typeof(DocumentDatabase).Assembly));
 
@@ -497,7 +497,7 @@ namespace Raven.Database.Config
 		/// <summary>
 		/// The indexing scheduler to use
 		/// </summary>
-		public IIndexingScheduler IndexingScheduler { get; set; }
+		public IIndexingClassifier IndexingClassifier { get; set; }
 
 		/// <summary>
 		/// Max number of items to take for indexing in a batch

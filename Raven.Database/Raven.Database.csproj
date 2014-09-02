@@ -670,9 +670,9 @@
     <Compile Include="Indexing\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\BackgroundTaskExecuter.cs" />
-    <Compile Include="Indexing\IIndexingScheduler.cs" />
+    <Compile Include="Indexing\IIndexingClassifier.cs" />
     <Compile Include="Indexing\IndexBatchSizeAutoTuner.cs" />
-    <Compile Include="Indexing\FairIndexingSchedulerWithOlderIndexesBias.cs" />
+    <Compile Include="Indexing\DefaultIndexingClassifier.cs" />
     <Compile Include="Indexing\IndexingWorkStats.cs" />
     <Compile Include="Indexing\IndexToWorkOn.cs" />
     <Compile Include="Indexing\IntersectionCollector.cs" />

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
@@ -47,6 +48,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.Synchronized)]
 		public void AutoThrottleBatchSize(int amountOfItemsToProcess, long size, TimeSpan processingDuration)
 		{
 			try

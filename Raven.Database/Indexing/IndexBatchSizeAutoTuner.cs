@@ -1,6 +1,4 @@
 using System;
-using Raven.Abstractions.Extensions;
-using Raven.Database.Config;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -11,12 +9,13 @@ namespace Raven.Database.Indexing
 		public IndexBatchSizeAutoTuner(WorkContext context)
 			: base(context)
 		{
-            this.InstallGauges();
+			LastAmountOfItemsToRemember = 1;
+            InstallGauges();
 		}
 
         private void InstallGauges()
         {
-            var metricCounters = this.context.MetricsCounters;
+            var metricCounters = context.MetricsCounters;
             metricCounters.AddGauge(typeof(IndexBatchSizeAutoTuner), "InitialNumberOfItems", () => InitialNumberOfItems);
             metricCounters.AddGauge(typeof(IndexBatchSizeAutoTuner), "MaxNumberOfItems", () => MaxNumberOfItems);
             metricCounters.AddGauge(typeof(IndexBatchSizeAutoTuner), "CurrentNumberOfItems", () => CurrentNumberOfItems);
@@ -37,21 +36,29 @@ namespace Raven.Database.Indexing
 			get { return context.CurrentNumberOfItemsToIndexInSingleBatch; }
 			set { context.CurrentNumberOfItemsToIndexInSingleBatch = value; }
 		}
+		
+		protected override sealed int LastAmountOfItemsToRemember { get; set; }
 
-		protected override int LastAmountOfItemsToRemember
-		{
-			get { return context.Configuration.IndexingScheduler.LastAmountOfItemsToIndexToRemember; }
-			set { context.Configuration.IndexingScheduler.LastAmountOfItemsToIndexToRemember = value; }
-		}
+		private List<int> lastAmountOfItemsToIndex = new List<int>();
 
 		protected override void RecordAmountOfItems(int numberOfItems)
 		{
-			context.Configuration.IndexingScheduler.RecordAmountOfItemsToIndex(numberOfItems);
+			var currentLastAmountOfItemsToIndex = lastAmountOfItemsToIndex;
+
+			var amountToTake = currentLastAmountOfItemsToIndex.Count;
+			
+			if (amountToTake + 1 >= LastAmountOfItemsToRemember)
+				amountToTake = currentLastAmountOfItemsToIndex.Count - 1;
+
+			lastAmountOfItemsToIndex = new List<int>(currentLastAmountOfItemsToIndex.Take(amountToTake))
+										{
+											numberOfItems
+										};
 		}
 
 		protected override IEnumerable<int> GetLastAmountOfItems()
 		{
-			return context.Configuration.IndexingScheduler.GetLastAmountOfItemsToIndex();
+			return lastAmountOfItemsToIndex;
 		}
 
 		public Action ConsiderLimitingNumberOfItemsToProcessForThisBatch(int? maxIndexOutputsPerDoc)
