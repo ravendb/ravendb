@@ -24,12 +24,12 @@ namespace Raven.Client.Document.DTC
 		{
 			throw new NotSupportedException();
 		}
-#if !SILVERLIGHT
+
 	    public byte[] GetRecoveryInformation(System.Transactions.PreparingEnlistment preparingEnlistment)
 	    {
 	        return null;
 	    }
-#endif
+
         public void Dispose()
 		{
 			
