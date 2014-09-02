@@ -257,18 +257,30 @@ namespace Raven.Database.Actions
 
             TransactionalStorage.Batch(actions =>
             {
-                definition.IndexId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
-                IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
+	            var maxId = 0;
+	            if (Database.IndexStorage.Indexes.Length > 0)
+	            {
+		            maxId = Database.IndexStorage.Indexes.Max();
+	            }
+	            definition.IndexId = (int) Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
+	            if (definition.IndexId <= maxId)
+	            {
+		            actions.General.SetIdentityValue("IndexId", maxId + 1);
+					definition.IndexId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
+	            }
 
-                // this has to happen in this fashion so we will expose the in memory status after the commit, but 
-                // before the rest of the world is notified about this.
 
-                IndexDefinitionStorage.CreateAndPersistIndex(definition);
-                Database.IndexStorage.CreateIndexImplementation(definition);
+	            IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
-                InvokeSuggestionIndexing(name, definition);
+	            // this has to happen in this fashion so we will expose the in memory status after the commit, but 
+	            // before the rest of the world is notified about this.
 
-                actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
+	            IndexDefinitionStorage.CreateAndPersistIndex(definition);
+	            Database.IndexStorage.CreateIndexImplementation(definition);
+
+	            InvokeSuggestionIndexing(name, definition);
+
+	            actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
             });
 
             if (name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
