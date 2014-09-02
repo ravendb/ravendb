@@ -207,17 +207,17 @@ namespace Raven.Database.Indexing
 					}
 				}
 
-				if (indexWriter != null)
+				try
 				{
-					try
-					{
-						ForceWriteToDisk();
-						WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
-					}
-					catch (Exception e)
-					{
-						logIndexing.ErrorException("Error while writing in memory index to disk.", e);
-					}
+					if (indexWriter == null)
+						CreateIndexWriter();
+
+					ForceWriteToDisk();
+					WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
+				}
+				catch (Exception e)
+				{
+					logIndexing.ErrorException("Error while writing in memory index to disk.", e);
 				}
 
 				if (indexWriter != null) // just in case, WriteInMemoryIndexToDiskIfNecessary recreates writer
