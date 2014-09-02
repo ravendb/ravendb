@@ -595,13 +595,13 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		TSelf Search(string fieldName, string searchTerms);
+		TSelf Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery);
 
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms);
+		TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery);
 
 		/// <summary>
 		/// Partition the query so we can intersect different parts of the query
