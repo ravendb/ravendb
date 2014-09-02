@@ -205,7 +205,7 @@ namespace Raven.Database.Server.Controllers
 
 			msg.Headers.TryAddWithoutValidation("Raven-internal-request", "true");
 
-			var controller = (ApiController)descriptor.CreateController(msg);
+			var controller = (RavenBaseApiController)descriptor.CreateController(msg);
 			controller.Configuration = Configuration;
 			var controllerContext = new HttpControllerContext(Configuration, route, msg)
 			{
@@ -214,6 +214,7 @@ namespace Raven.Database.Server.Controllers
 				RequestContext = new HttpRequestContext(),
 				RouteData = route
 			};
+			controller.SkipAuthorizationSinceThisIsMultiGetRequestAlreadyAuthorized = true;
 			controller.ControllerContext = controllerContext;
 			controllerContext.Request = msg;
 			controller.RequestContext = controllerContext.RequestContext;
