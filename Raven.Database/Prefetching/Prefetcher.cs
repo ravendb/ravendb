@@ -36,6 +36,19 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
+		public void RemovePrefetchingBehavior(PrefetchingBehavior prefetchingBehavior)
+		{
+			lock (this)
+			{
+				prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors.Except(new[]
+				{
+					prefetchingBehavior
+				}));
+
+				prefetchingBehavior.Dispose();
+			}
+		}
+
 		public void AfterDelete(string key, Etag deletedEtag)
 		{
 			foreach (var behavior in prefetchingBehaviors)

@@ -12,30 +12,34 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
 	public class IndexingExecuter : AbstractIndexingExecuter
 	{
-		private readonly PrefetchingBehavior prefetchingBehavior;
+		private readonly ConcurrentSet<PrefetchingBehavior> prefetchingBehaviors = new ConcurrentSet<PrefetchingBehavior>();
+		private readonly Prefetcher prefetcher;
+		private readonly PrefetchingBehavior defaultPrefetchingBehavior;
 
 		public IndexingExecuter(WorkContext context, Prefetcher prefetcher)
 			: base(context)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
-			prefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
+			this.prefetcher = prefetcher;
+			defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
+			prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
 		}
 
-		public PrefetchingBehavior PrefetchingBehavior
+		public List<PrefetchingBehavior> PrefetchingBehaviors
 		{
-			get { return prefetchingBehavior; }
+			get { return prefetchingBehaviors.ToList(); }
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
@@ -101,78 +105,124 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-        protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
-		{
-			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
+        protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexes)
+        {
+	        var indexingGroups = context.Configuration.IndexingClassifier.GroupMapIndexes(indexes);
 
-			if (indexesToWorkOn.Count == 0)
+	        indexingGroups = indexingGroups.OrderByDescending(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
+
+			if (indexingGroups.Count == 0)
 				return;
 
-            var lastIndexedEtagForAllIndexes =
-                   indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
+	        var lastIndexedEtagsPerGroup = indexingGroups.Keys.ToList();
+	        var groupedIndexes = indexingGroups.Values.ToList();
 
-	        var maxIndexOutputsPerDoc = indexesToWorkOn.Max(x => x.Index.MaxIndexOutputsPerDocument);
+			var maxIndexOutputsPerDoc = groupedIndexes.Max(x => x.Max(y => y.Index.MaxIndexOutputsPerDocument));
 
-	        var recoverTunerState = ((IndexBatchSizeAutoTuner) autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(maxIndexOutputsPerDoc);
+			var recoverTunerState = ((IndexBatchSizeAutoTuner)autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(maxIndexOutputsPerDoc);
 
-	        context.CancellationToken.ThrowIfCancellationRequested();
+			var usedPrefetchers = new ConcurrentSet<PrefetchingBehavior>();
 
-			var operationCancelled = false;
-			TimeSpan indexingDuration = TimeSpan.Zero;
-			var lastEtag = Etag.Empty;
+			BackgroundTaskExecuter.Instance.ExecuteAll(context, groupedIndexes, (indexesToWorkOn, i) =>
+			{
+				var lastIndexedEtagForIndexGroup = lastIndexedEtagsPerGroup[(int) i];
 
-			List<JsonDocument> jsonDocs;
+				var prefetchingBehavior = GetPrefetcherFor(lastIndexedEtagForIndexGroup, usedPrefetchers);
 
-	        using (MapIndexingInProgress(indexesToWorkOn))
-	        using (PrefetchingBehavior.DocumentBatchFrom(lastIndexedEtagForAllIndexes, out jsonDocs))
-	        {
-		        try
-		        {
-			        if (Log.IsDebugEnabled)
-			        {
-				        Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-					        jsonDocs.Count, lastIndexedEtagForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
-			        }
+				context.CancellationToken.ThrowIfCancellationRequested();
 
-			        context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
+				var operationCancelled = false;
+				TimeSpan indexingDuration = TimeSpan.Zero;
+				var lastEtag = Etag.Empty;
 
-			        context.CancellationToken.ThrowIfCancellationRequested();
+				List<JsonDocument> jsonDocs;
 
-			        if (jsonDocs.Count <= 0)
-			        {
-				        return;
-			        }
+				using (MapIndexingInProgress(indexesToWorkOn))
+				using (prefetchingBehavior.DocumentBatchFrom(lastIndexedEtagForIndexGroup, out jsonDocs))
+				{
+					try
+					{
+						if (Log.IsDebugEnabled)
+						{
+							Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+								jsonDocs.Count, lastIndexedEtagForIndexGroup, string.Join(", ", jsonDocs.Select(x => x.Key)));
+						}
 
-			        var sw = Stopwatch.StartNew();
+						context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
 
-			        lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+						context.CancellationToken.ThrowIfCancellationRequested();
 
-			        indexingDuration = sw.Elapsed;
-		        }
-		        catch (InvalidDataException e)
-		        {
-			        Log.ErrorException("Failed to index because of data corruption. ", e);
-			        indexesToWorkOn.ForEach(index =>
-				        context.AddError(index.IndexId, index.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
-		        }
-		        catch (OperationCanceledException)
-		        {
-			        operationCancelled = true;
-		        }
-		        finally
-		        {
-			        if (recoverTunerState != null)
-				        recoverTunerState();
+						if (jsonDocs.Count <= 0)
+						{
+							return;
+						}
 
-			        if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
-			        {
-				        PrefetchingBehavior.CleanupDocuments(lastEtag);
-				        PrefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
-			        }
+						var sw = Stopwatch.StartNew();
 
-			        PrefetchingBehavior.BatchProcessingComplete();
-		        }
-	        }
+						lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+
+						indexingDuration = sw.Elapsed;
+					}
+					catch (InvalidDataException e)
+					{
+						Log.ErrorException("Failed to index because of data corruption. ", e);
+						indexesToWorkOn.ForEach(index =>
+							context.AddError(index.IndexId, index.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
+					}
+					catch (OperationCanceledException)
+					{
+						operationCancelled = true;
+					}
+					finally
+					{
+						if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
+						{
+							prefetchingBehavior.CleanupDocuments(lastEtag);
+							prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
+						}
+
+						prefetchingBehavior.BatchProcessingComplete();
+					}
+				}
+			});
+
+			if (recoverTunerState != null)
+				recoverTunerState();
+
+			RemoveUnusedPrefetchers(usedPrefetchers);
+		}
+
+		private PrefetchingBehavior GetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+		{
+			foreach (var prefetchingBehavior in prefetchingBehaviors)
+			{
+				if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag) && usedPrefetchers.TryAdd(prefetchingBehavior))
+					return prefetchingBehavior;
+			}
+
+			var newPrefetcher = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
+			
+			prefetchingBehaviors.Add(newPrefetcher);
+			usedPrefetchers.Add(newPrefetcher);
+
+			return newPrefetcher;
+		}
+
+		private void RemoveUnusedPrefetchers(IEnumerable<PrefetchingBehavior> usedPrefetchingBehaviors)
+		{
+			var unused = prefetchingBehaviors.Except(usedPrefetchingBehaviors.Union(new[]
+			{
+				defaultPrefetchingBehavior
+			})).ToList();
+
+			if(unused.Count == 0)
+				return;
+
+			foreach (var unusedPrefetcher in unused)
+			{
+				prefetchingBehaviors.TryRemove(unusedPrefetcher);
+				prefetcher.RemovePrefetchingBehavior(unusedPrefetcher);
+			}
 		}
 
 		private static IDisposable MapIndexingInProgress(IList<IndexToWorkOn> indexesToWorkOn)
@@ -312,7 +362,7 @@ namespace Raven.Database.Indexing
 
 				foreach (var item in filteredDocs)
 				{
-					if (PrefetchingBehavior.FilterDocuments(item.Doc) == false)
+					if (defaultPrefetchingBehavior.FilterDocuments(item.Doc) == false)
 						continue;
 
 					// did we already indexed this document in this index?
@@ -327,7 +377,7 @@ namespace Raven.Database.Indexing
 						continue;
 					}
 
-					batch.Add(item.Doc, item.Json, PrefetchingBehavior.ShouldSkipDeleteFromIndex(item.Doc));
+					batch.Add(item.Doc, item.Json, defaultPrefetchingBehavior.ShouldSkipDeleteFromIndex(item.Doc));
 
 					if (batch.DateTime == null)
 						batch.DateTime = item.Doc.LastModified;
@@ -418,7 +468,10 @@ namespace Raven.Database.Indexing
 		{
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not dispose of IndexingExecuter");
 
-			exceptionAggregator.Execute(PrefetchingBehavior.Dispose);
+			foreach (var prefetchingBehavior in PrefetchingBehaviors)
+			{
+				exceptionAggregator.Execute(prefetchingBehavior.Dispose);
+			}
 
 			exceptionAggregator.ThrowIfNeeded();
 		}
