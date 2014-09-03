@@ -276,7 +276,6 @@ interface indexDefinitionDto {
     Map: string;
     Maps: string[];
     Reduce: string;
-    TransformResults: string;
     IsMapReduce: boolean;
     IsCompiled: boolean;
     Stores: any;

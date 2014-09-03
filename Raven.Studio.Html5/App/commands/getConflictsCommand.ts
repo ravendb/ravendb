@@ -23,7 +23,6 @@ class getConflictsCommand extends commandBase {
             sort: "-ConflictDetectedAt",
             start: this.skip,
             pageSize: this.take,
-            skipTransformResults: true,
             resultsTransformer: "Raven/ConflictDocumentsTransformer"
         };
 
