@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
         {
             using (NewDocumentStore())
             {
-                var target = LogManager.GetTarget<OnDemandLogTarget>();
+                var target = LogManager.GetTarget<AdminLogsTarget>();
                 Assert.NotNull(target);
 
                 using (var client1Target = target.For("client1"))
@@ -52,7 +52,7 @@ namespace Raven.Tests.Issues
         {
             using (NewDocumentStore())
             {
-                var target = LogManager.GetTarget<OnDemandLogTarget>();
+                var target = LogManager.GetTarget<AdminLogsTarget>();
                 Assert.NotNull(target);
 
                 using (var client1Target = target.For("client1"))

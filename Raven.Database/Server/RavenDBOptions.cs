@@ -27,7 +27,7 @@ namespace Raven.Database.Server
 			try
 			{
 				HttpEndpointRegistration.RegisterHttpEndpointTarget();
-			    HttpEndpointRegistration.RegisterOnDemandLogTarget();
+			    HttpEndpointRegistration.RegisterAdminLogsTarget();
 				if (db == null)
 				{
 					systemDatabase = new DocumentDatabase(configuration);
@@ -89,7 +89,7 @@ namespace Raven.Database.Server
                                 databasesLandlord, 
                                 fileSystemLandlord,
                                 systemDatabase, 
-                                LogManager.GetTarget<OnDemandLogTarget>(),
+                                LogManager.GetTarget<AdminLogsTarget>(),
                                 requestManager,
                                 countersLandlord
 		                    };

@@ -11,9 +11,9 @@ namespace Raven.Database.Server
 			LogManager.RegisterTarget<DatabaseMemoryTarget>();
 		}
 
-        public static void RegisterOnDemandLogTarget()
+        public static void RegisterAdminLogsTarget()
         {
-            LogManager.RegisterTarget<OnDemandLogTarget>();
+            LogManager.RegisterTarget<AdminLogsTarget>();
         }
 	}
 }

@@ -57,8 +57,8 @@ namespace Raven.Tests.Issues
 
 			RegisterRouteForOnlySysDb<StudioTasksController>(a => a.GetLatestServerBuildVersion(false));
             RegisterRouteForOnlySysDb<AdminController>(a => a.Stats());
-			RegisterRouteForOnlySysDb<AdminController>(a => a.OnDemandLogConfig());
-			RegisterRouteForOnlySysDb<AdminController>(a => a.OnDemandLogFetch());
+			RegisterRouteForOnlySysDb<AdminController>(a => a.OnAdminLogsConfig());
+			RegisterRouteForOnlySysDb<AdminController>(a => a.OnAdminLogsFetch());
 			RegisterRouteForOnlySysDb<AdminController>(a => a.InfoPackage());
             RegisterRouteForOnlySysDb<AdminController>(a => a.Gc());
             RegisterRouteForOnlySysDb<AdminController>(a => a.LohCompaction());

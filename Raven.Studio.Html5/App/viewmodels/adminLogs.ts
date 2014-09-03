@@ -5,7 +5,9 @@ import adminLogsClient = require("common/adminLogsClient");
 import fileDownloader = require("common/fileDownloader");
 import adminLogsConfigureDialog = require("viewmodels/adminLogsConfigureDialog");
 import adminLogsConfig = require("models/adminLogsConfig");
+import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import adminLogsConfigEntry = require("models/adminLogsConfigEntry");
+import appUrl = require('common/appUrl');
 
 class adminLogs extends viewModelBase {
    
@@ -14,19 +16,10 @@ class adminLogs extends viewModelBase {
     keepDown = ko.observable(false);
     rawLogs = ko.observable<logDto[]>([]);
     intervalId: number;
-    maxEntries = ko.observable(0);
     connected = ko.observable(false);
     logsContainer: Element;
     entriesCount = ko.computed(() => this.rawLogs().length);
     adminLogsConfig = ko.observable<adminLogsConfig>();
-
-    constructor() {
-        super();
-        var logConfig = new adminLogsConfig();
-        logConfig.maxEntries(10000);
-        logConfig.entries.push(new adminLogsConfigEntry("Raven.", "Info"));
-        this.adminLogsConfig(logConfig);
-    }
 
     redraw() {
         if (this.pendingLogs.length > 0) {
@@ -40,6 +33,11 @@ class adminLogs extends viewModelBase {
             $("#rawLogsContainer pre").append(logsAsText);
             this.rawLogs().pushAll(pendingCopy);
             this.rawLogs.valueHasMutated();
+
+            if (this.keepDown()) {
+                var logsPre = document.getElementById('adminLogsPre');
+                logsPre.scrollTop = logsPre.scrollHeight;
+            }
         }
     }
 
@@ -49,15 +47,70 @@ class adminLogs extends viewModelBase {
         $("#rawLogsContainer pre").empty();
     }
 
+    defaultLogsConfig() {
+        var logConfig = new adminLogsConfig();
+        logConfig.maxEntries(10000);
+        logConfig.entries.push(new adminLogsConfigEntry("Raven.", "Info"));
+        return logConfig;
+    }
+
+    configureConnection() {
+        this.intervalId = setInterval(function () { this.redraw(); }.bind(this), 1000);
+
+        var currentConfig = this.adminLogsConfig() ? this.adminLogsConfig().clone() : this.defaultLogsConfig();
+        var adminLogsConfigViewModel = new adminLogsConfigureDialog(currentConfig);
+        app.showDialog(adminLogsConfigViewModel);
+        adminLogsConfigViewModel.configurationTask.done((x: any) => {
+            this.adminLogsConfig(x);
+            this.reconnect();
+        });
+    }
+
     connect() {
-        console.log(this.activeDatabase());
-        console.log("TODO");
+        if (!!this.adminLogsClient()) {
+            this.reconnect();
+            return;
+        }
+        if (!this.adminLogsConfig()) {
+            this.configureConnection();
+            return;
+        }
+
+        var tokenDeferred = $.Deferred();
+
+        if (!this.adminLogsConfig().singleAuthToken()) {
+            new getSingleAuthTokenCommand(appUrl.getSystemDatabase(), true)
+                .execute()
+                .done((tokenObject: singleAuthToken) => {
+                    this.adminLogsConfig().singleAuthToken(tokenObject);
+                    tokenDeferred.resolve();
+                })
+                .fail((e) => {
+                    app.showMessage("You are not authorized to trace this resource", "Authorization error");
+                });
+        } else {
+            tokenDeferred.resolve();
+        }
+
+        tokenDeferred.done(() => {
+            this.adminLogsClient(new adminLogsClient(this.adminLogsConfig().singleAuthToken().Token));
+            this.adminLogsClient().connect();
+            var categoriesConfig = this.adminLogsConfig().entries().map(e => e.toDto());
+            this.adminLogsClient().configureCategories(categoriesConfig);
+            this.adminLogsClient().connectionOpeningTask.done(() => {
+                this.connected(true);
+                this.adminLogsClient().watchAdminLogs((event: logDto) => {
+                    this.onLogMessage(event);
+                });
+            });
+            this.adminLogsConfig().singleAuthToken(null);
+        });
     }
 
     disconnect(): JQueryPromise<any> {
         if (!!this.adminLogsClient()) {
             this.adminLogsClient().dispose();
-            return this.adminLogsClient().connectionClosingTask.done(() => {
+            return this.adminLogsClient().connectionClosingTask.then(() => {
                 this.adminLogsClient(null);
                 this.connected(false);
             });
@@ -101,7 +154,7 @@ class adminLogs extends viewModelBase {
     }
 
     onLogMessage(entry: logDto) {
-        if (this.rawLogs.length + this.pendingLogs.length < this.maxEntries()) {
+        if (this.entriesCount() + this.pendingLogs.length < this.adminLogsConfig().maxEntries()) {
             this.pendingLogs.push(entry);
         } else {
             // stop logging
@@ -115,36 +168,11 @@ class adminLogs extends viewModelBase {
         fileDownloader.downloadAsJson(this.rawLogs(), "logs.json");
     }
 
-    configureConnection() {
-        this.intervalId = setInterval(function () { this.redraw(); }.bind(this), 1000);
-
-        
-        var adminLogsConfigViewModel = new adminLogsConfigureDialog(this.adminLogsConfig().clone());
-        app.showDialog(adminLogsConfigViewModel);
-        adminLogsConfigViewModel.onExit().done((config: adminLogsConfig) => {
-            this.adminLogsConfig(config);
-            this.maxEntries(config.maxEntries());
-            this.adminLogsClient(new adminLogsClient(entry => this.onLogMessage(entry)));
-            this.adminLogsClient().connectToLogsTask.done(() => {
-                this.connected(true);
-            })
-                .fail((e) => {
-                    if (!!e && !!e.status && e.status == 401) {
-                        app.showMessage("You do not have the sufficient permissions", "Server logging failed to start");
-                    } else {
-                        app.showMessage("Could not open connection", "Server logging failed to start");
-                    }
-                });
-
-            var categoriesConfig = config.entries().map(e => e.toDto());
-            this.adminLogsClient().configureCategories(categoriesConfig);
-        });
-    }
-
     toggleKeepDown() {
         this.keepDown.toggle();
         if (this.keepDown() == true) {
-            this.logsContainer.scrollTop = this.logsContainer.scrollHeight * 1.1;
+            var logsPre = document.getElementById('adminLogsPre');
+            logsPre.scrollTop = logsPre.scrollHeight;
         }
     }
 }

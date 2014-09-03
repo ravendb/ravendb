@@ -491,7 +491,7 @@ namespace Raven.Database.Server.Connections
 
         protected override void RegisterTransportState()
         {
-            var logTarget = LogManager.GetTarget<OnDemandLogTarget>();
+            var logTarget = LogManager.GetTarget<AdminLogsTarget>();
             logTarget.Register(this);
         }
 

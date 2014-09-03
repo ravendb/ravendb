@@ -237,8 +237,8 @@
     <Compile Include="Server\Controllers\HttpTraceController.cs" />
     <Compile Include="Server\Connections\ILogsTransport.cs" />
     <Compile Include="Server\Connections\LogPushContent.cs" />
-    <Compile Include="Server\Connections\OnDemandLogConnectionState.cs" />
-    <Compile Include="Server\Connections\OnDemandLogTarget.cs" />
+    <Compile Include="Server\Connections\AdminLogsConnectionState.cs" />
+    <Compile Include="Server\Connections\AdminLogsTarget.cs" />
     <Compile Include="Server\RavenFS\Synchronization\ConflictResolvedInFavourOfCurrentVersion.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\AbstractFileSynchronizationConflictResolver.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LatestFileSynchronizationConflictResolver.cs" />

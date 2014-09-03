@@ -605,7 +605,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 	    [HttpGet]
 	    [Route("admin/logs/configure")]
-	    public HttpResponseMessage OnDemandLogConfig()
+	    public HttpResponseMessage OnAdminLogsConfig()
 	    {
 	        var id = GetQueryStringValue("id");
             if (string.IsNullOrEmpty(id))
@@ -616,7 +616,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 }, HttpStatusCode.BadRequest);
             }
 
-            var logTarget = LogManager.GetTarget<OnDemandLogTarget>();
+            var logTarget = LogManager.GetTarget<AdminLogsTarget>();
 	        var connectionState = logTarget.For(id, this);
 
 	        var command = GetQueryStringValue("command");
@@ -659,11 +659,11 @@ namespace Raven.Database.Server.Controllers.Admin
 
         [HttpGet]
         [Route("admin/logs/events")] 
-        public HttpResponseMessage OnDemandLogFetch()
+        public HttpResponseMessage OnAdminLogsFetch()
         {
             var logsTransport = new LogsPushContent(this);
             logsTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
-            var logTarget = LogManager.GetTarget<OnDemandLogTarget>();
+            var logTarget = LogManager.GetTarget<AdminLogsTarget>();
             logTarget.Register(logsTransport);
 
             return new HttpResponseMessage { Content = logsTransport };

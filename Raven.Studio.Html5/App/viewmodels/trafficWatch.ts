@@ -110,7 +110,6 @@ class trafficWatch extends viewModelBase {
                 app.showMessage("Cannot reconnect, please configure connection properly", "Connection Error");
                 return;
             }
-
             this.connect();
         } else {
             this.disconnect().done(() => {
@@ -139,7 +138,7 @@ class trafficWatch extends viewModelBase {
                     tokenDeferred.resolve();
                 })
                 .fail((e) => {
-                    app.showMessage("You are not authorized to trace this resource", "Ahuthorization error");
+                    app.showMessage("You are not authorized to trace this resource", "Authorization error");
                 });
         } else {
             tokenDeferred.resolve();
@@ -159,8 +158,6 @@ class trafficWatch extends viewModelBase {
             });
             this.logConfig().SingleAuthToken = null;
         });
-
-
     }
     
     disconnect(): JQueryPromise<any> {

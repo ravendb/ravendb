@@ -5,13 +5,15 @@ import dialog = require("plugins/dialog");
 import database = require("models/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import messagePublisher = require("common/messagePublisher");
+import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import adminLogsConfig = require("models/adminLogsConfig");
 import adminLogsConfigEntry = require("models/adminLogsConfigEntry");
+import appUrl = require('common/appUrl');
 
 class adminLogsConfigureDialog extends dialogViewModelBase {
 
-    private nextTask = $.Deferred<adminLogsConfig>();
-    nextTaskStarted = false;
+    public configurationTask = $.Deferred();
+
     private form: JQuery;
 
     private activeInput: JQuery;
@@ -51,21 +53,22 @@ class adminLogsConfigureDialog extends dialogViewModelBase {
     }
 
     deactivate() {
-        // If we were closed via X button or other dialog dismissal, reject the deletion task since
-        // we never started it.
-        if (!this.nextTaskStarted) {
-            this.nextTask.reject();
-        }
-    }
-
-    onExit() {
-        return this.nextTask.promise();
+        this.configurationTask.reject();
     }
 
     startServerLogging() {
-        this.nextTaskStarted = true;
-        this.nextTask.resolve(this.logConfig);
-        dialog.close(this);
+        var getTokenTask = new getSingleAuthTokenCommand(appUrl.getSystemDatabase(), true).execute();
+
+        getTokenTask
+            .done((tokenObject: singleAuthToken) => {
+
+                this.logConfig.singleAuthToken(tokenObject);
+                this.configurationTask.resolve(this.logConfig);
+                dialog.close(this);
+            })
+            .fail((e) => {
+                app.showMessage("You are not authorized to trace this resource", "Ahuthorization error");
+            });
     }
 
     insertNewRow() {

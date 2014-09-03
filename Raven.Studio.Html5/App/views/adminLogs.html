@@ -4,8 +4,7 @@
             <div class="btn-group">
                 <button type="button" class="btn btn-primary" data-bind="click: configureConnection">Configure Connection</button>
                 <button type="button" class="btn btn-success" data-bind="click: reconnect">Reconnect</button>
-                <button type="button" class="btn btn-warning" data-bind="click: disconnect, visibile: connected()">Disconnect</button>
-                <button type="button" class="btn btn-warning" data-bind="click: connect, visible: connected() == false">Connect</button>
+                <button type="button" class="btn btn-warning" data-bind="click: disconnect">Disconnect</button>
             </div>
             <div class="btn-group">
                 <button type="button" class="btn btn-default" data-bind="css: { 'pressed': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
@@ -18,13 +17,13 @@
     </div>
      <div class="form-group statsBar">
             <strong class="col-sm-12">Stats:</strong>
-            <div class="small col-sm-offset-1 col-sm-11" data-bind="with: adminLogsClient">
+            <div class="small col-sm-offset-1 col-sm-11" data-bind="with: adminLogsConfig">
                 <strong>Status: </strong><label data-bind="text: ($root.connected() == true ? 'Connected' : 'Disconnected'), css: { 'text-danger': $root.connected() == false, 'text-success': $root.connected() == true }"></label>
                 <strong>; Entries: <label data-bind="text: $root.entriesCount()"></label></strong>
                 <strong>; Buffer Size: </strong><label data-bind="text: $root.adminLogsConfig().maxEntries"></label>
             </div>
         </div>
     <div id="rawLogsContainer" style="position: absolute; top: 100px; bottom: 10px; width: 100%;">
-        <pre style="word-wrap: normal; overflow: auto; height: 100%"></pre>
+        <pre id="adminLogsPre" style="word-wrap: normal; overflow: auto; height: 100%"></pre>
     </div>
 </section>

@@ -17,6 +17,8 @@ namespace Raven.Tests.Server.Runner.Data
 
 		public bool RunInMemory { get; set; }
 
+        public string DefaultStorageTypeName { get; set; }
+
 		public bool UseCommercialLicense { get; set; }
 
 		public string ApiKeyName { get; set; }
@@ -33,7 +35,7 @@ namespace Raven.Tests.Server.Runner.Data
 			                    {
 				                    Port = Port,
 				                    RunInMemory = RunInMemory,
-				                    DefaultStorageTypeName = "esent"
+                                    DefaultStorageTypeName = DefaultStorageTypeName
 			                    };
 
 			foreach (var key in Settings.Keys)
