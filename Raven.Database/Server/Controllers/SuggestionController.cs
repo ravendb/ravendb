@@ -40,10 +40,10 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			if (int.TryParse(GetQueryStringValue("max"), out numOfSuggestions) == false)
-				numOfSuggestions = 10;
+				numOfSuggestions = SuggestionQuery.DefaultMaxSuggestions;
 
 			if (float.TryParse(GetQueryStringValue("accuracy"),NumberStyles.AllowDecimalPoint,CultureInfo.InvariantCulture, out accuracy) == false)
-				accuracy = 0.5f;
+				accuracy = SuggestionQuery.DefaultAccuracy;
 
 			bool popularity;
 			if (bool.TryParse(GetQueryStringValue("popularity"), out popularity) == false)

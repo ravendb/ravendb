@@ -25,6 +25,7 @@ using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
@@ -769,6 +770,18 @@ namespace Raven.Tests.Helpers
 			DatabaseNames.Add(name);
 
 			return name;
+		}
+
+		protected static void DeployNorthwind(DocumentStore store, string databaseName = null)
+		{
+			if (string.IsNullOrEmpty(databaseName) == false)
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(databaseName);
+
+			var url = store.Url.ForDatabase(string.IsNullOrEmpty(databaseName) == false ? databaseName : store.DefaultDatabase);
+
+			var requestFactory = store.JsonRequestFactory;
+			var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url + "/studio-tasks/createSampleData", "POST", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+			request.ExecuteRequest();
 		}
 	}
 }
