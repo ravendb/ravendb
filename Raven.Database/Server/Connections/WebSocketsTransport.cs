@@ -54,23 +54,23 @@ namespace Raven.Database.Server.Connections
 
     public class WebSocketTransportFactory
     {
-        public const string CHANGES_API_WEBSOCKET_SUFFIX = "/changes/websocket";
-        public const string WATCH_TRAFFIC_WEBSOCKET_SUFFIX = "/traffic-watch/websocket";
-        public const string CUSTOM_LOGGING_WEBSOCKET_SUFFIX = "/admin/logs/events";
+        public const string ChangesApiWebsocketSuffix = "/changes/websocket";
+        public const string WatchTrafficWebsocketSuffix = "/traffic-watch/websocket";
+        public const string AdminLogsWebsocketSuffix = "/admin/logs/events";
 
         public static WebSocketsTransport CreateWebSocketTransport(RavenDBOptions options, IOwinContext context)
         {
-            if (context.Request.Uri.LocalPath.EndsWith(CHANGES_API_WEBSOCKET_SUFFIX))
+            if (context.Request.Uri.LocalPath.EndsWith(ChangesApiWebsocketSuffix))
             {
                 return new WebSocketsTransport(options, context);
             }
-            if (context.Request.Uri.LocalPath.EndsWith(WATCH_TRAFFIC_WEBSOCKET_SUFFIX))
+            if (context.Request.Uri.LocalPath.EndsWith(WatchTrafficWebsocketSuffix))
             {
                 return new WatchTrafficWebsocketTransport(options, context);
             }
-            if (context.Request.Uri.LocalPath.EndsWith(CUSTOM_LOGGING_WEBSOCKET_SUFFIX))
+            if (context.Request.Uri.LocalPath.EndsWith(AdminLogsWebsocketSuffix))
             {
-                return  new CustomLogWebsocketTransport(options, context);
+                return new AdminLogsWebsocketTransport(options, context);
             }
             return null;
         }
@@ -119,7 +119,7 @@ namespace Raven.Database.Server.Connections
 
         protected virtual string ExpectedRequestSuffix
         {
-            get { return WebSocketTransportFactory.CHANGES_API_WEBSOCKET_SUFFIX; }
+            get { return WebSocketTransportFactory.ChangesApiWebsocketSuffix; }
         }
         
         public void Dispose()
@@ -387,7 +387,7 @@ namespace Raven.Database.Server.Connections
         
         override protected string ExpectedRequestSuffix
         {
-            get { return WebSocketTransportFactory.WATCH_TRAFFIC_WEBSOCKET_SUFFIX; }
+            get { return WebSocketTransportFactory.WatchTrafficWebsocketSuffix; }
         }
 
         protected override bool AuthenticateRequest(out IPrincipal user)
@@ -427,9 +427,9 @@ namespace Raven.Database.Server.Connections
         }
     }
 
-    public class CustomLogWebsocketTransport : WebSocketsTransport
+    public class AdminLogsWebsocketTransport : WebSocketsTransport
     {
-        public CustomLogWebsocketTransport(RavenDBOptions options, IOwinContext context)
+        public AdminLogsWebsocketTransport(RavenDBOptions options, IOwinContext context)
             : base(options, context)
         {
 
@@ -437,7 +437,7 @@ namespace Raven.Database.Server.Connections
 
         override protected string ExpectedRequestSuffix
         {
-            get { return WebSocketTransportFactory.CUSTOM_LOGGING_WEBSOCKET_SUFFIX; }
+            get { return WebSocketTransportFactory.AdminLogsWebsocketSuffix; }
         }
 
         protected override Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)
@@ -491,7 +491,7 @@ namespace Raven.Database.Server.Connections
 
         protected override void RegisterTransportState()
         {
-            var logTarget = LogManager.GetTarget<OnDemandLogTarget>();
+            var logTarget = LogManager.GetTarget<AdminLogsTarget>();
             logTarget.Register(this);
         }
 

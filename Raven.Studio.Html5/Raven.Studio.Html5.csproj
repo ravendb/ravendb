@@ -322,7 +322,7 @@
     <TypeScriptCompile Include="App\commands\getKillQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\getServerPrefixForHiLoCommand.ts" />
     <TypeScriptCompile Include="App\commands\getInfoPackage.ts" />
-    <TypeScriptCompile Include="App\commands\onDemandLogsConfigureCommand.ts" />
+    <TypeScriptCompile Include="App\commands\adminLogsConfigureCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
@@ -365,9 +365,9 @@
     <TypeScriptCompile Include="App\commands\resolveMergeCommand.ts" />
     <TypeScriptCompile Include="App\common\svgDownloader.ts" />
     <TypeScriptCompile Include="App\common\fileDownloader.ts" />
-    <TypeScriptCompile Include="App\common\onDemandLogs.ts" />
-    <TypeScriptCompile Include="App\models\customLogConfig.ts" />
-    <TypeScriptCompile Include="App\models\customLogEntry.ts" />
+    <TypeScriptCompile Include="App\common\adminLogsClient.ts" />
+    <TypeScriptCompile Include="App\models\adminLogsConfig.ts" />
+    <Content Include="App\models\adminLogsConfigEntry.ts" />
     <Content Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
@@ -377,8 +377,9 @@
     <TypeScriptCompile Include="App\viewmodels\runningTasks.ts" />
     <TypeScriptCompile Include="App\viewmodels\infoPackage.ts" />
     <TypeScriptCompile Include="App\viewmodels\infoPackageImport.ts" />
-    <TypeScriptCompile Include="App\viewmodels\customLogging.ts" />
+    <TypeScriptCompile Include="App\viewmodels\adminLogsConfigureDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\upgrade.ts" />
+    <TypeScriptCompile Include="App\viewmodels\adminLogs.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\adminSettings.html" />
@@ -387,8 +388,9 @@
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\copyTransformerDialog.html" />
     <Content Include="App\views\indexMergeSuggestions.html" />
+    <Content Include="App\views\adminLogs.html" />
     <Content Include="App\views\upgrade.html" />
-    <Content Include="App\views\customLogging.html" />
+    <Content Include="App\views\adminLogsConfigureDialog.html" />
     <Content Include="App\views\infoPackageImport.html" />
     <Content Include="App\views\infoPackage.html" />
     <Content Include="App\views\deleteResourceConfirm.html" />
@@ -952,7 +954,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>59658</DevelopmentServerPort>
+          <DevelopmentServerPort>54895</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>

@@ -7089,6 +7089,16 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 .indexes-container .index-group .panel-heading:hover .indexGroup-actions-container {
   display: inline-block;
 }
+#logsContainer .logButtons {
+  margin-left: 0;
+}
+#logsContainer .form-group {
+  margin-left: 1%;
+}
+#logsContainer .statsBar {
+  padding-left: 5%;
+  background-color: aliceblue;
+}
 #watchTrafficContainer .logButtons {
   margin-left: 0;
 }

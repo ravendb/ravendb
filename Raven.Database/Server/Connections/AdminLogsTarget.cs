@@ -12,14 +12,14 @@ using Raven.Database.Server.Controllers;
 
 namespace Raven.Database.Server.Connections
 {
-	public class OnDemandLogTarget : Target 
+	public class AdminLogsTarget : Target 
 	{
         private readonly ILog logger = LogManager.GetCurrentClassLogger();
 
         // used for removing never used configurations
         readonly TimeSensitiveStore<string> timeSensitiveStore = new TimeSensitiveStore<string>(TimeSpan.FromSeconds(45));
 
-        readonly ConcurrentDictionary<string, OnDemandLogConnectionState> connections = new ConcurrentDictionary<string, OnDemandLogConnectionState>();
+        readonly ConcurrentDictionary<string, AdminLogsConnectionState> connections = new ConcurrentDictionary<string, AdminLogsConnectionState>();
 
         private bool enabled; // true when connections.Count > 0 - it allows us to avoid locks
 
@@ -37,7 +37,7 @@ namespace Raven.Database.Server.Connections
         {
             timeSensitiveStore.ForAllExpired(s =>
             {
-                OnDemandLogConnectionState value;
+                AdminLogsConnectionState value;
                 if (connections.TryRemove(s, out value))
                     value.Dispose();
             });
@@ -47,25 +47,25 @@ namespace Raven.Database.Server.Connections
         public void Disconnect(string id)
         {
             timeSensitiveStore.Seen(id);
-            OnDemandLogConnectionState value;
+            AdminLogsConnectionState value;
             if (connections.TryRemove(id, out value))
                 value.Dispose();
             AlterEnabled();
         }
 
-        public OnDemandLogConnectionState Register(IEventsTransport transport)
+        public AdminLogsConnectionState Register(IEventsTransport transport)
         {
             timeSensitiveStore.Seen(transport.Id);
             transport.Disconnected += () =>
             {
                 timeSensitiveStore.Missing(transport.Id);
-                OnDemandLogConnectionState _;
+                AdminLogsConnectionState _;
                 connections.TryRemove(transport.Id, out _);
                 AlterEnabled();
             };
             return connections.AddOrUpdate(
                 transport.Id,
-                new OnDemandLogConnectionState(transport),
+                new AdminLogsConnectionState(transport),
                 (s, state) =>
                 {
                     state.Reconnect(transport);
@@ -79,9 +79,9 @@ namespace Raven.Database.Server.Connections
 				return;
 	        if (connections.Count > 0)
 	        {
-                foreach (var onDemandLogConfig in connections)
+                foreach (var connection in connections)
                 {
-                    onDemandLogConfig.Value.Send(logEvent);
+                    connection.Value.Send(logEvent);
                 }
 	        }
 		}
@@ -91,7 +91,7 @@ namespace Raven.Database.Server.Connections
 	        return enabled;
 	    }
 
-        public OnDemandLogConnectionState For(string id, RavenBaseApiController controller = null)
+        public AdminLogsConnectionState For(string id, RavenBaseApiController controller = null)
         {
             var connection = connections.GetOrAdd(
                 id,
@@ -101,7 +101,7 @@ namespace Raven.Database.Server.Connections
                     if (controller != null)
                         logsTransport = new LogsPushContent(controller);
 
-                    var connectionState = new OnDemandLogConnectionState(logsTransport);
+                    var connectionState = new AdminLogsConnectionState(logsTransport);
                     TimeSensitiveStore.Missing(id);
                     return connectionState;
                 });

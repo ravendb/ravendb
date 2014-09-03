@@ -5,13 +5,15 @@ import dialog = require("plugins/dialog");
 import database = require("models/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import messagePublisher = require("common/messagePublisher");
-import customLogConfig = require("models/customLogConfig");
-import customLogEntry = require("models/customLogEntry");
+import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
+import adminLogsConfig = require("models/adminLogsConfig");
+import adminLogsConfigEntry = require("models/adminLogsConfigEntry");
+import appUrl = require('common/appUrl');
 
-class customLogging extends dialogViewModelBase {
+class adminLogsConfigureDialog extends dialogViewModelBase {
 
-    private nextTask = $.Deferred<customLogConfig>();
-    nextTaskStarted = false;
+    public configurationTask = $.Deferred();
+
     private form: JQuery;
 
     private activeInput: JQuery;
@@ -20,7 +22,7 @@ class customLogging extends dialogViewModelBase {
     lineHeight: number = 51;
     isScrollNeeded: KnockoutComputed<boolean>;
 
-    constructor(private logConfig: customLogConfig) {
+    constructor(private logConfig: adminLogsConfig) {
         super();
         this.maxTableHeight(Math.floor($(window).height() * 0.43));
         
@@ -51,52 +53,37 @@ class customLogging extends dialogViewModelBase {
     }
 
     deactivate() {
-        // If we were closed via X button or other dialog dismissal, reject the deletion task since
-        // we never started it.
-        if (!this.nextTaskStarted) {
-            this.nextTask.reject();
-        }
+        this.configurationTask.reject();
     }
 
-    onExit() {
-        return this.nextTask.promise();
-    }
+    startServerLogging() {
+        var getTokenTask = new getSingleAuthTokenCommand(appUrl.getSystemDatabase(), true).execute();
 
-    startCustomLogging() {
-        this.nextTaskStarted = true;
-        this.nextTask.resolve(this.logConfig);
-        dialog.close(this);
+        getTokenTask
+            .done((tokenObject: singleAuthToken) => {
+
+                this.logConfig.singleAuthToken(tokenObject);
+                this.configurationTask.resolve(this.logConfig);
+                dialog.close(this);
+            })
+            .fail((e) => {
+                app.showMessage("You are not authorized to trace this resource", "Ahuthorization error");
+            });
     }
 
     insertNewRow() {
-        this.logConfig.entries.push(new customLogEntry("", "Info"));
+        this.logConfig.entries.push(new adminLogsConfigEntry("", "Info"));
 
         if (!this.isScrollNeeded()) {
             this.alignBoxVertically();
         }
     }
 
-    deleteRow(row: customLogEntry) {
+    deleteRow(row: adminLogsConfigEntry) {
         this.logConfig.entries.remove(row);
 
         if (!this.isScrollNeeded()) {
              this.alignBoxVertically();
-        }
-    }
-
-    moveUp(row: customLogEntry) {
-        var i = this.logConfig.entries.indexOf(row);
-        if (i >= 1) {
-            var array = this.logConfig.entries();
-            this.logConfig.entries.splice(i - 1, 2, array[i], array[i - 1]);
-        }
-    }
-
-    moveDown(row: customLogEntry) {
-        var i = this.logConfig.entries.indexOf(row);
-        if (i >= 0 && i < this.logConfig.entries.length - 1) {
-            var array = this.logConfig.entries();
-            this.logConfig.entries.splice(i, 2, array[i + 1], array[i]);
         }
     }
 
@@ -114,4 +101,4 @@ class customLogging extends dialogViewModelBase {
     }
 }
 
-export = customLogging;
+export = adminLogsConfigureDialog;
