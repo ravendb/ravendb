@@ -83,9 +83,18 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> IndexPut(string id)
 		{
 			var index = id;
-			var data = await ReadJsonObjectAsync<IndexDefinition>();
+			var jsonIndex = await ReadJsonAsync();
+
+			var data = jsonIndex.JsonDeserialization<IndexDefinition>();
+
 			if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
 				return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
+
+			// older clients (pre 3.0) might try to create the index without MaxIndexOutputsPerDocument set
+			// in order to ensure that they don't reset the default value for old clients, we force the default
+			// value to maintain the existing behavior
+			if (jsonIndex.ContainsKey("MaxIndexOutputsPerDocument") == false)
+				data.MaxIndexOutputsPerDocument = 16*1024;
 
 			try
 			{
