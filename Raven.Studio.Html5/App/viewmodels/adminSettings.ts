@@ -18,9 +18,8 @@ class adminSettings extends viewModelBase {
         var windowsAuthRoute = { route: 'admin/settings/windowsAuth', moduleId: 'viewmodels/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth() };
         var backupDatabaseRoute = { route: 'admin/settings/backupDatabase', moduleId: 'viewmodels/backupDatabase', title: 'Backup Database', nav: true, hash: appUrl.forBackupDatabase() };
         var restoreDatabaseRoute = { route: 'admin/settings/restoreDatabase', moduleId: 'viewmodels/restoreDatabase', title: 'Restore Database', nav: true, hash: appUrl.forRestoreDatabase() };
-        var adminLogsRoute = { route: 'admin/settings/restoreDatabase', moduleId: 'viewmodels/restoreDatabase', title: 'Admin Logs', nav: true, hash: appUrl.forAdminLogs() };
+        var adminLogsRoute = { route: 'admin/settings/adminLogs', moduleId: 'viewmodels/adminLogs', title: 'Admin Logs', nav: true, hash: appUrl.forAdminLogs() };
         var trafficWatchRoute = { route: 'admin/settings/trafficWatch', moduleId: 'viewmodels/trafficWatch', title: 'Traffic Watch', nav: true, hash: appUrl.forTrafficWatch() };
-        var serverLogsRoute = { route: 'admin/settings/serverLogs', moduleId: 'viewmodels/serverLogs', title: 'Server Logs', nav: true, hash: appUrl.forServerLogs() };
         var debugInfoRoute = { route: 'admin/settings/debugInfo', moduleId: 'viewmodels/infoPackage', title: 'Gather Debug Info', nav: true, hash: appUrl.forDebugInfo() };
         var studioConfigRoute = { route: 'admin/settings/studioConfig', moduleId: 'viewmodels/studioConfig', title: 'Studio Config', nav: true, hash: appUrl.forStudioConfig() };
 
@@ -32,7 +31,6 @@ class adminSettings extends viewModelBase {
                 restoreDatabaseRoute,
                 adminLogsRoute,
                 trafficWatchRoute,
-                serverLogsRoute,
                 debugInfoRoute,
                 studioConfigRoute
             ])

@@ -42,8 +42,6 @@
                         </td>
                         <td class="col-md-2">
                             <div class="btn-group">
-                                <button data-bind="click: $root.moveUp.bind($root, $data), disable: ($index() === 0)" type="button" class="btn btn-default"><i class="fa fa-arrow-up"></i></button>
-                                <button data-bind="click: $root.moveDown.bind($root, $data), disable: ($index() === $root.logConfig.entries().length - 1)" type="button" class="btn btn-default"><i class="fa fa-arrow-down"></i></button>
                                 <button type="button" class="btn btn-default" data-bind="click: $root.deleteRow.bind($root, $data)"><i class="fa fa-trash-o"></i></button>
                             </div>
                         </td>

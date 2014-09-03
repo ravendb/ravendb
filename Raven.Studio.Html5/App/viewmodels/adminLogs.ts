@@ -1,15 +1,15 @@
 ﻿import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
-import serverLogsConfigureCommand = require("commands/serverLogsConfigureCommand");
-import serverLogsClient = require("common/serverLogsClient");
+import adminLogsConfigureCommand = require("commands/adminLogsConfigureCommand");
+import adminLogsClient = require("common/adminLogsClient");
 import fileDownloader = require("common/fileDownloader");
-import serverLogsConfigureDialog = require("viewmodels/serverLogsConfigureDialog");
-import serverLogsConfig = require("models/serverLogsConfig");
-import serverLogsConfigEntry = require("models/serverLogsConfigEntry");
+import adminLogsConfigureDialog = require("viewmodels/adminLogsConfigureDialog");
+import adminLogsConfig = require("models/adminLogsConfig");
+import adminLogsConfigEntry = require("models/adminLogsConfigEntry");
 
-class serverLogs extends viewModelBase {
+class adminLogs extends viewModelBase {
    
-    serverLogsClient = ko.observable<serverLogsClient>(null);
+    adminLogsClient = ko.observable<adminLogsClient>(null);
     pendingLogs: logDto[] = [];
     keepDown = ko.observable(false);
     rawLogs = ko.observable<logDto[]>([]);
@@ -18,14 +18,14 @@ class serverLogs extends viewModelBase {
     connected = ko.observable(false);
     logsContainer: Element;
     entriesCount = ko.computed(() => this.rawLogs().length);
-    serverLogsConfig = ko.observable<serverLogsConfig>();
+    adminLogsConfig = ko.observable<adminLogsConfig>();
 
     constructor() {
         super();
-        var logConfig = new serverLogsConfig();
+        var logConfig = new adminLogsConfig();
         logConfig.maxEntries(10000);
-        logConfig.entries.push(new serverLogsConfigEntry("Raven.", "Info"));
-        this.serverLogsConfig(logConfig);
+        logConfig.entries.push(new adminLogsConfigEntry("Raven.", "Info"));
+        this.adminLogsConfig(logConfig);
     }
 
     redraw() {
@@ -55,10 +55,10 @@ class serverLogs extends viewModelBase {
     }
 
     disconnect(): JQueryPromise<any> {
-        if (!!this.serverLogsClient()) {
-            this.serverLogsClient().dispose();
-            return this.serverLogsClient().connectionClosingTask.done(() => {
-                this.serverLogsClient(null);
+        if (!!this.adminLogsClient()) {
+            this.adminLogsClient().dispose();
+            return this.adminLogsClient().connectionClosingTask.done(() => {
+                this.adminLogsClient(null);
                 this.connected(false);
             });
         } else {
@@ -68,7 +68,7 @@ class serverLogs extends viewModelBase {
     }
 
     reconnect() {
-        if (!this.serverLogsClient()) {
+        if (!this.adminLogsClient()) {
             this.connect();
         } else {
             this.disconnect().done(() => {
@@ -83,18 +83,18 @@ class serverLogs extends viewModelBase {
 
     deactivate() {
         clearInterval(this.intervalId);
-        if (this.serverLogsClient()) {
-            this.serverLogsClient().dispose();
+        if (this.adminLogsClient()) {
+            this.adminLogsClient().dispose();
         }
     }
 
     detached() {
         super.detached();
-        this.disposeServerLogsClient();
+        this.disposeAdminLogsClient();
     }
 
-    disposeServerLogsClient() {
-        var client = this.serverLogsClient();
+    disposeAdminLogsClient() {
+        var client = this.adminLogsClient();
         if (client) {
             client.dispose();
         }
@@ -105,7 +105,7 @@ class serverLogs extends viewModelBase {
             this.pendingLogs.push(entry);
         } else {
             // stop logging
-            var client = this.serverLogsClient();
+            var client = this.adminLogsClient();
             this.connected(false);
             client.dispose();
         }
@@ -119,13 +119,13 @@ class serverLogs extends viewModelBase {
         this.intervalId = setInterval(function () { this.redraw(); }.bind(this), 1000);
 
         
-        var serverLogsConfigViewModel = new serverLogsConfigureDialog(this.serverLogsConfig().clone());
-        app.showDialog(serverLogsConfigViewModel);
-        serverLogsConfigViewModel.onExit().done((config: serverLogsConfig) => {
-            this.serverLogsConfig(config);
+        var adminLogsConfigViewModel = new adminLogsConfigureDialog(this.adminLogsConfig().clone());
+        app.showDialog(adminLogsConfigViewModel);
+        adminLogsConfigViewModel.onExit().done((config: adminLogsConfig) => {
+            this.adminLogsConfig(config);
             this.maxEntries(config.maxEntries());
-            this.serverLogsClient(new serverLogsClient(entry => this.onLogMessage(entry)));
-            this.serverLogsClient().connectToLogsTask.done(() => {
+            this.adminLogsClient(new adminLogsClient(entry => this.onLogMessage(entry)));
+            this.adminLogsClient().connectToLogsTask.done(() => {
                 this.connected(true);
             })
                 .fail((e) => {
@@ -137,7 +137,7 @@ class serverLogs extends viewModelBase {
                 });
 
             var categoriesConfig = config.entries().map(e => e.toDto());
-            this.serverLogsClient().configureCategories(categoriesConfig);
+            this.adminLogsClient().configureCategories(categoriesConfig);
         });
     }
 
@@ -149,4 +149,4 @@ class serverLogs extends viewModelBase {
     }
 }
 
-export = serverLogs;
+export = adminLogs;

@@ -5,12 +5,12 @@ import dialog = require("plugins/dialog");
 import database = require("models/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import messagePublisher = require("common/messagePublisher");
-import serverLogsConfig = require("models/serverLogsConfig");
-import serverLogsConfigEntry = require("models/serverLogsConfigEntry");
+import adminLogsConfig = require("models/adminLogsConfig");
+import adminLogsConfigEntry = require("models/adminLogsConfigEntry");
 
-class serverLogsConfigureDialog extends dialogViewModelBase {
+class adminLogsConfigureDialog extends dialogViewModelBase {
 
-    private nextTask = $.Deferred<serverLogsConfig>();
+    private nextTask = $.Deferred<adminLogsConfig>();
     nextTaskStarted = false;
     private form: JQuery;
 
@@ -20,7 +20,7 @@ class serverLogsConfigureDialog extends dialogViewModelBase {
     lineHeight: number = 51;
     isScrollNeeded: KnockoutComputed<boolean>;
 
-    constructor(private logConfig: serverLogsConfig) {
+    constructor(private logConfig: adminLogsConfig) {
         super();
         this.maxTableHeight(Math.floor($(window).height() * 0.43));
         
@@ -69,34 +69,18 @@ class serverLogsConfigureDialog extends dialogViewModelBase {
     }
 
     insertNewRow() {
-        this.logConfig.entries.push(new serverLogsConfigEntry("", "Info"));
+        this.logConfig.entries.push(new adminLogsConfigEntry("", "Info"));
 
         if (!this.isScrollNeeded()) {
             this.alignBoxVertically();
         }
     }
 
-    deleteRow(row: serverLogsConfigEntry) {
+    deleteRow(row: adminLogsConfigEntry) {
         this.logConfig.entries.remove(row);
 
         if (!this.isScrollNeeded()) {
              this.alignBoxVertically();
-        }
-    }
-
-    moveUp(row: serverLogsConfigEntry) {
-        var i = this.logConfig.entries.indexOf(row);
-        if (i >= 1) {
-            var array = this.logConfig.entries();
-            this.logConfig.entries.splice(i - 1, 2, array[i], array[i - 1]);
-        }
-    }
-
-    moveDown(row: serverLogsConfigEntry) {
-        var i = this.logConfig.entries.indexOf(row);
-        if (i >= 0 && i < this.logConfig.entries.length - 1) {
-            var array = this.logConfig.entries();
-            this.logConfig.entries.splice(i, 2, array[i + 1], array[i]);
         }
     }
 
@@ -114,4 +98,4 @@ class serverLogsConfigureDialog extends dialogViewModelBase {
     }
 }
 
-export = serverLogsConfigureDialog;
+export = adminLogsConfigureDialog;

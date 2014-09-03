@@ -18,10 +18,10 @@
     </div>
      <div class="form-group statsBar">
             <strong class="col-sm-12">Stats:</strong>
-            <div class="small col-sm-offset-1 col-sm-11" data-bind="with: serverLogsClient">
+            <div class="small col-sm-offset-1 col-sm-11" data-bind="with: adminLogsClient">
                 <strong>Status: </strong><label data-bind="text: ($root.connected() == true ? 'Connected' : 'Disconnected'), css: { 'text-danger': $root.connected() == false, 'text-success': $root.connected() == true }"></label>
                 <strong>; Entries: <label data-bind="text: $root.entriesCount()"></label></strong>
-                <strong>; Buffer Size: </strong><label data-bind="text: $root.serverLogsConfig().maxEntries"></label>
+                <strong>; Buffer Size: </strong><label data-bind="text: $root.adminLogsConfig().maxEntries"></label>
             </div>
         </div>
     <div id="rawLogsContainer" style="position: absolute; top: 100px; bottom: 10px; width: 100%;">

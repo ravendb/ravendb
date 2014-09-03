@@ -2,12 +2,12 @@ import pagedResultSet = require("common/pagedResultSet");
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 
-class serverLogsConfigureCommand extends commandBase {
+class adminLogsConfigureCommand extends commandBase {
 
     /**
 	* @param ownerDb The database the collections will belong to.
 	*/
-    constructor(private ownerDb: database, private logConfig: serverLogsConfigEntryDto[], private eventsId: string) {
+    constructor(private ownerDb: database, private logConfig: adminLogsConfigEntryDto[], private eventsId: string) {
         super();
 
         if (!this.ownerDb) {
@@ -26,4 +26,4 @@ class serverLogsConfigureCommand extends commandBase {
     }
 }
 
-export = serverLogsConfigureCommand;
+export = adminLogsConfigureCommand;

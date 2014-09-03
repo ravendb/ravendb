@@ -11,9 +11,9 @@ import changesApi = require("common/changesApi");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import shell = require("viewmodels/shell");
 import idGenerator = require("common/idGenerator");
-import serverLogsConfigureCommand = require("commands/serverLogsConfigureCommand");
+import adminLogsConfigureCommand = require("commands/adminLogsConfigureCommand");
 
-class serverLogsClient {
+class adminLogsClient {
 
     public connectionClosingTask: JQueryDeferred<any>;
 
@@ -157,8 +157,8 @@ class serverLogsClient {
         this.onMessageCallback(eventDto);
     }
 
-    configureCategories(categoriesConfig: serverLogsConfigEntryDto[]) {
-        new serverLogsConfigureCommand(appUrl.getSystemDatabase(), categoriesConfig, this.eventsId).execute();
+    configureCategories(categoriesConfig: adminLogsConfigEntryDto[]) {
+        new adminLogsConfigureCommand(appUrl.getSystemDatabase(), categoriesConfig, this.eventsId).execute();
     }
 
     dispose() {
@@ -182,4 +182,4 @@ class serverLogsClient {
     }
 }
 
-export = serverLogsClient;
+export = adminLogsClient;

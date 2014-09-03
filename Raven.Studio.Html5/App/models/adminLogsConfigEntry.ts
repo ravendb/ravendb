@@ -1,4 +1,4 @@
-class serverLogsConfigEntry {
+class adminLogsConfigEntry {
 
     category = ko.observable<string>();
     level = ko.observable<string>();
@@ -9,14 +9,14 @@ class serverLogsConfigEntry {
     }
 
     clone() {
-        return new serverLogsConfigEntry(this.category(), this.level());
+        return new adminLogsConfigEntry(this.category(), this.level());
     }
 
     static empty() {
-        return new serverLogsConfigEntry(null, null);
+        return new adminLogsConfigEntry(null, null);
     }
 
-    toDto(): serverLogsConfigEntryDto {
+    toDto(): adminLogsConfigEntryDto {
         return {
             category: this.category(),
             level: this.level()
@@ -24,4 +24,4 @@ class serverLogsConfigEntry {
     }
 }
 
-export = serverLogsConfigEntry;
+export = adminLogsConfigEntry;
