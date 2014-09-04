@@ -367,6 +367,11 @@ interface replicationDestinationDto {
 interface replicationsDto {
     Destinations: replicationDestinationDto[];
     Source: string;
+    ClientConfiguration?: replicationClientConfigurationDto;
+}
+
+interface replicationClientConfigurationDto {
+    FailoverBehavior?: string;
 }
 
 interface replicationConfigDto {
