@@ -61,4 +61,34 @@
             </ul>
         </div>
     </div>
+    
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title text-info">Idle or Abandoned</h4>
+        </div>
+        <div class="panel-body">
+            <ul data-bind="foreach: idleOrAbandonedIndexes">
+                <li>
+                    <span class="index-name" data-bind="text: Name"></span>
+                    <span>: </span>
+                    <span data-bind="text: Priority"></span>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+     <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title text-info">Not used for over a week.</h4>
+        </div>
+        <div class="panel-body">
+            <ul data-bind="foreach: notUsedForLastWeek">
+                <li>
+                    <span class="index-name" data-bind="text: Name"></span>
+                    <span>: </span>
+                    <span data-bind="text: LastQueryTimestampText"></span>
+                </li>
+            </ul>
+        </div>
+    </div>
 </div>

@@ -4,14 +4,19 @@ import database = require("models/database");
 import appUrl = require("common/appUrl");
 import mergedIndexesStorage = require("common/mergedIndexesStorage");
 import indexMergeSuggestion = require("models/indexMergeSuggestion");
+import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import changeSubscription = require('models/changeSubscription');
 import shell = require("viewmodels/shell");
+import moment = require("moment");
+import optional = require("common/optional");
 
 class indexMergeSuggestions extends viewModelBase {
     
     appUrls: computedAppUrls;
     suggestions = ko.observableArray<indexMergeSuggestion>();
     unmergables = ko.observableArray<{ indexName: string; reason: string; }>();
+    idleOrAbandonedIndexes = ko.observableArray<indexStatisticsDto>();
+    notUsedForLastWeek = ko.observableArray<indexStatisticsDto>();
     
     constructor() {
         super();
@@ -20,9 +25,11 @@ class indexMergeSuggestions extends viewModelBase {
 
     canActivate(args: any) :any {
         var deferred = $.Deferred();
-        
+
         var fetchIndexMergeSuggestionsTask = this.fetchIndexMergeSuggestions();
-        fetchIndexMergeSuggestionsTask
+        var fetchStatsTask = this.fetchStats();
+
+        $.when(fetchIndexMergeSuggestionsTask, fetchStatsTask)
             .done(() => deferred.resolve({ can: true }))
             .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
 
@@ -33,9 +40,37 @@ class indexMergeSuggestions extends viewModelBase {
         return [ shell.currentResourceChangesApi().watchAllIndexes(() => this.fetchIndexMergeSuggestions()) ];
     }
 
-    activate(args) {
-        super.activate(args);
+    private fetchStats(): JQueryPromise<databaseStatisticsDto> {
+        var db = this.activeDatabase();
+        if (db) {
+            return new getDatabaseStatsCommand(db)
+                .execute()
+                .done((result: databaseStatisticsDto) => this.processStatsResults(result));
+        }
 
+        return null;
+    }
+
+    private processStatsResults(stats: databaseStatisticsDto) {
+        var now = moment();
+        var secondsInWeek = 100 * 3600 * 24 * 7;
+        stats.Indexes.forEach(indexDto => {
+            // we are using contains not equals as priority may contains 
+            if (indexDto.Priority.contains("Idle") || indexDto.Priority.contains("Abandoned")) {
+                this.idleOrAbandonedIndexes.push(indexDto);
+            }
+
+            if (indexDto.LastQueryTimestamp) {
+                var lastQueryDate = moment(indexDto.LastQueryTimestamp);
+                if (lastQueryDate.isValid()) {
+                    var agoInMs = now.diff(lastQueryDate);
+                    if (agoInMs > secondsInWeek) {
+                        indexDto['LastQueryTimestampText'] = optional.val(indexDto.LastQueryTimestamp).bind(v => v.toHumanizedDate());
+                        this.notUsedForLastWeek.push(indexDto);
+                    }
+                }
+            }
+        });
     }
 
     private fetchIndexMergeSuggestions() {
