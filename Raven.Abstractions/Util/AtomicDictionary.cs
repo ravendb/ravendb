@@ -64,6 +64,19 @@ namespace Raven.Abstractions.Util
 			}
 		}
 
+        public void Set(string key, Func<string, TVal> valueGenerator)
+        {
+            using (globalLocker.EnterReadLock())
+            {
+                key = key ?? NullValue;
+                lock (locks.GetOrAdd(key, new object()))
+                {
+	                var addValue = valueGenerator(null);
+	                items.AddOrUpdate(key, addValue, (s, val) => addValue);
+                }
+            }
+        }
+
 		public void Remove(string key)
 		{
 			using(globalLocker.EnterReadLock())

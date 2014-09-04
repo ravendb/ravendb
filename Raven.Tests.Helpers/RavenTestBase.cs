@@ -255,8 +255,8 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-		    bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(20));
-		    if (spinUntil == false)
+		    bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(5) :TimeSpan.FromSeconds(20)));
+		    if (spinUntil == false && store is EmbeddableDocumentStore)
 		        WaitForUserToContinueTheTest((EmbeddableDocumentStore) store);
 		    Assert.True(spinUntil);
 		}

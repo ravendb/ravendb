@@ -455,6 +455,7 @@ namespace Raven.Database
         public IndexStorage IndexStorage { get; private set; }
 
         public event EventHandler Disposing;
+        public event EventHandler DisposingEnded;
 
         public void Dispose()
         {
@@ -564,10 +565,29 @@ namespace Raven.Database
             if (workContext != null)
                 exceptionAggregator.Execute(workContext.Dispose);
 
-            exceptionAggregator.ThrowIfNeeded();
+            try
+            {
+                exceptionAggregator.ThrowIfNeeded();
+            }
+            finally
+            {
+                var onDisposingEnded = DisposingEnded;
+                if (onDisposingEnded != null)
+                {
+                    try
+                    {
+                        onDisposingEnded(this, EventArgs.Empty);
+                    }
+                    catch (Exception e)
+                    {
+                        log.WarnException("Error when notifying about db disposal ending, ignoring error and continuing with disposal", e);
+                    }
+                }                
+            }
 
             log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
-        }
+        } 
+
 
         public void StopBackgroundWorkers()
         {
@@ -1926,7 +1946,7 @@ namespace Raven.Database
                     scriptedJsonPatcher = new ScriptedJsonPatcher(this);
                     var jsonDoc = new RavenJObject();
                     jsonDoc[Constants.Metadata] = defaultMetadata ?? new RavenJObject();
-                    return scriptedJsonPatcher.Apply(new RavenJObject(), patchDefault, 0, docId);
+                    return scriptedJsonPatcher.Apply(jsonDoc, patchDefault, 0, docId);
                 },
                 () =>
                 {
@@ -2300,7 +2320,7 @@ namespace Raven.Database
             }
         }
 
-        /// <summary>
+	    /// <summary>
         /// Get the total index storage size taken by the indexes on the disk.
         /// This explicitly does NOT include in memory indexes.
         /// </summary>
@@ -2615,5 +2635,6 @@ namespace Raven.Database
         {
             return IndexDefinitionStorage.GetTransformerDefinition(name);
         }
+
     }
 }

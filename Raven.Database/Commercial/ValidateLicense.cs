@@ -33,7 +33,7 @@ namespace Raven.Database.Commercial
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private Timer timer;
 
-		private static readonly Dictionary<string,string> alwaysOnAttributes = new Dictionary<string, string>
+		private static readonly Dictionary<string, string> alwaysOnAttributes = new Dictionary<string, string>
 		{
 			{"periodicBackup", "false"},
 			{"encryption", "false"},
@@ -53,14 +53,14 @@ namespace Raven.Database.Commercial
 				Status = "AGPL - Open Source",
 				Error = false,
 				Message = "No license file was found.\r\n" +
-				          "The AGPL license restrictions apply, only Open Source / Development work is permitted.",
+						  "The AGPL license restrictions apply, only Open Source / Development work is permitted.",
 				Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
 			};
 		}
 
 		public void Execute(InMemoryRavenConfiguration config)
 		{
-			timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromHours(1), TimeSpan.FromHours(1));
+			timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15));
 
 			ExecuteInternal(config);
 		}
@@ -69,8 +69,8 @@ namespace Raven.Database.Commercial
 		{
 			var licensePath = GetLicensePath(config);
 			var licenseText = GetLicenseText(config);
-			
-			if (TryLoadLicense(licenseText) == false) 
+
+			if (TryLoadLicense(config) == false)
 				return;
 
 			try
@@ -81,12 +81,12 @@ namespace Raven.Database.Commercial
 
 					AssertForV2(licenseValidator.LicenseAttributes);
 					if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&
-					    "true".Equals(value, StringComparison.OrdinalIgnoreCase))
+						"true".Equals(value, StringComparison.OrdinalIgnoreCase))
 					{
 						licenseValidator.MultipleLicenseUsageBehavior = AbstractLicenseValidator.MultipleLicenseUsage.AllowSameLicense;
 					}
 					string allowExternalBundles;
-					if(licenseValidator.LicenseAttributes.TryGetValue("allowExternalBundles", out allowExternalBundles) && 
+					if (licenseValidator.LicenseAttributes.TryGetValue("allowExternalBundles", out allowExternalBundles) &&
 						bool.Parse(allowExternalBundles) == false)
 					{
 						var directoryCatalogs = config.Catalog.Catalogs.OfType<DirectoryCatalog>().ToArray();
@@ -104,11 +104,13 @@ namespace Raven.Database.Commercial
 				}
 
 				var message = "Valid license at " + licensePath;
-				var status = "Commercial - " + licenseValidator.LicenseType;
+				var status = "Commercial";
+				if (licenseValidator.LicenseType != LicenseType.Standard)
+					status += " - " + licenseValidator.LicenseType;
 
 				if (licenseValidator.IsOemLicense() && licenseValidator.ExpirationDate < SystemTime.UtcNow)
 				{
-					message = string.Format("Expired ({0}) OEM license at {1}", licenseValidator.ExpirationDate.ToShortDateString(), licensePath);
+					message = string.Format("Expired ({0}) OEM/ISV license at {1}", licenseValidator.ExpirationDate.ToShortDateString(), licensePath);
 					status += " (Expired)";
 				}
 
@@ -130,7 +132,7 @@ namespace Raven.Database.Commercial
 					xmlDocument.Load(licensePath);
 					var ns = new XmlNamespaceManager(xmlDocument.NameTable);
 					ns.AddNamespace("sig", "http://www.w3.org/2000/09/xmldsig#");
-					var sig = xmlDocument.SelectSingleNode("/license/sig:Signature",ns);
+					var sig = xmlDocument.SelectSingleNode("/license/sig:Signature", ns);
 					if (sig != null)
 					{
 						sig.RemoveAll();
@@ -152,37 +154,50 @@ namespace Raven.Database.Commercial
 			}
 		}
 
-		private bool TryLoadLicense(string licenseText)
+		private bool TryLoadLicense(InMemoryRavenConfiguration config)
 		{
 			string publicKey;
 			using (
-				var stream = typeof (ValidateLicense).Assembly.GetManifestResourceStream("Raven.Database.Commercial.RavenDB.public"))
+				var stream = typeof(ValidateLicense).Assembly.GetManifestResourceStream("Raven.Database.Commercial.RavenDB.public"))
 			{
 				if (stream == null)
 					throw new InvalidOperationException("Could not find public key for the license");
 				publicKey = new StreamReader(stream).ReadToEnd();
 			}
 
+			config.Container.SatisfyImportsOnce(this);
 
-			licenseValidator = new StringLicenseValidator(publicKey, licenseText)
+			var value = config.Settings["Raven/License"];
+			if (LicenseProvider != null && !string.IsNullOrEmpty(LicenseProvider.License))
 			{
-				DisableFloatingLicenses = true,
-				SubscriptionEndpoint = "http://uberprof.com/Subscriptions.svc"
-			};
-			licenseValidator.LicenseInvalidated += OnLicenseInvalidated;
-			licenseValidator.MultipleLicensesWereDiscovered += OnMultipleLicensesWereDiscovered;
+				value = LicenseProvider.License;
+			}
 
-			if (string.IsNullOrEmpty(licenseText))
+			var fullPath = GetLicensePath(config).ToFullPath();
+			if (string.IsNullOrEmpty(value) == false)
+			{
+				licenseValidator = new StringLicenseValidator(publicKey, value);
+			}
+			else if (File.Exists(fullPath))
+			{
+				licenseValidator = new LicenseValidator(publicKey, fullPath);
+			}
+			else 
 			{
 				CurrentLicense = new LicensingStatus
 				{
 					Status = "AGPL - Open Source",
 					Error = false,
-					Message = "No license file was found at " + licenseText +
-					          "\r\nThe AGPL license restrictions apply, only Open Source / Development work is permitted."
+					Message = "No license file was found at " + fullPath +
+							  "\r\nThe AGPL license restrictions apply, only Open Source / Development work is permitted."
 				};
 				return false;
 			}
+			licenseValidator.DisableFloatingLicenses = true;
+			licenseValidator.SubscriptionEndpoint = "http://uberprof.com/Subscriptions.svc";
+			licenseValidator.LicenseInvalidated += OnLicenseInvalidated;
+			licenseValidator.MultipleLicensesWereDiscovered += OnMultipleLicensesWereDiscovered;
+
 			return true;
 		}
 
@@ -195,35 +210,35 @@ namespace Raven.Database.Commercial
 					throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
 
 				// Add backward compatibility for the subscription licenses of v1
-				licenseAttributes["version"]= "2.5";
-				licenseAttributes["implicit20StandardLicenseBy10Subscription"]= "true";
-				licenseAttributes["allowWindowsClustering"]= "false";
-				licenseAttributes["numberOfDatabases"]= "unlimited";
-				licenseAttributes["periodicBackup"]= "true";
-				licenseAttributes["encryption"]= "false";
-				licenseAttributes["compression"]= "false";
-				licenseAttributes["quotas"]= "false";
-				licenseAttributes["authorization"]= "true";
-				licenseAttributes["documentExpiration"]= "true";
-				licenseAttributes["replication"]= "true";
-				licenseAttributes["versioning"]= "true";
-				licenseAttributes["maxSizeInMb"]= "unlimited";
+				licenseAttributes["version"] = "2.5";
+				licenseAttributes["implicit20StandardLicenseBy10Subscription"] = "true";
+				licenseAttributes["allowWindowsClustering"] = "false";
+				licenseAttributes["numberOfDatabases"] = "unlimited";
+				licenseAttributes["periodicBackup"] = "true";
+				licenseAttributes["encryption"] = "false";
+				licenseAttributes["compression"] = "false";
+				licenseAttributes["quotas"] = "false";
+				licenseAttributes["authorization"] = "true";
+				licenseAttributes["documentExpiration"] = "true";
+				licenseAttributes["replication"] = "true";
+				licenseAttributes["versioning"] = "true";
+				licenseAttributes["maxSizeInMb"] = "unlimited";
 
 				string oem;
 				if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out oem) &&
-				    "true".Equals(oem ,StringComparison.OrdinalIgnoreCase))
+					"true".Equals(oem, StringComparison.OrdinalIgnoreCase))
 				{
-					licenseAttributes["OEM"]= "true";
-					licenseAttributes["maxRamUtilization"]= "6442450944";
-					licenseAttributes["maxParallelism"]= "3";
+					licenseAttributes["OEM"] = "true";
+					licenseAttributes["maxRamUtilization"] = "6442450944";
+					licenseAttributes["maxParallelism"] = "3";
 
 				}
 				else
 				{
-					licenseAttributes["OEM"]= "false";
-					licenseAttributes["maxRamUtilization"]= "12884901888";
-					licenseAttributes["maxParallelism"]= "6";
-				}                     
+					licenseAttributes["OEM"] = "false";
+					licenseAttributes["maxRamUtilization"] = "12884901888";
+					licenseAttributes["maxParallelism"] = "6";
+				}
 			}
 			else
 			{
@@ -234,12 +249,12 @@ namespace Raven.Database.Commercial
 			string maxRam;
 			if (licenseAttributes.TryGetValue("maxRamUtilization", out maxRam))
 			{
-				if (string.Equals(maxRam, "unlimited",StringComparison.OrdinalIgnoreCase) == false)
+				if (string.Equals(maxRam, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
 				{
 					MemoryStatistics.MemoryLimit = (int)(long.Parse(maxRam) / 1024 / 1024);
 				}
 			}
-			
+
 			string maxParallel;
 			if (licenseAttributes.TryGetValue("maxParallelism", out maxParallel))
 			{
@@ -254,7 +269,7 @@ namespace Raven.Database.Commercial
 			string claster;
 			if (licenseAttributes.TryGetValue("allowWindowsClustering", out claster))
 			{
-				if(bool.Parse(claster) == false)
+				if (bool.Parse(claster) == false)
 				{
 					if (clasterInspector.IsRavenRunningAsClusterGenericService())
 						throw new InvalidOperationException("Your license does not allow clustering, but RavenDB is running in clustered mode");
@@ -298,9 +313,9 @@ namespace Raven.Database.Commercial
 
 		private void OnMultipleLicensesWereDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
 		{
-			logger.Error("A duplicate license was found at {0} for user {1}. User Id: {2}. Both licenses were disabled!", 
-				clientDiscoveredEventArgs.MachineName, 
-				clientDiscoveredEventArgs.UserName, 
+			logger.Error("A duplicate license was found at {0} for user {1}. User Id: {2}. Both licenses were disabled!",
+				clientDiscoveredEventArgs.MachineName,
+				clientDiscoveredEventArgs.UserName,
 				clientDiscoveredEventArgs.UserId);
 
 			CurrentLicense = new LicensingStatus
@@ -309,8 +324,8 @@ namespace Raven.Database.Commercial
 				Error = true,
 				Message =
 					string.Format("A duplicate license was found at {0} for user {1}. User Id: {2}.", clientDiscoveredEventArgs.MachineName,
-					              clientDiscoveredEventArgs.UserName,
-					              clientDiscoveredEventArgs.UserId)
+								  clientDiscoveredEventArgs.UserName,
+								  clientDiscoveredEventArgs.UserId)
 			};
 		}
 

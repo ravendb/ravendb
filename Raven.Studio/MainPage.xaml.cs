@@ -27,7 +27,8 @@ namespace Raven.Studio
 			HighlightCurrentPage(e.Uri);
 
 			// update the current database here so that back button navigation works correctly with database changes
-			ApplicationModel.Current.Server.Value.SetCurrentDatabase(new UrlParser(e.Uri.OriginalString));
+			if (string.IsNullOrEmpty(e.Uri.OriginalString) == false)
+				ApplicationModel.Current.Server.Value.SetCurrentDatabase(new UrlParser(e.Uri.OriginalString));
 
 			GC.Collect();
 		}

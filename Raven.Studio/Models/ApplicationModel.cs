@@ -204,28 +204,30 @@ namespace Raven.Studio.Models
 
 		public static List<object> ExtractError(Stream stream, HttpWebResponse httpWebResponse, IEnumerable<object> details)
 		{
-			var error = new StreamReader(stream).ReadToEnd();
-
 			var objects = new List<object>(details);
-			try
+			if (stream.CanRead)
 			{
-				var item = RavenJObject.Parse(error);
-				objects.Insert(0, "Server Error:");
-				objects.Insert(1, "-----------------------------------------");
-				objects.Insert(2, item.Value<string>("Url"));
-				objects.Insert(3, item.Value<string>("Error"));
-				objects.Insert(4, "-----------------------------------------");
-				objects.Insert(5, Environment.NewLine);
-				objects.Insert(6, Environment.NewLine);
-			}
-			catch (Exception)
-			{
-				objects.Insert(0, "Server sent:");
-				objects.Insert(1, error);
-				objects.Insert(2, Environment.NewLine);
-				objects.Insert(3, Environment.NewLine);
-			}
+				var error = new StreamReader(stream).ReadToEnd();
 
+				try
+				{
+					var item = RavenJObject.Parse(error);
+					objects.Insert(0, "Server Error:");
+					objects.Insert(1, "-----------------------------------------");
+					objects.Insert(2, item.Value<string>("Url"));
+					objects.Insert(3, item.Value<string>("Error"));
+					objects.Insert(4, "-----------------------------------------");
+					objects.Insert(5, Environment.NewLine);
+					objects.Insert(6, Environment.NewLine);
+				}
+				catch (Exception)
+				{
+					objects.Insert(0, "Server sent:");
+					objects.Insert(1, error);
+					objects.Insert(2, Environment.NewLine);
+					objects.Insert(3, Environment.NewLine);
+				}
+			}
 			if (httpWebResponse.StatusCode == HttpStatusCode.Unauthorized)
 			{
 				objects.Insert(0, "Could not get authorization for this command.");

@@ -34,7 +34,6 @@ namespace Raven.Studio.Models
 		private Observable<string> status;
 
 		public Observable<TaskModel> SelectedTask { get; set; }
-		public Observable<DatabaseDocument> DatabaseDocument { get; set; }
 		public QueueModel<string> RecentDocuments
 		{
 			get
@@ -87,18 +86,18 @@ namespace Raven.Studio.Models
 			if (ApplicationModel.Current != null)
 				ApplicationModel.Current.Server.Value.DocumentStore
 					.AsyncDatabaseCommands
-					.ForSystemDatabase()
-					.GetAsync("Raven/Databases/" + Name)
+					.GetDatabaseConfigurationAsync()
 					.ContinueOnSuccessInTheUIThread(doc =>
 					{
 						if (doc == null)
 							return;
-						DatabaseDocument = new Observable<DatabaseDocument>
-						{
-							Value = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer().Deserialize
-								<DatabaseDocument>(new RavenJTokenReader(doc.DataAsJson))
-						};
+
+						var bundles = doc.Value<RavenJArray>("ActiveBundles").Select(x=>x.Value<string>()).ToArray();
+
+						HasReplication = bundles.Contains("Replication", StringComparer.OrdinalIgnoreCase);
+						HasExpirationBundle = bundles.Contains("DocumentExpiration", StringComparer.OrdinalIgnoreCase);
 						OnPropertyChanged(() => HasReplication);
+						OnPropertyChanged(() => HasExpirationBundle);
 					});
 
             RefreshStatistics();
@@ -106,24 +105,13 @@ namespace Raven.Studio.Models
 
 		public bool HasReplication
 		{
-			get
-			{
-				return DatabaseDocument != null &&
-				       DatabaseDocument.Value.Settings != null &&
-				       DatabaseDocument.Value.Settings.ContainsKey("Raven/ActiveBundles") &&
-				       DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Split(';').Contains("Replication", StringComparer.OrdinalIgnoreCase);
-			}
+			get;set;
+			
 		}
 
 		public bool HasExpirationBundle
 		{
-			get
-			{
-				return DatabaseDocument != null &&
-				       DatabaseDocument.Value.Settings != null &&
-				       DatabaseDocument.Value.Settings.ContainsKey("Raven/ActiveBundles") &&
-				       DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Split(';').Contains("DocumentExpiration", StringComparer.OrdinalIgnoreCase);
-			}
+			get; set;
 		}
 
 		public BindableCollection<TaskModel> Tasks { get; private set; }

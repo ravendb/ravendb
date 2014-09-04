@@ -34,17 +34,36 @@ namespace Raven.Database.Plugins.Builtins
                         var resourceManagerId = item.Data.Value<string>("ResourceManagerId");
                         var recoveryInformation = item.Data.Value<byte[]>("RecoveryInformation");
 
-                        database.InFlightTransactionalState.RecoverTransaction(transactionId, changes);
+                        if(database.InFlightTransactionalState.RecoverTransaction(transactionId, changes) == false)
+							continue;
                    
                         Guid resourceId;
                         if (Guid.TryParse(resourceManagerId, out resourceId) == false || 
                             recoveryInformation == null)
                         {
-                            database.InFlightTransactionalState.Prepare(transactionId, null, null);
+	                        try
+	                        {
+		                        database.InFlightTransactionalState.Prepare(transactionId, null, null);
+	                        }
+	                        catch (Exception e)
+	                        {
+		                        logger.WarnException(
+			                        "Failed to prepare transaction " + transactionId +
+			                        " on database restart, transaction was aborted", e);
+	                        }
                             continue;
                         }
-                        database.InFlightTransactionalState.Prepare(transactionId, resourceId, recoveryInformation);
-
+						try
+						{
+							database.InFlightTransactionalState.Prepare(transactionId, resourceId, recoveryInformation);
+						}
+						catch (Exception e)
+						{
+							logger.WarnException(
+								"Failed to prepare transaction " + transactionId +
+								" on database restart, transaction was aborted", e);
+							continue;
+						}
                         resourceManagerIds.Add(resourceId);
                         recovery.Add(() =>
                         {
@@ -62,7 +81,6 @@ namespace Raven.Database.Plugins.Builtins
                     catch (Exception e)
                     {
                         logger.WarnException("Could not apply recovered transaction " + transactionId +", aborting transaction", e);
-                        throw;
                     }
                 }
 

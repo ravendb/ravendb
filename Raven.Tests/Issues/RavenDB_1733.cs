@@ -19,7 +19,8 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void SmugglerTransformShouldRecognizeNumericPropertiesEvenThoughTheyHaveTheSameNames()
 		{
-			SmugglerJintHelper.Initialize(new SmugglerOptions
+			var helper = new SmugglerJintHelper();
+			helper.Initialize(new SmugglerOptions
 			{
 				TransformScript = emptyTransform
 			});
@@ -30,7 +31,7 @@ namespace Raven.Tests.Issues
 				{"Min", 1}
 			};
 
-			var transformedObject = SmugglerJintHelper.Transform(emptyTransform, testObject);
+			var transformedObject = helper.Transform(emptyTransform, testObject);
 
 			Assert.Equal(testObject["Min"].Type, transformedObject["Min"].Type);
 			Assert.Equal(((RavenJObject)((RavenJArray)testObject["Range"])[0])["Min"].Type, ((RavenJObject)((RavenJArray)transformedObject["Range"])[0])["Min"].Type);

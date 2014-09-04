@@ -158,6 +158,8 @@ namespace Raven.Database.Config
 			FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
 
 			MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
+
+			FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
 		}
 
 		private string GetDefaultWebDir()
@@ -297,6 +299,8 @@ namespace Raven.Database.Config
 		public IntegerSetting MaxRecentTouchesToRemember { get; set; }
 
 		public IntegerSetting MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
+
+		public IntegerSetting FlushIndexToDiskSizeInMb { get; set; }
 
 		public IntegerSetting FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
 	}

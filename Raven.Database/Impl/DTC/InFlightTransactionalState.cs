@@ -195,7 +195,6 @@ namespace Raven.Database.Impl.DTC
 						throw new ConcurrencyException("Document " + key + " is being modified by another transaction: " + existing);
 					});
 
-					item.CommittedEtag = committedEtag;
 					state.changes.Add(item);
 
 					return result.currentEtag;
@@ -309,7 +308,6 @@ namespace Raven.Database.Impl.DTC
 							Data = change.Data == null ? null : (RavenJObject) change.Data.CreateSnapshot(),
 							Delete = change.Delete,
 							Etag = change.Etag,
-							CommittedEtag = change.CommittedEtag,
 							LastModified = change.LastModified,
 							Key = change.Key
 						};
@@ -321,12 +319,12 @@ namespace Raven.Database.Impl.DTC
 						// checked etags on previous PUT/DELETE, so we don't pass it here
 						if (doc.Delete)
 						{
-							databaseDelete(doc.Key, doc.CommittedEtag, null);
+							databaseDelete(doc.Key, null /* etag might have been changed by a touch */, null);
 							documentIdsToTouch.RemoveWhere(x => x.Equals(doc.Key));
 						}
 						else
 						{
-							databasePut(doc.Key, doc.CommittedEtag, doc.Data, doc.Metadata, null);
+							databasePut(doc.Key, null /* etag might have been changed by a touch */, doc.Data, doc.Metadata, null);
 							documentIdsToTouch.Add(doc.Key);
 						}
 					}
@@ -339,19 +337,38 @@ namespace Raven.Database.Impl.DTC
 			}
 		}
 
-	    public void RecoverTransaction(string id, IEnumerable<DocumentInTransactionData> changes)
+	    public bool RecoverTransaction(string id, IEnumerable<DocumentInTransactionData> changes)
 	    {
-            var txInfo = new TransactionInformation
-            {
-                Id = id,
-                Timeout = TimeSpan.FromMinutes(5)
-            };
-	        foreach (var changedDoc in changes)
-	        {
-                changedDoc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
-                changedDoc.Data.EnsureCannotBeChangeAndEnableSnapshotting();
-	            AddToTransactionState(changedDoc.Key, null, txInfo, changedDoc.CommittedEtag, changedDoc);
-	        }
+		    var txInfo = new TransactionInformation
+		    {
+			    Id = id,
+			    Timeout = TimeSpan.FromMinutes(5)
+		    };
+		    if (changes == null)
+		    {
+			    log.Warn("Failed to prepare transaction " + id + " because changes were null, maybe this is a partially committed transaction? Transaction will be rolled back");
+
+			    return false;
+		    }
+		    foreach (var changedDoc in changes)
+		    {
+			    if (changedDoc == null)
+			    {
+				    log.Warn("Failed preparing a document change in transaction " + id + " with a null change, maybe this is partiall committed transaction? Transaction will be rolled back");
+				    return false;
+			    }
+			    
+				changedDoc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
+			    changedDoc.Data.EnsureCannotBeChangeAndEnableSnapshotting();
+
+			    //we explicitly pass a null for the etag here, because we might have calls for TouchDocument()
+			    //that happened during the transaction, which changed the committed etag. That is fine when we are just running
+			    //the transaction, since we can just report the error and abort. But it isn't fine when we recover
+			    //var etag = changedDoc.CommittedEtag;
+			    Etag etag = null;
+			    AddToTransactionState(changedDoc.Key, null, txInfo, etag, changedDoc);
+		    }
+		    return true;
 	    }
 	}
 }

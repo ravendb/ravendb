@@ -1,6 +1,6 @@
-﻿<infrastructure:PageView x:Class="Raven.Studio.Features.Tasks.SmugglerTaskSectionView" 
-						 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
-						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+﻿<infrastructure:PageView x:Class="Raven.Studio.Features.Tasks.SmugglerTaskSectionView"
+						 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 						 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 						 mc:Ignorable="d"
@@ -16,146 +16,146 @@
 						 Title="SmugglerTaskSectionView Page"
 						 d:DataContext="{d:DesignInstance tasks:ExportTaskSectionModel}">
 
-		<controls:TabControl >
-			<controls:TabItem Header="General">
+	<controls:TabControl >
+		<controls:TabItem Header="General">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
+
+				<StackPanel VerticalAlignment="Center">
+					<CheckBox Grid.Column="0"
+								IsChecked="{Binding IncludeDocuments.Value, Mode=TwoWay}"
+								VerticalAlignment="Center" Margin="5" Content=" Include Documents"/>
+
+					<CheckBox Grid.Column="0"
+								IsChecked="{Binding IncludeIndexes.Value, Mode=TwoWay}"
+								VerticalAlignment="Center" Margin="5" Content=" Include Indexes"/>
+
+					<CheckBox Grid.Column="0"
+								IsChecked="{Binding IncludeAttachments.Value, Mode=TwoWay}"
+								VerticalAlignment="Center" Margin="5" Content=" Include Attachments"/>
+
+					<CheckBox Grid.Column="0"
+								IsChecked="{Binding IncludeTransforms.Value, Mode=TwoWay}"
+								VerticalAlignment="Center" Margin="5" Content=" Include Transformers"/>
+
+
+					<CheckBox Grid.Column="0"
+				IsChecked="{Binding RemoveAnalyzers.Value, Mode=TwoWay}"
+				VerticalAlignment="Center" Margin="5" Content=" Remove Analyzers"/>
+
+				</StackPanel>
+			</Grid>
+		</controls:TabItem>
+
+		<controls:TabItem Header="Advanced">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+				</Grid.ColumnDefinitions>
+
 				<Grid>
-					<Grid.RowDefinitions>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="*"/>
-					</Grid.RowDefinitions>
-
-					<StackPanel VerticalAlignment="Center">
-						<CheckBox Grid.Column="0" 
-								  IsChecked="{Binding IncludeDocuments.Value, Mode=TwoWay}" 
-								  VerticalAlignment="Center" Margin="5" Content=" Include Documents"/>
-
-						<CheckBox Grid.Column="0" 
-								  IsChecked="{Binding IncludeIndexes.Value, Mode=TwoWay}" 
-								  VerticalAlignment="Center" Margin="5" Content=" Include Indexes"/>
-
-						<CheckBox Grid.Column="0" 
-								  IsChecked="{Binding IncludeAttachments.Value, Mode=TwoWay}" 
-								  VerticalAlignment="Center" Margin="5" Content=" Include Attachments"/>
-
-						<CheckBox Grid.Column="0" 
-								  IsChecked="{Binding IncludeTransforms.Value, Mode=TwoWay}" 
-								  VerticalAlignment="Center" Margin="5" Content=" Include Transformers"/>
-
-
-                    <CheckBox Grid.Column="0" 
-								  IsChecked="{Binding RemoveAnalyzers.Value, Mode=TwoWay}" 
-								  VerticalAlignment="Center" Margin="5" Content=" Remove Analyzers"/>
-
-                </StackPanel>
-				</Grid>
-			</controls:TabItem>
-
-			<controls:TabItem Header="Advanced">
-				<Grid>
-					<Grid.RowDefinitions>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="*"/>
-					</Grid.RowDefinitions>
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="Auto"/>
 						<ColumnDefinition Width="Auto"/>
-						<ColumnDefinition Width="Auto"/>
-						<ColumnDefinition Width="*"/>
 					</Grid.ColumnDefinitions>
+					<sdk:DataGrid Margin="5"
+									ItemsSource="{Binding Filters}"
+									AutoGenerateColumns="False"
+									MinHeight="56"
+									MaxHeight="156"
+									VerticalAlignment="Top"
+									HorizontalAlignment="Left"
+									VerticalScrollBarVisibility="Visible">
+						<i:Interaction.Behaviors>
+							<behaviors:SelectRowOnRightClickBehavior />
+						</i:Interaction.Behaviors>
+
+						<sdk:DataGrid.Columns>
+							<sdk:DataGridTextColumn Header="Path"
+													Binding="{Binding Path, Mode=TwoWay}"
+													Width="Auto"/>
+							<sdk:DataGridTextColumn Header="Value"
+													Binding="{Binding Values, Mode=TwoWay}"
+													Width="Auto"/>
+							<sdk:DataGridCheckBoxColumn Header="Should Match"
+														Binding="{Binding ShouldMatch, Mode=TwoWay}"
+														Width="Auto"
+														CanUserResize="False"
+														CanUserReorder="False"/>
+							<sdk:DataGridTemplateColumn CanUserReorder="False" CanUserResize="False">
+								<sdk:DataGridTemplateColumn.CellEditingTemplate>
+									<DataTemplate>
+										<Button Style="{StaticResource Style_Button_MouseOverChrome}"
+												Command="{Binding DataContext.DeleteFilter, RelativeSource={RelativeSource AncestorType=infrastructure:PageView}}"
+												CommandParameter="{Binding}"
+												ToolTipService.ToolTip="Delete Database Access">
+											<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
+										</Button>
+									</DataTemplate>
+								</sdk:DataGridTemplateColumn.CellEditingTemplate>
+							</sdk:DataGridTemplateColumn>
+						</sdk:DataGrid.Columns>
+					</sdk:DataGrid>
+					<Button Style="{StaticResource Style_Button_MouseOverChrome}"
+							Grid.Column="1"
+							HorizontalAlignment="Left"
+							VerticalAlignment="Top"
+							Margin="0,9,0,0"
+							Command="{Binding DataContext.AddFilter, RelativeSource={RelativeSource AncestorType=Grid}}"
+							ToolTipService.ToolTip="Add Filter">
+						<Image Source="{StaticResource Image_Add_Tiny}" Width="12" Height="12"/>
+					</Button>
+				</Grid>
+				<StackPanel Margin="5" Grid.Column="1">
+
+					<CheckBox Grid.Column="0"
+								IsChecked="{Binding Options.Value.ShouldExcludeExpired, Mode=TwoWay}"
+								VerticalAlignment="Center" Margin="5" Content="Exclude Expired Documents"/>
 
 					<Grid>
 						<Grid.ColumnDefinitions>
 							<ColumnDefinition Width="Auto"/>
 							<ColumnDefinition Width="Auto"/>
 						</Grid.ColumnDefinitions>
-						<sdk:DataGrid Margin="5"
-									  ItemsSource="{Binding Filters}"
-									  AutoGenerateColumns="False"
-									  MinHeight="56"
-									  MaxHeight="156"
-									  VerticalAlignment="Top"
-									  HorizontalAlignment="Left"
-									  VerticalScrollBarVisibility="Visible">
-							<i:Interaction.Behaviors>
-								<behaviors:SelectRowOnRightClickBehavior />
-							</i:Interaction.Behaviors>
-
-							<sdk:DataGrid.Columns>
-								<sdk:DataGridTextColumn Header="Path"
-														Binding="{Binding Path, Mode=TwoWay}"
-														Width="Auto"/>
-								<sdk:DataGridTextColumn Header="Value"
-														Binding="{Binding Values, Mode=TwoWay}"
-														Width="Auto"/>
-								<sdk:DataGridCheckBoxColumn Header="Should Match"
-															Binding="{Binding ShouldMatch, Mode=TwoWay}" 
-															Width="Auto" 
-															CanUserResize="False"
-															CanUserReorder="False"/>
-								<sdk:DataGridTemplateColumn CanUserReorder="False" CanUserResize="False">
-									<sdk:DataGridTemplateColumn.CellEditingTemplate>
-										<DataTemplate>
-											<Button Style="{StaticResource Style_Button_MouseOverChrome}"
-													Command="{Binding DataContext.DeleteFilter, RelativeSource={RelativeSource AncestorType=infrastructure:PageView}}"
-													CommandParameter="{Binding}"
-													ToolTipService.ToolTip="Delete Database Access">
-												<Image Source="{StaticResource Image_Delete_Tiny}" Width="12" Height="12"/>
-											</Button>
-										</DataTemplate>
-									</sdk:DataGridTemplateColumn.CellEditingTemplate>
-								</sdk:DataGridTemplateColumn>
-							</sdk:DataGrid.Columns>
-						</sdk:DataGrid>
-						<Button Style="{StaticResource Style_Button_MouseOverChrome}"
-								Grid.Column="1" 
-								HorizontalAlignment="Left" 
-								VerticalAlignment="Top"
-								Margin="0,9,0,0"
-								Command="{Binding DataContext.AddFilter, RelativeSource={RelativeSource AncestorType=Grid}}" 
-								ToolTipService.ToolTip="Add Filter">
-							<Image Source="{StaticResource Image_Add_Tiny}" Width="12" Height="12"/>
-						</Button>
+						<TextBlock Grid.Column="0" Text="Batch Size: " VerticalAlignment="Center" Margin="5"/>
+						<toolkit:NumericUpDown Grid.Column="1" Value="{Binding Options.Value.BatchSize, Mode=TwoWay}" Maximum="65536" VerticalAlignment="Center" />
 					</Grid>
-					<StackPanel Margin="5" Grid.Column="1">
+				</StackPanel>
 
-							<CheckBox Grid.Column="0" 
-									  IsChecked="{Binding Options.Value.ShouldExcludeExpired, Mode=TwoWay}" 
-									  VerticalAlignment="Center" Margin="5" Content="Exclude Expired Documents"/>
+				<Grid Grid.Column="2" Margin="5" x:Name="CollectionGrid">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
 
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-							</Grid.ColumnDefinitions>
-							<TextBlock Grid.Column="0" Text="Batch Size: " VerticalAlignment="Center" Margin="5"/>
-							<toolkit:NumericUpDown Grid.Column="1" Value="{Binding Options.Value.BatchSize, Mode=TwoWay}" Maximum="65536" VerticalAlignment="Center" />
-						</Grid>
-					</StackPanel>
+					<CheckBox IsChecked="{Binding UseCollections.Value, Mode=TwoWay}"
+								Margin="5"
+								Content="Include only documents from specific collections (from the list below)"
+								VerticalAlignment="Center"/>
 
-					<Grid Grid.Column="2" Margin="5" x:Name="CollectionGrid">
-						<Grid.RowDefinitions>
-							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="Auto"/>
-						</Grid.RowDefinitions>
-						
-						<CheckBox IsChecked="{Binding UseCollections.Value, Mode=TwoWay}"
-								  Margin="5"
-								  Content="Include only documents from specific collections (from the list below)"
-								  VerticalAlignment="Center"/>
-						
-						<ListBox ItemsSource="{Binding Collections}"
-								 MaxHeight="156"
-								 Grid.Row="1">
-							<ListBox.ItemTemplate>
-								<DataTemplate>
-									<CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" Content="{Binding Name}"
-											  IsEnabled="{Binding DataContext.UseCollections.Value, ElementName=CollectionGrid}"/>
-								</DataTemplate>
-							</ListBox.ItemTemplate>
-						</ListBox>
-					</Grid>
+					<ListBox ItemsSource="{Binding Collections}"
+							 MaxHeight="156"
+							 Grid.Row="1">
+						<ListBox.ItemTemplate>
+							<DataTemplate>
+								<CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" Content="{Binding Name}"
+											IsEnabled="{Binding DataContext.UseCollections.Value, ElementName=CollectionGrid}"/>
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+					</ListBox>
+				</Grid>
 
 				<StackPanel Orientation="Horizontal" Grid.Row="1" Grid.ColumnSpan="4" >
 					<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
@@ -166,7 +166,8 @@
 										<ContentControl Style="{StaticResource Style_InfoToolTip}">
 											<RichTextBlock MaxWidth="370" Margin="5">
 												<Paragraph>Scripts are written in JScript.</Paragraph>
-												<Paragraph>Example:
+												<Paragraph>
+													Example:
 													<LineBreak/>
 													<Span FontFamily="Consolas">
 														<LineBreak/>
@@ -193,12 +194,15 @@
 						</i:Interaction.Behaviors>
 					</Image>
 
-					<TextBlock Text="Transform Script:" Style="{StaticResource Style_TextBlock_PagePartHeader}"></TextBlock>
+					<TextBlock  Text="Transform Script:" Style="{StaticResource Style_TextBlock_PagePartHeader}"></TextBlock>
 
 				</StackPanel>
-				<Editors:JsonEditor  Grid.Row="2" Grid.ColumnSpan="4"  BoundDocument="{Binding Script}" Margin="5"/>
-				</Grid>
-			
-			</controls:TabItem>
-		</controls:TabControl>
+				<TextBlock  Grid.Row="2" Grid.ColumnSpan="4"  Margin="5">
+					This feature cannot work from withing the Silverlight studio due to technical limitations. 
+					You can use this feature from the Raven.Smuggler.exe command line.
+				</TextBlock>
+			</Grid>
+
+		</controls:TabItem>
+	</controls:TabControl>
 </infrastructure:PageView>

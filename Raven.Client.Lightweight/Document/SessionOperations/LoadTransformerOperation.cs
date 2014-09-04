@@ -10,11 +10,11 @@ namespace Raven.Client.Document.SessionOperations
 {
 	public class LoadTransformerOperation
 	{
-		private readonly DocumentSession documentSession;
+		private readonly InMemoryDocumentSessionOperations documentSession;
 		private readonly string transformer;
 		private readonly string[] ids;
 
-		public LoadTransformerOperation(DocumentSession documentSession, string transformer, string[] ids)
+		public LoadTransformerOperation(InMemoryDocumentSessionOperations documentSession, string transformer, string[] ids)
 		{
 			this.documentSession = documentSession;
 			this.transformer = transformer;

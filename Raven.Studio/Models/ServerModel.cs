@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -92,6 +93,9 @@ namespace Raven.Studio.Models
 			var apiKey = urlParser.GetQueryParam("api-key");
 			if (string.IsNullOrEmpty(apiKey) == false)
 				documentStore.ApiKey = apiKey;
+			var database = urlParser.GetQueryParam("database");
+			if (string.IsNullOrEmpty(database) == false)
+				documentStore.DefaultDatabase = database;
 
 			documentStore.Initialize();
 
@@ -113,7 +117,7 @@ namespace Raven.Studio.Models
 
 			defaultDatabase = new[] { Constants.SystemDatabase };
 			Databases.Set(defaultDatabase);
-			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
+			SetCurrentDatabase(urlParser, firstTime: true);
 
 			//DisplayRawUrl();
 			DisplayBuildNumber();
@@ -126,15 +130,15 @@ namespace Raven.Studio.Models
 			if (SelectedDatabase.Value == null)
 				return;
 			SelectedDatabase.Value
-			                .AsyncDatabaseCommands
-			                .CreateRequest(string.Format("/debug/user-info").NoCache(), "GET")
-			                .ReadResponseJsonAsync()
-			                .ContinueOnSuccessInTheUIThread(doc =>
-			                {
-				                UserInfoSet = true;
-				                UserInfo = DocumentStore.Conventions.CreateSerializer()
-				                                           .Deserialize<UserInfo>(new RavenJTokenReader(doc));
-			                });
+							.AsyncDatabaseCommands
+							.CreateRequest(string.Format("/debug/user-info").NoCache(), "GET")
+							.ReadResponseJsonAsync()
+							.ContinueOnSuccessInTheUIThread(doc =>
+							{
+								UserInfoSet = true;
+								UserInfo = DocumentStore.Conventions.CreateSerializer()
+														   .Deserialize<UserInfo>(new RavenJTokenReader(doc));
+							});
 		}
 
 		public bool CreateNewDatabase { get; set; }
@@ -156,17 +160,17 @@ namespace Raven.Studio.Models
 										if (UserInfo != null && UserInfo.IsAdminGlobal)
 										{
 											ApplicationModel.Current.Server.Value.DocumentStore
-											                .AsyncDatabaseCommands
-											                .ForSystemDatabase()
-											                .GetAsync("Raven/StudioConfig")
-											                .ContinueOnSuccessInTheUIThread(doc =>
-											                {
-												                if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
-												                {
-													                if (doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
-														                UrlUtil.Navigate("/documents");
-												                }
-											                });
+															.AsyncDatabaseCommands
+															.ForSystemDatabase()
+															.GetAsync("Raven/StudioConfig")
+															.ContinueOnSuccessInTheUIThread(doc =>
+															{
+																if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+																{
+																	if (doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
+																		UrlUtil.Navigate("/documents");
+																}
+															});
 										}
 
 										var url = new UrlParser(UrlUtil.Url);
@@ -229,7 +233,7 @@ namespace Raven.Studio.Models
 			}.Uri.ToString();
 		}
 
-		public void SetCurrentDatabase(UrlParser urlParser)
+		public void SetCurrentDatabase(UrlParser urlParser, bool firstTime = false)
 		{
 			var databaseName = urlParser.GetQueryParam("database");
 
@@ -261,9 +265,17 @@ namespace Raven.Studio.Models
 					if (httpWebResponse == null)
 						return false;
 
+					if (firstTime && 
+						httpWebResponse.StatusCode == HttpStatusCode.Forbidden &&
+						databaseName == null)
+					{
+						return true; // we won't show error in this case
+					}
+
 					if (httpWebResponse.StatusCode != HttpStatusCode.ServiceUnavailable)
 						return false;
 
+					
 					ApplicationModel.Current.Notifications.Add(new Notification("Database " + databaseName + " does not exist.", NotificationLevel.Error, webException));
 
 					return true;
@@ -280,10 +292,13 @@ namespace Raven.Studio.Models
 		private void DisplayLicenseStatus()
 		{
 			SelectedDatabase.Value.AsyncDatabaseCommands.GetLicenseStatusAsync()
-				.ContinueOnSuccessInTheUIThread(x =>
+				.ContinueOnUIThread(x =>
 				{
-					License.Value = x;
-					if (x.Error == false)
+					if (x.Exception != null)
+						return;
+
+					License.Value = x.Result;
+					if (x.Result.Error == false)
 						return;
 					new ShowLicensingStatusCommand().Execute(x);
 				})
