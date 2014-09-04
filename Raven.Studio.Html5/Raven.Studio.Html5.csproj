@@ -323,6 +323,7 @@
     <TypeScriptCompile Include="App\commands\getServerPrefixForHiLoCommand.ts" />
     <TypeScriptCompile Include="App\commands\getInfoPackage.ts" />
     <TypeScriptCompile Include="App\commands\adminLogsConfigureCommand.ts" />
+    <TypeScriptCompile Include="App\commands\compactDatabaseCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
@@ -380,12 +381,14 @@
     <TypeScriptCompile Include="App\viewmodels\adminLogsConfigureDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\upgrade.ts" />
     <TypeScriptCompile Include="App\viewmodels\adminLogs.ts" />
+    <TypeScriptCompile Include="App\viewmodels\compactDatabase.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\adminSettings.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\confirmationDialog.html" />
+    <Content Include="App\views\compactDatabase.html" />
     <Content Include="App\views\copyTransformerDialog.html" />
     <Content Include="App\views\indexMergeSuggestions.html" />
     <Content Include="App\views\adminLogs.html" />

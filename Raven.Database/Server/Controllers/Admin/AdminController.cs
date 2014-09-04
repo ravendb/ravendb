@@ -34,6 +34,8 @@ using Raven.Json.Linq;
 
 using Voron.Impl.Backup;
 
+using Raven.Client.Extensions;
+
 namespace Raven.Database.Server.Controllers.Admin
 {
 	[RoutePrefix("")]
@@ -240,11 +242,8 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpPost]
 		[Route("admin/compact")]
-		[Route("databases/{databaseName}/admin/compact")]
 		public HttpResponseMessage Compact()
 		{
-			EnsureSystemDatabase();
-
 			var db = InnerRequest.RequestUri.ParseQueryString()["database"];
 			if (string.IsNullOrWhiteSpace(db))
 				return GetMessageWithString("Compact request requires a valid database parameter", HttpStatusCode.BadRequest);
@@ -253,9 +252,16 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (configuration == null)
 				return GetMessageWithString("No database named: " + db, HttpStatusCode.NotFound);
 
-			DatabasesLandlord.Lock(db, () => DatabasesLandlord.SystemDatabase.TransactionalStorage.Compact(configuration));
-
-			return GetEmptyMessage();
+            try
+            {
+                var targetDb = DatabasesLandlord.GetDatabaseInternal(db).ResultUnwrap();
+                DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration));
+                return GetEmptyMessage();
+            }
+            catch (NotSupportedException e)
+            {
+                return GetMessageWithString(e.Message, HttpStatusCode.BadRequest);
+            }
 		}
 
 		[HttpGet]
