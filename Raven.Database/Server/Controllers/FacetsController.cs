@@ -93,6 +93,9 @@ namespace Raven.Database.Server.Controllers
                 facetedQueries.Select(
                     facetedQuery =>
                     {
+						if (Database.IndexDefinitionStorage.Contains(facetedQuery.IndexName) == false)
+							throw new IndexDoesNotExistsException(string.Format("Index '{0}' does not exist.", facetedQuery.IndexName));
+
                         if (facetedQuery.FacetSetupDoc != null)
                             return Database.ExecuteGetTermsQuery(facetedQuery.IndexName, facetedQuery.Query, facetedQuery.FacetSetupDoc,
                                 facetedQuery.PageStart, facetedQuery.PageSize);
@@ -109,6 +112,9 @@ namespace Raven.Database.Server.Controllers
 
 		private Task<HttpResponseMessage> ExecuteFacetsQuery(string index, List<Facet> facets, Etag indexEtag)
         {
+			if (Database.IndexDefinitionStorage.Contains(index) == false)
+				return GetMessageWithStringAsTask(string.Format("Index '{0}' does not exist.", index), HttpStatusCode.BadRequest);
+
             var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
             var facetStart = GetFacetStart();
             var facetPageSize = GetFacetPageSize();
