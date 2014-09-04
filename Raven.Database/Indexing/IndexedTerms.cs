@@ -240,7 +240,7 @@ namespace Raven.Database.Indexing
 
         public static RavenJObject[] ReadAllEntriesFromIndex(IndexReader reader)
         {
-            if (reader.MaxDoc > 128 * 1024)
+            if (reader.MaxDoc > 512 * 1024)
             {
                 throw new InvalidOperationException("Refusing to extract all index entires from an index with " + reader.MaxDoc +
                                                     " entries, because of the probable time / memory costs associated with that." +
