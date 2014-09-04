@@ -276,10 +276,10 @@ class editDocument extends viewModelBase {
     updateNewlineLayoutInDocument(unescapeNewline) {
         var dirtyFlagValue = this.dirtyFlag().isDirty();
         if (unescapeNewline == true) {
-            this.documentText(this.unescapeNewlinesInTextFields(this.documentText()));
+            this.documentText(this.unescapeNewlinesAndTabsInTextFields(this.documentText()));
             this.docEditor.getSession().setMode('ace/mode/json_newline_friendly');
         } else {
-            this.documentText(this.escapeNewlinesInTextFields(this.documentText()));
+            this.documentText(this.escapeNewlinesAndTabsInTextFields(this.documentText()));
             this.docEditor.getSession().setMode('ace/mode/json');
             this.formatDocument();
         }
@@ -351,7 +351,7 @@ class editDocument extends viewModelBase {
         messagePublisher.reportError("Could not find " + docId + " document");
     }
 
-    escapeNewlinesInTextFields(str: string) :any {
+    escapeNewlinesAndTabsInTextFields(str: string) :any {
         var AceDocumentClass = require("ace/document").Document;
         var AceEditSessionClass = require("ace/edit_session").EditSession;
         var AceJSONMode = require("ace/mode/json_newline_friendly").Mode;
@@ -376,7 +376,11 @@ class editDocument extends viewModelBase {
                     text += "\\r\\n";
                 }
 
-                var newTokenValue = curToken.value.replace(/(\\n|\\r\\n)/g, '\\\\r\\\\n').replace(/(\n|\r\n)/g, '\\r\\n');
+                var newTokenValue = curToken.value
+                    .replace(/(\\n|\\r\\n)/g, '\\\\r\\\\n')
+                    .replace(/(\n|\r\n)/g, '\\r\\n')
+                    .replace(/(\\t)/g, '\\\\t')
+                    .replace(/(\t)/g, '\\t');
                 text += newTokenValue;
                 //text += curToken.value.replace(/(\n|\r\n)/g, '\\r\\n');
             } else {
@@ -407,7 +411,7 @@ class editDocument extends viewModelBase {
         }
     }
 
-    unescapeNewlinesInTextFields(str: string): any {
+    unescapeNewlinesAndTabsInTextFields(str: string): any {
         var AceDocumentClass = require("ace/document").Document;
         var AceEditSessionClass = require("ace/edit_session").EditSession;
         var AceJSONMode = require("ace/mode/json").Mode;
@@ -447,11 +451,15 @@ class editDocument extends viewModelBase {
                     var newTextPrefix = str.substring(0, stringTokenStartIndexInSourceText);
                     var newTextSuffix = str.substring(stringTokenEndIndexInSourceText, str.length);
                     var newStringTokenValue = str.substring(stringTokenStartIndexInSourceText, stringTokenEndIndexInSourceText)
-                        .replace(/(\\\\n|\\\\r\\\\n|\\n|\\r\\n)/g, (x) => {
+                        .replace(/(\\\\n|\\\\r\\\\n|\\n|\\r\\n|\\t|\\\\t)/g, (x) => {
                         if (x == "\\\\n" || x == "\\\\r\\\\n") {
                             return "\\r\\n";
-                        } else if (x=="\\n" || x== "\\r\\n") {
+                        } else if (x == "\\n" || x == "\\r\\n") {
                             return "\r\n";
+                        } else if (x == "\\t") {
+                            return "\t";
+                        } else if (x == "\\\\t") {
+                            return "\\t";
                         } else {
                             return "\r\n";
                         }
@@ -486,7 +494,7 @@ class editDocument extends viewModelBase {
             try {
                 var updatedDto;
                 if (this.isNewLineFriendlyMode() === true) {
-                    updatedDto = JSON.parse(this.escapeNewlinesInTextFields(this.documentText()));
+                    updatedDto = JSON.parse(this.escapeNewlinesAndTabsInTextFields(this.documentText()));
                 } else {
                     updatedDto = JSON.parse(this.documentText());
                 }
