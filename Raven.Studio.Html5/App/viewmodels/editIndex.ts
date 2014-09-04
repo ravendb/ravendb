@@ -29,7 +29,6 @@ class editIndex extends viewModelBase {
     priorityFriendlyName: KnockoutComputed<string>;
     editedIndex = ko.observable<indexDefinition>();
     hasExistingReduce: KnockoutComputed<string>;
-    hasExistingTransform: KnockoutComputed<string>;
     hasMultipleMaps: KnockoutComputed<boolean>;
     termsUrl = ko.observable<string>();
     queryUrl = ko.observable<string>();
@@ -59,7 +58,6 @@ class editIndex extends viewModelBase {
         this.priorityFriendlyName = ko.computed(() => this.getPriorityFriendlyName());
         this.priorityLabel = ko.computed(() => this.priorityFriendlyName() ? "Priority: " + this.priorityFriendlyName() : "Priority");
         this.hasExistingReduce = ko.computed(() => this.editedIndex() && this.editedIndex().reduce());
-        this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
         this.indexName = ko.computed(() => (!!this.editedIndex() && this.isEditingExistingIndex()) ? this.editedIndex().name() : "New Index");
         this.currentIndexName = ko.computed(() => this.isEditingExistingIndex() ? this.editedIndex().name() : (this.mergeSuggestion() != null) ? "Merged Index" : "New Index");
@@ -128,13 +126,12 @@ class editIndex extends viewModelBase {
     attached() {
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
-        this.addTransformHelpPopover();
         this.addScriptsLabelPopover();
     }
 
     private initializeDirtyFlag() {
         var indexDef: indexDefinition = this.editedIndex();
-        var checkedFieldsArray = [this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.transformResults, indexDef.numOfLuceneFields, indexDef.numOfSpatialFields, indexDef.maxIndexOutputsPerDocument];
+        var checkedFieldsArray = [this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.numOfLuceneFields, indexDef.numOfSpatialFields, indexDef.maxIndexOutputsPerDocument];
 
         indexDef.luceneFields().forEach((lf: luceneField) => {
             checkedFieldsArray.push(lf.name);
@@ -188,14 +185,6 @@ class editIndex extends viewModelBase {
             html: true,
             trigger: 'hover',
             content: 'The Reduce function consolidates documents from the Maps stage into a smaller set of documents. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> result <span class="code-keyword">in</span> results<br/><span class="code-keyword">group</span> result <span class="code-keyword">by new</span> { result.RegionId, result.Date } into g<br/><span class="code-keyword">select new</span><br/>{<br/>  Date = g.Key.Date,<br/>  RegionId = g.Key.RegionId,<br/>  Amount = g.Sum(x => x.Amount)<br/>}</pre>The objects produced by the Reduce function should have the same fields as the inputs.',
-        });
-    }
-
-    addTransformHelpPopover() {
-        $("#indexTransformLabel").popover({
-            html: true,
-            trigger: 'hover',
-            content: '<span class="text-danger">Deprecated.</span> Index Transform has been replaced with <strong>Result Transformers</strong>.<br/><br/>The Transform function allows you to change the shape of individual result documents before the server returns them. It uses LINQ query syntax.<br/><br/>Example:<pre><span class="code-keyword">from</span> order <span class="code-keyword">in</span> orders<br/><span class="code-keyword">let</span> region = Database.Load(result.RegionId)<br/><span class="code-keyword">select new</span><br/>{<br/>   result.Date,<br/>   result.Amount,<br/>   Region = region.Name,<br/>   Manager = region.Manager<br/>}</pre>'
         });
     }
 
@@ -368,13 +357,6 @@ class editIndex extends viewModelBase {
         }
     }
 
-    addTransform() {
-        if (!this.hasExistingTransform()) {
-            this.editedIndex().transformResults(" ");
-            this.addTransformHelpPopover();
-        }
-    }
-
     addField() {
         var field = new luceneField("");
         field.indexFieldNames = this.editedIndex().fields();
@@ -398,10 +380,6 @@ class editIndex extends viewModelBase {
 
     removeReduce() {
         this.editedIndex().reduce(null);
-    }
-
-    removeTransform() {
-        this.editedIndex().transformResults(null);
     }
 
     removeLuceneField(fieldIndex: number) {

@@ -132,6 +132,61 @@ namespace Raven.Tests.Security.OAuth
 			}
 		}
 
+		[Fact]
+		public void CanAuthAsAdminAgainstTenantDbUsingLazyOperations()
+		{
+			using (var server = GetNewServer(enableAuthentication: true))
+			{
+
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/sysadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
+				{
+					Name = "sysadmin",
+					Secret = "ThisIsMySecret",
+					Enabled = true,
+					Databases = new List<ResourceAccess>
+				{
+					new ResourceAccess{TenantId = Constants.SystemDatabase, Admin = true}, 
+				}
+				}), new RavenJObject(), null);
+
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/dbadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
+				{
+					Name = "dbadmin",
+					Secret = "ThisIsMySecret",
+					Enabled = true,
+					Databases = new List<ResourceAccess>
+				{
+					new ResourceAccess{TenantId = "test", Admin = true}, 
+				}
+				}), new RavenJObject(), null);
+
+				var serverUrl = server.SystemDatabase.ServerUrl;
+				using (var store = new DocumentStore
+				{
+					Url = serverUrl,
+					ApiKey = "sysadmin/ThisIsMySecret",
+					Conventions = { FailoverBehavior = FailoverBehavior.FailImmediately }
+				}.Initialize())
+				{
+					store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("test");
+				}
+
+				using (var store = new DocumentStore
+				{
+					Url = serverUrl,
+					ApiKey = "dbadmin/ThisIsMySecret"
+				}.Initialize())
+				{
+					using (var x = store.OpenSession("test"))
+					{
+						x.Advanced.Lazily.Load<dynamic>("users/1");
+						x.Advanced.Lazily.Load<dynamic>("users/2");
+						x.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
+					}
+				}
+			}
+		}
+
 		class TestClass
 		{
 			public string Name { get; set; }

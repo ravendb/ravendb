@@ -29,7 +29,6 @@ class queryIndexCommand extends commandBase {
             start: this.skip,
             pageSize: this.take,
             sort: this.sorts.map(s => s.toQuerySortString()),
-            skipTransformResults: true,
             fetch: this.showFields ? "__all_fields" : undefined,
             debug: this.indexEntries ? "entries" : undefined,
             operator: this.useAndOperator ? "AND" : undefined
@@ -44,7 +43,6 @@ class queryIndexCommand extends commandBase {
         var urlArgs = this.urlEncodeArgs({
             query: this.queryText ? this.queryText : undefined,
             sort: this.sorts.map(s => s.toQuerySortString()),
-            skipTransformResults: true,
             fetch: this.showFields ? "__all_fields" : undefined,
             debug: this.indexEntries ? "entries" : undefined,
             operator: this.useAndOperator ? "AND" : undefined,

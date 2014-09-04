@@ -317,11 +317,11 @@ class extensions {
         }
 
         String.prototype.toHumanizedDate = function () {
-            var dateMoment = moment(this);
+            var dateMoment = moment(this.toString());
             if (dateMoment.isValid()) {
                 var now = moment();
                 var agoInMs = dateMoment.diff(now);
-                return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MMMM Do YYYY, h:mma)");
+                return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
             }
 
             return this;

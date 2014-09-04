@@ -10,11 +10,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -259,18 +257,30 @@ namespace Raven.Database.Actions
 
             TransactionalStorage.Batch(actions =>
             {
-                definition.IndexId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
-                IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
+	            var maxId = 0;
+	            if (Database.IndexStorage.Indexes.Length > 0)
+	            {
+		            maxId = Database.IndexStorage.Indexes.Max();
+	            }
+	            definition.IndexId = (int) Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
+	            if (definition.IndexId <= maxId)
+	            {
+		            actions.General.SetIdentityValue("IndexId", maxId + 1);
+					definition.IndexId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
+	            }
 
-                // this has to happen in this fashion so we will expose the in memory status after the commit, but 
-                // before the rest of the world is notified about this.
 
-                IndexDefinitionStorage.CreateAndPersistIndex(definition);
-                Database.IndexStorage.CreateIndexImplementation(definition);
+	            IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
-                InvokeSuggestionIndexing(name, definition);
+	            // this has to happen in this fashion so we will expose the in memory status after the commit, but 
+	            // before the rest of the world is notified about this.
 
-                actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
+	            IndexDefinitionStorage.CreateAndPersistIndex(definition);
+	            Database.IndexStorage.CreateIndexImplementation(definition);
+
+	            InvokeSuggestionIndexing(name, definition);
+
+	            actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
             });
 
             if (name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
@@ -336,17 +346,11 @@ namespace Raven.Database.Actions
             var docsToIndex = new List<JsonDocument>();
             TransactionalStorage.Batch(actions =>
             {
-                var countOfDocuments = actions.Documents.GetDocumentsCount();
-
                 var tags = generator.ForEntityNames.Select(entityName => "Tag:[[" + entityName + "]]").ToList();
 
                 var query = string.Join(" OR ", tags);
-                var stats =
-                    actions.Indexing.GetIndexStats(
-                        IndexDefinitionStorage.GetIndexDefinition(DocumentsByEntityNameIndex).IndexId);
 
-                var lastIndexedEtagByRavenDocumentsByEntityName = stats.LastIndexedEtag;
-                var lastModifiedByRavenDocumentsByEntityName = stats.LastIndexedTimestamp;
+	            JsonDocument highestByEtag = null;
 
                 var cts = new CancellationTokenSource();
                 using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
@@ -390,22 +394,27 @@ namespace Raven.Database.Actions
                         var lastModified = DateTime.Parse(metadata.Value<string>(Constants.LastModified));
                         document.Remove(Constants.Metadata);
 
-                        docsToIndex.Add(new JsonDocument
-                        {
-                            DataAsJson = document,
-                            Etag = etag,
-                            Key = key,
-                            LastModified = lastModified,
-                            SkipDeleteFromIndex = true,
-                            Metadata = metadata
-                        });
+	                    var doc = new JsonDocument
+	                    {
+		                    DataAsJson = document,
+		                    Etag = etag,
+		                    Key = key,
+		                    LastModified = lastModified,
+		                    SkipDeleteFromIndex = true,
+		                    Metadata = metadata
+	                    };
+
+	                    docsToIndex.Add(doc);
+
+	                    if (highestByEtag == null || doc.Etag.CompareTo(highestByEtag.Etag) > 0)
+		                    highestByEtag = doc;
                     });
                 }
 
-                result = new PrecomputedIndexingBatch
+	            result = new PrecomputedIndexingBatch
                 {
-                    LastIndexed = lastIndexedEtagByRavenDocumentsByEntityName,
-                    LastModified = lastModifiedByRavenDocumentsByEntityName,
+                    LastIndexed = highestByEtag.Etag,
+                    LastModified = highestByEtag.LastModified.Value,
                     Documents = docsToIndex,
                     Index = index
                 };

@@ -237,8 +237,8 @@
     <Compile Include="Server\Controllers\HttpTraceController.cs" />
     <Compile Include="Server\Connections\ILogsTransport.cs" />
     <Compile Include="Server\Connections\LogPushContent.cs" />
-    <Compile Include="Server\Connections\OnDemandLogConnectionState.cs" />
-    <Compile Include="Server\Connections\OnDemandLogTarget.cs" />
+    <Compile Include="Server\Connections\AdminLogsConnectionState.cs" />
+    <Compile Include="Server\Connections\AdminLogsTarget.cs" />
     <Compile Include="Server\RavenFS\Synchronization\ConflictResolvedInFavourOfCurrentVersion.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\AbstractFileSynchronizationConflictResolver.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LatestFileSynchronizationConflictResolver.cs" />
@@ -670,9 +670,9 @@
     <Compile Include="Indexing\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\BackgroundTaskExecuter.cs" />
-    <Compile Include="Indexing\IIndexingScheduler.cs" />
+    <Compile Include="Indexing\IIndexingClassifier.cs" />
     <Compile Include="Indexing\IndexBatchSizeAutoTuner.cs" />
-    <Compile Include="Indexing\FairIndexingSchedulerWithOlderIndexesBias.cs" />
+    <Compile Include="Indexing\DefaultIndexingClassifier.cs" />
     <Compile Include="Indexing\IndexingWorkStats.cs" />
     <Compile Include="Indexing\IndexToWorkOn.cs" />
     <Compile Include="Indexing\IntersectionCollector.cs" />

@@ -95,6 +95,23 @@ namespace Raven.Database.Prefetching
 			return true;
 		}
 
+		public bool CanUsePrefetcherToLoadFrom(Etag fromEtag)
+		{
+			var nextEtagToIndex = GetNextDocEtag(fromEtag);
+			var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
+
+			if (firstEtagInQueue == null) // queue is empty, let it use this prefetcher
+				return true;
+
+			if (nextEtagToIndex == firstEtagInQueue) // docs for requested etag are already in queue
+				return true;
+
+			if (CanLoadDocumentsFromFutureBatches(nextEtagToIndex))
+				return true;
+
+			return false;
+		}
+
 		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Etag etag)
 		{
 			var result = new List<JsonDocument>();
@@ -175,18 +192,30 @@ namespace Raven.Database.Prefetching
 			return prefetchingQueue.Clone();
 		}
 
-		private bool TryLoadDocumentsFromFutureBatches(Etag nextDocEtag)
+		private bool CanLoadDocumentsFromFutureBatches(Etag nextDocEtag)
 		{
 			if (context.Configuration.DisableDocumentPreFetching)
 				return false;
 
+			FutureIndexBatch batch;
+			if (futureIndexBatches.TryGetValue(nextDocEtag, out batch) == false)
+				return false;
+
+			if (Task.CurrentId == batch.Task.Id)
+				return false;
+
+			return true;
+		}
+
+		private bool TryLoadDocumentsFromFutureBatches(Etag nextDocEtag)
+		{
 			try
 			{
-				FutureIndexBatch nextBatch;
-				if (futureIndexBatches.TryRemove(nextDocEtag, out nextBatch) == false)
+				if (CanLoadDocumentsFromFutureBatches(nextDocEtag) == false)
 					return false;
 
-				if (Task.CurrentId == nextBatch.Task.Id)
+				FutureIndexBatch nextBatch;
+				if (futureIndexBatches.TryRemove(nextDocEtag, out nextBatch) == false) // here we need to remove the batch
 					return false;
 
 				foreach (var jsonDocument in nextBatch.Task.Result)

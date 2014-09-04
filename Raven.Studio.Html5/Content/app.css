@@ -7073,21 +7073,36 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   text-decoration: underline !important;
   font-weight: bold;
 }
-.indexes-container {
+.indexes-container,
+#index-merge-suggestions {
   margin-top: 10px;
 }
-.indexes-container .index-group .panel-heading {
+.indexes-container .index-group .panel-heading,
+#index-merge-suggestions .index-group .panel-heading {
   padding-top: 0;
 }
-.indexes-container .index-group .panel-heading .panel-title {
+.indexes-container .index-group .panel-heading .panel-title,
+#index-merge-suggestions .index-group .panel-heading .panel-title {
   padding-top: 15px;
 }
-.indexes-container .index-group .panel-heading .indexGroup-actions-container {
+.indexes-container .index-group .panel-heading .indexGroup-actions-container,
+#index-merge-suggestions .index-group .panel-heading .indexGroup-actions-container {
   display: none;
   padding-top: 5px;
 }
-.indexes-container .index-group .panel-heading:hover .indexGroup-actions-container {
+.indexes-container .index-group .panel-heading:hover .indexGroup-actions-container,
+#index-merge-suggestions .index-group .panel-heading:hover .indexGroup-actions-container {
   display: inline-block;
+}
+#logsContainer .logButtons {
+  margin-left: 0;
+}
+#logsContainer .form-group {
+  margin-left: 1%;
+}
+#logsContainer .statsBar {
+  padding-left: 5%;
+  background-color: aliceblue;
 }
 #watchTrafficContainer .logButtons {
   margin-left: 0;

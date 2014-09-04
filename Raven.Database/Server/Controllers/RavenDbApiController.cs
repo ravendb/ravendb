@@ -73,9 +73,12 @@ namespace Raven.Database.Server.Controllers
 		private async Task<HttpResponseMessage> ExecuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
 			MixedModeRequestAuthorizer authorizer)
 		{
-			HttpResponseMessage authMsg;
-			if (authorizer.TryAuthorize(this, out authMsg) == false)
-				return authMsg;
+			if (SkipAuthorizationSinceThisIsMultiGetRequestAlreadyAuthorized == false)
+			{
+				HttpResponseMessage authMsg;
+				if (authorizer.TryAuthorize(this, out authMsg) == false)
+					return authMsg;
+			}
 
 			var internalHeader = GetHeader("Raven-internal-request");
 			if (internalHeader == null || internalHeader != "true")

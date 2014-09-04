@@ -7,7 +7,7 @@ using Raven.Abstractions.Util;
 
 namespace Raven.Database.Server.Connections
 {
-    public class OnDemandLogConnectionState : IDisposable
+    public class AdminLogsConnectionState : IDisposable
     {
         private readonly EasyReaderWriterLock slim = new EasyReaderWriterLock();
 
@@ -15,7 +15,7 @@ namespace Raven.Database.Server.Connections
 
         private IEventsTransport logsTransport;
 
-        public OnDemandLogConnectionState(IEventsTransport logsTransport)
+        public AdminLogsConnectionState(IEventsTransport logsTransport)
         {
             this.logsTransport = logsTransport;
         }

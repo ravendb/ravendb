@@ -353,9 +353,9 @@ namespace Raven.Storage.Voron
         public bool SupportsDtc { get { return false; } }
 
 	    public void Compact(InMemoryRavenConfiguration configuration)
-		{
-			//Voron storage does not support compaction
-		}
+	    {
+            throw new NotSupportedException("Voron storage does not support compaction");
+	    }
 
 		public Guid ChangeId()
 		{

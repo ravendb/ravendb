@@ -351,6 +351,7 @@ namespace Raven.Abstractions.Util
 			/// <summary>Matches simple lambdas of the form "a => b"</summary>
 			bool MatchSimpleLambda(Expression expr, out string parameterName, out Expression body)
 			{
+				expr = StripCastAndParenthasis(expr);
 				LambdaExpression lambda = expr as LambdaExpression;
 				if (lambda != null && lambda.Parameters.Count == 1 && lambda.Body is Expression)
 				{
@@ -365,6 +366,28 @@ namespace Raven.Abstractions.Util
 				parameterName = null;
 				body = null;
 				return false;
+			}
+
+			private static Expression StripCastAndParenthasis(Expression expr)
+			{
+				var ce = expr as CastExpression;
+				var pe = expr as ParenthesizedExpression;
+				while (ce != null || pe != null)
+				{
+					if (ce != null)
+					{
+						expr = ce.Expression;
+						ce = expr as CastExpression;
+						pe = expr as ParenthesizedExpression;
+					}
+					if (pe != null)
+					{
+						expr = pe.Expression;
+						pe = expr as ParenthesizedExpression;
+						ce = expr as CastExpression;
+					}
+				}
+				return expr;
 			}
 		}
 

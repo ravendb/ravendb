@@ -39,6 +39,8 @@ namespace Raven.Database.Server.Controllers
         
 		private HttpRequestMessage request;
 
+		internal bool SkipAuthorizationSinceThisIsMultiGetRequestAlreadyAuthorized{ get; set; }
+
 		public HttpRequestMessage InnerRequest
 		{
 			get

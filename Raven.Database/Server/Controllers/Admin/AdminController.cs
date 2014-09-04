@@ -34,6 +34,8 @@ using Raven.Json.Linq;
 
 using Voron.Impl.Backup;
 
+using Raven.Client.Extensions;
+
 namespace Raven.Database.Server.Controllers.Admin
 {
 	[RoutePrefix("")]
@@ -240,11 +242,8 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpPost]
 		[Route("admin/compact")]
-		[Route("databases/{databaseName}/admin/compact")]
 		public HttpResponseMessage Compact()
 		{
-			EnsureSystemDatabase();
-
 			var db = InnerRequest.RequestUri.ParseQueryString()["database"];
 			if (string.IsNullOrWhiteSpace(db))
 				return GetMessageWithString("Compact request requires a valid database parameter", HttpStatusCode.BadRequest);
@@ -253,9 +252,16 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (configuration == null)
 				return GetMessageWithString("No database named: " + db, HttpStatusCode.NotFound);
 
-			DatabasesLandlord.Lock(db, () => DatabasesLandlord.SystemDatabase.TransactionalStorage.Compact(configuration));
-
-			return GetEmptyMessage();
+            try
+            {
+                var targetDb = DatabasesLandlord.GetDatabaseInternal(db).ResultUnwrap();
+                DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration));
+                return GetEmptyMessage();
+            }
+            catch (NotSupportedException e)
+            {
+                return GetMessageWithString(e.Message, HttpStatusCode.BadRequest);
+            }
 		}
 
 		[HttpGet]
@@ -605,7 +611,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 	    [HttpGet]
 	    [Route("admin/logs/configure")]
-	    public HttpResponseMessage OnDemandLogConfig()
+	    public HttpResponseMessage OnAdminLogsConfig()
 	    {
 	        var id = GetQueryStringValue("id");
             if (string.IsNullOrEmpty(id))
@@ -616,7 +622,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 }, HttpStatusCode.BadRequest);
             }
 
-            var logTarget = LogManager.GetTarget<OnDemandLogTarget>();
+            var logTarget = LogManager.GetTarget<AdminLogsTarget>();
 	        var connectionState = logTarget.For(id, this);
 
 	        var command = GetQueryStringValue("command");
@@ -659,11 +665,11 @@ namespace Raven.Database.Server.Controllers.Admin
 
         [HttpGet]
         [Route("admin/logs/events")] 
-        public HttpResponseMessage OnDemandLogFetch()
+        public HttpResponseMessage OnAdminLogsFetch()
         {
             var logsTransport = new LogsPushContent(this);
             logsTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
-            var logTarget = LogManager.GetTarget<OnDemandLogTarget>();
+            var logTarget = LogManager.GetTarget<AdminLogsTarget>();
             logTarget.Register(logsTransport);
 
             return new HttpResponseMessage { Content = logsTransport };

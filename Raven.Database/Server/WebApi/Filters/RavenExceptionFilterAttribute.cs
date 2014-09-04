@@ -143,13 +143,13 @@ namespace Raven.Database.Server.WebApi.Filters
 		{
 			ctx.Response = new HttpResponseMessage
 			{
-				StatusCode = HttpStatusCode.ServiceUnavailable,
+				StatusCode = HttpStatusCode.InternalServerError,
 			};
 
 			SerializeError(ctx, new
 			{
 				Url = ctx.Request.RequestUri.PathAndQuery,
-				Error = e.Information == null ? e.Message : e.Information.GetErrorMessage(),
+				Error = e.Information == null ? e.ToString() : e.Information.GetErrorMessage(),
 			});
 		}
 	}

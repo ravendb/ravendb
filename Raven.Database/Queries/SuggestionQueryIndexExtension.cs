@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Documents;
@@ -90,15 +92,27 @@ namespace Raven.Database.Queries
 															 string queryText)
 		{
 			var individualTerms = queryText.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-			var result = new List<string>();
 
+			var result = new HashSet<string>();
+			var maxSuggestions = suggestionQuery.MaxSuggestions;
 			foreach (var term in individualTerms)
 			{
-				result.AddRange(spellChecker.SuggestSimilar(term,
-															suggestionQuery.MaxSuggestions,
+				if (maxSuggestions <= 0) 
+					break;
+
+				foreach (var suggestion in spellChecker.SuggestSimilar(term,
+															suggestionQuery.MaxSuggestions, // we can filter out duplicates, so taking more
 															indexReader,
 															suggestionQuery.Field,
-															suggestionQuery.Popularity));
+															suggestionQuery.Popularity))
+				{
+					if (result.Add(suggestion) == false)
+						continue;
+
+					maxSuggestions--;
+					if (maxSuggestions <= 0)
+						break;
+				}
 			}
 
 			return new SuggestionQueryResult

@@ -276,7 +276,6 @@ interface indexDefinitionDto {
     Map: string;
     Maps: string[];
     Reduce: string;
-    TransformResults: string;
     IsMapReduce: boolean;
     IsCompiled: boolean;
     Stores: any;
@@ -368,6 +367,11 @@ interface replicationDestinationDto {
 interface replicationsDto {
     Destinations: replicationDestinationDto[];
     Source: string;
+    ClientConfiguration?: replicationClientConfigurationDto;
+}
+
+interface replicationClientConfigurationDto {
+    FailoverBehavior?: string;
 }
 
 interface replicationConfigDto {
@@ -1067,7 +1071,7 @@ interface runningTaskDto {
 }
 
 
-interface customLogEntryDto {
+interface adminLogsConfigEntryDto {
     category: string;
     level: string;
 }

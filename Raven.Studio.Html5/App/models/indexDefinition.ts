@@ -6,7 +6,6 @@ class indexDefinition {
     map = ko.observable<string>().extend({ required: true });
     maps = ko.observableArray<KnockoutObservable<string>>().extend({ required: true });
     reduce = ko.observable<string>().extend({ required: true });
-    transformResults = ko.observable<string>().extend({ required: true });
     luceneFields = ko.observableArray<luceneField>();
     numOfLuceneFields = ko.computed(() => this.luceneFields().length).extend({ required: true });
 
@@ -49,7 +48,6 @@ class indexDefinition {
         this.stores = dto.Stores;
         this.suggestions = dto.Suggestions;
         this.termVectors = dto.TermVectors;
-        this.transformResults(dto.TransformResults);
         this.type = dto.Type;
 
         this.luceneFields(this.parseFields());
@@ -76,7 +74,6 @@ class indexDefinition {
             Stores: this.makeFieldObject(f => f.stores() === "Yes", f => f.stores()),
             Suggestions: this.makeFieldObject(f => f.suggestionDistance() !== "None", f => f.toSuggestionDto()),
             TermVectors: this.makeFieldObject(f => f.termVector() !== "No", f => f.termVector()),
-            TransformResults: this.transformResults(),
             Type: this.type,
             MaxIndexOutputsPerDocument: this.maxIndexOutputsPerDocument() ? this.maxIndexOutputsPerDocument()> 0 ? this.maxIndexOutputsPerDocument() : null : null
         };
@@ -100,7 +97,6 @@ class indexDefinition {
             Stores: {},
             Suggestions: {},
             TermVectors: {},
-            TransformResults: null,
             Type: "Map",
             MaxIndexOutputsPerDocument:null
         });
