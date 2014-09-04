@@ -393,8 +393,11 @@ If you really want to do in memory filtering on the data returned from the query
 
         #endregion 
 
-        public IAsyncFilesQuery<T> OnDirectory(string path, bool recursive = false)
+        public IAsyncFilesQuery<T> OnDirectory(string path = null, bool recursive = false)
         {
+            if (string.IsNullOrWhiteSpace(path))
+                path = string.Empty;
+
             var normalizedPath = path;
             if (!path.StartsWith("/"))
                 normalizedPath = "/" + path.TrimEnd('/');
@@ -403,19 +406,33 @@ If you really want to do in memory filtering on the data returned from the query
 
             if (recursive)
             {
-                this.WhereEquals("directory", normalizedPath);
+                this.WhereStartsWith("directory", normalizedPath);
                 this.AndAlso();
             }
             else
-            {                
-                this.OpenSubclause();
+            {            
+                if ( string.IsNullOrWhiteSpace(path) )
                 {
-                    this.WhereEquals("directory", normalizedPath);
-                    this.AndAlso();
-                    this.NegateNext();
-                    this.WhereStartsWith("directory", normalizedPath + "/");
+                    this.OpenSubclause();
+                    {
+                        this.WhereStartsWith("directory", "/");
+                        this.AndAlso();
+                        this.WhereEndsWith("directory", "/");                      
+                    }
+                    this.CloseSubclause();
                 }
-                this.CloseSubclause();
+                else
+                {
+                    this.OpenSubclause();
+                    {
+                        this.WhereEquals("directory", normalizedPath);
+                        this.AndAlso();
+                        this.NegateNext();
+                        this.WhereStartsWith("directory", normalizedPath + "/");
+                    }
+                    this.CloseSubclause();
+                }
+
                 this.AndAlso();
             }
 

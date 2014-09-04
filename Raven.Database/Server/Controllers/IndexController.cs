@@ -11,7 +11,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-using ICSharpCode.NRefactory.CSharp;
 using Lucene.Net.Documents;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;

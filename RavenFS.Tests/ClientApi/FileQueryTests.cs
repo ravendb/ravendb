@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.FileSystem;
+using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -73,6 +74,28 @@ namespace RavenFS.Tests.ClientApi
 
                 Assert.True(query.Any());
                 Assert.Equal(3, query.Count());
+            }
+        }
+
+        [Fact]
+        public async void CanQueryRootDirectoryWithoutRecursive()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test.file", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(10));
+                session.RegisterUpload("b/test.fi", CreateUniformFileStream(10));
+                session.RegisterUpload("b/test.f", CreateUniformFileStream(10));
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .OnDirectory()
+                                         .ToListAsync();
+
+                Assert.True(query.Any());
+                Assert.Equal(2, query.Count());
             }
         }
 
@@ -171,6 +194,44 @@ namespace RavenFS.Tests.ClientApi
                 Assert.True(query.Any());
                 Assert.Equal(1, query.Count());
                 Assert.Equal("test.fil", query.First().Name);
+            }
+        }
+
+        [Fact]
+        public async void CanQueryByMetadata()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test.file", CreateUniformFileStream(600));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(150));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(16));
+                await session.SaveChangesAsync();
+
+                var file1 = await session.LoadFileAsync("test.file");
+                file1.Metadata["Test"] = true;
+
+                var file2 = await session.LoadFileAsync("test.fil");
+                file2.Metadata["Test"] = false;
+
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .WhereEquals("Test", true)
+                                         .ToListAsync();
+
+
+                Assert.True(query.Any());
+                Assert.Equal(1, query.Count());
+                Assert.Contains("test.file", query.Select(x => x.Name));
+
+                query = await session.Query()
+                                         .WhereEquals("Test", false)
+                                         .ToListAsync();
+
+                Assert.Equal(1, query.Count());
+                Assert.Contains("test.fil", query.Select(x => x.Name));
             }
         }
 

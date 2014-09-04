@@ -16,7 +16,7 @@ namespace Raven.Client.FileSystem
     {
         bool IsDistinct { get; }
 
-        IAsyncFilesQuery<T> OnDirectory(string path, bool recursive = false);
+        IAsyncFilesQuery<T> OnDirectory(string path = null, bool recursive = false);
 
         Task<List<T>> ToListAsync();
     }

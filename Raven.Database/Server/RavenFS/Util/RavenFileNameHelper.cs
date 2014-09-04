@@ -6,18 +6,28 @@ namespace Raven.Database.Server.RavenFS.Util
 {
 	public static class RavenFileNameHelper
 	{
-		public static string RavenPath(string fileName)
-		{
-			fileName = Uri.UnescapeDataString(fileName);
+        public static string RavenPath(string fileName)
+        {
+            fileName = Uri.UnescapeDataString(fileName);
 
-			if (fileName.StartsWith("/"))
-				return fileName.LastIndexOf("/", StringComparison.InvariantCulture) != 0 ? fileName : fileName.TrimStart('/');
+            if (fileName.StartsWith("/"))
+                return fileName.LastIndexOf("/", StringComparison.InvariantCulture) != 0 ? fileName : fileName.TrimStart('/');
 
-			if (fileName.Contains("/"))
-				return new StringBuilder("/").Append(fileName).ToString();
+            if (fileName.Contains("/"))
+                return new StringBuilder("/").Append(fileName).ToString();
 
-			return fileName;
-		}
+            return fileName;
+        }
+
+        public static string RavenDirectory(string directory)
+        {
+            directory = Uri.UnescapeDataString(directory);
+            directory = directory.Replace("\\", "/");
+            if (!directory.StartsWith("/"))
+                directory = "/" + directory;
+
+            return directory;
+        }
 
 		public const string SyncNamePrefix = "Syncing-";
 		public static string SyncNameForFile(string fileName, string destination)

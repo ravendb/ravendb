@@ -34,7 +34,7 @@ class getFilesystemFilesCommand extends commandBase {
 
         var levelQuery = "__level:" + level;
         var args = {
-            query: this.directory ? "__directory:"+this.directory+" AND "+ levelQuery : levelQuery,
+            query: this.directory ? "__directoryName:" + this.directory + " AND " + levelQuery : levelQuery,
             start: this.skip,
             pageSize: this.take
         };

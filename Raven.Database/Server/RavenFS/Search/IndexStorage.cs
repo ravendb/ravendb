@@ -13,6 +13,7 @@ using Raven.Database.Indexing;
 using Raven.Json.Linq;
 using Raven.Database.Server.RavenFS.Extensions;
 using Lucene.Net.QueryParsers;
+using Raven.Database.Server.RavenFS.Util;
 
 namespace Raven.Database.Server.RavenFS.Search
 {
@@ -103,6 +104,7 @@ namespace Raven.Database.Server.RavenFS.Search
             lock (writerLock)
             {
                 var lowerKey = key.ToLowerInvariant();
+
                 var doc = CreateDocument(lowerKey, metadata);
 
                 // REVIEW: Check if there is more straight-forward/efficient pattern out there to work with RavenJObjects.
@@ -128,25 +130,40 @@ namespace Raven.Database.Server.RavenFS.Search
             var doc = new Document();
             doc.Add(new Field("__key", lowerKey, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
 
-            var fileName = Path.GetFileName(lowerKey);
+            var fileName = Path.GetFileName(lowerKey);            
             Debug.Assert(fileName != null);
             doc.Add(new Field("__fileName", fileName, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
             // the reversed version of the file name is used to allow searches that start with wildcards
             char[] revFileName = fileName.ToCharArray();
             Array.Reverse(revFileName);
-            doc.Add(new Field("__rfileName", new string(revFileName), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
+            doc.Add(new Field("__rfileName", new string(revFileName), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));                        
 
             int level = 0;
-            var directoryName = Path.GetDirectoryName(lowerKey);
+            var directoryName = RavenFileNameHelper.RavenDirectory(Path.GetDirectoryName(lowerKey));
+
+
+            doc.Add(new Field("__directory", directoryName, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
+            // the reversed version of the directory is used to allow searches that start with wildcards
+            char[] revDirectory = directoryName.ToCharArray();
+            Array.Reverse(revDirectory);
+            doc.Add(new Field("__rdirectory", new string(revDirectory), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
+
             do
             {
                 level += 1;
-                directoryName = (string.IsNullOrEmpty(directoryName) ? "" : directoryName.Replace("\\", "/"));
-                if (directoryName.StartsWith("/") == false)
-                    directoryName = "/" + directoryName;
-                doc.Add(new Field("__directory", directoryName, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
+
+                directoryName = RavenFileNameHelper.RavenDirectory(directoryName);
+
+                doc.Add(new Field("__directoryName", directoryName, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
+                // the reversed version of the directory is used to allow searches that start with wildcards
+                char[] revDirectoryName = directoryName.ToCharArray();
+                Array.Reverse(revDirectoryName);
+                doc.Add(new Field("__rdirectoryName", new string(revDirectoryName), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
+
                 directoryName = Path.GetDirectoryName(directoryName);
-            } while (directoryName != null);
+            } 
+            while (directoryName != null);
+
             doc.Add(new Field("__modified", DateTime.UtcNow.ToString(DateIndexFormat, CultureInfo.InvariantCulture), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
             doc.Add(new Field("__level", level.ToString(CultureInfo.InvariantCulture), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
             

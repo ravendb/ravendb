@@ -25,7 +25,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 directory = "/";
             }
 
-            IEnumerable<string> result = Search.GetTermsFor("__directory", directory)
+            IEnumerable<string> result = Search.GetTermsFor("__directoryName", directory)
 			                                .Where(subDir =>
 			                                {
 				                                if (subDir.StartsWith(directory) == false)

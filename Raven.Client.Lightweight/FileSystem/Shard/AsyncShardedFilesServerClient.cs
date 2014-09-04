@@ -535,7 +535,7 @@ namespace Raven.Client.FileSystem.Shard
 			else
 				level = folder.Count(ch => ch == '/') + 1;
 
-			var folderQueryPart = "__directory:" + folder + " AND __level:" + level;
+            var folderQueryPart = "__directoryName:" + folder + " AND __level:" + level;
 			return folderQueryPart;
 		}
 
