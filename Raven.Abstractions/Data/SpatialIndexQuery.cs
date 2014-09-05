@@ -58,6 +58,8 @@ namespace Raven.Abstractions.Data
 	        QueryInputs = query.QueryInputs;
 		    ResultsTransformer = query.ResultsTransformer;
 		    DefaultOperator = query.DefaultOperator;
+		    AllowMultipleIndexEntriesForSameDocumentToResultTransformer =
+			    query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
 		}
 
 		/// <summary>

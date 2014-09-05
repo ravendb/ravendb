@@ -233,6 +233,7 @@
     <Compile Include="Bugs\ConcurrencyTests.cs" />
     <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
     <Compile Include="Bugs\RawQueryShouldGoThroughAnalysis.cs" />
+    <Compile Include="Bugs\SortingAsMaxInt.cs" />
     <Compile Include="Bugs\SyncAsync.cs" />
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
     <Compile Include="Bundles\Encryption\Crud.cs" />
@@ -933,6 +934,7 @@
     <Compile Include="MailingList\TransformerDictionaryOrderTests.cs" />
     <Compile Include="MailingList\TransformerQueryInputTests.cs" />
     <Compile Include="MailingList\TransformersAndEtags.cs" />
+    <Compile Include="MailingList\TransformResultsWithProjection.cs" />
     <Compile Include="MailingList\TransformWithConversionListener.cs" />
     <Compile Include="MailingList\TransformWithLoad.cs" />
     <Compile Include="MailingList\TriggerCanAccessFullMetadataInQueryProjection.cs" />
