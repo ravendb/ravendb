@@ -100,6 +100,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Auth\Authentication.cs" />
     <Compile Include="Bundles\MoreLikeThis.cs" />
     <Compile Include="ChangesApi\ImplementingChangesClient.cs" />
     <Compile Include="ChangesApi\Subscribing.cs" />
@@ -170,9 +171,7 @@
       <Name>Raven.Smuggler</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Auth\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
