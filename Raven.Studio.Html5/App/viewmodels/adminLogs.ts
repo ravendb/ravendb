@@ -21,6 +21,11 @@ class adminLogs extends viewModelBase {
     entriesCount = ko.computed(() => this.rawLogs().length);
     adminLogsConfig = ko.observable<adminLogsConfig>();
 
+
+    canActivate(args): any {
+        return true;
+    }
+
     redraw() {
         if (this.pendingLogs.length > 0) {
             var pendingCopy = this.pendingLogs;

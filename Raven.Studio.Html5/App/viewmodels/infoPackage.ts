@@ -105,6 +105,10 @@ class infoPackage extends viewModelBase {
         });
     }
 
+    canActivate(args): any {
+        return true;
+    }
+
     attached() {
         var self = this;
         $("#stacksContainer").resize();

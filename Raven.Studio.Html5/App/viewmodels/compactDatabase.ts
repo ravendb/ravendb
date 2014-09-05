@@ -33,6 +33,10 @@ class compactDatabase extends viewModelBase {
         });
     }
 
+    canActivate(args): any {
+        return true;
+    }
+
     compositionComplete() {
         super.compositionComplete();
         $('form :input[name="databaseName"]').on("keypress", (e) => e.which != 13);

@@ -37,6 +37,10 @@ class trafficWatch extends viewModelBase {
         return "";
     });
     }
+
+    canActivate(args): any {
+        return true;
+    }
     
     activate(args) {
         var widthUnit = 0.08;
