@@ -1,6 +1,7 @@
 ﻿using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using System;
@@ -500,23 +501,31 @@ namespace Raven.Tests.Core.Session
                     session.SaveChanges();
                 }
 
+                this.Server.Server.ResetNumberOfRequests();
+
                 using (var session = store.OpenSession())
                 {
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+                    session.Load<User>("users/1");
+                    Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<User>("users/1");
+                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
                     for (var i = 0; i <= 20; i++)
                     {
-                        using (store.AggressivelyCacheFor(TimeSpan.FromMinutes(1)))
+                        using (store.AggressivelyCacheFor(TimeSpan.FromSeconds(30)))
                         {
                             session.Load<User>("users/1");
-                            Assert.Equal(1, session.Advanced.NumberOfRequests);
-
-                            if (i == 20)
-                            {
-                                System.Threading.Thread.Sleep(1000);
-                                session.Load<User>("users/1");
-                                Assert.Equal(2, session.Advanced.NumberOfRequests);
-                            }
                         }
                     }
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
         }
