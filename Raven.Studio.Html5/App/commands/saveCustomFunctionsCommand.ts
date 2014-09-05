@@ -11,14 +11,23 @@ class saveCustomFunctionsCommand extends commandBase {
         }
     }
 
+    private validateCustomFunctions(document: string):JQueryPromise<any> {
+        return this.post("/studio-tasks/validateCustomFunctions", document, this.db, { dataType: 'text' });
+    }
+
     execute(): JQueryPromise<any> {
         var args = JSON.stringify(this.toSave.toDto());
-        var url = "/docs/Raven/Javascript/Functions";
-        var saveTask = this.put(url, args, this.db, null);
 
-        saveTask.done(() => this.reportSuccess("Custom functions saved!"));
-        saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save custom functions!", response.responseText, response.statusText));
-        return saveTask;
+        return this.validateCustomFunctions(args)
+            .fail((response) => this.reportError("Failed to validate custom functions!", response.responseText, response.statusText))
+            .then(() => {
+                var url = "/docs/Raven/Javascript/Functions";
+                var saveTask = this.put(url, args, this.db, null);
+
+                saveTask.done(() => this.reportSuccess("Custom functions saved!"));
+                saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save custom functions!", response.responseText, response.statusText));
+                return saveTask;
+            });
     }
 }
 

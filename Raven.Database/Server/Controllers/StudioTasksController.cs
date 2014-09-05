@@ -13,6 +13,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+
+using Jint;
+using Jint.Parser;
+
 using Microsoft.VisualBasic.FileIO;
 using Newtonsoft.Json;
 using Raven.Abstractions;
@@ -25,6 +29,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Util;
 using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
+using Raven.Database.Plugins;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
@@ -33,6 +38,44 @@ namespace Raven.Database.Server.Controllers
 	public class StudioTasksController : RavenDbApiController
 	{
         const int csvImportBatchSize = 512;
+
+        [HttpPost]
+		[Route("studio-tasks/validateCustomFunctions")]
+        [Route("databases/{databaseName}/studio-tasks/validateCustomFunctions")]
+        public async Task<HttpResponseMessage> ValidateCustomFunctions()
+        {
+            try
+            {
+                var document = await ReadJsonAsync().ConfigureAwait(false);
+                ValidateCustomFunctions(document);
+                return GetEmptyMessage();
+            }
+            catch (ParserException e)
+            {
+                return GetMessageWithString(e.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        private void ValidateCustomFunctions(RavenJObject document)
+        {
+            var engine = new Engine(cfg =>
+            {
+                cfg.AllowDebuggerStatement();
+                cfg.MaxStatements(1000);
+            });
+
+            engine.Execute(string.Format(@"
+var customFunctions = function() {{ 
+	var exports = {{ }};
+	{0};
+	return exports;
+}}();
+for(var customFunction in customFunctions) {{
+	this[customFunction] = customFunctions[customFunction];
+}};", document.Value<string>("Functions")));
+
+        }
+    
 
 		[HttpPost]
 		[Route("studio-tasks/import")]
