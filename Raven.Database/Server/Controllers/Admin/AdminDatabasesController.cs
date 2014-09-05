@@ -211,7 +211,6 @@ namespace Raven.Database.Server.Controllers.Admin
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.BadRequest, Message = "Database " + databaseId + " is already " + state };
 			}
 
-			DatabasesLandlord.Unprotect(dbDoc);
 			dbDoc.Disabled = !dbDoc.Disabled;
 			var json = RavenJObject.FromObject(dbDoc);
 			json.Remove("Id");
