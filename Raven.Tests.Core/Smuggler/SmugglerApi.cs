@@ -12,6 +12,9 @@ using System.IO;
 using Xunit;
 using Raven.Abstractions.Data;
 using Raven.Smuggler;
+using System.Threading.Tasks;
+using Raven.Database.Server.RavenFS.Extensions;
+using System;
 
 namespace Raven.Tests.Core.Smuggler
 {
@@ -20,10 +23,23 @@ namespace Raven.Tests.Core.Smuggler
         public const int Port1 = 8081;
         public const int Port2 = 8082;
         public const string ServerName1 = "Raven.Tests.Core.Server";
-        public const string ServerName2 = "Raven.Tests.Core.Server";
+        public const string ServerName2 = "Raven.Tests.Core.Server2";
+
+        private string BackupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backup");
+
+        public SmugglerAPI()
+        {
+            IOExtensions.DeleteDirectory(BackupDir);
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            IOExtensions.DeleteDirectory(BackupDir);
+        }
 
         [Fact]
-        public void test()
+        public async Task CanUseBetween()
         {
             using (var server1 = new RavenDbServer(new RavenConfiguration()
             {
@@ -36,19 +52,18 @@ namespace Raven.Tests.Core.Smuggler
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument("db1");
-                ((ServerClient)Server.DocumentStore.DatabaseCommands.ForSystemDatabase()).GlobalAdmin.CreateDatabase(doc);
+                ((ServerClient)server1.DocumentStore.DatabaseCommands.ForSystemDatabase()).GlobalAdmin.CreateDatabase(doc);
 
                 using (var store1 = new DocumentStore
                 {
-                    HttpMessageHandler = Server.DocumentStore.HttpMessageHandler,
-                    Url = "http://localhost:8081",
+                    Url = "http://localhost:" + Port1,
                     DefaultDatabase = "db1"
                 }.Initialize())
                 {
                     new Users_ByName().Execute(store1);
                     new UsersTransformer().Execute(store1);
 
-                    using (var session = store1.OpenSession())
+                    using (var session = store1.OpenSession("db1"))
                     {
                         session.Store(new User { Name = "Name1", LastName = "LastName1" });
                         session.Store(new User { Name = "Name2", LastName = "LastName2" });
@@ -68,30 +83,111 @@ namespace Raven.Tests.Core.Smuggler
                     }.Initialize())
                     {
                         var doc2 = MultiDatabase.CreateDatabaseDocument("db2");
-                        ((ServerClient)Server.DocumentStore.DatabaseCommands.ForSystemDatabase()).GlobalAdmin.CreateDatabase(doc2);
+                        ((ServerClient)server2.DocumentStore.DatabaseCommands.ForSystemDatabase()).GlobalAdmin.CreateDatabase(doc2);
 
                         using (var store2 = new DocumentStore
                         {
-                            HttpMessageHandler = Server.DocumentStore.HttpMessageHandler,
-                            Url = "http://localhost:8082",
+                            Url = "http://localhost:" + Port2,
                             DefaultDatabase = "db2"
                         }.Initialize())
                         {
 
                             var smugglerApi = new SmugglerApi();
-                            smugglerApi.Between(new SmugglerBetweenOptions
+                            await smugglerApi.Between(new SmugglerBetweenOptions
                             {
-                                From = new RavenConnectionStringOptions { Url = "http://localhost:8081", DefaultDatabase = "db1" },
-                                To = new RavenConnectionStringOptions { Url = "http://localhost:8082", DefaultDatabase = "db2" }
+                                From = new RavenConnectionStringOptions { Url = "http://localhost:" + Port1, DefaultDatabase = "db1" },
+                                To = new RavenConnectionStringOptions { Url = "http://localhost:" + Port2, DefaultDatabase = "db2" }
                             });
 
+                            var docs = store2.DatabaseCommands.GetDocuments(0, 10);
+                            Assert.Equal(3, docs.Length);
                             var indexes = store2.DatabaseCommands.GetIndexes(0,10);
                             Assert.Equal(1, indexes.Length);
                             var transformers = store2.DatabaseCommands.GetTransformers(0, 10);
                             Assert.Equal(1, transformers.Length);
-                            var attachments = store2.DatabaseCommands.GetAttachments(0, null, 10);
+                            var attachments = store2.DatabaseCommands.GetAttachments(0, new Etag(), 10);
                             Assert.Equal(1, attachments.Length);
 
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanExportAndImportData()
+        {
+            using (var server1 = new RavenDbServer(new RavenConfiguration()
+            {
+                Port = Port1,
+                ServerName = ServerName1
+            })
+            {
+                RunInMemory = true,
+                UseEmbeddedHttpServer = true
+            }.Initialize())
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument("db1");
+                ((ServerClient)server1.DocumentStore.DatabaseCommands.ForSystemDatabase()).GlobalAdmin.CreateDatabase(doc);
+
+                using (var store1 = new DocumentStore
+                {
+                    Url = "http://localhost:" + Port1,
+                    DefaultDatabase = "db1"
+                }.Initialize())
+                {
+                    new Users_ByName().Execute(store1);
+                    new UsersTransformer().Execute(store1);
+
+                    using (var session = store1.OpenSession("db1"))
+                    {
+                        session.Store(new User { Name = "Name1", LastName = "LastName1" });
+                        session.Store(new User { Name = "Name2", LastName = "LastName2" });
+                        session.SaveChanges();
+                    }
+
+                    store1.DatabaseCommands.PutAttachment("attachement1", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
+
+                    var smugglerApi = new SmugglerApi();
+                    await smugglerApi.ExportData(new SmugglerExportOptions 
+                        { 
+                            From = new RavenConnectionStringOptions { Url = "http://localhost:" + Port1, DefaultDatabase = "db1" },
+                            ToFile = BackupDir
+                        });
+
+                    using (var server2 = new RavenDbServer(new RavenConfiguration()
+                    {
+                        Port = Port2,
+                        ServerName = ServerName2
+                    })
+                    {
+                        RunInMemory = true,
+                        UseEmbeddedHttpServer = true
+                    }.Initialize())
+                    {
+                        var doc2 = MultiDatabase.CreateDatabaseDocument("db2");
+                        ((ServerClient)server2.DocumentStore.DatabaseCommands.ForSystemDatabase()).GlobalAdmin.CreateDatabase(doc2);
+
+                        using (var store2 = new DocumentStore
+                        {
+                            Url = "http://localhost:" + Port2,
+                            DefaultDatabase = "db2"
+                        }.Initialize())
+                        {
+                            await smugglerApi.ImportData(new SmugglerImportOptions
+                            {
+                                FromFile = BackupDir,
+                                To = new RavenConnectionStringOptions { Url = "http://localhost:" + Port2, DefaultDatabase = "db2" }
+                            });
+                            
+                            var docs = store2.DatabaseCommands.GetDocuments(0, 10);
+                            Assert.Equal(3, docs.Length);
+                            var indexes = store2.DatabaseCommands.GetIndexes(0,10);
+                            Assert.Equal(1, indexes.Length);
+                            var transformers = store2.DatabaseCommands.GetTransformers(0, 10);
+                            Assert.Equal(1, transformers.Length);
+                            var attachments = store2.DatabaseCommands.GetAttachments(0, new Etag(), 10);
+                            Assert.Equal(1, attachments.Length);
                         }
                     }
                 }
