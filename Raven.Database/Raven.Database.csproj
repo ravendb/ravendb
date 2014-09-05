@@ -628,7 +628,6 @@
     <Compile Include="Server\Abstractions\PrincipalWithDatabaseAccess.cs" />
     <Compile Include="Server\BeforeRequestEventArgs.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />
-    <Compile Include="Server\LogContext.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
     <Compile Include="Bundles\Quotas\Documents\Triggers\DatabaseCountDocumentDeleteTrigger.cs" />

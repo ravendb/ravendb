@@ -202,6 +202,7 @@ interface userInfoDto {
 interface logDto {
     TimeStamp: string;
     Message: string;
+    Database: string;
     LoggerName: string;
     Level: string;
     Exception: string;

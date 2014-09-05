@@ -27,10 +27,11 @@ class adminLogs extends viewModelBase {
             this.pendingLogs = [];
             var logsAsText = "";
             pendingCopy.forEach(log => {
-                var line = log.TimeStamp + ";" + log.Level.toUpperCase() + ";" + log.LoggerName + ";" + log.Message + (log.Exception || "") + "\n";
+                var line = log.TimeStamp + ";" + log.Level.toUpperCase() + ";" +  log.Database + ";" + log.LoggerName + ";" + log.Message + (log.Exception || "") + "\n";
                 logsAsText += line;
             });
-            $("#rawLogsContainer pre").append(logsAsText);
+            // text: allows us to escape values
+            $("<div/>").text(logsAsText).appendTo("#rawLogsContainer pre");
             this.rawLogs().pushAll(pendingCopy);
             this.rawLogs.valueHasMutated();
 

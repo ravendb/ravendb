@@ -277,6 +277,7 @@
     <Compile Include="Logging\ILog.cs" />
     <Compile Include="Logging\ILogExtensions.cs" />
     <Compile Include="Logging\ILogManager.cs" />
+    <Compile Include="Logging\LogContext.cs" />
     <Compile Include="Logging\LoggerExecutionWrapper.cs" />
     <Compile Include="Logging\LogLevel.cs" />
     <Compile Include="Logging\LogManager.cs" />
