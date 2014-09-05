@@ -2,6 +2,8 @@
 
 using System.Linq;
 
+using Raven.Abstractions.Data;
+
 namespace Raven.Abstractions.Logging
 {
 	public class LoggerExecutionWrapper : ILog
@@ -54,10 +56,15 @@ namespace Raven.Abstractions.Logging
 			if (targets.Length == 0 || targets.All(t => !t.ShouldLog(logger, logLevel)))
 				return;
 			var formattedMessage = wrappedMessageFunc();
+            string databaseName = LogContext.DatabaseName.Value;
+            if (string.IsNullOrWhiteSpace(databaseName))
+                databaseName = Constants.SystemDatabase;
+
 			foreach (var target in targets)
 			{
 				target.Write(new LogEventInfo
 				{
+                    Database = databaseName,
 					Exception = null,
 					FormattedMessage = formattedMessage,
 					Level = logLevel,

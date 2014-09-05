@@ -133,6 +133,7 @@ namespace Raven.Abstractions.Logging
 
 	public class LogEventInfo
 	{
+        public string Database { get; set; }
 		public LogLevel Level { get; set; }
 		public DateTime TimeStamp { get; set; }
 		public string FormattedMessage { get; set; }
@@ -143,6 +144,7 @@ namespace Raven.Abstractions.Logging
     public class LogEventInfoFormatted
     {
         public String Level { get; set; }
+        public string Database { get; set; }
 		public DateTime TimeStamp { get; set; }
 		public string Message { get; set; }
 		public string LoggerName { get; set; }
@@ -155,6 +157,7 @@ namespace Raven.Abstractions.Logging
             LoggerName = eventInfo.LoggerName;
             Level = eventInfo.Level.ToString();
             Exception = eventInfo.Exception == null ? null : eventInfo.Exception.ToString();
+            Database = eventInfo.Database;
         }
     }
 }
