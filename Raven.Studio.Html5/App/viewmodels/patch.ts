@@ -9,6 +9,7 @@ import collection = require("models/collection");
 import customColumns = require("models/customColumns");
 import document = require("models/document");
 import pagedList = require("common/pagedList");
+import jsonUtil = require("common/jsonUtil");
 import queryIndexCommand = require("commands/queryIndexCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import savePatch = require('viewmodels/savePatch');
@@ -31,6 +32,9 @@ class patch extends viewModelBase {
 
     beforePatch = ko.observable<string>();
     afterPatch = ko.observable<string>();
+
+    loadedDocuments = ko.observableArray<string>();
+    putDocuments = ko.observableArray<any>();
 
     isExecuteAllowed: KnockoutComputed<boolean>;
     documentKey = ko.observable<string>();
@@ -230,8 +234,14 @@ class patch extends viewModelBase {
             .done((result: bulkDocumentDto[]) => {
                 var testResult = new document(result[0].AdditionalData['Document']);
                 this.afterPatch(JSON.stringify(testResult.toDto(), null, 4));
+                this.updateActions(result[0].AdditionalData['Actions']);
             })
             .fail((result: JQueryXHR) => console.log(result.responseText));
+    }
+
+    private updateActions(actions: { PutDocument: any[]; LoadDocument: any }) {
+        this.loadedDocuments(actions.LoadDocument); 
+        this.putDocuments(actions.PutDocument.map(doc => jsonUtil.syntaxHighlight(doc)));
     }
 
     executePatchOnSingle() {
