@@ -14,7 +14,7 @@ namespace Raven.Tests.Bugs
 	{
 		public class User
 		{
-			public long Age;
+			public int Age;
 		}
 
 		public class Users_ByAge : AbstractIndexCreationTask<User>
@@ -38,7 +38,7 @@ namespace Raven.Tests.Bugs
 				using (var s = store.OpenSession())
 				{
 					s.Store(new User{Age = 182});
-					s.Store(new User { Age = ((long)int.MaxValue)+1L});
+					s.Store(new User { Age = int.MaxValue});
 					s.SaveChanges();
 				}
 				WaitForIndexing(store);
@@ -50,7 +50,7 @@ namespace Raven.Tests.Bugs
 						.ToList();
 
 					Assert.Equal(182, a[0].Age);
-					Assert.Equal(int.MaxValue+1L, a[1].Age);
+					Assert.Equal(int.MaxValue, a[1].Age);
 				}
 			}
 		}
