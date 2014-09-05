@@ -582,10 +582,8 @@ class editDocument extends viewModelBase {
     }
 
     stringify(obj: any) {
-        
         var prettifySpacing = 4;
-        return JSON.stringify(obj, null, prettifySpacing);
-        
+        return JSON.stringify(obj, null, prettifySpacing).replace(/\n/g, '\r\n');
     }
     
 
