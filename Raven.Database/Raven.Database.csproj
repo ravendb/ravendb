@@ -228,7 +228,6 @@
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriterSimulator.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationMetricsCountersManager.cs" />
     <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
-    <Compile Include="Plugins\Builtins\DocumentCollectionChangeHandler.cs" />
     <Compile Include="Plugins\Builtins\HighestEtagsPerCollection.cs" />
     <Compile Include="Plugins\IServerStartupTask.cs" />
     <Compile Include="Server\Abstractions\IResourceStore.cs" />
