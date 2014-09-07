@@ -28,7 +28,7 @@ namespace Raven.Database.Actions
 
 			if (indexDefinitions.Count == 0)
 			{
-				lastCollectionEtags = new ConcurrentDictionary<string, Etag>();
+				lastCollectionEtags = new ConcurrentDictionary<string, Etag>(StringComparer.InvariantCultureIgnoreCase);
 				return;
 			}
 
@@ -65,7 +65,7 @@ namespace Raven.Database.Actions
 										})
 										.ToDictionary(x => x.CollectionName, y => y.MaxEtag);
 
-			lastCollectionEtags = new ConcurrentDictionary<string, Etag>(collectionEtags);
+			lastCollectionEtags = new ConcurrentDictionary<string, Etag>(collectionEtags,StringComparer.InvariantCultureIgnoreCase);
 		}
 
 		public bool HasEtagGreaterThan(List<string> collectionsToCheck, Etag etagToCheck)
