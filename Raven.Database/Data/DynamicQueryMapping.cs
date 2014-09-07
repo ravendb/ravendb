@@ -116,6 +116,8 @@ namespace Raven.Database.Data
 			else
 				mapDefinition = string.Format("{0}\r\nselect new\r\n{{\r\n\t{1}\r\n}}", fromClause, string.Join(",\r\n\t", realMappings));
 
+			mapDefinition = IndexPrettyPrinter.Format(mapDefinition);
+
 			var index = new IndexDefinition
 			{
 				Map = mapDefinition,
