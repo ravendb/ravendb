@@ -126,7 +126,7 @@ namespace Raven.Tests.Indexes
 
 			IndexDefinition definition = mapping.CreateIndexDefinition();
 
-			Assert.Equal("from doc in docs\r\nselect new { Name = doc.Name }", definition.Map);
+			Assert.Equal("from doc in docs\nselect new {\n\tName = doc.Name\n}", definition.Map);
 		}
 
 
@@ -148,12 +148,9 @@ namespace Raven.Tests.Indexes
 
 			IndexDefinition definition = mapping.CreateIndexDefinition();
 
-            Assert.Equal(@"from doc in docs
-select new
-{
-	docTagsName = (from docTagsItem in ((IEnumerable<dynamic>)doc.Tags).DefaultIfEmpty() select docTagsItem.Name).ToArray()
-}",
-				definition.Map);
+			const string map = "from doc in docs\nselect new {\n\tdocTagsName = (\n\t\tfrom docTagsItem in ((IEnumerable<dynamic>)doc.Tags).DefaultIfEmpty()\n\t\tselect docTagsItem.Name).ToArray()\n}";
+
+            Assert.Equal(map,definition.Map);
 		}
 
 
@@ -174,7 +171,7 @@ select new
 
 			IndexDefinition definition = mapping.CreateIndexDefinition();
 
-			Assert.Equal("from doc in docs\r\nselect new { UserName = doc.User.Name }", definition.Map);
+			Assert.Equal("from doc in docs\nselect new {\n\tUserName = doc.User.Name\n}", definition.Map);
 		}
 	}
 }

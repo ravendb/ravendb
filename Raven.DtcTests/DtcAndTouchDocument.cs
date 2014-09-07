@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void ShouldWork()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage:"esent"))
 			{
 				EnsureDtcIsSupported(store);
 

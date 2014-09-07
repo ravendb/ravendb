@@ -30,8 +30,8 @@ namespace Raven.Tests.Issues
 				var indexDefinition = store.DatabaseCommands.GetIndex("Auto/Employees/ByLastName");
 
 				Assert.Equal(
-@"from doc in docs.Employees
-select new { LastName = doc.LastName }", indexDefinition.Map);
+"from doc in docs.Employees\nselect new {\n\tLastName = doc.LastName\n}",
+indexDefinition.Map);
 				
 			}
 		}
@@ -53,12 +53,7 @@ select new { LastName = doc.LastName }", indexDefinition.Map);
 				var indexDefinition = store.DatabaseCommands.GetIndex("Auto/Blogs/ByCategoryAndTitle");
 
 				Assert.Equal(
-@"from doc in docs.Blogs
-select new
-{
-	Category = doc.Category,
-	Title = doc.Title
-}", indexDefinition.Map);
+"from doc in docs.Blogs\nselect new {\n\tCategory = doc.Category,\n\tTitle = doc.Title\n}", indexDefinition.Map);
 
 				store.SystemDatabase.ExecuteDynamicQuery("Users", new IndexQuery()
 				{
@@ -71,11 +66,8 @@ select new
 				indexDefinition = store.DatabaseCommands.GetIndex("Auto/Users/ByFriends_Name");
 
 				Assert.Equal(
-@"from doc in docs.Users
-select new
-{
-	Friends_Name = (from docFriendsItem in ((IEnumerable<dynamic>)doc.Friends).DefaultIfEmpty() select docFriendsItem.Name).ToArray()
-}", indexDefinition.Map);
+"from doc in docs.Users\nselect new {\n\tFriends_Name = (\n\t\tfrom docFriendsItem in ((IEnumerable<dynamic>)doc.Friends).DefaultIfEmpty()\n\t\tselect docFriendsItem.Name).ToArray()\n}"
+, indexDefinition.Map);
 
 			}
 		}

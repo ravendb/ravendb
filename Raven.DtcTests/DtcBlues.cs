@@ -63,7 +63,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanQueryDtcForUncommittedItem()
         {
-            using (var server = GetNewServer())
+            using (var server = GetNewServer(requestedStorage: "esent"))
             using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
             {
 
@@ -106,7 +106,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanQueryDtcForUncommittedItem()
         {
-            using (var server = GetNewServer(runInMemory: false))
+            using (var server = GetNewServer(requestedStorage:"esent"))
             using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
             {
 

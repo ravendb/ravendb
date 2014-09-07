@@ -22,7 +22,7 @@ namespace Raven.Tests.Transactions
 
 		public Etags()
 		{
-			store = NewDocumentStore();
+			store = NewDocumentStore(requestedStorage: "esent");
 			db = store.SystemDatabase;
 		}
 

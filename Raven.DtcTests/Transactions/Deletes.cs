@@ -21,7 +21,7 @@ namespace Raven.Tests.Transactions
 
 		public Deletes()
 		{
-			store = NewDocumentStore();
+			store = NewDocumentStore(requestedStorage: "esent");
 			db = store.SystemDatabase;
 		}
 

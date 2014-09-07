@@ -21,7 +21,7 @@ namespace Raven.Tests.Transactions
 
 		public Simple()
 		{
-			store = NewDocumentStore();
+			store = NewDocumentStore(requestedStorage: "esent");
 			db = store.SystemDatabase;
 		}
 

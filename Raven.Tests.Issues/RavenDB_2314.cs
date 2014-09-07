@@ -87,6 +87,11 @@ namespace Raven.Tests.Issues
                     var pizzerias = session.Query<Pizzeria, SpatialIndex>().ToList();
                     var stats = store.DatabaseCommands.GetStatistics();
 
+	                if (stats.Errors.Length != 2)
+	                {
+						Assert.False(true, string.Join(Environment.NewLine, stats.Errors.Select(e => e.ToString())));
+	                }
+
                     Assert.Equal(2, stats.Errors.Length);
                     Assert.Equal("pizzerias/3", stats.Errors.First().Document);
                     Assert.Equal("pizzerias/5", stats.Errors.Last().Document);
