@@ -107,7 +107,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void ShouldMarkMapReduceIndexAsErroredWhenItProducesTooManyOutputsPerDocument()
+		public void WhenIndexProducesTooManyOutputsPerDocumentItShouldError()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -118,9 +118,11 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
-				var stats = store.DatabaseCommands.GetStatistics().Indexes.First(x => x.Name == index.IndexName);
+				var serverError = store.DatabaseCommands.GetStatistics().Errors.First();
+				Assert.Equal(index.IndexName, serverError.IndexName);
 
-				Assert.Equal(IndexingPriority.Error, stats.Priority);
+				var queryResult = store.DatabaseCommands.Query(index.IndexName, new IndexQuery());
+				Assert.NotEmpty(queryResult.Results);
 			}
 		}
 
