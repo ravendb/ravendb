@@ -10,6 +10,7 @@ import deleteTransformerConfirm = require("viewmodels/deleteTransformerConfirm")
 import saveTransformerWithNewNameConfirm = require("viewmodels/saveTransformerWithNewNameConfirm");
 import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
+import jsonUtil = require("common/jsonUtil");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
 import formatIndexCommand = require("commands/formatIndexCommand");
@@ -58,7 +59,7 @@ class editTransformer extends viewModelBase {
             this.editedTransformer(transformer.empty());
         }
 
-        this.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
+        this.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults], false, jsonUtil.newLineNormalizingHashFunction);
         this.isSaveEnabled = ko.computed(() => !!this.editedTransformer().name() && this.dirtyFlag().isDirty());
     }
 

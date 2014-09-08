@@ -9,6 +9,7 @@ import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand")
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
+import jsonUtil = require("common/jsonUtil");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
@@ -160,7 +161,7 @@ class editIndex extends viewModelBase {
         checkedFieldsArray.push(this.indexScript);
         checkedFieldsArray.push(this.deleteScript);
 
-        this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray);
+        this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray, false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && this.dirtyFlag().isDirty());
     }

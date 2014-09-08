@@ -1,6 +1,7 @@
 ﻿import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
+import jsonUtil = require("common/jsonUtil");
 import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
@@ -108,7 +109,7 @@ class editSqlReplication extends viewModelBase {
 
     activate(replicationToEditName: string) {
         super.activate(replicationToEditName);
-        this.dirtyFlag = new ko.DirtyFlag([this.editedReplication]);
+        this.dirtyFlag = new ko.DirtyFlag([this.editedReplication], false, jsonUtil.newLineNormalizingHashFunction);
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 

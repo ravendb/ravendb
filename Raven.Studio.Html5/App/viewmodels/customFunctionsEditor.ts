@@ -5,6 +5,7 @@ import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand")
 import saveCustomFunctionsCommand = require("commands/saveCustomFunctionsCommand");
 import customFunctions = require("models/customFunctions");
 import execJs = require("common/execJs");
+import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
 
 class customFunctionsEditor extends viewModelBase {
@@ -22,7 +23,7 @@ class customFunctionsEditor extends viewModelBase {
         this.documentText = ko.observable<string>("");
         this.fetchCustomFunctions();
 
-        this.dirtyFlag = new ko.DirtyFlag([this.documentText]);
+        this.dirtyFlag = new ko.DirtyFlag([this.documentText], false, jsonUtil.newLineNormalizingHashFunction);
         this.isSaveEnabled = ko.computed<boolean>(() => {
             return this.dirtyFlag().isDirty();
         });
