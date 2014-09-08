@@ -16,7 +16,7 @@ class database extends resource {
         this.itemCount = ko.computed(() => this.statistics() ? this.statistics().CountOfDocuments : 0);
         this.itemCountText = ko.computed(() => {
             var itemCount = this.itemCount();
-            var text = itemCount + ' document';
+            var text = itemCount.toLocaleString() + ' document';
             if (itemCount != 1) {
                 text = text + 's';
             }
