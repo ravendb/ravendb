@@ -351,10 +351,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			public int Start;
 		}
 
-
-
         public override bool SetupRequestToProperDatabase(RequestManager rm)
         {
+            if (!RavenFileSystem.IsRemoteDifferentialCompressionInstalled)
+                throw new HttpException(503, "File Systems functionality is not supported. Remote Differential Compression is not installed.");
+
             var tenantId = FileSystemName;
 
             if (string.IsNullOrWhiteSpace(tenantId))
@@ -422,7 +423,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	    public override void MarkRequestDuration(long duration)
 	    {
 	        FileSystem.MetricsCounters.RequestDuationMetric.Update(duration);
-	    }
+	    }        
 
         #region Metadata Headers Handling
 
