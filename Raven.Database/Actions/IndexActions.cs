@@ -13,6 +13,9 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Lucene.Net.Analysis.Standard;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -225,6 +228,8 @@ namespace Raven.Database.Actions
 		        throw new ArgumentException("Canot use an index with // in the name, but got: " + name, "name");
 	        }
 
+            AssertAnalyzersValid(definition);
+
             switch (FindIndexCreationOptions(definition, ref name))
             {
                 case IndexCreationOptions.Noop:
@@ -247,6 +252,17 @@ namespace Raven.Database.Actions
             }));
 
             return name;
+        }
+
+        private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
+        {
+            foreach (var analyzer in from analyzer in indexDefinition.Analyzers
+                                     let analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzer.Value) ?? Type.GetType(analyzer.Value, throwOnError: false)
+                                     where analyzerType == null
+                                     select analyzer)
+            {
+                throw new ArgumentException(string.Format("Could not create analyzer for field: '{0}' because the type '{1}' was not found", analyzer.Key, analyzer.Value));
+            }
         }
 
         internal void PutNewIndexIntoStorage(string name, IndexDefinition definition)

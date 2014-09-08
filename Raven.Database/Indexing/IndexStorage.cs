@@ -830,7 +830,6 @@ namespace Raven.Database.Indexing
             log.Debug("Creating index {0} with id {1}", indexDefinition.IndexId, indexDefinition.Name);
 
 			IndexDefinitionStorage.ResolveAnalyzers(indexDefinition);
-			AssertAnalyzersValid(indexDefinition);
 
             if (TryIndexByName(indexDefinition.Name) != null)
 			{
@@ -844,17 +843,6 @@ namespace Raven.Database.Indexing
 			}, (s, index) => index);
 
             UpdateIndexMappingFile();
-		}
-
-		private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
-		{
-			foreach (var analyzer in from analyzer in indexDefinition.Analyzers
-									 let analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzer.Value) ?? Type.GetType(analyzer.Value, throwOnError: false)
-									 where analyzerType == null
-									 select analyzer)
-			{
-				throw new ArgumentException(string.Format("Could not create analyzer for field: '{0}' because the type '{1}' was not found", analyzer.Key, analyzer.Value));
-			}
 		}
 
 		public Query GetDocumentQuery(string index, IndexQuery query, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
