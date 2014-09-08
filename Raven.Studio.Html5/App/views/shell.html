@@ -264,9 +264,9 @@
                 <li class="status-link"><a data-bind="attr: { href: $root.appUrls.status }" class="navbar-link">Status</a></li>
                 <!-- ko with: statistics -->
                 <li><a class="navbar-link" data-bind="text: CountOfDocuments + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
-                <li><a class="navbar-link" data-bind="text: CountOfIndexes + ' indexes', attr: { href: $parents[1].appUrls.indexes }"></a></li>
-                <li><a class="navbar-link" data-bind="text: StaleIndexes.length + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
-                <li><a class="navbar-link" data-bind="text: Errors.length + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
+                <li><a class="navbar-link" data-bind="text: CountOfIndexes.toLocaleString() + ' indexes', attr: { href: $parents[1].appUrls.indexes }"></a></li>
+                <li><a class="navbar-link" data-bind="text: StaleIndexes.length.toLocaleString() + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
+                <li><a class="navbar-link" data-bind="text: Errors.length.toLocaleString() + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
                 <!--<li><a class="navbar-link" data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>-->
                 <li class="raw-url hidden-sm" data-bind="visible:$root.rawUrlIsVisible">
                     <a class="navbar-link" href="#" target='_blank' data-bind="text: $root.currentRawUrl, attr: { href: $root.currentRawUrl, title: $root.currentRawUrl }" style="max-width: 180px; -ms-text-overflow: ellipsis; -o-text-overflow: ellipsis; text-overflow: ellipsis; overflow-x: hidden; white-space: nowrap;"></a>
