@@ -5,11 +5,13 @@ import appUrl = require("common/appUrl");
 import filesystem = require("models/filesystem/filesystem");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
+import getFileSystemsStatusCommand = require("commands/filesystem/getFileSystemsStatusCommand");
 
 class filesystems extends viewModelBase {
 
-    appUrls: computedAppUrls;
+    appUrls: computedAppUrls;    
     fileSystems = ko.observableArray<filesystem>();
+    fileSystemsStatus = ko.observable<string>("loading");
     isAnyFileSystemSelected: KnockoutComputed<boolean>;
     allCheckedFileSystemsDisabled: KnockoutComputed<boolean>;
     searchText = ko.observable("");
@@ -29,6 +31,9 @@ class filesystems extends viewModelBase {
 
         var updatedUrl = appUrl.forFilesystems();
         this.updateUrl(updatedUrl);
+
+        var status = new getFileSystemsStatusCommand().execute()
+                            .done( (x:string) => this.fileSystemsStatus(x));            
 
         this.isAnyFileSystemSelected = ko.computed(() => {
             for (var i = 0; i < this.fileSystems().length; i++) {

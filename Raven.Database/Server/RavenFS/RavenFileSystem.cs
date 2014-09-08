@@ -22,6 +22,8 @@ using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
+using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper.Unmanaged;
+using System.Runtime.InteropServices;
 
 namespace Raven.Database.Server.RavenFS
 {
@@ -74,6 +76,24 @@ namespace Raven.Database.Server.RavenFS
 			AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
 		}
+
+        public static bool IsRemoteDifferentialCompressionInstalled
+        {
+            get
+            {
+                try
+                {
+                    var _rdcLibrary = new RdcLibrary();
+                    Marshal.ReleaseComObject(_rdcLibrary);
+
+                    return true;
+                }
+                catch (COMException)
+                {
+                    return false;
+                }
+            }
+        }
 
         private static ITransactionalStorage CreateTransactionalStorage(string storageType, InMemoryRavenConfiguration configuration)
         {
@@ -201,5 +221,5 @@ namespace Raven.Database.Server.RavenFS
 	        Storage.Batch(accessor => { fsStats.FileCount = accessor.GetFileCount(); });
             return fsStats;
 	    }
-	}
+    }
 }
