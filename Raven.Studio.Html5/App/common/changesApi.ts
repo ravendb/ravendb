@@ -43,8 +43,6 @@ class changesApi {
     private watchedFolders = {};
     private commandBase = new commandBase();
     
-    private adminLogsHandlers = ko.observableArray<changesCallback<logNotificationDto>>();
-
     constructor(private rs: resource, coolDownWithDataLoss: number = 0, isMultyTenantTransport:boolean = false) {
         this.eventsId = idGenerator.generateId();
         this.coolDownWithDataLoss = coolDownWithDataLoss;
@@ -263,27 +261,10 @@ class changesApi {
                 }
                 this.fireEvents(this.allFsConfigHandlers(), value, (e) => true);
             }
-            else if (type === "LogNotification") {
-                this.fireEvents(this.adminLogsHandlers(), value, (e) => true);
-            }
             else {
                 console.log("Unhandled Changes API notification type: " + type);
             }
         }
-    }
-
-    watchAdminLogs(onChange: (e: logNotificationDto) => void) {
-        var callback = new changesCallback<logNotificationDto>(onChange);
-        if (this.adminLogsHandlers().length == 0) {
-            this.send('watch-admin-log');
-        }
-        this.adminLogsHandlers.push(callback);
-        return new changeSubscription(() => {
-            this.adminLogsHandlers.remove(callback);
-            if (this.adminLogsHandlers().length == 0) {
-                this.send('unwatch-admin-log');
-            }
-        });
     }
 
     watchAllIndexes(onChange: (e: indexChangeNotificationDto) => void) {
