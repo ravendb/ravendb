@@ -115,49 +115,6 @@ namespace Raven.Database.Server.Controllers
 			{
 				connectionState.UnwatchBulkInsert(name);
 			}
-            else if (Match(cmd,"watch-db-log"))
-            {
-                connectionState.WatchDBLog(Database.Name);
-            }
-            else if (Match(cmd, "unwatch-db-log"))
-            {
-                connectionState.UnwatchDBLog(Database.Name);
-            }
-            else if (Match(cmd, "watch-admin-log"))
-            {
-                var systemDatabase = DatabasesLandlord.SystemDatabase;
-                var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
-                foreach (var transportState in DatabasesLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
-                {
-                    transportState.For(id, this).WatchAdminLog();
-                }
-                foreach (var transportState in FileSystemsLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
-                {
-                    transportState.For(id, this).WatchAdminLog();
-                }
-                foreach (var transportState in CountersLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
-                {
-                    transportState.For(id, this).WatchAdminLog();
-                }
-                
-            }
-            else if (Match(cmd, "unwatch-admin-log"))
-            {
-                var systemDatabase = DatabasesLandlord.SystemDatabase;
-                var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
-                foreach (var transportState in DatabasesLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
-                {
-                    transportState.For(id, this).UnwatchAdminLog();
-                }
-                foreach (var transportState in FileSystemsLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
-                {
-                    transportState.For(id, this).UnwatchAdminLog();
-                }
-                foreach (var transportState in CountersLandlord.GetUserAllowedTransportStates(User, systemDatabase, DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, authorizer, GetHeader("Authorization")))
-                {
-                    transportState.For(id, this).UnwatchAdminLog();
-                }
-            }
             else
 			{
 				return GetMessageWithObject(new
