@@ -7,6 +7,7 @@ import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand
 import saveDatabaseSettingsCommand = require("commands/saveDatabaseSettingsCommand");
 import document = require("models/document");
 import database = require("models/database");
+import jsonUtil = require("common/jsonUtil");
 import viewModelBase = require("viewmodels/viewModelBase");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
 import messagePublisher = require("common/messagePublisher");
@@ -71,7 +72,7 @@ class databaseSettings extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText]);
+        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText], false, jsonUtil.newLineNormalizingHashFunction);
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 

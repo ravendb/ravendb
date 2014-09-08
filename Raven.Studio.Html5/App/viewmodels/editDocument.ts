@@ -19,6 +19,7 @@ import resolveMergeCommand = require("commands/resolveMergeCommand");
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
+import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import genUtils = require("common/generalUtils");
@@ -226,16 +227,13 @@ class editDocument extends viewModelBase {
         else{
             return $.Deferred().resolve({ can: true });
         }
-
-
-        
     }
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
 
         this.lodaedDocumentName(this.userSpecifiedId());
-        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
+        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId],false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.computed(()=> {
             return (this.dirtyFlag().isDirty() || this.lodaedDocumentName() == "");// && !!self.userSpecifiedId(); || 
@@ -583,10 +581,8 @@ class editDocument extends viewModelBase {
 
     stringify(obj: any) {
         var prettifySpacing = 4;
-        return JSON.stringify(obj, null, prettifySpacing).replace(/\n/g, '\r\n');
+        return JSON.stringify(obj, null, prettifySpacing);
     }
-    
-
 
     activateMeta() {
         this.isEditingMetadata(true);
