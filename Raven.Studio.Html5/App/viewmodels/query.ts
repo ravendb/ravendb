@@ -348,7 +348,6 @@ class query extends viewModelBase {
                     })
                     .fail(() => {
                         recentQueriesStorage.removeIndexFromRecentQueries(db, selectedIndex);
-                        location.hash = appUrl.forIndexes(db);
                     });
             };
             var resultsList = new pagedList(resultsFetcher);
