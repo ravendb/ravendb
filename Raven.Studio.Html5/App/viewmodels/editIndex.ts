@@ -411,20 +411,20 @@ class editIndex extends viewModelBase {
     formatIndex() {
         require(["commands/formatIndexCommand"], formatIndexCommand => {
             var index: indexDefinition = this.editedIndex();
-            var mapRedceObservableArray = new Array<KnockoutObservable<string>>();
-            mapRedceObservableArray.pushAll(index.maps());
+            var mapReduceObservableArray = new Array<KnockoutObservable<string>>();
+            mapReduceObservableArray.pushAll(index.maps());
             if (!!index.reduce()) {
-                mapRedceObservableArray.push(index.reduce);
+                mapReduceObservableArray.push(index.reduce);
             }
 
-            var mapReduceArray = mapRedceObservableArray.map((observable: KnockoutObservable<string>) => observable());
+            var mapReduceArray = mapReduceObservableArray.map((observable: KnockoutObservable<string>) => observable());
 
             new formatIndexCommand(this.activeDatabase(), mapReduceArray, this.activeDatabase())
                 .execute()
                 .done((formatedMapReduceArray: string[]) => {
                     formatedMapReduceArray.forEach((element: string, i: number) => {
                         if (element.indexOf("Could not format:") == -1) {
-                            mapRedceObservableArray[i](element);
+                            mapReduceObservableArray[i](element);
                         } else {
                             var isReduce = !!index.reduce() && i == formatedMapReduceArray.length - 1;
                             var errorMessage = isReduce ? "Failed to format reduce!" : "Failed to format map '" + i + "'!";
