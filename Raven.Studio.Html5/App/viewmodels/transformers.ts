@@ -57,7 +57,7 @@ class Transformers extends viewModelBase {
     }
 
     private processTransformerEvent(e: transformerChangeNotificationDto) {
-        if (e.Type == transformerChangeType.TransformerRemoved) {
+        if (e.Type == "TransformerRemoved") {
             this.removeTransformersFromAllGroups(this.findTransformersByName(e.Name));
         } else {
             if (this.transformersMutex == true) {

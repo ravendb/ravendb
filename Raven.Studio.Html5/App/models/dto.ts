@@ -17,15 +17,15 @@ interface metadataAwareDto {
 }
 
 interface replicationConflictNotificationDto {
-    ItemType: replicationConflictTypes;
+    ItemType: string;
     Id: string;
     Etag: string;
-    OperationType: replicationOperationTypes;
+    OperationType: string;
     Conflicts: string[];
 }
 
 interface documentChangeNotificationDto {
-    Type: documentChangeType;
+    Type: string;
     Id: string;
     CollectionName: string;
     TypeName: string;
@@ -52,13 +52,13 @@ interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
 }
 
 interface indexChangeNotificationDto {
-    Type: indexChangeType;
+    Type: string;
     Name: string;
     Etag: string;
 }
 
 interface transformerChangeNotificationDto {
-    Type: transformerChangeType;
+    Type: string;
     Name: string;
 }
 
@@ -813,58 +813,10 @@ interface collectionStats {
     Size: number;
 }
 
-enum replicationConflictTypes {
-    None = 0,
-
-    DocumentReplicationConflict = 1,
-    AttachmentReplicationConflict = 2,
-}
-
-enum replicationOperationTypes {
-    None = 0,
-
-    Put = 1,
-    Delete = 2,
-}
-
-enum documentChangeType {
-    None = 0,
-    Put = 1,
-    Delete = 2,
-    Common= 3,
-    BulkInsertStarted = 4,
-    BulkInsertEnded = 8,
-    BulkInsertError = 16,
-}
-
-enum indexChangeType {
-    None = 0,
-
-    MapCompleted = 1,
-    ReduceCompleted = 2,
-    RemoveFromIndex = 4,
-
-    IndexAdded = 8,
-    IndexRemoved = 16,
-
-    IndexDemotedToIdle = 32,
-    IndexPromotedFromIdle = 64,
-
-    IndexDemotedToAbandoned = 128,
-    IndexDemotedToDisabled = 256,
-    IndexMarkedAsErrored =  512
-}
-
-enum transformerChangeType {
-    None = 0,
-    TransformerAdded = 1,
-    TransformerRemoved = 2
-}
-
 enum logTenantType {
-    Database= 0,
-    Filesystem= 1,
-    CounterStorage=2
+    Database = 0,
+    Filesystem = 1,
+    CounterStorage = 2
 }
 
 interface filterSettingDto {

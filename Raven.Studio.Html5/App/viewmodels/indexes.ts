@@ -145,7 +145,7 @@ class indexes extends viewModelBase {
     }
 
     processIndexEvent(e: indexChangeNotificationDto) {
-        if (e.Type == indexChangeType.IndexRemoved) {
+        if (e.Type == "IndexRemoved") {
             this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
         } else {
             if (this.indexMutex == true) {
