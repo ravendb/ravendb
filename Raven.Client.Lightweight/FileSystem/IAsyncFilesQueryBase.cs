@@ -212,6 +212,27 @@ This is likely a bug, because this will execute the filter in memory, rather tha
         /// <param name = "value">The value.</param>
         TSelf WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
 
+
+        /// <summary>
+        /// Performs a query matching ANY of the provided values against the given field (OR)
+        /// </summary>
+        TSelf ContainsAny(string fieldName, IEnumerable<object> values);
+
+        /// <summary>
+        /// Performs a query matching ANY of the provided values against the given field (OR)
+        /// </summary>
+        TSelf ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<object> values);
+
+        /// <summary>
+        /// Performs a query matching ALL of the provided values against the given field (AND)
+        /// </summary>
+        TSelf ContainsAll(string fieldName, IEnumerable<object> values);
+
+        /// <summary>
+        /// Performs a query matching ALL of the provided values against the given field (AND)
+        /// </summary>
+        TSelf ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<object> values);
+
         /// <summary>
         ///   Order the results by the specified fields
         ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.

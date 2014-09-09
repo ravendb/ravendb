@@ -108,6 +108,10 @@ namespace Raven.Client.FileSystem
         /// <param name = "value">The value.</param>
         void WhereLessThanOrEqual(string fieldName, object value);
 
+        void ContainsAny(string fieldName, IEnumerable<object> values);
+
+        void ContainsAll(string fieldName, IEnumerable<object> values);
+
         /// <summary>
         ///   Add an AND to the query
         /// </summary>
