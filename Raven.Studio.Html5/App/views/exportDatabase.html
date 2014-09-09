@@ -8,10 +8,10 @@
         <br />
         <div class="btn-toolbar">
             <div >
-                <button class="btn btn-primary" data-bind="click: startExport">
+                <a class="btn btn-primary" data-bind="click: startExport" download>
                     <i class="fa fa-download"></i>
                     Export Database
-                </button>
+                </a>
                 
                 <form id="dbExportDownloadForm" method="post" data-bind="attr:{action:exportActionUrl}" target="about:blank">
                     <input type="hidden" id="SmugglerOptions" name="SmugglerOptions" />
