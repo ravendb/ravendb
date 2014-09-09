@@ -577,5 +577,63 @@ namespace RavenFS.Tests.ClientApi
             }
         }
 
+        [Fact]
+        public async void CanUseContainsAll()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("a.file", CreateUniformFileStream(100));
+                session.RegisterUpload("b.file", CreateUniformFileStream(101));
+                await session.SaveChangesAsync();
+
+                var fileA = await session.LoadFileAsync("a.file");
+                fileA.Metadata["Test"] = new RavenJArray("test1", "test2", "test3");
+
+                var fileB = await session.LoadFileAsync("b.file");
+                fileB.Metadata["Test"] = new RavenJArray("test1", "test3");
+
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .ContainsAll("Test", new string[] { "test1", "test2" })
+                                         .ToListAsync();
+
+                Assert.Equal(1, query.Count);
+            }
+        }
+
+        [Fact]
+        public async void CanUseContainsAny()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("a.file", CreateUniformFileStream(100));
+                session.RegisterUpload("b.file", CreateUniformFileStream(101));
+                session.RegisterUpload("c.file", CreateUniformFileStream(103));
+                await session.SaveChangesAsync();
+
+                var fileA = await session.LoadFileAsync("a.file");
+                fileA.Metadata["Test"] = new RavenJArray(new string[] { "test3" });
+
+                var fileB = await session.LoadFileAsync("b.file");
+                fileB.Metadata["Test"] = new RavenJArray("test1", "test3");
+
+                var fileC = await session.LoadFileAsync("c.file");
+                fileC.Metadata["Test"] = new RavenJArray("test2", "test3");
+
+                await session.SaveChangesAsync();
+
+                var query = await session.Query()
+                                         .ContainsAny("Test", new string[] { "test1", "test2" })
+                                         .ToListAsync();
+
+                Assert.Equal(2, query.Count);
+            }
+        }
+
     }
 }
