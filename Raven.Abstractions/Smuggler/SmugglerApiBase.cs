@@ -265,6 +265,7 @@ namespace Raven.Abstractions.Smuggler
 
 		public abstract Task ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtagsToFetch);
 
+        [Obsolete("Use RavenFS instead.")]
 		protected virtual async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 			var totalCount = 0;
@@ -674,6 +675,7 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private async Task<int> ImportDeletedAttachments(JsonReader jsonReader)
 		{
 			var count = 0;
@@ -728,6 +730,7 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private async Task<int> ImportAttachments(RavenConnectionStringOptions dst, JsonTextReader jsonReader)
 		{
 			var count = 0;

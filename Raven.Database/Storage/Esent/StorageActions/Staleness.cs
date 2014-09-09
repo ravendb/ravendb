@@ -146,6 +146,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return Etag.Parse(lastEtag);
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public Etag GetMostRecentAttachmentEtag()
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_etag");

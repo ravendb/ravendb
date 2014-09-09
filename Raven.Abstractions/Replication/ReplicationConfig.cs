@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+
 namespace Raven.Abstractions.Replication
 {
 	/// <summary>
@@ -12,6 +14,7 @@ namespace Raven.Abstractions.Replication
 	{
 		public StraightforwardConflictResolution DocumentConflictResolution { get; set; }
 
+        [Obsolete("Use RavenFS instead.")]
 		public StraightforwardConflictResolution AttachmentConflictResolution { get; set; }
 	}
 

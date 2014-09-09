@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
+
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
@@ -11,6 +13,7 @@ namespace Raven.Database.Data
 	/// <summary>
 	/// Describe an attachment, but without the actual attachment data
 	/// </summary>
+    [Obsolete("Use RavenFS instead.")]
 	public class AttachmentInformation
 	{
 		/// <summary>

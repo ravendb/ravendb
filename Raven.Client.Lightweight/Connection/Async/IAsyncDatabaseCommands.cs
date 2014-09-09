@@ -271,33 +271,38 @@ namespace Raven.Client.Connection.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="stream">The data stream.</param>
 		/// <param name="metadata">The metadata.</param>
-		Task PutAttachmentAsync(string key, Etag etag, Stream stream, RavenJObject metadata);
+        [Obsolete("Use RavenFS instead.")]
+        Task PutAttachmentAsync(string key, Etag etag, Stream stream, RavenJObject metadata);
 
 		/// <summary>
 		/// Gets the attachment by the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
-		Task<Attachment> GetAttachmentAsync(string key);
+        [Obsolete("Use RavenFS instead.")]
+        Task<Attachment> GetAttachmentAsync(string key);
 
 		/// <summary>
 		/// Gets the attachments asynchronously
 		/// </summary>
 		/// <returns></returns>
-		Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize);
+        [Obsolete("Use RavenFS instead.")]
+        Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize);
 
 		/// <summary>
 		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
-		Task<Attachment> HeadAttachmentAsync(string key);
+        [Obsolete("Use RavenFS instead.")]
+        Task<Attachment> HeadAttachmentAsync(string key);
 
 		/// <summary>
 		/// Deletes the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
+        [Obsolete("Use RavenFS instead.")]
         Task DeleteAttachmentAsync(string key, Etag etag);
 
 		///<summary>
@@ -416,12 +421,14 @@ namespace Raven.Client.Connection.Async
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
 		/// <param name="metadata">The metadata.</param>
-		Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata);
+        [Obsolete("Use RavenFS instead.")]
+        Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata);
 
 		/// <summary>
 		/// Gets the attachments starting with the specified prefix
 		/// </summary>
-		Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize);
+        [Obsolete("Use RavenFS instead.")]
+        Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize);
 
 		/// <summary>
 		/// Commits the specified tx id.

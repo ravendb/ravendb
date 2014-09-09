@@ -70,6 +70,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			}
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public IEnumerable<AbstractAttachmentReplicationConflictResolver> AttachmentReplicationConflictResolvers
 		{
 			get
@@ -172,6 +173,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[HttpPost]
 		[Route("replication/replicateAttachments")]
 		[Route("databases/{databaseName}/replication/replicateAttachments")]
+        [Obsolete("Use RavenFS instead.")]
 		public async Task<HttpResponseMessage> AttachmentReplicatePost()
 		{
 			var src = GetQueryStringValue("from");
@@ -403,6 +405,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			}.Replicate(id, metadata, document);
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private void ReplicateAttachment(IStorageActionsAccessor actions, string id, RavenJObject metadata, byte[] data, string src)
 		{
 			new AttachmentReplicationBehavior

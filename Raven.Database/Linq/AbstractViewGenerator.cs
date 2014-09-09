@@ -134,6 +134,7 @@ namespace Raven.Database.Linq
 				.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO, false, Field.TermVector.NO, index);
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		protected dynamic LoadAttachmentForIndexing(object item)
 		{
 			if (item == null || item is DynamicNullObject)

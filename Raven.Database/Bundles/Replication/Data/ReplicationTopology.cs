@@ -40,6 +40,7 @@ namespace Raven.Database.Bundles.Replication.Data
 
 		public Guid StoredServerId { get; set; }
 
+        [Obsolete("Use RavenFS instead.")]
 		public Etag LastAttachmentEtag { get; set; }
 
 		public Etag LastDocumentEtag { get; set; }

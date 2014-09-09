@@ -1,3 +1,5 @@
+using System;
+
 using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Smuggler.Data
@@ -13,7 +15,11 @@ namespace Raven.Abstractions.Smuggler.Data
 		}
 		public Etag LastDocsEtag { get; set; }
 		public Etag LastDocDeleteEtag { get; set; }
+
+        [Obsolete("Use RavenFS instead.")]
 		public Etag LastAttachmentsEtag { get; set; }
+
+        [Obsolete("Use RavenFS instead.")]
 		public Etag LastAttachmentsDeleteEtag { get; set; }
 	}
 }

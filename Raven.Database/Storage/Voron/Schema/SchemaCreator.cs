@@ -199,6 +199,7 @@ namespace Raven.Database.Storage.Voron.Schema
 			storage.Environment.CreateTree(tx, storage.ReduceKeyTypes.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private static void CreateAttachmentsSchema(Transaction tx, TableStorage storage)
 		{
 			storage.Environment.CreateTree(tx, Tables.Attachments.TableName);

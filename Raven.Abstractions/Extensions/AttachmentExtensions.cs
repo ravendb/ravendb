@@ -1,4 +1,6 @@
-﻿namespace Raven.Abstractions.Extensions
+﻿using System;
+
+namespace Raven.Abstractions.Extensions
 {
 	using System.IO;
 	using System.Linq;
@@ -6,6 +8,7 @@
 	using Raven.Abstractions.Data;
 	using Raven.Json.Linq;
 
+    [Obsolete("Use RavenFS instead.")]
 	public static class AttachmentExtensions
 	{
 		public static bool IsConflictAttachment(this Attachment attachment)

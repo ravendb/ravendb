@@ -109,6 +109,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
+        [Obsolete("Use RavenFS instead.")]
         void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata);
 
 		/// <summary>
@@ -117,6 +118,7 @@ namespace Raven.Client.Connection
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
 		/// <param name="metadata">The metadata.</param>
+        [Obsolete("Use RavenFS instead.")]
         void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata);
 
 		/// <summary>
@@ -124,26 +126,29 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
-		Attachment GetAttachment(string key);
+        [Obsolete("Use RavenFS instead.")]
+        Attachment GetAttachment(string key);
 
 		/// <summary>
 		/// Gets the attachments starting with the specified prefix
 		/// </summary>
-		IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize);
+        [Obsolete("Use RavenFS instead.")]
+        IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize);
 
 		/// <summary>
 		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
-		Attachment HeadAttachment(string key);
-
+        [Obsolete("Use RavenFS instead.")]
+        Attachment HeadAttachment(string key);
 
 		/// <summary>
 		/// Deletes the attachment with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
+        [Obsolete("Use RavenFS instead.")]
         void DeleteAttachment(string key, Etag etag);
 
 		/// <summary>
@@ -490,7 +495,8 @@ namespace Raven.Client.Connection
 	    /// </summary>
 	    void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
 
-	    AttachmentInformation[] GetAttachments(int start, Etag startEtag, int pageSize);
+        [Obsolete("Use RavenFS instead.")]
+        AttachmentInformation[] GetAttachments(int start, Etag startEtag, int pageSize);
 
         IndexMergeResults GetIndexMergeSuggestions();
 	}

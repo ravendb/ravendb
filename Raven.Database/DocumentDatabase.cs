@@ -217,16 +217,20 @@ namespace Raven.Database
 		}
 
 		[ImportMany]
+        [Obsolete("Use RavenFS instead.")]
 		public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
 
 		[ImportMany]
+        [Obsolete("Use RavenFS instead.")]
 		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
 
 		[ImportMany]
+        [Obsolete("Use RavenFS instead.")]
 		public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
 
 		internal PutSerialLock DocumentLock { get; private set; }
 
+        [Obsolete("Use RavenFS instead.")]
 		public AttachmentActions Attachments { get; private set; }
 
 		public TaskScheduler BackgroundTaskScheduler

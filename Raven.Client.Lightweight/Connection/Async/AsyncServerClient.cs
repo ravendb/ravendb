@@ -1513,7 +1513,7 @@ namespace Raven.Client.Connection.Async
 			return json.Deserialize<DatabaseStatistics>(convention);
 		}
 
-
+        [Obsolete("Use RavenFS instead.")]
 		public Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
@@ -1535,7 +1535,8 @@ namespace Raven.Client.Connection.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data stream.</param>
 		/// <param name="metadata">The metadata.</param>
-		public Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata)
+        [Obsolete("Use RavenFS instead.")]
+        public Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata)
 		{
 			return ExecuteWithReplication("PUT", operationMetadata =>
 			{
@@ -1561,13 +1562,15 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
-		public Task<Attachment> GetAttachmentAsync(string key)
+        [Obsolete("Use RavenFS instead.")]
+        public Task<Attachment> GetAttachmentAsync(string key)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 
 			return ExecuteWithReplication("GET", operationMetadata => DirectGetAttachmentAsync(key, operationMetadata, "GET"));
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public Task<Attachment> HeadAttachmentAsync(string key)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
@@ -1575,6 +1578,7 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("HEAD", operationMetadata => DirectGetAttachmentAsync(key, operationMetadata, "HEAD"));
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private async Task<Attachment> DirectGetAttachmentAsync(string key, OperationMetadata operationMetadata, string method)
 		{
 			var metadata = new RavenJObject();
@@ -1654,7 +1658,8 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		public Task DeleteAttachmentAsync(string key, Etag etag)
+        [Obsolete("Use RavenFS instead.")]
+        public Task DeleteAttachmentAsync(string key, Etag etag)
 		{
 			return ExecuteWithReplication("DELETE", operationMetadata =>
 			{
@@ -2139,11 +2144,13 @@ namespace Raven.Client.Connection.Async
 																  convention.FailoverBehavior, HandleReplicationStatusChanges);
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata)
 		{
 			return ExecuteWithReplication("POST", operationMetadata => DirectUpdateAttachmentMetadata(key, metadata, etag, operationMetadata));
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private async Task DirectUpdateAttachmentMetadata(string key, RavenJObject metadata, Etag etag, OperationMetadata operationMetadata)
 		{
 			if (etag != null)
@@ -2168,11 +2175,13 @@ namespace Raven.Client.Connection.Async
 				throw responseException;
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize)
 		{
 			return ExecuteWithReplication("GET", operationMetadata => DirectGetAttachmentHeadersStartingWith("GET", idPrefix, start, pageSize, operationMetadata));
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private async Task<IAsyncEnumerator<Attachment>> DirectGetAttachmentHeadersStartingWith(string method, string idPrefix, int start, int pageSize, OperationMetadata operationMetadata)
 		{
 			var webRequest = jsonRequestFactory

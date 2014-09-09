@@ -36,6 +36,7 @@ namespace Raven.Smuggler
 			return SmugglerBetweenOperation.Between(betweenOptions, SmugglerOptions);
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		protected override Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 			if (maxEtag != null)

@@ -10,6 +10,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Responders
 {
+    [Obsolete("Use RavenFS instead.")]
 	public class AttachmentReplicationBehavior : SingleItemReplicationBehavior<Attachment, byte[]>
 	{
 		public IEnumerable<AbstractAttachmentReplicationConflictResolver> ReplicationConflictResolvers { get; set; }

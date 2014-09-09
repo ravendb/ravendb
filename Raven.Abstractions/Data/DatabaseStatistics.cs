@@ -11,6 +11,8 @@ namespace Raven.Abstractions.Data
 	public class DatabaseStatistics
 	{
 		public Etag LastDocEtag { get; set; }
+
+        [Obsolete("Use RavenFS instead.")]
 		public Etag LastAttachmentEtag { get; set; }
 		public int CountOfIndexes { get; set; }
 		public int InMemoryIndexingQueueSize { get; set; }
@@ -18,6 +20,7 @@ namespace Raven.Abstractions.Data
 
 		public long CountOfDocuments { get; set; }
 
+        [Obsolete("Use RavenFS instead.")]
 		public long CountOfAttachments { get; set; }
 
 		public string[] StaleIndexes { get; set; }

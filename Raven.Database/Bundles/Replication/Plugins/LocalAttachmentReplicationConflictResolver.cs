@@ -13,6 +13,7 @@ using Raven.Json.Linq;
 namespace Raven.Database.Bundles.Replication.Plugins
 {
 	[PartNotDiscoverable]
+    [Obsolete("Use RavenFS instead.")]
 	public class LocalAttachmentReplicationConflictResolver : AbstractAttachmentReplicationConflictResolver
 	{
 		public static LocalAttachmentReplicationConflictResolver Instance = new LocalAttachmentReplicationConflictResolver();
