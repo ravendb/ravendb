@@ -161,6 +161,7 @@ namespace Raven.Abstractions.Extensions
             return FilterHeadersToObject(self, HeadersToIgnoreClient, PrefixesInHeadersToIgnoreClient);
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
 		{
 			var filterHeaders = self.FilterHeadersToObject();
@@ -203,6 +204,7 @@ namespace Raven.Abstractions.Extensions
             return metadata;
         }
 
+        [Obsolete("Use RavenFS instead.")]
 		public static RavenJObject FilterHeadersAttachment(this HttpHeaders self)
 		{
 			var filterHeaders = self.FilterHeadersToObject();

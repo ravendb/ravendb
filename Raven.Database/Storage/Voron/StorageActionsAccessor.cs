@@ -57,6 +57,7 @@ namespace Raven.Database.Storage.Voron
 
 		public IStalenessStorageActions Staleness { get; private set; }
 
+        [Obsolete("Use RavenFS instead.")]
 		public IAttachmentsStorageActions Attachments { get; private set; }
 
 		public IIndexingStorageActions Indexing { get; private set; }

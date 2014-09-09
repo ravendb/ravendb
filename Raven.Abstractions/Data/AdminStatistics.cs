@@ -35,7 +35,10 @@ namespace Raven.Abstractions.Data
         public long TotalDatabaseSize { get; set; }
         public string TotalDatabaseHumaneSize { get; set; }
         public long CountOfDocuments { get; set; }
+
+        [Obsolete("Use RavenFS instead.")]
         public long CountOfAttachments { get; set; }
+
         public decimal DatabaseTransactionVersionSizeInMB { get; set; }
         public DatabaseMetrics Metrics { get; set; }
 		public StorageStats StorageStats { get; set; }

@@ -1,5 +1,8 @@
+using System;
+
 namespace Raven.Database.Linq
 {
+    [Obsolete("Use RavenFS instead.")]
 	public class AttachmentForIndexing 
 	{
 		private readonly string key;

@@ -65,8 +65,13 @@ namespace Raven.Abstractions.Data
 		public DateTime LastBackup { get; set; }
         public DateTime LastFullBackup { get; set; }
 		public Etag LastDocsEtag { get; set; }
+
+        [Obsolete("Use RavenFS instead.")]
 		public Etag LastAttachmentsEtag { get; set; }
+
         public Etag LastDocsDeletionEtag { get; set; }
+
+        [Obsolete("Use RavenFS instead.")]
         public Etag LastAttachmentDeletionEtag { get; set; }
 
 		public PeriodicExportStatus()

@@ -203,7 +203,8 @@ namespace Raven.Client.Connection
 		/// <param name="etag">The etag.</param>
 		/// <param name="data">The data.</param>
 		/// <param name="metadata">The metadata.</param>
-		public void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata)
+        [Obsolete("Use RavenFS instead.")]
+        public void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata)
 		{
 			asyncServerClient.PutAttachmentAsync(key, etag, data, metadata).WaitUnwrap();
 		}
@@ -214,7 +215,8 @@ namespace Raven.Client.Connection
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
 		/// <param name="metadata">The metadata.</param>
-		public void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata)
+        [Obsolete("Use RavenFS instead.")]
+        public void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata)
 		{
 			asyncServerClient.UpdateAttachmentMetadataAsync(key, etag, metadata).WaitUnwrap();
 		}
@@ -222,7 +224,8 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Gets the attachments starting with the specified prefix
 		/// </summary>
-		public IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize)
+        [Obsolete("Use RavenFS instead.")]
+        public IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize)
 		{
 			return new AsycnEnumerableWrapper<Attachment>(asyncServerClient.GetAttachmentHeadersStartingWithAsync(idPrefix,
 				start, pageSize).Result);
@@ -234,7 +237,8 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
-		public Attachment GetAttachment(string key)
+        [Obsolete("Use RavenFS instead.")]
+        public Attachment GetAttachment(string key)
 		{
 			return asyncServerClient.GetAttachmentAsync(key).ResultUnwrap();
 		}
@@ -244,7 +248,8 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
-		public Attachment HeadAttachment(string key)
+        [Obsolete("Use RavenFS instead.")]
+        public Attachment HeadAttachment(string key)
 		{
 			return asyncServerClient.HeadAttachmentAsync(key).ResultUnwrap();
 		}
@@ -254,7 +259,8 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		public void DeleteAttachment(string key, Etag etag)
+        [Obsolete("Use RavenFS instead.")]
+        public void DeleteAttachment(string key, Etag etag)
 		{
 			asyncServerClient.DeleteAttachmentAsync(key, etag).WaitUnwrap();
 		}
@@ -498,8 +504,9 @@ namespace Raven.Client.Connection
         public IndexMergeResults GetIndexMergeSuggestions()
 		{
             return asyncServerClient.GetIndexMergeSuggestionsAsync().ResultUnwrap();
-			}
+	    }
 
+        [Obsolete("Use RavenFS instead.")]
 		public AttachmentInformation[] GetAttachments(int start, Etag startEtag, int pageSize)
 		{
 			return asyncServerClient.GetAttachmentsAsync(start, startEtag, pageSize).ResultUnwrap();

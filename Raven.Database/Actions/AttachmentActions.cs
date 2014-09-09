@@ -22,6 +22,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
 {
+    [Obsolete("Use RavenFS instead.")]
     public class AttachmentActions : ActionsBase
     {
         /// <summary>

@@ -71,6 +71,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return false;
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public bool FilterAttachments(AttachmentInformation attachment, string destinationInstanceId)
 		{
 			if (attachment.Key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) || // don't replicate system attachments

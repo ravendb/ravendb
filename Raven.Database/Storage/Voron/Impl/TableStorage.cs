@@ -110,6 +110,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table ReduceResults { get; private set; }
 
+        [Obsolete("Use RavenFS instead.")]
 		public Table Attachments { get; private set; }
 
 		public Table ReduceKeyCounts { get; private set; }

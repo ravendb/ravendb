@@ -26,7 +26,7 @@
     <DefineConstants>TRACE;DEBUG;CLIENT</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <DocumentationFile>bin\Debug\Raven.Client.Lightweight.xml</DocumentationFile>
     <NoWarn>1573, 1587, 1591</NoWarn>
     <Prefer32Bit>false</Prefer32Bit>

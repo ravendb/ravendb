@@ -83,6 +83,7 @@ namespace Raven.Abstractions.Smuggler
         /// <summary>
         /// Start exporting from the specified attachments etag
         /// </summary>
+        [Obsolete("Use RavenFS instead.")]
         public Etag StartAttachmentsEtag { get; set; }
 
         /// <summary>
@@ -93,6 +94,7 @@ namespace Raven.Abstractions.Smuggler
         /// <summary>
         /// Start exporting from the specified attachment deletion etag
         /// </summary>
+        [Obsolete("Use RavenFS instead.")]
         public Etag StartAttachmentsDeletionEtag { get; set; }
 
         /// <summary>
@@ -261,6 +263,7 @@ namespace Raven.Abstractions.Smuggler
 	{
 		Documents = 0x1,
 		Indexes = 0x2,
+        [Obsolete("Use RavenFS instead.")]
 		Attachments = 0x4,
 		Transformers = 0x8,
 

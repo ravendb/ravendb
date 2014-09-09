@@ -6,6 +6,7 @@ using Raven.Json.Linq;
 namespace Raven.Bundles.Replication.Plugins
 {
 	[InheritedExport]
+    [Obsolete("Use RavenFS instead.")]
 	public abstract class AbstractAttachmentReplicationConflictResolver
 	{
 		public abstract bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment,
