@@ -153,7 +153,7 @@ class databases extends viewModelBase {
                 new createDatabaseCommand(databaseName, settings, securedSettings)
                     .execute()
                     .done(() => {
-                        var newDatabase = this.addNewDatabase(databaseName);
+                        var newDatabase = this.addNewDatabase(databaseName, bundles);
                         this.selectDatabase(newDatabase);
 
                         var encryptionConfirmationDialogPromise = $.Deferred();
@@ -183,11 +183,11 @@ class databases extends viewModelBase {
         });
     }
 
-    private addNewDatabase(databaseName: string): database {
+    private addNewDatabase(databaseName: string, bundles: string[]): database {
         var foundDatabase = this.databases.first((db: database) => db.name == databaseName);
 
         if (!foundDatabase) {
-            var newDatabase = new database(databaseName);
+            var newDatabase = new database(databaseName, false, bundles);
             this.databases.unshift(newDatabase);
             return newDatabase;
         }
