@@ -16,11 +16,13 @@ define('jquery', function() { return jQuery; });
 define('knockout', ko);
 define('nvd3', ['d3/d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], function (d3, nv, timelines, chart) { return nv; });
 
+// Do not remove the below comment, as it's used by the optimized build to inline Durandal scripts.
+// OPTIMIZED BUILD INLINE DURANDAL HERE
+
 define(['durandal/system', 'durandal/app', 'durandal/viewLocator', 'plugins/dialog'], function (system, app, viewLocator, dialog) {
-    //>>excludeStart("build", true);
-	system.debug(true);
+    //system.debug(true);
+	
 	NProgress.configure({ showSpinner: false });
-	//>>excludeEnd("build");
 
     app.title = 'Raven.Studio';
     dialog.MessageBox.setViewUrl('views/dialog.html');
