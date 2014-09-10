@@ -44,7 +44,7 @@ namespace Raven.Client.FileSystem
         /// <summary>
         /// The files waiting to be deleted
         /// </summary>
-        protected readonly HashSet<object> deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
+		protected readonly HashSet<string> deletedEntities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Entities whose filename we already know do not exist, because they were registered for deletion, etc.
@@ -128,12 +128,15 @@ namespace Raven.Client.FileSystem
         public int MaxNumberOfRequestsPerSession { get; set; }
 
 
-        private ConcurrentQueue<IFilesOperation> registeredOperations = new ConcurrentQueue<IFilesOperation>();
+        private Queue<IFilesOperation> registeredOperations = new Queue<IFilesOperation>();
 
 
         public void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
-            var operation = new UploadFileOperation(this, path, stream.Length, x => { stream.CopyTo(x); }, metadata, etag);
+	        if (deletedEntities.Contains(path))
+		        throw new InvalidOperationException("The file '" + path + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
+
+            var operation = new UploadFileOperation(this, path, stream.Length, stream.CopyTo, metadata, etag);
 
             IncrementRequestCount();
 
@@ -142,7 +145,10 @@ namespace Raven.Client.FileSystem
 
         public void RegisterUpload(FileHeader file, Stream stream, Etag etag = null)
         {
-            var operation = new UploadFileOperation(this, file.Name, stream.Length, x => { stream.CopyTo(x); }, file.Metadata, etag);
+			if (deletedEntities.Contains(file.Name))
+				throw new InvalidOperationException("The file '" + file.Name + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
+			
+			var operation = new UploadFileOperation(this, file.Name, stream.Length, stream.CopyTo, file.Metadata, etag);
 
             IncrementRequestCount();
 
@@ -169,6 +175,8 @@ namespace Raven.Client.FileSystem
 
         public void RegisterFileDeletion(string path, Etag etag = null)
         {
+	        deletedEntities.Add(path);
+
             var operation = new DeleteFileOperation(this, path, etag);
 
             IncrementRequestCount();
@@ -178,7 +186,9 @@ namespace Raven.Client.FileSystem
 
         public void RegisterFileDeletion(FileHeader file, Etag etag = null)
         {
-            var operation = new DeleteFileOperation(this, file.Path, etag);
+			deletedEntities.Add(file.Path);
+
+			var operation = new DeleteFileOperation(this, file.Path, etag);
 
             IncrementRequestCount();
 
@@ -247,31 +257,21 @@ namespace Raven.Client.FileSystem
             knownMissingIds.Add(id);
         }
 
-        public void RegisterDeleted(string id)
-        {
-            deletedEntities.Add(id);
-        }
-
         public async Task SaveChangesAsync()
         {
-            var session = this as IAsyncFilesSession;
-            if (session == null)
-                throw new InvalidCastException("This object does not implement IAsyncFilesSession.");
-
             var changes = new SaveChangesData();
-            var operationsToExecute = this.registeredOperations; // Potential race condition in between this two, not thread safe.
-            this.registeredOperations = new ConcurrentQueue<IFilesOperation>();
+            var operationsToExecute = registeredOperations;
+            registeredOperations = new Queue<IFilesOperation>();
             
             PrepareForSaveChanges(changes, operationsToExecute.ToList());
 
             try
             {
                 var results = new List<FileHeader>();
-                FileHeader operationResult;
-                foreach (var op in changes.Operations)
+	            foreach (var op in changes.Operations)
                 {
                     AssertConflictsAreNotAffectingOperation(op);
-                    operationResult = await op.Execute(session);
+                    var operationResult = await op.Execute((IAsyncFilesSession)this);
                     if (operationResult != null)
                         results.Add(operationResult);
                 }
@@ -304,12 +304,8 @@ namespace Raven.Client.FileSystem
             var deleteOperations = operations.OfType<DeleteFileOperation>().ToList();
             foreach (var op in deleteOperations)
             {
-                //TODO: this should work in order to avoid deletes when a file will be overriden
-                //if (!entitiesByKey.ContainsKey(op.Filename) || !UploadRegisteredForFileAfterDelete(op.Filename, operations))
-                //{
-                    changes.Operations.Add(op);
-                    deletedEntities.Add(op.Filename);
-                //}
+                changes.Operations.Add(op);
+                deletedEntities.Add(op.Filename);
             }
         }
 

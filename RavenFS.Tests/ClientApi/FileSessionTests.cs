@@ -470,34 +470,17 @@ namespace RavenFS.Tests.ClientApi
             }
         }
 
-        [Fact(Skip="Review if we want this level of object tracking for Beta 2")]
-        public async void CombinationOfDeletesAndUpdates()
+        [Fact]
+        public async void CombinationOfDeletesAndUpdatesNotPermitted()
         {
-            var store = (FilesStore)filesStore;
-
             using (var session = filesStore.OpenAsyncSession())
             {
                 session.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await session.SaveChangesAsync();
 
                 // deleting file, then uploading it again and doing metadata change
-                var file = await session.LoadFileAsync("test1.file");
                 session.RegisterFileDeletion("test1.file");
-                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
-                file.Metadata["Test"] = new RavenJValue("Value");
-
-                await session.SaveChangesAsync();
-
-                file = await session.LoadFileAsync("test1.file");
-                Assert.NotNull(file);
-                Assert.True(file.Metadata.ContainsKey("Test"));
-
-                session.RegisterUpload("test2.file", CreateUniformFileStream(128));
-                session.RegisterFileDeletion("test2.file");
-                await session.SaveChangesAsync();
-
-                file = await session.LoadFileAsync("test1.file");
-                Assert.Null(await session.LoadFileAsync("test2.file"));
+	            Assert.Throws<InvalidOperationException>(() => session.RegisterUpload("test1.file", CreateUniformFileStream(128)));
             }
         }
     }
