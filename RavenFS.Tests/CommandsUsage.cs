@@ -622,7 +622,7 @@ namespace RavenFS.Tests
             Assert.NotNull(fileMetadata);
             Assert.Equal(2, fileMetadata.Length);
             Assert.Equal("1.txt", fileMetadata[0].Name);
-            Assert.Equal("/a/b/2.txt", fileMetadata[1].FullName);
+            Assert.Equal("/a/b/2.txt", fileMetadata[1].FullPath);
             Assert.Equal("2.txt", fileMetadata[1].Name);
             Assert.Equal(128, fileMetadata[0].TotalSize);
             Assert.Equal(128, fileMetadata[1].TotalSize);
@@ -635,8 +635,8 @@ namespace RavenFS.Tests
             Assert.Equal(fileMetadata[1].Metadata[Constants.CreationDate].Value<DateTimeOffset>(), fileMetadata[1].CreationDate);
             Assert.Equal(".txt", fileMetadata[0].Extension);
             Assert.Equal(".txt", fileMetadata[1].Extension);
-            Assert.Equal("/", fileMetadata[0].Path);
-            Assert.Equal("/a/b", fileMetadata[1].Path);
+            Assert.Equal("/", fileMetadata[0].Directory);
+            Assert.Equal("/a/b", fileMetadata[1].Directory);
         }
 
         [Fact]

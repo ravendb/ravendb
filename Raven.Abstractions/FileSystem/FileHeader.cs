@@ -71,7 +71,7 @@ namespace Raven.Abstractions.FileSystem
             }
         }
 
-        public string FullName
+        public string FullPath
         {
             get;
             set;
@@ -84,10 +84,10 @@ namespace Raven.Abstractions.FileSystem
                 // FileHeader should not need to handle the case of non-canonical names. But we are handling it anyways.
                 // http://issues.hibernatingrhinos.com/issue/RavenDB-2681
                 int skipSlash = 1;
-                if (!FullName.StartsWith("/"))
+                if (!FullPath.StartsWith("/"))
                     skipSlash = 0;
 
-                return Path == "/" ? FullName.TrimStart('/') : FullName.Substring(Path.Count() + skipSlash);
+                return Directory == "/" ? FullPath.TrimStart('/') : FullPath.Substring(Directory.Count() + skipSlash);
             }
         }
 
@@ -95,22 +95,22 @@ namespace Raven.Abstractions.FileSystem
         {
             get
             {
-                return System.IO.Path.GetExtension(this.FullName);
+                return System.IO.Path.GetExtension(this.FullPath);
             }
         }
 
-        public string Path
+        public string Directory
         {
             get
             {
-                return System.IO.Path.GetDirectoryName(this.FullName)
+                return System.IO.Path.GetDirectoryName(this.FullPath)
                                      .Replace('\\', '/');
             }
         }        
 
         public FileHeader( string key, RavenJObject metadata )
         {
-            this.FullName = key;            
+            this.FullPath = key;            
             this.Metadata = metadata;
             this.OriginalMetadata = (RavenJObject)metadata.CloneToken();
             
@@ -170,7 +170,7 @@ namespace Raven.Abstractions.FileSystem
 
         protected bool Equals(FileHeader other)
         {
-            return string.Equals(FullName, other.FullName) && TotalSize == other.TotalSize && UploadedSize == other.UploadedSize && Metadata.Equals(other.Metadata);
+            return string.Equals(FullPath, other.FullPath) && TotalSize == other.TotalSize && UploadedSize == other.UploadedSize && Metadata.Equals(other.Metadata);
         }
 
         public override bool Equals(object obj)
@@ -185,7 +185,7 @@ namespace Raven.Abstractions.FileSystem
         {
             unchecked
             {
-                var hashCode = (FullName != null ? FullName.GetHashCode() : 0);
+                var hashCode = (FullPath != null ? FullPath.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ TotalSize.GetHashCode();
                 hashCode = (hashCode * 397) ^ UploadedSize.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Metadata != null ? Metadata.GetHashCode() : 0);

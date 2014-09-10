@@ -37,7 +37,7 @@ namespace RavenFS.Tests.Synchronization
 
 			Assert.Equal(1, results.FileCount);
             Assert.Equal("conflict.test", results.Files[0].Name);
-            Assert.Equal(FileHeader.Canonize("conflict.test"), results.Files[0].FullName);
+            Assert.Equal(FileHeader.Canonize("conflict.test"), results.Files[0].FullPath);
 		}
 
 		[Fact]
