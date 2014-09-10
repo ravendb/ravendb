@@ -16,6 +16,7 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
 
@@ -154,7 +155,7 @@ namespace Raven.SlowTests.Issues
                 TellFirstInstanceToReplicateToSecondInstance();
 
                 var replicationInformerForDatabase = store1.GetReplicationInformerForDatabase(store1.DefaultDatabase);
-                await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient)store1.DatabaseCommands);
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store1.AsyncDatabaseCommands);
 
                 var people = InitializeData(store1);
                 var lastPersonId = people.Last().Id;

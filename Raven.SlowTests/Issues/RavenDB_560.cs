@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Server;
 using Raven.Tests.Common;
@@ -87,7 +88,7 @@ namespace Raven.SlowTests.Issues
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
 			    replicationInformerForDatabase.DelayTimeInMiliSec = 0;
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands);
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands);
 
 				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
 
@@ -164,7 +165,7 @@ namespace Raven.SlowTests.Issues
 
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
                 replicationInformerForDatabase.DelayTimeInMiliSec = 0;
-                await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient)store.DatabaseCommands);
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands);
 
 				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
 

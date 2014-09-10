@@ -1,5 +1,6 @@
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Tests.Common;
 using Raven.Tests.Document;
@@ -43,7 +44,7 @@ namespace Raven.Tests.Bundles.Replication
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands)
 					.Wait();
 				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 
@@ -100,7 +101,7 @@ namespace Raven.Tests.Bundles.Replication
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient)store.DatabaseCommands)
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands)
 					.Wait();
 				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 

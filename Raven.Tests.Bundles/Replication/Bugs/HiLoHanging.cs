@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
@@ -24,10 +25,10 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 			var store2 = CreateStore();
 
 			((DocumentStore) store1).GetReplicationInformerForDatabase()
-			                        .UpdateReplicationInformationIfNeeded((ServerClient) store1.DatabaseCommands)
+			                        .UpdateReplicationInformationIfNeeded((AsyncServerClient) store1.AsyncDatabaseCommands)
 			                        .Wait();
 			((DocumentStore) store2).GetReplicationInformerForDatabase()
-			                        .UpdateReplicationInformationIfNeeded((ServerClient) store2.DatabaseCommands)
+			                        .UpdateReplicationInformationIfNeeded((AsyncServerClient) store2.AsyncDatabaseCommands)
 			                        .Wait();
 
 			TellFirstInstanceToReplicateToSecondInstance();

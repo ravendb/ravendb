@@ -771,6 +771,8 @@ PutDocument(
 									select new { doc.Owner }"
 					});
 
+			WaitForUserToContinueTheTest(store);
+
             store.OpenSession().Advanced.DocumentQuery<CustomType>("TestIndex")
 					.WaitForNonStaleResults().ToList();
 
