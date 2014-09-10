@@ -17,7 +17,7 @@ properties {
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
-	$global:configuration = "Debug"
+	$global:configuration = "Release"
 }
 
 task default -depends Test, DoReleasePart1
