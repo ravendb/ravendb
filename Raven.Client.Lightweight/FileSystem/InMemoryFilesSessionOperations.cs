@@ -145,10 +145,10 @@ namespace Raven.Client.FileSystem
 
         public void RegisterUpload(FileHeader file, Stream stream, Etag etag = null)
         {
-			if (deletedEntities.Contains(file.Name))
-				throw new InvalidOperationException("The file '" + file.Name + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
-			
-			var operation = new UploadFileOperation(this, file.Name, stream.Length, stream.CopyTo, file.Metadata, etag);
+            if (deletedEntities.Contains(file.FullName))
+                throw new InvalidOperationException("The file '" + file.FullName + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
+
+            var operation = new UploadFileOperation(this, file.FullName, stream.Length, stream.CopyTo, file.Metadata, etag);
 
             IncrementRequestCount();
 
@@ -166,7 +166,7 @@ namespace Raven.Client.FileSystem
 
         public void RegisterUpload(FileHeader file, long size, Action<Stream> write, Etag etag = null)
         {
-            var operation = new UploadFileOperation(this, file.Name, size, write, file.Metadata, etag);
+            var operation = new UploadFileOperation(this, file.FullName, size, write, file.Metadata, etag);
 
             IncrementRequestCount();
 
@@ -315,10 +315,10 @@ namespace Raven.Client.FileSystem
             {
                 var fileHeader = entitiesByKey[key] as FileHeader;
 
-                if (EntityChanged(fileHeader) && !UploadRegisteredForFile(fileHeader.Name, operations))
+                if (EntityChanged(fileHeader) && !UploadRegisteredForFile(fileHeader.FullName, operations))
                 {
                     changes.Operations.Add(new UpdateMetadataOperation(this, fileHeader, fileHeader.Metadata));
-                    changes.Entities.Add(fileHeader.Name);
+                    changes.Entities.Add(fileHeader.FullName);
                 }
             }
         }
@@ -344,17 +344,17 @@ namespace Raven.Client.FileSystem
                 existingFileHeader.OriginalMetadata = (RavenJObject)result.Metadata.CloneToken();
                 existingFileHeader.Refresh();
 
-                if (savedEntity != result.Name)
+                if (savedEntity != result.FullName)
                 {
-                    if ( !entitiesByKey.ContainsKey(result.Name) )
+                    if (!entitiesByKey.ContainsKey(result.FullName))
                     {
-                        existingFileHeader.Name = result.Name;
-                        entitiesByKey.Add(result.Name, existingFileHeader);
+                        existingFileHeader.FullName = result.FullName;
+                        entitiesByKey.Add(result.FullName, existingFileHeader);
                         entitiesByKey.Remove(savedEntity);
                     }
                 }
 
-                AddToCache(existingFileHeader.Name, existingFileHeader);
+                AddToCache(existingFileHeader.FullName, existingFileHeader);
 			}
         }
 

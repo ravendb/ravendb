@@ -388,7 +388,7 @@ namespace Raven.Client.FileSystem.Shard
 
 				var current = applyAsync[i][pos];
 				if (smallest == null ||
-					string.Compare(current.Name, smallest.Name, StringComparison.InvariantCultureIgnoreCase) < 0)
+                    string.Compare(current.FullName, smallest.FullName, StringComparison.InvariantCultureIgnoreCase) < 0)
 				{
 					smallest = current;
 					smallestIndex = i;
@@ -434,7 +434,7 @@ namespace Raven.Client.FileSystem.Shard
 		{
 			if (sortFields == null || sortFields.Length == 0)
 			{
-				return string.Compare(current.Name, smallest.Name, StringComparison.InvariantCultureIgnoreCase);
+                return string.Compare(current.FullName, smallest.FullName, StringComparison.InvariantCultureIgnoreCase);
 			}
 			foreach (var sortField in sortFields)
 			{

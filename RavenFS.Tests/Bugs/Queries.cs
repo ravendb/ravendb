@@ -75,7 +75,7 @@ namespace RavenFS.Tests.Bugs
 		}
 
 		[Fact]
-		public void ShouldEncodeValues()
+		public async void ShouldEncodeValues()
 		{
 
 			var client = NewAsyncClient(); 
@@ -87,13 +87,9 @@ namespace RavenFS.Tests.Bugs
 			ms.Position = 0;
 
 			const string filename = "10 jQuery Transition Effects/Moving Elements with Style - DevSnippets.txt";
-            client.UploadAsync(filename, ms, new RavenJObject
-			{
-				{"Item", "10"}
-			}).Wait();
+            await client.UploadAsync(filename, ms, new RavenJObject { {"Item", "10"} });
 
-
-			var fileInfos = client.SearchAsync("Item:10*").Result;
+			var fileInfos = await client.SearchAsync("Item:10*");
 
             Assert.Equal(1, fileInfos.Files.Count);
 			Assert.Equal("/" + filename, fileInfos.Files[0].Name);

@@ -228,7 +228,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             var fileInformation = new FileAndPagesInformation
                                   {
                                       TotalSize = f.TotalSize,
-                                      Name = f.Name,
+                                      Name = f.FullName,
                                       Metadata = f.Metadata,
                                       UploadedSize = f.UploadedSize,
                                       Start = start
@@ -838,12 +838,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             if (metadata.ContainsKey(RavenConstants.LastModified))
                 metadata[RavenConstants.LastModified] = metadata.Value<DateTimeOffset>(RavenConstants.LastModified);            
 
-            return new FileHeader
+            return new FileHeader (file.Value<string>("name"), metadata )
                    {
-                       Name = file.Value<string>("name"),
                        TotalSize = file.Value<long?>("total_size"),
                        UploadedSize = file.Value<long>("uploaded_size"),
-                       Metadata = metadata,
                    };
         }
 

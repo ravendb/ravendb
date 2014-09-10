@@ -9,22 +9,13 @@ namespace Raven.Abstractions.FileSystem
 	{
 		public SynchronizationException(string message)
 			: base(message)
-		{
+		{}
 
-		}
-
-		[JsonConstructor]
 		public SynchronizationException(string message, Exception inner)
 			: base(message, inner)
-		{
-		}
+		{}
 
-		protected SynchronizationException(
-			SerializationInfo info,
-			StreamingContext context)
-			: base(info, context)
-		{
-
-		}
+		protected SynchronizationException( SerializationInfo info, StreamingContext context) : base(info, context)
+		{}
 	}
 }

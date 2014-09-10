@@ -220,6 +220,7 @@
     <Compile Include="Actions\PatchActions.cs" />
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Bundles\Replication\Data\ReplicationTopologyNode.cs" />
     <Compile Include="Bundles\Replication\Data\ReplicationTopology.cs" />
     <Compile Include="Bundles\Replication\Data\ReplicatonNodeState.cs" />

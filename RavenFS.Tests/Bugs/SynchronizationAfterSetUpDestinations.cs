@@ -28,7 +28,7 @@ namespace RavenFS.Tests.Bugs
 			var reports = destinationSyncResults[0].Reports.ToArray();
 			Assert.Null(reports[0].Exception);
 			Assert.Equal(SynchronizationType.ContentUpdate, reports[0].Type);
-			Assert.Equal("renamed.bin", reports[0].FileName);
+			Assert.Equal(FileHeader.Canonize("renamed.bin"), reports[0].FileName);
 
 			fileContent.Position = 0;
 

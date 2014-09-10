@@ -146,6 +146,8 @@ namespace RavenFS.Tests.ClientApi
         [Fact]
         public async void ConflictListeners_RemoteVersion()
         {
+            var filename = FileHeader.Canonize("test1.file");
+
             int firstStreamSize = 130;
             int secondStreamSize = 128;
 
@@ -159,14 +161,14 @@ namespace RavenFS.Tests.ClientApi
             using (var sessionDestination2 = anotherStore.OpenAsyncSession())
             {
 
-                sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(firstStreamSize));
+                sessionDestination2.RegisterUpload(filename, CreateUniformFileStream(firstStreamSize));
                 await sessionDestination2.SaveChangesAsync();
 
-                sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(secondStreamSize));
+                sessionDestination1.RegisterUpload(filename, CreateUniformFileStream(secondStreamSize));
                 await sessionDestination1.SaveChangesAsync();
-                
-                var file = await sessionDestination1.LoadFileAsync("test1.file");
-                var file2 = await sessionDestination2.LoadFileAsync("test1.file");
+
+                var file = await sessionDestination1.LoadFileAsync(filename);
+                var file2 = await sessionDestination2.LoadFileAsync(filename);
                 Assert.Equal(secondStreamSize, file.TotalSize);
                 Assert.Equal(firstStreamSize, file2.TotalSize);
 
@@ -184,8 +186,8 @@ namespace RavenFS.Tests.ClientApi
                 Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
 
-                file = await sessionDestination1.LoadFileAsync("test1.file");
-                file2 = await sessionDestination2.LoadFileAsync("test1.file");
+                file = await sessionDestination1.LoadFileAsync(filename);
+                file2 = await sessionDestination2.LoadFileAsync(filename);
 
                 Assert.Equal(secondStreamSize, file.TotalSize);
                 Assert.Equal(secondStreamSize, file2.TotalSize);

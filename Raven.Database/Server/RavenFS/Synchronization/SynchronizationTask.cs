@@ -356,7 +356,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			foreach (var fileHeader in filteredFilesToSynchronization)
 			{
-				var file = fileHeader.Name;
+                var file = fileHeader.FullName;
 				var localMetadata = GetLocalMetadata(file);
 
 				RavenJObject destinationMetadata;
@@ -758,7 +758,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
         private static void LogFilesInfo(string message, ICollection<FileHeader> files)
 		{
 			Log.Debug(message, files.Count,
-                      string.Join(",", files.Select(x => string.Format("{0} [ETag {1}]", x.Name, x.Metadata.Value<Guid>(Constants.MetadataEtagField)))));
+                      string.Join(",", files.Select(x => string.Format("{0} [ETag {1}]", x.FullName, x.Metadata.Value<Guid>(Constants.MetadataEtagField)))));
 		}
 	}
 }

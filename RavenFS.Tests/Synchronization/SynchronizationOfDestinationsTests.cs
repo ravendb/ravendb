@@ -22,6 +22,8 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async void Should_synchronize_to_all_destinations()
 		{
+            var canonicalFilename = FileHeader.Canonize("test.bin");
+
 			var sourceContent = SyncTestUtils.PrepareSourceStream(10000);
 			sourceContent.Position = 0;
 
@@ -48,8 +50,8 @@ namespace RavenFS.Tests.Synchronization
 
 			// we expect conflicts after first attempt of synchronization
 			Assert.Equal(2, destinationSyncResults.Length);
-			Assert.Equal("File test.bin is conflicted", destinationSyncResults[0].Reports.ToArray()[0].Exception.Message);
-			Assert.Equal("File test.bin is conflicted", destinationSyncResults[1].Reports.ToArray()[0].Exception.Message);
+            Assert.Equal(string.Format("File {0} is conflicted", canonicalFilename), destinationSyncResults[0].Reports.ToArray()[0].Exception.Message);
+            Assert.Equal(string.Format("File {0} is conflicted", canonicalFilename), destinationSyncResults[1].Reports.ToArray()[0].Exception.Message);
 
             await destination1Client.Synchronization.ResolveConflictAsync("test.bin", ConflictResolutionStrategy.RemoteVersion);
             await destination2Client.Synchronization.ResolveConflictAsync("test.bin", ConflictResolutionStrategy.RemoteVersion);
@@ -145,7 +147,7 @@ namespace RavenFS.Tests.Synchronization
 
 		[Fact]
 		public async Task Make_sure_that_locks_are_released_after_synchronization_when_two_files_synchronized_simultaneously()
-		{
+		{            
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);
 
@@ -163,12 +165,12 @@ namespace RavenFS.Tests.Synchronization
 
 			var configs = await destinationClient.Configuration.GetKeyNamesAsync();
 
-			Assert.DoesNotContain("SyncingLock-test1.bin", configs);
-			Assert.DoesNotContain("SyncingLock-test2.bin", configs);
+            Assert.DoesNotContain(RavenFileNameHelper.SyncLockNameForFile("test1.bin"), configs);
+			Assert.DoesNotContain(RavenFileNameHelper.SyncLockNameForFile("test2.bin"), configs);
 
 			// also make sure that results exist
-			Assert.Contains("SyncResult-test1.bin", configs);
-			Assert.Contains("SyncResult-test2.bin", configs);
+            Assert.Contains(RavenFileNameHelper.SyncResultNameForFile("test1.bin"), configs);
+            Assert.Contains(RavenFileNameHelper.SyncResultNameForFile("test2.bin"), configs);
 		}
 
 		[Fact]
@@ -188,7 +190,7 @@ namespace RavenFS.Tests.Synchronization
 
             var synchronizationDetails = sourceClient.Configuration.GetKeyAsync<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test.bin", fullDstUrl)).Result;
 
-			Assert.Equal("test.bin", synchronizationDetails.FileName);
+			Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationDetails.FileName);
             Assert.Equal(fullDstUrl, synchronizationDetails.DestinationUrl);
 			Assert.NotEqual(Guid.Empty, synchronizationDetails.FileETag);
 			Assert.Equal(SynchronizationType.ContentUpdate, synchronizationDetails.Type);
@@ -374,18 +376,19 @@ namespace RavenFS.Tests.Synchronization
             await sourceClient.Synchronization.SetDestinationsAsync(destinationClient.ToSynchronizationDestination());
 			await sourceClient.Synchronization.SynchronizeAsync();
 
-			var confirmations = await
-			                    destinationClient.Synchronization.GetConfirmationForFilesAsync(new List<Tuple<string, Guid>>
+            var metadata = await sourceClient.GetMetadataForAsync("test.bin");
+
+			var confirmations = await destinationClient.Synchronization.GetConfirmationForFilesAsync(
+                                    new List<Tuple<string, Guid>>
 				                    {
-					                    new Tuple<string, Guid>("test.bin"
-											,sourceClient.GetMetadataForAsync("test.bin").Result.Value<Guid>(Constants.MetadataEtagField))
+					                    new Tuple<string, Guid>("test.bin", metadata.Value<Guid>(Constants.MetadataEtagField))
 				                    });
 
 			var synchronizationConfirmations = confirmations as SynchronizationConfirmation[] ?? confirmations.ToArray();
 
 			Assert.Equal(1, synchronizationConfirmations.Count());
 			Assert.Equal(FileStatus.Safe, synchronizationConfirmations.ToArray()[0].Status);
-			Assert.Equal("test.bin", synchronizationConfirmations.ToArray()[0].FileName);
+			Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationConfirmations.ToArray()[0].FileName);
 		}
 
 		[Fact]
@@ -404,17 +407,15 @@ namespace RavenFS.Tests.Synchronization
 
 			var differentETag = Guid.NewGuid();
 
-			var confirmations =
-				destinationClient.Synchronization.GetConfirmationForFilesAsync(new List<Tuple<string, Guid>>
-					                                                    {
-						                                                    new Tuple<string, Guid>(
-							                                                    "test.bin", differentETag)
-					                                                    })
-				                 .Result.ToList();
+			var confirmations = destinationClient.Synchronization.GetConfirmationForFilesAsync(
+                                                        new List<Tuple<string, Guid>> 
+                                                        {
+                                                            new Tuple<string, Guid>("test.bin", differentETag)
+                                                        }).Result.ToList();
 
 			Assert.Equal(1, confirmations.Count());
 			Assert.Equal(FileStatus.Unknown, confirmations.ToArray()[0].Status);
-			Assert.Equal("test.bin", confirmations.ToArray()[0].FileName);
+			Assert.Equal(FileHeader.Canonize("test.bin"), confirmations.ToArray()[0].FileName);
 		}
 
 		[Fact]
@@ -430,7 +431,7 @@ namespace RavenFS.Tests.Synchronization
 
 			Assert.Equal(1, confirmations.Count());
 			Assert.Equal(FileStatus.Unknown, confirmations.ToArray()[0].Status);
-			Assert.Equal("test.bin", confirmations.ToArray()[0].FileName);
+            Assert.Equal(FileHeader.Canonize("test.bin"), confirmations.ToArray()[0].FileName);
 		}
 
 		[Fact]
@@ -455,7 +456,7 @@ namespace RavenFS.Tests.Synchronization
 					                                                    });
 			Assert.Equal(1, confirmations.Count());
 			Assert.Equal(FileStatus.Broken, confirmations[0].Status);
-			Assert.Equal("test.bin", confirmations[0].FileName);
+            Assert.Equal(FileHeader.Canonize("test.bin"), confirmations[0].FileName);
 		}
 
 		[Fact]

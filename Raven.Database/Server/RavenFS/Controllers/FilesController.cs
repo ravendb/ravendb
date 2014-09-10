@@ -48,7 +48,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/files/{*name}")]
         public HttpResponseMessage Get(string name)
 		{
-			name = RavenFileNameHelper.RavenPath(name);
+            name = FileHeader.Canonize(name);
 			FileAndPagesInformation fileAndPages = null;
 			try
 			{
@@ -84,7 +84,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Delete(string name)
 		{
-			name = RavenFileNameHelper.RavenPath(name);
+            name = FileHeader.Canonize(name);
 
 			try
 			{
@@ -145,7 +145,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Head(string name)
 		{
-			name = RavenFileNameHelper.RavenPath(name);
+            name = FileHeader.Canonize(name);
 			FileAndPagesInformation fileAndPages = null;
 			try
 			{
@@ -185,7 +185,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
             }
 
-            var ravenPaths = fileNames.Where(x => x != null).Select(x => RavenFileNameHelper.RavenPath(x));
+            var ravenPaths = fileNames.Where(x => x != null).Select(x => FileHeader.Canonize(x));
 
             var list = new List<FileHeader>();
             Storage.Batch(accessor => list.AddRange(ravenPaths.Select(accessor.ReadFile).Where(x => x != null)));
@@ -198,7 +198,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Post(string name)
 		{
-			name = RavenFileNameHelper.RavenPath(name);
+            name = FileHeader.Canonize(name);
 
             var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
 
@@ -236,8 +236,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Patch(string name, string rename)
 		{
-			name = RavenFileNameHelper.RavenPath(name);
-			rename = RavenFileNameHelper.RavenPath(rename);
+            name = FileHeader.Canonize(name);
+            rename = FileHeader.Canonize(rename);
 
 			try
 			{
@@ -297,7 +297,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
                 FileSystem.MetricsCounters.FilesPerSecond.Mark();
 
-				name = RavenFileNameHelper.RavenPath(name);
+                name = FileHeader.Canonize(name);
 
                 var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
 

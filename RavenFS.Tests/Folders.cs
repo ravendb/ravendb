@@ -310,7 +310,7 @@ namespace RavenFS.Tests
 		}
 
 		[Fact]
-		public void Should_not_see_already_deleted_files()
+		public async void Should_not_see_already_deleted_files()
 		{
 			var client = NewAsyncClient();
 			var ms = new MemoryStream();
@@ -319,8 +319,8 @@ namespace RavenFS.Tests
 
 			client.DeleteAsync("toDelete.bin").Wait();
 
-			var fileNames =
-				client.SearchOnDirectoryAsync("/").Result.Files.Select(x => x.Name).ToArray();
+			var results = await client.SearchOnDirectoryAsync("/");
+            var fileNames = results.Files.Select(x => x.Name).ToArray();
 			Assert.Equal(new[] { "visible.bin" }, fileNames);
 		}
 	}

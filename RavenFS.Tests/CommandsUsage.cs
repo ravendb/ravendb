@@ -418,7 +418,7 @@ namespace RavenFS.Tests
 			{
 				ex = e.GetBaseException();
 			}
-			Assert.Contains("Cannot rename because file file2.bin already exists", ex.Message);
+			Assert.Contains(string.Format("Cannot rename because file {0} already exists", FileHeader.Canonize("file2.bin")), ex.Message);
 		}
 
 		[Fact]
@@ -634,8 +634,8 @@ namespace RavenFS.Tests
             Assert.Equal(fileMetadata[1].Metadata[Constants.CreationDate].Value<DateTimeOffset>(), fileMetadata[1].CreationDate);
             Assert.Equal(".txt", fileMetadata[0].Extension);
             Assert.Equal(".txt", fileMetadata[1].Extension);
-            Assert.Equal("", fileMetadata[0].Path);
-            Assert.Equal("\\a\\b", fileMetadata[1].Path);
+            Assert.Equal("/", fileMetadata[0].Path);
+            Assert.Equal("/a/b", fileMetadata[1].Path);
         }
 
         [Fact]

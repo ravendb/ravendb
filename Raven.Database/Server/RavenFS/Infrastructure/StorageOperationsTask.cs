@@ -71,7 +71,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 					previousRenameTombstone.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
 				{
 					// if there is a tombstone delete it
-					accessor.Delete(previousRenameTombstone.Name);
+                    accessor.Delete(previousRenameTombstone.FullName);
 				}
 
                 accessor.RenameFile(operation.Name, operation.Rename, true);
@@ -293,9 +293,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 
 		private static string SynchronizedFileName(string originalFileName)
 		{
-			return originalFileName.Substring(0,
-											  originalFileName.IndexOf(RavenFileNameHelper.DownloadingFileSuffix,
-																	   StringComparison.InvariantCulture));
+			return originalFileName.Substring(0, originalFileName.IndexOf(RavenFileNameHelper.DownloadingFileSuffix, StringComparison.InvariantCulture));
 		}
 
 		private bool IsSynchronizationInProgress(string originalFileName)
@@ -314,18 +312,18 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 			{
 				if (deletedFile.IsFileBeingUploadedOrUploadHasBeenBroken()) // and might be uploading at the moment
 				{
-					if (!uploadingFiles.ContainsKey(deletedFile.Name))
+                    if (!uploadingFiles.ContainsKey(deletedFile.FullName))
 					{
-						uploadingFiles.TryAdd(deletedFile.Name, deletedFile);
+                        uploadingFiles.TryAdd(deletedFile.FullName, deletedFile);
 						return true; // first attempt to delete a file, prevent this time
 					}
-					var uploadingFile = uploadingFiles[deletedFile.Name];
+                    var uploadingFile = uploadingFiles[deletedFile.FullName];
 					if (uploadingFile != null && uploadingFile.UploadedSize != deletedFile.UploadedSize)
 					{
 						return true; // if uploaded size changed it means that file is being uploading
 					}
 					FileHeader header;
-					uploadingFiles.TryRemove(deletedFile.Name, out header);
+                    uploadingFiles.TryRemove(deletedFile.FullName, out header);
 				}
 			}
 			return false;
