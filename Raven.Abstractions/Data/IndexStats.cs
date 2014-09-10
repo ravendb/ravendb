@@ -37,7 +37,15 @@ namespace Raven.Abstractions.Data
 		public IndexingPerformanceStats[] Performance { get; set; }
 		public int DocsCount { get; set; }
 
-		public override string ToString()
+	    public bool IsInvalidIndex
+	    {
+	        get
+	        {
+	            return IndexFailureInformation.CheckIndexInvalid(IndexingAttempts, IndexingErrors, ReduceIndexingAttempts, ReduceIndexingErrors);
+	        }
+	    }
+
+	    public override string ToString()
 		{
 		    return Id.ToString(CultureInfo.InvariantCulture);
 		}

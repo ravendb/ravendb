@@ -115,6 +115,7 @@ interface indexStatisticsDto {
     ForEntityName: string[];
     Performance: indexPerformanceDto[];
     DocsCount: number;
+    IsInvalidIndex: boolean;
 }
 
 interface indexingBatchInfoDto {
