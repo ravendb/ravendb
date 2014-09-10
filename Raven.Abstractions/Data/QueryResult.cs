@@ -112,9 +112,6 @@ namespace Raven.Abstractions.Data
 		{
 			Results = new List<RavenJObject>();
 			Includes = new List<RavenJObject>();
-		    Highlightings = new Dictionary<string, Dictionary<string, string[]>>();
-			ScoreExplanations = new Dictionary<string, string>();
-			TimingsInMilliseconds = new Dictionary<string, double>();
 		}
 
 		/// <summary>
@@ -147,11 +144,11 @@ namespace Raven.Abstractions.Data
 				IsStale = this.IsStale,
 				SkippedResults = this.SkippedResults,
 				TotalResults = this.TotalResults,
-				Highlightings = this.Highlightings.ToDictionary(
+				Highlightings = this.Highlightings == null ? null :  this.Highlightings.ToDictionary(
 					pair => pair.Key,
 					x => new Dictionary<string, string[]>(x.Value)),
-				ScoreExplanations = this.ScoreExplanations.ToDictionary(x => x.Key, x => x.Value),
-				TimingsInMilliseconds = this.TimingsInMilliseconds.ToDictionary(x => x.Key, x => x.Value),
+				ScoreExplanations = this.ScoreExplanations == null ? null : this.ScoreExplanations.ToDictionary(x => x.Key, x => x.Value),
+				TimingsInMilliseconds = this.TimingsInMilliseconds  == null ?  null :  this.TimingsInMilliseconds.ToDictionary(x => x.Key, x => x.Value),
 				LastQueryTime = this.LastQueryTime,
 				DurationMilliseconds = this.DurationMilliseconds,
 				NonAuthoritativeInformation = this.NonAuthoritativeInformation,

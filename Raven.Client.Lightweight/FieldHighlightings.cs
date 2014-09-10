@@ -46,6 +46,9 @@ namespace Raven.Client
 		{
 			this.highlightings.Clear();
 
+			if (queryResult.Highlightings == null)
+				return;
+
 			foreach (var entityFragments in queryResult.Highlightings)
 				foreach (var fieldFragments in entityFragments.Value)
 					if (fieldFragments.Key == this.FieldName)

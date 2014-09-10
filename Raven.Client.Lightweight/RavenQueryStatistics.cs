@@ -100,8 +100,12 @@ namespace Raven.Client
 			TimingsInMilliseconds = qr.TimingsInMilliseconds;
 			LastQueryTime = qr.LastQueryTime;
 			ResultSize = qr.ResultSize;
+			ScoreExplanations = qr.ScoreExplanations;
 		}
 
-		
+		/// <summary>
+		/// Gets or sets explanations of document scores 
+		/// </summary>
+		public Dictionary<string, string> ScoreExplanations { get; set; }
 	}
 }

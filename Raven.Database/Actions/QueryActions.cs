@@ -237,7 +237,10 @@ namespace Raven.Database.Actions
                 transformerErrors = new List<string>();
 				results = database
 					.Queries
-					.GetQueryResults(query, viewGenerator, docRetriever, docs, transformerErrors, timeInMilliseconds => executionTimes[QueryTimings.LoadDocuments] = timeInMilliseconds, timeInMilliseconds => executionTimes[QueryTimings.TransformResults] = timeInMilliseconds, query.ShowTimings, cancellationToken);
+					.GetQueryResults(query, viewGenerator, docRetriever, docs, transformerErrors, 
+						timeInMilliseconds => executionTimes[QueryTimings.LoadDocuments] = timeInMilliseconds,
+						timeInMilliseconds => executionTimes[QueryTimings.TransformResults] = timeInMilliseconds, 
+						query.ShowTimings, cancellationToken);
 
                 Header = new QueryHeaderInformation
                 {
