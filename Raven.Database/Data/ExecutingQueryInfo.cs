@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 
 using Raven.Abstractions.Data;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Data
 {
@@ -14,6 +15,7 @@ namespace Raven.Database.Data
 
         public long QueryId { get; private set; }
 
+		[JsonIgnore]
         public CancellationTokenSource TokenSource { get; private set; }
 
         public TimeSpan Duration
