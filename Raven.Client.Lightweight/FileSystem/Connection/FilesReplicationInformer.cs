@@ -124,49 +124,5 @@ namespace Raven.Client.FileSystem.Connection
         {
             return baseUrl + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations) + "&check-server-reachable";
         }
-
-        public override Task UpdateReplicationInformationIfNeeded(IAsyncFilesCommands commands)
-        {
-            var serverClient = (IAsyncFilesCommandsImpl)commands;
-
-            if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
-                return new CompletedTask();
-
-            if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-                return new CompletedTask();
-
-            lock (replicationLock)
-            {
-                if (firstTime)
-                {
-                    var serverHash = ServerHash.GetServerHash(serverClient.ServerUrl);
-
-                    var destinations = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
-                    if (destinations != null)
-                    {
-                        UpdateReplicationInformationFromDocument(destinations);
-                    }
-                }
-
-                firstTime = false;
-
-                if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-                    return new CompletedTask();
-
-                var taskCopy = refreshReplicationInformationTask;
-                if (taskCopy != null)
-                    return taskCopy;
-
-                return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
-                    .ContinueWith(task =>
-                    {
-                        if (task.Exception != null)
-                        {
-                            log.ErrorException("Failed to refresh replication information", task.Exception);
-                        }
-                        refreshReplicationInformationTask = null;
-                    });
-            }
-        }
     }
 }

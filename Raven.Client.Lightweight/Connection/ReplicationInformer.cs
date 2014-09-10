@@ -37,11 +37,6 @@ namespace Raven.Client.Connection
 			return UpdateReplicationInformationIfNeededInternal(serverClient.Url, key => serverClient.DirectGetAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials), key).ResultUnwrap());
 		}
 
-		public override Task UpdateReplicationInformationIfNeeded(ServerClient serverClient)
-		{
-			return UpdateReplicationInformationIfNeededInternal(serverClient.Url, key => serverClient.DirectGet(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials), key));
-		}
-
 		private Task UpdateReplicationInformationIfNeededInternal(string url, Func<string, JsonDocument> getDocument)
 		{
 			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)

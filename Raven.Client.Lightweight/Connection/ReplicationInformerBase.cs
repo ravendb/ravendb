@@ -79,11 +79,6 @@ namespace Raven.Client.Connection
 		}
 
         /// <summary>
-        /// Updates the replication information if needed.
-        /// </summary>
-        public abstract Task UpdateReplicationInformationIfNeeded(TClient client);
-
-        /// <summary>
         /// Refreshes the replication information.
         /// Expert use only.
         /// </summary>

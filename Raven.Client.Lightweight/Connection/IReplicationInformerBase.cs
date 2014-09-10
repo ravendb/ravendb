@@ -54,11 +54,6 @@ namespace Raven.Client.Connection
     public interface IReplicationInformerBase<in TClient> : IReplicationInformerBase
     {
         /// <summary>
-        /// Updates the replication information if needed.
-        /// </summary>
-        Task UpdateReplicationInformationIfNeeded(TClient client);
-
-        /// <summary>
         /// Refreshes the replication information.
         /// Expert use only.
         /// </summary>
