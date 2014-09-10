@@ -19,7 +19,7 @@ namespace Raven.Abstractions.Data
 
 		public override string ToString()
 		{
-			return string.Format("Index: {0}, Error: {1}, Document: {2}, Action: {3}", Index, Error, Document, Action);
+			return string.Format("Index: {0}, Error: {1}, Document: {2}, Action: {3}", IndexName, Error, Document, Action);
 		}
 	}
 }

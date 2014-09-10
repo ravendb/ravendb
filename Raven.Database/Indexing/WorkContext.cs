@@ -235,12 +235,13 @@ namespace Raven.Database.Indexing
 
 		public void ClearErrorsFor(string name)
 		{
+
 			var list = new List<ServerError>();
 
 			ServerError error;
 			while (serverErrors.TryDequeue(out error))
 			{
-				if (StringComparer.OrdinalIgnoreCase.Equals(error.Index, name) == false)
+				if (StringComparer.OrdinalIgnoreCase.Equals(error.IndexName, name) == false)
 					list.Add(error);
 			}
 

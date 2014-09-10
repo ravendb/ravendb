@@ -271,7 +271,8 @@ namespace Raven.Database.Actions
             Debug.Assert(TransactionalStorage != null);
             Debug.Assert(WorkContext != null);
 
-            TransactionalStorage.Batch(actions =>
+	        Index index = null;
+			TransactionalStorage.Batch(actions =>
             {
 	            var maxId = 0;
 	            if (Database.IndexStorage.Indexes.Length > 0)
@@ -293,28 +294,36 @@ namespace Raven.Database.Actions
 
 	            IndexDefinitionStorage.CreateAndPersistIndex(definition);
 	            Database.IndexStorage.CreateIndexImplementation(definition);
-
+				index = Database.IndexStorage.GetIndexInstance(definition.IndexId);
+				//ensure that we don't start indexing it right away, let the precomputation run first, if applicable
+	            index.IsMapIndexingInProgress = true; 
 	            InvokeSuggestionIndexing(name, definition);
 
 	            actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
             });
 
-            if (name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
-                Database.IndexStorage.HasIndex(Constants.DocumentsByEntityNameIndex))
-            {
-                // optimization of handling new index creation when the number of document in a database is significantly greater than
-                // number of documents that this index applies to - let us use built-in RavenDocumentsByEntityName to get just appropriate documents
+	        Debug.Assert(index != null);
 
-                var index = Database.IndexStorage.GetIndexInstance(definition.IndexId);
-                TryApplyPrecomputedBatchForNewIndex(index, definition);
-            }
+	        if (name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
+	            Database.IndexStorage.HasIndex(Constants.DocumentsByEntityNameIndex))
+	        {
+		        // optimization of handling new index creation when the number of document in a database is significantly greater than
+		        // number of documents that this index applies to - let us use built-in RavenDocumentsByEntityName to get just appropriate documents
 
-            WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
+		        TryApplyPrecomputedBatchForNewIndex(index, definition);
+	        }
+	        else
+	        {
+		        index.IsMapIndexingInProgress = false;// we can't apply optimization, so we'll make it eligible for running normally
+	        }
+
+			// The act of adding it here make it visible to other threads
+			// we have to do it in this way so first we prepare all the elements of the 
+			// index, then we add it to the storage in a way that make it public
+			IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
+			
+			WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
             WorkContext.NotifyAboutWork();
-            // The act of adding it here make it visible to other threads
-            // we have to do it in this way so first we prepare all the elements of the 
-            // index, then we add it to the storage in a way that make it public
-            IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
         }
 
 
@@ -325,10 +334,10 @@ namespace Raven.Database.Actions
             {
                 // we don't optimize if we don't have what to optimize _on, we know this is going to return all docs.
                 // no need to try to optimize that, then
-                return;
+				index.IsMapIndexingInProgress = false;
+				return;
             }
 
-            index.IsMapIndexingInProgress = true;
             try
             {
                 Task.Factory.StartNew(() => ApplyPrecomputedBatchForNewIndex(index, generator),

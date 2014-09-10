@@ -218,18 +218,27 @@ namespace Raven.Database.Indexing
                     var failureRate = actions.Indexing.GetFailureRate(indexesStat.Id);
                     if (failureRate.IsInvalidIndex)
                     {
-                        Log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
-                                   indexesStat.Id,
-                                       failureRate.FailureRate);
-                        continue;
+	                    if (Log.IsDebugEnabled)
+	                    {
+		                    Log.Debug("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
+			                    indexesStat.Id,
+			                    failureRate.FailureRate);
+	                    }
+	                    continue;
                     }
                     if (IsIndexStale(indexesStat, actions, isIdle, localFoundOnlyIdleWork) == false)
                         continue;
-                    var indexToWorkOn = GetIndexToWorkOn(indexesStat);
                     var index = context.IndexStorage.GetIndexInstance(indexesStat.Id);
                     if (index == null) // not there
                         continue;
 
+					if(context.IndexDefinitionStorage.GetViewGenerator(indexesStat.Id) == null)
+						continue; // an index that is in the process of being added, ignoring it, we'll check again on the next run
+
+					if (index.IsMapIndexingInProgress)// precomputed? slow? it is already running, nothing to do with it for now
+						continue;
+
+					var indexToWorkOn = GetIndexToWorkOn(indexesStat);
                     indexToWorkOn.Index = index;
                     indexesToWorkOn.Add(indexToWorkOn);
                 }
