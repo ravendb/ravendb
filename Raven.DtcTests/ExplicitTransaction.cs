@@ -15,10 +15,9 @@ namespace Raven.Tests.Bugs
 	public class ExplicitTransaction : RavenTest
 	{
 		[Theory]
-		[PropertyData("Storages")]
-		public void Can_use_transactions_to_isolate_saves(string storage)
+		public void Can_use_transactions_to_isolate_saves()
 		{
-			using (var documentStore = NewDocumentStore(requestedStorage:storage))
+			using (var documentStore = NewDocumentStore(requestedStorage:"esent"))
 			{
                 EnsureDtcIsSupported(documentStore);
 				var company = new Company { Name = "Company Name" };
@@ -42,10 +41,9 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Theory]
-        [PropertyData("Storages")]
-		public void Will_process_all_different_documents_enlisted_in_a_transaction(string storage)
+		public void Will_process_all_different_documents_enlisted_in_a_transaction()
 		{
-			using (var documentStore = NewDocumentStore(requestedStorage:storage))
+			using (var documentStore = NewDocumentStore(requestedStorage:"esent"))
 			{
                 EnsureDtcIsSupported(documentStore);
 				using (RavenTransactionAccessor.StartTransaction())
