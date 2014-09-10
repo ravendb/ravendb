@@ -263,6 +263,42 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
         /// <summary>
+        /// Performs a query matching ANY of the provided values against the given field (OR)
+        /// </summary>
+        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.ContainsAny(string fieldName, IEnumerable<object> values)
+        {
+            ContainsAny(fieldName, values);
+            return this;
+        }
+
+        /// <summary>
+        /// Performs a query matching ANY of the provided values against the given field (OR)
+        /// </summary>
+        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<object> values)
+        {
+            ContainsAny(GetMemberQueryPath(propertySelector.Body), values);
+            return this;
+        }
+
+        /// <summary>
+        /// Performs a query matching ALL of the provided values against the given field (AND)
+        /// </summary>
+        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.ContainsAll(string fieldName, IEnumerable<object> values)
+        {
+            ContainsAll(fieldName, values);
+            return this;
+        }
+
+        /// <summary>
+        /// Performs a query matching ALL of the provided values against the given field (AND)
+        /// </summary>
+        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<object> values)
+        {
+            ContainsAll(GetMemberQueryPath(propertySelector.Body), values);
+            return this;
+        }
+
+        /// <summary>
         /// Add an AND to the query
         /// </summary>
         IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.AndAlso()

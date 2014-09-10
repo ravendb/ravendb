@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.ComponentModel.Composition;
 using System.IO;
 using Raven.Abstractions.Data;
@@ -16,6 +17,7 @@ namespace Raven.Bundles.Replication.Triggers
 	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10000)]
 	[InheritedExport(typeof(AbstractAttachmentPutTrigger))]
+    [Obsolete("Use RavenFS instead.")]
 	public class AttachmentAncestryPutTrigger : AbstractAttachmentPutTrigger
 	{
 

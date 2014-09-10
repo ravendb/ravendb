@@ -57,7 +57,7 @@ namespace Raven.Database.Config
 			MemoryCacheLimitMegabytes =
 				new IntegerSetting(settings["Raven/MemoryCacheLimitMegabytes"], GetDefaultMemoryCacheLimitMegabytes);
 			MemoryCacheExpiration =
-				new TimeSpanSetting(settings["Raven/MemoryCacheExpiration"], TimeSpan.FromMinutes(5),
+				new TimeSpanSetting(settings["Raven/MemoryCacheExpiration"], TimeSpan.FromMinutes(60),
 				                    TimeSpanArgumentType.FromSeconds);
 			MemoryCacheLimitPercentage =
 				new IntegerSetting(settings["Raven/MemoryCacheLimitPercentage"], 0 /* auto size */);

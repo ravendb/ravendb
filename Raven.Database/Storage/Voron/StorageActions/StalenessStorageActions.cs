@@ -160,6 +160,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public Etag GetMostRecentAttachmentEtag()
 		{
 			var attachmentsByEtag = tableStorage.Attachments.GetIndex(Tables.Attachments.Indices.ByEtag);

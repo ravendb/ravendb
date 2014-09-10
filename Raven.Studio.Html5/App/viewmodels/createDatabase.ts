@@ -31,7 +31,7 @@ class createDatabase extends dialogViewModelBase {
     isReplicationBundleEnabled = ko.observable(false);
     isSqlReplicationBundleEnabled = ko.observable(false);
     isVersioningBundleEnabled = ko.observable(false);
-    isPeriodicExportBundleEnabled = ko.observable(true); // Old Raven Studio has this enabled by default
+    isPeriodicExportBundleEnabled = ko.observable(false); // Old Raven Studio has this enabled by default
     isScriptedIndexBundleEnabled = ko.observable(false);
 
     constructor(private databases: KnockoutObservableArray<database>, private licenseStatus: KnockoutObservable<licenseStatusDto>) {

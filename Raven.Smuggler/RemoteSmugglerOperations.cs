@@ -66,6 +66,7 @@ namespace Raven.Smuggler
 			this.isTransformersSupported = isTransformersSupported;
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public Task DeleteAttachment(string key)
 		{
 			return Store.AsyncDatabaseCommands.DeleteAttachmentAsync(key, null);
@@ -76,6 +77,7 @@ namespace Raven.Smuggler
 			return Store.AsyncDatabaseCommands.DeleteDocumentAsync(key);
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
 		{
 			throw new NotSupportedException("Exporting deletions is not supported for Command Line Smuggler");
@@ -97,6 +99,7 @@ namespace Raven.Smuggler
 			};
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public async Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
 		{
 			var attachments = await Store.AsyncDatabaseCommands.GetAttachmentsAsync(start, etag, maxRecords);
@@ -104,6 +107,7 @@ namespace Raven.Smuggler
 			return attachments.ToList();
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public async Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
 		{
 			var attachment = await Store.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
@@ -196,6 +200,7 @@ namespace Raven.Smuggler
 			throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public async Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo)
 		{
 			if (attachmentExportInfo != null)

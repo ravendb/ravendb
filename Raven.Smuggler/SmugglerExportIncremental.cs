@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 
 namespace Raven.Smuggler
@@ -25,6 +26,7 @@ namespace Raven.Smuggler
 
 		public Etag LastDocsEtag { get; set; }
 
+        [Obsolete("Use RavenFS instead.")]
 		public Etag LastAttachmentsEtag { get; set; }
 	}
 }

@@ -20,7 +20,7 @@ interface KnockoutObservableArray<T> {
 }
 
 interface KnockoutStatic {
-    DirtyFlag(any): void;
+    DirtyFlag(any, isInitiallyDirty?, hashFunction?): void;
 }
 
 interface Function {

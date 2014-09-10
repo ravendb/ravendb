@@ -112,8 +112,15 @@ namespace Raven.Database.Server.RavenFS.Search
                 foreach ( var metadataKey in lookup )
                 {
                     foreach ( var metadataHolder in metadataKey )
-                    {                        
-                        doc.Add(new Field(metadataHolder.Key, metadataHolder.Value.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+                    {
+                        var array = metadataHolder.Value as RavenJArray;
+                        if (array != null)
+                        {
+                            // Object is an array. Therefore, we index each token. 
+                            foreach (var item in array)
+                                doc.Add(new Field(metadataHolder.Key, item.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));                         
+                        }
+                        else doc.Add(new Field(metadataHolder.Key, metadataHolder.Value.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
                     }
                 }
 

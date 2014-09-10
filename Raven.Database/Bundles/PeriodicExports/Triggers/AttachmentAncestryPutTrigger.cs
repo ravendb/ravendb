@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.ComponentModel.Composition;
 using System.IO;
 
@@ -15,6 +16,7 @@ namespace Raven.Database.Bundles.PeriodicExports.Triggers
 	[ExportMetadata("Bundle", "PeriodicExport")]
 	[ExportMetadata("Order", 10001)]
 	[InheritedExport(typeof(AbstractAttachmentPutTrigger))]
+    [Obsolete("Use RavenFS instead.")]
 	public class AttachmentAncestryPutTrigger : AbstractAttachmentPutTrigger
 	{
 		public override void OnPut(string key, Stream data, RavenJObject metadata)

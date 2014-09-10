@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.Owin;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Counters;
@@ -144,7 +145,7 @@ namespace Raven.Database.Server.Connections
                 var memoryStream = new MemoryStream();
                 var serializer = new JsonSerializer
                 {
-                    Converters = {new EtagJsonConverter()}
+                    Converters = {new EtagJsonConverter(),new JsonEnumConverter()}
                 };
 
 				CreateWaitForClientCloseTask(websocketContext, callCancelled);

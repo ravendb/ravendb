@@ -334,6 +334,52 @@ namespace Raven.Client.FileSystem
             isDistinct = true;
         }
 
+        public void ContainsAny(string fieldName, IEnumerable<object> values)
+        {
+            ContainsAnyAllProcessor(fieldName, values, "OR");
+        }
+
+        public void ContainsAll(string fieldName, IEnumerable<object> values)
+        {
+            ContainsAnyAllProcessor(fieldName, values, "AND");
+        }
+
+        private void ContainsAnyAllProcessor(string fieldName, IEnumerable<object> values, string seperator)
+        {
+            AppendSpaceIfNeeded(queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false);
+            NegateIfNeeded();
+
+            var list = UnpackEnumerable(values).ToList();
+            if (list.Count == 0)
+            {
+                return;
+            }
+
+            var first = true;
+            queryText.Append("(");
+            foreach (var value in list)
+            {
+                if (first == false)
+                {
+                    queryText.Append(" " + seperator + " ");
+                }
+                first = false;
+                var whereParams = new WhereParams
+                {
+                    AllowWildcards = true,
+                    IsAnalyzed = true,
+                    FieldName = fieldName,
+                    Value = value
+                };
+                EnsureValidFieldName(whereParams);
+                queryText.Append(fieldName)
+                         .Append(":")
+                         .Append(TransformToEqualValue(whereParams));
+            }
+            queryText.Append(")");
+        }
+
+
         /// <summary>
         ///   Adds an ordering for a specific field to the query
         /// </summary>

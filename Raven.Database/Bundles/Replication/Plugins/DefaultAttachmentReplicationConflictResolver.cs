@@ -9,6 +9,7 @@
 	using Raven.Database.Bundles.Replication.Impl;
 	using Raven.Json.Linq;
 
+    [Obsolete("Use RavenFS instead.")]
 	public class DefaultAttachmentReplicationConflictResolver : AbstractAttachmentReplicationConflictResolver
 	{
 		public override bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment,

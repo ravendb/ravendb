@@ -40,7 +40,6 @@ class datePickerBindingHandler {
     update(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
         var date : Moment =  ko.unwrap(valueAccessor());
         if (date) {
-
             $(element).data("DateTimePicker").setDate(date);
         }
     }

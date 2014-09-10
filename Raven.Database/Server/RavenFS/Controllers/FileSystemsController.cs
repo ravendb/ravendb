@@ -40,6 +40,19 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return responseMessage.WithNoCache();
 		}
 
+        [HttpGet]
+        [Route("fs/status")]
+        public HttpResponseMessage Status()
+        {
+            string status = "ready";
+            if (!RavenFileSystem.IsRemoteDifferentialCompressionInstalled)
+                status = "install-rdc";
+
+            var result = new { Status = status };
+
+            return GetMessageWithObject(result).WithNoCache();
+        }
+
 		[HttpGet]
 		[Route("fs/stats")]
 		public async Task<HttpResponseMessage> Stats()
@@ -62,7 +75,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				stats.Add(fsStats);
 			}
 
-			return GetMessageWithObject(stats).WithNoCache();
+            return GetMessageWithObject(stats).WithNoCache();
 		}
 
 		private string[] GetFileSystemNames()

@@ -9,6 +9,7 @@ import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand")
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
+import jsonUtil = require("common/jsonUtil");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
@@ -160,7 +161,7 @@ class editIndex extends viewModelBase {
         checkedFieldsArray.push(this.indexScript);
         checkedFieldsArray.push(this.deleteScript);
 
-        this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray);
+        this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray, false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && this.dirtyFlag().isDirty());
     }
@@ -411,20 +412,20 @@ class editIndex extends viewModelBase {
     formatIndex() {
         require(["commands/formatIndexCommand"], formatIndexCommand => {
             var index: indexDefinition = this.editedIndex();
-            var mapRedceObservableArray = new Array<KnockoutObservable<string>>();
-            mapRedceObservableArray.pushAll(index.maps());
+            var mapReduceObservableArray = new Array<KnockoutObservable<string>>();
+            mapReduceObservableArray.pushAll(index.maps());
             if (!!index.reduce()) {
-                mapRedceObservableArray.push(index.reduce);
+                mapReduceObservableArray.push(index.reduce);
             }
 
-            var mapReduceArray = mapRedceObservableArray.map((observable: KnockoutObservable<string>) => observable());
+            var mapReduceArray = mapReduceObservableArray.map((observable: KnockoutObservable<string>) => observable());
 
             new formatIndexCommand(this.activeDatabase(), mapReduceArray, this.activeDatabase())
                 .execute()
                 .done((formatedMapReduceArray: string[]) => {
                     formatedMapReduceArray.forEach((element: string, i: number) => {
                         if (element.indexOf("Could not format:") == -1) {
-                            mapRedceObservableArray[i](element);
+                            mapReduceObservableArray[i](element);
                         } else {
                             var isReduce = !!index.reduce() && i == formatedMapReduceArray.length - 1;
                             var errorMessage = isReduce ? "Failed to format reduce!" : "Failed to format map '" + i + "'!";

@@ -22,6 +22,7 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IAttachmentsStorageActions
 	{
+        [Obsolete("Use RavenFS instead.")]
 		public Etag AddAttachment(string key, Etag etag, Stream data, RavenJObject headers)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
@@ -83,6 +84,7 @@ namespace Raven.Storage.Esent.StorageActions
 			return newETag;
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public void DeleteAttachment(string key, Etag etag)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
@@ -111,6 +113,7 @@ namespace Raven.Storage.Esent.StorageActions
 			logger.Debug("Attachment with key '{0}' was deleted", key);
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 	    public long GetAttachmentsCount()
 	    {
             if (Api.TryMoveFirst(session, Details))
@@ -118,6 +121,7 @@ namespace Raven.Storage.Esent.StorageActions
             return 0;
 	    }
 
+        [Obsolete("Use RavenFS instead.")]
 	    public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_etag");
@@ -133,6 +137,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public IEnumerable<AttachmentInformation> GetAttachmentsStartingWith(string idPrefix, int start, int pageSize)
 		{
 			if (pageSize <= 0)
@@ -165,6 +170,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Etag etag, int take, long maxTotalSize)
 		{
 			if (take == 0 || maxTotalSize == 0)
@@ -193,6 +199,7 @@ namespace Raven.Storage.Esent.StorageActions
 				});
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private AttachmentInformation ReadCurrentAttachmentInformation()
 		{
 			return new AttachmentInformation
@@ -206,6 +213,7 @@ namespace Raven.Storage.Esent.StorageActions
 			};
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public Attachment GetAttachment(string key)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
@@ -231,7 +239,7 @@ namespace Raven.Storage.Esent.StorageActions
 			};
 		}
 
-
+        [Obsolete("Use RavenFS instead.")]
 		private Stream GetAttachmentStream(string key)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");

@@ -20,6 +20,10 @@
             return '<span class="' + cls + '">' + match + '</span>';
         });
     }
+
+    static newLineNormalizingHashFunction = (object: any) => {
+        return ko.toJSON(object).replace(/\\r\\n/g, '\\n');
+    };
 } 
 
 export = jsonUtil

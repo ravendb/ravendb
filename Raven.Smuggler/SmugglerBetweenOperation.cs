@@ -272,6 +272,7 @@ namespace Raven.Smuggler
 			}
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptions options, int exportBatchSize)
 		{
 			Etag lastEtag = options.StartAttachmentsEtag;

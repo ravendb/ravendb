@@ -100,6 +100,9 @@ class aceEditorBindingHandler {
         }
     }
 
+    minHeight: number;
+    maxHeight: number;
+
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement,
         valueAccessor: () => {
@@ -113,6 +116,7 @@ class aceEditorBindingHandler {
             typeName?: string;
             completerHostObject?: any;
             minHeight?: number;
+            maxHeight?: number;
             selectAll?: boolean;
             bubbleEscKey: boolean;
             bubbleEnterKey: boolean;
@@ -120,6 +124,7 @@ class aceEditorBindingHandler {
         allBindings,
         viewModel,
         bindingContext: any) {
+        var self = this;
         var bindingValues = valueAccessor();
         var theme = bindingValues.theme || this.defaults.theme;
         var fontSize = bindingValues.fontSize || this.defaults.fontSize;
@@ -129,7 +134,8 @@ class aceEditorBindingHandler {
         var code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
         var langTools = null;
         var completerHostObject = bindingValues.completerHostObject;
-        var minHeight = bindingValues.minHeight ? bindingValues.minHeight:140;
+        this.minHeight = bindingValues.minHeight ? bindingValues.minHeight : 140;
+        this.maxHeight = bindingValues.maxHeight ? bindingValues.maxHeight : 400;
         var selectAll = bindingValues.selectAll || this.defaults.selectAll;
         var bubbleEscKey = bindingValues.bubbleEscKey || this.defaults.bubbleEscKey;
         var bubbleEnterKey = bindingValues.bubbleEnterKey || this.defaults.bubbleEnterKey;
@@ -183,18 +189,21 @@ class aceEditorBindingHandler {
 
         // In the event of keyup or lose focus, push the value into the observable.
         var aceFocusElement = ".ace_text-input";
-        $(element).on('keyup', aceFocusElement, () => code(aceEditor.getSession().getValue()));
+        $(element).on('keyup', aceFocusElement, () => {
+            code(aceEditor.getSession().getValue());
+            self.alterHeight(element, aceEditor);
+        });
         $(element).on('focus', aceFocusElement, () => aceEditorBindingHandler.currentEditor = aceEditor);
 
         // Initialize ace resizeble text box
         aceEditor.setOption('vScrollBarAlwaysVisible', true);
         aceEditor.setOption('hScrollBarAlwaysVisible', true);
         
-        if ($(element).height() < minHeight) {
-            $(element).height(minHeight);
+        if ($(element).height() < this.minHeight) {
+            $(element).height(this.minHeight);
         }
         $(element).resizable({
-            minHeight: minHeight,
+            minHeight: this.minHeight,
             handles: "s, se",
             grid: [10000000000000000, 1],
             resize: function (event, ui) {
@@ -202,7 +211,7 @@ class aceEditorBindingHandler {
             }
         });
 
-        aceEditor.resize(); //for ace elements smaller than 'minHeight'
+        this.alterHeight(element, aceEditor);
         $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
         $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');
         $('.ui-resizable-se').css('cursor', 's-resize');
@@ -236,6 +245,30 @@ class aceEditorBindingHandler {
         var editorCode = aceEditor.getSession().getValue();
         if (code !== editorCode) {
             aceEditor.getSession().setValue(code);
+        }
+        this.alterHeight(element, aceEditor);
+    }
+
+    previousLinesCount = -1;
+
+    alterHeight(element: HTMLElement, aceEditor: AceAjax.Editor) {
+        // update only if line count changes
+        var currentLinesCount = aceEditor.getSession().getScreenLength();
+        if (this.previousLinesCount != currentLinesCount) {
+            var newHeight = currentLinesCount
+                * aceEditor.renderer.lineHeight
+                + (<any>aceEditor.renderer).scrollBar.getWidth();
+                + 10; // few pixels extra padding
+
+            if (newHeight < this.minHeight) {
+                newHeight = this.minHeight;
+            } else if (newHeight > this.maxHeight) {
+                newHeight = this.maxHeight;
+            }
+
+            $(element).height(newHeight);
+            aceEditor.resize();
+            this.previousLinesCount = currentLinesCount;
         }
     }
 }

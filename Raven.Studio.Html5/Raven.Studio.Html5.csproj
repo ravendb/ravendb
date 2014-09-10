@@ -41,6 +41,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getFilesConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFoldersCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getSyncIncomingActivitiesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getSyncOutgoingActivitiesCommand.ts" />

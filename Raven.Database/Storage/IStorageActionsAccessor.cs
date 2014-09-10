@@ -14,9 +14,12 @@ namespace Raven.Database.Storage
 		IQueueStorageActions Queue { get; }
 		IListsStorageActions Lists { get; }
 		ITasksStorageActions Tasks { get; }
-		IStalenessStorageActions Staleness{ get; }
+        IStalenessStorageActions Staleness { get; }
+        
+        [Obsolete("Use RavenFS instead.")]
 		IAttachmentsStorageActions Attachments { get; }
-		IIndexingStorageActions Indexing { get; }
+		
+        IIndexingStorageActions Indexing { get; }
 		IGeneralStorageActions General { get; }
 		IMappedResultsStorageAction MapReduce { get; }
 	    bool IsNested { get; set; }

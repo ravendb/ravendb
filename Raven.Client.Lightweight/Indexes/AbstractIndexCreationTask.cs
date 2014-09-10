@@ -183,7 +183,8 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Loads the specifed document during the indexing process
 		/// </summary>
-		public object LoadAttachmentForIndexing(string key)
+        [Obsolete("Use RavenFS instead.")]
+        public object LoadAttachmentForIndexing(string key)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}

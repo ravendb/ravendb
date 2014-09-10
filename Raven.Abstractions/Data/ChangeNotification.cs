@@ -114,6 +114,8 @@ namespace Raven.Abstractions.Data
 		None = 0,
 
 		DocumentReplicationConflict = 1,
+
+        [Obsolete("Use RavenFS instead.")]
 		AttachmentReplicationConflict = 2,
 	}
 

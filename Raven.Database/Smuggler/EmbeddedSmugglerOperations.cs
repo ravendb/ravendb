@@ -56,6 +56,7 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(enumerator));
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
 		{
 			var lastEtag = startAttachmentsDeletionEtag;
@@ -134,6 +135,7 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask();
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo)
 		{
 			if (attachmentExportInfo != null)
@@ -198,6 +200,7 @@ namespace Raven.Database.Smuggler
 
 		public SmugglerOptions Options { get; private set; }
 
+        [Obsolete("Use RavenFS instead.")]
 		public Task DeleteAttachment(string key)
 		{
 			database.Attachments.DeleteStatic(key, null);
@@ -250,7 +253,7 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-
+        [Obsolete("Use RavenFS instead.")]
 		public Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
 		{
 			var attachments = database
@@ -261,6 +264,7 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask<List<AttachmentInformation>>(attachments);
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
 		{
 			var attachment = database.Attachments.GetStatic(attachmentInformation.Key);

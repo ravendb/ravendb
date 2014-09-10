@@ -373,17 +373,17 @@ class shell extends viewModelBase {
     private changesApiFiredForResource(e: documentChangeNotificationDto,
         resourceObservableArray: KnockoutObservableArray<any>, activeResourceObservable: any, resourceType: logTenantType) {
 
-        if (!!e.Id && (e.Type === documentChangeType.Delete || e.Type === documentChangeType.Put)) {
+        if (!!e.Id && (e.Type === "Delete" || e.Type === "Put")) {
             var receivedResourceName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
             
-            if (e.Type === documentChangeType.Delete) {
+            if (e.Type === "Delete") {
                 var resourceToDelete = resourceObservableArray.first((rs: resource) => rs.name == receivedResourceName);
                 if (!!resourceToDelete) {
                     resourceObservableArray.remove(resourceToDelete);
 
                     this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
                 }
-            } else { // e.Type === documentChangeType.Put
+            } else { // e.Type === "Put"
                 var getSystemDocumentTask = new getSystemDocumentCommand(e.Id).execute();
                 getSystemDocumentTask.done((dto: databaseDocumentDto) => {
                     var existingResource = resourceObservableArray.first((rs: resource) => rs.name == receivedResourceName);

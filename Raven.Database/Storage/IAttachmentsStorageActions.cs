@@ -12,6 +12,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
 {
+
+    [Obsolete("Use RavenFS instead.")]
 	public interface IAttachmentsStorageActions
 	{
 		Etag AddAttachment(string key, Etag etag, Stream data, RavenJObject headers);

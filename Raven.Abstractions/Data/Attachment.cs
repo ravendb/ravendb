@@ -12,6 +12,7 @@ namespace Raven.Abstractions.Data
 	/// <summary>
 	/// Attachment data and metadata
 	/// </summary>
+    [Obsolete("Use RavenFS instead.")]
 	public class Attachment
 	{
 		/// <summary>

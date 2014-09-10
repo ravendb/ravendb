@@ -59,6 +59,7 @@ namespace Raven.Storage.Esent
 			get { return inner;  }
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public IAttachmentsStorageActions Attachments
 		{
 			get { return inner; }

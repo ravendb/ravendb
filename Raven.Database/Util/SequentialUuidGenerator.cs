@@ -9,7 +9,10 @@ namespace Raven.Database.Util
 	{
 		private byte[] ticksAsBytes;
 		private long sequentialUuidCounterDocuments;
+
+        [Obsolete("Use RavenFS instead.")]
 		private long sequentialUuidCounterAttachments;
+
 		private long sequentialUuidCounterDocumentsTransactions;
 		private long sequentialUuidCounterMappedResults;
 		private long sequentialUuidCounterReduceResults;

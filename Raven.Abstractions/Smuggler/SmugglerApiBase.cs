@@ -265,6 +265,7 @@ namespace Raven.Abstractions.Smuggler
 
 		public abstract Task ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtagsToFetch);
 
+        [Obsolete("Use RavenFS instead.")]
 		protected virtual async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 			var totalCount = 0;
@@ -639,7 +640,7 @@ namespace Raven.Abstractions.Smuggler
 
 			sw.Stop();
 
-			Operations.ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments, deleted {2:#,#;;0} documents and {3:#,#;;0} attachments in {4:#,#;;0} ms", exportCounts["Docs"], exportCounts["Attachments"], exportCounts["DocsDeletions"], exportCounts["AttachmentsDeletions"], sw.ElapsedMilliseconds);
+			Operations.ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments, deleted {2:#,#;;0} documents and {3:#,#;;0} attachments in {4:#,#.###;;0} s", exportCounts["Docs"], exportCounts["Attachments"], exportCounts["DocsDeletions"], exportCounts["AttachmentsDeletions"], sw.ElapsedMilliseconds / 1000f);
 
 			SmugglerOptions.CancelToken.Token.ThrowIfCancellationRequested();
 		}
@@ -674,6 +675,7 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private async Task<int> ImportDeletedAttachments(JsonReader jsonReader)
 		{
 			var count = 0;
@@ -728,6 +730,7 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private async Task<int> ImportAttachments(RavenConnectionStringOptions dst, JsonTextReader jsonReader)
 		{
 			var count = 0;

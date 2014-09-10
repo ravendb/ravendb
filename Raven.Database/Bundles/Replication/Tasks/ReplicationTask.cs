@@ -420,6 +420,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private bool? ReplicateAttachments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder)
 		{
 			Tuple<RavenJArray, Etag> tuple;
@@ -635,6 +636,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return destStats.FailureCount == 0;
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private bool TryReplicationAttachments(ReplicationStrategy destination, RavenJArray jsonAttachments, out string errorMessage)
 		{
 			try
@@ -901,7 +903,7 @@ namespace Raven.Bundles.Replication.Tasks
 				.ToList();
 		}
 
-
+        [Obsolete("Use RavenFS instead.")]
 		private Tuple<RavenJArray, Etag> GetAttachments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
 		{
 			var timeout = TimeSpan.FromSeconds(docDb.Configuration.Replication.FetchingFromDiskTimeoutInSeconds);
@@ -1006,6 +1008,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return Tuple.Create(attachments, lastAttachmentEtag);
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		private static List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Etag lastAttachmentEtag)
 		{
 			var attachmentInformations = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100, 1024 * 1024 * 10).ToList();
