@@ -246,7 +246,7 @@ namespace Raven.Database.Util
 
 		internal static object GetCurrentlyIndexingForDebug(DocumentDatabase database)
 		{
-			var indexingWork = database.IndexingExecuter.GetCurrentlyProcessingIndexes();
+			var indexingWork = database .IndexingExecuter.GetCurrentlyProcessingIndexes();
 			var reduceWork = database.ReducingExecuter.GetCurrentlyProcessingIndexes();
 
 			var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();

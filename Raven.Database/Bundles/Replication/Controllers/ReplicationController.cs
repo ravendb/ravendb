@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -70,7 +73,17 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			}
 		}
 
-        [Obsolete("Use RavenFS instead.")]
+		[HttpGet]
+		[Route("replication/topology")]
+		[Route("databases/{databaseName}/replication/topology")]
+		public HttpResponseMessage TopologyGet()
+		{
+			var documentsController = new DocumentsController();
+			documentsController.InitializeFrom(this);
+			return documentsController.DocGet(Constants.RavenReplicationDestinations);
+		}
+
+		[Obsolete("Use RavenFS instead.")]
 		public IEnumerable<AbstractAttachmentReplicationConflictResolver> AttachmentReplicationConflictResolvers
 		{
 			get

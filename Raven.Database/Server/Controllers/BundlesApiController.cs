@@ -15,8 +15,8 @@ namespace Raven.Database.Server.Controllers
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			InnerInitialization(controllerContext);
-			var config = DatabasesLandlord.CreateTenantConfiguration(DatabaseName);
-			if (!config.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName,StringComparison.InvariantCultureIgnoreCase)))
+			var db = await DatabasesLandlord.GetDatabaseInternal(DatabaseName);
+			if (!db.Configuration.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName,StringComparison.InvariantCultureIgnoreCase)))
 			{
 				return GetMessageWithObject(new
 				{
