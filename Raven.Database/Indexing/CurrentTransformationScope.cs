@@ -10,22 +10,24 @@ namespace Raven.Database.Indexing
 		private readonly DocumentDatabase database;
 		private readonly DocumentRetriever retriever;
 
-		[ThreadStatic] private static CurrentTransformationScope current;
+		[ThreadStatic]
+		private static CurrentTransformationScope current;
 		private CurrentTransformationScope old;
+		private HashSet<string> nested;
 
 		public static CurrentTransformationScope Current
-	    {
+		{
 			get { return current; }
-	    }
+		}
 
-	    public CurrentTransformationScope(DocumentDatabase database, DocumentRetriever documentRetriever)
-	    {
-		    this.database = database;
-		    retriever = documentRetriever;
-		    old = current;
+		public CurrentTransformationScope(DocumentDatabase database, DocumentRetriever documentRetriever)
+		{
+			this.database = database;
+			retriever = documentRetriever;
+			old = current;
 			current = this;
-			
-	    }
+
+		}
 
 		public void Dispose()
 		{
@@ -39,6 +41,10 @@ namespace Raven.Database.Indexing
 		public DocumentRetriever Retriever
 		{
 			get { return retriever; }
+		}
+		public HashSet<string> Nested
+		{
+			get { return nested ?? (nested = new HashSet<string>(StringComparer.OrdinalIgnoreCase)); }
 		}
 	}
 }
