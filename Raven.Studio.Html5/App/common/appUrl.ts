@@ -10,7 +10,6 @@ import messagePublisher = require("common/messagePublisher");
 // Helper class with static methods for generating app URLs.
 class appUrl {
 
-
     static detectAppUrl() {
         var path = window.location.pathname.replace("\\", "/").replace("%5C", "/");
         var suffix = "studio/index.html";
