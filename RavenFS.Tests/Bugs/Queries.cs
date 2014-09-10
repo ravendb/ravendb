@@ -92,7 +92,7 @@ namespace RavenFS.Tests.Bugs
 			var fileInfos = await client.SearchAsync("Item:10*");
 
             Assert.Equal(1, fileInfos.Files.Count);
-			Assert.Equal("/" + filename, fileInfos.Files[0].Name);
+			Assert.Equal("/" + filename, fileInfos.Files[0].FullName);
 		}
 	}
 }

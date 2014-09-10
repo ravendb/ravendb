@@ -622,7 +622,8 @@ namespace RavenFS.Tests
             Assert.NotNull(fileMetadata);
             Assert.Equal(2, fileMetadata.Length);
             Assert.Equal("1.txt", fileMetadata[0].Name);
-            Assert.Equal("/a/b/2.txt", fileMetadata[1].Name);
+            Assert.Equal("/a/b/2.txt", fileMetadata[1].FullName);
+            Assert.Equal("2.txt", fileMetadata[1].Name);
             Assert.Equal(128, fileMetadata[0].TotalSize);
             Assert.Equal(128, fileMetadata[1].TotalSize);
             Assert.NotNull(fileMetadata[0].Etag);

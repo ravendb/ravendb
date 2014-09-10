@@ -81,7 +81,13 @@ namespace Raven.Abstractions.FileSystem
         {
             get
             {
-                return Path == "/" ? FullName.TrimStart('/') : FullName;
+                // FileHeader should not need to handle the case of non-canonical names. But we are handling it anyways.
+                // http://issues.hibernatingrhinos.com/issue/RavenDB-2681
+                int skipSlash = 1;
+                if (!FullName.StartsWith("/"))
+                    skipSlash = 0;
+
+                return Path == "/" ? FullName.TrimStart('/') : FullName.Substring(Path.Count() + skipSlash);
             }
         }
 

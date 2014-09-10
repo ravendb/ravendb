@@ -155,7 +155,7 @@ namespace RavenFS.Tests.Shard
 
 			var result = await shardedClient.SearchAsync("__size_numeric:[2 TO 4]");
 			var files = result.Files;
-			var fileNames = files.Select(f => f.Name).ToArray();
+			var fileNames = files.Select(f => f.FullName).ToArray();
 
 			Assert.Equal(3, result.FileCount);
 			Assert.Contains(name2, fileNames);
@@ -174,7 +174,7 @@ namespace RavenFS.Tests.Shard
 
 			var result = await shardedClient.SearchAsync("", new []{"__size"});
 			var files = result.Files;
-			var fileNames = files.Select(f => f.Name).ToArray();
+			var fileNames = files.Select(f => f.FullName).ToArray();
 
 			Assert.Equal(new[] {name2, name3, name4, name5, name1 }, fileNames);
 		}
@@ -190,7 +190,7 @@ namespace RavenFS.Tests.Shard
 
 			var result = await shardedClient.SearchAsync("", new[] { "-__size" });
 			var files = result.Files;
-			var fileNames = files.Select(f => f.Name).ToArray();
+			var fileNames = files.Select(f => f.FullName).ToArray();
 
 			Assert.Equal(new[] { name2, name3, name4, name5, name1 }.Reverse(), fileNames);
 		}
