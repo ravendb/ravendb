@@ -27,6 +27,7 @@ class index {
     isIdle = ko.observable(false);
     isAbandoned = ko.observable(false);
     isDisabled = ko.observable(false);
+    isInvalid = ko.observable(false);
     editUrl: KnockoutComputed<string>;
     queryUrl: KnockoutComputed<string>;
 
@@ -60,6 +61,7 @@ class index {
         this.reduceIndexingErrors = dto.ReduceIndexingErrors;
         this.reduceIndexingSuccesses = dto.ReduceIndexingSuccesses;
         this.touchCount = dto.TouchCount;
+        this.isInvalid(dto.IsInvalidIndex);
 
         this.isAbandoned(this.priority && this.priority.indexOf(index.priorityAbandoned) !== -1);
         this.isDisabled(this.priority && this.priority.indexOf(index.priorityDisabled) !== -1);

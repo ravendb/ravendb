@@ -20,21 +20,26 @@ namespace Raven.Abstractions.Data
 		{
 			get
 			{
-				if (Attempts == 0 || Errors == 0)
-					return false;
-				if(ReduceAttempts != null)
-				{
-					// we don't have enough attempts to make a useful determination
-					if (Attempts + ReduceAttempts < 100)
-						return false;
-					return (Errors + (ReduceErrors ?? 0))/(float) (Attempts + (ReduceAttempts ?? 0)) > 0.15;
-				}
-				// we don't have enough attempts to make a useful determination
-				if (Attempts < 100)
-					return false;
-				return (Errors / (float)Attempts) > 0.15;
+			    return CheckIndexInvalid(Attempts, Errors, ReduceAttempts, ReduceErrors);
 			}
 		}
+
+        public static bool CheckIndexInvalid(int attempts, int errors, int? reduceAttempts, int? reduceErrors)
+        {
+            if (attempts == 0 || errors == 0)
+                return false;
+            if (reduceAttempts != null)
+            {
+                // we don't have enough attempts to make a useful determination
+                if (attempts + reduceAttempts < 100)
+                    return false;
+                return (errors + (reduceErrors ?? 0)) / (float)(attempts + (reduceAttempts ?? 0)) > 0.15;
+            }
+            // we don't have enough attempts to make a useful determination
+            if (attempts < 100)
+                return false;
+            return (errors / (float)attempts) > 0.15;
+        }
 
 		/// <summary>
 		/// Gets or sets the id
