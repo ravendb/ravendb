@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Should_save_put_to_tenant_database_if_tenant_database_is_reloaded_before_the_put_transaction()
         {
-			using (var server = GetNewServer(runInMemory: false))
+			using (var server = GetNewServer(runInMemory: false, requestedStorage: "esent"))
             using (var store = new DocumentStore
             {
                 Url = "http://localhost:8079"
@@ -56,7 +56,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Should_save_put_to_tenant_database_if_tenant_database_is_reloaded_in_the_middle_of_the_put_transaction()
         {
-			using (var server = GetNewServer(runInMemory: false))
+			using (var server = GetNewServer(runInMemory: false, requestedStorage:"esent"))
             using (var store = new DocumentStore
             {
                 Url = "http://localhost:8079"
@@ -90,7 +90,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void Should_fail_put_to_tenant_database_if_tenant_database_is_reloaded_after_the_put_transaction_because_tx_was_reset()
         {
-			using (var server = GetNewServer(runInMemory: false))
+			using (var server = GetNewServer(runInMemory: false, requestedStorage: "esent"))
             using (var store = NewRemoteDocumentStore(ravenDbServer:server))
             {
                 EnsureDtcIsSupported(server);
