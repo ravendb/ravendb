@@ -96,7 +96,7 @@ namespace Raven.Client.FileSystem
 
                 var fileHeaders = await Commands.GetAsync(idsOfNotExistingObjects.ToArray());                                
                 foreach( var header in fileHeaders )
-                    AddToCache(header.Name, header);                
+                    AddToCache(header.FullName, header);                
             }
 
             var result = new List<FileHeader>();
@@ -122,10 +122,10 @@ namespace Raven.Client.FileSystem
 
         public Task<Stream> DownloadAsync(FileHeader fileHeader, Reference<RavenJObject> metadata = null)
         {
-            if (fileHeader == null || string.IsNullOrWhiteSpace(fileHeader.Name))
+            if (fileHeader == null || string.IsNullOrWhiteSpace(fileHeader.FullName))
                 throw new ArgumentNullException("fileHeader", "The file header cannot be null, and must have a filename.");
 
-            return this.DownloadAsync(fileHeader.Name, metadata);
+            return this.DownloadAsync(fileHeader.FullName, metadata);
         }
 
         public async Task<FileHeader[]> LoadFilesAtDirectoryAsync(string directory)

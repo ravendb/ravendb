@@ -98,7 +98,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		[Route("admin/fs/{*id}")]
 		public HttpResponseMessage FileSystemToggleDisable(string id, bool isSettingDisabled)
 		{
-			var message = ToggeleFileSystemDisabled(id, isSettingDisabled);
+			var message = ToggleFileSystemDisabled(id, isSettingDisabled);
 			if (message.ErrorCode != HttpStatusCode.OK)
 			{
 				return GetMessageWithString(message.Message, message.ErrorCode);
@@ -121,7 +121,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			databasesToToggle.ForEach(fileSystemId =>
 			{
-				var message = ToggeleFileSystemDisabled(fileSystemId, isSettingDisabled);
+				var message = ToggleFileSystemDisabled(fileSystemId, isSettingDisabled);
 				if (message.ErrorCode == HttpStatusCode.OK)
 				{
 					successfullyToggledFileSystems.Add(fileSystemId);
@@ -156,7 +156,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return new MessageWithStatusCode();
 		}
 
-		private MessageWithStatusCode ToggeleFileSystemDisabled(string fileSystemId, bool isSettingDisabled)
+		private MessageWithStatusCode ToggleFileSystemDisabled(string fileSystemId, bool isSettingDisabled)
 		{
 			var docKey = "Raven/FileSystems/" + fileSystemId;
 			var document = Database.Documents.Get(docKey, null);

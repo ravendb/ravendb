@@ -15,6 +15,7 @@ using Raven.Database.Server.RavenFS.Synchronization.Rdc;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
+using Raven.Database.Server.RavenFS.Util;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -26,15 +27,15 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/rdc/Signatures/{*id}")]
 		public HttpResponseMessage Signatures(string id)
 		{
-			var filename = Uri.UnescapeDataString(id);
+            var canonicalFilename = FileHeader.Canonize(id);
 
-			Log.Debug("Got signatures of a file '{0}' request", filename);
+			Log.Debug("Got signatures of a file '{0}' request", id);
 
-			using (var signatureRepository = new StorageSignatureRepository(Storage, filename))
+            using (var signatureRepository = new StorageSignatureRepository(Storage, canonicalFilename))
 			{
 				var localRdcManager = new LocalRdcManager(signatureRepository, Storage, SigGenerator);
-				var resultContent = localRdcManager.GetSignatureContentForReading(filename);
-				return StreamResult(filename, resultContent);
+                var resultContent = localRdcManager.GetSignatureContentForReading(canonicalFilename);
+                return StreamResult(canonicalFilename, resultContent);
 			}
 		}
 
@@ -59,35 +60,36 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		[HttpGet]
         [Route("fs/{fileSystemName}/rdc/Manifest/{*id}")]
-		public async Task<HttpResponseMessage> Manifest(string id)
+        public async Task<HttpResponseMessage> Manifest(string id)
 		{
-			var filename = Uri.UnescapeDataString(id);
+            var canonicalFilename = FileHeader.Canonize(id);
+
 			FileAndPagesInformation fileAndPages = null;
 			try
 			{
-				Storage.Batch(accessor => fileAndPages = accessor.GetFile(filename, 0, 0));
+                Storage.Batch(accessor => fileAndPages = accessor.GetFile(canonicalFilename, 0, 0));
 			}
 			catch (FileNotFoundException)
 			{
-				Log.Debug("Signature manifest for a file '{0}' was not found", filename);
+				Log.Debug("Signature manifest for a file '{0}' was not found", id);
 				return Request.CreateResponse(HttpStatusCode.NotFound);
 			}
 
 			long? fileLength = fileAndPages.TotalSize;
 
-			using (var signatureRepository = new StorageSignatureRepository(Storage, filename))
+            using (var signatureRepository = new StorageSignatureRepository(Storage, canonicalFilename))
 			{
 				var rdcManager = new LocalRdcManager(signatureRepository, Storage, SigGenerator);
 				var signatureManifest = await rdcManager.GetSignatureManifestAsync(
                                                                 new DataInfo
 					                                            {
-						                                            Name = filename,
+                                                                    Name = canonicalFilename,
                                                                     LastModified = fileAndPages.Metadata.Value<DateTime>(Constants.LastModified)
 								                                                       .ToUniversalTime()
 					                                            });
 				signatureManifest.FileLength = fileLength ?? 0;
 
-				Log.Debug("Signature manifest for a file '{0}' was downloaded. Signatures count was {1}", filename, signatureManifest.Signatures.Count);
+				Log.Debug("Signature manifest for a file '{0}' was downloaded. Signatures count was {1}", id, signatureManifest.Signatures.Count);
 
                 return GetMessageWithObject(signatureManifest)
                            .WithNoCache();

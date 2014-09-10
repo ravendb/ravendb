@@ -435,7 +435,7 @@ namespace RavenFS.Tests.Synchronization
 			var synchronizationReport = await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
 
             Assert.Contains("The limit of active synchronizations to " + destinationClient.ServerUrl, synchronizationReport.Exception.Message);
-            Assert.Contains("server has been achieved. Cannot process a file 'test.bin'.", synchronizationReport.Exception.Message);
+            Assert.Contains(string.Format("server has been achieved. Cannot process a file '{0}'.", FileHeader.Canonize("test.bin")), synchronizationReport.Exception.Message);
 		}
 
 		[Fact]

@@ -282,12 +282,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
 				return null;
 
-            return new FileHeader
+            return new FileHeader ( Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode), RetrieveMetadata())
 				       {
-					       Name = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 					       TotalSize = GetTotalSize(),
 					       UploadedSize = BitConverter.ToInt64(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
-					       Metadata = RetrieveMetadata()
 				       };
 		}
 
@@ -356,12 +354,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 
 			do
 			{
-				yield return new FileHeader
+				yield return new FileHeader(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode), RetrieveMetadata() )
 					             {
-						             Name = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 						             TotalSize = GetTotalSize(),
 						             UploadedSize = BitConverter.ToInt64(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
-						             Metadata = RetrieveMetadata()
 					             };
 			} while (++index < size && Api.TryMoveNext(session, Files));
 		}
@@ -393,12 +389,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 
 			do
 			{
-                result.Add(new FileHeader
+                result.Add(new FileHeader (Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode), RetrieveMetadata() )
 					           {
-						           Name = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 						           TotalSize = GetTotalSize(),
 						           UploadedSize = BitConverter.ToInt64( Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
-						           Metadata = RetrieveMetadata()
 					           });
 			} while (++index < take && Api.TryMoveNext(session, Files));
 

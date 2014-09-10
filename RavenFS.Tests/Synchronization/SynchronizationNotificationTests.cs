@@ -47,10 +47,10 @@ namespace RavenFS.Tests.Synchronization
 			var synchronizationUpdates = await notificationTask;
 
 			Assert.Equal(SynchronizationAction.Start, synchronizationUpdates[0].Action);
-			Assert.Equal("test.bin", synchronizationUpdates[0].FileName);
+			Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[0].FileName);
 			Assert.Equal(SynchronizationType.ContentUpdate, synchronizationUpdates[0].Type);
 			Assert.Equal(SynchronizationAction.Finish, synchronizationUpdates[1].Action);
-			Assert.Equal("test.bin", synchronizationUpdates[1].FileName);
+			Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[1].FileName);
 			Assert.Equal(SynchronizationType.ContentUpdate, synchronizationUpdates[1].Type);
 
 			// metadata update
@@ -69,10 +69,10 @@ namespace RavenFS.Tests.Synchronization
 			synchronizationUpdates = await notificationTask;
 
 			Assert.Equal(SynchronizationAction.Start, synchronizationUpdates[0].Action);
-			Assert.Equal("test.bin", synchronizationUpdates[0].FileName);
+			Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[0].FileName);
 			Assert.Equal(SynchronizationType.MetadataUpdate, synchronizationUpdates[0].Type);
 			Assert.Equal(SynchronizationAction.Finish, synchronizationUpdates[1].Action);
-			Assert.Equal("test.bin", synchronizationUpdates[1].FileName);
+			Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[1].FileName);
 			Assert.Equal(SynchronizationType.MetadataUpdate, synchronizationUpdates[1].Type);
 
 			// rename update
@@ -91,10 +91,10 @@ namespace RavenFS.Tests.Synchronization
 			synchronizationUpdates = await notificationTask;
 
 			Assert.Equal(SynchronizationAction.Start, synchronizationUpdates[0].Action);
-			Assert.Equal("test.bin", synchronizationUpdates[0].FileName);
+			Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[0].FileName);
 			Assert.Equal(SynchronizationType.Rename, synchronizationUpdates[0].Type);
 			Assert.Equal(SynchronizationAction.Finish, synchronizationUpdates[1].Action);
-			Assert.Equal("test.bin", synchronizationUpdates[1].FileName);
+			Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[1].FileName);
 			Assert.Equal(SynchronizationType.Rename, synchronizationUpdates[1].Type);
 
 			// delete update
@@ -113,10 +113,10 @@ namespace RavenFS.Tests.Synchronization
 			synchronizationUpdates = await notificationTask;
 
 			Assert.Equal(SynchronizationAction.Start, synchronizationUpdates[0].Action);
-			Assert.Equal("rename.bin", synchronizationUpdates[0].FileName);
+            Assert.Equal(FileHeader.Canonize("rename.bin"), synchronizationUpdates[0].FileName);
 			Assert.Equal(SynchronizationType.Delete, synchronizationUpdates[0].Type);
 			Assert.Equal(SynchronizationAction.Finish, synchronizationUpdates[1].Action);
-			Assert.Equal("rename.bin", synchronizationUpdates[1].FileName);
+            Assert.Equal(FileHeader.Canonize("rename.bin"), synchronizationUpdates[1].FileName);
 			Assert.Equal(SynchronizationType.Delete, synchronizationUpdates[1].Type);
 		}
 
@@ -139,7 +139,7 @@ namespace RavenFS.Tests.Synchronization
 			var synchronizationUpdates = await notificationTask;
 
 			Assert.Equal(SynchronizationAction.Start, synchronizationUpdates[0].Action);
-			Assert.Equal("test.bin", synchronizationUpdates[0].FileName);
+			Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[0].FileName);
 			Assert.Equal(SynchronizationType.ContentUpdate, synchronizationUpdates[0].Type);
 
 			// metadata update
@@ -158,7 +158,7 @@ namespace RavenFS.Tests.Synchronization
 			synchronizationUpdates = await notificationTask;
 
 			Assert.Equal(SynchronizationAction.Start, synchronizationUpdates[0].Action);
-			Assert.Equal("test.bin", synchronizationUpdates[0].FileName);
+			Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[0].FileName);
 			Assert.Equal(SynchronizationType.MetadataUpdate, synchronizationUpdates[0].Type);
 
 			// rename update
@@ -177,7 +177,7 @@ namespace RavenFS.Tests.Synchronization
 			synchronizationUpdates = await notificationTask;
 
 			Assert.Equal(SynchronizationAction.Start, synchronizationUpdates[0].Action);
-			Assert.Equal("test.bin", synchronizationUpdates[0].FileName);
+            Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[0].FileName);
 			Assert.Equal(SynchronizationType.Rename, synchronizationUpdates[0].Type);
 
 			// delete update
@@ -196,7 +196,7 @@ namespace RavenFS.Tests.Synchronization
 			synchronizationUpdates = await notificationTask;
 
 			Assert.Equal(SynchronizationAction.Start, synchronizationUpdates[0].Action);
-			Assert.Equal("rename.bin", synchronizationUpdates[0].FileName);
+            Assert.Equal(FileHeader.Canonize("rename.bin"), synchronizationUpdates[0].FileName);
 			Assert.Equal(SynchronizationType.Delete, synchronizationUpdates[0].Type);
 		}
 

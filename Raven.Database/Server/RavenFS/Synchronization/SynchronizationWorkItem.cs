@@ -24,7 +24,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		protected SynchronizationWorkItem(string fileName, string sourceServerUrl, ITransactionalStorage storage)
 		{
 			Storage = storage;
-			FileName = fileName;
+            FileName = fileName;
 
 			FileAndPagesInformation fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(fileName, 0, 0));

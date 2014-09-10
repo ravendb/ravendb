@@ -17,13 +17,13 @@ namespace Raven.Client.FileSystem.Impl
 
         public UpdateMetadataOperation(InMemoryFilesSessionOperations sessionOperations, FileHeader fileHeader, RavenJObject metadata)
         {
-            if (fileHeader != null && string.IsNullOrWhiteSpace(fileHeader.Name))
+            if (fileHeader != null && string.IsNullOrWhiteSpace(fileHeader.FullName))
                 throw new ArgumentNullException("fileHeader", "The file cannot be null or have an empty or whitespace name.");
 
             this.sessionOperations = sessionOperations;
 
             this.FileHeader = fileHeader;
-            this.Filename = fileHeader.Name;
+            this.Filename = fileHeader.FullName;
             this.Metadata = metadata;
         }
 

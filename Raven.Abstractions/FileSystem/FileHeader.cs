@@ -14,8 +14,6 @@ namespace Raven.Abstractions.FileSystem
         public RavenJObject Metadata { get; set; }
         public RavenJObject OriginalMetadata { get; set; }
 
-        public string Name { get; set; }
-
         private long? _totalSize;
         public long? TotalSize
         {
@@ -73,11 +71,25 @@ namespace Raven.Abstractions.FileSystem
             }
         }
 
+        public string FullName
+        {
+            get;
+            set;
+        }
+
+        public string Name
+        {
+            get
+            {
+                return Path == "/" ? FullName.TrimStart('/') : FullName;
+            }
+        }
+
         public string Extension
         {
             get
             {
-                return System.IO.Path.GetExtension(this.Name);
+                return System.IO.Path.GetExtension(this.FullName);
             }
         }
 
@@ -85,15 +97,17 @@ namespace Raven.Abstractions.FileSystem
         {
             get
             {
-                return System.IO.Path.GetDirectoryName(this.Name);
+                return System.IO.Path.GetDirectoryName(this.FullName)
+                                     .Replace('\\', '/');
             }
-        }
+        }        
 
-        public FileHeader( string name, RavenJObject metadata )
+        public FileHeader( string key, RavenJObject metadata )
         {
-            this.Name = name;
+            this.FullName = key;            
             this.Metadata = metadata;
             this.OriginalMetadata = (RavenJObject)metadata.CloneToken();
+            
             SetFileSize();
         }
 
@@ -114,9 +128,6 @@ namespace Raven.Abstractions.FileSystem
             this.UploadedSize = this._totalSize.HasValue ? this._totalSize.Value : 0;
 
         }
-
-        public FileHeader()
-        {}
 
         public string HumaneTotalSize
         {
@@ -153,7 +164,7 @@ namespace Raven.Abstractions.FileSystem
 
         protected bool Equals(FileHeader other)
         {
-            return string.Equals(Name, other.Name) && TotalSize == other.TotalSize && UploadedSize == other.UploadedSize && Metadata.Equals(other.Metadata);
+            return string.Equals(FullName, other.FullName) && TotalSize == other.TotalSize && UploadedSize == other.UploadedSize && Metadata.Equals(other.Metadata);
         }
 
         public override bool Equals(object obj)
@@ -168,12 +179,26 @@ namespace Raven.Abstractions.FileSystem
         {
             unchecked
             {
-                var hashCode = (Name != null ? Name.GetHashCode() : 0);
+                var hashCode = (FullName != null ? FullName.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ TotalSize.GetHashCode();
                 hashCode = (hashCode * 397) ^ UploadedSize.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Metadata != null ? Metadata.GetHashCode() : 0);
                 return hashCode;
             }
+        }
+
+        public static string Canonize(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return "/";
+
+            name = Uri.UnescapeDataString(name);
+            name = name.Replace("\\", "/");
+
+            if (!name.StartsWith("/"))
+                return "/" + name.TrimEnd('/');
+
+            return name.TrimEnd('/');
         }
     }
 

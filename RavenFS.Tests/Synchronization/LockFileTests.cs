@@ -42,7 +42,7 @@ namespace RavenFS.Tests.Synchronization
             var innerException = SyncTestUtils.ExecuteAndGetInnerException(async () => await destinationClient.UpdateMetadataAsync("test.bin", new RavenJObject()));
 
 			Assert.IsType(typeof (SynchronizationException), innerException.GetBaseException());
-			Assert.Equal("File test.bin is being synced", innerException.GetBaseException().Message);
+            Assert.Equal(string.Format("File {0} is being synced", FileHeader.Canonize("test.bin")), innerException.GetBaseException().Message);
 		}
 
 		[Fact]
@@ -58,7 +58,7 @@ namespace RavenFS.Tests.Synchronization
 			var innerException = SyncTestUtils.ExecuteAndGetInnerException(async () => await destinationClient.DeleteAsync("test.bin"));
 
 			Assert.IsType(typeof (SynchronizationException), innerException.GetBaseException());
-			Assert.Equal("File test.bin is being synced", innerException.GetBaseException().Message);
+            Assert.Equal(string.Format("File {0} is being synced", FileHeader.Canonize("test.bin")), innerException.GetBaseException().Message);
 		}
 
 		[Fact]
@@ -75,7 +75,7 @@ namespace RavenFS.Tests.Synchronization
 				SyncTestUtils.ExecuteAndGetInnerException(async () => await destinationClient.RenameAsync("test.bin", "newname.bin"));
 
 			Assert.IsType(typeof (SynchronizationException), innerException.GetBaseException());
-			Assert.Equal("File test.bin is being synced", innerException.GetBaseException().Message);
+            Assert.Equal(string.Format("File {0} is being synced", FileHeader.Canonize("test.bin")), innerException.GetBaseException().Message);
 		}
 
 		[Fact]
@@ -91,7 +91,7 @@ namespace RavenFS.Tests.Synchronization
 			var innerException = SyncTestUtils.ExecuteAndGetInnerException(async () => await destinationClient.UploadAsync("test.bin", new MemoryStream()));
 
 			Assert.IsType(typeof (SynchronizationException), innerException.GetBaseException());
-			Assert.Equal("File test.bin is being synced", innerException.GetBaseException().Message);
+            Assert.Equal(string.Format("File {0} is being synced", FileHeader.Canonize("test.bin")), innerException.GetBaseException().Message);
 		}
 
 		[Fact]
@@ -106,7 +106,7 @@ namespace RavenFS.Tests.Synchronization
 
 			var synchronizationReport = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 
-			Assert.Equal("File test.bin is being synced", synchronizationReport.Exception.Message);
+            Assert.Equal(string.Format("File {0} is being synced", FileHeader.Canonize("test.bin")), synchronizationReport.Exception.Message);
 		}
 
 		[Fact]
