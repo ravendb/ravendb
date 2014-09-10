@@ -8,12 +8,12 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 	{
         public bool Equals(FileHeader x, FileHeader y)
 		{
-            return x.FullName == y.FullName;
+            return x.FullPath == y.FullPath;
 		}
 
         public int GetHashCode(FileHeader header)
 		{
-            return (header.FullName != null ? header.FullName.GetHashCode() : 0);
+            return (header.FullPath != null ? header.FullPath.GetHashCode() : 0);
 		}
 	}
 }

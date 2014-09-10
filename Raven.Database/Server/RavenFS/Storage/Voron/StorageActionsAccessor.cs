@@ -228,7 +228,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             var fileInformation = new FileAndPagesInformation
                                   {
                                       TotalSize = f.TotalSize,
-                                      Name = f.FullName,
+                                      Name = f.FullPath,
                                       Metadata = f.Metadata,
                                       UploadedSize = f.UploadedSize,
                                       Start = start

@@ -71,7 +71,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 					previousRenameTombstone.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
 				{
 					// if there is a tombstone delete it
-                    accessor.Delete(previousRenameTombstone.FullName);
+                    accessor.Delete(previousRenameTombstone.FullPath);
 				}
 
                 accessor.RenameFile(operation.Name, operation.Rename, true);
@@ -312,18 +312,18 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 			{
 				if (deletedFile.IsFileBeingUploadedOrUploadHasBeenBroken()) // and might be uploading at the moment
 				{
-                    if (!uploadingFiles.ContainsKey(deletedFile.FullName))
+                    if (!uploadingFiles.ContainsKey(deletedFile.FullPath))
 					{
-                        uploadingFiles.TryAdd(deletedFile.FullName, deletedFile);
+                        uploadingFiles.TryAdd(deletedFile.FullPath, deletedFile);
 						return true; // first attempt to delete a file, prevent this time
 					}
-                    var uploadingFile = uploadingFiles[deletedFile.FullName];
+                    var uploadingFile = uploadingFiles[deletedFile.FullPath];
 					if (uploadingFile != null && uploadingFile.UploadedSize != deletedFile.UploadedSize)
 					{
 						return true; // if uploaded size changed it means that file is being uploading
 					}
 					FileHeader header;
-                    uploadingFiles.TryRemove(deletedFile.FullName, out header);
+                    uploadingFiles.TryRemove(deletedFile.FullPath, out header);
 				}
 			}
 			return false;

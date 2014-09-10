@@ -251,14 +251,14 @@ namespace RavenFS.Tests.Storage
             {
                 storage.Batch(accessor => Assert.Empty(accessor.ReadFiles(0, 10)));
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("file3", null, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("file4", 10, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("file5", null, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("file6", 10, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("file7", null, new RavenJObject().WithETag(Guid.NewGuid())));
-                storage.Batch(accessor => accessor.PutFile("file8", 10, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("/file1", null, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("/file2", 10, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("/file4", 10, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("/file5", null, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("/file6", 10, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("/file7", null, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("/file8", 10, new RavenJObject().WithETag(Guid.NewGuid())));
 
                 storage.Batch(accessor =>
                 {
@@ -330,14 +330,14 @@ namespace RavenFS.Tests.Storage
             {
                 storage.Batch(accessor => Assert.Empty(accessor.GetFilesAfter(Guid.NewGuid(), 10)));
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(etag2)));
-                storage.Batch(accessor => accessor.PutFile("file3", null, new RavenJObject().WithETag(etag3)));
-                storage.Batch(accessor => accessor.PutFile("file4", 10, new RavenJObject().WithETag(etag4)));
-                storage.Batch(accessor => accessor.PutFile("file5", null, new RavenJObject().WithETag(etag5)));
-                storage.Batch(accessor => accessor.PutFile("file6", 10, new RavenJObject().WithETag(etag6)));
-                storage.Batch(accessor => accessor.PutFile("file7", null, new RavenJObject().WithETag(etag7)));
-                storage.Batch(accessor => accessor.PutFile("file8", 10, new RavenJObject().WithETag(etag8)));
+                storage.Batch(accessor => accessor.PutFile("/file1", null, new RavenJObject().WithETag(etag1)));
+                storage.Batch(accessor => accessor.PutFile("/file2", 10, new RavenJObject().WithETag(etag2)));
+                storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject().WithETag(etag3)));
+                storage.Batch(accessor => accessor.PutFile("/file4", 10, new RavenJObject().WithETag(etag4)));
+                storage.Batch(accessor => accessor.PutFile("/file5", null, new RavenJObject().WithETag(etag5)));
+                storage.Batch(accessor => accessor.PutFile("/file6", 10, new RavenJObject().WithETag(etag6)));
+                storage.Batch(accessor => accessor.PutFile("/file7", null, new RavenJObject().WithETag(etag7)));
+                storage.Batch(accessor => accessor.PutFile("/file8", 10, new RavenJObject().WithETag(etag8)));
 
                 storage.Batch(accessor =>
                 {

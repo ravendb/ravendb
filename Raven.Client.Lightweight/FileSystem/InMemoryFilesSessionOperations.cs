@@ -145,10 +145,10 @@ namespace Raven.Client.FileSystem
 
         public void RegisterUpload(FileHeader file, Stream stream, Etag etag = null)
         {
-            if (deletedEntities.Contains(file.FullName))
-                throw new InvalidOperationException("The file '" + file.FullName + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
+            if (deletedEntities.Contains(file.FullPath))
+                throw new InvalidOperationException("The file '" + file.FullPath + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
 
-            var operation = new UploadFileOperation(this, file.FullName, stream.Length, stream.CopyTo, file.Metadata, etag);
+            var operation = new UploadFileOperation(this, file.FullPath, stream.Length, stream.CopyTo, file.Metadata, etag);
 
             IncrementRequestCount();
 
@@ -166,7 +166,7 @@ namespace Raven.Client.FileSystem
 
         public void RegisterUpload(FileHeader file, long size, Action<Stream> write, Etag etag = null)
         {
-            var operation = new UploadFileOperation(this, file.FullName, size, write, file.Metadata, etag);
+            var operation = new UploadFileOperation(this, file.FullPath, size, write, file.Metadata, etag);
 
             IncrementRequestCount();
 
@@ -186,9 +186,9 @@ namespace Raven.Client.FileSystem
 
         public void RegisterFileDeletion(FileHeader file, Etag etag = null)
         {
-			deletedEntities.Add(file.Path);
+			deletedEntities.Add(file.Directory);
 
-			var operation = new DeleteFileOperation(this, file.Path, etag);
+			var operation = new DeleteFileOperation(this, file.Directory, etag);
 
             IncrementRequestCount();
 
@@ -206,7 +206,7 @@ namespace Raven.Client.FileSystem
 
         public void RegisterRename(FileHeader sourceFile, string destinationFile)
         {
-            RegisterRename(sourceFile.Path, destinationFile);
+            RegisterRename(sourceFile.Directory, destinationFile);
         }
 
         public void AddToCache(string filename, FileHeader fileHeader)
@@ -315,10 +315,10 @@ namespace Raven.Client.FileSystem
             {
                 var fileHeader = entitiesByKey[key] as FileHeader;
 
-                if (EntityChanged(fileHeader) && !UploadRegisteredForFile(fileHeader.FullName, operations))
+                if (EntityChanged(fileHeader) && !UploadRegisteredForFile(fileHeader.FullPath, operations))
                 {
                     changes.Operations.Add(new UpdateMetadataOperation(this, fileHeader, fileHeader.Metadata));
-                    changes.Entities.Add(fileHeader.FullName);
+                    changes.Entities.Add(fileHeader.FullPath);
                 }
             }
         }
@@ -344,17 +344,17 @@ namespace Raven.Client.FileSystem
                 existingFileHeader.OriginalMetadata = (RavenJObject)result.Metadata.CloneToken();
                 existingFileHeader.Refresh();
 
-                if (savedEntity != result.FullName)
+                if (savedEntity != result.FullPath)
                 {
-                    if (!entitiesByKey.ContainsKey(result.FullName))
+                    if (!entitiesByKey.ContainsKey(result.FullPath))
                     {
-                        existingFileHeader.FullName = result.FullName;
-                        entitiesByKey.Add(result.FullName, existingFileHeader);
+                        existingFileHeader.FullPath = result.FullPath;
+                        entitiesByKey.Add(result.FullPath, existingFileHeader);
                         entitiesByKey.Remove(savedEntity);
                     }
                 }
 
-                AddToCache(existingFileHeader.FullName, existingFileHeader);
+                AddToCache(existingFileHeader.FullPath, existingFileHeader);
 			}
         }
 

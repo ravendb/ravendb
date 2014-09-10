@@ -240,7 +240,7 @@ namespace RavenFS.Tests
 			var results = client.SearchOnDirectoryAsync("/").Result; // make sure that indexes are updated
 
 			Assert.Equal(1, results.FileCount);
-			Assert.Equal(rename, results.Files[0].FullName);
+			Assert.Equal(rename, results.Files[0].FullPath);
 		}
 
 		[Fact]

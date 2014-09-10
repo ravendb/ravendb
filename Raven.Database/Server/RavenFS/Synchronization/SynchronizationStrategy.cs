@@ -30,16 +30,16 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			if (file.Metadata.Value<Guid>(SynchronizationConstants.RavenSynchronizationSource) == destinationId)
 				return false;
 
-            if (file.FullName.EndsWith(RavenFileNameHelper.DownloadingFileSuffix))
+            if (file.FullPath.EndsWith(RavenFileNameHelper.DownloadingFileSuffix))
 				return false;
 
-            if (file.FullName.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
+            if (file.FullPath.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
 				return false;
 
 			if (file.IsFileBeingUploadedOrUploadHasBeenBroken())
 				return false;
 
-            if (ExistsRenameTombstone(file.FullName, candidatesToSynchronization))
+            if (ExistsRenameTombstone(file.FullPath, candidatesToSynchronization))
 				return false;
 
 			return true;
