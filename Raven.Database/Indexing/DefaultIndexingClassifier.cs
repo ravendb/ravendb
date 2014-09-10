@@ -15,6 +15,8 @@ namespace Raven.Database.Indexing
 	{
 		private readonly Dictionary<Etag, List<IndexToWorkOn>> empty = new Dictionary<Etag, List<IndexToWorkOn>>();
 
+		private RoughEtagEqualityAndComparison comparison = new RoughEtagEqualityAndComparison();
+
 		public Dictionary<Etag, List<IndexToWorkOn>> GroupMapIndexes(IList<IndexToWorkOn> indexes)
 		{
 			if (indexes.Count == 0)
@@ -22,8 +24,8 @@ namespace Raven.Database.Indexing
 
 			var indexesByIndexedEtag = indexes
                 .Where(x => x.Index.IsMapIndexingInProgress == false) // indexes with precomputed docs are processed separately
-				.GroupBy(x => x.LastIndexedEtag, new RoughEtagEqualityAndComparison())
-				.OrderByDescending(x => x.Key, new RoughEtagEqualityAndComparison())
+				.GroupBy(x => x.LastIndexedEtag, comparison)
+				.OrderByDescending(x => x.Key, comparison)
 				.ToList();
 
 			if (indexesByIndexedEtag.Count == 0)
