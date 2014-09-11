@@ -70,18 +70,24 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/debug/indexing-perf-stats")]
 		public HttpResponseMessage IndexingPerfStats(string format = "json")
 		{
+		    var now = SystemTime.UtcNow;
+            now = new DateTime(now.Ticks - (now.Ticks % TimeSpan.TicksPerSecond), now.Kind);
+
 			var databaseStatistics = Database.Statistics;
 			var stats = from index in databaseStatistics.Indexes
 						from perf in index.Performance
+                        where perf.Operation == "Map" || perf.Operation == "Index"
 						let k = new { index, perf}
-						group k by new { k.perf.Started,k.perf.Operation } into g
+						group k by (int)(now - k.perf.Started).TotalSeconds into g
+                        orderby g.Key descending
 						select new
 						{
-							Started = g.Key.Started,
+							Started = now.AddSeconds(-g.Key - 1),
 							Stats = from k in g
 									select new
 									{
 										Index = k.index.Name,
+                                        StartTime = k.perf.Started,
 										k.perf.DurationMilliseconds,
 										k.perf.InputCount,
 										k.perf.OutputCount,

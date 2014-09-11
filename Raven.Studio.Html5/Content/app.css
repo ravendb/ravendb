@@ -8169,18 +8169,27 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   cursor: inherit;
   display: block;
 }
-.jsContent .string {
+.jsContent .string,
+.nvtooltip .string {
   color: #D14;
 }
-.jsContent .number {
+.jsContent .number,
+.nvtooltip .number {
   color: #099;
 }
-.jsContent .boolean {
+.jsContent .boolean,
+.nvtooltip .boolean {
   color: #0000ff;
 }
-.jsContent .null {
+.jsContent .null,
+.nvtooltip .null {
   color: #0000ff;
 }
-.jsContent .key {
+.jsContent .key,
+.nvtooltip .key {
   color: #000;
+}
+.nvtooltip {
+  border-radius: 5px;
+  box-shadow: 2px 2px 5px 0 rgba(50, 50, 50, 0.61);
 }

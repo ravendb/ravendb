@@ -44,6 +44,7 @@ class appUrl {
         reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
+        indexStats: ko.computed(() => appUrl.forIndexStats(appUrl.currentDatabase())),
         metrics: ko.computed(() => appUrl.forMetrics(appUrl.currentDatabase())),
         metricsIndexing: ko.computed(() => appUrl.forMetricsIndexing(appUrl.currentDatabase())),
         metricsRequests: ko.computed(() => appUrl.forMetricsRequests(appUrl.currentDatabase())),
@@ -228,12 +229,17 @@ class appUrl {
         return "#databases/edit?" + databaseUrlPart;
     }
 
+
     /**
     * Gets the URL for status page.
     * @param database The database to use in the URL. If null, the current database will be used.
     */
     static forStatus(db: database): string {
         return "#databases/status?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forIndexStats(db: database): string {
+        return "#databases/status/indexStats?" + appUrl.getEncodedDbPart(db);
     }
 
     static forMetrics(db: database): string {
