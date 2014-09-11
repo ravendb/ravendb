@@ -36,6 +36,8 @@ using Voron.Impl.Backup;
 
 using Raven.Client.Extensions;
 
+using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
+
 namespace Raven.Database.Server.Controllers.Admin
 {
 	[RoutePrefix("")]

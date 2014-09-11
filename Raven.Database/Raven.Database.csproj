@@ -238,6 +238,7 @@
     <Compile Include="Server\Connections\LogPushContent.cs" />
     <Compile Include="Server\Connections\AdminLogsConnectionState.cs" />
     <Compile Include="Server\Connections\AdminLogsTarget.cs" />
+    <Compile Include="Server\RavenFS\MaintenanceActions.cs" />
     <Compile Include="Server\RavenFS\Synchronization\ConflictResolvedInFavourOfCurrentVersion.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\AbstractFileSynchronizationConflictResolver.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LatestFileSynchronizationConflictResolver.cs" />

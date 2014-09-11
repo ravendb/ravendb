@@ -8,7 +8,9 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -17,6 +19,7 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
 using Raven.Database.Server.RavenFS.Storage.Voron.Schema;
+using Raven.Database.Storage.Voron.Backup;
 
 using Voron;
 using Voron.Impl;
@@ -195,6 +198,27 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                     }
                 }
             }
+        }
+
+        public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup,
+            DatabaseDocument documentDatabase)
+        {
+            if (tableStorage == null)
+                throw new InvalidOperationException("Cannot begin database backup - table store is not initialized");
+
+            var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory,
+                backupDestinationDirectory, tableStorage.Environment, incrementalBackup, documentDatabase);
+
+            Task.Factory.StartNew(() =>
+            {
+                using (backupOperation)
+                    backupOperation.Execute();
+            });
+        }
+
+        public void Restore(RestoreRequest restoreRequest, Action<string> output)
+        {
+            new RestoreOperation(restoreRequest, configuration, output).Execute();
         }
 
 		private void Output(string message)

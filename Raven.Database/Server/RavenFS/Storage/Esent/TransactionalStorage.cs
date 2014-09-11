@@ -10,13 +10,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
+using System.Threading.Tasks;
 
 using Microsoft.Isam.Esent.Interop;
 
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Storage.Esent.Backup;
 
 namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
@@ -392,6 +395,20 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 				Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, (JET_param)JET_paramEnableIndexCleanup, 0, null);
 			}
 		}
+
+        public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase)
+        {
+            if (new InstanceParameters(instance).Recovery == false)
+                throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to false.");
+
+            var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase);
+            Task.Factory.StartNew(backupOperation.Execute);
+        }
+
+        public void Restore(RestoreRequest restoreRequest, Action<string> output)
+        {
+            new RestoreOperation(restoreRequest, configuration, output).Execute();
+        }
 
 		private void Output(string message)
 		{
