@@ -453,6 +453,7 @@ namespace Voron.Impl
 			{
 				_transactionPages.Remove(scratchPage);
 				_unusedScratchPages.Add(scratchPage);
+				_scratchPagesTable.Remove(pageNumber);
 			}
 
 			long numberOfOverflowPages;
