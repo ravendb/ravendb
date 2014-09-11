@@ -466,7 +466,9 @@ namespace Voron.Impl
 				_overflowPagesInTransaction--;
 
 				_dirtyOverflowPages.Remove(pageNumber);
-				_dirtyOverflowPages.Add(pageNumber + 1, numberOfOverflowPages - 1); // change the range of the overflow page
+
+				if (numberOfOverflowPages > 1) // prevent adding range which length is 0
+					_dirtyOverflowPages.Add(pageNumber + 1, numberOfOverflowPages - 1); // change the range of the overflow page
 			}
 		}
 
