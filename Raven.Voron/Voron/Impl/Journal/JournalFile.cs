@@ -53,6 +53,7 @@ namespace Voron.Impl.Journal
             public long JournalPos;
             public long TransactionId;
 	        public long JournalNumber;
+			public int ScratchNumber;
 	        public bool IsFreedPageMarker;
 
             public override bool Equals(object obj)
@@ -213,6 +214,7 @@ namespace Voron.Impl.Journal
 				{
 					ScratchPos = -1,
 					JournalPos = -1,
+					ScratchNumber = -1,
 					TransactionId = tx.Id,
 					JournalNumber = Number,
 					IsFreedPageMarker = true
@@ -222,7 +224,7 @@ namespace Voron.Impl.Journal
 		    for (int index = 1; index < txPages.Count; index++)
 		    {
 			    var txPage = txPages[index];
-			    var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
+			    var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
 			    var pageNumber = scratchPage.PageNumber;
 
 				PagePosition value;
@@ -236,6 +238,7 @@ namespace Voron.Impl.Journal
 				ptt[pageNumber] = new PagePosition
 				{
 					ScratchPos = txPage.PositionInScratchBuffer,
+					ScratchNumber = txPage.ScratchFileNumber,
 					JournalPos = -1, // needed only during recovery and calculated there
 					TransactionId = tx.Id,
 					JournalNumber = Number
@@ -247,6 +250,7 @@ namespace Voron.Impl.Journal
 			    unused.Add(new PagePosition
 			    {
 				    ScratchPos = freedPage.PositionInScratchBuffer,
+					ScratchNumber = freedPage.ScratchFileNumber,
 				    JournalPos = -1, // needed only during recovery and calculated there
 				    TransactionId = tx.Id,
 				    JournalNumber = Number
@@ -278,12 +282,12 @@ namespace Voron.Impl.Journal
 
             foreach (var unusedScratchPage in unusedAndFree)
             {
-                tx.Environment.ScratchBufferPool.Free(unusedScratchPage.ScratchPos, tx.Id);
+                tx.Environment.ScratchBufferPool.Free(unusedScratchPage.ScratchNumber, unusedScratchPage.ScratchPos, tx.Id);
             }
 
             foreach (var unusedScratchPage in unusedPages)
             {
-				tx.Environment.ScratchBufferPool.Free(unusedScratchPage.Value.ScratchPos, tx.Id);
+				tx.Environment.ScratchBufferPool.Free(unusedScratchPage.Value.ScratchNumber, unusedScratchPage.Value.ScratchPos, tx.Id);
             }
         }
     }

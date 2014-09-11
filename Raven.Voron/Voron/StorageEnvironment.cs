@@ -15,6 +15,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
+using Voron.Impl.Scratch;
 using Voron.Trees;
 using Voron.Util;
 

@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Voron.Impl;
+using Voron.Impl.Scratch;
 using Xunit;
 
 namespace Voron.Tests.Storage

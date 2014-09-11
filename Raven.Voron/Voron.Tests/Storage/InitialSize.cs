@@ -35,7 +35,7 @@ namespace Voron.Tests.Storage
 			using (new StorageEnvironment(options))
 			{
 				var dataFile = Path.Combine(path, Constants.DatabaseFilename);
-				var scratchFile = Path.Combine(path, "scratch.buffers");
+				var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
 
 				Assert.Equal(systemInfo.allocationGranularity, new FileInfo(dataFile).Length);
 				Assert.Equal(systemInfo.allocationGranularity, new FileInfo(scratchFile).Length);
@@ -54,7 +54,7 @@ namespace Voron.Tests.Storage
 			using (new StorageEnvironment(options))
 			{
 				var dataFile = Path.Combine(path, Constants.DatabaseFilename);
-				var scratchFile = Path.Combine(path, "scratch.buffers");
+				var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
 
 				Assert.Equal(systemInfo.allocationGranularity * 2, new FileInfo(dataFile).Length);
 				Assert.Equal(systemInfo.allocationGranularity * 2, new FileInfo(scratchFile).Length);
@@ -73,7 +73,7 @@ namespace Voron.Tests.Storage
 			using (new StorageEnvironment(options))
 			{
 				var dataFile = Path.Combine(path, Constants.DatabaseFilename);
-				var scratchFile = Path.Combine(path, "scratch.buffers");
+				var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
 
 				Assert.Equal(systemInfo.allocationGranularity * 3, new FileInfo(dataFile).Length);
 				Assert.Equal(systemInfo.allocationGranularity * 3, new FileInfo(scratchFile).Length);

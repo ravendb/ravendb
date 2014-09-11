@@ -9,6 +9,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
+using Voron.Impl.Scratch;
 using Voron.Trees;
 
 namespace Voron.Impl
@@ -60,13 +61,12 @@ namespace Voron.Impl
 		private readonly HashSet<long> _freedPages = new HashSet<long>();
 		private readonly List<PageFromScratchBuffer> _unusedScratchPages = new List<PageFromScratchBuffer>();
 	    private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
-	    private readonly PagerState _scratchPagerState;
+		private readonly PagerState _scratchPagerState;
+
 
 	    public bool Committed { get; private set; }
 
 		public bool RolledBack { get; private set; }
-
-		public PagerState LatestPagerState { get; private set; }
 
 		public StorageEnvironmentState State
 		{
@@ -88,7 +88,7 @@ namespace Voron.Impl
 			_id = id;
 			_freeSpaceHandling = freeSpaceHandling;
 			Flags = flags;
-            var scratchPagerState = env.ScratchBufferPool.PagerState;
+            var scratchPagerState = env.ScratchBufferPool.PagerStateOfCurrentScratch;
             scratchPagerState.AddRef();
             _pagerStates.Add(scratchPagerState);
 			if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
@@ -113,7 +113,7 @@ namespace Voron.Impl
 		{
 			for (int i = 0; i < pages.NumberOfPages; i++)
 		    {
-		        var page = _env.ScratchBufferPool.ReadPage(pages.PositionInScratchBuffer+i);
+		        var page = _env.ScratchBufferPool.ReadPage(pages.ScratchFileNumber, pages.PositionInScratchBuffer+i);
 			    int numberOfPages = 1;
 			    if (page.IsOverflow)
 		        {
@@ -123,8 +123,8 @@ namespace Voron.Impl
 		        }
 
 			    var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
-			   
-				var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.PositionInScratchBuffer);
+
+				var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
 			    NativeMethods.memcpy(dest, page.Base, numberOfPages*AbstractPager.PageSize);
 
 			    _allocatedPagesInTransaction++;
@@ -145,7 +145,7 @@ namespace Voron.Impl
 		private void InitTransactionHeader()
 		{
 			var allocation = _env.ScratchBufferPool.Allocate(this, 1);
-			var page = _env.ScratchBufferPool.ReadPage(allocation.PositionInScratchBuffer, _scratchPagerState);
+			var page = _env.ScratchBufferPool.ReadPage(allocation.ScratchFileNumber, allocation.PositionInScratchBuffer, _scratchPagerState);
 			_transactionPages.Add(allocation);
 			NativeMethods.memset(page.Base, 0, AbstractPager.PageSize);
 			_txHeader = (TransactionHeader*)page.Base;
@@ -231,7 +231,7 @@ namespace Voron.Impl
 		    Page p;
 			if (_scratchPagesTable.TryGetValue(pageNumber, out value))
 			{
-			    p = _env.ScratchBufferPool.ReadPage(value.PositionInScratchBuffer, _scratchPagerState);
+			    p = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber, value.PositionInScratchBuffer, _scratchPagerState);
 			}
 			else
 			{
@@ -274,7 +274,7 @@ namespace Voron.Impl
 			var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
 			_transactionPages.Add(pageFromScratchBuffer);
 
-			var page = _env.ScratchBufferPool.ReadPage(pageFromScratchBuffer.PositionInScratchBuffer);
+			var page = _env.ScratchBufferPool.ReadPage(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
 			page.PageNumber = pageNumber.Value;
 
 			_allocatedPagesInTransaction++;
@@ -391,12 +391,12 @@ namespace Voron.Impl
 
 			foreach (var pageFromScratch in _transactionPages)
 			{
-				_env.ScratchBufferPool.Free(pageFromScratch.PositionInScratchBuffer, -1);
+				_env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, -1);
 			}
 
 			foreach (var pageFromScratch in _unusedScratchPages)
 			{
-				_env.ScratchBufferPool.Free(pageFromScratch.PositionInScratchBuffer, -1);
+				_env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, -1);
 			}
 
 			RolledBack = true;
@@ -485,7 +485,6 @@ namespace Voron.Impl
 
 		internal void AddPagerState(PagerState state)
 		{
-			LatestPagerState = state;
 			_pagerStates.Add(state);
 		}
 

@@ -390,6 +390,11 @@ namespace Voron
 			return string.Format("{0:D19}.recovery", number);
 		}
 
+		public static string ScratchBufferName(long number)
+		{
+			return string.Format("scratch.{0:D10}.buffers", number);
+		}
+
 		public abstract void Dispose();
 
 		public abstract bool TryDeleteJournal(long number);
