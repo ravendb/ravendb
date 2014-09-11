@@ -92,6 +92,7 @@
     <Compile Include="Bugs\GettingListOfFilesAfterSynchronization.cs" />
     <Compile Include="Bugs\FileRenaming.cs" />
     <Compile Include="Bugs\Queries.cs" />
+    <Compile Include="Bugs\SearchingCollections.cs" />
     <Compile Include="Bugs\SynchronizationAfterSetUpDestinations.cs" />
     <Compile Include="Bugs\UpdatingMetadata.cs" />
     <Compile Include="Bugs\UploadFilesWithTheSameContentConcurrently.cs" />
