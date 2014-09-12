@@ -613,7 +613,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 
 				request.WriteBson(jsonAttachments);
-				request.ExecuteRequest();
+				request.ExecuteRequest(docDb.WorkContext.CancellationToken);
 				log.Info("Replicated {0} attachments to {1} in {2:#,#;;0} ms", jsonAttachments.Length, destination, sp.ElapsedMilliseconds);
 				errorMessage = "";
 				return true;
@@ -669,7 +669,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 				request.Write(jsonDocuments);
-				request.ExecuteRequest();
+				request.ExecuteRequest(docDb.WorkContext.CancellationToken);
+
 				log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);
 				lastError = "";
 				return true;
