@@ -23,6 +23,8 @@ using System.Linq;
 
 namespace Raven.Storage.Managed
 {
+	using System.Threading;
+
 	public class DocumentsStorageActions : IDocumentStorageActions
 	{
 		private readonly TableStorage storage;
@@ -50,9 +52,10 @@ namespace Raven.Storage.Managed
 				.Take(take);
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, long? maxSize = null, Etag untilEtag = null, 
-            /* this value is ignored in Munin */
-            TimeSpan? timeout = null)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take,
+															CancellationToken cancellation, /* this value is ignored in Munin */
+															long? maxSize = null, Etag untilEtag = null,
+															TimeSpan? timeout = null  /* this value is ignored in Munin */)
 		{
 			var docs = storage.Documents["ByEtag"].SkipAfter(new RavenJObject { { "etag", etag.ToByteArray() } })
 				.Select(result => DocumentByKey(result.Value<string>("key"), null))

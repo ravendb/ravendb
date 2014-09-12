@@ -212,6 +212,7 @@ namespace Raven.Database.Prefetching
 					.GetDocumentsAfter(
 						etag,
 						autoTuner.NumberOfItemsToIndexInSingleBatch,
+						context.CancellationToken,
 						maxSize: autoTuner.MaximumSizeAllowedToFetchFromStorage,
 						untilEtag: untilEtag,
                         timeout: autoTuner.FetchingDocumentsFromDiskTimeout)

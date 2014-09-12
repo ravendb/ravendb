@@ -10,6 +10,8 @@ using Xunit;
 
 namespace Raven.Tests.Storage
 {
+	using System.Threading;
+
 	public class DocumentKeys : RavenTest
 	{
 		[Fact]
@@ -24,7 +26,7 @@ namespace Raven.Tests.Storage
 
 			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
-				tx.Batch(viewer => Assert.Equal(new[] { "Ayende" }, viewer.Documents.GetDocumentsAfter(Etag.Empty,5).Select(x=>x.Key).ToArray()));
+				tx.Batch(viewer => Assert.Equal(new[] { "Ayende" }, viewer.Documents.GetDocumentsAfter(Etag.Empty,5, CancellationToken.None).Select(x=>x.Key).ToArray()));
 			}
 		}
 	}
