@@ -33,9 +33,9 @@ namespace Voron.Impl.Scratch
 
 		public PagerState PagerState { get { return _scratchPager.PagerState; } }
 
-		public int NumberOfAllocations
+		public int Number
 		{
-			get { return _allocatedPages.Count; }
+			get { return _scratchNumber; }
 		}
 
 		public long Size
@@ -163,8 +163,10 @@ namespace Voron.Impl.Scratch
 				{
 					result += free.Key;
 
-					if(item.Next == null)
+					if (item.Next == null)
 						break;
+
+					item = item.Next;
 				}
 			}
 

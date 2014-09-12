@@ -35,7 +35,10 @@ namespace Voron.Impl.Scratch
 			_current = NextFile();
 		}
 
-		public PagerState PagerStateOfCurrentScratch { get { return _current.PagerState; }}
+		public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
+		{
+			return _scratchBuffers.ToDictionary(x => x.Key, y => y.Value.PagerState);
+		}
 
 		private ScratchBufferFile NextFile()
 		{
@@ -68,10 +71,26 @@ namespace Voron.Impl.Scratch
 
 			if (_scratchBuffers.Count > 1)
 			{
+				var scratchesToDelete = new List<int>();
+				var oldestTransaction = tx.Environment.OldestTransaction;
+
 				// determine how many bytes of older scratches is still in use
 				foreach (var olderScratch in _scratchBuffers.Values.Except(new []{_current}))
 				{
-					sizeAfterAllocation += olderScratch.ActivelyUsedBytes(tx.Environment.OldestTransaction);
+					var bytesInUse = olderScratch.ActivelyUsedBytes(oldestTransaction);
+
+					if (bytesInUse > 0)
+						sizeAfterAllocation += bytesInUse;
+					else
+						scratchesToDelete.Add(olderScratch.Number);
+				}
+
+				// delete inactive scratches
+				foreach (var scratchNumber in scratchesToDelete)
+				{
+					var scratchBufferFile = _scratchBuffers[scratchNumber];
+					_scratchBuffers.Remove(scratchNumber);
+					scratchBufferFile.Dispose();
 				}
 			}
 
@@ -101,6 +120,8 @@ namespace Voron.Impl.Scratch
 					// so we will create a new scratch file and will allow to allocate new continuous range from there
 
 					_current = NextFile();
+
+					_current.PagerState.AddRef();
 					tx.AddPagerState(_current.PagerState);
 
 					return _current.Allocate(tx, numberOfPages, size);
@@ -128,17 +149,6 @@ namespace Voron.Impl.Scratch
 		public void Free(int scratchNumber, long page, long asOfTxId)
 		{
 			_scratchBuffers[scratchNumber].Free(page, asOfTxId);
-
-			if(_scratchBuffers.Count == 1)
-				return;
-
-			// delete the scratch if it has no allocations and there is already a newer scratch
-			if (_scratchBuffers.Any(x => x.Key > scratchNumber) && _scratchBuffers[scratchNumber].NumberOfAllocations == 0)
-			{
-				var scratchBufferFile = _scratchBuffers[scratchNumber];
-				_scratchBuffers.Remove(scratchNumber);
-				scratchBufferFile.Dispose();
-			}
 		}
 
 		public void Dispose()

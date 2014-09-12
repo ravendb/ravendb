@@ -61,7 +61,7 @@ namespace Voron.Impl
 		private readonly HashSet<long> _freedPages = new HashSet<long>();
 		private readonly List<PageFromScratchBuffer> _unusedScratchPages = new List<PageFromScratchBuffer>();
 	    private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
-		private readonly PagerState _scratchPagerState;
+		private readonly Dictionary<int, PagerState> _scratchPagerStates;
 
 
 	    public bool Committed { get; private set; }
@@ -88,14 +88,20 @@ namespace Voron.Impl
 			_id = id;
 			_freeSpaceHandling = freeSpaceHandling;
 			Flags = flags;
-            var scratchPagerState = env.ScratchBufferPool.PagerStateOfCurrentScratch;
-            scratchPagerState.AddRef();
-            _pagerStates.Add(scratchPagerState);
+			var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
+
+			foreach (var scratchPagerState in scratchPagerStates.Values)
+			{
+				scratchPagerState.AddRef();
+				_pagerStates.Add(scratchPagerState);
+			}
+
+            
 			if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
 			{
                 // for read transactions, we need to keep the pager state frozen
                 // for write transactions, we can use the current one (which == null)
-			    _scratchPagerState = scratchPagerState;
+				_scratchPagerStates = scratchPagerStates;
 
 				_state = env.State.Clone(this);
 				_journal.GetSnapshots().ForEach(AddJournalSnapshot);
@@ -145,7 +151,7 @@ namespace Voron.Impl
 		private void InitTransactionHeader()
 		{
 			var allocation = _env.ScratchBufferPool.Allocate(this, 1);
-			var page = _env.ScratchBufferPool.ReadPage(allocation.ScratchFileNumber, allocation.PositionInScratchBuffer, _scratchPagerState);
+			var page = _env.ScratchBufferPool.ReadPage(allocation.ScratchFileNumber, allocation.PositionInScratchBuffer);
 			_transactionPages.Add(allocation);
 			NativeMethods.memset(page.Base, 0, AbstractPager.PageSize);
 			_txHeader = (TransactionHeader*)page.Base;
@@ -231,11 +237,11 @@ namespace Voron.Impl
 		    Page p;
 			if (_scratchPagesTable.TryGetValue(pageNumber, out value))
 			{
-			    p = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber, value.PositionInScratchBuffer, _scratchPagerState);
+			    p = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber, value.PositionInScratchBuffer, _scratchPagerStates != null ? _scratchPagerStates[value.ScratchFileNumber] : null);
 			}
 			else
 			{
-			    p =  _journal.ReadPage(this, pageNumber, _scratchPagerState) ?? _dataPager.Read(pageNumber);
+			    p =  _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? _dataPager.Read(pageNumber);
 			}
 
             Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
