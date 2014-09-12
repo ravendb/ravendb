@@ -15,7 +15,7 @@ namespace Voron.Impl.Scratch
 
 			var other = (PageFromScratchBuffer)obj;
 
-			return PositionInScratchBuffer == other.PositionInScratchBuffer && Size == other.Size && NumberOfPages == other.NumberOfPages;
+			return PositionInScratchBuffer == other.PositionInScratchBuffer && Size == other.Size && NumberOfPages == other.NumberOfPages && ScratchFileNumber == other.ScratchFileNumber;
 		}
 
 		public override int GetHashCode()
@@ -25,13 +25,14 @@ namespace Voron.Impl.Scratch
 				var hashCode = PositionInScratchBuffer.GetHashCode();
 				hashCode = (hashCode * 397) ^ Size.GetHashCode();
 				hashCode = (hashCode * 397) ^ NumberOfPages;
+				hashCode = (hashCode * 397) ^ ScratchFileNumber;
 				return hashCode;
 			}
 		}
 
 		public override string ToString()
 		{
-			return string.Format("PositionInScratchBuffer: {0}, Size: {1}, NumberOfPages: {2}", PositionInScratchBuffer, Size, NumberOfPages);
+			return string.Format("PositionInScratchBuffer: {0}, ScratchFileNumber: {1},  Size: {2}, NumberOfPages: {3}", PositionInScratchBuffer, ScratchFileNumber, Size, NumberOfPages);
 		}
 	}
 }

@@ -33,7 +33,7 @@ namespace Voron.Impl.Journal
         {
             protected bool Equals(PagePosition other)
             {
-	            return ScratchPos == other.ScratchPos && JournalPos == other.JournalPos && TransactionId == other.TransactionId && JournalNumber == other.JournalNumber && IsFreedPageMarker == other.IsFreedPageMarker;
+	            return ScratchPos == other.ScratchPos && JournalPos == other.JournalPos && TransactionId == other.TransactionId && JournalNumber == other.JournalNumber && IsFreedPageMarker == other.IsFreedPageMarker && ScratchNumber == other.ScratchNumber;
             }
 
             public override int GetHashCode()
@@ -45,6 +45,7 @@ namespace Voron.Impl.Journal
                     hashCode = (hashCode * 397) ^ TransactionId.GetHashCode();
                     hashCode = (hashCode * 397) ^ JournalNumber.GetHashCode();
 					hashCode = (hashCode * 397) ^ IsFreedPageMarker.GetHashCode();
+					hashCode = (hashCode * 397) ^ ScratchNumber.GetHashCode();
                     return hashCode;
                 }
             }
@@ -70,7 +71,7 @@ namespace Voron.Impl.Journal
 
 	        public override string ToString()
 	        {
-		        return string.Format("ScratchPos: {0}, JournalPos: {1}, TransactionId: {2}, JournalNumber: {3}, IsFreedPageMarker: {4}", ScratchPos, JournalPos, TransactionId, JournalNumber, IsFreedPageMarker);
+				return string.Format("ScratchPos: {0}, JournalPos: {1}, TransactionId: {2}, JournalNumber: {3}, ScratchNumber: {4}, IsFreedPageMarker: {5}", ScratchPos, JournalPos, TransactionId, JournalNumber, ScratchNumber, IsFreedPageMarker);
 	        }
         }
 
