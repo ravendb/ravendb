@@ -1843,7 +1843,7 @@ namespace Raven.Database
                 {
                     var documents = etag == null
                                         ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                                        : actions.Documents.GetDocumentsAfter(etag, pageSize);
+                                        : actions.Documents.GetDocumentsAfter(etag, pageSize, WorkContext.CancellationToken);
                     var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
                     int docCount = 0;
                     foreach (var doc in documents)

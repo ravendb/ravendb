@@ -11,6 +11,8 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Connection
 {
+	using System.Threading;
+
 	public class HttpRavenRequest
 	{
 		private readonly string url;
@@ -160,6 +162,24 @@ namespace Raven.Abstractions.Connection
 		public void ExecuteRequest()
 		{
 			SendRequestToServer(response => { });
+		}
+
+		public void ExecuteRequest(CancellationToken cancellationToken)
+		{
+			using (cancellationToken.Register(() => WebRequest.Abort()))
+			{
+				try
+				{
+					SendRequestToServer(response => { });
+				}
+				catch (Exception ex)
+				{
+					if (cancellationToken.IsCancellationRequested)
+						throw new OperationCanceledException(ex.Message, ex, cancellationToken);
+					
+					throw;
+				}
+			}	
 		}
 
 		private void SendRequestToServer(Action<WebResponse> action)
