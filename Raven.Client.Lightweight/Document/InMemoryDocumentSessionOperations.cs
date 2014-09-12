@@ -603,6 +603,14 @@ more responsive application.
 		/// <param name="id"></param>
 		public void Delete(string id)
 		{
+			if (id == null) throw new ArgumentNullException("id");
+			object value;
+			if (entitiesByKey.TryGetValue(id, out value))
+			{
+				Delete(value);
+				return;
+			}
+			includedDocumentsByKey.Remove(id);
 			knownMissingIds.Add(id);
 			object entity;
 			if (entitiesByKey.TryGetValue(id, out entity))
@@ -697,8 +705,8 @@ more responsive application.
 				GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 			}
 
-			if (deferedCommands.Any(c => c.GetType() == typeof(DeleteCommandData) && c.Key == id))
-				throw new InvalidOperationException("Can't store object, which was deleted in this session.");
+			if (deferedCommands.Any(c => c.Key == id))
+				throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + id);
 
 			// we make the check here even if we just generated the key
 			// users can override the key generation behavior, and we need
@@ -781,6 +789,10 @@ more responsive application.
 
 		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
+			deletedEntities.Remove(entity);
+			if(id !=null)
+				knownMissingIds.Remove(id);
+
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
 				Key = id,
