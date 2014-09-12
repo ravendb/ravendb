@@ -435,7 +435,7 @@ namespace Voron
             if (tx.FlushedToJournal == false)
                 return;
 
-            Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Count);
+            Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Sum(x => x.NumberOfPages));
 			_flushWriter.Set();
         }
 
