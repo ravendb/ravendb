@@ -708,6 +708,9 @@ more responsive application.
 			if (deferedCommands.Any(c => c.Key == id))
 				throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + id);
 
+			if (deletedEntities.Contains(entity))
+				throw new InvalidOperationException("Can't store object, it was already deleted in this session.  Document id: " + id);
+
 			// we make the check here even if we just generated the key
 			// users can override the key generation behavior, and we need
 			// to detect if they generate duplicates.
