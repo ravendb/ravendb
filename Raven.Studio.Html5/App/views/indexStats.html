@@ -15,12 +15,29 @@
         fill: steelblue;
     }
 
-    .x.axis path {
-        display: none;
+    rect.outputCounts, rect.inputCounts {
+        fill-opacity: 0.8;
+        cursor: pointer;
+    }
+
+    rect.outputCounts:hover, rect.inputCounts:hover {
+        fill-opacity: 1;
+    }
+    .legend rect {
+        cursor: pointer;
+    }
+
+    .legend_bg {
+        fill: white;
+        fill-opacity: 0.8;
+        stroke: #ccc;
+    }
+
+    .legendHidden {
+        fill-opacity: 0.2;   
     }
 
 </style>
-<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
 <section id="indexStatsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-    <svg id="indexStatsGraph"></svg>
+    <svg id="indexStatsGraph" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
 </section>
