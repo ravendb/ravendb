@@ -288,6 +288,9 @@ namespace Voron.Impl.Journal
 
             foreach (var unusedScratchPage in unusedPages)
             {
+				if(unusedScratchPage.Value.IsFreedPageMarker)
+					continue;
+
 				tx.Environment.ScratchBufferPool.Free(unusedScratchPage.Value.ScratchNumber, unusedScratchPage.Value.ScratchPos, tx.Id);
             }
         }

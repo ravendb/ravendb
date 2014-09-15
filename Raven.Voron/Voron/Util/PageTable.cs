@@ -116,12 +116,12 @@ namespace Voron.Util
 				.Max(x => x.TransactionId);
 		}
 
-		public List<KeyValuePair<long, JournalFile.PagePosition>> AllPagesOlderThan(long oldestActiveTransaction)
+		public List<KeyValuePair<long, JournalFile.PagePosition>> AllPagesOlderThan(long lastSyncedTransactionId)
 		{
 			return _values.Where(x =>
 			{
 				var val = x.Value[x.Value.Count - 1];
-				return val.Value.TransactionId < oldestActiveTransaction && val.Value.IsFreedPageMarker == false;
+				return val.Value.TransactionId <= lastSyncedTransactionId;
 			}).Select(x => new KeyValuePair<long, JournalFile.PagePosition>(x.Key, x.Value[x.Value.Count - 1].Value))
 				.ToList();
 		}
