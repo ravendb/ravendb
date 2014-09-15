@@ -274,8 +274,8 @@ namespace Voron.Impl.Journal
             List<PagePosition> unusedAndFree;
             lock (_locker)
             {
-                unusedAndFree = _unusedPages.FindAll(position => position.TransactionId < lastSyncedTransactionId);
-                _unusedPages.RemoveAll(position => position.TransactionId < lastSyncedTransactionId);
+                unusedAndFree = _unusedPages.FindAll(position => position.TransactionId <= lastSyncedTransactionId);
+                _unusedPages.RemoveAll(position => position.TransactionId <= lastSyncedTransactionId);
 
                 unusedPages = _pageTranslationTable.AllPagesOlderThan(lastSyncedTransactionId);
                 _pageTranslationTable.Remove(unusedPages.Select(x => x.Key), lastSyncedTransactionId);

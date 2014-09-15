@@ -38,6 +38,11 @@ namespace Voron.Impl.Scratch
 			get { return _scratchNumber; }
 		}
 
+		public int NumberOfAllocations
+		{
+			get { return _allocatedPages.Count; }
+		}
+
 		public long Size
 		{
 			get { return _scratchPager.NumberOfAllocatedPages*AbstractPager.PageSize; }
@@ -120,11 +125,14 @@ namespace Voron.Impl.Scratch
 			}
 		}
 
-		public void Free(long page, long asOfTxId)
+		public void Free(long page, long asOfTxId, bool ignoreError = false)
 		{
 			PageFromScratchBuffer value;
 			if (_allocatedPages.TryGetValue(page, out value) == false)
 			{
+				if(ignoreError)
+					return;
+
 				throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
 			}
 			_allocatedPages.Remove(page);

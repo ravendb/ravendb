@@ -380,6 +380,9 @@ namespace Voron.Impl
 				FlushedToJournal = true;
 			}
 
+			// release scratch file page allocated for the transaction header
+			_env.ScratchBufferPool.Free(_transactionPages[0].ScratchFileNumber, _transactionPages[0].PositionInScratchBuffer, -1);
+
 			Committed = true;
 			AfterCommit(this);
 

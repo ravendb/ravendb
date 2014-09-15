@@ -40,6 +40,11 @@ namespace Voron.Impl.Scratch
 			return _scratchBuffers.ToDictionary(x => x.Key, y => y.Value.PagerState);
 		}
 
+		internal long GetNumberOfAllocations(int scratchNumber)
+		{
+			return _scratchBuffers[scratchNumber].NumberOfAllocations;
+		}
+
 		private ScratchBufferFile NextFile()
 		{
 			_currentScratchNumber++;
@@ -146,9 +151,9 @@ namespace Voron.Impl.Scratch
 			return result;
 		}
 
-		public void Free(int scratchNumber, long page, long asOfTxId)
+		public void Free(int scratchNumber, long page, long asOfTxId, bool ignoreError = false)
 		{
-			_scratchBuffers[scratchNumber].Free(page, asOfTxId);
+			_scratchBuffers[scratchNumber].Free(page, asOfTxId, ignoreError);
 		}
 
 		public void Dispose()
