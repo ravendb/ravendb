@@ -15,7 +15,7 @@ namespace Voron.Impl.Journal
         private readonly long _lastSyncedTransactionId;
         private long _readingPage;
 
-	    private readonly Dictionary<long, JournalFile.PagePosition> _transactionPageTranslation = new Dictionary<long, JournalFile.PagePosition>();
+	    private readonly Dictionary<long, PagePosition> _transactionPageTranslation = new Dictionary<long, PagePosition>();
         private int _recoveryPage;
 
         public bool RequireHeaderUpdate { get; private set; }
@@ -75,7 +75,7 @@ namespace Voron.Impl.Journal
                 return false;   
             }
 
-            var tempTransactionPageTranslaction = new Dictionary<long, JournalFile.PagePosition>();
+            var tempTransactionPageTranslaction = new Dictionary<long, PagePosition>();
 
             for (var i = 0; i < current->PageCount; i++)
             {
@@ -84,7 +84,7 @@ namespace Voron.Impl.Journal
 
                 var page = _recoveryPager.Read(_recoveryPage);
 
-				 tempTransactionPageTranslaction[page.PageNumber] = new JournalFile.PagePosition
+				 tempTransactionPageTranslaction[page.PageNumber] = new PagePosition
                 {
                     JournalPos = _recoveryPage,
                     TransactionId = current->TransactionId
@@ -120,7 +120,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public Dictionary<long, JournalFile.PagePosition> TransactionPageTranslation
+        public Dictionary<long, PagePosition> TransactionPageTranslation
         {
             get { return _transactionPageTranslation; }
         }

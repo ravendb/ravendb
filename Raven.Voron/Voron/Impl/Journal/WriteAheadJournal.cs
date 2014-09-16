@@ -279,12 +279,18 @@ namespace Voron.Impl.Journal
 				// read log snapshots from the back to get the most recent version of a page
 				for (var i = tx.JournalSnapshots.Count - 1; i >= 0; i--)
 				{
-					JournalFile.PagePosition value;
+					PagePosition value;
 					if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
 					{
 						var page = _env.ScratchBufferPool.ReadPage(value.ScratchNumber, value.ScratchPos, scratchPagerStates[value.ScratchNumber]);
-						
-						Debug.Assert(page.PageNumber == pageNumber);
+						try
+						{
+							Debug.Assert(page.PageNumber == pageNumber);
+						}
+						catch (Exception e)
+						{
+							Console.WriteLine(e);
+						}
 						return page;
 					}
 				}
@@ -296,12 +302,19 @@ namespace Voron.Impl.Journal
 			var files = _files;
 			for (var i = files.Count - 1; i >= 0; i--)
 			{
-				JournalFile.PagePosition value;
+				PagePosition value;
 				if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
 				{
 					var page = _env.ScratchBufferPool.ReadPage(value.ScratchNumber, value.ScratchPos);
 
-					Debug.Assert(page.PageNumber == pageNumber);
+					try
+					{
+						Debug.Assert(page.PageNumber == pageNumber);
+					}
+					catch (Exception e)
+					{
+						Console.WriteLine(e);
+					}
 
 					return page;
 				}
@@ -421,7 +434,7 @@ namespace Voron.Impl.Journal
 
 					Debug.Assert(jrnls.First().Number >= _lastSyncedJournal);
 
-					var pagesToWrite = new Dictionary<long, JournalFile.PagePosition>();
+					var pagesToWrite = new Dictionary<long, PagePosition>();
 
 					long lastProcessedJournal = -1;
 					long previousJournalMaxTransactionId = -1;
@@ -440,7 +453,7 @@ namespace Voron.Impl.Journal
 								// we cannot write this yet, there is a read transaction that might be looking at this
 								// however, we _aren't_ going to be writing this to the data file, since that would be a 
 								// waste, we would just overwrite that value in the next flush anyway
-								JournalFile.PagePosition existingPagePosition;
+								PagePosition existingPagePosition;
 								if (pagesToWrite.TryGetValue(pagePosition.Key, out existingPagePosition) &&
 									pagePosition.Value.JournalNumber == existingPagePosition.JournalNumber)
 								{
@@ -550,7 +563,7 @@ namespace Voron.Impl.Journal
 
 			public Dictionary<long, int> writtenPages = new Dictionary<long, int>();
 
-			private void ApplyPagesToDataFileFromScratch(Dictionary<long, JournalFile.PagePosition> pagesToWrite, Transaction transaction, bool alreadyInWriteTx)
+			private void ApplyPagesToDataFileFromScratch(Dictionary<long, PagePosition> pagesToWrite, Transaction transaction, bool alreadyInWriteTx)
 			{
 				var scratchBufferPool = _waj._env.ScratchBufferPool;
 				var scratchPagerStates = new Dictionary<int, PagerState>();
