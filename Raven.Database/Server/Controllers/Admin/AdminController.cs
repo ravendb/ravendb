@@ -130,6 +130,10 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (databaseName == Constants.SystemDatabase)
 				return GetMessageWithString("Cannot do an online restore for the <system> database", HttpStatusCode.BadRequest);
 
+			var existingDatabase = Database.Documents.GetDocumentMetadata("Raven/Databases/" + databaseName,null);
+			if(existingDatabase != null)
+				return GetMessageWithString("Cannot do an online restore for an existing database, delete the database " + databaseName + " and restore again.", HttpStatusCode.BadRequest);
+
 			var ravenConfiguration = new RavenConfiguration
 			{
 				DatabaseName = databaseName,
@@ -161,8 +165,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		    if (bool.TryParse(GetQueryStringValue("defrag"), out defrag))
 		        restoreRequest.Defrag = defrag;
 
-			//TODO: add task to pending task list like in ImportDatabase
-            Task.Factory.StartNew(() =>
+            var task = Task.Factory.StartNew(() =>
             {
                 MaintenanceActions.Restore(ravenConfiguration,restoreRequest,
                     msg =>
@@ -190,7 +193,19 @@ namespace Raven.Database.Server.Controllers.Admin
                     RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
             }, TaskCreationOptions.LongRunning);
 
-            return GetEmptyMessage();
+			long id;
+			Database.Tasks.AddTask(task, new object(), new TaskActions.PendingTaskDescription
+			{
+				StartTime = SystemTime.UtcNow,
+				TaskType = TaskActions.PendingTaskType.RestoreDatabase,
+				Payload = "Restoring database " + databaseName + " from " + restoreRequest.BackupLocation
+			}, out id);
+
+
+			return GetMessageWithObject(new
+			{
+				OperationId = id
+			});
 		}
 
 		private string ResolveTenantDataDirectory(string databaseLocation, string databaseName, out string documentDataDir)
