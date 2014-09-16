@@ -4,10 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
+using Raven.Client.FileSystem;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Embedded;
@@ -25,6 +27,7 @@ namespace Raven.Server
 		private RavenDBOptions options;
 	    private OwinHttpServer owinHttpServer;
         private DocumentStore documentStore;
+		private FilesStore filesStore;
 	    private string url;
 
 	    public RavenDbServer()
@@ -41,6 +44,13 @@ namespace Raven.Server
 				    FailoverBehavior = FailoverBehavior.FailImmediately
 			    }
 		    };
+			filesStore = new FilesStore
+			{
+				Conventions =
+				{
+					FailoverBehavior = FailoverBehavior.FailImmediately
+				}
+			};
 		}
 
 	    public InMemoryRavenConfiguration Configuration
@@ -70,8 +80,12 @@ namespace Raven.Server
 	    {
             get { return documentStore; }
 	    }
+		public FilesStore FilesStore
+		{
+			get { return filesStore; }
+		}
 
-	    public bool RunInMemory
+		public bool RunInMemory
 	    {
 	        get { return configuration.RunInMemory; }
             set { configuration.RunInMemory = value; }
@@ -85,6 +99,11 @@ namespace Raven.Server
 	        documentStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke);
 	        documentStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
 	        documentStore.Initialize();
+
+
+			filesStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke);
+			filesStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
+			filesStore.Initialize();
 
 			foreach (var task in configuration.Container.GetExportedValues<IServerStartupTask>())
 			{
@@ -114,6 +133,9 @@ namespace Raven.Server
 	    {
 		    if (documentStore != null)
 			    documentStore.Dispose();
+
+		    if (filesStore != null)
+			    filesStore.Dispose();
 
 		    if (owinHttpServer != null)
 			    owinHttpServer.Dispose();
