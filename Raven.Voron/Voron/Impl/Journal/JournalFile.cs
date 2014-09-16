@@ -269,16 +269,17 @@ namespace Voron.Impl.Journal
 	    public void FreeScratchPagesOlderThan(Transaction tx, long lastSyncedTransactionId)
 	    {
 		    if (tx == null) throw new ArgumentNullException("tx");
-		    List<KeyValuePair<long, PagePosition>> unusedPages;
+		    var unusedPages = new List<PagePosition>();
 
             List<PagePosition> unusedAndFree;
+
             lock (_locker)
             {
                 unusedAndFree = _unusedPages.FindAll(position => position.TransactionId <= lastSyncedTransactionId);
                 _unusedPages.RemoveAll(position => position.TransactionId <= lastSyncedTransactionId);
 
-                unusedPages = _pageTranslationTable.AllPagesOlderThan(lastSyncedTransactionId);
-                _pageTranslationTable.Remove(unusedPages.Select(x => x.Key), lastSyncedTransactionId);
+                var keysToRemove = _pageTranslationTable.AllPagesOlderThan(lastSyncedTransactionId);
+				_pageTranslationTable.Remove(keysToRemove, lastSyncedTransactionId, unusedPages);
             }
 
             foreach (var unusedScratchPage in unusedAndFree)
@@ -286,13 +287,13 @@ namespace Voron.Impl.Journal
                 tx.Environment.ScratchBufferPool.Free(unusedScratchPage.ScratchNumber, unusedScratchPage.ScratchPos, tx.Id);
             }
 
-            foreach (var unusedScratchPage in unusedPages)
-            {
-				if(unusedScratchPage.Value.IsFreedPageMarker)
+			foreach (var page in unusedPages)
+			{
+				if (page.IsFreedPageMarker)
 					continue;
 
-				tx.Environment.ScratchBufferPool.Free(unusedScratchPage.Value.ScratchNumber, unusedScratchPage.Value.ScratchPos, tx.Id);
-            }
+				tx.Environment.ScratchBufferPool.Free(page.ScratchNumber, page.ScratchPos, tx.Id);
+			}
         }
     }
 }

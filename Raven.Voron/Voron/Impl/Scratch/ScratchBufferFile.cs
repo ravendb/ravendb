@@ -81,11 +81,13 @@ namespace Voron.Impl.Scratch
 			foreach (var sizeKey in sizesFromLargest)
 			{
 				var item = _freePagesBySize[sizeKey].Last;
-				while (oldestTransaction == 0 || item.Value.ValidAfterTransactionId < oldestTransaction)
+
+
+				while (item != null && (oldestTransaction == 0 || item.Value.ValidAfterTransactionId < oldestTransaction))
 				{
 					available += sizeKey;
 
-					if(available >= size || item.Previous == null)
+					if(available >= size)
 						break;
 
 					item = item.Previous;
@@ -125,16 +127,14 @@ namespace Voron.Impl.Scratch
 			}
 		}
 
-		public void Free(long page, long asOfTxId, bool ignoreError = false)
+		public void Free(long page, long asOfTxId)
 		{
 			PageFromScratchBuffer value;
 			if (_allocatedPages.TryGetValue(page, out value) == false)
 			{
-				if(ignoreError)
-					return;
-
-				throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
+				return;
 			}
+
 			_allocatedPages.Remove(page);
 			LinkedList<PendingPage> list;
 			if (_freePagesBySize.TryGetValue(value.Size, out list) == false)

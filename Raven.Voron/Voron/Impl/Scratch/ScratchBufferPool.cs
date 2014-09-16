@@ -151,9 +151,9 @@ namespace Voron.Impl.Scratch
 			return result;
 		}
 
-		public void Free(int scratchNumber, long page, long asOfTxId, bool ignoreError = false)
+		public void Free(int scratchNumber, long page, long asOfTxId)
 		{
-			_scratchBuffers[scratchNumber].Free(page, asOfTxId, ignoreError);
+			_scratchBuffers[scratchNumber].Free(page, asOfTxId);
 		}
 
 		public void Dispose()

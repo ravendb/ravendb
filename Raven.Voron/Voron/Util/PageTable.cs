@@ -64,7 +64,7 @@ namespace Voron.Util
 			_maxSeenTransaction = tx.Id;
 		}
 
-		public void Remove(IEnumerable<long> pages, long lastSyncedTransactionId)
+		public void Remove(IEnumerable<long> pages, long lastSyncedTransactionId, List<JournalFile.PagePosition> unusedPages)
 		{
 			foreach (var page in pages)
 			{
@@ -72,12 +72,15 @@ namespace Voron.Util
 				if (_values.TryGetValue(page, out list) == false)
 					continue;
 
-				var newList = list.RemoveWhile(value => value.Transaction <= lastSyncedTransactionId);
+				var removedItems = new List<PageValue>();
+				var newList = list.RemoveWhile(value => value.Transaction <= lastSyncedTransactionId, removedItems);
 
 				if (newList.Count != 0)
 					_values.AddOrUpdate(page, newList, (l, values) => newList);
 				else
 					_values.TryRemove(page, out list);
+
+				unusedPages.AddRange(removedItems.Select(x => x.Value));
 			}
 		}
 
@@ -116,14 +119,13 @@ namespace Voron.Util
 				.Max(x => x.TransactionId);
 		}
 
-		public List<KeyValuePair<long, JournalFile.PagePosition>> AllPagesOlderThan(long lastSyncedTransactionId)
+		public List<long> AllPagesOlderThan(long lastSyncedTransactionId)
 		{
 			return _values.Where(x =>
 			{
 				var val = x.Value[x.Value.Count - 1];
 				return val.Value.TransactionId <= lastSyncedTransactionId;
-			}).Select(x => new KeyValuePair<long, JournalFile.PagePosition>(x.Key, x.Value[x.Value.Count - 1].Value))
-				.ToList();
+			}).Select(x => x.Key).ToList();
 		}
 
 		public long GetLastSeenTransactionId()
