@@ -57,7 +57,7 @@ namespace Raven.Tests.Storage
 			db.Dispose();
 			IOExtensions.DeleteDirectory(DataDir);
 
-		    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+		    MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
 		    {
 		        BackupLocation = BackupDir,
 		        DatabaseLocation = DataDir,
@@ -85,7 +85,7 @@ namespace Raven.Tests.Storage
 			db.Dispose();
 			IOExtensions.DeleteDirectory(DataDir);
 
-		    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+		    MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
 		    {
 		        BackupLocation = BackupDir,
 		        DatabaseLocation = DataDir
@@ -127,7 +127,7 @@ namespace Raven.Tests.Storage
 			db.Dispose();
 			IOExtensions.DeleteDirectory(DataDir);
 
-		    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+		    MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
 		    {
 		        BackupLocation = BackupDir,
 		        DatabaseLocation = DataDir,

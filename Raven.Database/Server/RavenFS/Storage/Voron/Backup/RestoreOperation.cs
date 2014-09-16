@@ -1,18 +1,20 @@
 ﻿using System.Linq;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+
 using System;
 using System.IO;
-using Raven.Database.Data;
+
 using Voron;
 using Voron.Impl.Backup;
 
-namespace Raven.Database.Storage.Voron.Backup
+namespace Raven.Database.Server.RavenFS.Storage.Voron.Backup
 {
     public class RestoreOperation : BaseRestoreOperation
     {
-		public RestoreOperation(DatabaseRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
+		public RestoreOperation(FilesystemRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
             : base(restoreRequest, configuration, operationOutputCallback)
 		{
 		}
@@ -30,7 +32,6 @@ namespace Raven.Database.Storage.Voron.Backup
             try
             {
                 CopyIndexes();
-				CopyIndexDefinitions();
 
 				var backupFilenamePath = BackupFilenamePath(BackupMethods.Filename);
 

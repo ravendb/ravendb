@@ -28,6 +28,7 @@ using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
+using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -56,7 +57,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("databases/{databaseName}/admin/backup")]
 		public async Task<HttpResponseMessage> Backup()
 		{
-			var backupRequest = await ReadJsonObjectAsync<BackupRequest>();
+			var backupRequest = await ReadJsonObjectAsync<DatabaseBackupRequest>();
 			var incrementalString = InnerRequest.RequestUri.ParseQueryString()["incremental"];
 			bool incrementalBackup;
 			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
@@ -103,11 +104,11 @@ namespace Raven.Database.Server.Controllers.Admin
 
             var restoreStatus = new RestoreStatus{Messages = new List<string>()};
 
-			var restoreRequest = await ReadJsonObjectAsync<RestoreRequest>();
+			var restoreRequest = await ReadJsonObjectAsync<DatabaseRestoreRequest>();
 
 			DatabaseDocument databaseDocument = null;
 
-			var databaseDocumentPath = Path.Combine(restoreRequest.BackupLocation, "Database.Document");
+			var databaseDocumentPath = Path.Combine(restoreRequest.BackupLocation, BackupMethods.DatabaseDocumentFilename);
 			if (File.Exists(databaseDocumentPath))
 			{
 				var databaseDocumentText = File.ReadAllText(databaseDocumentPath);

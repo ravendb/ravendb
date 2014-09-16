@@ -39,7 +39,7 @@ namespace Raven.Tests.Issues
 			    }
 			}
 
-			Assert.DoesNotThrow(() => MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+			Assert.DoesNotThrow(() => MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
 			{
 			    BackupLocation = BackupDir,
                 DatabaseLocation = DataDir

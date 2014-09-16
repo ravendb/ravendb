@@ -57,5 +57,10 @@ namespace Raven.Abstractions.Data
                        (Severity.GetHashCode() << 16);
             }
         }
+
+        public static string RavenFilesystemBackupStatusDocumentKey(string filesystemName)
+        {
+            return "Raven/FileSystem/Backup/Status/" + filesystemName;
+        }
     }
 }

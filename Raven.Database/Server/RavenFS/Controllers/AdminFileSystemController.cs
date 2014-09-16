@@ -6,15 +6,22 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
 using Raven.Database.Config;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Storage;
 using Raven.Json.Linq;
 
 using Voron.Impl.Backup;
@@ -24,6 +31,45 @@ namespace Raven.Database.Server.RavenFS.Controllers
 {
     public class AdminFileSystemController : BaseAdminController
     {
+        public string FilesystemName { get; private set; }
+
+        protected override void InnerInitialization(HttpControllerContext controllerContext)
+        {
+            base.InnerInitialization(controllerContext);
+            var values = controllerContext.Request.GetRouteData().Values;
+            if (values.ContainsKey("MS_SubRoutes"))
+            {
+                var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
+                var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("fileSystemName"));
+
+                if (selectedData != null)
+                    FilesystemName = selectedData.Values["fileSystemName"] as string;
+                else
+                    FilesystemName = null;
+            }
+            else
+            {
+                if (values.ContainsKey("fileSystemName"))
+                    FilesystemName = values["fileSystemName"] as string;
+                else
+                    FilesystemName = null;
+            }
+        }
+
+        public RavenFileSystem FileSystem
+        {
+            get
+            {
+                var filesystem = FileSystemsLandlord.GetFileSystemInternal(FilesystemName);
+                if (filesystem == null)
+                {
+                    throw new InvalidOperationException("Could not find a filesystem named: " + FilesystemName);
+                }
+
+                return filesystem.Result;
+            }
+        }
+
         [HttpPut]
         [Route("admin/fs/{*id}")]
         public async Task<HttpResponseMessage> FileSystemPut(string id, bool update = false)
@@ -168,14 +214,13 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			if (document == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "File system " + fileSystemId + " wasn't found" };
 
-			var fsDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
+			var fsDoc = document.DataAsJson.JsonDeserialization<FileSystemDocument>();
 			if (fsDoc.Disabled == isSettingDisabled)
 			{
 				string state = isSettingDisabled ? "disabled" : "enabled";
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.BadRequest, Message = "File system " + fileSystemId + " is already " + state };
 			}
 
-			FileSystemsLandlord.Unprotect(fsDoc);
 			fsDoc.Disabled = !fsDoc.Disabled;
 			var json = RavenJObject.FromObject(fsDoc);
 			json.Remove("Id");
@@ -189,31 +234,62 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("fs/{fileSystemName}/admin/fs/backup")]
         public async Task<HttpResponseMessage> Backup()
         {
-            var backupRequest = await ReadJsonObjectAsync<BackupRequest>();
+            var backupRequest = await ReadJsonObjectAsync<FilesystemBackupRequest>();
             var incrementalString = InnerRequest.RequestUri.ParseQueryString()["incremental"];
             bool incrementalBackup;
             if (bool.TryParse(incrementalString, out incrementalBackup) == false)
                 incrementalBackup = false;
 
-            if (backupRequest.DatabaseDocument == null && Database.Name != null)
+            if (backupRequest.FileSystemDocument == null && FileSystem.Name != null)
             {
-                if (Database.Name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
+                var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get("Raven/Filesystems/" + FileSystem.Name, null);
+                if (jsonDocument != null)
                 {
-                    backupRequest.DatabaseDocument = new DatabaseDocument { Id = Constants.SystemDatabase };
-                }
-                else
-                {
-                    var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get("Raven/Databases/" + Database.Name, null);
-                    if (jsonDocument != null)
-                    {
-                        backupRequest.DatabaseDocument = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
-                        DatabasesLandlord.Unprotect(backupRequest.DatabaseDocument);
-                        backupRequest.DatabaseDocument.Id = Database.Name;
-                    }
+                    backupRequest.FileSystemDocument = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
+                    backupRequest.FileSystemDocument.Id = FileSystem.Name;
                 }
             }
 
-            Database.Maintenance.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
+            var transactionalStorage = FileSystem.Storage;
+            var filesystemDocument = backupRequest.FileSystemDocument;
+            var backupDestinationDirectory = backupRequest.BackupLocation;
+
+            var document = Database.Documents.Get(BackupStatus.RavenFilesystemBackupStatusDocumentKey(FilesystemName), null);
+            if (document != null)
+            {
+                var backupStatus = document.DataAsJson.JsonDeserialization<BackupStatus>();
+                if (backupStatus.IsRunning)
+                {
+                    throw new InvalidOperationException("Backup is already running");
+                }
+            }
+
+            //TODO: verify those properies (for Filesystem)
+            bool enableIncrementalBackup;
+            if (incrementalBackup &&
+                transactionalStorage is Storage.Esent.TransactionalStorage &&
+                (bool.TryParse(Database.Configuration.Settings["Raven/Esent/CircularLog"], out enableIncrementalBackup) == false || enableIncrementalBackup))
+            {
+                throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
+            }
+
+            if (incrementalBackup &&
+                transactionalStorage is Storage.Voron.TransactionalStorage &&
+                Database.Configuration.Storage.Voron.AllowIncrementalBackups == false)
+            {
+                throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
+            }
+
+            Database.Documents.Put(BackupStatus.RavenFilesystemBackupStatusDocumentKey(FilesystemName), null, RavenJObject.FromObject(new BackupStatus
+            {
+                Started = SystemTime.UtcNow,
+                IsRunning = true,
+            }), new RavenJObject(), null);
+
+            if (filesystemDocument.Settings.ContainsKey("Raven/StorageTypeName") == false)
+                filesystemDocument.Settings["Raven/StorageTypeName"] = transactionalStorage.FriendlyName ?? transactionalStorage.GetType().AssemblyQualifiedName;
+
+            transactionalStorage.StartBackupOperation(DatabasesLandlord.SystemDatabase, FileSystem, backupDestinationDirectory, incrementalBackup, filesystemDocument);
 
             return GetEmptyMessage(HttpStatusCode.Created);
         }
@@ -228,61 +304,62 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             var restoreStatus = new RestoreStatus { Messages = new List<string>() };
 
-            var restoreRequest = await ReadJsonObjectAsync<RestoreRequest>();
+            var restoreRequest = await ReadJsonObjectAsync<FilesystemRestoreRequest>();
 
-            DatabaseDocument databaseDocument = null;
+            FileSystemDocument filesystemDocument = null;
 
-            var databaseDocumentPath = Path.Combine(restoreRequest.BackupLocation, "Database.Document");
-            if (File.Exists(databaseDocumentPath))
+            var fileSystemDocumentPath = Path.Combine(restoreRequest.BackupLocation, BackupMethods.FilesystemDocumentFilename);
+
+            if (!File.Exists(fileSystemDocumentPath))
             {
-                var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
-                databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
+                throw new InvalidOperationException("Cannot restore when the Filesystem.Document file is missing in the backup folder: " + restoreRequest.BackupLocation);
             }
 
-            var databaseName = !string.IsNullOrWhiteSpace(restoreRequest.DatabaseName) ? restoreRequest.DatabaseName
-                                   : databaseDocument == null ? null : databaseDocument.Id;
+            var filesystemDocumentText = File.ReadAllText(fileSystemDocumentPath);
+            filesystemDocument = RavenJObject.Parse(filesystemDocumentText).JsonDeserialization<FileSystemDocument>();
 
-            if (string.IsNullOrWhiteSpace(databaseName))
+            var filesystemName = !string.IsNullOrWhiteSpace(restoreRequest.FilesystemName) ? restoreRequest.FilesystemName
+                                   : filesystemDocument == null ? null : filesystemDocument.Id;
+
+            if (string.IsNullOrWhiteSpace(filesystemName))
             {
-                var errorMessage = (databaseDocument == null || String.IsNullOrWhiteSpace(databaseDocument.Id))
-                                ? "Database.Document file is invalid - database name was not found and not supplied in the request (Id property is missing or null). This is probably a bug - should never happen."
-                                : "A database name must be supplied if the restore location does not contain a valid Database.Document file";
+                var errorMessage = (filesystemDocument == null || String.IsNullOrWhiteSpace(filesystemDocument.Id))
+                                ? BackupMethods.FilesystemDocumentFilename +  " file is invalid - filesystem name was not found and not supplied in the request (Id property is missing or null). This is probably a bug - should never happen."
+                                : "A filesystem name must be supplied if the restore location does not contain a valid " + BackupMethods.FilesystemDocumentFilename + " file";
 
                 restoreStatus.Messages.Add(errorMessage);
-                DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null, RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+                DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
 
                 return GetMessageWithString(errorMessage, HttpStatusCode.BadRequest);
             }
 
-            if (databaseName == Constants.SystemDatabase)
-                return GetMessageWithString("Cannot do an online restore for the <system> database", HttpStatusCode.BadRequest);
-
             var ravenConfiguration = new RavenConfiguration
             {
-                DatabaseName = databaseName,
+                DatabaseName = filesystemName,
                 IsTenantDatabase = true
             };
 
-            if (databaseDocument != null)
+            if (filesystemDocument != null)
             {
-                foreach (var setting in databaseDocument.Settings)
+                foreach (var setting in filesystemDocument.Settings)
                 {
                     ravenConfiguration.Settings[setting.Key] = setting.Value;
                 }
             }
 
             if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename)))
-                ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+                ravenConfiguration.DefaultStorageTypeName = typeof(Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
             else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
-                ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
-
-            ravenConfiguration.CustomizeValuesForTenant(databaseName);
+                ravenConfiguration.DefaultStorageTypeName = typeof(Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
+            
+            ravenConfiguration.CustomizeValuesForTenant(filesystemName);
             ravenConfiguration.Initialize();
 
             string documentDataDir;
-            ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
-            restoreRequest.DatabaseLocation = ravenConfiguration.DataDirectory;
-            DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
+            ravenConfiguration.FileSystem.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, filesystemName, out documentDataDir);
+            restoreRequest.DatabaseLocation = ravenConfiguration.FileSystem.DataDirectory;
+            
+            DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, null);
 
             bool defrag;
             if (bool.TryParse(GetQueryStringValue("defrag"), out defrag))
@@ -291,29 +368,35 @@ namespace Raven.Database.Server.RavenFS.Controllers
             //TODO: add task to pending task list like in ImportDatabase
             Task.Factory.StartNew(() =>
             {
-                MaintenanceActions.Restore(ravenConfiguration, restoreRequest,
-                    msg =>
+                if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))
+                {
+                    ravenConfiguration.DataDirectory = restoreRequest.DatabaseLocation;
+                }
+
+                using (var transactionalStorage = RavenFileSystem.CreateTransactionalStorage(ravenConfiguration))
+                {
+                    transactionalStorage.Restore(restoreRequest, msg =>
                     {
                         restoreStatus.Messages.Add(msg);
-                        DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+                        DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null,
                             RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
                     });
+                }
 
-                if (databaseDocument == null)
+                if (filesystemDocument == null)
                     return;
 
-                databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
+                filesystemDocument.Settings["Raven/FileSystem/DataDir"] = documentDataDir;
                 if (restoreRequest.IndexesLocation != null)
-                    databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
+                    filesystemDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
                 if (restoreRequest.JournalsLocation != null)
-                    databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
-                databaseDocument.Id = databaseName;
-                DatabasesLandlord.Protect(databaseDocument);
-                DatabasesLandlord.SystemDatabase.Documents.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
+                    filesystemDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+                filesystemDocument.Id = filesystemName;
+                DatabasesLandlord.SystemDatabase.Documents.Put("Raven/FileSystems/" + filesystemName, null, RavenJObject.FromObject(filesystemDocument),
                     new RavenJObject(), null);
 
-                restoreStatus.Messages.Add("The new database was created");
-                DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+                restoreStatus.Messages.Add("The new filesystem was created");
+                DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null,
                     RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
             }, TaskCreationOptions.LongRunning);
 
@@ -321,7 +404,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         }
 
         //TODO: extract to utils?
-        private string ResolveTenantDataDirectory(string databaseLocation, string databaseName, out string documentDataDir)
+        private string ResolveTenantDataDirectory(string databaseLocation, string filesystemName, out string documentDataDir)
         {
             if (Path.IsPathRooted(databaseLocation))
             {
@@ -335,7 +418,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             if (string.IsNullOrWhiteSpace(databaseLocation))
             {
-                documentDataDir = Path.Combine("~\\Databases", databaseName);
+                documentDataDir = Path.Combine("~\\Filesystems", filesystemName);
                 return Raven.Database.Extensions.IOExtensions.ToFullPath(documentDataDir, baseDataPath);
             }
 

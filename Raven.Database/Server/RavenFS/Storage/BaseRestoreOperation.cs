@@ -1,13 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Database.Extensions;
 
-namespace Raven.Database.Storage
+namespace Raven.Database.Server.RavenFS.Storage
 {
     public abstract class BaseRestoreOperation
     {
@@ -18,11 +18,11 @@ namespace Raven.Database.Storage
 
         protected readonly string backupLocation;
 
-        protected readonly DatabaseRestoreRequest _restoreRequest;
+        protected readonly AbstractRestoreRequest _restoreRequest;
         protected readonly InMemoryRavenConfiguration Configuration;
         protected readonly string databaseLocation, indexLocation, journalLocation;
 
-        protected BaseRestoreOperation(DatabaseRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> output)
+        protected BaseRestoreOperation(AbstractRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> output)
         {
             _restoreRequest = restoreRequest;
             backupLocation = restoreRequest.BackupLocation;
@@ -46,9 +46,9 @@ namespace Raven.Database.Storage
 
             if (Directory.Exists(databaseLocation) && Directory.GetFileSystemEntries(databaseLocation).Length > 0)
             {
-                output("Error: Database already exists, cannot restore to an existing database.");
+                output("Error: Filesystem already exists, cannot restore to an existing filesystem.");
                 output("Error: Restore Canceled");
-                throw new IOException("Database already exists, cannot restore to an existing database.");
+                throw new IOException("Filesystem already exists, cannot restore to an existing filesystem.");
             }
 
             if (Directory.Exists(databaseLocation) == false)
@@ -93,75 +93,39 @@ namespace Raven.Database.Storage
             }
         }
 
-        private void ForceIndexReset(string indexPath, string indexName, Exception ex)
+        private void ForceIndexReset(string indexPath, Exception ex)
         {
             if (Directory.Exists(indexPath))
                 IOExtensions.DeleteDirectory(indexPath); // this will force index reset
 
             output(
                 string.Format(
-                    "Error: Index {0} could not be restored. All already copied index files was deleted. " +
+                    "Error: RavenFS index could not be restored. All already copied index files was deleted. " +
                     "Index will be recreated after launching Raven instance. Thrown exception:{1}{2}",
-                    indexName, Environment.NewLine, ex));
+                    Environment.NewLine, ex));
         }
-
-	    protected void CopyIndexDefinitions()
-	    {
-			var directories = Directory.GetDirectories(backupLocation, "Inc*")
-												  .OrderByDescending(dir => dir)
-												  .ToList();
-
-			string indexDefinitionsBackupFolder;
-			string indexDefinitionsDestinationFolder = Path.Combine(databaseLocation, "IndexDefinitions");
-			if (directories.Count == 0)
-			    indexDefinitionsBackupFolder = Path.Combine(backupLocation, "IndexDefinitions");
-		    else
-		    {
-				var latestIncrementalBackupDirectory = directories.First();
-			    if (Directory.Exists(Path.Combine(latestIncrementalBackupDirectory, "IndexDefinitions")) == false)
-			    {
-				    output("Failed to restore index definitions. It seems the index definitions are missing from backup folder.");
-					return;
-			    }
-				indexDefinitionsBackupFolder = Path.Combine(latestIncrementalBackupDirectory, "IndexDefinitions");
-		    }
-
-			try
-			{
-				CopyAll(new DirectoryInfo(indexDefinitionsBackupFolder), new DirectoryInfo(indexDefinitionsDestinationFolder));
-			}
-			catch (Exception ex)
-			{
-				output("Failed to restore index definitions. This is not supposed to happen. Reason : " + ex);
-			}
-		}
 
         protected void CopyIndexes()
         {
             var directories = Directory.GetDirectories(backupLocation, "Inc*")
                                        .OrderByDescending(dir => dir)
                                        .ToList();
-
 	        if (directories.Count == 0)
             {
-                foreach (var backupIndex in Directory.GetDirectories(Path.Combine(backupLocation, IndexesSubfolder)))
+                // if not incremental backup
+                try
                 {
-                    var indexName = Path.GetFileName(backupIndex);
-                    var indexPath = Path.Combine(indexLocation, indexName);
-
-                    try
-                    {
-                        CopyAll(new DirectoryInfo(backupIndex), new DirectoryInfo(indexPath));
-                    }
-                    catch (Exception ex)
-                    {
-						output("Failed to restore indexes, forcing index reset. Reason : " + ex);
-						ForceIndexReset(indexPath, indexName, ex);
-                    }
+                    CopyAll(new DirectoryInfo(Path.Combine(backupLocation, IndexesSubfolder)), new DirectoryInfo(indexLocation));
                 }
-
+                catch (Exception ex)
+                {
+                    output("Failed to restore indexes, forcing index reset. Reason : " + ex);
+                    ForceIndexReset(Path.Combine(backupLocation, IndexesSubfolder), ex); //TODO: is it possible to reset RavenFS index?
+                }
                 return;
             }
+
+            //TODO: review me!
 
             var latestIncrementalBackupDirectory = directories.First();
             if (Directory.Exists(Path.Combine(latestIncrementalBackupDirectory, IndexesSubfolder)) == false)
@@ -206,7 +170,7 @@ namespace Raven.Database.Storage
                 }
                 catch (Exception ex)
                 {
-                    ForceIndexReset(indexPath, indexName, ex);
+                    ForceIndexReset(indexPath, ex);
                 }
             }
         }

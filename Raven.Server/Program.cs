@@ -282,7 +282,7 @@ namespace Raven.Server
 			using (var stream = request.GetRequestStream())
 			using (var writer = new StreamWriter(stream))
 			{
-				var json = RavenJObject.FromObject(new RestoreRequest
+				var json = RavenJObject.FromObject(new DatabaseRestoreRequest
 				                                   {
 					                                   BackupLocation = backupLocation, 
 													   DatabaseLocation = restoreLocation,
@@ -435,7 +435,7 @@ Configuration options:
 				{
 					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 				}
-				MaintenanceActions.Restore(ravenConfiguration, new RestoreRequest
+				MaintenanceActions.Restore(ravenConfiguration, new DatabaseRestoreRequest
 				{
 				    BackupLocation = backupLocation,
                     DatabaseLocation = databaseLocation,

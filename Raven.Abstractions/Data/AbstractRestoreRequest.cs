@@ -7,7 +7,7 @@ using System;
 
 namespace Raven.Abstractions.Data
 {
-	public class RestoreRequest
+	public abstract class AbstractRestoreRequest
 	{
         public string BackupLocation { get; set; }
         
@@ -15,7 +15,6 @@ namespace Raven.Abstractions.Data
 		public string RestoreLocation { get { return BackupLocation; } set { BackupLocation = value; } }
 
 		public string DatabaseLocation { get; set; }
-		public string DatabaseName { get; set; }
 
         public string JournalsLocation { get; set; }
         public string IndexesLocation { get; set; }

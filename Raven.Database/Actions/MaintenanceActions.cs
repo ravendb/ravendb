@@ -13,8 +13,11 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Impl;
+using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+
+using Voron.Impl.Backup;
 
 namespace Raven.Database.Actions
 {
@@ -25,9 +28,9 @@ namespace Raven.Database.Actions
         {
         }
 
-        public static void Restore(RavenConfiguration configuration, RestoreRequest restoreRequest, Action<string> output)
+        public static void Restore(RavenConfiguration configuration, DatabaseRestoreRequest restoreRequest, Action<string> output)
         {
-            var databaseDocumentPath = Path.Combine(restoreRequest.BackupLocation, "Database.Document");
+            var databaseDocumentPath = Path.Combine(restoreRequest.BackupLocation, BackupMethods.DatabaseDocumentFilename);
             if (File.Exists(databaseDocumentPath) == false)
             {
                 throw new InvalidOperationException("Cannot restore when the Database.Document file is missing in the backup folder: " + restoreRequest.BackupLocation);

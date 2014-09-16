@@ -275,7 +275,7 @@ namespace Raven.Storage.Voron
 				throw new InvalidOperationException("Cannot begin database backup - table store is not initialized");
 			
 			var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory,
-		        backupDestinationDirectory, tableStorage.Environment, incrementalBackup,documentDatabase);
+		        backupDestinationDirectory, tableStorage.Environment, incrementalBackup, documentDatabase);
 
 		    Task.Factory.StartNew(() =>
 		    {
@@ -284,7 +284,7 @@ namespace Raven.Storage.Voron
 		    });
 		}       
 
-		public void Restore(RestoreRequest restoreRequest, Action<string> output)
+		public void Restore(DatabaseRestoreRequest restoreRequest, Action<string> output)
 		{
 			new RestoreOperation(restoreRequest, configuration, output).Execute();
 		}

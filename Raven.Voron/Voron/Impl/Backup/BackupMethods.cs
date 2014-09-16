@@ -9,9 +9,12 @@ namespace Voron.Impl.Backup
 	{
         public const string Filename = "RavenDB.Voron.Backup";
 
-		public static FullBackup Full = new FullBackup();
+	    public const string DatabaseDocumentFilename = "Database.Document";
+
+	    public const string FilesystemDocumentFilename = "Filesystem.Document";
+
+	    public static FullBackup Full = new FullBackup();
 
 		public static IncrementalBackup Incremental = new IncrementalBackup();
-
 	}
 }
