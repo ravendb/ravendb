@@ -583,6 +583,8 @@ more responsive application.
 				throw new InvalidOperationException(entity + " is marked as read only and cannot be deleted");
 			deletedEntities.Add(entity);
 			knownMissingIds.Add(value.Key);
+			entitiesAndMetadata.Remove(entity);
+			entitiesByKey.Remove(value.Key);
 		}
 
 		/// <summary>
@@ -604,26 +606,19 @@ more responsive application.
 		public void Delete(string id)
 		{
 			if (id == null) throw new ArgumentNullException("id");
-			object value;
-			if (entitiesByKey.TryGetValue(id, out value))
+			object entity;
+			if (entitiesByKey.TryGetValue(id, out entity))
 			{
-				Delete(value);
+				if (EntityChanged(entity, entitiesAndMetadata[entity]))
+				{
+					throw new InvalidOperationException("Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
+				}
+				Delete(entity);
 				return;
 			}
 			includedDocumentsByKey.Remove(id);
 			knownMissingIds.Add(id);
-			object entity;
-			if (entitiesByKey.TryGetValue(id, out entity))
-			{
-				// find if entity was changed on session or just inserted
-
-				if (EntityChanged(entity, entitiesAndMetadata[entity], null))
-				{
-					throw new InvalidOperationException("Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
-				}
-				entitiesByKey.Remove(id);
-				entitiesAndMetadata.Remove(entity);
-			}
+			
 			Defer(new DeleteCommandData { Key = id });
 		}
 

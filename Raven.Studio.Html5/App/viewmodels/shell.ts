@@ -771,7 +771,12 @@ class shell extends viewModelBase {
     fetchLicenseStatus() {
         new getLicenseStatusCommand()
             .execute()
-            .done((result: licenseStatusDto) => shell.licenseStatus(result));
+            .done((result: licenseStatusDto) => {
+                if (result.Status.contains("AGPL")) {
+                    result.Status = "Development Only";
+                }
+                shell.licenseStatus(result)
+            });
     }
 
     fetchGoToDocSearchResults(query: string) {

@@ -60,9 +60,9 @@ namespace Raven.Backup
             var backupRequest = new
             {
                 BackupLocation = BackupPath.Replace("\\", "\\\\"),
-                DatabaseDocument = new DatabaseDocument { Id = Database }
             };
 
+	       
             var json = RavenJObject.FromObject(backupRequest).ToString();
 
             var url = "/admin/backup";

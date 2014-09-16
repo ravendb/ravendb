@@ -1,8 +1,6 @@
 ﻿using System;
-using Raven.Client.Embedded;
-using Raven.Client.FileSystem;
-using Raven.Database.Config;
-using Raven.Server;
+using Raven.Abstractions.Data;
+using Raven.Tests.Notifications;
 
 namespace Raven.Tryouts
 {
@@ -10,12 +8,14 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			var ravenConfiguration = new RavenConfiguration
+			for (int i = 0; i < 10; i++)
 			{
-				DataDirectory = "~/Data"
-			};
-			var ravenDbServer = new RavenDbServer(ravenConfiguration);
-			
+				Console.WriteLine(i);
+				using (var x = new Embedded())
+				{
+					x.CanGetNotificationAboutDocumentPut();
+				}
+			}
 		}
 	}
 }

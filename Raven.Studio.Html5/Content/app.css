@@ -7444,23 +7444,29 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 .popover {
   max-width: 30%;
 }
-#queryContainer .breadcrumb {
+#queryContainer .breadcrumb,
+#reportingContainer .breadcrumb {
   width: 100%;
 }
-#queryContainer .breadcrumb li {
+#queryContainer .breadcrumb li,
+#reportingContainer .breadcrumb li {
   overflow: visible !important;
 }
-#queryContainer .editor {
+#queryContainer .editor,
+#reportingContainer .editor {
   height: 60px;
 }
-#queryContainer .popover {
+#queryContainer .popover,
+#reportingContainer .popover {
   max-width: 450px;
   width: 450px;
 }
-#queryContainer .form-horizontal {
+#queryContainer .form-horizontal,
+#reportingContainer .form-horizontal {
   overflow: hidden auto;
 }
-#queryContainer .side-panel li {
+#queryContainer .side-panel li,
+#reportingContainer .side-panel li {
   max-width: 100% !important;
   margin-top: 5%;
   margin-bottom: 5%;
@@ -7472,7 +7478,8 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
-#queryContainer .suggestion-box {
+#queryContainer .suggestion-box,
+#reportingContainer .suggestion-box {
   position: absolute;
   display: table-cell;
   z-index: 200;

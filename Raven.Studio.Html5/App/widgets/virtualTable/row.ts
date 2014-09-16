@@ -42,7 +42,9 @@ class row {
     resetCells() {
         for (var prop in this.cellMap) {
             var cellVal: cell = this.cellMap[prop];
-            cellVal.reset();
+            if (cellVal) {
+                cellVal.reset();
+            }
         }
         this.collectionClass('');
         this.isChecked(false);

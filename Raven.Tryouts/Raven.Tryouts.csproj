@@ -203,6 +203,18 @@
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
+      <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
+      <Name>Raven.Tests.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
+      <Project>{1B88473F-743B-4F6B-8E5E-97BB816E6C68}</Project>
+      <Name>Raven.Tests.Helpers</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
+      <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
+      <Name>Raven.Tests</Name>
+    </ProjectReference>
     <ProjectReference Include="..\RavenFS.Tests\RavenFS.Tests.csproj">
       <Project>{01ca67f3-1e46-455c-8713-86fccf2efbc7}</Project>
       <Name>RavenFS.Tests</Name>

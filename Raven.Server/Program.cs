@@ -196,22 +196,22 @@ namespace Raven.Server
 					}
 				},
 				{"restore-database=", "Starts a restore operation from a backup on a REMOTE server found under specified {0:url}.", 
-					url =>
-				{
-					if (backupLocation == null)
-					{
-						throw new OptionException("when using --restore-database, --restore-source must be specified", "restore-database");
-					}
+					url => actionToTake = () =>
+				    {
+					    if (backupLocation == null)
+					    {
+						    throw new OptionException("when using --restore-database, --restore-source must be specified", "restore-database");
+					    }
 
-					Uri uri;
-					if (Uri.TryCreate(url, UriKind.Absolute, out uri) == false)
-					{
-						throw new OptionException("specified destination server url is not valid", "restore-database");
-					}
+					    Uri uri;
+					    if (Uri.TryCreate(url, UriKind.Absolute, out uri) == false)
+					    {
+						    throw new OptionException("specified destination server url is not valid", "restore-database");
+					    }
 
-					RunRemoteDatabaseRestoreOperation(backupLocation, restoreLocation, restoreDatabaseName, defrag, uri);
-					Environment.Exit(0);
-				}
+					    RunRemoteDatabaseRestoreOperation(backupLocation, restoreLocation, restoreDatabaseName, defrag, uri);
+					    Environment.Exit(0);
+				    }
 				},
 				{"restore-defrag", 
 					"Applicable only during restore, execute defrag after the restore is completed", key =>

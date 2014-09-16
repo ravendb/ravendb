@@ -601,7 +601,7 @@ namespace Raven.Database.Bundles.SqlReplication
                 {
                     AlertLevel = AlertLevel.Error,
                     CreatedAt = SystemTime.UtcNow,
-                    Message = "Last SQL eplication operation for " + sqlReplication.Name + " was failed",
+                    Message = "Last SQL replication operation for " + sqlReplication.Name + " was failed",
                     Title = "SQL replication error",
                     Exception = e.ToString(),
                     UniqueKey = "Sql Replication Error: " + sqlReplication.Name
