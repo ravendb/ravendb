@@ -183,6 +183,7 @@ namespace Raven.Database.Server.RavenFS
 			AppDomain.CurrentDomain.ProcessExit -= ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload -= ShouldDispose;
 
+			synchronizationTask.Dispose();
 			storage.Dispose();
 			search.Dispose();
 			sigGenerator.Dispose();

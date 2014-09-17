@@ -1,20 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using NLog;
-using Newtonsoft.Json;
 using Raven.Abstractions;
-using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Notifications;
 using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Abstractions.Extensions;
@@ -29,7 +25,7 @@ using System.Threading;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
-	public class SynchronizationTask
+	public class SynchronizationTask : IDisposable
 	{
 		private const int DefaultLimitOfConcurrentSynchronizations = 5;
 
@@ -46,6 +42,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		private readonly IObservable<long> timer;
 		private int failedAttemptsToGetDestinationsConfig;
+		private IDisposable timerSubscription;
 
 		public SynchronizationTask(ITransactionalStorage storage, SigGenerator sigGenerator, NotificationPublisher publisher,
 								   InMemoryRavenConfiguration systemConfiguration)
@@ -126,10 +123,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		private void InitializeTimer()
 		{
-            timer.Subscribe(tick => StartSynchronizeDestinationsInBackground());
+			timerSubscription = timer.Subscribe(tick => StartSynchronizeDestinationsInBackground());
 		}
 
-        private void StartSynchronizeDestinationsInBackground()
+		private void StartSynchronizeDestinationsInBackground()
         {
             Task.Factory.StartNew(async () => await SynchronizeDestinationsAsync(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
         }
@@ -759,6 +756,12 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
 			Log.Debug(message, files.Count,
                       string.Join(",", files.Select(x => string.Format("{0} [ETag {1}]", x.FullPath, x.Metadata.Value<Guid>(Constants.MetadataEtagField)))));
+		}
+
+		public void Dispose()
+		{
+			if (timerSubscription != null)
+				timerSubscription.Dispose();
 		}
 	}
 }
