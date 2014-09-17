@@ -172,11 +172,11 @@ namespace Voron
 			fixed (byte* slicePtr = sliceData)
 			{
 				if (Prefix.Value == null)
-					NativeMethods.memcpy(slicePtr, Prefix.ValuePtr + bytesToSkip, prefixPart);
+					StdLib.memcpy(slicePtr, Prefix.ValuePtr + bytesToSkip, prefixPart);
 				else
 				{
 					fixed (byte* prefixVal = Prefix.Value)
-						NativeMethods.memcpy(slicePtr, prefixVal + bytesToSkip, prefixPart);
+						StdLib.memcpy(slicePtr, prefixVal + bytesToSkip, prefixPart);
 				}
 			}
 

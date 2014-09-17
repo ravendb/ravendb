@@ -21,7 +21,7 @@ namespace Voron.Impl.Paging
 		{
 			_reservedSize = Environment.Is64BitProcess ? 4 * 1024 * 1024 * 1024UL : 128 * 1024 * 1024UL;
 			var dwSize = new UIntPtr(_reservedSize);
-			_baseAddress = NativeMethods.VirtualAlloc(null, dwSize, NativeMethods.AllocationType.RESERVE, NativeMethods.MemoryProtection.NOACCESS);
+			_baseAddress = Win32NativeMethods.VirtualAlloc(null, dwSize, Win32NativeMethods.AllocationType.RESERVE, Win32NativeMethods.MemoryProtection.NOACCESS);
 			if (_baseAddress == null)
 				throw new Win32Exception();
 		    _rangesCount = 1;
@@ -34,7 +34,7 @@ namespace Voron.Impl.Paging
 			AllocatePages(data.Length / PageSize + (data.Length % PageSize == 0 ? 0 : 1));
 			fixed (byte* origin = data)
 			{
-				NativeMethods.memcpy(_baseAddress, origin, data.Length);
+				StdLib.memcpy(_baseAddress, origin, data.Length);
 			}
 		}
 
@@ -59,7 +59,7 @@ namespace Voron.Impl.Paging
 
 			if (lpAddress + dwSize > _baseAddress + _reservedSize)
 			{
-                var extResult = NativeMethods.VirtualAlloc(_baseAddress + _reservedSize, new UIntPtr(_reservedSize), NativeMethods.AllocationType.RESERVE, NativeMethods.MemoryProtection.NOACCESS);
+				var extResult = Win32NativeMethods.VirtualAlloc(_baseAddress + _reservedSize, new UIntPtr(_reservedSize), Win32NativeMethods.AllocationType.RESERVE, Win32NativeMethods.MemoryProtection.NOACCESS);
 			    if (extResult == null)
 			        throw new InvalidOperationException(
 			            "Tried to allocated pages beyond the reserved space of: " + _reservedSize +
@@ -67,7 +67,7 @@ namespace Voron.Impl.Paging
 			    _rangesCount++;
 			}
 
-			var result = NativeMethods.VirtualAlloc(lpAddress, new UIntPtr(dwSize), NativeMethods.AllocationType.COMMIT, NativeMethods.MemoryProtection.READWRITE);
+			var result = Win32NativeMethods.VirtualAlloc(lpAddress, new UIntPtr(dwSize), Win32NativeMethods.AllocationType.COMMIT, Win32NativeMethods.MemoryProtection.READWRITE);
 			if (result == null)
 				throw new Win32Exception();
 
@@ -103,7 +103,7 @@ namespace Voron.Impl.Paging
 			EnsureContinuous(null, pagePosition, pagesToWrite);
 
 			var toCopy = pagesToWrite*PageSize;
-			NativeMethods.memcpy(AcquirePagePointer(pagePosition), start.Base, toCopy);
+			StdLib.memcpy(AcquirePagePointer(pagePosition), start.Base, toCopy);
 
 			return toCopy;
 		}
@@ -115,7 +115,7 @@ namespace Voron.Impl.Paging
 			base.Dispose();
 		    for (ulong i = 0; i < _rangesCount; i++)
 		    {
-                NativeMethods.VirtualFree(_baseAddress +(i * _reservedSize), new UIntPtr(_reservedSize), NativeMethods.FreeType.MEM_RELEASE);
+				Win32NativeMethods.VirtualFree(_baseAddress +(i * _reservedSize), new UIntPtr(_reservedSize), Win32NativeMethods.FreeType.MEM_RELEASE);
 		    }
 		}
 	}

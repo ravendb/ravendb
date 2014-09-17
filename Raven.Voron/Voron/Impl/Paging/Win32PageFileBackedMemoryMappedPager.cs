@@ -25,8 +25,8 @@ namespace Voron.Impl.Paging
 	    public Win32PageFileBackedMemoryMappedPager(string name, long? initialFileSize = null)
 		{
 		    _name = name;
-		    NativeMethods.SYSTEM_INFO systemInfo;
-			NativeMethods.GetSystemInfo(out systemInfo);
+		    Win32NativeMethods.SYSTEM_INFO systemInfo;
+			Win32NativeMethods.GetSystemInfo(out systemInfo);
 
 			AllocationGranularity = systemInfo.allocationGranularity;
 			_totalAllocationSize = initialFileSize.HasValue ? NearestSizeToAllocationGranularity(initialFileSize.Value) : systemInfo.allocationGranularity;
@@ -118,7 +118,7 @@ namespace Voron.Impl.Paging
 			ThrowObjectDisposedIfNeeded();
 
 			int toCopy = pagesToWrite * PageSize;
-			NativeMethods.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
+			StdLib.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
 
 			return toCopy;
 		}
@@ -153,8 +153,9 @@ namespace Voron.Impl.Paging
 				var allocationInfoAfterReallocation = new List<PagerState.AllocationInfo>();
 				foreach (var allocationInfo in PagerState.AllocationInfos)
 				{
-					var newAlloctedBaseAddress = MemoryMapNativeMethods.MapViewOfFileEx(allocationInfo.MappedFile.SafeMemoryMappedFileHandle.DangerousGetHandle(),
-						MemoryMapNativeMethods.NativeFileMapAccessType.Read | MemoryMapNativeMethods.NativeFileMapAccessType.Write,
+					var newAlloctedBaseAddress = Win32MemoryMapNativeMethods.MapViewOfFileEx(allocationInfo.MappedFile.SafeMemoryMappedFileHandle.DangerousGetHandle(),
+					                                                                         Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | 
+					                                                                         Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write,
 						0, 0,
 						UIntPtr.Zero, 
 						newBaseAddress + offset);
@@ -204,7 +205,7 @@ namespace Voron.Impl.Paging
 		private static void UndoMappings(IEnumerable<PagerState.AllocationInfo> newAllocationInfos)
 		{
 			foreach (var newAllocationInfo in newAllocationInfos)
-				MemoryMapNativeMethods.UnmapViewOfFile(newAllocationInfo.BaseAddress);
+				Win32MemoryMapNativeMethods.UnmapViewOfFile(newAllocationInfo.BaseAddress);
 		}
 
 		private bool TryAllocateMoreContinuousPages(long allocationSize)
@@ -227,8 +228,9 @@ namespace Voron.Impl.Paging
 		{
 			var newMemoryMappedFile = MemoryMappedFile.CreateNew(null, allocationSize);
 			var newFileMappingHandle = newMemoryMappedFile.SafeMemoryMappedFileHandle.DangerousGetHandle();
-			var newMappingBaseAddress = MemoryMapNativeMethods.MapViewOfFileEx(newFileMappingHandle,
-				MemoryMapNativeMethods.NativeFileMapAccessType.Read | MemoryMapNativeMethods.NativeFileMapAccessType.Write,
+			var newMappingBaseAddress = Win32MemoryMapNativeMethods.MapViewOfFileEx(newFileMappingHandle,
+			                                                                        Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | 
+			                                                                        Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write,
 				0, 0,
 				UIntPtr.Zero,
 				baseAddress);
@@ -254,15 +256,15 @@ namespace Voron.Impl.Paging
 			foundAddressPtr = null;
 			try
 			{
-				foundAddressPtr = NativeMethods.VirtualAlloc(null, new UIntPtr(size), NativeMethods.AllocationType.RESERVE,
-					NativeMethods.MemoryProtection.READWRITE);
+				foundAddressPtr = Win32NativeMethods.VirtualAlloc(null, new UIntPtr(size), Win32NativeMethods.AllocationType.RESERVE,
+				                                                  Win32NativeMethods.MemoryProtection.READWRITE);
 
 				return (foundAddressPtr != null && foundAddressPtr != (byte*)0);
 			}
 			finally
 			{
 				if (foundAddressPtr != null && foundAddressPtr != (byte*)0)
-					NativeMethods.VirtualFree(foundAddressPtr, UIntPtr.Zero, NativeMethods.FreeType.MEM_RELEASE);
+					Win32NativeMethods.VirtualFree(foundAddressPtr, UIntPtr.Zero, Win32NativeMethods.FreeType.MEM_RELEASE);
 			}
 		}
 		
@@ -283,8 +285,9 @@ namespace Voron.Impl.Paging
 
 			var fileMappingHandle = mmf.SafeMemoryMappedFileHandle.DangerousGetHandle();
 
-			var startingBaseAddressPtr = MemoryMapNativeMethods.MapViewOfFileEx(fileMappingHandle,
-				MemoryMapNativeMethods.NativeFileMapAccessType.Read | MemoryMapNativeMethods.NativeFileMapAccessType.Write,
+			var startingBaseAddressPtr = Win32MemoryMapNativeMethods.MapViewOfFileEx(fileMappingHandle,
+			                                                                         Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | 
+			                                                                         Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write,
 				0, 0,
 				UIntPtr.Zero, //map all what was "reserved" in CreateFileMapping on previous row
 				requestedBaseAddress);

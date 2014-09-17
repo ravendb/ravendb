@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Voron.Impl
 {
-	public static unsafe class NativeMethods
+	public static unsafe class Win32NativeMethods
 	{
 		[StructLayout(LayoutKind.Sequential)]
 		public struct SYSTEM_INFO
@@ -88,21 +88,6 @@ namespace Voron.Impl
 
 		[DllImport("kernel32.dll")]
 		public static extern void GetSystemInfo(out SYSTEM_INFO lpSystemInfo);
-
-		[DllImport("msvcrt.dll", EntryPoint = "memcpy", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
-        public static extern IntPtr memcpy(byte* dest, byte* src, IntPtr count);
-
-        [DllImport("msvcrt.dll", EntryPoint = "memcpy", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
-        public static extern IntPtr memcpy(byte* dest, byte* src, int count);
-
-		[DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
-		public static extern int memcmp(byte* b1, byte* b2, int count);
-
-		[DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
-		public static extern int memmove(byte* b1, byte* b2, int count);
-
-        [DllImport("msvcrt.dll", EntryPoint = "memset", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
-        public static extern IntPtr memset(byte* dest, int c, int count);
 
 		[DllImport("kernel32.dll", SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]

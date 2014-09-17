@@ -94,11 +94,11 @@ namespace Voron
 			if (_val == null)
 			{
 				fixed (byte* b = _buffer)
-					NativeMethods.memcpy(buffer, b + _pos, count);
+					StdLib.memcpy(buffer, b + _pos, count);
 			}
 			else
 			{
-				NativeMethods.memcpy(buffer, _val + _pos, count);
+				StdLib.memcpy(buffer, _val + _pos, count);
 			}
 			_pos += count;
 
@@ -212,20 +212,20 @@ namespace Voron
 					{
 						fixed (byte* b = other._buffer)
 						{
-							return NativeMethods.memcmp(a, b, len);
+							return StdLib.memcmp(a, b, len);
 						}
 					}
-					return NativeMethods.memcmp(a, other._val, len);
+					return StdLib.memcmp(a, other._val, len);
 				}
 			}
 			if (other._buffer != null)
 			{
 				fixed (byte* b = other._buffer)
 				{
-					return NativeMethods.memcmp(_val, b, len);
+					return StdLib.memcmp(_val, b, len);
 				}
 			}
-			return NativeMethods.memcmp(_val, other._val, len);
+			return StdLib.memcmp(_val, other._val, len);
 		}
 
 		public Slice AsSlice()

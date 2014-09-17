@@ -56,7 +56,7 @@ namespace Voron.Impl.Journal
 	                continue;
 	            }
 
-	            NativeMethods.memcpy(buffer, current.Pointer, count);
+				StdLib.memcpy(buffer, current.Pointer, count);
 		        return true;
 	        }
 		    return false;
@@ -95,7 +95,7 @@ namespace Voron.Impl.Journal
 
 				for (int index = 0; index < pages.Length; index++)
 				{
-					NativeMethods.memcpy(buffer.Pointer + (index * AbstractPager.PageSize), pages[index], AbstractPager.PageSize);
+					StdLib.memcpy(buffer.Pointer + (index * AbstractPager.PageSize), pages[index], AbstractPager.PageSize);
 				}
 			}
 			finally

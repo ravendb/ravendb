@@ -754,7 +754,7 @@ namespace Voron.Impl.Journal
 				var txPage = txPages[index];
 				var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.PositionInScratchBuffer);
 				var count = txPage.NumberOfPages * AbstractPager.PageSize;
-				NativeMethods.memcpy(write, scratchPage, count);
+				StdLib.memcpy(write, scratchPage, count);
 				write += count;
 			}
 
@@ -765,7 +765,7 @@ namespace Voron.Impl.Journal
 		    if (remainder != 0)
 		    {
                 // zero the remainder of the page
-		        NativeMethods.memset(compressionBuffer + len, 0, remainder);
+				StdLib.memset(compressionBuffer + len, 0, remainder);
 		    }
 
 			var pages = new byte*[compressedPages + 1];

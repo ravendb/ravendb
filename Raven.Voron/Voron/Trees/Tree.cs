@@ -113,7 +113,7 @@ namespace Voron.Trees
 
 			fixed (byte* src = value)
 			{
-				NativeMethods.memcpy(pos, src, value.Length);
+				StdLib.memcpy(pos, src, value.Length);
 			}
 		}
 
@@ -139,7 +139,7 @@ namespace Voron.Trees
 					var read = value.Read(tempPageBuffer, 0, AbstractPager.PageSize);
 					if (read == 0)
 						break;
-					NativeMethods.memcpy(pos, tempPagePointer, read);
+					StdLib.memcpy(pos, tempPagePointer, read);
 					pos += read;
 				}
 			}

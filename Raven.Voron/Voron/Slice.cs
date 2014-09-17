@@ -222,12 +222,12 @@ namespace Voron
 		{
 			if (Array == null)
 			{
-				NativeMethods.memcpy(dest, Pointer, Size);
+				StdLib.memcpy(dest, Pointer, Size);
 				return;
 			}
 			fixed (byte* a = Array)
 			{
-				NativeMethods.memcpy(dest, a, Size);
+				StdLib.memcpy(dest, a, Size);
 			}
 		}
 
@@ -241,7 +241,7 @@ namespace Voron
 			if (Array == null)
 			{
 				fixed (byte* p = dest)
-					NativeMethods.memcpy(p, Pointer, Size);
+					StdLib.memcpy(p, Pointer, Size);
 				return;
 			}
 			Buffer.BlockCopy(Array, 0, dest, 0, Size);
@@ -257,7 +257,7 @@ namespace Voron
 			if (Array == null)
 			{
 				fixed (byte* p = dest)
-					NativeMethods.memcpy(p + offset, Pointer + from, count);
+					StdLib.memcpy(p + offset, Pointer + from, count);
 				return;
 			}
 			Buffer.BlockCopy(Array, from, dest, offset, count);
@@ -270,12 +270,12 @@ namespace Voron
 
 			if (Array == null)
 			{
-				NativeMethods.memcpy(dest + offset, Pointer + from, count);
+				StdLib.memcpy(dest + offset, Pointer + from, count);
 				return;
 			}
 
 			fixed (byte* p = Array)
-				NativeMethods.memcpy(dest + offset, p + from, count);
+				StdLib.memcpy(dest + offset, p + from, count);
 		}
 
 		public Slice Clone()
@@ -285,7 +285,7 @@ namespace Voron
 			{
 				fixed (byte* dest = buffer)
 				{
-					NativeMethods.memcpy(dest, Pointer, Size);
+					StdLib.memcpy(dest, Pointer, Size);
 				}
 			}
 			else

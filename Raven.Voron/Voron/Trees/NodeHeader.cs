@@ -71,9 +71,9 @@ namespace Voron.Trees
             if (node->Flags == (NodeFlags.PageRef))
             {
                 var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
-                NativeMethods.memcpy(dest, overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
+                StdLib.memcpy(dest, overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
             }
-            NativeMethods.memcpy(dest, (byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
+			StdLib.memcpy(dest, (byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }
 
 		public static int GetDataSize(Transaction tx, NodeHeader* node)

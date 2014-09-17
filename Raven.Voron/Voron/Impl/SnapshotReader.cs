@@ -7,12 +7,10 @@
 
 	public class SnapshotReader : IDisposable
 	{
-		private readonly StorageEnvironment _env;
 
 		public SnapshotReader(Transaction tx)
 		{
 			Transaction = tx;
-			_env = Transaction.Environment;
 		}
 
 		public Transaction Transaction { get; private set; }

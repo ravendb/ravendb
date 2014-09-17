@@ -8,7 +8,7 @@ using Microsoft.Win32.SafeHandles;
 
 namespace Voron.Impl
 {
-	public static unsafe class MemoryMapNativeMethods
+	public static unsafe class Win32MemoryMapNativeMethods
 	{
 		public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 

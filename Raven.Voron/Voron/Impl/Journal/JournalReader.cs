@@ -62,7 +62,7 @@ namespace Voron.Impl.Journal
             _recoveryPager.EnsureContinuous(null, _recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
             var dataPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
 
-            NativeMethods.memset(dataPage, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
+			StdLib.memset(dataPage, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
             try
             {
                 LZ4.Decode64(_pager.AcquirePagePointer(_readingPage), current->CompressedSize, dataPage, current->UncompressedSize, true);

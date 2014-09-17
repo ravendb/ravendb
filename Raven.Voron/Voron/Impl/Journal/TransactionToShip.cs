@@ -34,7 +34,7 @@ namespace Voron.Impl.Journal
 	        {
 				for (int i = 0; i < CompressedPages.Length; i++)
 	            {
-	                NativeMethods.memcpy(p + (i*AbstractPager.PageSize), CompressedPages[i], AbstractPager.PageSize);
+	                StdLib.memcpy(p + (i*AbstractPager.PageSize), CompressedPages[i], AbstractPager.PageSize);
 	            }
 	        }
 	    }

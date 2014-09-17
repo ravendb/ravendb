@@ -362,7 +362,7 @@ namespace Voron
 					ptr = Marshal.AllocHGlobal(sizeof(FileHeader));
 					_headers[filename] = ptr;
 				}
-				NativeMethods.memcpy((byte*)ptr, (byte*)header, sizeof(FileHeader));
+				StdLib.memcpy((byte*)ptr, (byte*)header, sizeof(FileHeader));
 			}
 
 			public override IVirtualPager CreateScratchPager(string name)

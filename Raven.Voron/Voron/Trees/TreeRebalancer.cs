@@ -99,7 +99,7 @@ namespace Voron.Trees
 			using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
 			{
 				var mergedPage = tmp.GetTempPage(left.KeysPrefixed);
-				NativeMethods.memcpy(mergedPage.Base, left.Base, left.PageSize);
+				StdLib.memcpy(mergedPage.Base, left.Base, left.PageSize);
 
 				var previousSearchPosition = right.LastSearchPosition;
 
@@ -120,7 +120,7 @@ namespace Voron.Trees
 					mergedPage.CopyNodeDataToEndOfPage(node, prefixedKey);
 				}
 
-				NativeMethods.memcpy(left.Base, mergedPage.Base, left.PageSize);
+				StdLib.memcpy(left.Base, mergedPage.Base, left.PageSize);
 			}
 
 			parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
@@ -191,7 +191,7 @@ namespace Voron.Trees
 	        }
 			
 			if(dataPos != null && fromDataSize > 0)
-				NativeMethods.memcpy(dataPos, val, fromDataSize);
+				StdLib.memcpy(dataPos, val, fromDataSize);
             
             from.RemoveNode(from.LastSearchPositionOrLastEntry);
 
