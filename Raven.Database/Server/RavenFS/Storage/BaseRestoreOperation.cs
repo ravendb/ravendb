@@ -125,54 +125,49 @@ namespace Raven.Database.Server.RavenFS.Storage
                 return;
             }
 
-            //TODO: review me!
-
             var latestIncrementalBackupDirectory = directories.First();
             if (Directory.Exists(Path.Combine(latestIncrementalBackupDirectory, IndexesSubfolder)) == false)
                 return;
 
             directories.Add(backupLocation); // add the root (first full backup) to the end of the list (last place to look for)
 
-            foreach (var index in Directory.GetDirectories(Path.Combine(latestIncrementalBackupDirectory, IndexesSubfolder)))
+            var index = Path.Combine(latestIncrementalBackupDirectory, IndexesSubfolder);
+
+            try
             {
-                var indexName = Path.GetFileName(index);
-                var indexPath = Path.Combine(indexLocation, indexName);
+                var filesList = File.ReadAllLines(Path.Combine(index, "index-files.required-for-index-restore"))
+                    .Where(x => string.IsNullOrEmpty(x) == false)
+                    .Reverse();
 
-                try
+                output("Copying RavenFS Index.");
+
+                if (Directory.Exists(indexLocation) == false)
+                    Directory.CreateDirectory(indexLocation);
+
+                foreach (var neededFile in filesList)
                 {
-                    var filesList = File.ReadAllLines(Path.Combine(index, "index-files.required-for-index-restore"))
-                        .Where(x => string.IsNullOrEmpty(x) == false)
-                        .Reverse();
+                    var found = false;
 
-                    output("Copying Index: " + indexName);
-
-                    if (Directory.Exists(indexPath) == false)
-                        Directory.CreateDirectory(indexPath);
-
-                    foreach (var neededFile in filesList)
+                    foreach (var directory in directories)
                     {
-                        var found = false;
+                        var possiblePathToFile = Path.Combine(directory, IndexesSubfolder, neededFile);
+                        if (File.Exists(possiblePathToFile) == false)
+                            continue;
 
-                        foreach (var directory in directories)
-                        {
-                            var possiblePathToFile = Path.Combine(directory,IndexesSubfolder , indexName, neededFile);
-                            if (File.Exists(possiblePathToFile) == false)
-                                continue;
-
-                            found = true;
-                            File.Copy(possiblePathToFile, Path.Combine(indexPath, neededFile));
-                            break;
-                        }
-
-                        if (found == false)
-                            output(string.Format("Error: File \"{0}\" is missing from index {1}", neededFile, indexName));
+                        found = true;
+                        File.Copy(possiblePathToFile, Path.Combine(indexLocation, neededFile));
+                        break;
                     }
-                }
-                catch (Exception ex)
-                {
-                    ForceIndexReset(indexPath, ex);
+
+                    if (found == false)
+                        output(string.Format("Error: File \"{0}\" is missing from RavenFS index", neededFile));
                 }
             }
+            catch (Exception ex)
+            {
+                ForceIndexReset(indexLocation, ex); //TODO: test me!
+            }
+            
         }
 
         protected string BackupFilenamePath(string backupFilename)

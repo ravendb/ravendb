@@ -83,16 +83,15 @@ namespace RavenFS.Tests
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,                
 			};
 
-            if (customConfig != null)
-            {
-                customConfig(ravenConfiguration);
-                ravenConfiguration.Initialize();
-            }
-
 	        ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
             ravenConfiguration.FileSystem.MaximumSynchronizationInterval = this.SynchronizationInterval;
 	        ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
 	        ravenConfiguration.FileSystem.DefaultStorageTypeName = storageType;
+
+            if (customConfig != null)
+            {
+                customConfig(ravenConfiguration);
+            }
 
             if (enableAuthentication)
             {

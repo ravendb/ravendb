@@ -81,7 +81,9 @@ namespace RavenFS.Tests.Storage
         {
             using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig:config =>
             {
+                config.Settings["Raven/Esent/CircularLog"] = "false";
                 config.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
+                config.Storage.Voron.AllowIncrementalBackups = true;
             }))
             {
                 await CreateSampleData(store);
@@ -92,7 +94,7 @@ namespace RavenFS.Tests.Storage
                 await CreateSampleData(store, 3, 5);
                 
                 // fetch md5 sums for later verification
-                var md5Sums = FetchMd5Sums(store.AsyncFilesCommands, 8);
+                var md5Sums = FetchMd5Sums(store.AsyncFilesCommands, 7);
 
                 // create second backup
                 await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
@@ -108,10 +110,10 @@ namespace RavenFS.Tests.Storage
                 SpinWait.SpinUntil(() => store.AsyncFilesCommands.Admin.GetNamesAsync().Result.Contains("NewFS"),
                     Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(1));
 
-                var restoredMd5Sums = FetchMd5Sums(store.AsyncFilesCommands.ForFileSystem("NewFS"), 8);
+                var restoredMd5Sums = FetchMd5Sums(store.AsyncFilesCommands.ForFileSystem("NewFS"), 7);
                 Assert.Equal(md5Sums, restoredMd5Sums);
 
-                var restoredClientComputedMd5Sums = ComputeMd5Sums(store.AsyncFilesCommands.ForFileSystem("NewFS"), 8);
+                var restoredClientComputedMd5Sums = ComputeMd5Sums(store.AsyncFilesCommands.ForFileSystem("NewFS"), 7);
                 Assert.Equal(md5Sums, restoredClientComputedMd5Sums);
             }
 

@@ -100,7 +100,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent.Backup
 
 			foreach (var directory in directories)
 			{
-				foreach (var file in Directory.GetFiles(directory, "RVN*.log"))
+				foreach (var file in Directory.GetFiles(directory, "RFS*.log"))
 				{
 					var justFile = Path.GetFileName(file);
                     output(string.Format("Copying incremental log : {0}", justFile));

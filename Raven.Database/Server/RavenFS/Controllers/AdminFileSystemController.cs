@@ -403,7 +403,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
             return GetEmptyMessage();
         }
 
-        //TODO: extract to utils?
         private string ResolveTenantDataDirectory(string databaseLocation, string filesystemName, out string documentDataDir)
         {
             if (Path.IsPathRooted(databaseLocation))
