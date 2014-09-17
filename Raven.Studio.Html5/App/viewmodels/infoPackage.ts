@@ -92,13 +92,13 @@ class infoPackage extends viewModelBase {
         return !(navigator && navigator.msSaveBlob);
     });
     appUrls: computedAppUrls;
-    stackDumpEnabled: KnockoutComputed<boolean>;
+    adminView: KnockoutComputed<boolean>;
 
     constructor() {
         super();
 
         this.appUrls = appUrl.forCurrentDatabase();
-        this.stackDumpEnabled = ko.computed(() => {
+        this.adminView = ko.computed(() => {
             var activeDb = this.activeDatabase();
             var appUrls = this.appUrls;
             return (!!activeDb && activeDb.isSystem || !!appUrls && appUrls.isAreaActive('admin')());
@@ -350,7 +350,7 @@ class infoPackage extends viewModelBase {
     createPackage(includeStacks: boolean) {
         this.showLoadingIndicator(true); 
         this.cleanup();
-        var activeDb = !!this.activeDatabase() ? this.activeDatabase() : appUrl.getSystemDatabase();
+        var activeDb = this.adminView() ? appUrl.getSystemDatabase() : (this.activeDatabase() || appUrl.getSystemDatabase());
         new getInfoPackage(activeDb, includeStacks)
             .execute()
             .done((data, filename) => {
