@@ -301,7 +301,7 @@ namespace Voron.Impl.Paging
 
 		public override void ReleaseAllocationInfo(byte* baseAddress)
 		{
-			MemoryMapNativeMethods.UnmapViewOfFile(baseAddress);
+			Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress);
 		}
 	}
 }
