@@ -1,19 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+using Voron.Trees;
+using Voron.Util;
 
-namespace Voron.Impl.Paging
+namespace Voron.Impl.Paging.Win32
 {
-	using Microsoft.Win32.SafeHandles;
-	using System;
-	using System.ComponentModel;
-	using System.Diagnostics;
-	using System.IO;
-	using System.IO.MemoryMappedFiles;
-	using System.Runtime.InteropServices;
-	using Voron.Trees;
-	using Voron.Util;
-
 	public unsafe class Win32MemoryMapPager : AbstractPager
 	{
 		public readonly long AllocationGranularity;

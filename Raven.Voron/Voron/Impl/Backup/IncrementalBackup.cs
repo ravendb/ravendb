@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
+using Voron.Impl.Paging.Win32;
 using Voron.Trees;
 using Voron.Util;
 

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Voron.Impl;
+using Voron.Impl.Paging.Win32;
 using Xunit;
 using Xunit.Extensions;
 
@@ -158,9 +159,9 @@ namespace Voron.Tests.Storage
 			{
 				//if this fails and adjacentBlockAddress == 0 or null --> this means the remapping will occur anyway. 
 				//the allocation is here to make sure the remapping does happen in any case
-				adjacentBlockAddress = NativeMethods.VirtualAlloc(
+				adjacentBlockAddress = Win32NativeMethods.VirtualAlloc(
 					Env.Options.DataPager.PagerState.MapBase + totalAllocationSize, new UIntPtr(16),
-					NativeMethods.AllocationType.RESERVE, NativeMethods.MemoryProtection.EXECUTE_READWRITE);
+					Win32NativeMethods.AllocationType.RESERVE, Win32NativeMethods.MemoryProtection.EXECUTE_READWRITE);
 
 				pagerSize *= 2;
 				var numberOfPagesBeforeAllocation = Env.Options.DataPager.NumberOfAllocatedPages;
@@ -171,7 +172,7 @@ namespace Voron.Tests.Storage
 			finally
 			{
 				if(adjacentBlockAddress != null && adjacentBlockAddress != (byte*)0)
-					NativeMethods.VirtualFree(adjacentBlockAddress, UIntPtr.Zero, NativeMethods.FreeType.MEM_RELEASE);
+					Win32NativeMethods.VirtualFree(adjacentBlockAddress, UIntPtr.Zero, Win32NativeMethods.FreeType.MEM_RELEASE);
 			}
 		}
 	}

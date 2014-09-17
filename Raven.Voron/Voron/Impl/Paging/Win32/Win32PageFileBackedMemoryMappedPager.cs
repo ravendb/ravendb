@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -10,7 +9,7 @@ using System.Threading;
 using Voron.Trees;
 using Voron.Util;
 
-namespace Voron.Impl.Paging
+namespace Voron.Impl.Paging.Win32
 {
 	public unsafe class Win32PageFileBackedMemoryMappedPager : AbstractPager
 	{
@@ -315,7 +314,7 @@ namespace Voron.Impl.Paging
 			return newPager;
 		}
 
-		public override unsafe void ReleaseAllocationInfo(byte* baseAddress)
+		public override void ReleaseAllocationInfo(byte* baseAddress)
 		{
 			Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress);
 		}

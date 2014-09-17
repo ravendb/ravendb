@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Voron.Impl
+namespace Voron.Impl.Paging.Win32
 {
 	public static unsafe class Win32NativeMethods
 	{

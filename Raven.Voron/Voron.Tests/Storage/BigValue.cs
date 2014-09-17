@@ -126,7 +126,7 @@ namespace Voron.Tests.Storage
 		{
 			fixed(byte* b = buffer)
 			fixed (byte* c = memoryStream.GetBuffer())
-				Assert.Equal(0, NativeMethods.memcmp(b, c, buffer.Length));
+				Assert.Equal(0, StdLib.memcmp(b, c, buffer.Length));
 		}
 
 		[Fact]

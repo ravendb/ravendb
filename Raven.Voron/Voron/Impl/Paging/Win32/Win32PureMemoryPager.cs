@@ -1,10 +1,9 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Voron.Trees;
 
-namespace Voron.Impl.Paging
+namespace Voron.Impl.Paging.Win32
 {
 	public unsafe class Win32PureMemoryPager : AbstractPager
 	{
