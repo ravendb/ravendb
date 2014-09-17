@@ -69,8 +69,6 @@
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
     <Compile Include="Impl\Journal\ShipppedTransactionsApplicator.cs" />
     <Compile Include="Impl\Journal\TransactionToShip.cs" />
-    <Compile Include="Impl\MemoryMapNativeMethods.cs" />
-    <Compile Include="Impl\Paging\Win32PageFileBackedMemoryMappedPager.cs" />
     <Compile Include="PrefixComparisonCache.cs" />
     <Compile Include="PrefixedSlice.cs" />
     <Compile Include="SliceComparisonMethods.cs" />
@@ -105,8 +103,6 @@
     <Compile Include="Impl\Paging\FragmentedPureMemoryPager.cs" />
     <Compile Include="Impl\Paging\FilePager.cs" />
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
-    <Compile Include="Impl\Paging\Win32MemoryMapPager.cs" />
-    <Compile Include="Impl\Paging\Win32PureMemoryPager.cs" />
     <Compile Include="Impl\Paging\TemporaryPage.cs" />
     <Compile Include="Impl\ScratchBufferPool.cs" />
     <Compile Include="Impl\SliceEqualityComparer.cs" />
@@ -121,7 +117,6 @@
     <Compile Include="TransactionFlags.cs" />
     <Compile Include="Trees\Cursor.cs" />
     <Compile Include="Debugging\DebugStuff.cs" />
-    <Compile Include="Impl\NativeMethods.cs" />
     <Compile Include="Trees\EmptyIterator.cs" />
     <Compile Include="Trees\IIterator.cs" />
     <Compile Include="Trees\TreeIterator.cs" />
@@ -162,6 +157,11 @@
     <Compile Include="Util\PageTable.cs" />
     <Compile Include="ValueReader.cs" />
     <Compile Include="Impl\StdLib.cs" />
+    <Compile Include="Impl\Paging\Win32\Win32MemoryMapNativeMethods.cs" />
+    <Compile Include="Impl\Paging\Win32\Win32MemoryMapPager.cs" />
+    <Compile Include="Impl\Paging\Win32\Win32NativeMethods.cs" />
+    <Compile Include="Impl\Paging\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
+    <Compile Include="Impl\Paging\Win32\Win32PureMemoryPager.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Util\Conversion\readme.txt" />
@@ -178,4 +178,7 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <ItemGroup>
+    <Folder Include="Impl\Paging\Win32\" />
+  </ItemGroup>
 </Project>
