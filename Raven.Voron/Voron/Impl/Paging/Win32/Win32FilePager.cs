@@ -10,23 +10,23 @@ using Voron.Util;
 
 namespace Voron.Impl.Paging
 {
-    public unsafe class FilePager : AbstractPager
+    public unsafe class Win32FilePager : AbstractPager
     {
         private readonly FileStream _fileStream;
         private readonly FileInfo _fileInfo;
 	    private SafeFileHandle _safeFileHandle;
 
-	    public FilePager(string file)
+	    public Win32FilePager(string file)
         {
             _fileInfo = new FileInfo(file);
 
             var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
 
-            _safeFileHandle = NativeFileMethods.CreateFile(file,
-	            NativeFileAccess.GenericRead | NativeFileAccess.GenericWrite,
-	            NativeFileShare.Read, IntPtr.Zero,
-	            NativeFileCreationDisposition.OpenAlways,
-	            NativeFileAttributes.Write_Through | NativeFileAttributes.NoBuffering ,
+            _safeFileHandle = Win32NativeFileMethods.CreateFile(file,
+	            Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,
+			                                                    Win32NativeFileShare.Read, IntPtr.Zero,
+			                                                    Win32NativeFileCreationDisposition.OpenAlways,
+			                                                    Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering ,
 	            IntPtr.Zero);
 
             if (_safeFileHandle.IsInvalid)
@@ -76,7 +76,7 @@ namespace Voron.Impl.Paging
                 return;
 
             // need to allocate memory again
-			NativeFileMethods.SetFileLength(_safeFileHandle, newLength);
+			Win32NativeFileMethods.SetFileLength(_safeFileHandle, newLength);
 
 			Debug.Assert(_fileStream.Length == newLength);
 
@@ -167,7 +167,7 @@ namespace Voron.Impl.Paging
 				while (toWrite != 0)
 				{
 					int written;
-					if (NativeFileMethods.WriteFile(_safeFileHandle, startWrite, toWrite, out written, nativeOverlapped) == false)
+					if (Win32NativeFileMethods.WriteFile(_safeFileHandle, startWrite, toWrite, out written, nativeOverlapped) == false)
 					{
 						throw new Win32Exception();
 					}

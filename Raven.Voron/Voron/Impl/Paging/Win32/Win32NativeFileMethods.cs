@@ -15,7 +15,7 @@ using Voron.Exceptions;
 
 namespace Voron.Util
 {
-	public static unsafe class NativeFileMethods
+	public static unsafe class Win32NativeFileMethods
 	{
 
 		[DllImport("kernel32.dll", SetLastError = true)]
@@ -34,10 +34,10 @@ namespace Voron.Util
 
 		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
 		public static extern SafeFileHandle CreateFile(string lpFileName,
-		                                               NativeFileAccess dwDesiredAccess, NativeFileShare dwShareMode,
+		                                               Win32NativeFileAccess dwDesiredAccess, Win32NativeFileShare dwShareMode,
 		                                               IntPtr lpSecurityAttributes,
-		                                               NativeFileCreationDisposition dwCreationDisposition,
-		                                               NativeFileAttributes dwFlagsAndAttributes, IntPtr hTemplateFile);
+		                                               Win32NativeFileCreationDisposition dwCreationDisposition,
+		                                               Win32NativeFileAttributes dwFlagsAndAttributes, IntPtr hTemplateFile);
 
 		[DllImport("kernel32.dll", SetLastError = true)]
 		public static extern bool CloseHandle(IntPtr hObject);
@@ -47,7 +47,7 @@ namespace Voron.Util
 
 		[DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
 		private static extern int SetFilePointer([In] SafeFileHandle hFile, [In] int lDistanceToMove,
-		                                         [Out] out int lpDistanceToMoveHigh, [In] NativeFileMoveMethod dwMoveMethod);
+		                                         [Out] out int lpDistanceToMoveHigh, [In] Win32NativeFileMoveMethod dwMoveMethod);
 
 		[DllImport("kernel32.dll")]
 		public static extern bool FlushFileBuffers(SafeFileHandle hFile);
@@ -62,7 +62,7 @@ namespace Voron.Util
 
 			int lastError;
 
-			if (SetFilePointer(fileHandle, lo, out hi, NativeFileMoveMethod.Begin) == -1)
+			if (SetFilePointer(fileHandle, lo, out hi, Win32NativeFileMoveMethod.Begin) == -1)
 			{
 				lastError = Marshal.GetLastWin32Error();
 				if (lastError != 0)
@@ -73,7 +73,7 @@ namespace Voron.Util
 			{
 				lastError = Marshal.GetLastWin32Error();
 
-				if (lastError == (int) NativeFileErrors.DiskFull)
+				if (lastError == (int) Win32NativeFileErrors.DiskFull)
 				{
 					var filePath = new StringBuilder(256);
 
@@ -97,12 +97,12 @@ namespace Voron.Util
 		}
 	}
 
-	public enum NativeFileErrors
+	public enum Win32NativeFileErrors
 	{
 		DiskFull = 0x70
 	}
 
-	public enum NativeFileMoveMethod : uint
+	public enum Win32NativeFileMoveMethod : uint
 	{
 		Begin = 0,
 		Current = 1,
@@ -110,7 +110,7 @@ namespace Voron.Util
 	}
 
 	[Flags]
-	public enum NativeFileAccess : uint
+	public enum Win32NativeFileAccess : uint
 	{
 		//
 		// Standard Section
@@ -185,7 +185,7 @@ namespace Voron.Util
 	}
 
 	[Flags]
-	public enum NativeFileShare : uint
+	public enum Win32NativeFileShare : uint
 	{
 		/// <summary>
 		///
@@ -211,7 +211,7 @@ namespace Voron.Util
 		Delete = 0x00000004
 	}
 
-	public enum NativeFileCreationDisposition : uint
+	public enum Win32NativeFileCreationDisposition : uint
 	{
 		/// <summary>
 		/// Creates a new file. The function fails if a specified file exists.
@@ -240,7 +240,7 @@ namespace Voron.Util
 	}
 
 	[Flags]
-	public enum NativeFileAttributes : uint
+	public enum Win32NativeFileAttributes : uint
 	{
 		Readonly = 0x00000001,
 		Hidden = 0x00000002,

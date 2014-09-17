@@ -231,7 +231,7 @@ namespace Voron
 					while (remaining > 0)
 					{
 						int read;
-						if (NativeFileMethods.ReadFile(fs.SafeFileHandle, ptr, remaining, out read, null) == false)
+						if (Win32NativeFileMethods.ReadFile(fs.SafeFileHandle, ptr, remaining, out read, null) == false)
 							throw new Win32Exception();
 					    if (read == 0)
 					        return false; // we should be reading _something_ here, if we can't, then it is an error and we assume corruption
@@ -252,12 +252,12 @@ namespace Voron
 					while (remaining > 0)
 					{
 						int read;
-						if (NativeFileMethods.WriteFile(fs.SafeFileHandle, ptr, remaining, out read, null) == false)
+						if (Win32NativeFileMethods.WriteFile(fs.SafeFileHandle, ptr, remaining, out read, null) == false)
 							throw new Win32Exception();
 						ptr += read;
 						remaining -= read;
 					}
-					NativeFileMethods.FlushFileBuffers(fs.SafeFileHandle);
+					Win32NativeFileMethods.FlushFileBuffers(fs.SafeFileHandle);
 				}
 			}
 
@@ -267,7 +267,7 @@ namespace Voron
 			    if (File.Exists(scratchFile)) 
                     File.Delete(scratchFile);
 
-                return new Win32MemoryMapPager(scratchFile, InitialFileSize, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
+				return new Win32MemoryMapPager(scratchFile, InitialFileSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
@@ -276,7 +276,7 @@ namespace Voron
                 var path = Path.Combine(_journalPath, name);
 				if (File.Exists(path) == false)
 					throw new InvalidOperationException("No such journal " + path);
-				return new Win32MemoryMapPager(path, access: NativeFileAccess.GenericRead);
+				return new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead);
 			}
 		}
 

@@ -101,7 +101,6 @@
     <Compile Include="Impl\PagerState.cs" />
     <Compile Include="Impl\Paging\AbstractPager.cs" />
     <Compile Include="Impl\Paging\FragmentedPureMemoryPager.cs" />
-    <Compile Include="Impl\Paging\FilePager.cs" />
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
     <Compile Include="Impl\Paging\TemporaryPage.cs" />
     <Compile Include="Impl\ScratchBufferPool.cs" />
@@ -145,7 +144,6 @@
     <Compile Include="Util\ImmutableAppendOnlyList.cs" />
     <Compile Include="Util\LZ4.cs" />
     <Compile Include="Util\MemoryUtils.cs" />
-    <Compile Include="Util\NativeFileMethods.cs" />
     <Compile Include="Impl\Backup\BackupMethods.cs" />
     <Compile Include="Util\DataCopier.cs" />
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
@@ -162,6 +160,8 @@
     <Compile Include="Impl\Paging\Win32\Win32NativeMethods.cs" />
     <Compile Include="Impl\Paging\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
     <Compile Include="Impl\Paging\Win32\Win32PureMemoryPager.cs" />
+    <Compile Include="Impl\Paging\Win32\Win32FilePager.cs" />
+    <Compile Include="Impl\Paging\Win32\Win32NativeFileMethods.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Util\Conversion\readme.txt" />
