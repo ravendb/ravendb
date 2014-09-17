@@ -35,8 +35,6 @@
 
         private int _refs;
 
-        public MemoryMappedViewAccessor Accessor;
-
         public MemoryMappedFile[] Files;
 
 		public AllocationInfo[] AllocationInfos;
@@ -61,17 +59,10 @@
 
         private void ReleaseInternal()
         {
-            if (Accessor != null)
-            {
-                Accessor.SafeMemoryMappedViewHandle.ReleasePointer();
-                Accessor.Dispose();
-                Accessor = null;
-            }
-
 			if (AllocationInfos != null)
 			{
 				foreach (var allocationInfo in AllocationInfos)
-					_pager.ReleaseAllocationInfo(allocationInfo.BaseAddress);
+					_pager.ReleaseAllocationInfo(allocationInfo.BaseAddress, allocationInfo.Size);
 			}
 
 			if (Files != null && DisposeFilesOnDispose)
