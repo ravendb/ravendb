@@ -37,8 +37,8 @@ namespace Raven.Database.Impl.DTC
 
 		public EsentInFlightTransactionalState(DocumentDatabase docDb,
 			TransactionalStorage storage,
-			CommitTransactionGrbit txMode, 
-			Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, 
+			CommitTransactionGrbit txMode,
+			Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut,
 			Func<string, Etag, TransactionInformation, bool> databaseDelete)
 			: base(databasePut, databaseDelete)
 		{
@@ -48,12 +48,12 @@ namespace Raven.Database.Impl.DTC
 			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 		}
 
-	    public EsentTransactionContext CreateEsentTransactionContext()
+		public EsentTransactionContext CreateEsentTransactionContext()
 		{
 			var newTransactionNumber = Interlocked.Increment(ref transactionContextNumber);
 			return new EsentTransactionContext(new Session(storage.Instance),
-			                                   new IntPtr(newTransactionNumber),
-			                                   SystemTime.UtcNow);
+											   new IntPtr(newTransactionNumber),
+											   SystemTime.UtcNow);
 		}
 
 		private void CleanupOldTransactions(object state)
@@ -92,7 +92,7 @@ namespace Raven.Database.Impl.DTC
 				//using(context.Session) - disposing the session is actually done in the rollback, which is always called
 				using (context.EnterSessionContext())
 				{
-				    context.Transaction.Commit(txMode);
+					context.Transaction.Commit(txMode);
 
 					if (context.DocumentIdsToTouch != null)
 					{
@@ -113,15 +113,15 @@ namespace Raven.Database.Impl.DTC
 										}
 										catch (ConcurrencyException)
 										{
-                                            log.Info("Concurrency exception when touching {0}", docId);
-               
+											log.Info("Concurrency exception when touching {0}", docId);
+
 										}
 									}
 								});
 							}
 						}
 					}
-					
+
 					foreach (var afterCommit in context.ActionsAfterCommit)
 					{
 						afterCommit();
@@ -148,23 +148,23 @@ namespace Raven.Database.Impl.DTC
 			}
 			try
 			{
-			    List<DocumentInTransactionData> changes = null;
-                using (storage.SetTransactionContext(context))
+				List<DocumentInTransactionData> changes = null;
+				using (storage.SetTransactionContext(context))
 				{
 					storage.Batch(accessor =>
 					{
-					    var documentsToTouch = RunOperationsInTransaction(id, out changes);
-					    context.DocumentIdsToTouch = documentsToTouch;
+						var documentsToTouch = RunOperationsInTransaction(id, out changes);
+						context.DocumentIdsToTouch = documentsToTouch;
 					});
 				}
 
-			    if (changes == null) 
-                    return;
+				if (changes == null)
+					return;
 
-			    // independent storage transaction, will actually commit here
-			    storage.Batch(accessor =>
-			    {
-			        var data = new RavenJObject
+				// independent storage transaction, will actually commit here
+				storage.Batch(accessor =>
+				{
+					var data = new RavenJObject
 			        {
 			            {"Changes", RavenJToken.FromObject(changes, new JsonSerializer
 			            {
@@ -178,9 +178,9 @@ namespace Raven.Database.Impl.DTC
 			            {"ResourceManagerId", resourceManagerId.ToString()},
 			            {"RecoveryInformation", recoveryInformation}
 			        };
-			        accessor.Lists.Set("Raven/Transactions/Pending", id, data,
-			            UuidType.DocumentTransactions);
-			    });
+					accessor.Lists.Set("Raven/Transactions/Pending", id, data,
+						UuidType.DocumentTransactions);
+				});
 			}
 			catch (Exception)
 			{
@@ -201,7 +201,7 @@ namespace Raven.Database.Impl.DTC
 			Monitor.Enter(context, ref lockTaken);
 			try
 			{
-                storage.Batch(accessor => accessor.Lists.Remove("Raven/Transactions/Pending", id));
+				storage.Batch(accessor => accessor.Lists.Remove("Raven/Transactions/Pending", id));
 
 				context.Dispose();
 			}
@@ -212,42 +212,31 @@ namespace Raven.Database.Impl.DTC
 			}
 		}
 
-        internal List<TransactionContextData> GetTransactionContextsData()
-	    {
-            var results = new List<TransactionContextData>();
+		internal List<TransactionContextData> GetTransactionContextsData()
+		{
+			var results = new List<TransactionContextData>();
 
-            try
-            {
+			foreach (var transactionName in transactionContexts.Keys)
+			{
+				EsentTransactionContext curContext;
+				if (!transactionContexts.TryGetValue(transactionName, out curContext))
+					continue;
 
-            
-            foreach (var transactionName in transactionContexts.Keys)
-            {
-                EsentTransactionContext curContext;
-                if (transactionContexts.TryGetValue(transactionName, out curContext))
-                {
-                    results.Add(new TransactionContextData(){
-                        
-                        Id = transactionName,
-                    CreatedAt = curContext.CreatedAt,
-                        DocumentIdsToTouch = curContext.DocumentIdsToTouch != null? curContext.DocumentIdsToTouch.ToList():null,
-                    IsAlreadyInContext = curContext.AlreadyInContext,
-                        NumberOfActionsAfterCommit = curContext.ActionsAfterCommit!= null?curContext.ActionsAfterCommit.Count:0
-                        });
-                }
-            }
+				var documentIdsToTouch = curContext.DocumentIdsToTouch;
+				var actionsAfterCommit = curContext.ActionsAfterCommit;
+				results.Add(new TransactionContextData()
+				{
 
-            }
-            catch (Exception ex)
-            {
+					Id = transactionName,
+					CreatedAt = curContext.CreatedAt,
+					DocumentIdsToTouch = documentIdsToTouch != null ? documentIdsToTouch.ToList() : null,
+					IsAlreadyInContext = curContext.AlreadyInContext,
+					NumberOfActionsAfterCommit = actionsAfterCommit != null ? actionsAfterCommit.Count : 0
+				});
+			}
+			return results;
+		}
 
-                throw;
-            }
-	        return  results;
-
-            
-            
-	    }
-      
 
 		public void Dispose()
 		{

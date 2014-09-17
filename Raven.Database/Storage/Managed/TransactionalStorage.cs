@@ -316,7 +316,7 @@ namespace Raven.Storage.Managed
 
         public List<TransactionContextData> GetTransactionContextsData()
         {
-            throw new NotImplementedException();
+            return new List<TransactionContextData>();
         }
     }
 }
