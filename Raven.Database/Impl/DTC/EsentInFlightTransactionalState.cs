@@ -16,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
+using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -57,21 +58,24 @@ namespace Raven.Database.Impl.DTC
 
 		private void CleanupOldTransactions(object state)
 		{
-			var oldestAllowedTransaction = SystemTime.UtcNow;
-            log.Info("Performing Transactions Cleanup Sequence for db {0}", docDb != null? docDb.Name:"unknown");
-			foreach (var ctx in transactionContexts.ToArray())
+			using (LogContext.WithDatabase(docDb.Name ?? Constants.SystemDatabase))
 			{
-				var age = oldestAllowedTransaction - ctx.Value.CreatedAt;
-				if (age.TotalMinutes >= 5)
+				var oldestAllowedTransaction = SystemTime.UtcNow;
+				log.Info("Performing Transactions Cleanup Sequence for db {0}", docDb.Name ?? Constants.SystemDatabase);
+				foreach (var ctx in transactionContexts.ToArray())
 				{
-					log.Info("Rolling back DTC transaction {0} because it is too old {1}", ctx.Key, age);
-					try
+					var age = oldestAllowedTransaction - ctx.Value.CreatedAt;
+					if (age.TotalMinutes >= 3)
 					{
-						Rollback(ctx.Key);
-					}
-					catch (Exception e)
-					{
-						log.WarnException("Could not properly rollback transaction", e);
+						log.Info("Rolling back DTC transaction {0} because it is too old {1}", ctx.Key, age);
+						try
+						{
+							Rollback(ctx.Key);
+						}
+						catch (Exception e)
+						{
+							log.WarnException("Could not properly rollback transaction", e);
+						}
 					}
 				}
 			}
