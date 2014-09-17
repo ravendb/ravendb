@@ -348,9 +348,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
             }
 
             if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename)))
-                ravenConfiguration.DefaultStorageTypeName = typeof(Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+                ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.VoronTypeName;
             else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
-                ravenConfiguration.DefaultStorageTypeName = typeof(Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
+                ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.EsentTypeName;
             
             ravenConfiguration.CustomizeValuesForTenant(filesystemName);
             ravenConfiguration.Initialize();
@@ -370,7 +370,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             {
                 if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))
                 {
-                    ravenConfiguration.DataDirectory = restoreRequest.DatabaseLocation;
+                    ravenConfiguration.FileSystem.DataDirectory = restoreRequest.DatabaseLocation;
                 }
 
                 using (var transactionalStorage = RavenFileSystem.CreateTransactionalStorage(ravenConfiguration))

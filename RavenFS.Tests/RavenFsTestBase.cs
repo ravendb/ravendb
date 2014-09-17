@@ -14,6 +14,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database;
@@ -27,10 +28,24 @@ using Raven.Client.FileSystem;
 
 using RavenFS.Tests.Tools;
 
+using Xunit;
+
 namespace RavenFS.Tests
 {
     public class RavenFsTestBase : WithNLog, IDisposable
     {
+        public static IEnumerable<object[]> Storages
+        {
+            get
+            {
+                return new[]
+				{
+					new object[] {"voron"},
+					new object[] {"esent"}
+				};
+            }
+        }
+
         private readonly List<RavenDbServer> servers = new List<RavenDbServer>();
         private readonly List<IFilesStore> filesStores = new List<IFilesStore>();
         private readonly List<IAsyncFilesCommands> asyncCommandClients = new List<IAsyncFilesCommands>();
@@ -49,7 +64,8 @@ namespace RavenFS.Tests
                                                     bool runInMemory = true,
                                                     string requestedStorage = null,
                                                     bool enableAuthentication = false,
-                                                    string fileSystemName = null)
+                                                    string fileSystemName = null,
+                                                    Action<RavenConfiguration> customConfig = null)
         {
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
             var storageType = GetDefaultStorageType(requestedStorage);
@@ -66,6 +82,12 @@ namespace RavenFS.Tests
 				DefaultStorageTypeName = storageType,
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,                
 			};
+
+            if (customConfig != null)
+            {
+                customConfig(ravenConfiguration);
+                ravenConfiguration.Initialize();
+            }
 
 	        ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
             ravenConfiguration.FileSystem.MaximumSynchronizationInterval = this.SynchronizationInterval;
@@ -96,11 +118,17 @@ namespace RavenFS.Tests
         }
 
         protected virtual IFilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
-                                                ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null)
+                                                ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null, 
+                                                bool runInMemory = true, Action<RavenConfiguration> customConfig = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            var server = CreateRavenDbServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage);
+            var server = CreateRavenDbServer(Ports[index], 
+                fileSystemName: fileSystemName,
+                enableAuthentication: enableAuthentication, 
+                customConfig: customConfig,
+                requestedStorage: requestedStorage, 
+                runInMemory:runInMemory);
 
             var store = new FilesStore()
             {
@@ -167,7 +195,6 @@ namespace RavenFS.Tests
 
         protected virtual void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
-
         }
 
         protected string NewDataPath(string prefix = null)
@@ -338,6 +365,34 @@ namespace RavenFS.Tests
             ms.Position = 0;
 
             return ms;
+        }
+
+        protected void WaitForBackup(string fileStoreName, bool checkError)
+        {
+            Func<string, JsonDocument> getDocument = fsName => servers.First().SystemDatabase.Documents.Get(BackupStatus.RavenFilesystemBackupStatusDocumentKey(fsName), null);
+            var done = SpinWait.SpinUntil(() =>
+            {
+                // We expect to get the doc from database that we tried to backup
+                var jsonDocument = getDocument(fileStoreName);
+                if (jsonDocument == null)
+                    return true;
+
+                var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
+                if (backupStatus.IsRunning == false)
+                {
+                    if (checkError)
+                    {
+                        var firstOrDefault =
+                            backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
+                        if (firstOrDefault != null)
+                            Assert.True(false, string.Format("{0}\n\nDetails: {1}", firstOrDefault.Message, firstOrDefault.Details));
+                    }
+
+                    return true;
+                }
+                return false;
+            }, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
+            Assert.True(done);
         }
     }
 }
