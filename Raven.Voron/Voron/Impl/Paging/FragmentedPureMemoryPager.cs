@@ -60,5 +60,10 @@ namespace Voron.Impl.Paging
 		{
 			return "memory";
 		}
+
+		public override unsafe void ReleaseAllocationInfo(byte* baseAddress, long size)
+		{
+			throw new NotSupportedException();
+		}
 	}
 }
