@@ -221,6 +221,7 @@
     <Compile Include="Prefetching\Prefetcher.cs" />
     <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\Responders\Admin\AdminDetailedSizeBreakdown.cs" />
+    <Compile Include="Server\Responders\TransactionsList.cs" />
     <Compile Include="Server\Responders\Debugging\DebugDocumentsCount.cs" />
     <Compile Include="Server\Responders\Debugging\DebugIndexFields.cs" />
     <Compile Include="Server\Responders\Debugging\DebugLists.cs" />
@@ -230,6 +231,7 @@
     <Compile Include="Server\Responders\Debugging\DebugPrefetchStatus.cs" />
     <Compile Include="Server\Responders\SingleAuthToken.cs" />
     <Compile Include="Server\Responders\TransactionPrepare.cs" />
+    <Compile Include="Server\Responders\TransactionsRollbackAll.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
@@ -833,6 +835,7 @@
     <Compile Include="Storage\Managed\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Managed\TasksStorageActions.cs" />
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
+    <Compile Include="Storage\TransactionContextData.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />

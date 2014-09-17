@@ -312,5 +312,11 @@ namespace Raven.Storage.Managed
 		{
 			persistenceSource.EnsureCapacity(value);
 		}
-	}
+
+
+        public List<TransactionContextData> GetTransactionContextsData()
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

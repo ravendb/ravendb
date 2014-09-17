@@ -7,8 +7,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
+using Mono.Cecil;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -42,7 +44,7 @@ namespace Raven.Database.Impl.DTC
 			this.storage = storage;
 			this.docDb = docDb;
 			this.txMode = txMode;
-			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 		}
 
 	    public EsentTransactionContext CreateEsentTransactionContext()
@@ -56,6 +58,7 @@ namespace Raven.Database.Impl.DTC
 		private void CleanupOldTransactions(object state)
 		{
 			var oldestAllowedTransaction = SystemTime.UtcNow;
+            log.Info("Performing Transactions Cleanup Sequence for db {0}", docDb != null? docDb.Name:"unknown");
 			foreach (var ctx in transactionContexts.ToArray())
 			{
 				var age = oldestAllowedTransaction - ctx.Value.CreatedAt;
@@ -204,6 +207,43 @@ namespace Raven.Database.Impl.DTC
 					Monitor.Exit(context);
 			}
 		}
+
+        internal List<TransactionContextData> GetTransactionContextsData()
+	    {
+            var results = new List<TransactionContextData>();
+
+            try
+            {
+
+            
+            foreach (var transactionName in transactionContexts.Keys)
+            {
+                EsentTransactionContext curContext;
+                if (transactionContexts.TryGetValue(transactionName, out curContext))
+                {
+                    results.Add(new TransactionContextData(){
+                        
+                        Id = transactionName,
+                    CreatedAt = curContext.CreatedAt,
+                        DocumentIdsToTouch = curContext.DocumentIdsToTouch != null? curContext.DocumentIdsToTouch.ToList():null,
+                    IsAlreadyInContext = curContext.AlreadyInContext,
+                        NumberOfActionsAfterCommit = curContext.ActionsAfterCommit!= null?curContext.ActionsAfterCommit.Count:0
+                        });
+                }
+            }
+
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+	        return  results;
+
+            
+            
+	    }
+      
 
 		public void Dispose()
 		{

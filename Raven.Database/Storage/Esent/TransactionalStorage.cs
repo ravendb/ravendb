@@ -758,5 +758,10 @@ namespace Raven.Storage.Esent
             Console.Write(message);
             Console.WriteLine();
         }
+
+        public List<TransactionContextData> GetTransactionContextsData()
+	    {
+            return inFlightTransactionalState.GetTransactionContextsData();
+	    }
     }
 }
