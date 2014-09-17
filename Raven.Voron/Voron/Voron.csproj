@@ -96,7 +96,7 @@
     <Compile Include="Impl\Journal\PureMemoryJournalWriter.cs" />
     <Compile Include="Impl\Journal\TransactionHeader.cs" />
     <Compile Include="Impl\Journal\TransactionMarker.cs" />
-    <Compile Include="Impl\Journal\Win32JournalWriter.cs" />
+    <Compile Include="Platform\Win32\Win32JournalWriter.cs" />
     <Compile Include="Impl\Journal\WriteAheadJournal.cs" />
     <Compile Include="Impl\PagerState.cs" />
     <Compile Include="Impl\Paging\AbstractPager.cs" />
@@ -155,13 +155,9 @@
     <Compile Include="Util\PageTable.cs" />
     <Compile Include="ValueReader.cs" />
     <Compile Include="Impl\StdLib.cs" />
-    <Compile Include="Impl\Paging\Win32\Win32MemoryMapNativeMethods.cs" />
-    <Compile Include="Impl\Paging\Win32\Win32MemoryMapPager.cs" />
-    <Compile Include="Impl\Paging\Win32\Win32NativeMethods.cs" />
-    <Compile Include="Impl\Paging\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
-    <Compile Include="Impl\Paging\Win32\Win32PureMemoryPager.cs" />
-    <Compile Include="Impl\Paging\Win32\Win32FilePager.cs" />
-    <Compile Include="Impl\Paging\Win32\Win32NativeFileMethods.cs" />
+    <Compile Include="Platform\Win32\Win32MemoryMapPager.cs" />
+    <Compile Include="Platform\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
+    <Compile Include="Platform\Win32\NativeMethods.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Util\Conversion\readme.txt" />
@@ -178,7 +174,5 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-  <ItemGroup>
-    <Folder Include="Impl\Paging\Win32\" />
-  </ItemGroup>
+  <ItemGroup />
 </Project>

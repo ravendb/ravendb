@@ -8,7 +8,7 @@ using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
-using Voron.Impl.Paging.Win32;
+using Voron.Platform.Win32;
 using Voron.Util;
 
 namespace Voron

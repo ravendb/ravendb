@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Voron.Impl;
-using Voron.Impl.Paging.Win32;
+using Voron.Platform.Win32;
 using Xunit;
 using Xunit.Extensions;
 

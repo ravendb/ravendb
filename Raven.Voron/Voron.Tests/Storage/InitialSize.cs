@@ -7,7 +7,7 @@ using System;
 using System.IO;
 
 using Voron.Impl;
-using Voron.Impl.Paging.Win32;
+using Voron.Platform.Win32;
 using Xunit;
 
 namespace Voron.Tests.Storage

@@ -6,10 +6,12 @@ using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Voron.Impl;
+using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
 
-namespace Voron.Impl.Paging.Win32
+namespace Voron.Platform.Win32
 {
 	public unsafe class Win32PageFileBackedMemoryMappedPager : AbstractPager
 	{
