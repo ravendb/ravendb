@@ -299,5 +299,9 @@ namespace Voron.Impl.Paging
 			base.Dispose();
 		}
 
+		public override void ReleaseAllocationInfo(byte* baseAddress)
+		{
+			MemoryMapNativeMethods.UnmapViewOfFile(baseAddress);
+		}
 	}
 }

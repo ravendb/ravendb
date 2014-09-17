@@ -145,7 +145,7 @@ namespace Voron.Impl.Paging
             return _fileInfo.Name;
         }
 
-        public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
+	    public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
         {
             if (_fileInfo.Extension == ".voron" && pagePosition > 1)
             {

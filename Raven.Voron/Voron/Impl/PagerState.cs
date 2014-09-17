@@ -71,7 +71,7 @@
 			if (AllocationInfos != null)
 			{
 				foreach (var allocationInfo in AllocationInfos)
-					MemoryMapNativeMethods.UnmapViewOfFile(allocationInfo.BaseAddress);
+					_pager.ReleaseAllocationInfo(allocationInfo.BaseAddress);
 			}
 
 			if (Files != null && DisposeFilesOnDispose)

@@ -311,5 +311,10 @@ namespace Voron.Impl.Paging
 
 			return newPager;
 		}
+
+		public override unsafe void ReleaseAllocationInfo(byte* baseAddress)
+		{
+			MemoryMapNativeMethods.UnmapViewOfFile(baseAddress);
+		}
 	}
 }
