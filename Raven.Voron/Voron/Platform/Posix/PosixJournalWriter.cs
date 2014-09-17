@@ -25,7 +25,8 @@ namespace Voron.Platform.Posix
 		{
 			_filename = filename;
 
-			_fd = Syscall.open(filename, OpenFlags.O_WRONLY | OpenFlags.O_SYNC | OpenFlags.O_CREAT);
+			_fd = Syscall.open(filename, OpenFlags.O_WRONLY | OpenFlags.O_SYNC | OpenFlags.O_CREAT,
+			                   FilePermissions.ALLPERMS);
 			if (_fd == -1)
 			{
 				PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());

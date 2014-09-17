@@ -20,12 +20,13 @@ namespace Voron.Platform.Posix
 			if (Enum.IsDefined(typeof(Errno), lastError) == false)
 				throw new InvalidOperationException("Unknown errror " + lastError);
 			var error = (Errno)lastError;
-			throw new InvalidOperationException(error.ToString());
+//			throw new InvalidOperationException(error.ToString());
 		}
 
 		public static unsafe void WriteFileHeader(FileHeader* header, string path)
 		{
-			var fd = Syscall.open(path, OpenFlags.O_WRONLY | OpenFlags.O_CREAT);
+			var fd = Syscall.open(path, OpenFlags.O_WRONLY | OpenFlags.O_CREAT,
+			                      FilePermissions.ALLPERMS);
 			try
 			{
 				if (fd == -1)

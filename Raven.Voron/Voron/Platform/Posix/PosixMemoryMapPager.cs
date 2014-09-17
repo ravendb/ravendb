@@ -20,7 +20,8 @@ namespace Voron.Platform.Posix
 		public PosixMemoryMapPager(string file, long? initialFileSize = null)
 		{
 			_file = file;
-			_fd = Syscall.open(file, OpenFlags.O_RDONLY);
+			_fd = Syscall.open(file, OpenFlags.O_RDWR|OpenFlags.O_CREAT,
+			                   FilePermissions.ALLPERMS);
 			if (_fd == -1)
 				PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
 
@@ -30,7 +31,14 @@ namespace Voron.Platform.Posix
 			if (_totalAllocationSize == 0 && initialFileSize.HasValue)
 			{
 				_totalAllocationSize = NearestSizeToPageSize(initialFileSize.Value);
-				Syscall.posix_fallocate(_fd, 0, (ulong)_totalAllocationSize);
+			}
+			if (_totalAllocationSize == 0 || _totalAllocationSize % SysPageSize != 0) 
+			{
+				_totalAllocationSize = NearestSizeToPageSize(_totalAllocationSize);
+				var result = Syscall.posix_fallocate (_fd, 0, (ulong)_totalAllocationSize);
+				if (result != 0)
+					PosixHelper.ThrowLastError (result);
+
 			}
 
 			NumberOfAllocatedPages = _totalAllocationSize / PageSize;
@@ -40,6 +48,9 @@ namespace Voron.Platform.Posix
 
 		private long NearestSizeToPageSize(long size)
 		{
+			if (size == 0)
+				return SysPageSize * 16;
+
 			var mod = size%SysPageSize;
 			if (mod == 0)
 			{
@@ -146,7 +157,9 @@ namespace Voron.Platform.Posix
 		private PagerState CreatePagerState()
 		{
 			var fileSize = GetFileSize();
-			var startingBaseAddressPtr = Syscall.mmap(IntPtr.Zero, (ulong)fileSize, MmapProts.PROT_READ | MmapProts.PROT_WRITE, 0, _fd, 0);
+			var startingBaseAddressPtr = Syscall.mmap(IntPtr.Zero, (ulong)fileSize,
+			                                          MmapProts.PROT_READ | MmapProts.PROT_WRITE,
+			                                          MmapFlags.MAP_PRIVATE, _fd, 0);
 
 			if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
 				PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
