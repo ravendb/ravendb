@@ -37,7 +37,7 @@ namespace Voron.Platform.Win32
 			PagerState.Release();
 			Debug.Assert(AllocationGranularity % PageSize == 0);
 			NumberOfAllocatedPages = _totalAllocationSize / PageSize;
-			PagerState = CreateInitialPagerState(_totalAllocationSize, null);
+			PagerState = CreateInitialPagerState(_totalAllocationSize);
 		}
 
 		protected override string GetSourceName()
@@ -78,9 +78,6 @@ namespace Voron.Platform.Win32
 				return;
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
-
-			if (_totalAllocationSize + allocationSize >= long.MaxValue) //probably would never be true, but just in case
-				throw new OutOfMemoryException("failed to allocated more pages - reached maximum allowed space usage");
 
 		    if (TryAllocateMoreContinuousPages(allocationSize) == false)
 		    {
@@ -279,7 +276,7 @@ namespace Voron.Platform.Win32
 		    return ((size/AllocationGranularity) + 1)*AllocationGranularity;
 		}
 
-		private PagerState CreateInitialPagerState(long size, byte* requestedBaseAddress)
+		private PagerState CreateInitialPagerState(long size)
 		{
 			var allocationSize = NearestSizeToAllocationGranularity(size);
 			var mmf = MemoryMappedFile.CreateNew(null, allocationSize, MemoryMappedFileAccess.ReadWrite);
@@ -291,7 +288,7 @@ namespace Voron.Platform.Win32
 			                                                                         Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write,
 				0, 0,
 				UIntPtr.Zero, //map all what was "reserved" in CreateFileMapping on previous row
-				requestedBaseAddress);
+				null);
 
 			if (startingBaseAddressPtr == (byte*)0) //system didn't succeed in mapping the address where we wanted
 				throw new Win32Exception();
@@ -306,7 +303,6 @@ namespace Voron.Platform.Win32
 			var newPager = new PagerState(this)
 			{
 				Files = new[] { mmf },
-				Accessor = null, //not available since MapViewOfFileEx is used (instead of MapViewOfFile - which is used in managed wrapper)
 				MapBase = startingBaseAddressPtr,
 				AllocationInfos = new[] { allocationInfo }
 			};
@@ -316,9 +312,10 @@ namespace Voron.Platform.Win32
 			return newPager;
 		}
 
-		public override void ReleaseAllocationInfo(byte* baseAddress)
+		public override void ReleaseAllocationInfo(byte* baseAddress, long size)
 		{
-			Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress);
+			if(Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress) ==false)
+				throw new Win32Exception();
 		}
 	}
 }

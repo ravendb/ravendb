@@ -117,9 +117,6 @@ namespace Voron.Platform.Win32
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-			if (_totalAllocationSize + allocationSize >= long.MaxValue) //probably would never be true, but just in case
-				throw new OutOfMemoryException("failed to allocated more pages - reached maximum allowed space usage");
-
 			_fileStream.SetLength(_totalAllocationSize + allocationSize);
 			if (TryAllocateMoreContinuousPages(allocationSize) == false)
 			{
@@ -227,7 +224,6 @@ namespace Voron.Platform.Win32
 			var newPager = new PagerState(this)
 			{
 				Files = new[] { mmf },
-				Accessor = null, //not available since MapViewOfFileEx is used (instead of MapViewOfFile - which is used in managed wrapper)
 				MapBase = startingBaseAddressPtr,
 				AllocationInfos = new[] { allocationInfo }
 			};
@@ -299,9 +295,10 @@ namespace Voron.Platform.Win32
 			base.Dispose();
 		}
 
-		public override void ReleaseAllocationInfo(byte* baseAddress)
+		public override void ReleaseAllocationInfo(byte* baseAddress, long size)
 		{
-			Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress);
+			if (Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress) == false)
+				throw new Win32Exception();
 		}
 	}
 }

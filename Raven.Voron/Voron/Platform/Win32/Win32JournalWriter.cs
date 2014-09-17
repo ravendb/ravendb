@@ -68,6 +68,7 @@ namespace Voron.Impl.Journal
 			{
 				if(IntPtr.Size == 4)
 					_segments[i].Alignment = (ulong) pages[i];
+
 				else
 					_segments[i].Buffer = pages[i];
 			}
@@ -140,6 +141,9 @@ namespace Voron.Impl.Journal
 					}
 					count -= read;
 					buffer += read;
+					position += read;
+					nativeOverlapped->OffsetLow = (int) (position & 0xffffffff);
+					nativeOverlapped->OffsetHigh = (int) (position >> 32);
 				}
 				return true;
 			}
