@@ -132,7 +132,7 @@ namespace Voron.Impl.Scratch
 			PageFromScratchBuffer value;
 			if (_allocatedPages.TryGetValue(page, out value) == false)
 			{
-				return;
+				throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
 			}
 
 			_allocatedPages.Remove(page);

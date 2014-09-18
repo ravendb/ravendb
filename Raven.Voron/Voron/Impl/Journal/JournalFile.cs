@@ -183,8 +183,11 @@ namespace Voron.Impl.Journal
 			    var pageNumber = scratchPage.PageNumber;
 
 				PagePosition value;
-				if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
-					unused.Add(value);
+			    if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
+			    {
+				    value.UnusedInPTT = true;
+				    unused.Add(value);
+			    }
 
 				PagePosition pagePosition;
 				if (ptt.TryGetValue(pageNumber, out pagePosition) && pagePosition.IsFreedPageMarker == false)
@@ -245,6 +248,14 @@ namespace Voron.Impl.Journal
 			{
 				if (page.IsFreedPageMarker)
 					continue;
+
+				if (page.UnusedInPTT) // to prevent freeing a page that was already freed as unusedAndFree
+				{
+					// the page could be either freed in the current run, then just skip it to avoid freeing an unallocated page, or
+					// it could be released in an earlier run, but it still resided in PTT because a under a relevant page number of PTT 
+					// there were overwrites by newer transactions (> lastSyncedTransactionId) and we didn't remove it from there
+					continue;
+				}
 
 				tx.Environment.ScratchBufferPool.Free(page.ScratchNumber, page.ScratchPos, tx.Id);
 			}

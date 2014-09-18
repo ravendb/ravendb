@@ -32,6 +32,7 @@ namespace Voron.Impl
 		public long JournalNumber;
 		public int ScratchNumber;
 		public bool IsFreedPageMarker;
+		public bool UnusedInPTT;
 
 		public override bool Equals(object obj)
 		{
