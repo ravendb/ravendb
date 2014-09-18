@@ -21,15 +21,52 @@ namespace Voron.Tryout
 	{
 		public static void Main()
 		{
-			using (var env = new StorageEnvironment (StorageEnvironmentOptions.ForPath ("VRN"))) 
+			var path = "v4";
+			if (Directory.Exists (path))
+				Directory.Delete (path, true);
+			Console.WriteLine (Process.GetCurrentProcess().Id);
+
+			using (var env = new StorageEnvironment (StorageEnvironmentOptions.ForPath (path))) 
 			{
 				var batch = new WriteBatch ();
 				batch.Add ("ayende@ayende.com", "Oren Eini", "Names");
 				env.Writer.Write (batch);
+
+				using (var snp = env.CreateSnapshot()) 
+				{
+					var reader = snp.Read ("Names", "ayende@ayende.com");
+					if (reader == null) 
+					{
+						Console.WriteLine ("Couldn't find it");
+					} 
+					else 
+					{
+						Console.WriteLine (reader.Reader.ToStringValue());
+					}
+				}
 			}
 
-			using (var env = new StorageEnvironment (StorageEnvironmentOptions.ForPath ("VRN"))) 
+			Console.WriteLine (Process.GetCurrentProcess().Id);
+			using (var env = new StorageEnvironment (StorageEnvironmentOptions.ForPath (path))) 
 			{
+				using (var snp = env.CreateSnapshot()) 
+				{
+					var reader = snp.Read ("Names", "ayende@ayende.com");
+					if (reader == null) 
+					{
+						Console.WriteLine ("Couldn't find it");
+					} 
+					else 
+					{
+						Console.WriteLine (reader.Reader.ToStringValue());
+					}
+				}
+			}
+
+
+			using (var env = new StorageEnvironment (StorageEnvironmentOptions.ForPath (path))) 
+			{
+
 				using (var snp = env.CreateSnapshot()) 
 				{
 					var reader = snp.Read ("Names", "ayende@ayende.com");
