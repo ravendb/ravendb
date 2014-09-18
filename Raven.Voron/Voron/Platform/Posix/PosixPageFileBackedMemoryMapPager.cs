@@ -21,7 +21,7 @@ namespace Voron
 		{
 			var instanceId = Interlocked.Increment(ref _counter);
 			_file = "/" + instanceId + "-" + file;
-			_fd = Rt.shm_open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT, 0600);
+			_fd = Rt.shm_open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT, 0600);
 			if (_fd == -1)
 				PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
 
@@ -180,7 +180,8 @@ namespace Voron
 			base.Dispose ();
 			if (_fd != -1) 
 			{
-				Rt.shm_unlink (_fd);
+				Syscall.close (_fd);
+				Rt.shm_unlink (_file);
 				_fd = -1;
 			}		
 		}
