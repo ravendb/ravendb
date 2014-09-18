@@ -497,9 +497,18 @@ interface databaseDocumentDto {
 }
 
 interface restoreRequestDto {
-    RestoreLocation: string;
-    DatabaseLocation: string;
+    BackupLocation: string;
+    
+}
+
+interface databaseRestoreRequestDto extends restoreRequestDto {
     DatabaseName: string;
+    DatabaseLocation: string;
+}
+
+interface filesystemRestoreRequestDto extends restoreRequestDto {
+    FilesystemName: string;
+    FilesystemLocation: string;
 }
 
 interface restoreStatusDto {

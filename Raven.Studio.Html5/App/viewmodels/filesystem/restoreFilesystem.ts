@@ -1,13 +1,14 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import database = require("models/database");
+import filesystem = require("models/filesystem/filesystem");
 
-class restoreDatabase extends viewModelBase {
+class restoreFilesystem extends viewModelBase {
 
     defrag = ko.observable<boolean>(false);
     backupLocation = ko.observable<string>('');
-    databaseLocation = ko.observable<string>();
-    databaseName = ko.observable<string>();
+    filesystemLocation = ko.observable<string>();
+    filesystemName = ko.observable<string>();
     nameCustomValidityError: KnockoutComputed<string>;
 
     restoreStatusMessages = ko.observableArray<string>();
@@ -18,11 +19,11 @@ class restoreDatabase extends viewModelBase {
 
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
-            var newDatabaseName = this.databaseName();
-            var foundDb = shell.databases.first((db: database) => newDatabaseName == db.name);
+            var newFilesystemName = this.filesystemName();
+            var foundFs = shell.fileSystems.first((fs: filesystem) => newFilesystemName == fs.name);
 
-            if (!!foundDb && newDatabaseName.length > 0) {
-                errorMessage = "Database name already exists!";
+            if (!!foundFs && newFilesystemName.length > 0) {
+                errorMessage = "Filesystem name already exists!";
             }
 
             return errorMessage;
@@ -36,21 +37,21 @@ class restoreDatabase extends viewModelBase {
     startRestore() {
         this.isBusy(true);
 
-        var restoreDatabaseDto: databaseRestoreRequestDto = {
+        var restoreFilesystemDto: filesystemRestoreRequestDto = {
             BackupLocation: this.backupLocation(),
-            DatabaseLocation: this.databaseLocation(),
-            DatabaseName: this.databaseName()
+            FilesystemLocation: this.filesystemLocation(),
+            FilesystemName: this.filesystemName()
         };
         var updateRestoreStatus = (newRestoreStatus: restoreStatusDto) => {
             this.restoreStatusMessages(newRestoreStatus.Messages);
             this.isBusy(!!newRestoreStatus.IsRunning);
         };
 
-        require(["commands/startRestoreCommand"], startRestoreCommand => {
-            new startRestoreCommand(this.defrag(), restoreDatabaseDto, updateRestoreStatus)
+        require(["commands/filesystem/startRestoreCommand"], startRestoreCommand => {
+            new startRestoreCommand(this.defrag(), restoreFilesystemDto, updateRestoreStatus)
                 .execute();
         });
     }
 }
 
-export = restoreDatabase;  
+export = restoreFilesystem;  

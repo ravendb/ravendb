@@ -19,6 +19,8 @@ class adminSettings extends viewModelBase {
         var backupDatabaseRoute = { route: 'admin/settings/backupDatabase', moduleId: 'viewmodels/backupDatabase', title: 'Backup Database', nav: true, hash: appUrl.forBackupDatabase() };
         var compactDatabaseRoute = { route: 'admin/settings/compactDatabase', moduleId: 'viewmodels/compactDatabase', title: 'Compact Database', nav: true, hash: appUrl.forCompactDatabase() };
         var restoreDatabaseRoute = { route: 'admin/settings/restoreDatabase', moduleId: 'viewmodels/restoreDatabase', title: 'Restore Database', nav: true, hash: appUrl.forRestoreDatabase() };
+        var backupFilesystemRoute = { route: 'admin/settings/backupFilesystem', moduleId: 'viewmodels/filesystem/backupFilesystem', title: 'Backup Filesystem', nav: true, hash: appUrl.forBackupFilesystem() };
+        var restoreFilesystemRoute = { route: 'admin/settings/restoreFilesystem', moduleId: 'viewmodels/filesystem/restoreFilesystem', title: 'Restore Filesystem', nav: true, hash: appUrl.forRestoreFilesystem() };
         var adminLogsRoute = { route: 'admin/settings/adminLogs', moduleId: 'viewmodels/adminLogs', title: 'Admin Logs', nav: true, hash: appUrl.forAdminLogs() };
         var trafficWatchRoute = { route: 'admin/settings/trafficWatch', moduleId: 'viewmodels/trafficWatch', title: 'Traffic Watch', nav: true, hash: appUrl.forTrafficWatch() };
         var debugInfoRoute = { route: 'admin/settings/debugInfo', moduleId: 'viewmodels/infoPackage', title: 'Gather Debug Info', nav: true, hash: appUrl.forDebugInfo() };
@@ -31,6 +33,8 @@ class adminSettings extends viewModelBase {
                 backupDatabaseRoute,
                 compactDatabaseRoute,
                 restoreDatabaseRoute,
+                backupFilesystemRoute, 
+                restoreFilesystemRoute,
                 adminLogsRoute,
                 trafficWatchRoute,
                 debugInfoRoute,

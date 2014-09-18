@@ -356,8 +356,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
             ravenConfiguration.Initialize();
 
             string documentDataDir;
-            ravenConfiguration.FileSystem.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, filesystemName, out documentDataDir);
-            restoreRequest.DatabaseLocation = ravenConfiguration.FileSystem.DataDirectory;
+            ravenConfiguration.FileSystem.DataDirectory = ResolveTenantDataDirectory(restoreRequest.FilesystemLocation, filesystemName, out documentDataDir);
+            restoreRequest.FilesystemLocation = ravenConfiguration.FileSystem.DataDirectory;
             
             DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, null);
 
@@ -368,9 +368,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
             //TODO: add task to pending task list like in ImportDatabase
             Task.Factory.StartNew(() =>
             {
-                if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))
+                if (!string.IsNullOrWhiteSpace(restoreRequest.FilesystemLocation))
                 {
-                    ravenConfiguration.FileSystem.DataDirectory = restoreRequest.DatabaseLocation;
+                    ravenConfiguration.FileSystem.DataDirectory = restoreRequest.FilesystemLocation;
                 }
 
                 using (var transactionalStorage = RavenFileSystem.CreateTransactionalStorage(ravenConfiguration))
@@ -403,25 +403,25 @@ namespace Raven.Database.Server.RavenFS.Controllers
             return GetEmptyMessage();
         }
 
-        private string ResolveTenantDataDirectory(string databaseLocation, string filesystemName, out string documentDataDir)
+        private string ResolveTenantDataDirectory(string filesystemLocation, string filesystemName, out string documentDataDir)
         {
-            if (Path.IsPathRooted(databaseLocation))
+            if (Path.IsPathRooted(filesystemLocation))
             {
-                documentDataDir = databaseLocation;
-                return databaseLocation;
+                documentDataDir = filesystemLocation;
+                return filesystemLocation;
             }
 
             var baseDataPath = Path.GetDirectoryName(DatabasesLandlord.SystemDatabase.Configuration.DataDirectory);
             if (baseDataPath == null)
                 throw new InvalidOperationException("Could not find root data path");
 
-            if (string.IsNullOrWhiteSpace(databaseLocation))
+            if (string.IsNullOrWhiteSpace(filesystemLocation))
             {
                 documentDataDir = Path.Combine("~\\Filesystems", filesystemName);
                 return Raven.Database.Extensions.IOExtensions.ToFullPath(documentDataDir, baseDataPath);
             }
 
-            documentDataDir = databaseLocation;
+            documentDataDir = filesystemLocation;
 
             if (!documentDataDir.StartsWith("~/") && !documentDataDir.StartsWith(@"~\"))
             {

@@ -28,10 +28,13 @@ namespace RavenFS.Tests.Storage
     /// </summary>
     public class BackupRestoreTests : RavenFsTestBase
     {
+        private readonly string DataDir;
+
         private readonly string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BackupRestoreTests.Backup");
 
         public BackupRestoreTests()
         {
+            DataDir = NewDataPath("DataDirectory");
             IOExtensions.DeleteDirectory(backupDir);
         }
 
@@ -43,7 +46,7 @@ namespace RavenFS.Tests.Storage
 
         [Theory]
         [PropertyData("Storages")]
-        public async Task CanRestoreBackupToDifferentFilesystem(string requestedStorage) //TODO: change test name and write more for other types
+        public async Task CanRestoreBackupToDifferentFilesystem(string requestedStorage)
         {
             using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false))
             {
@@ -60,7 +63,8 @@ namespace RavenFS.Tests.Storage
                 await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
                 {
                     BackupLocation = backupDir,
-                    FilesystemName = "NewFS"
+                    FilesystemName = "NewFS",
+                    FilesystemLocation = DataDir
                 });
 
                 SpinWait.SpinUntil(() => store.AsyncFilesCommands.Admin.GetNamesAsync().Result.Contains("NewFS"),
@@ -77,7 +81,7 @@ namespace RavenFS.Tests.Storage
 
         [Theory]
         [PropertyData("Storages")]
-        public async Task CanRestoreIncrementalBackupToDifferentFilesystem(string requestedStorage) //TODO: change test name and write more for other types
+        public async Task CanRestoreIncrementalBackupToDifferentFilesystem(string requestedStorage)
         {
             using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig:config =>
             {
@@ -104,7 +108,8 @@ namespace RavenFS.Tests.Storage
                 await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
                                                                   {
                                                                       BackupLocation = backupDir,
-                                                                      FilesystemName = "NewFS"
+                                                                      FilesystemName = "NewFS",
+                                                                      FilesystemLocation = DataDir
                                                                   });
 
                 SpinWait.SpinUntil(() => store.AsyncFilesCommands.Admin.GetNamesAsync().Result.Contains("NewFS"),

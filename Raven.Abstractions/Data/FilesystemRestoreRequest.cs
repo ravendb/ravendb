@@ -10,5 +10,7 @@ namespace Raven.Abstractions.Data
     public class FilesystemRestoreRequest : AbstractRestoreRequest
 	{
 		public string FilesystemName { get; set; }
+
+        public string FilesystemLocation { get; set; }
 	}
 }

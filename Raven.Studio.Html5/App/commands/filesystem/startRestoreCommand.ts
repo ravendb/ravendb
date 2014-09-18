@@ -6,21 +6,21 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 class startRestoreCommand extends commandBase {
     private db: database = new database("<system>");
 
-    constructor(private defrag: boolean, private restoreRequest: databaseRestoreRequestDto, private updateRestoreStatus: (restoreStatusDto) => void) {
+    constructor(private defrag: boolean, private restoreRequest: filesystemRestoreRequestDto, private updateRestoreStatus: (restoreStatusDto) => void) {
         super();
     }
 
     execute(): JQueryPromise<any> {
         var result = $.Deferred();
 
-        new deleteDocumentCommand('Raven/Restore/Status', this.db)
+        new deleteDocumentCommand('Raven/FileSystem/Restore/Status/' + this.restoreRequest.FilesystemName, this.db)
             .execute()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to delete restore status document!", response.responseText, response.statusText);
                 result.reject();
             })
             .done(_=> {
-            this.post('/admin/restore?defrag=' + this.defrag, ko.toJSON(this.restoreRequest), null, { dataType: 'text' })
+            this.post('/admin/fs/restore?defrag=' + this.defrag, ko.toJSON(this.restoreRequest), null, { dataType: 'text' })
                 .fail((response: JQueryXHR) => {
                     this.reportError("Failed to restore backup!", response.responseText, response.statusText);
                     this.logError(response, result);
@@ -39,7 +39,7 @@ class startRestoreCommand extends commandBase {
     }
 
     private getRestoreStatus(result: JQueryDeferred<any>) {
-        new getDocumentWithMetadataCommand("Raven/Restore/Status", this.db)
+        new getDocumentWithMetadataCommand("Raven/FileSystem/Restore/Status/" + this.restoreRequest.FilesystemName, this.db)
             .execute()
             .fail((response: JQueryXHR) => {
                 setTimeout(() => this.getRestoreStatus(result), 1000);
@@ -47,10 +47,9 @@ class startRestoreCommand extends commandBase {
             .done((restoreStatus: restoreStatusDto)=> {
                 var lastMessage = restoreStatus.Messages.last();
                 var isRestoreFinished =
-                    lastMessage.contains("The new database was created") ||
+                    lastMessage.contains("The new filesystem was created") ||
                     lastMessage.contains("Restore Canceled") ||
-                    lastMessage.contains("A database name must be supplied if the restore location does not contain a valid Database.Document file") ||
-                    lastMessage.contains("Cannot do an online restore for the <system> database") ||
+                    lastMessage.contains("A filesystem name must be supplied if the restore location does not contain a valid") ||
                     lastMessage.contains("Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name");
 
                 restoreStatus.IsRunning = !isRestoreFinished;
@@ -59,7 +58,7 @@ class startRestoreCommand extends commandBase {
                 if (!isRestoreFinished) {
                     setTimeout(() => this.getRestoreStatus(result), 1000);
                 } else {
-                    this.reportSuccess("Database was successfully restored!");
+                    this.reportSuccess("Filesystem was successfully restored!");
                     result.resolve();
                 }
             });

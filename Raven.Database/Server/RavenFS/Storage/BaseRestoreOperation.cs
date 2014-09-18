@@ -18,17 +18,17 @@ namespace Raven.Database.Server.RavenFS.Storage
 
         protected readonly string backupLocation;
 
-        protected readonly AbstractRestoreRequest _restoreRequest;
+        protected readonly FilesystemRestoreRequest _restoreRequest;
         protected readonly InMemoryRavenConfiguration Configuration;
         protected readonly string databaseLocation, indexLocation, journalLocation;
 
-        protected BaseRestoreOperation(AbstractRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> output)
+        protected BaseRestoreOperation(FilesystemRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> output)
         {
             _restoreRequest = restoreRequest;
             backupLocation = restoreRequest.BackupLocation;
-            databaseLocation = _restoreRequest.DatabaseLocation.ToFullPath();
-			indexLocation = (_restoreRequest.IndexesLocation ?? Path.Combine(_restoreRequest.DatabaseLocation, "Indexes")).ToFullPath();
-            journalLocation = (_restoreRequest.JournalsLocation ?? _restoreRequest.DatabaseLocation).ToFullPath();
+            databaseLocation = _restoreRequest.FilesystemLocation.ToFullPath();
+            indexLocation = (_restoreRequest.IndexesLocation ?? Path.Combine(_restoreRequest.FilesystemLocation, "Indexes")).ToFullPath();
+            journalLocation = (_restoreRequest.JournalsLocation ?? _restoreRequest.FilesystemLocation).ToFullPath();
             Configuration = configuration;
             this.output = output;			
         }

@@ -10,5 +10,7 @@ namespace Raven.Abstractions.Data
     public class DatabaseRestoreRequest : AbstractRestoreRequest
 	{
 		public string DatabaseName { get; set; }
+
+        public string DatabaseLocation { get; set; }
 	}
 }

@@ -14,8 +14,6 @@ namespace Raven.Abstractions.Data
         [Obsolete]
 		public string RestoreLocation { get { return BackupLocation; } set { BackupLocation = value; } }
 
-		public string DatabaseLocation { get; set; }
-
         public string JournalsLocation { get; set; }
         public string IndexesLocation { get; set; }
 	    public bool Defrag { get; set; }
