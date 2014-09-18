@@ -443,7 +443,7 @@ class shell extends viewModelBase {
         shell.databases(databases.concat([this.systemDatabase]));
     }
 
-    private fileSystemsLoaded(fileSystems: filesystem[]) {
+    private static fileSystemsLoaded(fileSystems: filesystem[]) {
         shell.fileSystems(fileSystems);
     }
 
@@ -454,6 +454,12 @@ class shell extends viewModelBase {
     launchDocEditor(docId?: string, docsList?: pagedList) {
         var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null, this.activeDatabase());
         this.navigate(editDocUrl);
+    }
+
+    static loadFileSystems() {
+        return new getFileSystemsCommand()
+            .execute()
+            .done((results: filesystem[]) => shell.fileSystemsLoaded(results));
     }
 
     connectToRavenServer() {
@@ -469,9 +475,7 @@ class shell extends viewModelBase {
                 router.activate();
             });
 
-        var fileSystemsLoadedTask: JQueryPromise<any> = new getFileSystemsCommand()
-            .execute()
-            .done((results: filesystem[]) => this.fileSystemsLoaded(results));
+        var fileSystemsLoadedTask: JQueryPromise<any> = shell.loadFileSystems();
 
         var counterStoragesLoadedTask: JQueryPromise < any> = new getCounterStoragesCommand()
             .execute()

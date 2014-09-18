@@ -6,7 +6,7 @@ import appUrl = require("common/appUrl");
 
 class backupFilesystemCommand extends commandBase {
 
-    constructor(private fs: filesystem, private backupLocation: string, private updateBackupStatus: (backupStatusDto) => void) {
+    constructor(private fs: filesystem, private backupLocation: string, private updateBackupStatus: (backupStatusDto) => void, private incremental: boolean) {
         super();
     }
 
@@ -17,7 +17,7 @@ class backupFilesystemCommand extends commandBase {
                     BackupLocation: this.backupLocation,
                     DatabaseDocument: null
                 };
-        this.post('/admin/fs/backup', JSON.stringify(args), this.fs, { dataType: 'text' })
+        this.post('/admin/fs/backup?incremental=' + this.incremental, JSON.stringify(args), this.fs, { dataType: 'text' })
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to create backup!", response.responseText, response.statusText);
                 result.reject();

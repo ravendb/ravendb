@@ -4,6 +4,7 @@ import filesystem = require("models/filesystem/filesystem");
 
 class backupFilesystem extends viewModelBase {
 
+    incremental = ko.observable<boolean>(false);
     filesystemName = ko.observable<string>('');
     backupLocation = ko.observable<string>('');
     backupStatusMessages = ko.observableArray<backupMessageDto>();
@@ -54,7 +55,7 @@ class backupFilesystem extends viewModelBase {
         
         require(["commands/filesystem/backupFilesystemCommand"], backupFilesystemCommand => {
             var fsToBackup = shell.fileSystems.first((fs: filesystem) => fs.name == this.filesystemName());
-            new backupFilesystemCommand(fsToBackup, this.backupLocation(), updateBackupStatus)
+            new backupFilesystemCommand(fsToBackup, this.backupLocation(), updateBackupStatus, this.incremental())
                 .execute()
                 .always(() => this.isBusy(false));
         });

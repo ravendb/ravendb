@@ -1,6 +1,7 @@
 import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
+import shell = require("viewmodels/shell");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 
 class startRestoreCommand extends commandBase {
@@ -60,6 +61,8 @@ class startRestoreCommand extends commandBase {
                 } else {
                     this.reportSuccess("Filesystem was successfully restored!");
                     result.resolve();
+                    // restore operation can create new filesystem, so reload file systems list
+                    shell.loadFileSystems();
                 }
             });
     }
