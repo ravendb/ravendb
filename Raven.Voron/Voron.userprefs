@@ -1,39 +1,24 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Voron.Tryout/Program.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Voron/Platform/Posix/PosixPageFileBackedMemoryMapPager.cs">
     <Files>
-      <File FileName="Voron.Tryout/Program.cs" Line="41" Column="11" />
-      <File FileName="Voron/Platform/Posix/NativeMethods.cs" Line="29" Column="50" />
-      <File FileName="Voron/Platform/Posix/PosixMemoryMapPager.cs" Line="23" Column="56" />
-      <File FileName="Voron/StorageEnvironmentOptions.cs" Line="151" Column="1" />
-      <File FileName="Voron/StorageEnvironment.cs" Line="102" Column="1" />
-      <File FileName="Voron/Util/ConcurrentSet.cs" Line="33" Column="1" />
-      <File FileName="Voron/Impl/Paging/AbstractPager.cs" Line="44" Column="1" />
-      <File FileName="Voron/Platform/Posix/PosixJournalWriter.cs" Line="29" Column="47" />
+      <File FileName="Voron.Tryout/Program.cs" Line="18" Column="23" />
+      <File FileName="Voron/Platform/Posix/NativeMethods.cs" Line="23" Column="1" />
+      <File FileName="Voron/Platform/Posix/PosixPageFileBackedMemoryMapPager.cs" Line="25" Column="18" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
-          <Node name="Voron" expanded="True">
-            <Node name="Impl" expanded="True">
-              <Node name="Paging" expanded="True" />
-            </Node>
-            <Node name="Platform" expanded="True">
-              <Node name="Posix" expanded="True" />
-            </Node>
-          </Node>
-          <Node name="Voron.Tryout" expanded="True">
-            <Node name="Program.cs" selected="True" />
-          </Node>
+          <Node name="Voron.Tests" selected="True" />
+          <Node name="Voron.Tryout" expanded="True" />
         </State>
       </Pad>
     </Pads>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore>
-      <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron/Platform/Posix/PosixMemoryMapPager.cs" line="160" column="1" />
-      <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron/Platform/Posix/PosixMemoryMapPager.cs" line="23" column="27" />
       <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron.Tryout/Program.cs" line="58" column="24" />
+      <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron/Platform/Posix/PosixPageFileBackedMemoryMapPager.cs" line="181" column="1" />
     </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />

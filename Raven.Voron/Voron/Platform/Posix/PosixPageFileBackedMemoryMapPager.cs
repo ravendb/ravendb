@@ -20,8 +20,8 @@ namespace Voron
 		public PosixPageFileBackedMemoryMapPager(string file, long? initialFileSize = null)
 		{
 			var instanceId = Interlocked.Increment(ref _counter);
-			_file = "/" + instanceId + "-" + file;
-			_fd = Rt.shm_open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT, 0600);
+			_file = "/" + Syscall.getpid() + "-" + instanceId + "-" + file;
+			_fd = Rt.shm_open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT, (int)FilePermissions.ALLPERMS);
 			if (_fd == -1)
 				PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
 
