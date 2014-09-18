@@ -20,7 +20,7 @@ namespace Voron.Platform.Posix
 			if (Enum.IsDefined(typeof(Errno), lastError) == false)
 				throw new InvalidOperationException("Unknown errror " + lastError);
 			var error = (Errno)lastError;
-//			throw new InvalidOperationException(error.ToString());
+			throw new InvalidOperationException(error.ToString());
 		}
 
 		public static unsafe void WriteFileHeader(FileHeader* header, string path)
@@ -85,5 +85,15 @@ namespace Voron.Platform.Posix
 					Syscall.close(fd);
 			}
 		}
+	}
+
+	internal static class Rt
+	{
+		[DllImport("rt", SetLastError = true)]
+		public extern static int shm_open (string name, OpenFlags oflag, int mode);
+
+		[DllImport("rt", SetLastError = true)]
+		public extern static int shm_unlink (int fd);
+
 	}
 }
