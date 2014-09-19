@@ -420,7 +420,7 @@ namespace Raven.Database.Server.Controllers.Admin
         public HttpResponseMessage Gc()
         {
             if (EnsureSystemDatabase() == false)
-                return GetMessageWithString("Garbage Collection is only possiable from the system database", HttpStatusCode.BadRequest);
+                return GetMessageWithString("Garbage Collection is only possible from the system database", HttpStatusCode.BadRequest);
 
 
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
@@ -436,7 +436,7 @@ namespace Raven.Database.Server.Controllers.Admin
         public HttpResponseMessage LohCompaction()
 		{
             if (EnsureSystemDatabase() == false)
-                return GetMessageWithString("Large Object Heap Garbage Collection is only possiable from the system database", HttpStatusCode.BadRequest);
+                return GetMessageWithString("Large Object Heap Garbage Collection is only possible from the system database", HttpStatusCode.BadRequest);
 
 
 		    Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
