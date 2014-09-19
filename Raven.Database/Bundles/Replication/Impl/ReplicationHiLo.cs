@@ -31,7 +31,7 @@ namespace Raven.Bundles.Replication.Impl
 		{
 			Database = database;
 
-			// backward compatability, read the hilo max then delete it, storing the value in the identity val
+			// backward compatibility, read the hilo max then delete it, storing the value in the identity val
 
 			var document = database.Documents.Get(RavenReplicationVersionHiLo, null);
 			if (document == null)
