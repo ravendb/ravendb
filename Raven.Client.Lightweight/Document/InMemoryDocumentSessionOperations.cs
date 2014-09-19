@@ -273,6 +273,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		public bool IsLoaded(string id)
 		{
+			if (IsDeleted(id))
+				return false;
 			return entitiesByKey.ContainsKey(id) || includedDocumentsByKey.ContainsKey(id);
 		}
 
