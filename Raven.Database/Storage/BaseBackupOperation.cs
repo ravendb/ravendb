@@ -56,31 +56,25 @@ namespace Raven.Database.Storage
         {
             try
             {
-                string incrementalTag = null;
-
                 log.Info("Starting backup of '{0}' to '{1}'", backupSourceDirectory, backupDestinationDirectory);
                 UpdateBackupStatus(
                     string.Format("Started backup process. Backing up data to directory = '{0}'",
                                   backupDestinationDirectory), null, BackupStatus.BackupMessageSeverity.Informational);
 
-                if (BackupAlreadyExists) // trying to backup to an existing backup folder
+                if (incrementalBackup)
                 {
-                    if (!incrementalBackup)
-                        throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
-
-                    while (true)
+                    if (CanPerformIncrementalBackup())
                     {
-                        incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd HH-mm-ss");
-                        backupDestinationDirectory = Path.Combine(backupDestinationDirectory, incrementalTag);
-
-                        if (Directory.Exists(backupDestinationDirectory) == false)
-                            break;
-                        Thread.Sleep(100); // wait until the second changes, should only even happen in tests
+                        backupDestinationDirectory = DirectoryForIncrementalBackup();
+                    }
+                    else
+                    {
+                        incrementalBackup = false; // destination wasn't detected as a backup folder, automatically revert to a full backup if incremental was specified
                     }
                 }
-                else
+                else if (BackupAlreadyExists)
                 {
-                    incrementalBackup = false; // destination wasn't detected as a backup folder, automatically revert to a full backup if incremental was specified
+                    throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
                 }
 
                 UpdateBackupStatus(string.Format("Backing up indexes.."), null, BackupStatus.BackupMessageSeverity.Informational);
@@ -135,6 +129,30 @@ namespace Raven.Database.Storage
             finally
             {
                 CompleteBackup();
+            }
+        }
+
+        /// <summary>
+        /// The key of this check is to determinate if incremental backup can be executed 
+        /// 
+        /// For voron: first and subsequent backups are incremenetal 
+        /// For esent: first backup can't be incremental - when user requested incremental esent backup and target directory is empty, we have to start with full backup.
+        /// </summary>
+        /// <returns></returns>
+        protected abstract bool CanPerformIncrementalBackup();
+
+        protected string DirectoryForIncrementalBackup()
+        {
+            while (true)
+            {
+                var incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd HH-mm-ss");
+                var backupDirectory = Path.Combine(backupDestinationDirectory, incrementalTag);
+
+                if (Directory.Exists(backupDirectory) == false)
+                {
+                    return backupDirectory;
+                }
+                Thread.Sleep(100); // wait until the second changes, should only even happen in tests
             }
         }
 

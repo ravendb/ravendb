@@ -45,5 +45,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Backup
         public void Dispose()
         {
         }
+
+        protected override bool CanPerformIncrementalBackup()
+        {
+            return true;
+        }
     }
 }

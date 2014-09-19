@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Linq;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -28,9 +29,21 @@ namespace Raven.Database.Actions
         {
         }
 
+        internal static string FindDatabaseDocument(string rootBackupPath)
+        {
+            // try to find newest database document in incremental backups first - to have the most recent version (if available)
+
+            var backupPath = Directory.GetDirectories(rootBackupPath, "Inc*")
+                                       .OrderByDescending(dir => dir)
+                                       .Select(dir => Path.Combine(dir, BackupMethods.DatabaseDocumentFilename))
+                                       .FirstOrDefault();
+
+            return backupPath ?? Path.Combine(rootBackupPath, BackupMethods.DatabaseDocumentFilename);
+        }
+
         public static void Restore(RavenConfiguration configuration, DatabaseRestoreRequest restoreRequest, Action<string> output)
         {
-            var databaseDocumentPath = Path.Combine(restoreRequest.BackupLocation, BackupMethods.DatabaseDocumentFilename);
+            var databaseDocumentPath = FindDatabaseDocument(restoreRequest.BackupLocation);
             if (File.Exists(databaseDocumentPath) == false)
             {
                 throw new InvalidOperationException("Cannot restore when the Database.Document file is missing in the backup folder: " + restoreRequest.BackupLocation);

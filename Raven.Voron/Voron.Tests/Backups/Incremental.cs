@@ -215,6 +215,67 @@ namespace Voron.Tests.Backups
 			}
 		}
 
+        [Fact]
+        public void IncrementalBackupShouldAcceptEmptyIncrementalBackups()
+        {
+            RequireFileBasedPager();
+            var random = new Random();
+            var buffer = new byte[100];
+            random.NextBytes(buffer);
+
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    tx.State.Root.Add("items/" + i, new MemoryStream(buffer));
+                }
+
+                tx.Commit();
+            }
+
+            var usedPagesInJournal = Env.Journal.CurrentFile.WritePagePosition;
+
+            var backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupFile(0));
+
+            Assert.Equal(usedPagesInJournal, backedUpPages);
+
+            // We don't modify anything between backups - to create empty incremental backup
+
+            var writePos = Env.Journal.CurrentFile.WritePagePosition;
+
+            var usedByLastTransaction = Env.Journal.CurrentFile.WritePagePosition - writePos;
+            Assert.Equal(0, usedByLastTransaction);
+
+            backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupFile(1));
+
+            Assert.Equal(usedByLastTransaction, backedUpPages);
+
+            var options = StorageEnvironmentOptions.ForPath(_restoredStoragePath);
+            options.MaxLogFileSize = Env.Options.MaxLogFileSize;
+
+            BackupMethods.Incremental.Restore(options, new[]
+            {
+                _incrementalBackupFile(0),
+                _incrementalBackupFile(1)
+            });
+
+            using (var env = new StorageEnvironment(options))
+            {
+                using (var tx = env.NewTransaction(TransactionFlags.Read))
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+                        var readResult = tx.State.Root.Read("items/" + i);
+                        Assert.NotNull(readResult);
+                        var memoryStream = new MemoryStream();
+                        readResult.Reader.CopyTo(memoryStream);
+                        Assert.Equal(memoryStream.ToArray(), buffer);
+                    }
+                }
+            }
+        }
+
+
 		private void Clean()
 		{
 			foreach (var incBackupFile in Directory.EnumerateFiles(".", "*incremental-backup"))

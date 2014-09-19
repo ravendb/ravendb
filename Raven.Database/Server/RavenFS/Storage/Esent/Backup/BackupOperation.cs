@@ -50,5 +50,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent.Backup
 
             File.WriteAllText(backupConfigPath, "Backup completed " + SystemTime.UtcNow);
         }
+
+	    protected override bool CanPerformIncrementalBackup()
+	    {
+	        return BackupAlreadyExists;
+	    }
 	}
 }

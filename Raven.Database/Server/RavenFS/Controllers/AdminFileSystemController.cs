@@ -308,7 +308,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             FileSystemDocument filesystemDocument = null;
 
-            var fileSystemDocumentPath = Path.Combine(restoreRequest.BackupLocation, BackupMethods.FilesystemDocumentFilename);
+            var fileSystemDocumentPath = FindFilesystemDocument(restoreRequest.BackupLocation);
 
             if (!File.Exists(fileSystemDocumentPath))
             {
@@ -401,6 +401,18 @@ namespace Raven.Database.Server.RavenFS.Controllers
             }, TaskCreationOptions.LongRunning);
 
             return GetEmptyMessage();
+        }
+
+        private string FindFilesystemDocument(string rootBackupPath)
+        {
+            // try to find newest filesystem document in incremental backups first - to have the most recent version (if available)
+
+            var backupPath = Directory.GetDirectories(rootBackupPath, "Inc*")
+                                       .OrderByDescending(dir => dir)
+                                       .Select(dir => Path.Combine(dir, BackupMethods.FilesystemDocumentFilename))
+                                       .FirstOrDefault();
+
+            return backupPath ?? Path.Combine(rootBackupPath, BackupMethods.FilesystemDocumentFilename);
         }
 
         private string ResolveTenantDataDirectory(string filesystemLocation, string filesystemName, out string documentDataDir)

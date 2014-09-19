@@ -137,6 +137,7 @@ namespace Raven.Server
 			string backupLocation = null;
 			string restoreLocation = null;
 			string restoreDatabaseName = null;
+		    string restoreFilesystemName = null;
 			bool defrag = false;
 			Action actionToTake = null;
 			bool launchBrowser = false;
@@ -213,6 +214,23 @@ namespace Raven.Server
 					    Environment.Exit(0);
 				    }
 				},
+                {"restore-filesystem=", "Starts a restore operation from a backup on a REMOTE server found under specified {0:url}.",
+                    url => actionToTake = () =>
+                    {
+                       if (backupLocation == null)
+                       {
+                           throw new OptionException("when using --restore-filesystem, --restore-source must be specified", "restore-filesystem");
+                       }
+
+                       Uri uri;
+                        if (Uri.TryCreate(url, UriKind.Absolute, out uri) == false)
+                        {
+                            throw new OptionException("specified destination server url is not valid", "restore-database");
+                        }
+
+                        RunRemoteFilesystemRestoreOperation(backupLocation, restoreLocation, restoreFilesystemName, defrag, uri);
+                        Environment.Exit(0);
+                    }},
 				{"restore-defrag", 
 					"Applicable only during restore, execute defrag after the restore is completed", key =>
 					{
@@ -221,6 +239,7 @@ namespace Raven.Server
 				{"restore-destination=", "The {0:path} of the new database. If not specified it will be located in default data directory", value => restoreLocation = value},
 				{"restore-source=", "The {0:path} of the backup", value => backupLocation = value},
 				{"restore-database-name=", "The {0:name} of the new database. If not specified, it will be extracted from backup. Only applicable during REMOTE restore", value => restoreDatabaseName = value},
+                {"restore-filesystem-name", "The {0:name} of the new filesystem. If not specified, it will be extracted from backup.", value => restoreFilesystemName = value},
 				{"encrypt-self-config", "Encrypt the RavenDB configuration file", file =>
 						{
 							actionToTake = () => ProtectConfiguration(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile);
@@ -296,6 +315,30 @@ namespace Raven.Server
 
 			Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
 		}
+
+        private static void RunRemoteFilesystemRestoreOperation(string backupLocation, string restoreLocation, string restoreFilesystemName, bool defrag, Uri uri)
+        {
+            var url = uri.AbsoluteUri + "/admin/fs/restore";
+            var request = WebRequest.Create(url);
+            request.Method = "POST";
+            request.ContentType = "application/json; charset=utf-8";
+            using (var stream = request.GetRequestStream())
+            using (var writer = new StreamWriter(stream))
+            {
+                var json = RavenJObject.FromObject(new FilesystemRestoreRequest
+                {
+                    BackupLocation = backupLocation,
+                    FilesystemLocation = restoreLocation,
+                    FilesystemName = restoreFilesystemName,
+                    Defrag = defrag
+                }).ToString(Formatting.None);
+                writer.Write(json);
+            }
+
+            request.GetResponse();
+
+            Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
+        }
 
 		public static void DumpToCsv(RavenConfiguration ravenConfiguration)
 		{

@@ -63,9 +63,9 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
 				incrementalBackup = false;
 
-            if (backupRequest.DatabaseDocument == null && Database.Name != null)
+            if (backupRequest.DatabaseDocument == null)
             {
-                if (Database.Name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
+                if (Database.Name == null || Database.Name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
                 {
                     backupRequest.DatabaseDocument = new DatabaseDocument { Id = Constants.SystemDatabase };
                 }
@@ -108,7 +108,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			DatabaseDocument databaseDocument = null;
 
-			var databaseDocumentPath = Path.Combine(restoreRequest.BackupLocation, BackupMethods.DatabaseDocumentFilename);
+            var databaseDocumentPath = MaintenanceActions.FindDatabaseDocument(restoreRequest.BackupLocation);
 			if (File.Exists(databaseDocumentPath))
 			{
 				var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
