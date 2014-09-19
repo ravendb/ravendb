@@ -140,7 +140,9 @@ class patch extends viewModelBase {
 
     setSelectedCollection(coll: collection) {
         this.patchDocument().selectedItem(coll.name);
-        this.currentCollectionPagedItems(coll.getDocuments());
+        var list = coll.getDocuments();
+        this.currentCollectionPagedItems(list);
+        list.fetch(0, 20);
         $("#matchingDocumentsGrid").resize();
     }
 
