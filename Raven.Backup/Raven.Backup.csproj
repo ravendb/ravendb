@@ -69,7 +69,11 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>Options.cs</Link>
     </Compile>
-    <Compile Include="BackupOperation.cs" />
+    <Compile Include="AbstractBackupOperation.cs" />
+    <Compile Include="FilesystemBackupOperation.cs" />
+    <Compile Include="DatabaseBackupOperation.cs" />
+    <Compile Include="BackupOperationDispatcher.cs" />
+    <Compile Include="BackupParameters.cs" />
     <Compile Include="ExitCodes.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
@@ -114,7 +118,7 @@
   <ItemGroup>
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''"  />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="AfterBuild">
   </Target>

@@ -260,6 +260,10 @@ namespace Voron.Impl.Backup
                                 .Select(x => x.Value())
                                 .ToList();
 
+                            if (sortedPages.Count == 0)
+                            {
+                                return;
+                            }
                             var last = sortedPages.Last();
 
                             env.Options.DataPager.EnsureContinuous(txw, last.PageNumber,

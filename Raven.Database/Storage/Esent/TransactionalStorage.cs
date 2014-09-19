@@ -35,9 +35,9 @@ using Raven.Database.Storage.Esent.Backup;
 using Raven.Database.Storage.Esent.Debug;
 using Raven.Database.Util;
 using Raven.Json.Linq;
-using Raven.Storage.Esent.Backup;
 using Raven.Storage.Esent.SchemaUpdates;
 using Raven.Storage.Esent.StorageActions;
+
 
 namespace Raven.Storage.Esent
 {
@@ -194,11 +194,11 @@ namespace Raven.Storage.Esent
 			if (new InstanceParameters(instance).Recovery == false)
 				throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to false.");
 
-			var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase);
+            var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase);
 			Task.Factory.StartNew(backupOperation.Execute);
 		}
 
-		public void Restore(RestoreRequest restoreRequest, Action<string> output)
+		public void Restore(DatabaseRestoreRequest restoreRequest, Action<string> output)
 		{
 			new RestoreOperation(restoreRequest, configuration, output).Execute();
 		}

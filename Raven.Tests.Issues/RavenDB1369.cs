@@ -75,7 +75,7 @@ namespace Raven.Tests.Issues
                 WaitForBackup(store.SystemDatabase, true);
             }
 
-            MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = backupDir,
                 DatabaseLocation = dataDir,
@@ -120,7 +120,7 @@ namespace Raven.Tests.Issues
                 WaitForBackup(store.SystemDatabase, true);
             }
 
-            MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = backupDir,
                 DatabaseLocation = dataDir,
@@ -173,7 +173,7 @@ namespace Raven.Tests.Issues
                 store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1");
                 WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
 
-                store.DatabaseCommands.GlobalAdmin.StartRestore(new RestoreRequest
+                store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
                 {
                     BackupLocation = backupDir,
                     DatabaseLocation = dataDir,
@@ -226,7 +226,7 @@ namespace Raven.Tests.Issues
 					Thread.Sleep(1000); // incremental tag has seconds precision
                 }
 
-                store.DatabaseCommands.GlobalAdmin.StartRestore(new RestoreRequest
+                store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
                 {
                     BackupLocation = backupDir,
                     DatabaseLocation = dataDir,
@@ -277,7 +277,7 @@ namespace Raven.Tests.Issues
                 store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1");
                 WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
 
-                store.DatabaseCommands.GlobalAdmin.StartRestore(new RestoreRequest
+                store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
                 {
                     BackupLocation = backupDir,
                     DatabaseLocation = dataDir,

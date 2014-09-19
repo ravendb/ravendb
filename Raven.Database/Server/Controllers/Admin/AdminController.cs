@@ -28,6 +28,7 @@ using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
+using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -35,6 +36,8 @@ using Raven.Json.Linq;
 using Voron.Impl.Backup;
 
 using Raven.Client.Extensions;
+
+using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
 
 namespace Raven.Database.Server.Controllers.Admin
 {
@@ -54,15 +57,15 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("databases/{databaseName}/admin/backup")]
 		public async Task<HttpResponseMessage> Backup()
 		{
-			var backupRequest = await ReadJsonObjectAsync<BackupRequest>();
+			var backupRequest = await ReadJsonObjectAsync<DatabaseBackupRequest>();
 			var incrementalString = InnerRequest.RequestUri.ParseQueryString()["incremental"];
 			bool incrementalBackup;
 			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
 				incrementalBackup = false;
 
-            if (backupRequest.DatabaseDocument == null && Database.Name != null)
+            if (backupRequest.DatabaseDocument == null)
             {
-                if (Database.Name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
+                if (Database.Name == null || Database.Name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
                 {
                     backupRequest.DatabaseDocument = new DatabaseDocument { Id = Constants.SystemDatabase };
                 }
@@ -101,11 +104,11 @@ namespace Raven.Database.Server.Controllers.Admin
 
             var restoreStatus = new RestoreStatus{Messages = new List<string>()};
 
-			var restoreRequest = await ReadJsonObjectAsync<RestoreRequest>();
+			var restoreRequest = await ReadJsonObjectAsync<DatabaseRestoreRequest>();
 
 			DatabaseDocument databaseDocument = null;
 
-			var databaseDocumentPath = Path.Combine(restoreRequest.BackupLocation, "Database.Document");
+            var databaseDocumentPath = MaintenanceActions.FindDatabaseDocument(restoreRequest.BackupLocation);
 			if (File.Exists(databaseDocumentPath))
 			{
 				var databaseDocumentText = File.ReadAllText(databaseDocumentPath);

@@ -136,6 +136,9 @@
     <Compile Include="Counters\CounterStorageReplicationDocument.cs" />
     <Compile Include="Counters\CounterView.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
+    <Compile Include="Data\AbstractRestoreRequest.cs" />
+    <Compile Include="Data\FilesystemRestoreRequest.cs" />
+    <Compile Include="Data\FilesystemBackupRequest.cs" />
     <Compile Include="Data\EsentStorageStats.cs" />
     <Compile Include="Data\IndexingBatchInfo.cs" />
     <Compile Include="Data\AdminStatistics.cs" />
@@ -144,7 +147,7 @@
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
     <Compile Include="Data\AttachmentInformation.cs" />
-    <Compile Include="Data\BackupRequest.cs" />
+    <Compile Include="Data\DatabaseBackupRequest.cs" />
     <Compile Include="Data\DatabaseMetrics.cs" />
     <Compile Include="Data\DocumentsChanges.cs" />
     <Compile Include="Data\FacetQuery.cs" />
@@ -160,7 +163,7 @@
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\QueryHeaderInformation.cs" />
     <Compile Include="Data\ReplicationInfoStatus.cs" />
-    <Compile Include="Data\RestoreRequest.cs" />
+    <Compile Include="Data\DatabaseRestoreRequest.cs" />
     <Compile Include="Data\RestoreStatus.cs" />
     <Compile Include="Data\ScriptedIndexResults.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />

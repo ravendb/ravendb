@@ -12,7 +12,7 @@ namespace Raven.Database.Storage.Voron.Backup
 {
     public class RestoreOperation : BaseRestoreOperation
     {
-		public RestoreOperation(RestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
+		public RestoreOperation(DatabaseRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
             : base(restoreRequest, configuration, operationOutputCallback)
 		{
 		}

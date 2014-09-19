@@ -18,11 +18,11 @@ namespace Raven.Database.Storage
 
         protected readonly string backupLocation;
 
-        protected readonly RestoreRequest _restoreRequest;
+        protected readonly DatabaseRestoreRequest _restoreRequest;
         protected readonly InMemoryRavenConfiguration Configuration;
         protected readonly string databaseLocation, indexLocation, journalLocation;
 
-        protected BaseRestoreOperation(RestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> output)
+        protected BaseRestoreOperation(DatabaseRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> output)
         {
             _restoreRequest = restoreRequest;
             backupLocation = restoreRequest.BackupLocation;

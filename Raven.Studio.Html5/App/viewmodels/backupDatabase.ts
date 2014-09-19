@@ -4,6 +4,7 @@ import database = require("models/database");
 
 class backupDatabase extends viewModelBase {
 
+    incremental = ko.observable<boolean>(false);
     databaseName = ko.observable<string>('');
     backupLocation = ko.observable<string>('');
     backupStatusMessages = ko.observableArray<backupMessageDto>();
@@ -54,7 +55,7 @@ class backupDatabase extends viewModelBase {
         
         require(["commands/backupDatabaseCommand"], backupDatabaseCommand => {
             var dbToBackup = shell.databases.first((db: database) => db.name == this.databaseName());
-            new backupDatabaseCommand(dbToBackup, this.backupLocation(), updateBackupStatus)
+            new backupDatabaseCommand(dbToBackup, this.backupLocation(), updateBackupStatus, this.incremental())
                 .execute()
                 .always(() => this.isBusy(false));
         });

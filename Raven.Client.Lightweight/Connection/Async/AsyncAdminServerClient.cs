@@ -78,14 +78,14 @@ namespace Raven.Client.Connection.Async
 		{
 		    var request = adminRequest.StartBackup(backupLocation, databaseDocument, databaseName, incremental);
 
-            return request.WriteAsync(RavenJObject.FromObject(new BackupRequest
+            return request.WriteAsync(RavenJObject.FromObject(new DatabaseBackupRequest
             {
                 BackupLocation = backupLocation,
                 DatabaseDocument = databaseDocument
             }));
 		}
 
-		public Task StartRestoreAsync(RestoreRequest restoreRequest)
+		public Task StartRestoreAsync(DatabaseRestoreRequest restoreRequest)
 		{
 		    var request = adminRequest.CreateRestoreRequest();
 

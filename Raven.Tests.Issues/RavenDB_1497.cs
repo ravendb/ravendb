@@ -114,7 +114,7 @@ namespace Raven.Tests.Issues
 					{"Raven/Voron/AllowIncrementalBackups", "true"}
 				}
 
-				}, new RestoreRequest
+				}, new DatabaseRestoreRequest
 				{
 				    BackupLocation = BackupDir,
                     Defrag = true,

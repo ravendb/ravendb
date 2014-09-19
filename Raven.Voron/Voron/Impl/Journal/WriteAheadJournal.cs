@@ -509,7 +509,7 @@ namespace Voron.Impl.Journal
 						if (unusedJournals.Count > 0)
 						{
 							var lastUnusedJournalNumber = unusedJournals.Last().Number;
-							_waj._files = _waj._files.RemoveWhile(x => x.Number <= lastUnusedJournalNumber, new List<JournalFile>());
+							_waj._files = _waj._files.RemoveWhile(x => x.Number <= lastUnusedJournalNumber);
 						}
 
 						if (_waj._files.Count == 0)

@@ -163,6 +163,14 @@ class appUrl {
         return "#admin/settings/restoreDatabase";
     }
 
+    static forBackupFilesystem(): string {
+        return "#admin/settings/backupFilesystem";
+    }
+
+    static forRestoreFilesystem(): string {
+        return "#admin/settings/restoreFilesystem";
+    }
+
     static forAdminLogs(): string {
         return "#admin/settings/adminLogs";
     }

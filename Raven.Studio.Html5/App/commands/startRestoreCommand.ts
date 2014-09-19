@@ -6,7 +6,7 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 class startRestoreCommand extends commandBase {
     private db: database = new database("<system>");
 
-    constructor(private defrag: boolean, private restoreRequest: restoreRequestDto, private updateRestoreStatus: (restoreStatusDto) => void) {
+    constructor(private defrag: boolean, private restoreRequest: databaseRestoreRequestDto, private updateRestoreStatus: (restoreStatusDto) => void) {
         super();
     }
 
@@ -16,7 +16,7 @@ class startRestoreCommand extends commandBase {
         new deleteDocumentCommand('Raven/Restore/Status', this.db)
             .execute()
             .fail((response: JQueryXHR) => {
-                this.reportError("Failed to delete resotre status document!", response.responseText, response.statusText);
+                this.reportError("Failed to delete restore status document!", response.responseText, response.statusText);
                 result.reject();
             })
             .done(_=> {
