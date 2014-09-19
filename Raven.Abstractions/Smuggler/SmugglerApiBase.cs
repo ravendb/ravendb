@@ -30,7 +30,7 @@ namespace Raven.Abstractions.Smuggler
 
 		public ISmugglerOperations Operations { get; protected set; }
 
-		public SmugglerOptions SmugglerOptions { get; private set; }
+        public SmugglerOptions SmugglerOptions { get; private set; }
 
 		private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 

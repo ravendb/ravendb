@@ -7,7 +7,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-
+using System.Threading.Tasks;
 using NDesk.Options;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -19,16 +19,35 @@ namespace Raven.Smuggler
 {
 	public class Program
 	{
-		private readonly RavenConnectionStringOptions connectionStringOptions = new RavenConnectionStringOptions {Credentials = new NetworkCredential()};
-		private readonly RavenConnectionStringOptions connectionStringOptions2 = new RavenConnectionStringOptions {Credentials = new NetworkCredential()};
-		//private readonly SmugglerOptions options = new SmugglerOptions();
-		private readonly SmugglerApi smugglerApi = new SmugglerApi();
-		private readonly OptionSet optionSet;
-		bool waitForIndexing;
+		private readonly SmugglerApi smugglerApi = new SmugglerApi();	
+        
+        private readonly OptionSet optionSet;
+        private readonly OptionSet selectionDispatching;
 
 	    private Program()
 	    {
-		    var options = smugglerApi.SmugglerOptions;
+            var options = smugglerApi.SmugglerOptions;
+
+	        selectionDispatching = new OptionSet
+	        {
+			    {"d|d2|database|database2:", value =>
+			                    {
+			                        if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Database)
+			                            mode = SmugglerMode.Database;
+			                        else PrintUsageAndExit(new ArgumentException("Database and Filesystem parameters are mixed. You cannot use both in the same request."));
+			                    } 
+                },
+			    {"f|f2|filesystem|filesystem2:", value =>
+			                    {
+                                    if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Filesystem)
+                                        mode = SmugglerMode.Filesystem;
+			                        else PrintUsageAndExit(new ArgumentException("Database and Filesystem parameters are mixed. You cannot use both in the same request."));
+			                    }
+                },
+
+
+	        };
+
 		    optionSet = new OptionSet
 		    {
 			    {
@@ -46,7 +65,7 @@ namespace Raven.Smuggler
 					    }
 					    catch (Exception e)
 					    {
-						    PrintUsageAndExit(e);
+                            PrintUsageAndExit(e);
 					    }
 				    }
 			    },
@@ -56,7 +75,7 @@ namespace Raven.Smuggler
 				    {
 					    Path = "@metadata." + key,
 					    ShouldMatch = true,
-															   Values = FilterSetting.ParseValues(val)
+						Values = FilterSetting.ParseValues(val)
 				    })
 			    },
 			    {
@@ -104,18 +123,18 @@ namespace Raven.Smuggler
 			    {"timeout:", "The timeout to use for requests", s => options.Timeout = TimeSpan.FromMilliseconds(int.Parse(s))},
 			    {"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s)},
 				{"chunk-size:", "The number of documents to import before new connection will be opened", s => options.ChunkSize = int.Parse(s)},
-			    {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
-			    {"d2|database2:", "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => connectionStringOptions2.DefaultDatabase = value},
-			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).UserName = value},
-			    {"u2|user2|username2:", "The username to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).UserName = value},
-			    {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).Password = value},
-			    {"p2|pass2|password2:", "The password to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).Password = value},
-			    {"domain:", "The domain to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).Domain = value},
-			    {"domain2:", "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).Domain = value},
-			    {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
-			    {"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => connectionStringOptions2.ApiKey = value},
+			    {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => options.Source.DefaultDatabase = value},
+			    {"d2|database2:", "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => options.Destination.DefaultDatabase = value},
+			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential) options.Source.Credentials).UserName = value},
+			    {"u2|user2|username2:", "The username to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) options.Destination.Credentials).UserName = value},
+			    {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => ((NetworkCredential) options.Source.Credentials).Password = value},
+			    {"p2|pass2|password2:", "The password to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) options.Destination.Credentials).Password = value},
+			    {"domain:", "The domain to use when the database requires the client to authenticate.", value => ((NetworkCredential) options.Source.Credentials).Domain = value},
+			    {"domain2:", "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) options.Destination.Credentials).Domain = value},
+			    {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => options.Source.ApiKey = value},
+			    {"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => options.Destination.ApiKey = value},
 			    {"incremental", "States usage of incremental operations", _ => options.Incremental = true},
-			    {"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _ => waitForIndexing = true},
+			    {"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _ => options.WaitForIndexing = true},
                 {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true},
                 {"limit:", "Reads at most VALUE documents/attachments.", s => options.Limit = int.Parse(s)},
 			    {"h|?|help", v => PrintUsageAndExit(0)},
@@ -125,11 +144,16 @@ namespace Raven.Smuggler
 		static void Main(string[] args)
 		{
 			var program = new Program();
-			program.Parse(args);
+			program.Parse(args)
+                   .RunSynchronously();
 		}
 
-		private void Parse(string[] args)
+        private SmugglerMode mode = SmugglerMode.Unknown;
+
+        private async Task Parse(string[] args)
 		{
+            var options = smugglerApi.SmugglerOptions;
+
 			// Do these arguments the traditional way to maintain compatibility
 			if (args.Length < 3)
 				PrintUsageAndExit(-1);
@@ -140,11 +164,18 @@ namespace Raven.Smuggler
                 PrintUsageAndExit(-1);
                 return;
             }
-            connectionStringOptions.Url = url;
 
-            var backupPath = args[2];
-            if (backupPath == null)
+            options.Source.Url = url;
+
+            options.BackupPath = args[2];
+            if (options.BackupPath == null)
                 PrintUsageAndExit(-1);
+
+            // We may be able to decide immediately if this is a file system or a database request based on the urls already provided.
+            if ( url.Contains("/fs/") )
+                mode = SmugglerMode.Filesystem;
+		    else if ( url.Contains("/databases/"))
+                mode = SmugglerMode.Database;
 
 			SmugglerAction action;
 		    if (string.Equals(args[0], "in", StringComparison.OrdinalIgnoreCase))
@@ -165,88 +196,32 @@ namespace Raven.Smuggler
                 return;
             }
 
-			if (action != SmugglerAction.Between && Directory.Exists(backupPath))
+            if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
 			{
 				smugglerApi.SmugglerOptions.Incremental = true;
 			}
 
 			try
 			{
-				optionSet.Parse(args);
+			    // selectionDispatching.Parse(args);
+                optionSet.Parse(args);
 			}
 			catch (Exception e)
 			{
 				PrintUsageAndExit(e);
 			}
-
-			try
-			{
-				switch (action)
-				{
-					case SmugglerAction.Import:
-						smugglerApi.ImportData(new SmugglerImportOptions { FromFile = backupPath, To = connectionStringOptions }).Wait();
-						if (waitForIndexing)
-							smugglerApi.WaitForIndexing().Wait();
-						break;
-					case SmugglerAction.Export:
-						smugglerApi.ExportData(new SmugglerExportOptions { From = connectionStringOptions, ToFile = backupPath }).Wait();
-						break;
-					case SmugglerAction.Between:
-						connectionStringOptions2.Url = backupPath;
-						smugglerApi.Between(new SmugglerBetweenOptions { From = connectionStringOptions, To = connectionStringOptions2 }).Wait();
-						break;
-				}
-			}
-			catch (AggregateException ex)
-			{
-			    var exception = ex.ExtractSingleInnerException();
-			    var e = exception as WebException;
-			    if (e != null)
-			    {
-					if (e.Status == WebExceptionStatus.ConnectFailure)
-					{
-						Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url + (action == SmugglerAction.Between ? " => " + connectionStringOptions2.Url : ""));
-						var socketException = e.InnerException as SocketException;
-						if (socketException != null)
-						{
-							Console.WriteLine("Details: {0}", socketException.Message);
-							Console.WriteLine("Socket Error Code: {0}", socketException.SocketErrorCode);
-						}
-
-			            Environment.Exit((int) e.Status);
-			        }
-
-			        var httpWebResponse = e.Response as HttpWebResponse;
-			        if (httpWebResponse == null)
-			            throw;
-			        Console.WriteLine("Error: " + e.Message);
-			        Console.WriteLine("Http Status Code: " + httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription);
-
-			        using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
-			        {
-			            string line;
-			            while ((line = reader.ReadLine()) != null)
-			            {
-			                Console.WriteLine(line);
-			            }
-			        }
-
-			        Environment.Exit((int) httpWebResponse.StatusCode);
-			    }
-				else
-			    {
-				    if (exception is SmugglerException)
-				    {
-						Console.WriteLine(exception.Message);
-				    }
-				    else
-				    {
-						Console.WriteLine(exception);
-				    }
-					
-			        Environment.Exit(-1);
-			    }
-			}
+            
+		    switch ( this.mode )
+		    {
+                case SmugglerMode.Database:
+                    var databaseDispatcher = new DatabaseSmugglerOperationDispatcher(smugglerApi);
+                    await databaseDispatcher.Execute(action, smugglerApi.SmugglerOptions);
+                    break;
+                case SmugglerMode.Filesystem:
+                    var filesDispatcher = new FilesSmugglerOperationDispatcher();
+                    await filesDispatcher.Execute(action, smugglerApi.SmugglerOptions);
+                    break;
+		    }
 		}
 
 		private void PrintUsageAndExit(Exception e)
@@ -269,6 +244,13 @@ Usage:
 		Raven.Smuggler out http://localhost:8080/ dump.raven --database=MyDatabase
 	- Export from Database1 to Database2 on a different RavenDB instance:
 		Raven.Smuggler between http://localhost:8080/databases/Database1 http://localhost:8081/databases/Database2
+    - Import a file system dump.ravenfs file to the MyFiles filesystem of the specified RavenDB instance:
+		Raven.Smuggler in http://localhost:8080/ dump.ravenfs --filesystem=MyFiles
+	- Export from MyFiles file system of the specified RavenDB instance to the dump.ravenfs file:
+		Raven.Smuggler out http://localhost:8080/ dump.ravenfs --filesystem=MyFiles
+	- Export from MyFiles1 to MyFiles2 on a different RavenDB instance:
+		Raven.Smuggler between http://localhost:8080/fs/MyFiles1 http://localhost:8081/fs/MyFiles2
+    
 
 Command line options:", SystemTime.UtcNow.Year);
 

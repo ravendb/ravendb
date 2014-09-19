@@ -352,11 +352,13 @@
     <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
     <Compile Include="Smuggler\Data\ExportDataResult.cs" />
     <Compile Include="Smuggler\Data\Tombstone.cs" />
+    <Compile Include="Smuggler\FilesSmugglerOptions.cs" />
     <Compile Include="Smuggler\ISmugglerApi.cs" />
     <Compile Include="Smuggler\ISmugglerOperations.cs" />
     <Compile Include="Smuggler\Data\LastEtagsInfo.cs" />
     <Compile Include="Smuggler\SmugglerAction.cs" />
     <Compile Include="Smuggler\SmugglerApiBase.cs" />
+    <Compile Include="Smuggler\SmugglerMode.cs" />
     <Compile Include="Smuggler\SmugglerOptions.cs" />
     <Compile Include="Spatial\ShapeConverter.cs" />
     <Compile Include="Spatial\GeoJsonWktConverter.cs" />

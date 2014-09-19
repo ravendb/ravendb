@@ -40,9 +40,17 @@ namespace Raven.Abstractions.Smuggler
 	        ExportDeletions = false;
 		    TotalDocumentSizeInChunkLimitInBytes = DefaultDocumentSizeInChunkLimitInBytes;
 			CancelToken = new CancellationTokenSource();
+
+            Source = new RavenConnectionStringOptions();
+            Destination = new RavenConnectionStringOptions();
 		}
 
 		public CancellationTokenSource CancelToken;
+
+        public RavenConnectionStringOptions Source { get; set; }
+        public RavenConnectionStringOptions Destination { get; set; }
+
+        public string BackupPath { get; set; }
 
 		/// <summary>
 		/// Limit total size of documents in each chunk
@@ -214,6 +222,8 @@ namespace Raven.Abstractions.Smuggler
         /// Maximum number of steps that transform script can have
         /// </summary>
         public int MaxStepsForTransformScript { get; set; }
+
+        public bool WaitForIndexing { get; set; }
     }
 
     public class SmugglerBetweenOptions
