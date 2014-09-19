@@ -165,6 +165,7 @@
     <Compile Include="Platform\Win32\Win32MemoryMapPager.cs" />
     <Compile Include="Platform\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
     <Compile Include="Platform\Win32\NativeMethods.cs" />
+    <Compile Include="Platform\Posix\PosixPageFileBackedMemoryMapPager.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Util\Conversion\readme.txt" />

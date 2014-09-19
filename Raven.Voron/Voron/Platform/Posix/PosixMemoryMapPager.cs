@@ -21,6 +21,7 @@ namespace Voron.Platform.Posix
 		{
 			_file = file;
 			//todo, do we need O_SYNC here? 
+			//todo, ALLPERMS ? 
 			_fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_SYNC,
 			                   FilePermissions.ALLPERMS);
 			if (_fd == -1)
@@ -36,7 +37,7 @@ namespace Voron.Platform.Posix
 			if (_totalAllocationSize == 0 || _totalAllocationSize % SysPageSize != 0) 
 			{
 				_totalAllocationSize = NearestSizeToPageSize(_totalAllocationSize);
-				var result = Syscall.posix_fallocate (_fd, 0, (ulong)_totalAllocationSize);
+				var result = Syscall.ftruncate (_fd, _totalAllocationSize);
 				if (result != 0)
 					PosixHelper.ThrowLastError (result);
 
@@ -88,7 +89,7 @@ namespace Voron.Platform.Posix
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-			Syscall.posix_fallocate(_fd, 0, (ulong)(_totalAllocationSize + allocationSize));
+			Syscall.ftruncate(_fd, (_totalAllocationSize + allocationSize));
 
 			if (TryAllocateMoreContinuousPages(allocationSize) == false)
 			{
@@ -218,8 +219,6 @@ namespace Voron.Platform.Posix
 
 			int toCopy = pagesToWrite * PageSize;
 			StdLib.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
-
-			var a = new Page (PagerState.MapBase, "test", 4096);
 
 			return toCopy;
 		}
