@@ -30,7 +30,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <CustomCommands>
       <CustomCommands>
-        <Command type="Execute" command="../../SharedLibs/xunit/xunit.console.clr4.exe ${TargetFile}" />
+        <Command type="Execute" command="../../SharedLibs/xunit/xunit.console.clr4.exe ${TargetFile}" externalConsole="True" pauseExternalConsole="True" />
       </CustomCommands>
     </CustomCommands>
     <Externalconsole>true</Externalconsole>
