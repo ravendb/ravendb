@@ -8,6 +8,10 @@ using System;
 using System.Net;
 using System.Threading;
 
+using System.Linq;
+
+using Raven.Abstractions.Extensions;
+
 namespace Raven.Backup
 {
     using Raven.Abstractions.Connection;
@@ -95,7 +99,7 @@ namespace Raven.Backup
             try
             {
                 var json = (RavenJObject)req.ReadResponseJson();
-                return json.Deserialize<BackupStatus>(new DocumentConvention()); //TODO: do we really need store.Conventions here?
+                return json.JsonDeserialization<BackupStatus>();
             }
             catch (WebException ex)
             {

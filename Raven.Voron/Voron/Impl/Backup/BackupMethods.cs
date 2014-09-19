@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 namespace Voron.Impl.Backup
 {
-	public class BackupMethods
+	public static class BackupMethods
 	{
         public const string Filename = "RavenDB.Voron.Backup";
 

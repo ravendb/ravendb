@@ -264,7 +264,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 }
             }
 
-            //TODO: verify those properies (for Filesystem)
             bool enableIncrementalBackup;
             if (incrementalBackup &&
                 transactionalStorage is Storage.Esent.TransactionalStorage &&
