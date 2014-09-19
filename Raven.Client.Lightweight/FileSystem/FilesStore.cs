@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.FileSystem.Changes;
@@ -69,6 +70,8 @@ namespace Raven.Client.FileSystem
 
             return fileSystemChanges.GetOrAdd(filesystem,  x => CreateFileSystemChanges (x) );
         }
+        
+
 
         protected virtual IFilesChanges CreateFileSystemChanges(string filesystem)
         {
@@ -320,14 +323,41 @@ namespace Raven.Client.FileSystem
 
         public FilesSessionListeners Listeners
         {
-            get 
-            {
-                return listeners; 
-            }
+            get  { return listeners; }
         }
         public void SetListeners(FilesSessionListeners newListeners)
         {
             this.listeners = newListeners;         
+        }
+
+
+
+        private string _connectionStringName;
+
+        public string ConnectionStringName
+        {
+            get { return _connectionStringName; }
+            set
+            {
+                _connectionStringName = value;
+                HandleConnectionStringOptions();
+            }
+        }
+
+        private void HandleConnectionStringOptions()
+        {
+            var parser = ConnectionStringParser<FilesConnectionStringOptions>.FromConnectionStringName(ConnectionStringName);
+            parser.Parse();
+
+            var options = parser.ConnectionStringOptions;
+            if (options.Credentials != null)
+                this.Credentials = options.Credentials;
+            if (string.IsNullOrEmpty(options.Url) == false)
+                this.Url = options.Url;
+            if (string.IsNullOrEmpty(options.DefaultFileSystem) == false)
+                this.DefaultFileSystem = options.DefaultFileSystem;
+            if (string.IsNullOrEmpty(options.ApiKey) == false)
+                this.ApiKey = options.ApiKey;
         }
 
 
