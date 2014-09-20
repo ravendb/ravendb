@@ -98,6 +98,8 @@
     <Compile Include="Journal\UncommittedTransactions.cs" />
     <Compile Include="MultiTreeSize.cs" />
     <Compile Include="MultiValueTree.cs" />
+    <Compile Include="ScratchBuffer\MutipleScratchBuffersUsage.cs" />
+    <Compile Include="ScratchBuffer\ScratchCanForceToFlushOldPages.cs" />
     <Compile Include="Optimizations\Writes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Storage\Batches.cs" />

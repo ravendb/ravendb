@@ -103,13 +103,18 @@ namespace Voron.Util
 				.Max(x => x.TransactionId);
 		}
 
-		public List<long> AllPagesOlderThan(long lastSyncedTransactionId)
+		public List<long> KeysWhereAllPagesOlderThan(long lastSyncedTransactionId)
 		{
 			return _values.Where(x =>
 			{
 				var val = x.Value[x.Value.Count - 1];
 				return val.TransactionId <= lastSyncedTransactionId;
 			}).Select(x => x.Key).ToList();
+		}
+
+		public List<long> KeysWhereSomePagesOlderThan(long lastSyncedTransactionId)
+		{
+			return _values.Where(x => x.Value.Any(p => p.TransactionId <= lastSyncedTransactionId)).Select(x => x.Key).ToList();
 		}
 
 		public long GetLastSeenTransactionId()

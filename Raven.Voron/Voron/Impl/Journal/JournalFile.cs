@@ -223,19 +223,24 @@ namespace Voron.Impl.Journal
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
 	    
-	    public void FreeScratchPagesOlderThan(Transaction tx, long lastSyncedTransactionId)
+	    public void FreeScratchPagesOlderThan(Transaction tx, long lastSyncedTransactionId, bool forceToFreeAllPages = false)
 	    {
 		    if (tx == null) throw new ArgumentNullException("tx");
 		    var unusedPages = new List<PagePosition>();
 
             List<PagePosition> unusedAndFree;
+		    List<long> keysToRemove;
 
             lock (_locker)
             {
                 unusedAndFree = _unusedPages.FindAll(position => position.TransactionId <= lastSyncedTransactionId);
                 _unusedPages.RemoveAll(position => position.TransactionId <= lastSyncedTransactionId);
 
-                var keysToRemove = _pageTranslationTable.AllPagesOlderThan(lastSyncedTransactionId);
+	            if (forceToFreeAllPages)
+		            keysToRemove = _pageTranslationTable.KeysWhereSomePagesOlderThan(lastSyncedTransactionId);
+	            else
+					keysToRemove = _pageTranslationTable.KeysWhereAllPagesOlderThan(lastSyncedTransactionId);
+
 				_pageTranslationTable.Remove(keysToRemove, lastSyncedTransactionId, unusedPages);
             }
 

@@ -283,14 +283,9 @@ namespace Voron.Impl.Journal
 					if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
 					{
 						var page = _env.ScratchBufferPool.ReadPage(value.ScratchNumber, value.ScratchPos, scratchPagerStates[value.ScratchNumber]);
-						try
-						{
-							Debug.Assert(page.PageNumber == pageNumber);
-						}
-						catch (Exception e)
-						{
-							Console.WriteLine(e);
-						}
+
+						Debug.Assert(page.PageNumber == pageNumber);
+
 						return page;
 					}
 				}
@@ -307,14 +302,7 @@ namespace Voron.Impl.Journal
 				{
 					var page = _env.ScratchBufferPool.ReadPage(value.ScratchNumber, value.ScratchPos);
 
-					try
-					{
-						Debug.Assert(page.PageNumber == pageNumber);
-					}
-					catch (Exception e)
-					{
-						Console.WriteLine(e);
-					}
+					Debug.Assert(page.PageNumber == pageNumber);
 
 					return page;
 				}
@@ -404,6 +392,8 @@ namespace Voron.Impl.Journal
 			private long _totalWrittenButUnsyncedBytes;
 			private DateTime _lastDataFileSyncTime;
 			private JournalFile _lastFlushedJournal;
+			private long? forcedIterateJournalsAsOf = null;
+			private bool forcedFlushOfOldPages = false;
 
 			public JournalApplicator(WriteAheadJournal waj, ReaderWriterLockSlim flushingSemaphore)
 			{
@@ -411,7 +401,21 @@ namespace Voron.Impl.Journal
 				_flushingSemaphore = flushingSemaphore;
 			}
 
-			public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, Transaction transaction = null)
+			private IDisposable ForceFlushingPagesOlderThan(long oldestActiveTransaction)
+			{
+				forcedIterateJournalsAsOf = oldestActiveTransaction == 0 ?
+															long.MaxValue : // if there is no active transaction, let it read as of LastTransaction from a snapshot
+															oldestActiveTransaction - 1;
+				forcedFlushOfOldPages = true;
+
+				return new DisposableAction(() =>
+				{
+					forcedIterateJournalsAsOf = null;
+					forcedFlushOfOldPages = false;
+				});
+			}
+
+			public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, Transaction transaction = null, bool allowToFlushOverwrittenPages = false)
 			{
 				bool locked = false;
 				if (_flushingSemaphore.IsWriteLockHeld == false)
@@ -445,7 +449,12 @@ namespace Voron.Impl.Journal
 					{
 						var currentJournalMaxTransactionId = -1L;
 
-						foreach (var pagePosition in journalFile.PageTranslationTable.IterateLatestAsOf(journalFile.LastTransaction))
+						var iterateLatestAsOf = journalFile.LastTransaction;
+
+						if (forcedFlushOfOldPages && forcedIterateJournalsAsOf.HasValue)
+							iterateLatestAsOf = Math.Min(journalFile.LastTransaction, forcedIterateJournalsAsOf.Value);
+
+						foreach (var pagePosition in journalFile.PageTranslationTable.IterateLatestAsOf(iterateLatestAsOf))
 						{
 							if (oldestActiveTransaction != 0 &&
 								pagePosition.Value.TransactionId >= oldestActiveTransaction)
@@ -493,7 +502,22 @@ namespace Voron.Impl.Journal
 					}
 
 					if (pagesToWrite.Count == 0)
+					{
+						if (allowToFlushOverwrittenPages)
+						{
+							// we probably filtered out all pages because they have some overwrites and we applied an optimization
+							// that relays on iterating over pages from end of PTT, however we might want to flush such pages
+							// in order to allow to free them because the scratch buffer might require them
+							// so we can flush all pages that we are sure they aren't being read by any transaction
+
+							using (ForceFlushingPagesOlderThan(oldestActiveTransaction))
+							{
+								ApplyLogsToDataFile(oldestActiveTransaction, token, transaction, allowToFlushOverwrittenPages: false);
+							}
+						}
+
 						return;
+					}
 
 					try
 					{
@@ -642,12 +666,12 @@ namespace Voron.Impl.Journal
 				// to read the most updated version)
 				foreach (var journalFile in unusedJournalFiles.OrderBy(x => x.Number))
 				{
-					journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
+					journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId, forceToFreeAllPages: forcedFlushOfOldPages);
 				}
 
 				foreach (var jrnl in _waj._files.OrderBy(x => x.Number))
 				{
-					jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
+					jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId, forceToFreeAllPages: forcedFlushOfOldPages);
 				}
 			}
 

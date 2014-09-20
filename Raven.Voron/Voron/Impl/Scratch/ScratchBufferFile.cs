@@ -82,7 +82,6 @@ namespace Voron.Impl.Scratch
 			{
 				var item = _freePagesBySize[sizeKey].Last;
 
-
 				while (item != null && (oldestTransaction == 0 || item.Value.ValidAfterTransactionId < oldestTransaction))
 				{
 					available += sizeKey;
@@ -121,10 +120,9 @@ namespace Voron.Impl.Scratch
 			};
 
 			_allocatedPages.Add(val.Page, pageFromScratchBuffer);
-			{
-				result = pageFromScratchBuffer;
-				return true;
-			}
+			
+			result = pageFromScratchBuffer;
+			return true;
 		}
 
 		public void Free(long page, long asOfTxId)

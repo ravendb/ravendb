@@ -26,6 +26,7 @@ namespace Voron.Impl.Scratch
 		private ScratchBufferFile _current;
 		private StorageEnvironmentOptions _options;
 		private int _currentScratchNumber = -1;
+		private long _oldestTransactionWhenFlushWasForced = -1;
 		private readonly Dictionary<int, ScratchBufferFile> _scratchBuffers = new Dictionary<int, ScratchBufferFile>();
 
 		public ScratchBufferPool(StorageEnvironment env)
@@ -54,6 +55,8 @@ namespace Voron.Impl.Scratch
 			var scratchFile = new ScratchBufferFile(scratchPager, _currentScratchNumber);
 			_scratchBuffers.Add(_currentScratchNumber, scratchFile);
 
+			_oldestTransactionWhenFlushWasForced = -1;
+
 			return scratchFile;
 		}
 
@@ -73,16 +76,16 @@ namespace Voron.Impl.Scratch
 				return result;
 
 			long sizeAfterAllocation = _current.SizeAfterAllocation(size);
+			long oldestActiveTransaction = tx.Environment.OldestTransaction;
 
 			if (_scratchBuffers.Count > 1)
 			{
 				var scratchesToDelete = new List<int>();
-				var oldestTransaction = tx.Environment.OldestTransaction;
 
-				// determine how many bytes of older scratches is still in use
+				// determine how many bytes of older scratches are still in use
 				foreach (var olderScratch in _scratchBuffers.Values.Except(new []{_current}))
 				{
-					var bytesInUse = olderScratch.ActivelyUsedBytes(oldestTransaction);
+					var bytesInUse = olderScratch.ActivelyUsedBytes(oldestActiveTransaction);
 
 					if (bytesInUse > 0)
 						sizeAfterAllocation += bytesInUse;
@@ -99,25 +102,36 @@ namespace Voron.Impl.Scratch
 				}
 			}
 
+			if (sizeAfterAllocation > 0.8 * _sizeLimit && oldestActiveTransaction > _oldestTransactionWhenFlushWasForced)
+			{
+				_oldestTransactionWhenFlushWasForced = oldestActiveTransaction;
+
+				// We are starting to force a flush to free scratch pages. We are doing it at this point (80% of the max scratch size)
+				// to make sure that next transactions will be able to allocate pages that we are going to free in the current transaction.
+				// Important notice: all pages freed by this run will get ValidAfterTransactionId == tx.Id (so only next ones can use it)
+
+				tx.Environment.ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages: true);
+			}
+
 			if (sizeAfterAllocation > _sizeLimit)
 			{
 				var sp = Stopwatch.StartNew();
+
 				// Our problem is that we don't have any available free pages, probably because
 				// there are read transactions that are holding things open. We are going to see if
 				// there are any free pages that _might_ be freed for us if we wait for a bit. The idea
 				// is that we let the read transactions time to complete and do their work, at which point
-				// we can continue running. 
-				// We start this by forcing a flush, then we are waiting up to the timeout for we are waiting
-				// for the read transactions to complete. It is possible that a long running read transaction
+				// we can continue running. It is possible that a long running read transaction
 				// would in fact generate enough work for us to timeout, but hopefully we can avoid that.
 
-				tx.Environment.ForceLogFlushToDataFile(tx);
 				while (sp.ElapsedMilliseconds < tx.Environment.Options.ScratchBufferOverflowTimeout)
 				{
 					if (_current.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
 						return result;
 					Thread.Sleep(32);
 				}
+
+				sp.Stop();
 
 				if (_current.HasDiscontinuousSpaceFor(tx, size))
 				{
