@@ -9,6 +9,8 @@ using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+
+using Raven.Abstractions.Logging;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
 using Raven.Database.Server.RavenFS.Extensions;
@@ -19,6 +21,8 @@ namespace Raven.Database.Server.RavenFS.Search
 {
 	public class IndexStorage : IDisposable
 	{
+	    protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+
 		private const string DateIndexFormat = "yyyy-MM-dd_HH-mm-ss";
 		private static readonly string[] NumericIndexFields = new[] { "__size_numeric" };
 
@@ -26,6 +30,7 @@ namespace Raven.Database.Server.RavenFS.Search
 		private FSDirectory directory;
 		private LowerCaseKeywordAnalyzer analyzer;
 		private IndexWriter writer;
+        private SnapshotDeletionPolicy snapshotter;
 		private readonly object writerLock = new object();
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
@@ -43,7 +48,8 @@ namespace Raven.Database.Server.RavenFS.Search
 				IndexWriter.Unlock(directory);
 
 			analyzer = new LowerCaseKeywordAnalyzer();
-			writer = new IndexWriter(directory, analyzer, IndexWriter.MaxFieldLength.UNLIMITED);
+            snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+			writer = new IndexWriter(directory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
 			writer.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
 			currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
 		}
@@ -257,5 +263,103 @@ namespace Raven.Database.Server.RavenFS.Search
 				}
 			}
 		}
+
+        public void Backup(string backupDirectory)
+	    {
+            bool hasSnapshot = false;
+            bool throwOnFinallyException = true;
+            try
+            {
+                var existingFiles = new HashSet<string>();
+                var allFilesPath = Path.Combine(backupDirectory, "index-files.all-existing-index-files");
+                var saveToFolder = Path.Combine(backupDirectory, "Indexes");
+                System.IO.Directory.CreateDirectory(saveToFolder);
+                if (File.Exists(allFilesPath))
+                {
+                    foreach (var file in File.ReadLines(allFilesPath))
+                    {
+                        existingFiles.Add(file);
+                    }
+                }
+
+                var neededFilePath = Path.Combine(saveToFolder, "index-files.required-for-index-restore");
+                using (var allFilesWriter = File.Exists(allFilesPath) ? File.AppendText(allFilesPath) : File.CreateText(allFilesPath))
+                using (var neededFilesWriter = File.CreateText(neededFilePath))
+                {
+                    var segmentsFileName = "segments.gen";
+                    var segmentsFullPath = Path.Combine(path, segmentsFileName);
+                    File.Copy(segmentsFullPath, Path.Combine(saveToFolder, segmentsFileName));
+                    allFilesWriter.WriteLine(segmentsFileName);
+                    neededFilesWriter.WriteLine(segmentsFileName);
+
+                    var commit = snapshotter.Snapshot();
+                    hasSnapshot = true;
+                    foreach (var fileName in commit.FileNames)
+                    {
+                        var fullPath = Path.Combine(path, fileName);
+
+                        if (".lock".Equals(Path.GetExtension(fullPath), StringComparison.InvariantCultureIgnoreCase))
+                            continue;
+
+                        if (File.Exists(fullPath) == false)
+                            continue;
+
+                        if (existingFiles.Contains(fileName) == false)
+                        {
+                            var destFileName = Path.Combine(saveToFolder, fileName);
+                            try
+                            {
+                                File.Copy(fullPath, destFileName);
+                            }
+                            catch (Exception e)
+                            {
+                                log.WarnException(
+                                    "Could not backup RavenFS index" + 
+                                    " because failed to copy file : " + fullPath + ". Skipping the index, will force index reset on restore", e); //TODO: is it also true for RavenFS?
+                                neededFilesWriter.Dispose();
+                                TryDelete(neededFilePath);
+                                return;
+
+                            }
+                            allFilesWriter.WriteLine(fileName);
+                        }
+                        neededFilesWriter.WriteLine(fileName);
+                    }
+                    allFilesWriter.Flush();
+                    neededFilesWriter.Flush();
+                }
+            }
+            catch
+            {
+                throwOnFinallyException = false;
+                throw;
+            }
+            finally
+            {
+                if (snapshotter != null && hasSnapshot)
+                {
+                    try
+                    {
+                        snapshotter.Release();
+                    }
+                    catch
+                    {
+                        if (throwOnFinallyException)
+                            throw;
+                    }
+                }
+            }
+	    }
+
+        private static void TryDelete(string neededFilePath)
+        {
+            try
+            {
+                File.Delete(neededFilePath);
+            }
+            catch (Exception)
+            {
+            }
+        }
 	}
 }

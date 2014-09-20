@@ -82,7 +82,7 @@ namespace Raven.Tests.Issues
 			}
 			IOExtensions.DeleteDirectory(DataDir);
 
-		    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+		    MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
 		    {
 		        BackupLocation = BackupDir,
 		        DatabaseLocation = DataDir,

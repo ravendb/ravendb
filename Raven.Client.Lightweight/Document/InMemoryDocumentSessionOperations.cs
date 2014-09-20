@@ -273,6 +273,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		public bool IsLoaded(string id)
 		{
+			if (IsDeleted(id))
+				return false;
 			return entitiesByKey.ContainsKey(id) || includedDocumentsByKey.ContainsKey(id);
 		}
 
@@ -603,19 +605,20 @@ more responsive application.
 		/// <param name="id"></param>
 		public void Delete(string id)
 		{
-			knownMissingIds.Add(id);
+			if (id == null) throw new ArgumentNullException("id");
 			object entity;
 			if (entitiesByKey.TryGetValue(id, out entity))
 			{
-				// find if entity was changed on session or just inserted
-
-				if (EntityChanged(entity, entitiesAndMetadata[entity], null))
+				if (EntityChanged(entity, entitiesAndMetadata[entity]))
 				{
 					throw new InvalidOperationException("Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
 				}
-				entitiesByKey.Remove(id);
-				entitiesAndMetadata.Remove(entity);
+				Delete(entity);
+				return;
 			}
+			includedDocumentsByKey.Remove(id);
+			knownMissingIds.Add(id);
+			
 			Defer(new DeleteCommandData { Key = id });
 		}
 
@@ -697,8 +700,11 @@ more responsive application.
 				GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 			}
 
-			if (deferedCommands.Any(c => c.GetType() == typeof(DeleteCommandData) && c.Key == id))
-				throw new InvalidOperationException("Can't store object, which was deleted in this session.");
+			if (deferedCommands.Any(c => c.Key == id))
+				throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + id);
+
+			if (deletedEntities.Contains(entity))
+				throw new InvalidOperationException("Can't store object, it was already deleted in this session.  Document id: " + id);
 
 			// we make the check here even if we just generated the key
 			// users can override the key generation behavior, and we need
@@ -781,6 +787,10 @@ more responsive application.
 
 		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
+			deletedEntities.Remove(entity);
+			if(id !=null)
+				knownMissingIds.Remove(id);
+
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
 				Key = id,

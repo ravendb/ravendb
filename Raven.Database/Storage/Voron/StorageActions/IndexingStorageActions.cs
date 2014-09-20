@@ -457,12 +457,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private int ReadPriority(string key)
 		{
-			return tableStorage.IndexingMetadata.Read(Snapshot, CreateKey(key, "priority"), writeBatch.Value).Reader.ReadLittleEndianInt32();
+			var readResult = tableStorage.IndexingMetadata.Read(Snapshot, CreateKey(key, "priority"), writeBatch.Value);
+			if (readResult == null)
+				return -1;
+			return readResult.Reader.ReadLittleEndianInt32();
 		}
 
 		private int ReadTouches(string key)
 		{
-			return tableStorage.IndexingMetadata.Read(Snapshot, CreateKey(key, "touches"), writeBatch.Value).Reader.ReadLittleEndianInt32();
+			var readResult = tableStorage.IndexingMetadata.Read(Snapshot, CreateKey(key, "touches"), writeBatch.Value);
+			if (readResult == null)
+				return  -1;
+			return readResult.Reader.ReadLittleEndianInt32();
 		}
 	}
 }

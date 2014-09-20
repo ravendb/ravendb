@@ -96,6 +96,9 @@ namespace Raven.Client.FileSystem
         Task CreateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null);
         Task CreateOrUpdateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null);
         Task DeleteFileSystemAsync(string fileSystemName = null, bool hardDelete = false);
+
+        Task StartRestore(FilesystemRestoreRequest restoreRequest);
+        Task StartBackup(string backupLocation, FileSystemDocument databaseDocument, bool incremental, string filesystemName);
     }
 
     public interface IAsyncFilesConfigurationCommands : IDisposable, IHoldProfilingInformation

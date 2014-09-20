@@ -28,6 +28,7 @@ using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
+using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -35,6 +36,8 @@ using Raven.Json.Linq;
 using Voron.Impl.Backup;
 
 using Raven.Client.Extensions;
+
+using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
 
 namespace Raven.Database.Server.Controllers.Admin
 {
@@ -54,15 +57,15 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("databases/{databaseName}/admin/backup")]
 		public async Task<HttpResponseMessage> Backup()
 		{
-			var backupRequest = await ReadJsonObjectAsync<BackupRequest>();
+			var backupRequest = await ReadJsonObjectAsync<DatabaseBackupRequest>();
 			var incrementalString = InnerRequest.RequestUri.ParseQueryString()["incremental"];
 			bool incrementalBackup;
 			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
 				incrementalBackup = false;
 
-            if (backupRequest.DatabaseDocument == null && Database.Name != null)
+            if (backupRequest.DatabaseDocument == null)
             {
-                if (Database.Name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
+                if (Database.Name == null || Database.Name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
                 {
                     backupRequest.DatabaseDocument = new DatabaseDocument { Id = Constants.SystemDatabase };
                 }
@@ -101,11 +104,11 @@ namespace Raven.Database.Server.Controllers.Admin
 
             var restoreStatus = new RestoreStatus{Messages = new List<string>()};
 
-			var restoreRequest = await ReadJsonObjectAsync<RestoreRequest>();
+			var restoreRequest = await ReadJsonObjectAsync<DatabaseRestoreRequest>();
 
 			DatabaseDocument databaseDocument = null;
 
-			var databaseDocumentPath = Path.Combine(restoreRequest.BackupLocation, "Database.Document");
+            var databaseDocumentPath = MaintenanceActions.FindDatabaseDocument(restoreRequest.BackupLocation);
 			if (File.Exists(databaseDocumentPath))
 			{
 				var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
@@ -129,6 +132,10 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			if (databaseName == Constants.SystemDatabase)
 				return GetMessageWithString("Cannot do an online restore for the <system> database", HttpStatusCode.BadRequest);
+
+			var existingDatabase = Database.Documents.GetDocumentMetadata("Raven/Databases/" + databaseName,null);
+			if(existingDatabase != null)
+				return GetMessageWithString("Cannot do an online restore for an existing database, delete the database " + databaseName + " and restore again.", HttpStatusCode.BadRequest);
 
 			var ravenConfiguration = new RavenConfiguration
 			{
@@ -161,8 +168,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		    if (bool.TryParse(GetQueryStringValue("defrag"), out defrag))
 		        restoreRequest.Defrag = defrag;
 
-			//TODO: add task to pending task list like in ImportDatabase
-            Task.Factory.StartNew(() =>
+            var task = Task.Factory.StartNew(() =>
             {
                 MaintenanceActions.Restore(ravenConfiguration,restoreRequest,
                     msg =>
@@ -190,7 +196,19 @@ namespace Raven.Database.Server.Controllers.Admin
                     RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
             }, TaskCreationOptions.LongRunning);
 
-            return GetEmptyMessage();
+			long id;
+			Database.Tasks.AddTask(task, new object(), new TaskActions.PendingTaskDescription
+			{
+				StartTime = SystemTime.UtcNow,
+				TaskType = TaskActions.PendingTaskType.RestoreDatabase,
+				Payload = "Restoring database " + databaseName + " from " + restoreRequest.BackupLocation
+			}, out id);
+
+
+			return GetMessageWithObject(new
+			{
+				OperationId = id
+			});
 		}
 
 		private string ResolveTenantDataDirectory(string databaseLocation, string databaseName, out string documentDataDir)
@@ -405,7 +423,7 @@ namespace Raven.Database.Server.Controllers.Admin
         public HttpResponseMessage Gc()
         {
             if (EnsureSystemDatabase() == false)
-                return GetMessageWithString("Garbage Collection is only possiable from the system database", HttpStatusCode.BadRequest);
+                return GetMessageWithString("Garbage Collection is only possible from the system database", HttpStatusCode.BadRequest);
 
 
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
@@ -421,7 +439,7 @@ namespace Raven.Database.Server.Controllers.Admin
         public HttpResponseMessage LohCompaction()
 		{
             if (EnsureSystemDatabase() == false)
-                return GetMessageWithString("Large Object Heap Garbage Collection is only possiable from the system database", HttpStatusCode.BadRequest);
+                return GetMessageWithString("Large Object Heap Garbage Collection is only possible from the system database", HttpStatusCode.BadRequest);
 
 
 		    Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();

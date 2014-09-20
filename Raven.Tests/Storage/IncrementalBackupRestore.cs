@@ -81,7 +81,7 @@ namespace Raven.Tests.Storage
 					{"Raven/Voron/AllowIncrementalBackups", "true"}
 	            }
 
-			}, new RestoreRequest
+			}, new DatabaseRestoreRequest
 			{
 			    BackupLocation = BackupDir,
                 DatabaseLocation = DataDir,
@@ -144,7 +144,7 @@ namespace Raven.Tests.Storage
 					{"Raven/Voron/AllowIncrementalBackups", "true"}
 	            }
 
-            }, new RestoreRequest
+            }, new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir,

@@ -30,19 +30,25 @@ text.trace {
 
 <section id="infoPackageSection">
     
-    <div class="btn-group">
-        <button data-bind="click: createPackageWithoutStacks" class="btn btn-default">
-            Create info package <i class="fa fa-file-zip-o"></i>
-        </button>
+    <div class="btn-group" data-bind="visible: adminView()">
+        <button class="btn btn-default" title="Creates package with stacktrace (available ONLY for system database)" data-bind="click: createPackageWithStacks" >Create info package with stacktraces <span class="text-danger">(This is resource consuming)</span></button>
         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
             <span class="caret"></span>
-            <span class="sr-only">Toggle Dropdown</span>
+            <span class="sr-only" >Toggle Dropdown</span>
         </button>
         <ul class="dropdown-menu" role="menu">
             <li>
-                <button class="btn btn-default" title="Creates package with stacktrace (available ONLY for system database)" data-bind="click: createPackageWithStacks, enable: stackDumpEnabled()" >Create info package with stacktraces <span class="text-danger">(This is resource consuming)</span></button>
+                <button data-bind="click: createPackageWithoutStacks" class="btn btn-default">
+                    Create info package <i class="fa fa-file-zip-o"></i>
+                </button>
             </li>
         </ul>
+    </div>
+    
+    <div class="btn-group" data-bind="visible: adminView()==false">
+        <button data-bind="click: createPackageWithoutStacks" class="btn btn-default">
+            Create info package <i class="fa fa-file-zip-o"></i>
+        </button>
     </div>
     
     <div class="btn-group" data-bind="visible: hasStackDump">

@@ -81,7 +81,7 @@ namespace Raven.Tests
 					{"Raven/Voron/AllowIncrementalBackups", "true"}
 	            }
 
-            }, new RestoreRequest
+            }, new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir,
@@ -127,7 +127,7 @@ namespace Raven.Tests
                         {"Raven/Esent/CircularLog", "false"}
                     }
 
-                }, new RestoreRequest
+                }, new DatabaseRestoreRequest
                 {
                     BackupLocation = BackupDir,
                     DatabaseLocation = DataDir,

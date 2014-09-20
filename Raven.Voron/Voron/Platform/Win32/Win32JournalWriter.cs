@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Voron.Impl.Paging;
+using Voron.Platform.Win32;
 using Voron.Util;
 
 namespace Voron.Impl.Journal
@@ -29,15 +30,15 @@ namespace Voron.Impl.Journal
 		public Win32FileJournalWriter(string filename, long journalSize)
 		{
 			_filename = filename;
-			_handle = NativeFileMethods.CreateFile(filename,
-				NativeFileAccess.GenericWrite, NativeFileShare.Read, IntPtr.Zero,
-				NativeFileCreationDisposition.OpenAlways,
-				NativeFileAttributes.Write_Through | NativeFileAttributes.NoBuffering | NativeFileAttributes.Overlapped, IntPtr.Zero);
+			_handle = Win32NativeFileMethods.CreateFile(filename,
+			                                            Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.Read, IntPtr.Zero,
+			                                            Win32NativeFileCreationDisposition.OpenAlways,
+			                                            Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering | Win32NativeFileAttributes.Overlapped, IntPtr.Zero);
 
 			if (_handle.IsInvalid)
 				throw new Win32Exception();
 
-			NativeFileMethods.SetFileLength(_handle, journalSize);
+			Win32NativeFileMethods.SetFileLength(_handle, journalSize);
 
 			NumberOfAllocatedPages = journalSize/AbstractPager.PageSize;
 			_manualResetEvent = new ManualResetEvent(false);
@@ -67,6 +68,7 @@ namespace Voron.Impl.Journal
 			{
 				if(IntPtr.Size == 4)
 					_segments[i].Alignment = (ulong) pages[i];
+
 				else
 					_segments[i].Buffer = pages[i];
 			}
@@ -113,12 +115,12 @@ namespace Voron.Impl.Journal
 		{
 			if (_readHandle == null)
 			{
-				_readHandle = NativeFileMethods.CreateFile(_filename,
-					NativeFileAccess.GenericRead,
-					NativeFileShare.Write | NativeFileShare.Read | NativeFileShare.Delete,
+				_readHandle = Win32NativeFileMethods.CreateFile(_filename,
+				                                                Win32NativeFileAccess.GenericRead,
+				                                                Win32NativeFileShare.Write | Win32NativeFileShare.Read | Win32NativeFileShare.Delete,
 					IntPtr.Zero,
-					NativeFileCreationDisposition.OpenExisting,
-					NativeFileAttributes.Normal,
+				                                                Win32NativeFileCreationDisposition.OpenExisting,
+				                                                Win32NativeFileAttributes.Normal,
 					IntPtr.Zero);
 			}
 
@@ -130,7 +132,7 @@ namespace Voron.Impl.Journal
 				while (count > 0)
 				{
 					int read;
-					if (NativeFileMethods.ReadFile(_readHandle, buffer, count, out read, nativeOverlapped) == false)
+					if (Win32NativeFileMethods.ReadFile(_readHandle, buffer, count, out read, nativeOverlapped) == false)
 					{
 						int lastWin32Error = Marshal.GetLastWin32Error();
 						if (lastWin32Error == ErrorHandleEof)
@@ -139,6 +141,9 @@ namespace Voron.Impl.Journal
 					}
 					count -= read;
 					buffer += read;
+					position += read;
+					nativeOverlapped->OffsetLow = (int) (position & 0xffffffff);
+					nativeOverlapped->OffsetHigh = (int) (position >> 32);
 				}
 				return true;
 			}

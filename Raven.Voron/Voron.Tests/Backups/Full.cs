@@ -66,6 +66,8 @@ namespace Voron.Tests.Backups
 				tx.Commit();
 			}
 
+            Env.FlushLogToDataFile(); // force writing data to the data file - this won't sync data to disk because there was another sync withing last minute
+
 			BackupMethods.Full.ToFile(Env, _backupFile);
 
 			BackupMethods.Full.Restore(_backupFile, _recoveredStoragePath);

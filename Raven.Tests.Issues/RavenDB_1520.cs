@@ -26,12 +26,12 @@ namespace Raven.Tests.Issues
 			using (var ravenServer = GetNewServer(runInMemory: false,requestedStorage:"esent"))
 			using (var _ = NewRemoteDocumentStore(ravenDbServer: ravenServer, databaseName: "fooDB", runInMemory: false))
 			{
-			    using (var systemDatabaseBackupOperation = new BackupOperation
-			                                            {
-			                                                BackupPath = BackupDir,
-			                                                Database = Constants.SystemDatabase,
-			                                                ServerUrl = ravenServer.SystemDatabase.Configuration.ServerUrl
-			                                            })
+			    using (var systemDatabaseBackupOperation = new DatabaseBackupOperation(new BackupParameters
+			                                                                           {
+                                                                                           BackupPath = BackupDir,
+                                                                                           Database = Constants.SystemDatabase,
+                                                                                           ServerUrl = ravenServer.SystemDatabase.Configuration.ServerUrl
+			                                                                           }))
 			    {
 
 			        Assert.True(systemDatabaseBackupOperation.InitBackup());
@@ -39,7 +39,7 @@ namespace Raven.Tests.Issues
 			    }
 			}
 
-			Assert.DoesNotThrow(() => MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+			Assert.DoesNotThrow(() => MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
 			{
 			    BackupLocation = BackupDir,
                 DatabaseLocation = DataDir

@@ -7,7 +7,7 @@ using System;
 using System.IO;
 
 using Voron.Impl;
-
+using Voron.Platform.Win32;
 using Xunit;
 
 namespace Voron.Tests.Storage
@@ -26,8 +26,8 @@ namespace Voron.Tests.Storage
 		[Fact]
 		public void WhenInitialFileSizeIsNotSetTheFileSizeForDataFileAndScratchFileShouldBeSetToSystemAllocationGranularity()
 		{
-			NativeMethods.SYSTEM_INFO systemInfo;
-			NativeMethods.GetSystemInfo(out systemInfo);
+			Win32NativeMethods.SYSTEM_INFO systemInfo;
+			Win32NativeMethods.GetSystemInfo(out systemInfo);
 
 			var options = StorageEnvironmentOptions.ForPath(path);
 			options.InitialFileSize = null;
@@ -45,8 +45,8 @@ namespace Voron.Tests.Storage
 		[Fact]
 		public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordingly()
 		{
-			NativeMethods.SYSTEM_INFO systemInfo;
-			NativeMethods.GetSystemInfo(out systemInfo);
+			Win32NativeMethods.SYSTEM_INFO systemInfo;
+			Win32NativeMethods.GetSystemInfo(out systemInfo);
 
 			var options = StorageEnvironmentOptions.ForPath(path);
 			options.InitialFileSize = systemInfo.allocationGranularity * 2;
@@ -64,8 +64,8 @@ namespace Voron.Tests.Storage
 		[Fact]
 		public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordinglyAndItWillBeRoundedToTheNearestGranularity()
 		{
-			NativeMethods.SYSTEM_INFO systemInfo;
-			NativeMethods.GetSystemInfo(out systemInfo);
+			Win32NativeMethods.SYSTEM_INFO systemInfo;
+			Win32NativeMethods.GetSystemInfo(out systemInfo);
 
 			var options = StorageEnvironmentOptions.ForPath(path);
 			options.InitialFileSize = systemInfo.allocationGranularity * 2 + 1;

@@ -1,0 +1,44 @@
+﻿<form class="form-horizontal" role="form" data-bind="submit: startRestore">
+    <div class="panel panel-default">
+        <div class="panel-heading panel-info">
+            <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: isBusy">
+                <i class="fa fa-cloud-download"></i>
+                <span>Restore Filesystem</span>
+            </button>
+        </div>
+        <div class="panel-body">
+            <div class="form-group">
+                <label for="backupLocation" class="col-sm-2 control-label">Backup Location</label>
+                <div class="col-sm-5">
+                    <input data-bind="value: backupLocation" type="text" required class="form-control" id="backupLocation" placeholder="C:\path-to-your-backup-folder">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="filesystemLocation" class="col-sm-2 control-label">Filesystem Location</label>
+                <div class="col-sm-5">
+                    <input data-bind="value: filesystemLocation" type="text" class="form-control" id="filesystemLocation" placeholder="C:\path-to-your-restored-filesystem-folder">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="filesystemName" class="col-sm-2 control-label">Filesystem Name</label>
+                <div class="col-sm-3">
+                    <input data-bind="value: filesystemName, customValidity: nameCustomValidityError" type="text" required class="form-control" id="filesystemName" placeholder="Restored filesystem name" autocomplete="off">
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-5">
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" data-bind="checked: defrag"> Defrag
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group col-sm-7">
+                <div data-bind="foreach: restoreStatusMessages">
+                    <div data-bind="text: $data"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

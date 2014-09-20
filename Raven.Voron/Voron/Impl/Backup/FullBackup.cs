@@ -5,9 +5,11 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Impl.FileHeaders;
@@ -39,6 +41,7 @@ namespace Voron.Impl.Backup
 					long allocatedPages;
 
 					ImmutableAppendOnlyList<JournalFile> files; // thread safety copy
+                    var usedJournals = new List<JournalFile>();
 					long lastWrittenLogPage = -1;
 					long lastWrittenLogFile = -1;
 					using (var txw = env.NewTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
@@ -52,11 +55,25 @@ namespace Voron.Impl.Backup
 
 						// journal files snapshot
 						files = env.Journal.Files;
- 
-						foreach (var journalFile in files)
-						{
-							journalFile.AddRef();
-						}
+
+                        JournalInfo journalInfo = env.HeaderAccessor.Get(ptr => ptr->Journal);
+                        for (var journalNum = journalInfo.CurrentJournal - journalInfo.JournalFilesCount + 1; journalNum <= journalInfo.CurrentJournal; journalNum++)
+                        {
+                            var journalFile = files.FirstOrDefault(x => x.Number == journalNum); // first check journal files currently being in use
+                            if (journalFile == null)
+                            {
+                                long journalSize;
+                                using (var pager = env.Options.OpenJournalPager(journalNum))
+                                {
+                                    journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * AbstractPager.PageSize);
+                                }
+
+                                journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
+                            }
+
+                            journalFile.AddRef();
+                            usedJournals.Add(journalFile);
+                        }
 
 						if (env.Journal.CurrentFile != null)
 						{
@@ -84,7 +101,7 @@ namespace Voron.Impl.Backup
 
 					try
 					{
-						foreach (var journalFile in files)
+						foreach (var journalFile in usedJournals)
 						{
 							var journalPart = package.CreateEntry(StorageEnvironmentOptions.JournalName(journalFile.Number), compression);
 
@@ -104,7 +121,7 @@ namespace Voron.Impl.Backup
 					}
 					finally
 					{
-						foreach (var journalFile in files)
+                        foreach (var journalFile in usedJournals)
 						{
 							journalFile.Release();
 						}

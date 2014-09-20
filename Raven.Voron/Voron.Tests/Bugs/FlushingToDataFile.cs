@@ -70,7 +70,7 @@ namespace Voron.Tests.Bugs
 
                     fixed (byte* b = value1)
                     fixed (byte* c = memoryStream.GetBuffer())
-                        Assert.Equal(0, NativeMethods.memcmp(b, c, value1.Length));
+                        Assert.Equal(0, StdLib.memcmp(b, c, value1.Length));
                 }
             }
         }

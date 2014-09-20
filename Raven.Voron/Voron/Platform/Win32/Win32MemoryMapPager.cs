@@ -1,19 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+using Voron.Impl;
+using Voron.Impl.Paging;
+using Voron.Trees;
+using Voron.Util;
 
-namespace Voron.Impl.Paging
+namespace Voron.Platform.Win32
 {
-	using Microsoft.Win32.SafeHandles;
-	using System;
-	using System.ComponentModel;
-	using System.Diagnostics;
-	using System.IO;
-	using System.IO.MemoryMappedFiles;
-	using System.Runtime.InteropServices;
-	using Voron.Trees;
-	using Voron.Util;
-
 	public unsafe class Win32MemoryMapPager : AbstractPager
 	{
 		public readonly long AllocationGranularity;
@@ -21,7 +21,7 @@ namespace Voron.Impl.Paging
 		private readonly FileInfo _fileInfo;
 		private readonly FileStream _fileStream;
 		private readonly SafeFileHandle _handle;
-		private readonly NativeFileAccess _access;
+		private readonly Win32NativeFileAccess _access;
 		private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
 
 		[StructLayout(LayoutKind.Explicit)]
@@ -39,22 +39,22 @@ namespace Voron.Impl.Paging
 
 		public Win32MemoryMapPager(string file,
 			long? initialFileSize = null,
-			NativeFileAttributes options = NativeFileAttributes.Normal,
-			NativeFileAccess access = NativeFileAccess.GenericRead | NativeFileAccess.GenericWrite)
+		                           Win32NativeFileAttributes options = Win32NativeFileAttributes.Normal,
+		                           Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
 		{
-			NativeMethods.SYSTEM_INFO systemInfo;
-			NativeMethods.GetSystemInfo(out systemInfo);
+			Win32NativeMethods.SYSTEM_INFO systemInfo;
+			Win32NativeMethods.GetSystemInfo(out systemInfo);
 
 			AllocationGranularity = systemInfo.allocationGranularity;
 
 			_access = access;
-			_memoryMappedFileAccess = _access == NativeFileAccess.GenericRead
+			_memoryMappedFileAccess = _access == Win32NativeFileAccess.GenericRead
 				? MemoryMappedFileAccess.Read
 				: MemoryMappedFileAccess.ReadWrite;
 
-			_handle = NativeFileMethods.CreateFile(file, access,
-			   NativeFileShare.Read | NativeFileShare.Write | NativeFileShare.Delete, IntPtr.Zero,
-			   NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);
+			_handle = Win32NativeFileMethods.CreateFile(file, access,
+			                                            Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
+			                                            Win32NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);
 			if (_handle.IsInvalid)
 			{
 				int lastWin32ErrorCode = Marshal.GetLastWin32Error();
@@ -64,16 +64,16 @@ namespace Voron.Impl.Paging
 
 			_fileInfo = new FileInfo(file);
 
-			var streamAccessType = _access == NativeFileAccess.GenericRead
+			var streamAccessType = _access == Win32NativeFileAccess.GenericRead
 				? FileAccess.Read
 				: FileAccess.ReadWrite;
 			_fileStream = new FileStream(_handle, streamAccessType);
 
 			_totalAllocationSize = _fileInfo.Length;
 
-			if (_access.HasFlag(NativeFileAccess.GenericWrite) || 
-				_access.HasFlag(NativeFileAccess.GenericAll) ||
-				_access.HasFlag(NativeFileAccess.FILE_GENERIC_WRITE))
+			if (_access.HasFlag(Win32NativeFileAccess.GenericWrite) || 
+			    _access.HasFlag(Win32NativeFileAccess.GenericAll) ||
+			    _access.HasFlag(Win32NativeFileAccess.FILE_GENERIC_WRITE))
 			{
 				var fileLength = _fileStream.Length;
 				if (fileLength == 0 && initialFileSize.HasValue)
@@ -116,9 +116,6 @@ namespace Voron.Impl.Paging
 				return;
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
-
-			if (_totalAllocationSize + allocationSize >= long.MaxValue) //probably would never be true, but just in case
-				throw new OutOfMemoryException("failed to allocated more pages - reached maximum allowed space usage");
 
 			_fileStream.SetLength(_totalAllocationSize + allocationSize);
 			if (TryAllocateMoreContinuousPages(allocationSize) == false)
@@ -175,8 +172,8 @@ namespace Voron.Impl.Paging
 				_memoryMappedFileAccess,
 				null, HandleInheritability.None, true);
 
-			var newMappingBaseAddress = MemoryMapNativeMethods.MapViewOfFileEx(mmf.SafeMemoryMappedFileHandle.DangerousGetHandle(),
-				MemoryMapNativeMethods.NativeFileMapAccessType.Read | MemoryMapNativeMethods.NativeFileMapAccessType.Write,
+			var newMappingBaseAddress = Win32MemoryMapNativeMethods.MapViewOfFileEx(mmf.SafeMemoryMappedFileHandle.DangerousGetHandle(),
+				Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write,
 				offset.High, offset.Low,
 				new UIntPtr((ulong)allocationSize), 
 				baseAddress);
@@ -203,11 +200,11 @@ namespace Voron.Impl.Paging
 				null, HandleInheritability.None, true);
 
 			var fileMappingHandle = mmf.SafeMemoryMappedFileHandle.DangerousGetHandle();
-			var mmFileAccessType = _access == NativeFileAccess.GenericRead
-				? MemoryMapNativeMethods.NativeFileMapAccessType.Read
-				: MemoryMapNativeMethods.NativeFileMapAccessType.Read | MemoryMapNativeMethods.NativeFileMapAccessType.Write;
+			var mmFileAccessType = _access == Win32NativeFileAccess.GenericRead
+				? Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read
+					: Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write;
 
-			var startingBaseAddressPtr = MemoryMapNativeMethods.MapViewOfFileEx(fileMappingHandle,
+			var startingBaseAddressPtr = Win32MemoryMapNativeMethods.MapViewOfFileEx(fileMappingHandle,
 				mmFileAccessType,
 				0, 0,
 				UIntPtr.Zero, //map all what was "reserved" in CreateFileMapping on previous row
@@ -227,7 +224,6 @@ namespace Voron.Impl.Paging
 			var newPager = new PagerState(this)
 			{
 				Files = new[] { mmf },
-				Accessor = null, //not available since MapViewOfFileEx is used (instead of MapViewOfFile - which is used in managed wrapper)
 				MapBase = startingBaseAddressPtr,
 				AllocationInfos = new[] { allocationInfo }
 			};
@@ -255,10 +251,10 @@ namespace Voron.Impl.Paging
 			ThrowObjectDisposedIfNeeded();
 
 			if (PagerState.AllocationInfos.Any(allocationInfo => 
-				MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress, new IntPtr(allocationInfo.Size)) == false))
+			                                   Win32MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress, new IntPtr(allocationInfo.Size)) == false))
 					throw new Win32Exception();
 
-			if (MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
+			if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
 				throw new Win32Exception();
 		}
 
@@ -281,7 +277,7 @@ namespace Voron.Impl.Paging
 			ThrowObjectDisposedIfNeeded();
 
 			int toCopy = pagesToWrite*PageSize;
-			NativeMethods.memcpy(PagerState.MapBase + pagePosition*PageSize, start.Base, toCopy);
+			StdLib.memcpy(PagerState.MapBase + pagePosition*PageSize, start.Base, toCopy);
 
 			return toCopy;
 		}
@@ -299,5 +295,10 @@ namespace Voron.Impl.Paging
 			base.Dispose();
 		}
 
+		public override void ReleaseAllocationInfo(byte* baseAddress, long size)
+		{
+			if (Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress) == false)
+				throw new Win32Exception();
+		}
 	}
 }

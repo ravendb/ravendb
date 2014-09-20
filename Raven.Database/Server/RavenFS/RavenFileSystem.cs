@@ -51,9 +51,7 @@ namespace Raven.Database.Server.RavenFS
 		    this.Name = name;
 			this.systemConfiguration = systemConfiguration;
 
-		    var storageType = systemConfiguration.FileSystem.DefaultStorageTypeName;
-
-            storage = CreateTransactionalStorage(storageType, systemConfiguration);
+            storage = CreateTransactionalStorage(systemConfiguration);
 			search = new IndexStorage(systemConfiguration.FileSystem.IndexStoragePath, systemConfiguration.Settings);
 			sigGenerator = new SigGenerator();
 			var replicationHiLo = new SynchronizationHiLo(storage);
@@ -95,8 +93,9 @@ namespace Raven.Database.Server.RavenFS
             }
         }
 
-        private static ITransactionalStorage CreateTransactionalStorage(string storageType, InMemoryRavenConfiguration configuration)
+        internal static ITransactionalStorage CreateTransactionalStorage(InMemoryRavenConfiguration configuration)
         {
+            var storageType = configuration.FileSystem.DefaultStorageTypeName;
             switch (storageType)
             {
                 case InMemoryRavenConfiguration.VoronTypeName:
@@ -183,6 +182,7 @@ namespace Raven.Database.Server.RavenFS
 			AppDomain.CurrentDomain.ProcessExit -= ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload -= ShouldDispose;
 
+			synchronizationTask.Dispose();
 			storage.Dispose();
 			search.Dispose();
 			sigGenerator.Dispose();

@@ -65,28 +65,42 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(results);
 		}
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <remarks>
+        /// as we sum data we have to guarantee that we don't sum the same record twice on client side.
+        /// to prevent such situation we don't send data from current second
+        /// </remarks>
+        /// <param name="format"></param>
+        /// <returns></returns>
 		[HttpGet]
 		[Route("debug/indexing-perf-stats")]
 		[Route("databases/{databaseName}/debug/indexing-perf-stats")]
 		public HttpResponseMessage IndexingPerfStats(string format = "json")
-		{
+        {
+            var now = SystemTime.UtcNow;
+            var nowTruncToSeconds = new DateTime(now.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, now.Kind);
+
 			var databaseStatistics = Database.Statistics;
 			var stats = from index in databaseStatistics.Indexes
 						from perf in index.Performance
+                        where (perf.Operation == "Map" || perf.Operation == "Index") && perf.Started < nowTruncToSeconds
 						let k = new { index, perf}
-						group k by new { k.perf.Started,k.perf.Operation } into g
+						group k by k.perf.Started.Ticks / TimeSpan.TicksPerSecond into g
+                        orderby g.Key 
 						select new
 						{
-							Started = g.Key.Started,
+							Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
 							Stats = from k in g
+                                    group k by k.index.Name into gg
 									select new
 									{
-										Index = k.index.Name,
-										k.perf.DurationMilliseconds,
-										k.perf.InputCount,
-										k.perf.OutputCount,
-										k.perf.ItemsCount,
-										k.perf.Operation,
+										Index = gg.Key,
+                                        DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
+                                        InputCount = gg.Sum(x => x.perf.InputCount),
+                                        OutputCount = gg.Sum(x => x.perf.OutputCount),
+                                        ItemsCount = gg.Sum(x => x.perf.ItemsCount)
 									}
 						};
 
@@ -99,12 +113,12 @@ namespace Raven.Database.Server.Controllers
 					foreach(var stat in stats)
 					{
 						sw.WriteLine(stat.Started.ToString("o"));
-						sw.WriteLine("Index, Duration (ms), Input, Output, Items, Operation");
+						sw.WriteLine("Index, Duration (ms), Input, Output, Items");
 						foreach(var indexStat in stat.Stats)
 						{
 							sw.Write('"');
 							sw.Write(indexStat.Index);
-							sw.Write("\",{0},{1},{2},{3},{4}",indexStat.DurationMilliseconds, indexStat.InputCount, indexStat.OutputCount, indexStat.ItemsCount, indexStat.Operation);
+                            sw.Write("\",{0},{1},{2},{3}", indexStat.DurationMilliseconds, indexStat.InputCount, indexStat.OutputCount, indexStat.ItemsCount);
 							sw.WriteLine();
 						}
 						sw.WriteLine();

@@ -7444,23 +7444,29 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 .popover {
   max-width: 30%;
 }
-#queryContainer .breadcrumb {
+#queryContainer .breadcrumb,
+#reportingContainer .breadcrumb {
   width: 100%;
 }
-#queryContainer .breadcrumb li {
+#queryContainer .breadcrumb li,
+#reportingContainer .breadcrumb li {
   overflow: visible !important;
 }
-#queryContainer .editor {
+#queryContainer .editor,
+#reportingContainer .editor {
   height: 60px;
 }
-#queryContainer .popover {
+#queryContainer .popover,
+#reportingContainer .popover {
   max-width: 450px;
   width: 450px;
 }
-#queryContainer .form-horizontal {
+#queryContainer .form-horizontal,
+#reportingContainer .form-horizontal {
   overflow: hidden auto;
 }
-#queryContainer .side-panel li {
+#queryContainer .side-panel li,
+#reportingContainer .side-panel li {
   max-width: 100% !important;
   margin-top: 5%;
   margin-bottom: 5%;
@@ -7472,7 +7478,8 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
-#queryContainer .suggestion-box {
+#queryContainer .suggestion-box,
+#reportingContainer .suggestion-box {
   position: absolute;
   display: table-cell;
   z-index: 200;
@@ -8169,18 +8176,27 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   cursor: inherit;
   display: block;
 }
-.jsContent .string {
+.jsContent .string,
+.nvtooltip .string {
   color: #D14;
 }
-.jsContent .number {
+.jsContent .number,
+.nvtooltip .number {
   color: #099;
 }
-.jsContent .boolean {
+.jsContent .boolean,
+.nvtooltip .boolean {
   color: #0000ff;
 }
-.jsContent .null {
+.jsContent .null,
+.nvtooltip .null {
   color: #0000ff;
 }
-.jsContent .key {
+.jsContent .key,
+.nvtooltip .key {
   color: #000;
+}
+.nvtooltip {
+  border-radius: 5px;
+  box-shadow: 2px 2px 5px 0 rgba(50, 50, 50, 0.61);
 }

@@ -9,7 +9,33 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
 {
-	public class RavenConnectionStringOptions
+
+    public class ConnectionStringOptions
+    {        
+        private string url;
+        public string Url
+        {
+            get { return url; }
+            set
+            {
+                url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
+            }
+        }
+
+        public string ApiKey { get; set; }
+
+        internal string CurrentOAuthToken { get; set; }
+
+        public ICredentials Credentials { get; set; }
+
+        public override string ToString()
+        {
+            var user = Credentials == null ? "<none>" : ((NetworkCredential)Credentials).UserName;
+            return string.Format("Url: {0}, User: {1}, Api Key: {2}", Url, user, ApiKey);
+        }
+    }
+
+    public class RavenConnectionStringOptions : ConnectionStringOptions
 	{
 		public RavenConnectionStringOptions()
 		{
@@ -20,36 +46,23 @@ namespace Raven.Abstractions.Data
 #endif
 		}
 
-		public ICredentials Credentials { get; set; }
+        public Guid ResourceManagerId { get; set; }
+
 		public bool EnlistInDistributedTransactions { get; set; }
-		public string DefaultDatabase { get; set; }
-		public Guid ResourceManagerId { get; set; }
-		private string url;
+        public string DefaultDatabase { get; set; }
 
-		public string Url
-		{
-			get { return url; }
-			set
-			{
-				url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
-			}
-		}
-
+		
 		public FailoverServers FailoverServers { get; set; }
 
-		public string ApiKey { get; set; }
-
-		internal string CurrentOAuthToken { get; set; }
-
-		public override string ToString()
-		{
-			var user = Credentials == null ? "<none>" : ((NetworkCredential)Credentials).UserName;
-			return string.Format("Url: {4}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, ResourceManagerId: {3}, Api Key: {5}", user, EnlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url, ApiKey);
-		}
+        public override string ToString()
+        {
+            var user = Credentials == null ? "<none>" : ((NetworkCredential)Credentials).UserName;
+            return string.Format("Url: {4}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, ResourceManagerId: {3}, Api Key: {5}", user, EnlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url, ApiKey);
+        }
 	}
 
-	public class EmbeddedRavenConnectionStringOptions : RavenConnectionStringOptions
-	{
+    public class EmbeddedRavenConnectionStringOptions : RavenConnectionStringOptions
+    {
 		public bool AllowEmbeddedOptions { get; set; }
 
 		public string DataDirectory { get; set; }
@@ -57,7 +70,18 @@ namespace Raven.Abstractions.Data
 		public bool RunInMemory { get; set; }
 	}
 
-	public class ConnectionStringParser<TConnectionString> where TConnectionString : RavenConnectionStringOptions, new()
+    public class FilesConnectionStringOptions : ConnectionStringOptions
+    {
+        public string DefaultFileSystem { get; set; }
+
+        public override string ToString()
+        {
+            var filesystem = string.IsNullOrWhiteSpace(DefaultFileSystem) ? "<none>" : DefaultFileSystem;
+            return string.Format("Url: {0}, FileSystem: {1}, Api Key: {2}", Url, filesystem, ApiKey);
+        }
+    }
+
+	public class ConnectionStringParser<TConnectionString> where TConnectionString : ConnectionStringOptions, new()
 	{
 		public static ConnectionStringParser<TConnectionString> FromConnectionStringName(string connectionStringName)
 		{
@@ -101,84 +125,152 @@ namespace Raven.Abstractions.Data
 			this.connectionStringName = connectionStringName;
 		}
 
-		/// <summary>
-		/// Parse the connection string option
-		/// </summary>
-		protected virtual void ProcessConnectionStringOption(NetworkCredential networkCredentials, string key, string value)
-		{
-			var embeddedRavenConnectionStringOptions = ConnectionStringOptions as EmbeddedRavenConnectionStringOptions;
-			switch (key)
-			{
-				case "apikey":
-					ConnectionStringOptions.ApiKey = value;
+        /// <summary>
+        /// Parse the connection string option strictly for the ConnectionStringOptions
+        /// </summary>
+        protected virtual bool ProcessConnectionStringOption(ConnectionStringOptions options, NetworkCredential networkCredentials, string key, string value)
+        {
+            if (options == null)
+                return false;
+
+            switch (key)
+            {
+                case "apikey":
+                    options.ApiKey = value;
+                    break;
+                case "user":
+                    networkCredentials.UserName = value;
+                    setupUsernameInConnectionString = true;
+                    break;
+                case "password":
+                    networkCredentials.Password = value;
+                    setupPasswordInConnectionString = true;
+                    break;
+                case "domain":
+                    networkCredentials.Domain = value;
+                    break;
+		        case "url":
+					if (string.IsNullOrEmpty(options.Url))
+						options.Url = value;
 					break;
-				case "memory":
-					if(embeddedRavenConnectionStringOptions  == null)
-						goto default;
-					bool result;
-					if (bool.TryParse(value, out result) == false)
-					{
+
+                // Couldn't process the option.
+                default: return false;
+            }
+
+            // Could process therefore we didn't enter in default.
+            return true;
+        }
+
+        /// <summary>
+        /// Parse the connection string option strictly for the RavenConnectionStringOptions
+        /// </summary>
+        protected virtual bool ProcessConnectionStringOption(RavenConnectionStringOptions options, string key, string value)
+        {
+            if (options == null)
+                return false;
+
+            switch( key )
+            {
+                case "database":
+                case "defaultdatabase":
+                    options.DefaultDatabase = value;
+                    break;
+
+               case "enlist":
+					options.EnlistInDistributedTransactions = bool.Parse(value);
+					break;
+
+                case "resourcemanagerid":
+                    options.ResourceManagerId = new Guid(value);
+                    break;
+
+               case "failover":
+                    if (options.FailoverServers == null)
+                        options.FailoverServers = new FailoverServers();
+
+                    var databaseNameAndFailoverDestination = value.Split('|');
+
+                    ReplicationDestination destination;
+                    if (databaseNameAndFailoverDestination.Length == 1)
+                    {
+                        destination = JsonConvert.DeserializeObject<ReplicationDestination>(databaseNameAndFailoverDestination[0]);
+                        options.FailoverServers.AddForDefaultDatabase(destination);
+                    }
+                    else
+                    {
+                        destination = JsonConvert.DeserializeObject<ReplicationDestination>(databaseNameAndFailoverDestination[1]);
+                        options.FailoverServers.AddForDatabase(databaseName: databaseNameAndFailoverDestination[0], destinations: destination);
+                    }
+                    break;
+
+                // Couldn't process the option.
+                default: return false;
+            }
+
+            // Could process therefore we didn't enter in default.
+            return true;
+        }
+
+        /// <summary>
+        /// Parse the connection string option strictly for the EmbeddedRavenConnectionStringOptions
+        /// </summary>
+        protected virtual bool ProcessConnectionStringOption(EmbeddedRavenConnectionStringOptions options, string key, string value)
+        {
+            if (options == null)
+                return false;
+
+            switch( key )
+            {
+                case "memory":
+                    bool result;
+                    if (bool.TryParse(value, out result) == false)
+                    {
 #if !MONODROID
-						throw new ConfigurationErrorsException(string.Format("Could not understand memory setting: '{0}'", value));
+                        throw new ConfigurationErrorsException(string.Format("Could not understand memory setting: '{0}'", value));
 #else
 						throw new Exception(string.Format("Could not understand memory setting: '{0}'", value));
 #endif
-					}
-					embeddedRavenConnectionStringOptions.RunInMemory = result;
-					break;
-				case "datadir":
-					if(embeddedRavenConnectionStringOptions  == null)
-						goto default;
+                    }
+                    options.RunInMemory = result;
+                    break;
 
-					embeddedRavenConnectionStringOptions.DataDirectory = value;
-					break;
-				case "enlist":
-					ConnectionStringOptions.EnlistInDistributedTransactions = bool.Parse(value);
-					break;
-				case "resourcemanagerid":
-					ConnectionStringOptions.ResourceManagerId = new Guid(value);
-					break;
-				case "url":
-					if (string.IsNullOrEmpty(ConnectionStringOptions.Url))
-						ConnectionStringOptions.Url = value;
-					break;
-				case "failover":
-					if (ConnectionStringOptions.FailoverServers == null)
-						ConnectionStringOptions.FailoverServers = new FailoverServers();
+                case "datadir":
+                    options.DataDirectory = value;
+                    break;
 
-					var databaseNameAndFailoverDestination = value.Split('|');
+                // Couldn't process the option.
+                default: return false;
+            }
 
-					ReplicationDestination destination;
-					if (databaseNameAndFailoverDestination.Length == 1)
-					{
-						destination = JsonConvert.DeserializeObject<ReplicationDestination>(databaseNameAndFailoverDestination[0]);
-						ConnectionStringOptions.FailoverServers.AddForDefaultDatabase(destination);
-					}
-					else
-					{
-						destination = JsonConvert.DeserializeObject<ReplicationDestination>(databaseNameAndFailoverDestination[1]);
-						ConnectionStringOptions.FailoverServers.AddForDatabase(databaseName: databaseNameAndFailoverDestination[0], destinations: destination);
-					}
-					break;
-				case "database":
-				case "defaultdatabase":
-					ConnectionStringOptions.DefaultDatabase = value;
-					break;
-				case "user":
-					networkCredentials.UserName = value;
-					setupUsernameInConnectionString = true;
-					break;
-				case "password":
-					networkCredentials.Password = value;
-					setupPasswordInConnectionString = true;
-					break;
-				case "domain":
-					networkCredentials.Domain = value;
-					break;
-				default:
-					throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed, unknown option: '{1}'", connectionStringName, key));
-			}
-		}
+            // Could process therefore we didn't enter in default.
+            return true;
+        }
+
+
+        /// <summary>
+        /// Parse the connection string option strictly for the FilesConnectionStringOptions
+        /// </summary>
+        protected virtual bool ProcessConnectionStringOption(FilesConnectionStringOptions options, string key, string value)
+        {
+            if (options == null)
+                return false;
+
+            switch (key)
+            {
+                case "filesystem":
+                case "defaultfilesystem":
+                    options.DefaultFileSystem = value;
+                    break;
+
+                // Couldn't process the option.
+                default: return false;
+            }
+
+            // Could process therefore we didn't enter in default.
+            return true;
+        }
+
 
 		public void Parse()
 		{
@@ -190,7 +282,19 @@ namespace Raven.Abstractions.Data
 				Match match = connectionStringRegex.Match(arg);
 				if (match.Success == false)
 					throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed", connectionStringName));
-				ProcessConnectionStringOption(networkCredential, match.Groups[1].Value.ToLower(), match.Groups[2].Value.Trim());
+
+                string key = match.Groups[1].Value.ToLower();
+                string value = match.Groups[2].Value.Trim();
+
+                // I am sure there are more elegant solutions than this one. But it makes the job done. 
+                // Clear separation and same parsing logic as long as inheritance tree is well constructed and the calls are topologically ordered.
+                bool processed = ProcessConnectionStringOption( this.ConnectionStringOptions as ConnectionStringOptions, networkCredential, key, value );
+                processed |= ProcessConnectionStringOption( this.ConnectionStringOptions as RavenConnectionStringOptions, key, value );
+                processed |= ProcessConnectionStringOption( this.ConnectionStringOptions as EmbeddedRavenConnectionStringOptions, key, value );
+                processed |= ProcessConnectionStringOption( this.ConnectionStringOptions as FilesConnectionStringOptions, key, value );
+
+                if ( ! processed )
+                    throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed, unknown option: '{1}'", connectionStringName, key));
 			}
 
 			if (setupUsernameInConnectionString == false && setupPasswordInConnectionString == false)
@@ -198,7 +302,8 @@ namespace Raven.Abstractions.Data
 
 			if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false)
 				throw new ArgumentException(string.Format("User and Password must both be specified in the connection string: '{0}'", connectionStringName));
-			ConnectionStringOptions.Credentials = networkCredential;
+			
+            ConnectionStringOptions.Credentials = networkCredential;
 		}
 	}
 }

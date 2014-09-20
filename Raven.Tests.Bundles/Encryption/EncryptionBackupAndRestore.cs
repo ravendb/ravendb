@@ -55,7 +55,7 @@ namespace Raven.Tests.Bundles.Encryption
 				await store.AsyncDatabaseCommands.ForDatabase("Db1").GlobalAdmin.StartBackupAsync(backupFolderDb1, db1,false ,"Db1");
 				WaitForBackup(store.DatabaseCommands.ForDatabase("Db1"), true);
 
-			    await store.AsyncDatabaseCommands.GlobalAdmin.StartRestoreAsync(new RestoreRequest
+			    await store.AsyncDatabaseCommands.GlobalAdmin.StartRestoreAsync(new DatabaseRestoreRequest
 			    {
 			        BackupLocation = backupFolderDb1, 
                     DatabaseLocation = @"~\Databases\Db2", 

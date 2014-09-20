@@ -1600,6 +1600,44 @@ namespace Raven.Client.FileSystem
 				}
 			}
 
+            public async Task StartRestore(FilesystemRestoreRequest restoreRequest)
+            {
+                var requestUrlString = string.Format("{0}/admin/fs/restore", client.ServerUrl);
+
+                var request = client.RequestFactory.CreateHttpJsonRequest(
+                    new CreateHttpJsonRequestParams(this, requestUrlString, "POST", client.PrimaryCredentials, convention));
+
+                try
+                {
+                    await request.WriteWithObjectAsync(restoreRequest);
+                }
+                catch (Exception e)
+                {
+                    throw e.SimplifyException();
+                }
+            }
+
+            public async Task StartBackup(string backupLocation, FileSystemDocument databaseDocument, bool incremental, string filesystemName)
+            {
+                var requestUrlString = string.Format("{0}/fs/{1}/admin/fs/backup?incremental={2}", client.ServerUrl, filesystemName, incremental);
+
+                var request = client.RequestFactory.CreateHttpJsonRequest(
+                    new CreateHttpJsonRequestParams(this, requestUrlString, "POST", client.PrimaryCredentials, convention));
+
+                try
+                {
+                    await request.WriteWithObjectAsync(new FilesystemBackupRequest
+                                                       {
+                                                           BackupLocation = backupLocation,
+                                                           FileSystemDocument = databaseDocument
+                                                       });
+                }
+                catch (Exception e)
+                {
+                    throw e.SimplifyException();
+                }
+            }
+
             public ProfilingInformation ProfilingInformation { get; private set; }
 
             public void Dispose()

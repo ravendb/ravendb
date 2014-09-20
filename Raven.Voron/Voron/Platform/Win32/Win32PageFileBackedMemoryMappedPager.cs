@@ -2,15 +2,16 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Voron.Impl;
+using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
 
-namespace Voron.Impl.Paging
+namespace Voron.Platform.Win32
 {
 	public unsafe class Win32PageFileBackedMemoryMappedPager : AbstractPager
 	{
@@ -25,8 +26,8 @@ namespace Voron.Impl.Paging
 	    public Win32PageFileBackedMemoryMappedPager(string name, long? initialFileSize = null)
 		{
 		    _name = name;
-		    NativeMethods.SYSTEM_INFO systemInfo;
-			NativeMethods.GetSystemInfo(out systemInfo);
+		    Win32NativeMethods.SYSTEM_INFO systemInfo;
+			Win32NativeMethods.GetSystemInfo(out systemInfo);
 
 			AllocationGranularity = systemInfo.allocationGranularity;
 			_totalAllocationSize = initialFileSize.HasValue ? NearestSizeToAllocationGranularity(initialFileSize.Value) : systemInfo.allocationGranularity;
@@ -36,7 +37,7 @@ namespace Voron.Impl.Paging
 			PagerState.Release();
 			Debug.Assert(AllocationGranularity % PageSize == 0);
 			NumberOfAllocatedPages = _totalAllocationSize / PageSize;
-			PagerState = CreateInitialPagerState(_totalAllocationSize, null);
+			PagerState = CreateInitialPagerState(_totalAllocationSize);
 		}
 
 		protected override string GetSourceName()
@@ -78,9 +79,6 @@ namespace Voron.Impl.Paging
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-			if (_totalAllocationSize + allocationSize >= long.MaxValue) //probably would never be true, but just in case
-				throw new OutOfMemoryException("failed to allocated more pages - reached maximum allowed space usage");
-
 		    if (TryAllocateMoreContinuousPages(allocationSize) == false)
 		    {
 		        var newPagerState = AllocateMorePagesAndRemapContinuously(allocationSize);
@@ -118,7 +116,7 @@ namespace Voron.Impl.Paging
 			ThrowObjectDisposedIfNeeded();
 
 			int toCopy = pagesToWrite * PageSize;
-			NativeMethods.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
+			StdLib.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
 
 			return toCopy;
 		}
@@ -153,8 +151,9 @@ namespace Voron.Impl.Paging
 				var allocationInfoAfterReallocation = new List<PagerState.AllocationInfo>();
 				foreach (var allocationInfo in PagerState.AllocationInfos)
 				{
-					var newAlloctedBaseAddress = MemoryMapNativeMethods.MapViewOfFileEx(allocationInfo.MappedFile.SafeMemoryMappedFileHandle.DangerousGetHandle(),
-						MemoryMapNativeMethods.NativeFileMapAccessType.Read | MemoryMapNativeMethods.NativeFileMapAccessType.Write,
+					var newAlloctedBaseAddress = Win32MemoryMapNativeMethods.MapViewOfFileEx(allocationInfo.MappedFile.SafeMemoryMappedFileHandle.DangerousGetHandle(),
+					                                                                         Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | 
+					                                                                         Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write,
 						0, 0,
 						UIntPtr.Zero, 
 						newBaseAddress + offset);
@@ -204,7 +203,7 @@ namespace Voron.Impl.Paging
 		private static void UndoMappings(IEnumerable<PagerState.AllocationInfo> newAllocationInfos)
 		{
 			foreach (var newAllocationInfo in newAllocationInfos)
-				MemoryMapNativeMethods.UnmapViewOfFile(newAllocationInfo.BaseAddress);
+				Win32MemoryMapNativeMethods.UnmapViewOfFile(newAllocationInfo.BaseAddress);
 		}
 
 		private bool TryAllocateMoreContinuousPages(long allocationSize)
@@ -227,8 +226,9 @@ namespace Voron.Impl.Paging
 		{
 			var newMemoryMappedFile = MemoryMappedFile.CreateNew(null, allocationSize);
 			var newFileMappingHandle = newMemoryMappedFile.SafeMemoryMappedFileHandle.DangerousGetHandle();
-			var newMappingBaseAddress = MemoryMapNativeMethods.MapViewOfFileEx(newFileMappingHandle,
-				MemoryMapNativeMethods.NativeFileMapAccessType.Read | MemoryMapNativeMethods.NativeFileMapAccessType.Write,
+			var newMappingBaseAddress = Win32MemoryMapNativeMethods.MapViewOfFileEx(newFileMappingHandle,
+			                                                                        Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | 
+			                                                                        Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write,
 				0, 0,
 				UIntPtr.Zero,
 				baseAddress);
@@ -254,15 +254,15 @@ namespace Voron.Impl.Paging
 			foundAddressPtr = null;
 			try
 			{
-				foundAddressPtr = NativeMethods.VirtualAlloc(null, new UIntPtr(size), NativeMethods.AllocationType.RESERVE,
-					NativeMethods.MemoryProtection.READWRITE);
+				foundAddressPtr = Win32NativeMethods.VirtualAlloc(null, new UIntPtr(size), Win32NativeMethods.AllocationType.RESERVE,
+				                                                  Win32NativeMethods.MemoryProtection.READWRITE);
 
 				return (foundAddressPtr != null && foundAddressPtr != (byte*)0);
 			}
 			finally
 			{
 				if (foundAddressPtr != null && foundAddressPtr != (byte*)0)
-					NativeMethods.VirtualFree(foundAddressPtr, UIntPtr.Zero, NativeMethods.FreeType.MEM_RELEASE);
+					Win32NativeMethods.VirtualFree(foundAddressPtr, UIntPtr.Zero, Win32NativeMethods.FreeType.MEM_RELEASE);
 			}
 		}
 		
@@ -276,18 +276,19 @@ namespace Voron.Impl.Paging
 		    return ((size/AllocationGranularity) + 1)*AllocationGranularity;
 		}
 
-		private PagerState CreateInitialPagerState(long size, byte* requestedBaseAddress)
+		private PagerState CreateInitialPagerState(long size)
 		{
 			var allocationSize = NearestSizeToAllocationGranularity(size);
 			var mmf = MemoryMappedFile.CreateNew(null, allocationSize, MemoryMappedFileAccess.ReadWrite);
 
 			var fileMappingHandle = mmf.SafeMemoryMappedFileHandle.DangerousGetHandle();
 
-			var startingBaseAddressPtr = MemoryMapNativeMethods.MapViewOfFileEx(fileMappingHandle,
-				MemoryMapNativeMethods.NativeFileMapAccessType.Read | MemoryMapNativeMethods.NativeFileMapAccessType.Write,
+			var startingBaseAddressPtr = Win32MemoryMapNativeMethods.MapViewOfFileEx(fileMappingHandle,
+			                                                                         Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | 
+			                                                                         Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write,
 				0, 0,
 				UIntPtr.Zero, //map all what was "reserved" in CreateFileMapping on previous row
-				requestedBaseAddress);
+				null);
 
 			if (startingBaseAddressPtr == (byte*)0) //system didn't succeed in mapping the address where we wanted
 				throw new Win32Exception();
@@ -302,7 +303,6 @@ namespace Voron.Impl.Paging
 			var newPager = new PagerState(this)
 			{
 				Files = new[] { mmf },
-				Accessor = null, //not available since MapViewOfFileEx is used (instead of MapViewOfFile - which is used in managed wrapper)
 				MapBase = startingBaseAddressPtr,
 				AllocationInfos = new[] { allocationInfo }
 			};
@@ -310,6 +310,12 @@ namespace Voron.Impl.Paging
 			newPager.AddRef();
 
 			return newPager;
+		}
+
+		public override void ReleaseAllocationInfo(byte* baseAddress, long size)
+		{
+			if(Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress) ==false)
+				throw new Win32Exception();
 		}
 	}
 }

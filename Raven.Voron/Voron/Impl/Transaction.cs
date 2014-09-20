@@ -129,9 +129,9 @@ namespace Voron.Impl
 		        }
 
 			    var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
-
+			   
 				var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
-			    NativeMethods.memcpy(dest, page.Base, numberOfPages*AbstractPager.PageSize);
+				StdLib.memcpy(dest, page.Base, numberOfPages*AbstractPager.PageSize);
 
 			    _allocatedPagesInTransaction++;
 				
@@ -153,7 +153,7 @@ namespace Voron.Impl
 			var allocation = _env.ScratchBufferPool.Allocate(this, 1);
 			var page = _env.ScratchBufferPool.ReadPage(allocation.ScratchFileNumber, allocation.PositionInScratchBuffer);
 			_transactionPages.Add(allocation);
-			NativeMethods.memset(page.Base, 0, AbstractPager.PageSize);
+			StdLib.memset(page.Base, 0, AbstractPager.PageSize);
 			_txHeader = (TransactionHeader*)page.Base;
 			_txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 
@@ -219,7 +219,7 @@ namespace Voron.Impl
 
 			var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
 
-			NativeMethods.memcpy(newPage.Base, page.Base, AbstractPager.PageSize);
+			StdLib.memcpy(newPage.Base, page.Base, AbstractPager.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
 			newPage.LastMatch = page.LastMatch;
 

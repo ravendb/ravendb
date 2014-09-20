@@ -13,9 +13,9 @@ using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Voron.Exceptions;
 
-namespace Voron.Util
+namespace Voron.Platform.Win32
 {
-	public static unsafe class NativeFileMethods
+	public static unsafe class Win32NativeFileMethods
 	{
 
 		[DllImport("kernel32.dll", SetLastError = true)]
@@ -34,10 +34,10 @@ namespace Voron.Util
 
 		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
 		public static extern SafeFileHandle CreateFile(string lpFileName,
-		                                               NativeFileAccess dwDesiredAccess, NativeFileShare dwShareMode,
+		                                               Win32NativeFileAccess dwDesiredAccess, Win32NativeFileShare dwShareMode,
 		                                               IntPtr lpSecurityAttributes,
-		                                               NativeFileCreationDisposition dwCreationDisposition,
-		                                               NativeFileAttributes dwFlagsAndAttributes, IntPtr hTemplateFile);
+		                                               Win32NativeFileCreationDisposition dwCreationDisposition,
+		                                               Win32NativeFileAttributes dwFlagsAndAttributes, IntPtr hTemplateFile);
 
 		[DllImport("kernel32.dll", SetLastError = true)]
 		public static extern bool CloseHandle(IntPtr hObject);
@@ -47,7 +47,7 @@ namespace Voron.Util
 
 		[DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
 		private static extern int SetFilePointer([In] SafeFileHandle hFile, [In] int lDistanceToMove,
-		                                         [Out] out int lpDistanceToMoveHigh, [In] NativeFileMoveMethod dwMoveMethod);
+		                                         [Out] out int lpDistanceToMoveHigh, [In] Win32NativeFileMoveMethod dwMoveMethod);
 
 		[DllImport("kernel32.dll")]
 		public static extern bool FlushFileBuffers(SafeFileHandle hFile);
@@ -62,7 +62,7 @@ namespace Voron.Util
 
 			int lastError;
 
-			if (SetFilePointer(fileHandle, lo, out hi, NativeFileMoveMethod.Begin) == -1)
+			if (SetFilePointer(fileHandle, lo, out hi, Win32NativeFileMoveMethod.Begin) == -1)
 			{
 				lastError = Marshal.GetLastWin32Error();
 				if (lastError != 0)
@@ -73,7 +73,7 @@ namespace Voron.Util
 			{
 				lastError = Marshal.GetLastWin32Error();
 
-				if (lastError == (int) NativeFileErrors.DiskFull)
+				if (lastError == (int) Win32NativeFileErrors.DiskFull)
 				{
 					var filePath = new StringBuilder(256);
 
@@ -97,12 +97,12 @@ namespace Voron.Util
 		}
 	}
 
-	public enum NativeFileErrors
+	public enum Win32NativeFileErrors
 	{
 		DiskFull = 0x70
 	}
 
-	public enum NativeFileMoveMethod : uint
+	public enum Win32NativeFileMoveMethod : uint
 	{
 		Begin = 0,
 		Current = 1,
@@ -110,7 +110,7 @@ namespace Voron.Util
 	}
 
 	[Flags]
-	public enum NativeFileAccess : uint
+	public enum Win32NativeFileAccess : uint
 	{
 		//
 		// Standard Section
@@ -185,7 +185,7 @@ namespace Voron.Util
 	}
 
 	[Flags]
-	public enum NativeFileShare : uint
+	public enum Win32NativeFileShare : uint
 	{
 		/// <summary>
 		///
@@ -211,7 +211,7 @@ namespace Voron.Util
 		Delete = 0x00000004
 	}
 
-	public enum NativeFileCreationDisposition : uint
+	public enum Win32NativeFileCreationDisposition : uint
 	{
 		/// <summary>
 		/// Creates a new file. The function fails if a specified file exists.
@@ -240,7 +240,7 @@ namespace Voron.Util
 	}
 
 	[Flags]
-	public enum NativeFileAttributes : uint
+	public enum Win32NativeFileAttributes : uint
 	{
 		Readonly = 0x00000001,
 		Hidden = 0x00000002,
@@ -267,5 +267,155 @@ namespace Voron.Util
 		OpenReparsePoint = 0x00200000,
 		OpenNoRecall = 0x00100000,
 		FirstPipeInstance = 0x00080000
-	} 
+	}
+
+	public static unsafe class Win32MemoryMapNativeMethods
+	{
+		public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
+
+		[Flags]
+		public enum FileMapProtection : uint
+		{
+			PageReadonly = 0x02,
+			PageReadWrite = 0x04,
+			PageWriteCopy = 0x08,
+			PageExecuteRead = 0x20,
+			PageExecuteReadWrite = 0x40,
+			SectionCommit = 0x8000000,
+			SectionImage = 0x1000000,
+			SectionNoCache = 0x10000000,
+			SectionReserve = 0x4000000,
+		}
+
+		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+		public static extern IntPtr CreateFileMapping(
+			IntPtr hFile,
+			IntPtr lpFileMappingAttributes,
+			FileMapProtection flProtect,
+			uint dwMaximumSizeHigh,
+			uint dwMaximumSizeLow,
+			[MarshalAs(UnmanagedType.LPStr)] string lpName);
+
+		// ReSharper disable UnusedMember.Local
+		[Flags]
+		public enum NativeFileMapAccessType : uint
+		{
+			Copy = 0x01,
+			Write = 0x02,
+			Read = 0x04,
+			AllAccess = 0x08,
+			Execute = 0x20,
+		}
+		// ReSharper restore UnusedMember.Local
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		public static extern bool UnmapViewOfFile(byte* lpBaseAddress);
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		public static extern byte* MapViewOfFileEx(IntPtr hFileMappingObject,
+													NativeFileMapAccessType dwDesiredAccess,
+													uint dwFileOffsetHigh,
+													uint dwFileOffsetLow,
+													UIntPtr dwNumberOfBytesToMap,
+													byte* lpBaseAddress);
+
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		public static extern bool FlushFileBuffers(SafeFileHandle hFile);
+
+
+		[DllImport("kernel32.dll")]
+		public static extern bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
+	}
+	public static unsafe class Win32NativeMethods
+	{
+		[StructLayout(LayoutKind.Sequential)]
+		public struct SYSTEM_INFO
+		{
+			public ushort processorArchitecture;
+			// ReSharper disable once FieldCanBeMadeReadOnly.Local
+			ushort reserved;
+			public uint pageSize;
+			public IntPtr minimumApplicationAddress;
+			public IntPtr maximumApplicationAddress;
+			public IntPtr activeProcessorMask;
+			public uint numberOfProcessors;
+			public uint processorType;
+			public uint allocationGranularity;
+			public ushort processorLevel;
+			public ushort processorRevision;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct MEMORY_BASIC_INFORMATION
+		{
+			public UIntPtr BaseAddress;
+			public UIntPtr AllocationBase;
+			public uint AllocationProtect;
+			public IntPtr RegionSize;
+			public uint State;
+			public uint Protect;
+			public uint Type;
+		}
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		public static extern byte* VirtualAlloc(byte* lpAddress, UIntPtr dwSize,
+			AllocationType flAllocationType, MemoryProtection flProtect);
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		public static extern bool VirtualFree(byte* lpAddress, UIntPtr dwSize,
+			FreeType dwFreeType);
+
+		[DllImport("kernel32.dll")]
+		public static extern int VirtualQuery(
+			byte* lpAddress,
+			MEMORY_BASIC_INFORMATION* lpBuffer,
+			IntPtr dwLength
+		);
+
+		[Flags]
+		public enum FreeType : uint
+		{
+			MEM_DECOMMIT = 0x4000,
+			MEM_RELEASE = 0x8000
+		}
+
+		[Flags]
+		public enum AllocationType : uint
+		{
+			COMMIT = 0x1000,
+			RESERVE = 0x2000,
+			RESET = 0x80000,
+			LARGE_PAGES = 0x20000000,
+			PHYSICAL = 0x400000,
+			TOP_DOWN = 0x100000,
+			WRITE_WATCH = 0x200000
+		}
+
+		[Flags]
+		public enum MemoryProtection : uint
+		{
+			EXECUTE = 0x10,
+			EXECUTE_READ = 0x20,
+			EXECUTE_READWRITE = 0x40,
+			EXECUTE_WRITECOPY = 0x80,
+			NOACCESS = 0x01,
+			READONLY = 0x02,
+			READWRITE = 0x04,
+			WRITECOPY = 0x08,
+			GUARD_Modifierflag = 0x100,
+			NOCACHE_Modifierflag = 0x200,
+			WRITECOMBINE_Modifierflag = 0x400
+		}
+
+		// ReSharper restore InconsistentNaming
+
+		[DllImport("kernel32.dll")]
+		public static extern void GetSystemInfo(out SYSTEM_INFO lpSystemInfo);
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		public static extern bool CloseHandle(IntPtr hObject);
+	}
 }

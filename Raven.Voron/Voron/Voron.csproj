@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -14,6 +14,8 @@
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <ProductVersion>12.0.0</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -38,15 +40,15 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject />
-  </PropertyGroup>
-  <PropertyGroup>
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Mono.Posix">
+      <HintPath>..\..\SharedLibs\Mono.Posix.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
@@ -73,8 +75,10 @@
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
     <Compile Include="Impl\Journal\ShipppedTransactionsApplicator.cs" />
     <Compile Include="Impl\Journal\TransactionToShip.cs" />
-    <Compile Include="Impl\MemoryMapNativeMethods.cs" />
-    <Compile Include="Impl\Paging\Win32PageFileBackedMemoryMappedPager.cs" />
+    <Compile Include="Platform\Posix\NativeMethods.cs" />
+    <Compile Include="Platform\Posix\PosixJournalWriter.cs" />
+    <Compile Include="Platform\Posix\PosixMemoryMapPager.cs" />
+    <Compile Include="Platform\Win32\Win32Helper.cs" />
     <Compile Include="PrefixComparisonCache.cs" />
     <Compile Include="PrefixedSlice.cs" />
     <Compile Include="SliceComparisonMethods.cs" />
@@ -102,15 +106,12 @@
     <Compile Include="Impl\Journal\PureMemoryJournalWriter.cs" />
     <Compile Include="Impl\Journal\TransactionHeader.cs" />
     <Compile Include="Impl\Journal\TransactionMarker.cs" />
-    <Compile Include="Impl\Journal\Win32JournalWriter.cs" />
+    <Compile Include="Platform\Win32\Win32JournalWriter.cs" />
     <Compile Include="Impl\Journal\WriteAheadJournal.cs" />
     <Compile Include="Impl\PagerState.cs" />
     <Compile Include="Impl\Paging\AbstractPager.cs" />
     <Compile Include="Impl\Paging\FragmentedPureMemoryPager.cs" />
-    <Compile Include="Impl\Paging\FilePager.cs" />
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
-    <Compile Include="Impl\Paging\Win32MemoryMapPager.cs" />
-    <Compile Include="Impl\Paging\Win32PureMemoryPager.cs" />
     <Compile Include="Impl\Paging\TemporaryPage.cs" />
     <Compile Include="Impl\Scratch\ScratchBufferPool.cs" />
     <Compile Include="Impl\SliceEqualityComparer.cs" />
@@ -125,7 +126,6 @@
     <Compile Include="TransactionFlags.cs" />
     <Compile Include="Trees\Cursor.cs" />
     <Compile Include="Debugging\DebugStuff.cs" />
-    <Compile Include="Impl\NativeMethods.cs" />
     <Compile Include="Trees\EmptyIterator.cs" />
     <Compile Include="Trees\IIterator.cs" />
     <Compile Include="Trees\TreeIterator.cs" />
@@ -154,7 +154,6 @@
     <Compile Include="Util\ImmutableAppendOnlyList.cs" />
     <Compile Include="Util\LZ4.cs" />
     <Compile Include="Util\MemoryUtils.cs" />
-    <Compile Include="Util\NativeFileMethods.cs" />
     <Compile Include="Impl\Backup\BackupMethods.cs" />
     <Compile Include="Util\DataCopier.cs" />
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
@@ -165,6 +164,11 @@
     <Compile Include="Util\Utils.cs" />
     <Compile Include="Util\PageTable.cs" />
     <Compile Include="ValueReader.cs" />
+    <Compile Include="Impl\StdLib.cs" />
+    <Compile Include="Platform\Win32\Win32MemoryMapPager.cs" />
+    <Compile Include="Platform\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
+    <Compile Include="Platform\Win32\NativeMethods.cs" />
+    <Compile Include="Platform\Posix\PosixPageFileBackedMemoryMapPager.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Util\Conversion\readme.txt" />
@@ -181,4 +185,5 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <ItemGroup />
 </Project>

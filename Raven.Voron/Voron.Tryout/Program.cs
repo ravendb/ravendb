@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Mono.Unix.Native;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -9,37 +10,87 @@ using System.Text;
 using System.Xml;
 using Voron.Debugging;
 using Voron.Impl;
+using Voron.Platform.Win32;
 using Voron.Tests.Backups;
 using Voron.Tests.Bugs;
 using Voron.Tests.Storage;
+using Voron.Trees;
 using Snapshots = Voron.Tests.Bugs.Snapshots;
 
 namespace Voron.Tryout
 {
-	internal unsafe class Program
+	public unsafe class Program
 	{
-		[StructLayout(LayoutKind.Explicit)]
-		private struct NumberWithHighAndLowParts
+		public static void Main()
 		{
-			[FieldOffset(0)]
-			public long Number;
+			
+			var basePath = @"C:\Work\ravendb-3.0\Raven.Voron\Voron.Tryout\bin\Debug\v4";
 
-			[FieldOffset(0)]
-			public uint Low;
+			var win = new Win32MemoryMapPager(Path.Combine(basePath, "v2", "Raven.voron"));
+			var lin = new Win32MemoryMapPager(Path.Combine(basePath, "v2l", "Raven.voron"));
 
-			[FieldOffset(4)]
-			public uint High;
-		}
-		private static void Main()
-		{
-			for (int i = 0; i < 10; i++)
+			var winPage = (PageHeader*)win.AcquirePagePointer(0);
+			var linPage = (PageHeader*)lin.AcquirePagePointer(0);
+
+			return;
+			var path = "v4";
+			if (Directory.Exists(path))
+				Directory.Delete(path, true);
+			Console.WriteLine(Process.GetCurrentProcess().Id);
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
-			    Console.WriteLine(i);
-				using (var x = new Incremental())
+				var batch = new WriteBatch();
+				batch.Add("ayende@ayende.com", "Oren Eini", "Names");
+				env.Writer.Write(batch);
+
+				using (var snp = env.CreateSnapshot())
 				{
-					x.CanDoMultipleIncrementalBackupsAndRestoreOneByOne();
+					var reader = snp.Read("Names", "ayende@ayende.com");
+					if (reader == null)
+					{
+						Console.WriteLine("Couldn't find it");
+					}
+					else
+					{
+						Console.WriteLine(reader.Reader.ToStringValue());
+					}
 				}
 			}
+
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			{
+				//				using (var snp = env.CreateSnapshot()) 
+				//				{
+				//					var reader = snp.Read ("Names", "ayende@ayende.com");
+				//					if (reader == null) 
+				//					{
+				//						Console.WriteLine ("Couldn't find it");
+				//					} 
+				//					else 
+				//					{
+				//						Console.WriteLine (reader.Reader.ToStringValue());
+				//					}
+				//				}
+			}
+
+
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			{
+
+				using (var snp = env.CreateSnapshot())
+				{
+					var reader = snp.Read("Names", "ayende@ayende.com");
+					if (reader == null)
+					{
+						Console.WriteLine("Couldn't find it");
+					}
+					else
+					{
+						Console.WriteLine(reader.Reader.ToStringValue());
+					}
+				}
+			}
+			Console.WriteLine("Done");
 		}
 	}
 }

@@ -172,7 +172,9 @@ namespace Raven.Database.Actions
 
             IndexDeleteOperation,
 
-			ImportDatabase
+			ImportDatabase,
+
+			RestoreDatabase
         }
 
       

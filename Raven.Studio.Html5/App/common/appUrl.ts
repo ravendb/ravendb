@@ -44,6 +44,7 @@ class appUrl {
         reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
+        indexStats: ko.computed(() => appUrl.forIndexStats(appUrl.currentDatabase())),
         metrics: ko.computed(() => appUrl.forMetrics(appUrl.currentDatabase())),
         metricsIndexing: ko.computed(() => appUrl.forMetricsIndexing(appUrl.currentDatabase())),
         metricsRequests: ko.computed(() => appUrl.forMetricsRequests(appUrl.currentDatabase())),
@@ -162,6 +163,14 @@ class appUrl {
         return "#admin/settings/restoreDatabase";
     }
 
+    static forBackupFilesystem(): string {
+        return "#admin/settings/backupFilesystem";
+    }
+
+    static forRestoreFilesystem(): string {
+        return "#admin/settings/restoreFilesystem";
+    }
+
     static forAdminLogs(): string {
         return "#admin/settings/adminLogs";
     }
@@ -228,12 +237,17 @@ class appUrl {
         return "#databases/edit?" + databaseUrlPart;
     }
 
+
     /**
     * Gets the URL for status page.
     * @param database The database to use in the URL. If null, the current database will be used.
     */
     static forStatus(db: database): string {
         return "#databases/status?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forIndexStats(db: database): string {
+        return "#databases/status/indexStats?" + appUrl.getEncodedDbPart(db);
     }
 
     static forMetrics(db: database): string {
@@ -347,6 +361,14 @@ class appUrl {
     static forVisualizer(db: database, index: string = null): string {
         var url = "#databases/status/visualizer?" + appUrl.getEncodedDbPart(db);
         if (index) { 
+            url += "&index=" + index;
+        }
+        return url;
+    }
+
+    static forIndexingPerfStats(db: database, index: string = null): string {
+        var url = "#databases/status/metrics/indexing?" + appUrl.getEncodedDbPart(db);
+        if (index) {
             url += "&index=" + index;
         }
         return url;

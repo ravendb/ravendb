@@ -92,6 +92,7 @@
     <Compile Include="Bugs\GettingListOfFilesAfterSynchronization.cs" />
     <Compile Include="Bugs\FileRenaming.cs" />
     <Compile Include="Bugs\Queries.cs" />
+    <Compile Include="Bugs\SearchingCollections.cs" />
     <Compile Include="Bugs\SynchronizationAfterSetUpDestinations.cs" />
     <Compile Include="Bugs\UpdatingMetadata.cs" />
     <Compile Include="Bugs\UploadFilesWithTheSameContentConcurrently.cs" />
@@ -114,6 +115,7 @@
     <Compile Include="StorageOperationsTests.cs" />
     <Compile Include="MtaFactAttribute.cs" />
     <Compile Include="Notifications.cs" />
+    <Compile Include="Storage\BackupRestoreTests.cs" />
     <Compile Include="Storage\Basic.cs" />
     <Compile Include="Storage\ConfigTests.cs" />
     <Compile Include="Storage\FileTests.cs" />

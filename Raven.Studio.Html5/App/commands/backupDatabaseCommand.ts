@@ -4,7 +4,7 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 
 class backupDatabaseCommand extends commandBase {
 
-    constructor(private db: database, private backupLocation: string, private updateBackupStatus: (backupStatusDto) => void) {
+    constructor(private db: database, private backupLocation: string, private updateBackupStatus: (backupStatusDto) => void, private incremental: boolean) {
         super();
     }
 
@@ -21,7 +21,7 @@ class backupDatabaseCommand extends commandBase {
                     BackupLocation: this.backupLocation,
                     DatabaseDocument: doc
                 };
-                this.post('/admin/backup', JSON.stringify(args), this.db, { dataType: 'text' })
+                this.post('/admin/backup?incremental=' + this.incremental, JSON.stringify(args), this.db, { dataType: 'text' })
                     .fail((response: JQueryXHR) => {
                         this.reportError("Failed to create backup!", response.responseText, response.statusText);
                         result.reject();

@@ -214,5 +214,6 @@ namespace Voron.Impl.Paging
 				throw new ObjectDisposedException("The pager is already disposed");
 		}
 
+	    public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
     }
 }

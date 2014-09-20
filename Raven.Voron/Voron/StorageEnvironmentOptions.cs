@@ -2,12 +2,16 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
+using Voron.Platform.Posix;
+using Voron.Platform.Win32;
 using Voron.Util;
 
 namespace Voron
@@ -98,11 +102,11 @@ namespace Voron
 		public static StorageEnvironmentOptions CreateMemoryOnly()
 		{
 			return new PureMemoryStorageEnvironmentOptions();
-		}		
+		}
 
 		public static StorageEnvironmentOptions ForPath(string path, string tempPath = null, string journalPath = null)
 		{
-            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath);
+			return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath);
 		}
 
 		public IDisposable AllowManualFlushing()
@@ -116,9 +120,9 @@ namespace Voron
 
 		public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
 		{
-		    private readonly string _journalPath;
-		    private readonly string _basePath;
-            private readonly string _tempPath;
+			private readonly string _journalPath;
+			private readonly string _basePath;
+			private readonly string _tempPath;
 
 			private readonly Lazy<IVirtualPager> _dataPager;
 
@@ -127,22 +131,24 @@ namespace Voron
 
 			public DirectoryStorageEnvironmentOptions(string basePath, string tempPath, string journalPath)
 			{
-			    _basePath = Path.GetFullPath(basePath);
-                _tempPath = !string.IsNullOrEmpty(tempPath) ? Path.GetFullPath(tempPath) : _basePath;
-			    _journalPath = !string.IsNullOrEmpty(journalPath) ? Path.GetFullPath(journalPath) : _basePath;
-                
+				_basePath = Path.GetFullPath(basePath);
+				_tempPath = !string.IsNullOrEmpty(tempPath) ? Path.GetFullPath(tempPath) : _basePath;
+				_journalPath = !string.IsNullOrEmpty(journalPath) ? Path.GetFullPath(journalPath) : _basePath;
+
 				if (Directory.Exists(_basePath) == false)
 					Directory.CreateDirectory(_basePath);
 
-                if (_basePath != tempPath && Directory.Exists(_tempPath) == false)
-                    Directory.CreateDirectory(_tempPath);
+				if (_basePath != tempPath && Directory.Exists(_tempPath) == false)
+					Directory.CreateDirectory(_tempPath);
 
-                if (_journalPath != tempPath && Directory.Exists(_journalPath) == false)
-                    Directory.CreateDirectory(_journalPath);
+				if (_journalPath != tempPath && Directory.Exists(_journalPath) == false)
+					Directory.CreateDirectory(_journalPath);
 
 				_dataPager = new Lazy<IVirtualPager>(() =>
 				{
 					FilePath = Path.Combine(_basePath, Constants.DatabaseFilename);
+					if (RunningOnPosix)
+						return new PosixMemoryMapPager(FilePath, InitialFileSize);
 					return new Win32MemoryMapPager(FilePath, InitialFileSize);
 				});
 			}
@@ -162,20 +168,32 @@ namespace Voron
 				get { return _basePath; }
 			}
 
-            public string TempPath
-            {
-                get { return _tempPath; }
-            }
+			public string TempPath
+			{
+				get { return _tempPath; }
+			}
 
 			public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
 			{
 				var name = JournalName(journalNumber);
-                var path = Path.Combine(_journalPath, name);
-				var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() => new Win32FileJournalWriter(path, journalSize)));
+				var path = Path.Combine(_journalPath, name);
+				var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() =>
+				{
+					if (RunningOnPosix)
+						return new PosixJournalWriter(path, journalSize);
+
+					return new Win32FileJournalWriter(path, journalSize);
+				}));
 
 				if (result.Value.Disposed)
 				{
-					var newWriter = new Lazy<IJournalWriter>(() =>  new Win32FileJournalWriter(path, journalSize));
+					var newWriter = new Lazy<IJournalWriter>(() =>
+					{
+						if (RunningOnPosix)
+							return new PosixJournalWriter(path, journalSize);
+
+						return new Win32FileJournalWriter(path, journalSize);
+					});
 					if (_journals.TryUpdate(name, newWriter, result) == false)
 						throw new InvalidOperationException("Could not update journal pager");
 					result = newWriter;
@@ -206,7 +224,7 @@ namespace Voron
 				if (_journals.TryRemove(name, out lazy) && lazy.IsValueCreated)
 					lazy.Value.Dispose();
 
-                var file = Path.Combine(_journalPath, name);
+				var file = Path.Combine(_journalPath, name);
 				if (File.Exists(file) == false)
 					return false;
 				File.Delete(file);
@@ -220,67 +238,54 @@ namespace Voron
 				{
 					return false;
 				}
-				using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-				{
-				    if (fs.Length != sizeof (FileHeader))
-				        return false; // wrong file size
-
-				    var ptr = (byte*)header;
-					int remaining = sizeof(FileHeader);
-					while (remaining > 0)
-					{
-						int read;
-						if (NativeFileMethods.ReadFile(fs.SafeFileHandle, ptr, remaining, out read, null) == false)
-							throw new Win32Exception();
-					    if (read == 0)
-					        return false; // we should be reading _something_ here, if we can't, then it is an error and we assume corruption
-						ptr += read;
-						remaining -= read;
-					}
-					return true;
-				}
+				if (RunningOnPosix)
+					return PosixHelper.TryReadFileHeader(header, path);
+				return Win32Helper.TryReadFileHeader(header, path);
 			}
+
 
 			public override unsafe void WriteHeader(string filename, FileHeader* header)
 			{
 				var path = Path.Combine(_basePath, filename);
-				using (var fs = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.Read))
-				{
-					var ptr = (byte*)header;
-					int remaining = sizeof(FileHeader);
-					while (remaining > 0)
-					{
-						int read;
-						if (NativeFileMethods.WriteFile(fs.SafeFileHandle, ptr, remaining, out read, null) == false)
-							throw new Win32Exception();
-						ptr += read;
-						remaining -= read;
-					}
-					NativeFileMethods.FlushFileBuffers(fs.SafeFileHandle);
-				}
+				if (RunningOnPosix)
+					PosixHelper.WriteFileHeader(header, path);
+				else
+					Win32Helper.WriteFileHeader(header, path);
 			}
+
 
 			public override IVirtualPager CreateScratchPager(string name)
 			{
-			    var scratchFile = Path.Combine(_tempPath, name);
-			    if (File.Exists(scratchFile)) 
-                    File.Delete(scratchFile);
+				var scratchFile = Path.Combine(_tempPath, name);
+				if (File.Exists(scratchFile))
+					File.Delete(scratchFile);
 
-                return new Win32MemoryMapPager(scratchFile, InitialFileSize, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
+				if (RunningOnPosix)
+				{
+					return new PosixMemoryMapPager(scratchFile, InitialFileSize)
+					{
+						DeleteOnClose = true
+					};
+				}
+				return new Win32MemoryMapPager(scratchFile, InitialFileSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
 			{
 				var name = JournalName(journalNumber);
-                var path = Path.Combine(_journalPath, name);
+				var path = Path.Combine(_journalPath, name);
 				if (File.Exists(path) == false)
 					throw new InvalidOperationException("No such journal " + path);
-				return new Win32MemoryMapPager(path, access: NativeFileAccess.GenericRead);
+				if (RunningOnPosix)
+					return new PosixMemoryMapPager(path);
+				return new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead);
 			}
 		}
 
 		public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
 		{
+			private static int _counter;
+
 			private readonly IVirtualPager _dataPager;
 
 			private readonly Dictionary<string, IJournalWriter> _logs =
@@ -288,10 +293,15 @@ namespace Voron
 
 			private readonly Dictionary<string, IntPtr> _headers =
 				new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
+			private int _instanceId;
 
 			public PureMemoryStorageEnvironmentOptions()
 			{
-				_dataPager = new Win32PageFileBackedMemoryMappedPager("data.pager", InitialFileSize);
+				_instanceId = Interlocked.Increment(ref _counter);
+				if (RunningOnPosix)
+					_dataPager = new PosixPageFileBackedMemoryMapPager("_data.pager", InitialFileSize);
+				else
+					_dataPager = new Win32PageFileBackedMemoryMappedPager("data.pager", InitialFileSize);
 			}
 
 			public override IVirtualPager DataPager
@@ -362,11 +372,13 @@ namespace Voron
 					ptr = Marshal.AllocHGlobal(sizeof(FileHeader));
 					_headers[filename] = ptr;
 				}
-				NativeMethods.memcpy((byte*)ptr, (byte*)header, sizeof(FileHeader));
+				StdLib.memcpy((byte*)ptr, (byte*)header, sizeof(FileHeader));
 			}
 
 			public override IVirtualPager CreateScratchPager(string name)
 			{
+				if (RunningOnPosix)
+					return new PosixPageFileBackedMemoryMapPager(name, InitialFileSize);
 				return new Win32PageFileBackedMemoryMappedPager(name, InitialFileSize);
 			}
 
@@ -406,5 +418,27 @@ namespace Voron
 		public abstract IVirtualPager CreateScratchPager(string name);
 
 		public abstract IVirtualPager OpenJournalPager(long journalNumber);
+
+		public static bool RunningOnPosix
+		{
+			get
+			{
+				switch (Environment.OSVersion.Platform)
+				{
+					case PlatformID.Win32S:
+					case PlatformID.Win32Windows:
+					case PlatformID.Win32NT:
+					case PlatformID.WinCE:
+					case PlatformID.Xbox:
+						return false;
+					case PlatformID.Unix:
+					case PlatformID.MacOSX:
+						return true;
+					default:
+						return false; // we'll try the windows version here
+				}
+			}
+		}
+
 	}
 }

@@ -293,7 +293,7 @@ namespace Voron.Trees
 		        return;
 	        }
 	        newNode->DataSize = other->DataSize;
-			NativeMethods.memcpy((byte*)newNode + Constants.NodeHeaderSize + key.Size,
+			StdLib.memcpy((byte*)newNode + Constants.NodeHeaderSize + key.Size,
                                  (byte*)other + Constants.NodeHeaderSize + other->KeySize,
                                  other->DataSize);
         }
@@ -535,7 +535,7 @@ namespace Voron.Trees
 					copy.CopyNodeDataToEndOfPage(node, copy.PrepareKeyToInsert(slice, copy.NumberOfEntries));
 				}
 
-				NativeMethods.memcpy(_base + Constants.PageHeaderSize,
+				StdLib.memcpy(_base + Constants.PageHeaderSize,
 									 copy._base + Constants.PageHeaderSize,
 									 _pageSize - Constants.PageHeaderSize);
 
@@ -563,7 +563,7 @@ namespace Voron.Trees
 			if(KeysPrefixed == false)
 				return;
 
-			NativeMethods.memset((byte*)_prefixSection->PrefixOffsets, 0, sizeof(ushort) * PrefixCount);
+			StdLib.memset((byte*)_prefixSection->PrefixOffsets, 0, sizeof(ushort) * PrefixCount);
 			_prefixSection->NextPrefixId = 0;
 	    }
 
@@ -609,7 +609,7 @@ namespace Voron.Trees
 		    using (tx.Environment.GetTemporaryPage(tx, out tmp))
 		    {
 			    var tempPage = tmp.GetTempPage(KeysPrefixed);
-			    NativeMethods.memcpy(tempPage.Base, Base, _pageSize);
+				StdLib.memcpy(tempPage.Base, Base, _pageSize);
 
 			    var numberOfEntries = NumberOfEntries;
 
@@ -620,7 +620,7 @@ namespace Voron.Trees
 					var node = tempPage.GetNode(i);
 				    var size = node->GetNodeSize() - Constants.NodeOffsetSize;
 				    size += size & 1;
-				    NativeMethods.memcpy(Base + Upper - size, (byte*) node, size);
+					StdLib.memcpy(Base + Upper - size, (byte*) node, size);
 				    Upper -= (ushort) size;
 				    KeysOffsets[i] = Upper;
 			    }
@@ -639,7 +639,7 @@ namespace Voron.Trees
 				    var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefixNode.PrefixLength;
 				    prefixNodeSize += prefixNodeSize & 1;
 
-				    NativeMethods.memcpy(Base + Upper - prefixNodeSize, prefixNode.Base, prefixNodeSize);
+					StdLib.memcpy(Base + Upper - prefixNodeSize, prefixNode.Base, prefixNodeSize);
 				    Upper -= (ushort) prefixNodeSize;
 					_prefixSection->PrefixOffsets[i] = Upper;
 			    }
@@ -737,7 +737,7 @@ namespace Voron.Trees
 				var key = new byte[keySize];
 
 				fixed (byte* ptr = key)
-					NativeMethods.memcpy(ptr, (byte*)node + Constants.NodeHeaderSize, keySize);
+					StdLib.memcpy(ptr, (byte*)node + Constants.NodeHeaderSize, keySize);
 
 				return new Slice(key);
 			}
@@ -751,7 +751,7 @@ namespace Voron.Trees
 			var nonPrefixedData = new byte[nonPrefixedSize];
 
 			fixed (byte* ptr = nonPrefixedData)
-				NativeMethods.memcpy(ptr, (byte*)prefixHeader + Constants.PrefixedSliceHeaderSize, nonPrefixedSize);
+				StdLib.memcpy(ptr, (byte*)prefixHeader + Constants.PrefixedSliceHeaderSize, nonPrefixedSize);
 
 			var prefixedSlice = new PrefixedSlice(prefixHeader->PrefixId, prefixHeader->PrefixUsage, new Slice(nonPrefixedData));
 
@@ -766,7 +766,7 @@ namespace Voron.Trees
 			var prefixData = new byte[prefixLength];
 
 			fixed (byte* ptr = prefixData)
-				NativeMethods.memcpy(ptr, (byte*) prefixNodePtr + Constants.PrefixNodeHeaderSize, prefixLength);
+				StdLib.memcpy(ptr, (byte*) prefixNodePtr + Constants.PrefixNodeHeaderSize, prefixLength);
 
 			prefixedSlice.Prefix = new PrefixNode(new PrefixNodeHeader{ PrefixLength =  prefixLength }, prefixData, PageNumber);
 

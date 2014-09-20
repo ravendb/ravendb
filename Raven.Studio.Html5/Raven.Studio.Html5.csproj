@@ -325,8 +325,11 @@
     <TypeScriptCompile Include="App\commands\getInfoPackage.ts" />
     <TypeScriptCompile Include="App\commands\adminLogsConfigureCommand.ts" />
     <TypeScriptCompile Include="App\commands\compactDatabaseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getIndexingPerfStatsCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\startRestoreCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
@@ -383,14 +386,20 @@
     <TypeScriptCompile Include="App\viewmodels\upgrade.ts" />
     <TypeScriptCompile Include="App\viewmodels\adminLogs.ts" />
     <TypeScriptCompile Include="App\viewmodels\compactDatabase.ts" />
+    <TypeScriptCompile Include="App\viewmodels\indexStats.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\backupFilesystem.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\restoreFilesystem.ts" />
     <Content Include="App\views\adminSettings.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\compactDatabase.html" />
+    <Content Include="App\views\indexStats.html" />
+    <Content Include="App\views\filesystem\backupFilesystem.html" />
     <Content Include="App\views\copyTransformerDialog.html" />
+    <Content Include="App\views\filesystem\restoreFilesystem.html" />
     <Content Include="App\views\indexMergeSuggestions.html" />
     <Content Include="App\views\adminLogs.html" />
     <Content Include="App\views\upgrade.html" />
@@ -823,6 +832,11 @@
     <Content Include="Content\bootstrap.less" />
     <Content Include="Content\variables.less" />
     <Content Include="Content\functions.less" />
+    <Content Include="fonts\fontawesome-webfont.woff" />
+    <Content Include="fonts\fontawesome-webfont.ttf" />
+    <Content Include="fonts\fontawesome-webfont.eot" />
+    <Content Include="fonts\FontAwesome.otf" />
+    <None Include="Scripts\jquery-2.1.0.intellisense.js" />
     <Content Include="Scripts\forge\forge_custom.min.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
@@ -868,6 +882,7 @@
     <Content Include="fonts\fontawesome-webfont.ttf" />
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
+    <Content Include="Scripts\jquery-2.1.0.min.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
       <SubType>Designer</SubType>

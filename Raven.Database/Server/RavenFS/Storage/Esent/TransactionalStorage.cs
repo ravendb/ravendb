@@ -10,13 +10,22 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
+using System.Threading.Tasks;
 
 using Microsoft.Isam.Esent.Interop;
 
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Server.RavenFS.Storage.Esent.Backup;
+using Raven.Json.Linq;
+
+using Voron.Impl.Backup;
+
+using BackupOperation = Raven.Database.Server.RavenFS.Storage.Esent.Backup.BackupOperation;
 
 namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
@@ -58,6 +67,11 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 
 			CreateInstance(out instance, database + Guid.NewGuid());
 		}
+
+        public string FriendlyName
+        {
+            get { return "Esent"; }
+        }
 
 		public TableColumnsCache TableColumnsCache
 		{
@@ -392,6 +406,20 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 				Api.JetSetSystemParameter(jetInstance, JET_SESID.Nil, (JET_param)JET_paramEnableIndexCleanup, 0, null);
 			}
 		}
+
+        public void StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup, FileSystemDocument fileSystemDocument)
+        {
+            if (new InstanceParameters(instance).Recovery == false)
+                throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to false.");
+
+            var backupOperation = new BackupOperation(systemDatabase, filesystem, systemDatabase.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, fileSystemDocument);
+            Task.Factory.StartNew(backupOperation.Execute);
+        }
+
+        public void Restore(FilesystemRestoreRequest restoreRequest, Action<string> output)
+        {
+            new RestoreOperation(restoreRequest, configuration, output).Execute();
+        }
 
 		private void Output(string message)
 		{

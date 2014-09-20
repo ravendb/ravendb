@@ -36,8 +36,8 @@ class restoreDatabase extends viewModelBase {
     startRestore() {
         this.isBusy(true);
 
-        var restoreDatabaseDto: restoreRequestDto = {
-            RestoreLocation: this.backupLocation(),
+        var restoreDatabaseDto: databaseRestoreRequestDto = {
+            BackupLocation: this.backupLocation(),
             DatabaseLocation: this.databaseLocation(),
             DatabaseName: this.databaseName()
         };
