@@ -18,7 +18,10 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-            context.WriteJson(new { TransactionData = Database.TransactionalStorage.GetTransactionContextsData() });
+            context.WriteJson(new
+            {
+	            PreparedTransactions = Database.TransactionalStorage.GetPreparedTransactions()
+            });
 		}
 	}
 }

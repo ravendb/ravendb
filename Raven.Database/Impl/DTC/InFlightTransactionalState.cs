@@ -47,6 +47,11 @@ namespace Raven.Database.Impl.DTC
 
 		protected readonly ConcurrentDictionary<string, TransactionState> transactionStates = new ConcurrentDictionary<string, TransactionState>();
 
+		public object GetInFlightTransactionsInternalStateForDebugOnly()
+		{
+			return new {changedInTransaction, transactionStates};
+		}
+
 		protected InFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
 		{
 			this.databasePut = databasePut;

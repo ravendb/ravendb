@@ -132,23 +132,23 @@ namespace Raven.Database.Impl.DTC
 
 		public override void Prepare(string id, Guid? resourceManagerId, byte[] recoveryInformation)
 		{
-			EsentTransactionContext context;
-			if (transactionContexts.TryGetValue(id, out context) == false)
-			{
-				var myContext = CreateEsentTransactionContext();
-				try
-				{
-					context = transactionContexts.GetOrAdd(id, myContext);
-				}
-				finally
-				{
-					if (myContext != context)
-						myContext.Dispose();
-				}
-			}
 			try
 			{
+				EsentTransactionContext context;
 				List<DocumentInTransactionData> changes = null;
+				if (transactionContexts.TryGetValue(id, out context) == false)
+				{
+					var myContext = CreateEsentTransactionContext();
+					try
+					{
+						context = transactionContexts.GetOrAdd(id, myContext);
+					}
+					finally
+					{
+						if (myContext != context)
+							myContext.Dispose();
+					}
+				}
 				using (storage.SetTransactionContext(context))
 				{
 					storage.Batch(accessor =>
@@ -212,7 +212,7 @@ namespace Raven.Database.Impl.DTC
 			}
 		}
 
-		internal List<TransactionContextData> GetTransactionContextsData()
+		internal List<TransactionContextData> GetPreparedTransactions()
 		{
 			var results = new List<TransactionContextData>();
 

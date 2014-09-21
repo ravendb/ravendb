@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Transactions;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Document.DTC;
 using Raven.Tests.Indexes;
@@ -12,23 +13,16 @@ namespace Raven.Tryouts
     {
         private static void Main(string[] args)
         {
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8080",
-                DefaultDatabase = "test",
-                TransactionRecoveryStorage = new IsolatedStorageTransactionRecoveryStorage()
-            }.Initialize())
-            {
-                using (var tx = new TransactionScope())
-                {
-                    using (var documentSession = store.OpenSession())
-                    {
-                        documentSession.Store(new {Name = "Oren", DateTime.Now}, "users/1");
-                        documentSession.SaveChanges();
-                    }
-                    tx.Complete();
-                }
-            }
+			var store = new DocumentStore
+			{
+				ConnectionStringName = "RavenDB"
+			}.Initialize();
+
+			IDocumentSession documentSession = store.OpenSession();
+	        var load = documentSession.Advanced.Lazily.Load<dynamic>("users/1");
+			var load2 = documentSession.Advanced.Lazily.Load<dynamic>("users/2");
+
+			documentSession.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
         }
     }
 }

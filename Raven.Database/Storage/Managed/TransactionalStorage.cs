@@ -314,9 +314,15 @@ namespace Raven.Storage.Managed
 		}
 
 
-        public List<TransactionContextData> GetTransactionContextsData()
+        public List<TransactionContextData> GetPreparedTransactions()
         {
             return new List<TransactionContextData>();
         }
+
+
+		public object GetInFlightTransactionsInternalStateForDebugOnly()
+		{
+			return inFlightTransactionalState.GetInFlightTransactionsInternalStateForDebugOnly();
+		}
     }
 }

@@ -40,7 +40,7 @@ namespace Raven.Database.Server.Responders
 				return;
 		    }
 
-			var transactions = Database.TransactionalStorage.GetTransactionContextsData();
+			var transactions = Database.TransactionalStorage.GetPreparedTransactions();
 			foreach (var transactionContextData in transactions)
 			{
 				Database.Rollback(transactionContextData.Id);
