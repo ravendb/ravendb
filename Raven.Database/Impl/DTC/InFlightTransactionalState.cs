@@ -115,6 +115,12 @@ namespace Raven.Database.Impl.DTC
 			if (changedInTransaction.TryGetValue(key, out existing) == false || (tx != null && tx.Id == existing.transactionId))
 				return null;
 
+			if (transactionStates.ContainsKey(existing.transactionId) == false)
+			{
+				changedInTransaction.TryRemove(key, out existing);
+				return null;// shouldn't happen, but we have better be on the safe side
+			}
+
 			return document =>
 			{
 				if (document == null)
