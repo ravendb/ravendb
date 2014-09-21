@@ -27,13 +27,30 @@ namespace Raven.Database.Impl.DTC
 	{
 		protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		protected readonly Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut;
-		protected readonly Func<string, Etag, TransactionInformation, bool> databaseDelete;
+		protected readonly Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> DatabasePut;
+		protected readonly Func<string, Etag, TransactionInformation, bool> DatabaseDelete;
 
 		protected class TransactionState
 		{
-			public readonly List<DocumentInTransactionData> changes = new List<DocumentInTransactionData>();
-			public volatile Reference<DateTime> lastSeen = new Reference<DateTime>();
+			public readonly List<DocumentInTransactionData> Changes = new List<DocumentInTransactionData>();
+			public volatile Reference<DateTime> LastSeen = new Reference<DateTime>();
+			private TimeSpan timeout;
+			public TimeSpan Timeout
+			{
+				get
+				{
+					if (timeout < TimeSpan.FromSeconds(30))
+						return TimeSpan.FromSeconds(30);
+					return timeout;
+				}
+
+				set { timeout = value; }
+			}
+
+			public TransactionState()
+			{
+				Timeout = TimeSpan.FromMinutes(3);
+			}
 		}
 
 		protected class ChangedDoc
@@ -49,13 +66,13 @@ namespace Raven.Database.Impl.DTC
 
 		public object GetInFlightTransactionsInternalStateForDebugOnly()
 		{
-			return new {changedInTransaction, transactionStates};
+			return new { changedInTransaction, transactionStates };
 		}
 
 		protected InFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
 		{
-			this.databasePut = databasePut;
-			this.databaseDelete = databaseDelete;
+			this.DatabasePut = databasePut;
+			this.DatabaseDelete = databaseDelete;
 		}
 
 		public Etag AddDocumentInTransaction(
@@ -128,7 +145,7 @@ namespace Raven.Database.Impl.DTC
 					return new TDocument
 					{
 						Key = key,
-						Metadata = new RavenJObject {{Constants.RavenDocumentDoesNotExists, true}},
+						Metadata = new RavenJObject { { Constants.RavenDocumentDoesNotExists, true } },
 						LastModified = DateTime.MinValue,
 						NonAuthoritativeInformation = true,
 						Etag = Etag.Empty
@@ -140,23 +157,23 @@ namespace Raven.Database.Impl.DTC
 			};
 		}
 
-        public virtual void Rollback(string id)
+		public virtual void Rollback(string id)
 		{
 			TransactionState value;
 			if (transactionStates.TryRemove(id, out value) == false)
 				return;
 			lock (value)
 			{
-				foreach (var change in value.changes)
+				foreach (var change in value.Changes)
 				{
 					ChangedDoc guid;
 					changedInTransaction.TryRemove(change.Key, out guid);
 				}
-				value.changes.Clear();
+				value.Changes.Clear();
 			}
 		}
 
-        protected readonly ThreadLocal<string> currentlyCommittingTransaction = new ThreadLocal<string>();
+		protected readonly ThreadLocal<string> currentlyCommittingTransaction = new ThreadLocal<string>();
 
 		public abstract void Commit(string id);
 
@@ -173,18 +190,19 @@ namespace Raven.Database.Impl.DTC
 				var state = transactionStates.GetOrAdd(transactionInformation.Id, id => new TransactionState());
 				lock (state)
 				{
-					state.lastSeen = new Reference<DateTime>
+					state.LastSeen = new Reference<DateTime>
 					{
-						Value = SystemTime.UtcNow + transactionInformation.Timeout
+						Value = SystemTime.UtcNow
 					};
+					state.Timeout = transactionInformation.Timeout;
 
-					var currentTxVal = state.changes.LastOrDefault(x => string.Equals(x.Key, key, StringComparison.InvariantCultureIgnoreCase));
+					var currentTxVal = state.Changes.LastOrDefault(x => string.Equals(x.Key, key, StringComparison.InvariantCultureIgnoreCase));
 					if (currentTxVal != null)
 					{
 						EnsureValidEtag(key, etag, committedEtag, currentTxVal);
-					    state.changes.Remove(currentTxVal);
+						state.Changes.Remove(currentTxVal);
 					}
-				    var result = changedInTransaction.AddOrUpdate(key, s =>
+					var result = changedInTransaction.AddOrUpdate(key, s =>
 					{
 						EnsureValidEtag(key, etag, committedEtag, currentTxVal);
 
@@ -206,7 +224,7 @@ namespace Raven.Database.Impl.DTC
 						throw new ConcurrencyException("Document " + key + " is being modified by another transaction: " + existing);
 					});
 
-					state.changes.Add(item);
+					state.Changes.Add(item);
 
 					return result.currentEtag;
 				}
@@ -218,32 +236,32 @@ namespace Raven.Database.Impl.DTC
 			}
 		}
 
-	    private static void EnsureValidEtag(string key, Etag etag, Etag committedEtag, DocumentInTransactionData currentTxVal)
-	    {
-	        if (etag == null)
-	            return;
-            if (currentTxVal != null && currentTxVal.Delete)
-	        {
-                if (etag != Etag.Empty)
-	                throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag (delete)");
-	            return;
-	        }
+		private static void EnsureValidEtag(string key, Etag etag, Etag committedEtag, DocumentInTransactionData currentTxVal)
+		{
+			if (etag == null)
+				return;
+			if (currentTxVal != null && currentTxVal.Delete)
+			{
+				if (etag != Etag.Empty)
+					throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag (delete)");
+				return;
+			}
 
-	        if (currentTxVal != null)
-	        {
-	            if (currentTxVal.Etag != etag)
-	            {
-	                throw new ConcurrencyException("Transaction operation attempted on : " + key +
-	                                               " using a non current etag");
-	            }
-	            return;
-	        }
+			if (currentTxVal != null)
+			{
+				if (currentTxVal.Etag != etag)
+				{
+					throw new ConcurrencyException("Transaction operation attempted on : " + key +
+												   " using a non current etag");
+				}
+				return;
+			}
 
-	        if(etag != committedEtag)
+			if (etag != committedEtag)
 				throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
-	    }
+		}
 
-	    public bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
+		public bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
 		{
 			return TryGetInternal(key, transactionInformation, (theKey, change) => new JsonDocument
 			{
@@ -277,7 +295,7 @@ namespace Raven.Database.Impl.DTC
 				document = null;
 				return false;
 			}
-			var change = state.changes.LastOrDefault(x => string.Equals(x.Key, key, StringComparison.InvariantCultureIgnoreCase));
+			var change = state.Changes.LastOrDefault(x => string.Equals(x.Key, key, StringComparison.InvariantCultureIgnoreCase));
 			if (change == null)
 			{
 				document = null;
@@ -292,34 +310,35 @@ namespace Raven.Database.Impl.DTC
 			return true;
 		}
 
-        public bool HasTransaction(string txId)
+		public bool HasTransaction(string txId)
 		{
 			return transactionStates.ContainsKey(txId);
 		}
 
-        protected HashSet<string> RunOperationsInTransaction(string id, out List<DocumentInTransactionData> changes)
-        {
-            changes = null;
+		protected HashSet<string> RunOperationsInTransaction(string id, out List<DocumentInTransactionData> changes)
+		{
+			changes = null;
 			TransactionState value;
-		    if (transactionStates.TryGetValue(id, out value) == false)
-		        return null; // no transaction, cannot do anything to this
+			if (transactionStates.TryGetValue(id, out value) == false)
+				return null; // no transaction, cannot do anything to this
 
-            changes = value.changes;
+			changes = value.Changes;
 			lock (value)
 			{
-				value.lastSeen.Value = SystemTime.UtcNow;
+				value.LastSeen = new Reference<DateTime>
+				{
+					Value = SystemTime.UtcNow
+				};
 				currentlyCommittingTransaction.Value = id;
 				try
 				{
-				    var documentIdsToTouch = new HashSet<string>();
-					foreach (var change in value.changes)
+					var documentIdsToTouch = new HashSet<string>();
+					foreach (var change in value.Changes)
 					{
-						value.lastSeen.Value = SystemTime.UtcNow; 
-						
 						var doc = new DocumentInTransactionData
 						{
-							Metadata = change.Metadata == null ? null : (RavenJObject) change.Metadata.CreateSnapshot(),
-							Data = change.Data == null ? null : (RavenJObject) change.Data.CreateSnapshot(),
+							Metadata = change.Metadata == null ? null : (RavenJObject)change.Metadata.CreateSnapshot(),
+							Data = change.Data == null ? null : (RavenJObject)change.Data.CreateSnapshot(),
 							Delete = change.Delete,
 							Etag = change.Etag,
 							LastModified = change.LastModified,
@@ -332,16 +351,16 @@ namespace Raven.Database.Impl.DTC
 						// checked etags on previous PUT/DELETE, so we don't pass it here
 						if (doc.Delete)
 						{
-							databaseDelete(doc.Key, null /* etag might have been changed by a touch */, null);
+							DatabaseDelete(doc.Key, null /* etag might have been changed by a touch */, null);
 							documentIdsToTouch.RemoveWhere(x => x.Equals(doc.Key));
 						}
 						else
 						{
-							databasePut(doc.Key, null /* etag might have been changed by a touch */, doc.Data, doc.Metadata, null);
+							DatabasePut(doc.Key, null /* etag might have been changed by a touch */, doc.Data, doc.Metadata, null);
 							documentIdsToTouch.Add(doc.Key);
 						}
 					}
-				    return documentIdsToTouch;
+					return documentIdsToTouch;
 				}
 				finally
 				{
@@ -350,38 +369,38 @@ namespace Raven.Database.Impl.DTC
 			}
 		}
 
-	    public bool RecoverTransaction(string id, IEnumerable<DocumentInTransactionData> changes)
-	    {
-		    var txInfo = new TransactionInformation
-		    {
-			    Id = id,
-			    Timeout = TimeSpan.FromMinutes(5)
-		    };
-		    if (changes == null)
-		    {
-			    log.Warn("Failed to prepare transaction " + id + " because changes were null, maybe this is a partially committed transaction? Transaction will be rolled back");
+		public bool RecoverTransaction(string id, IEnumerable<DocumentInTransactionData> changes)
+		{
+			var txInfo = new TransactionInformation
+			{
+				Id = id,
+				Timeout = TimeSpan.FromMinutes(5)
+			};
+			if (changes == null)
+			{
+				log.Warn("Failed to prepare transaction " + id + " because changes were null, maybe this is a partially committed transaction? Transaction will be rolled back");
 
-			    return false;
-		    }
-		    foreach (var changedDoc in changes)
-		    {
-			    if (changedDoc == null)
-			    {
-				    log.Warn("Failed preparing a document change in transaction " + id + " with a null change, maybe this is partiall committed transaction? Transaction will be rolled back");
-				    return false;
-			    }
-			    
+				return false;
+			}
+			foreach (var changedDoc in changes)
+			{
+				if (changedDoc == null)
+				{
+					log.Warn("Failed preparing a document change in transaction " + id + " with a null change, maybe this is partiall committed transaction? Transaction will be rolled back");
+					return false;
+				}
+
 				changedDoc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
-			    changedDoc.Data.EnsureCannotBeChangeAndEnableSnapshotting();
+				changedDoc.Data.EnsureCannotBeChangeAndEnableSnapshotting();
 
-			    //we explicitly pass a null for the etag here, because we might have calls for TouchDocument()
-			    //that happened during the transaction, which changed the committed etag. That is fine when we are just running
-			    //the transaction, since we can just report the error and abort. But it isn't fine when we recover
-			    //var etag = changedDoc.CommittedEtag;
-			    Etag etag = null;
-			    AddToTransactionState(changedDoc.Key, null, txInfo, etag, changedDoc);
-		    }
-		    return true;
-	    }
+				//we explicitly pass a null for the etag here, because we might have calls for TouchDocument()
+				//that happened during the transaction, which changed the committed etag. That is fine when we are just running
+				//the transaction, since we can just report the error and abort. But it isn't fine when we recover
+				//var etag = changedDoc.CommittedEtag;
+				Etag etag = null;
+				AddToTransactionState(changedDoc.Key, null, txInfo, etag, changedDoc);
+			}
+			return true;
+		}
 	}
 }

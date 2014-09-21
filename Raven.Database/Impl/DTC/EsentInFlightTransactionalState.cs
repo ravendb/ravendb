@@ -60,12 +60,12 @@ namespace Raven.Database.Impl.DTC
 		{
 			using (LogContext.WithDatabase(docDb.Name ?? Constants.SystemDatabase))
 			{
-				var oldestAllowedTransaction = SystemTime.UtcNow;
+				var now = SystemTime.UtcNow;
 				log.Info("Performing Transactions Cleanup Sequence for db {0}", docDb.Name ?? Constants.SystemDatabase);
 				foreach (var pendingTx in transactionStates)
 				{
-					var age = oldestAllowedTransaction - pendingTx.Value.lastSeen.Value;
-					if (age.TotalMinutes >= 3)
+					var age = now - pendingTx.Value.LastSeen.Value;
+					if (age > pendingTx.Value.Timeout)
 					{
 						log.Info("Rolling back DTC transaction {0} because it is too old {1}", pendingTx.Key, age);
 						try
@@ -80,7 +80,7 @@ namespace Raven.Database.Impl.DTC
 				}
 				foreach (var ctx in transactionContexts)
 				{
-					var age = oldestAllowedTransaction - ctx.Value.CreatedAt;
+					var age = now - ctx.Value.CreatedAt;
 					if (age.TotalMinutes >= 3)
 					{
 						log.Info("Rolling back DTC transaction {0} because it is too old {1}", ctx.Key, age);
