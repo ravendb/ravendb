@@ -62,7 +62,23 @@ namespace Raven.Database.Impl.DTC
 			{
 				var oldestAllowedTransaction = SystemTime.UtcNow;
 				log.Info("Performing Transactions Cleanup Sequence for db {0}", docDb.Name ?? Constants.SystemDatabase);
-				foreach (var ctx in transactionContexts.ToArray())
+				foreach (var pendingTx in transactionStates)
+				{
+					var age = oldestAllowedTransaction - pendingTx.Value.lastSeen.Value;
+					if (age.TotalMinutes >= 3)
+					{
+						log.Info("Rolling back DTC transaction {0} because it is too old {1}", pendingTx.Key, age);
+						try
+						{
+							Rollback(pendingTx.Key);
+						}
+						catch (Exception e)
+						{
+							log.WarnException("Could not properly rollback transaction", e);
+						}
+					}
+				}
+				foreach (var ctx in transactionContexts)
 				{
 					var age = oldestAllowedTransaction - ctx.Value.CreatedAt;
 					if (age.TotalMinutes >= 3)
