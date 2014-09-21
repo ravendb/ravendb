@@ -307,12 +307,15 @@ namespace Raven.Database.Impl.DTC
             changes = value.changes;
 			lock (value)
 			{
+				value.lastSeen.Value = SystemTime.UtcNow;
 				currentlyCommittingTransaction.Value = id;
 				try
 				{
 				    var documentIdsToTouch = new HashSet<string>();
 					foreach (var change in value.changes)
 					{
+						value.lastSeen.Value = SystemTime.UtcNow; 
+						
 						var doc = new DocumentInTransactionData
 						{
 							Metadata = change.Metadata == null ? null : (RavenJObject) change.Metadata.CreateSnapshot(),
@@ -323,8 +326,7 @@ namespace Raven.Database.Impl.DTC
 							Key = change.Key
 						};
 
-						log.Debug("Commit of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key);
-						Trace.WriteLine(String.Format("RunOperationsInTransaction (Prepare Phase) of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key));
+						log.Debug("Prepare of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key);
 
 						// doc.Etag - represent the _modified_ document etag, and we already
 						// checked etags on previous PUT/DELETE, so we don't pass it here
