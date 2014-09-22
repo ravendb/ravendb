@@ -220,17 +220,24 @@ namespace Raven.Tests.Core.ChangesApi
         {
             using (var store = GetDocumentStore())
             {
-                var bulkInsert = store.BulkInsert();
+	            using (var bulkInsert = store.BulkInsert())
+	            {
+		            store.Changes().Task.Result
+			            .ForBulkInsert(bulkInsert.OperationId).Task.Result
+			            .Subscribe(changes =>
+			            {
+				            output = "passed_bulkInsert";
+			            });
 
-                store.Changes().Task.Result
-                    .ForBulkInsert(bulkInsert.OperationId)
-                    .Subscribe(changes =>
-                    {
-                        output = "passed_bulkInsert";
-                    });
+		            bulkInsert.Store(new User
+		            {
+			            Name = "User"
+		            });
 
-                bulkInsert.Store(new User { Name = "User" });
-                WaitUntilOutput("passed_bulkInsert");
+	            }
+
+				// perform the check after dispose of bulk insert operation to make sure that we already flushed everyting to the server to the notification shold already arrive
+				WaitUntilOutput("passed_bulkInsert");
             }
         }
 

@@ -20,6 +20,9 @@ namespace Raven.Tests.Core.Commands
 
         public Admin()
         {
+			IOExtensions.DeleteFile(BackupDir);
+			IOExtensions.DeleteFile(RestoreDir);
+
             IOExtensions.DeleteDirectory(BackupDir);
             IOExtensions.DeleteDirectory(RestoreDir);
         }
