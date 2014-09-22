@@ -6,19 +6,19 @@
 
 using System;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Smuggler
 {
-	public class DataDumper : SmugglerApiBase
+	public class DataDumper : SmugglerDatabaseApiBase
 	{
-		public DataDumper(DocumentDatabase database, SmugglerOptions options = null)
-			: base(options ?? new SmugglerOptions())
+        public DataDumper(DocumentDatabase database, SmugglerDatabaseOptions options = null)
+            : base(options ?? new SmugglerDatabaseOptions())
 		{
-			Operations = new EmbeddedSmugglerOperations(database);
+			Operations = new EmbeddedSmugglerDatabaseOperations(database);
 		}
 
 		public override async Task ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtagsToFetch)
@@ -34,7 +34,7 @@ namespace Raven.Database.Smuggler
 			jsonWriter.WriteEndArray();
 		}
 
-		public override Task Between(SmugglerBetweenOptions betweenOptions)
+        public override Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions)
 		{
 			throw new NotSupportedException();
 		}
@@ -43,12 +43,12 @@ namespace Raven.Database.Smuggler
 		{
 			get
 			{
-				return ((EmbeddedSmugglerOperations)Operations).Progress;
+				return ((EmbeddedSmugglerDatabaseOperations)Operations).Progress;
 			}
 
 			set
 			{
-				((EmbeddedSmugglerOperations)Operations).Progress = value;
+				((EmbeddedSmugglerDatabaseOperations)Operations).Progress = value;
 			}
 		}
 	}

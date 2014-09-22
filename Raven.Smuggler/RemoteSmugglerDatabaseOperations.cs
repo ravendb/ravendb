@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RemoteSmugglerOperations.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="RemoteSmugglerDatabaseOperations.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -24,7 +24,7 @@ using Raven.Smuggler.Imports;
 
 namespace Raven.Smuggler
 {
-	public class RemoteSmugglerOperations : ISmugglerOperations
+	public class RemoteSmugglerDatabaseOperations : ISmugglerDatabaseOperations
 	{
 		private readonly Func<DocumentStore> store;
 
@@ -54,11 +54,11 @@ namespace Raven.Smuggler
 
 		private readonly SmugglerJintHelper jintHelper = new SmugglerJintHelper();
 
-		public SmugglerOptions Options { get; private set; }
+		public SmugglerDatabaseOptions Options { get; private set; }
 
 		public bool LastRequestErrored { get; set; }
 
-		public RemoteSmugglerOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported)
+		public RemoteSmugglerDatabaseOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported)
 		{
 			this.store = store;
 			this.operation = operation;
@@ -267,13 +267,13 @@ namespace Raven.Smuggler
 			return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
 		}
 
-		public void Initialize(SmugglerOptions options)
+		public void Initialize(SmugglerDatabaseOptions databaseOptions)
 		{
-			Options = options;
-			jintHelper.Initialize(options);
+			Options = databaseOptions;
+			jintHelper.Initialize(databaseOptions);
 		}
 
-		public void Configure(SmugglerOptions options)
+		public void Configure(SmugglerDatabaseOptions databaseOptions)
 		{
 			if (Store.HasJsonRequestFactory == false)
 				return;
@@ -286,8 +286,8 @@ namespace Raven.Smuggler
 			if (maxNumberOfItemsToProcessInSingleBatch <= 0)
 				return;
 
-			var current = options.BatchSize;
-			options.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
+			var current = databaseOptions.BatchSize;
+			databaseOptions.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
 		}
 	}
 }

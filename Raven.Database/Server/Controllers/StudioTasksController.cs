@@ -116,7 +116,7 @@ for(var customFunction in customFunctions) {{
 					{
 						var dataDumper = new DataDumper(Database);
 						dataDumper.Progress += s => status.LastProgress = s;
-						var smugglerOptions = dataDumper.SmugglerOptions;
+                        var smugglerOptions = dataDumper.Options;
 						smugglerOptions.BatchSize = batchSize;
 						smugglerOptions.ShouldExcludeExpired = !includeExpiredDocuments;
 						smugglerOptions.OperateOnTypes = operateOnTypes;
@@ -133,7 +133,7 @@ for(var customFunction in customFunctions) {{
 								.Select(o => new FilterSetting { Path = o[0], Values = new List<string> { o[1] }, ShouldMatch = bool.Parse(o[2]) }));
 						}
 
-						await dataDumper.ImportData(new SmugglerImportOptions { FromStream = fileStream });
+						await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = fileStream });
 					}
 				}
 				catch (Exception e)
@@ -179,12 +179,12 @@ for(var customFunction in customFunctions) {{
         public Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
 		{
             var requestString = smugglerOptionsJson.SmugglerOptions;
-	        SmugglerOptions smugglerOptions;
+            SmugglerDatabaseOptions smugglerOptions;
       
             using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
 			{
 				var serializer = JsonExtensions.CreateDefaultJsonSerializer();
-                smugglerOptions = (SmugglerOptions)serializer.Deserialize(jsonReader, typeof(SmugglerOptions));
+                smugglerOptions = (SmugglerDatabaseOptions)serializer.Deserialize(jsonReader, typeof(SmugglerDatabaseOptions));
 			}
 
 
@@ -197,7 +197,7 @@ for(var customFunction in customFunctions) {{
 			    {
 				    var dataDumper = new DataDumper(Database, smugglerOptions);
 				    await dataDumper.ExportData(
-					    new SmugglerExportOptions
+                        new SmugglerExportOptions<RavenConnectionStringOptions>
 					    {
 						    ToStream = outputStream
 					    }).ConfigureAwait(false);
@@ -231,8 +231,8 @@ for(var customFunction in customFunctions) {{
 
 			using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
 			{
-				var dataDumper = new DataDumper(Database) {SmugglerOptions = {OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false}};
-				await dataDumper.ImportData(new SmugglerImportOptions {FromStream = sampleData});
+                var dataDumper = new DataDumper(Database) { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false } };
+                await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = sampleData });
 			}
 
 			return GetEmptyMessage();

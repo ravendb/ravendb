@@ -806,7 +806,7 @@ namespace Raven.Client.FileSystem
             if (options.HasFlag(FilesSortOptions.Desc))
             {
                 if (string.IsNullOrEmpty(sort))
-                    throw new ArgumentException("options");
+                    throw new ArgumentException("databaseOptions");
                 sort = "-" + sort;
             }
 

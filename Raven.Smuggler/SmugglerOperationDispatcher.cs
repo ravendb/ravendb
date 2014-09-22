@@ -8,27 +8,33 @@ using System.Text;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
-using Raven.Client.FileSystem;
 using System.Threading.Tasks;
 
 namespace Raven.Smuggler
 {
     public abstract class SmugglerOperationDispatcher<T> where T : SmugglerOptions
     {
-        public async Task Execute(SmugglerAction action, T options)
+        public T Options { get; private set; }
+
+        protected SmugglerOperationDispatcher(T options)
+        {
+            this.Options = options;
+        }
+        
+        public async Task Execute(SmugglerAction action)
         {
             try
             {
                 switch (action)
                 {
                     case SmugglerAction.Import:
-                        await PerformImportAsync(options);
+                        await PerformImportAsync(this.Options);
                         break;
                     case SmugglerAction.Export:
-                        await PerformExportAsync(options);
+                        await PerformExportAsync(this.Options);
                         break;
                     case SmugglerAction.Between:
-                        await PerformBetweenAsync(options);
+                        await PerformBetweenAsync(this.Options);
                         break;
                 }
             }
@@ -40,7 +46,7 @@ namespace Raven.Smuggler
                 {
                     if (e.Status == WebExceptionStatus.ConnectFailure)
                     {
-                        Console.WriteLine("Error: {0} {1}", e.Message, options.Source.Url + (action == SmugglerAction.Between ? " => " + options.Destination.Url : ""));
+                        Console.WriteLine("Error: {0} {1}", e.Message, this.Options.SourceUrl + (action == SmugglerAction.Between ? " => " + this.Options.DestinationUrl : ""));
                         var socketException = e.InnerException as SocketException;
                         if (socketException != null)
                         {

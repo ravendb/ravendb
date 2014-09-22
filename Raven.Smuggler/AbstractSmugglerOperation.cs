@@ -9,11 +9,11 @@ namespace Raven.Smuggler
 {
     public abstract class AbstractSmugglerOperation<T> : IDisposable where T : SmugglerOptions
     {
-        protected T parameters;
+        protected T Parameters;
 
         protected AbstractSmugglerOperation( T parameters )
         {
-            this.parameters = parameters;
+            this.Parameters = parameters;
         }
 
         public abstract bool InitSmuggler();

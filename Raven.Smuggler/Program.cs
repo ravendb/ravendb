@@ -19,14 +19,15 @@ namespace Raven.Smuggler
 {
 	public class Program
 	{
-		private readonly SmugglerApi smugglerApi = new SmugglerApi();	
+        private readonly SmugglerDatabaseApi smugglerApi = new SmugglerDatabaseApi();
+        private readonly SmugglerFilesApi smugglerFilesApi = new SmugglerFilesApi();
         
         private readonly OptionSet optionSet;
         private readonly OptionSet selectionDispatching;
 
 	    private Program()
 	    {
-            var options = smugglerApi.SmugglerOptions;
+            var options = smugglerApi.Options;
 
 	        selectionDispatching = new OptionSet
 	        {
@@ -152,7 +153,7 @@ namespace Raven.Smuggler
 
         private async Task Parse(string[] args)
 		{
-            var options = smugglerApi.SmugglerOptions;
+            var options = smugglerApi.Options;
 
 			// Do these arguments the traditional way to maintain compatibility
 			if (args.Length < 3)
@@ -198,12 +199,12 @@ namespace Raven.Smuggler
 
             if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
 			{
-				smugglerApi.SmugglerOptions.Incremental = true;
+                smugglerApi.Options.Incremental = true;
 			}
 
 			try
 			{
-			    // selectionDispatching.Parse(args);
+			    selectionDispatching.Parse(args);
                 optionSet.Parse(args);
 			}
 			catch (Exception e)
@@ -214,12 +215,12 @@ namespace Raven.Smuggler
 		    switch ( this.mode )
 		    {
                 case SmugglerMode.Database:
-                    var databaseDispatcher = new DatabaseSmugglerOperationDispatcher(smugglerApi);
-                    await databaseDispatcher.Execute(action, smugglerApi.SmugglerOptions);
+                    var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
+                    await databaseDispatcher.Execute(action);
                     break;
                 case SmugglerMode.Filesystem:
-                    var filesDispatcher = new FilesSmugglerOperationDispatcher();
-                    await filesDispatcher.Execute(action, smugglerApi.SmugglerOptions);
+                    var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
+                    await filesDispatcher.Execute(action);
                     break;
 		    }
 		}

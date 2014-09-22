@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="SmugglerApi.cs" company="Hibernating Rhinos LTD">
+// <copyright file="smugglerApi.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -19,28 +19,28 @@ using System.Threading.Tasks;
 
 namespace Raven.Smuggler
 {
-	public class SmugglerApi : SmugglerApiBase
+	public class SmugglerDatabaseApi : SmugglerDatabaseApiBase
 	{
-		public SmugglerApi(SmugglerOptions options = null)
-			: base(options ?? new SmugglerOptions())
+		public SmugglerDatabaseApi(SmugglerDatabaseOptions databaseOptions = null)
+			: base(databaseOptions ?? new SmugglerDatabaseOptions())
 		{
-			Operations = new RemoteSmugglerOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported);
+			Operations = new RemoteSmugglerDatabaseOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported);
 		}
 
 		private BulkInsertOperation operation;
 
 		private DocumentStore store;
 
-		public override Task Between(SmugglerBetweenOptions betweenOptions)
+        public override Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions)
 		{
-			return SmugglerBetweenOperation.Between(betweenOptions, SmugglerOptions);
+            return SmugglerBetweenOperation.Between(betweenOptions, Options);
 		}
 
         [Obsolete("Use RavenFS instead.")]
 		protected override Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 			if (maxEtag != null)
-				throw new ArgumentException("We don't support maxEtag in SmugglerApi", maxEtag);
+				throw new ArgumentException("We don't support maxEtag in SmugglerDatabaseApi", maxEtag);
 
 			return base.ExportAttachments(src, jsonWriter, lastEtag, null);
 		}
@@ -50,7 +50,7 @@ namespace Raven.Smuggler
 			throw new NotSupportedException("Exporting deletions is not supported for Command Line Smuggler");
 		}
 
-		public override async Task ImportData(SmugglerImportOptions importOptions, Stream stream)
+        public override async Task ImportData(SmugglerImportOptions<RavenConnectionStringOptions> importOptions, Stream stream)
 		{
 			using (store = CreateStore(importOptions.To))
 			{
@@ -74,7 +74,7 @@ namespace Raven.Smuggler
 			}
 		}
 
-		public override async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions)
+        public override async Task<ExportDataResult> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
 		{
 			using (store = CreateStore(exportOptions.From))
 			{
@@ -89,9 +89,9 @@ namespace Raven.Smuggler
 
 			operation = new ChunkedBulkInsertOperation(store.DefaultDatabase, store, store.Listeners, new BulkInsertOptions
 			{
-				BatchSize = SmugglerOptions.BatchSize,
+                BatchSize = Options.BatchSize,
 				OverwriteExisting = true
-			}, store.Changes(), SmugglerOptions.ChunkSize, SmugglerOptions.DefaultDocumentSizeInChunkLimitInBytes);
+            }, store.Changes(), Options.ChunkSize, SmugglerDatabaseOptions.DefaultDocumentSizeInChunkLimitInBytes);
 
 			operation.Report += text => Operations.ShowProgress(text);
 		}

@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="ISmugglerOperations.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ISmugglerDatabaseOperations.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -17,9 +17,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Smuggler
 {
-	public interface ISmugglerOperations
+	public interface ISmugglerDatabaseOperations
 	{
-		SmugglerOptions Options { get; }
+        SmugglerDatabaseOptions Options { get; }
 
         [Obsolete("Use RavenFS instead.")]
 		Task DeleteAttachment(string key);
@@ -66,8 +66,8 @@ namespace Raven.Abstractions.Smuggler
 
 		Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript);
 
-		void Initialize(SmugglerOptions options);
+        void Initialize(SmugglerDatabaseOptions options);
 
-		void Configure(SmugglerOptions options);
+        void Configure(SmugglerDatabaseOptions options);
 	}
 }

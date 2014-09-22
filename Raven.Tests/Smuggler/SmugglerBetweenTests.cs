@@ -44,8 +44,8 @@ namespace Raven.Tests.Smuggler
                 {
 					using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
 					{
-						var smugglerApi = new SmugglerApi();
-						await smugglerApi.Between(new SmugglerBetweenOptions
+						var smugglerApi = new SmugglerDatabaseApi();
+                        await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
 						{
 							From = new RavenConnectionStringOptions {Url = "http://localhost:8079", DefaultDatabase = "Database1"},
 							To = new RavenConnectionStringOptions {Url = "http://localhost:8078", DefaultDatabase = "Database2"}
@@ -87,12 +87,12 @@ namespace Raven.Tests.Smuggler
                 {
 					using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
 					{
-						var smugglerApi = new SmugglerApi(new SmugglerOptions
+						var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
 						{
 							Incremental = true,
 						});
 
-						await smugglerApi.Between(new SmugglerBetweenOptions
+                        await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
 						{
 							From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
 							To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
@@ -116,7 +116,7 @@ namespace Raven.Tests.Smuggler
                         }
                         await store2.AsyncDatabaseCommands.PutAttachmentAsync("fitzchak", null, new MemoryStream(new byte[] { 6 }), new RavenJObject());
 
-						await smugglerApi.Between(new SmugglerBetweenOptions
+                        await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
 						{
 							From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
 							To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
@@ -166,18 +166,18 @@ namespace Raven.Tests.Smuggler
 				    {
 						using (var store3 = NewRemoteDocumentStore(ravenDbServer: server3, databaseName: "Database3"))
 						{
-							var smugglerApi = new SmugglerApi(new SmugglerOptions
+							var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
 							{
 								Incremental = true,
 							});
 
-							await smugglerApi.Between(new SmugglerBetweenOptions
+                            await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
 							{
 								From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
 								To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
 							});
 
-							await smugglerApi.Between(new SmugglerBetweenOptions
+                            await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
 							{
 								From = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" },
 								To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }

@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Abstractions.Smuggler
+namespace Raven.Abstractions.Smuggler.Data
 {
-    class FilesSmugglerOptions
+    public class FilesExportDataResult
     {
+        public string FilePath { get; set; }
     }
 }

@@ -20,7 +20,7 @@ namespace Raven.Smuggler
 	{
 		const int RetriesCount = 5;
 
-		public static async Task Between(SmugglerBetweenOptions betweenOptions, SmugglerOptions options)
+        public static async Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions, SmugglerDatabaseOptions databaseOptions)
 		{
 			SetDatabaseNameIfEmpty(betweenOptions.From);
 			SetDatabaseNameIfEmpty(betweenOptions.To);
@@ -28,11 +28,11 @@ namespace Raven.Smuggler
 			using (var exportStore = CreateStore(betweenOptions.From))
 			using (var importStore = CreateStore(betweenOptions.To))
 			{
-				SmugglerApi.ValidateThatServerIsUpAndDatabaseExists(betweenOptions.From, exportStore);
-				SmugglerApi.ValidateThatServerIsUpAndDatabaseExists(betweenOptions.To, importStore);
+				SmugglerDatabaseApi.ValidateThatServerIsUpAndDatabaseExists(betweenOptions.From, exportStore);
+				SmugglerDatabaseApi.ValidateThatServerIsUpAndDatabaseExists(betweenOptions.To, importStore);
 
-				var exportBatchSize = GetBatchSize(exportStore, options);
-				var importBatchSize = GetBatchSize(importStore, options);
+				var exportBatchSize = GetBatchSize(exportStore, databaseOptions);
+				var importBatchSize = GetBatchSize(importStore, databaseOptions);
 
 				var exportStoreSupportedFeatures = await DetectServerSupportedFeatures(exportStore);
 				var importStoreSupportedFeatures = await DetectServerSupportedFeatures(importStore);
@@ -43,7 +43,7 @@ namespace Raven.Smuggler
 				}
 
 				var incremental = new ExportIncremental();
-				if (options.Incremental)
+				if (databaseOptions.Incremental)
 				{
 					var jsonDocument = await importStore.AsyncDatabaseCommands.GetAsync(SmugglerExportIncremental.RavenDocumentKey);
 					if (jsonDocument != null)
@@ -55,29 +55,29 @@ namespace Raven.Smuggler
 							incremental = value;
 						}
 
-						options.StartDocsEtag = incremental.LastDocsEtag ?? Etag.Empty;
-						options.StartAttachmentsEtag = incremental.LastAttachmentsEtag ?? Etag.Empty;
+						databaseOptions.StartDocsEtag = incremental.LastDocsEtag ?? Etag.Empty;
+						databaseOptions.StartAttachmentsEtag = incremental.LastAttachmentsEtag ?? Etag.Empty;
 					}
 				}
 
-				if (options.OperateOnTypes.HasFlag(ItemType.Indexes))
+				if (databaseOptions.OperateOnTypes.HasFlag(ItemType.Indexes))
 				{
 					await ExportIndexes(exportStore, importStore, exportBatchSize);
 				}
-				if (options.OperateOnTypes.HasFlag(ItemType.Transformers) && exportStoreSupportedFeatures.IsTransformersSupported && importStoreSupportedFeatures.IsTransformersSupported)
+				if (databaseOptions.OperateOnTypes.HasFlag(ItemType.Transformers) && exportStoreSupportedFeatures.IsTransformersSupported && importStoreSupportedFeatures.IsTransformersSupported)
 				{
 					await ExportTransformers(exportStore, importStore, exportBatchSize);
 				}
-				if (options.OperateOnTypes.HasFlag(ItemType.Documents))
+				if (databaseOptions.OperateOnTypes.HasFlag(ItemType.Documents))
 				{
-					incremental.LastDocsEtag = await ExportDocuments(exportStore, importStore, options, exportStoreSupportedFeatures, exportBatchSize, importBatchSize);
+					incremental.LastDocsEtag = await ExportDocuments(exportStore, importStore, databaseOptions, exportStoreSupportedFeatures, exportBatchSize, importBatchSize);
 				}
-				if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
+				if (databaseOptions.OperateOnTypes.HasFlag(ItemType.Attachments))
 				{
-					incremental.LastAttachmentsEtag = await ExportAttachments(exportStore, importStore, options, exportBatchSize);
+					incremental.LastAttachmentsEtag = await ExportAttachments(exportStore, importStore, databaseOptions, exportBatchSize);
 				}
 
-				if (options.Incremental)
+				if (databaseOptions.Incremental)
 				{
 					var smugglerExportIncremental = new SmugglerExportIncremental();
 					var jsonDocument = await importStore.AsyncDatabaseCommands.GetAsync(SmugglerExportIncremental.RavenDocumentKey);
@@ -91,10 +91,10 @@ namespace Raven.Smuggler
 			}
 		}
 
-		private static int GetBatchSize(DocumentStore store, SmugglerOptions options)
+		private static int GetBatchSize(DocumentStore store, SmugglerDatabaseOptions databaseOptions)
 		{
 			if (store.HasJsonRequestFactory == false)
-				return options.BatchSize;
+				return databaseOptions.BatchSize;
 
 			var url = store.Url.ForDatabase(store.DefaultDatabase) + "/debug/config";
 			var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
@@ -102,9 +102,9 @@ namespace Raven.Smuggler
 
 			var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
 			if (maxNumberOfItemsToProcessInSingleBatch <= 0)
-				return options.BatchSize;
+				return databaseOptions.BatchSize;
 
-			return Math.Min(options.BatchSize, maxNumberOfItemsToProcessInSingleBatch);
+			return Math.Min(databaseOptions.BatchSize, maxNumberOfItemsToProcessInSingleBatch);
 		}
 
 		private static void SetDatabaseNameIfEmpty(RavenConnectionStringOptions connection)
@@ -140,11 +140,11 @@ namespace Raven.Smuggler
 			}
 		}
 
-		private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptions options, ServerSupportedFeatures exportStoreSupportedFeatures, int exportBatchSize, int importBatchSize)
+		private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerDatabaseOptions databaseOptions, ServerSupportedFeatures exportStoreSupportedFeatures, int exportBatchSize, int importBatchSize)
 		{
 			var now = SystemTime.UtcNow;
 
-			string lastEtag = options.StartDocsEtag;
+			string lastEtag = databaseOptions.StartDocsEtag;
 			var totalCount = 0;
 			var lastReport = SystemTime.UtcNow;
 			var reportInterval = TimeSpan.FromSeconds(2);
@@ -170,9 +170,9 @@ namespace Raven.Smuggler
 							{
 								var document = documentsEnumerator.Current;
 
-								if (!options.MatchFilters(document))
+								if (!databaseOptions.MatchFilters(document))
 									continue;
-								if (options.ShouldExcludeExpired && options.ExcludeExpired(document, now))
+								if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
 									continue;
 
 								var metadata = document.Value<RavenJObject>("@metadata");
@@ -196,7 +196,7 @@ namespace Raven.Smuggler
 					{
 						int retries = RetriesCount;
 						var originalRequestTimeout = exportStore.JsonRequestFactory.RequestTimeout;
-						var timeout = options.Timeout.Seconds;
+						var timeout = databaseOptions.Timeout.Seconds;
 						if (timeout < 30)
 							timeout = 30;
 						try
@@ -218,9 +218,9 @@ namespace Raven.Smuggler
 										metadata.Remove("@id");
 										metadata.Remove("@etag");
 
-										if (!options.MatchFilters(document))
+										if (!databaseOptions.MatchFilters(document))
 											continue;
-										if (options.ShouldExcludeExpired && options.ExcludeExpired(document, now))
+										if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
 											continue;
 
 										bulkInsertOperation.Store(document, metadata, id);
@@ -273,9 +273,9 @@ namespace Raven.Smuggler
 		}
 
         [Obsolete("Use RavenFS instead.")]
-		private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptions options, int exportBatchSize)
+		private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerDatabaseOptions databaseOptions, int exportBatchSize)
 		{
-			Etag lastEtag = options.StartAttachmentsEtag;
+			Etag lastEtag = databaseOptions.StartAttachmentsEtag;
 			int totalCount = 0;
 			while (true)
 			{
@@ -363,7 +363,7 @@ namespace Raven.Smuggler
 				       };
 			}
 
-			var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerApiBase>()).ProductVersion;
+			var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerDatabaseApiBase>()).ProductVersion;
 			var subSmugglerVersion = smugglerVersion.Substring(0, 3);
 
 			var subServerVersion = buildNumber.ProductVersion.Substring(0, 3);

@@ -1,15 +1,19 @@
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler.Data;
 
 namespace Raven.Abstractions.Smuggler
 {
-	public interface ISmugglerApi
-	{
-        Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions);
+    public interface ISmugglerApi<TIn, TOptions, TOut>
+        where TIn : ConnectionStringOptions, new()
+        where TOptions : SmugglerOptions<TIn>
+    {
+        TOptions Options { get; }
 
-		Task ImportData(SmugglerImportOptions importOptions);
+        Task<TOut> ExportData(SmugglerExportOptions<TIn> exportOptions);
 
-		Task Between(SmugglerBetweenOptions betweenOptions);
+        Task ImportData(SmugglerImportOptions<TIn> importOptions);
+
+        Task Between(SmugglerBetweenOptions<TIn> betweenOptions);
 	}
 }
