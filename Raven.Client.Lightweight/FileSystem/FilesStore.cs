@@ -294,9 +294,7 @@ namespace Raven.Client.FileSystem
             currentSessionId = sessionId;
             try
             {
-                var client = new AsyncFilesServerClient( this.Url, sessionOptions.FileSystem, sessionOptions.Credentials, sessionOptions.ApiKey );
-
-                var session = new AsyncFilesSession(this, client, this.Listeners, sessionId);
+                var session = new AsyncFilesSession(this, this.AsyncFilesCommands, this.Listeners, sessionId);
                 AfterSessionCreated(session);
                 return session;
             }
