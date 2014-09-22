@@ -24,7 +24,11 @@ namespace Raven.Database.Extensions
 	{
 		public static Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
 		{
-			var analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzerTypeAsString) ?? Type.GetType(analyzerTypeAsString);
+			var luceneAssembly = typeof(StandardAnalyzer).Assembly;
+			var analyzerType = luceneAssembly.GetType(analyzerTypeAsString) ?? 
+								Type.GetType(analyzerTypeAsString) ??
+								luceneAssembly.GetType("Lucene.Net.Analysis." + analyzerTypeAsString) ??
+								luceneAssembly.GetType("Lucene.Net.Analysis.Standard." + analyzerTypeAsString);
 			if (analyzerType == null)
 				throw new InvalidOperationException("Cannot find analyzer type '" + analyzerTypeAsString + "' for field: " + name);
 			
