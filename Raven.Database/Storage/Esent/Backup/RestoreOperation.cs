@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -118,10 +119,22 @@ namespace Raven.Database.Storage.Esent.Backup
 			return JET_err.Success;
 		}
 
+		private DateTime lastCompactionProgressStatusUpdate;
+
 		private JET_err CompactStatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
 		{
-			output(string.Format("Esent Compact: {0} {1} {2}", snp, snt, data));
 			Console.WriteLine("Esent Compact: {0} {1} {2}", snp, snt, data);
+
+			if (snt == JET_SNT.Progress)
+			{
+				if(SystemTime.UtcNow - lastCompactionProgressStatusUpdate < TimeSpan.FromMilliseconds(100))
+					return JET_err.Success;
+
+				lastCompactionProgressStatusUpdate = SystemTime.UtcNow;
+			}
+
+			output(string.Format("Esent Compact: {0} {1} {2}", snp, snt, data));
+			
 			return JET_err.Success;
 		}
 	}

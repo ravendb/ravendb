@@ -599,7 +599,13 @@ namespace Raven.Database.Actions
                             Etag = newEtag,
                             LastModified = addDocumentResult.SavedAt,
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
-                        }, documents => Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents));
+                        }, documents =>
+                        {
+							if(Database.IndexDefinitionStorage.IndexesCount == 0 || Database.WorkContext.RunIndexing == false)
+								return;
+
+	                        Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
+                        });
 
                         if (addDocumentResult.Updated)
                             Database.Prefetcher.AfterUpdate(key, addDocumentResult.PrevEtag);
