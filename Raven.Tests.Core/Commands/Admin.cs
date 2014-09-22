@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Data;
+﻿using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -14,20 +15,20 @@ namespace Raven.Tests.Core.Commands
 {
 	public class Admin : RavenCoreTestBase
     {
-        private string DataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Restore.Data");
+        private string RestoreDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Restore.Data");
         private string BackupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backup");
 
         public Admin()
         {
             IOExtensions.DeleteDirectory(BackupDir);
-            IOExtensions.DeleteDirectory(DataDir);
+            IOExtensions.DeleteDirectory(RestoreDir);
         }
 
         public override void Dispose()
         {
             base.Dispose();
             IOExtensions.DeleteDirectory(BackupDir);
-            IOExtensions.DeleteDirectory(DataDir);
+            IOExtensions.DeleteDirectory(RestoreDir);
         }
 
 		[Fact]
@@ -106,29 +107,39 @@ namespace Raven.Tests.Core.Commands
         [Fact]
         public void CanDoBackupAndRestore()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add("DataDirectory", DataDir)))
-            {
-                store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
+			using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add("Raven/RunInMemory", "false")))
+			{
+				store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
 
-                store.DatabaseCommands.GlobalAdmin.StartBackup(BackupDir, new DatabaseDocument(), false, store.DefaultDatabase);
-                WaitForBackup(Server.SystemDatabase);
-            }
+				store.DatabaseCommands.GlobalAdmin.StartBackup(BackupDir, new DatabaseDocument()
+				{
+					Settings = new Dictionary<string, string>()
+					{
+						{"Raven/RunInMemory", "false"}
+					}
+				}, false, store.DefaultDatabase);
+				WaitForBackup(store.DatabaseCommands, true);
+			}
 
-            Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest() 
-                { 
-                    BackupLocation = BackupDir, 
-                    DatabaseLocation = DataDir, 
-                    DatabaseName = "CanDoBackupAndRestore"
-                });
+			Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest()
+			{
+				BackupLocation = BackupDir,
+				DatabaseLocation = RestoreDir,
+				DatabaseName = "CanDoBackupAndRestore_Database"
+			});
 
-            using (var store = new DocumentStore
-            {
-                Url = Server.SystemDatabase.ServerUrl,
-                DefaultDatabase = "CanDoBackupAndRestore"
-            }.Initialize())
-            {
-                WaitForDocument(store.DatabaseCommands, "companies/1");
-            }
+			WaitForRestore(Server.DocumentStore.DatabaseCommands);
+
+			using (var store = new DocumentStore
+			{
+				Url = Server.SystemDatabase.ServerUrl,
+				DefaultDatabase = "CanDoBackupAndRestore_Database",
+			}.Initialize())
+			{
+				WaitForDocument(store.DatabaseCommands, "companies/1");
+			}
+
+			Server.DocumentStore.DatabaseCommands.GlobalAdmin.DeleteDatabase("CanDoBackupAndRestore_Database", hardDelete: true);
         }
 	}
 }

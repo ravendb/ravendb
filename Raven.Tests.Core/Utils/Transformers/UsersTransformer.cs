@@ -18,9 +18,8 @@ namespace Raven.Tests.Core.Utils.Transformers
         public UsersTransformer()
         {
             TransformResults = results => from result in results
-                                          group result by result into g
                                           let key = ParameterOrDefault("Key", "LastName").Value<string>()
-                                          select new { g.Key, PassedParameter = key };
+                                          select new { PassedParameter = key };
         }
     }
 }

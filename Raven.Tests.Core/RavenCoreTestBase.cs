@@ -96,23 +96,37 @@ namespace Raven.Tests.Core
 			Assert.True(spinUntil, "Indexes took took long to become unstale");
 		}
 
-        public static void WaitForBackup(DocumentDatabase db)
-        {
-            var done = SpinWait.SpinUntil(() =>
-            {
-                var jsonDocument = db.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
-                if (jsonDocument == null)
-                    return true;
+		protected void WaitForBackup(IDatabaseCommands commands, bool checkError)
+		{
+			WaitForBackup(commands.Get, checkError);
+		}
 
-                var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
-                if (backupStatus.IsRunning == false)
-                {
-                    return true;
-                }
-                return false;
-            }, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-            Assert.True(done);
-        }
+		private void WaitForBackup(Func<string, JsonDocument> getDocument, bool checkError)
+		{
+			var done = SpinWait.SpinUntil(() =>
+			{
+				// We expect to get the doc from database that we tried to backup
+				var jsonDocument = getDocument(BackupStatus.RavenBackupStatusDocumentKey);
+				if (jsonDocument == null)
+					return false;
+
+				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
+				if (backupStatus.IsRunning == false)
+				{
+					if (checkError)
+					{
+						var firstOrDefault =
+							backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
+						if (firstOrDefault != null)
+							Assert.True(false, string.Format("{0}\n\nDetails: {1}", firstOrDefault.Message, firstOrDefault.Details));
+					}
+
+					return true;
+				}
+				return false;
+			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
+			Assert.True(done);
+		}
 
         public static void WaitForRestore(IDatabaseCommands databaseCommands)
         {
