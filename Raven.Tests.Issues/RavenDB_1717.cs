@@ -7,7 +7,7 @@
 using System.IO;
 
 using Raven.Tests.Common;
-
+using Voron;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -29,8 +29,8 @@ namespace Raven.Tests.Issues
         {
             using (var storage = NewTransactionalStorage(requestedStorage: "voron", dataDir: path, runInMemory:false))
             {
-                var scratchFile = Path.Combine(path, "scratch.buffers");
-                var scratchFileTemp = Path.Combine(temp, "scratch.buffers");
+                var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
+				var scratchFileTemp = Path.Combine(temp, StorageEnvironmentOptions.ScratchBufferName(0));
 
                 Assert.True(File.Exists(scratchFile));
                 Assert.False(File.Exists(scratchFileTemp));
@@ -42,8 +42,8 @@ namespace Raven.Tests.Issues
         {
 			using (var storage = NewTransactionalStorage(requestedStorage: "voron", dataDir: path, tempDir: temp, runInMemory: false))
             {
-                var scratchFile = Path.Combine(path, "scratch.buffers");
-                var scratchFileTemp = Path.Combine(temp, "scratch.buffers");
+				var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
+				var scratchFileTemp = Path.Combine(temp, StorageEnvironmentOptions.ScratchBufferName(0));
 
                 Assert.False(File.Exists(scratchFile));
                 Assert.True(File.Exists(scratchFileTemp));
