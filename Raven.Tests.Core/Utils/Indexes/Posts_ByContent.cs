@@ -6,6 +6,10 @@
 using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using System.Collections.Generic;
+using System.Linq.Expressions;
+using System;
+using Raven.Abstractions.Indexing;
 
 namespace Raven.Tests.Core.Utils.Indexes
 {

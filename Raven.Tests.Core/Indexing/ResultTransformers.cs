@@ -252,5 +252,41 @@ namespace Raven.Tests.Core.Indexing
 				}
 			}
 		}
+
+        [Fact]
+        public void CanUseTransformerWithParameterOrDefault()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new Users_CountByLastName();
+                index.Execute(store);
+                var transformer = new UsersTransformer();
+                transformer.Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Daniel", LastName = "LastName1" });
+                    session.Store(new User { Name = "Daniel2", LastName = "LastName1" });
+                    session.Store(new User { Name = "Daniel2", LastName = "LastName2" });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+
+                    var result = session.Query<User, Users_CountByLastName>()
+                        .TransformWith<UsersTransformer, UsersTransformer.Result>()
+                        .ToArray();
+
+                    Assert.Equal(3, result.Length);
+                    Assert.Equal("LastName", result[0].PassedParameter);
+
+                    result = session.Query<User, Users_CountByLastName>()
+                        .TransformWith<UsersTransformer, UsersTransformer.Result>()
+                        .AddTransformerParameter("Key", "SomeParameter")
+                        .ToArray();
+
+                    Assert.Equal(3, result.Length);
+                    Assert.Equal("SomeParameter", result[0].PassedParameter);
+                }
+            }
+        }
 	}
 }

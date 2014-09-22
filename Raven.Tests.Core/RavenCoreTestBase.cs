@@ -7,15 +7,16 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using Raven.Abstractions.Data;
+using System.Threading;using Raven.Abstractions.Data;using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Extensions;
-using Raven.Database.Server;
-using Raven.Server;
+using System.Linq;
 using Xunit;
+using Raven.Server;
+using Raven.Database;
+using Raven.Database.Server;
 
 namespace Raven.Tests.Core
 {
@@ -94,6 +95,71 @@ namespace Raven.Tests.Core
 
 			Assert.True(spinUntil, "Indexes took took long to become unstale");
 		}
+
+        public static void WaitForBackup(DocumentDatabase db)
+        {
+            var done = SpinWait.SpinUntil(() =>
+            {
+                var jsonDocument = db.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+                if (jsonDocument == null)
+                    return true;
+
+                var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
+                if (backupStatus.IsRunning == false)
+                {
+                    return true;
+                }
+                return false;
+            }, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
+            Assert.True(done);
+        }
+
+        public static void WaitForRestore(IDatabaseCommands databaseCommands)
+        {
+            var systemDatabaseCommands = databaseCommands.ForSystemDatabase();
+
+            var failureMessages = new[]
+			                      {
+				                      "Esent Restore: Failure! Could not restore database!", 
+									  "Error: Restore Canceled", 
+									  "Restore Operation: Failure! Could not restore database!"
+			                      };
+
+            var restoreFinishMessages = new[]
+			                            {
+				                            "The new database was created", 
+											"Esent Restore: Restore Complete", 
+											"Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
+			                            };
+
+            var done = SpinWait.SpinUntil(() =>
+            {
+                var doc = systemDatabaseCommands.Get(RestoreStatus.RavenRestoreStatusDocumentKey);
+
+                if (doc == null)
+                    return false;
+
+                var status = doc.DataAsJson.Deserialize<RestoreStatus>(new DocumentConvention());
+
+                if (failureMessages.Any(status.Messages.Contains))
+                    throw new InvalidOperationException("Restore failure: " + status.Messages.Aggregate(string.Empty, (output, message) => output + (message + Environment.NewLine)));
+
+                return restoreFinishMessages.Any(status.Messages.Contains);
+            }, TimeSpan.FromMinutes(1));
+
+            Assert.True(done);
+        }
+
+        public static void WaitForDocument(IDatabaseCommands databaseCommands, string id)
+        {
+            var done = SpinWait.SpinUntil(() =>
+            {
+                var doc = databaseCommands.Get(id);
+                return doc != null;
+            }, TimeSpan.FromMinutes(1));
+
+            Assert.True(done);
+        }
 
 		public virtual void Dispose()
 		{

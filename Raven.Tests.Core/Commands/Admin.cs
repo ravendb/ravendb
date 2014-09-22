@@ -1,11 +1,35 @@
-﻿using Raven.Client.Extensions;
+﻿using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Database.Extensions;
+using Raven.Json.Linq;
+using Raven.Tests.Core.Utils.Entities;
+using System;
+using System.IO;
 using System.Linq;
 using Xunit;
 
 namespace Raven.Tests.Core.Commands
 {
 	public class Admin : RavenCoreTestBase
-	{
+    {
+        private string DataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Restore.Data");
+        private string BackupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backup");
+
+        public Admin()
+        {
+            IOExtensions.DeleteDirectory(BackupDir);
+            IOExtensions.DeleteDirectory(DataDir);
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            IOExtensions.DeleteDirectory(BackupDir);
+            IOExtensions.DeleteDirectory(DataDir);
+        }
+
 		[Fact]
 		public void CanManageIndexingProcess()
 		{
@@ -76,6 +100,34 @@ namespace Raven.Tests.Core.Commands
                 Assert.True(adminStatistics.TotalNumberOfRequests > 0);
                 Assert.NotNull(adminStatistics.Memory);
 				Assert.NotNull(adminStatistics.LoadedDatabases.First().StorageStats);
+            }
+        }
+
+        [Fact]
+        public void CanDoBackupAndRestore()
+        {
+            using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add("DataDirectory", DataDir)))
+            {
+                store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
+
+                store.DatabaseCommands.GlobalAdmin.StartBackup(BackupDir, new DatabaseDocument(), false, store.DefaultDatabase);
+                WaitForBackup(Server.SystemDatabase);
+            }
+
+            Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new RestoreRequest 
+                { 
+                    BackupLocation = BackupDir, 
+                    DatabaseLocation = DataDir, 
+                    DatabaseName = "CanDoBackupAndRestore"
+                });
+
+            using (var store = new DocumentStore
+            {
+                Url = Server.SystemDatabase.ServerUrl,
+                DefaultDatabase = "CanDoBackupAndRestore"
+            }.Initialize())
+            {
+                WaitForDocument(store.DatabaseCommands, "companies/1");
             }
         }
 	}
