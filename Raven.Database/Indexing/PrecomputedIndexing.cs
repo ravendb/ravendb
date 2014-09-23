@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
