@@ -258,7 +258,8 @@ namespace Raven.Database.Actions
         {
             foreach (var analyzer in indexDefinition.Analyzers)
             {
-				IndexingExtensions.CreateAnalyzerInstance(analyzer.Key, analyzer.Value);
+				//this throws if the type cannot be found
+				IndexingExtensions.GetAnalyzerType(analyzer.Key, analyzer.Value);
             }
         }
 

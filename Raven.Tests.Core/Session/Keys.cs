@@ -67,5 +67,30 @@ namespace Raven.Tests.Core.Session
 				Assert.Equal("companies/1", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase, store.AsyncDatabaseCommands, new Company()));
 			}
 		}
-	}
+
+        [Fact]
+        public void KeyGenerationOnLoad()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Conventions.FindIdentityProperty = info => info.Name == "NotFound!";
+                store.Conventions.RegisterIdConvention<TShirt>((databaseName, commands, entity) => "ts/" + entity.ReleaseYear);
+                store.Conventions.RegisterIdLoadConvention<TShirt, int>(id => "ts/" + id);
+
+                using (var session = store.OpenSession())
+                {
+                    var shirt = new TShirt { Manufacturer = "Test1", ReleaseYear = 1999 };
+                    session.Store(shirt);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var shirt = session.Load<TShirt>(1999);
+                    Assert.Equal(shirt.Manufacturer, "Test1");
+                    Assert.Equal(shirt.ReleaseYear, 1999);
+                }
+            }
+        }
+    }
 }

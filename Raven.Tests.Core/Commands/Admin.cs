@@ -1,11 +1,39 @@
-﻿using Raven.Client.Extensions;
+﻿using System.Collections.Generic;
+using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Database.Extensions;
+using Raven.Json.Linq;
+using Raven.Tests.Core.Utils.Entities;
+using System;
+using System.IO;
 using System.Linq;
 using Xunit;
 
 namespace Raven.Tests.Core.Commands
 {
 	public class Admin : RavenCoreTestBase
-	{
+    {
+        private string RestoreDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Restore.Data");
+        private string BackupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backup");
+
+        public Admin()
+        {
+			IOExtensions.DeleteFile(BackupDir);
+			IOExtensions.DeleteFile(RestoreDir);
+
+            IOExtensions.DeleteDirectory(BackupDir);
+            IOExtensions.DeleteDirectory(RestoreDir);
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            IOExtensions.DeleteDirectory(BackupDir);
+            IOExtensions.DeleteDirectory(RestoreDir);
+        }
+
 		[Fact]
 		public void CanManageIndexingProcess()
 		{
@@ -77,6 +105,44 @@ namespace Raven.Tests.Core.Commands
                 Assert.NotNull(adminStatistics.Memory);
 				Assert.NotNull(adminStatistics.LoadedDatabases.First().StorageStats);
             }
+        }
+
+        [Fact]
+        public void CanDoBackupAndRestore()
+        {
+			using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add("Raven/RunInMemory", "false")))
+			{
+				store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
+
+				store.DatabaseCommands.GlobalAdmin.StartBackup(BackupDir, new DatabaseDocument()
+				{
+					Settings = new Dictionary<string, string>()
+					{
+						{"Raven/RunInMemory", "false"}
+					}
+				}, false, store.DefaultDatabase);
+				WaitForBackup(store.DatabaseCommands, true);
+			}
+
+			Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest()
+			{
+				BackupLocation = BackupDir,
+				DatabaseLocation = RestoreDir,
+				DatabaseName = "CanDoBackupAndRestore_Database"
+			});
+
+			WaitForRestore(Server.DocumentStore.DatabaseCommands);
+
+			using (var store = new DocumentStore
+			{
+				Url = Server.SystemDatabase.ServerUrl,
+				DefaultDatabase = "CanDoBackupAndRestore_Database",
+			}.Initialize())
+			{
+				WaitForDocument(store.DatabaseCommands, "companies/1");
+			}
+
+			Server.DocumentStore.DatabaseCommands.GlobalAdmin.DeleteDatabase("CanDoBackupAndRestore_Database", hardDelete: true);
         }
 	}
 }
