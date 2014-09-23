@@ -49,6 +49,8 @@ namespace Raven.Database.Prefetching
 
 		public PrefetchingUser PrefetchingUser { get; private set; }
 
+		public bool IgnoreJustCommitedDocuments { get; set; }
+
 		public int InMemoryIndexingQueueSize
 		{
 			get { return prefetchingQueue.Count; }
@@ -443,7 +445,7 @@ namespace Raven.Database.Prefetching
 
 		public void AfterStorageCommitBeforeWorkNotifications(JsonDocument[] docs)
 		{
-			if (context.Configuration.DisableDocumentPreFetching || docs.Length == 0)
+			if (context.Configuration.DisableDocumentPreFetching || docs.Length == 0 || IgnoreJustCommitedDocuments)
 				return;
 
 			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
