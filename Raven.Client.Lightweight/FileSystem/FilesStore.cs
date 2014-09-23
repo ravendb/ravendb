@@ -225,16 +225,20 @@ namespace Raven.Client.FileSystem
 
         protected virtual void InitializeInternal()
         {
-            asyncFilesCommandsGenerator = () =>
-            {
-                return new AsyncFilesServerClient(Url, DefaultFileSystem, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, this.Listeners.ConflictListeners);
-            };
+            AsyncFilesCommandsGenerator = () => 
+				new AsyncFilesServerClient(Url, 
+					DefaultFileSystem, 
+					Conventions, 
+					new OperationCredentials(ApiKey, Credentials),
+					jsonRequestFactory, 
+					currentSessionId, 
+					Listeners.ConflictListeners);
         }
 
         /// <summary>
         /// Generate new instance of files commands
         /// </summary>
-        protected Func<IAsyncFilesCommands> asyncFilesCommandsGenerator;
+        protected Func<IAsyncFilesCommands> AsyncFilesCommandsGenerator;
         
         /// <summary>
         /// Gets the async file system commands.
@@ -245,7 +249,7 @@ namespace Raven.Client.FileSystem
             get
             {
                 AssertInitialized();
-                var commands = asyncFilesCommandsGenerator();
+                var commands = AsyncFilesCommandsGenerator();
                 foreach (string key in SharedOperationsHeaders)
                 {
                     var values = SharedOperationsHeaders.GetValues(key);
