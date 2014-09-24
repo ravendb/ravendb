@@ -2,11 +2,12 @@
 using Raven.Json.Linq;
 using System.Collections.Specialized;
 using System.IO;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-    public class UpdatingMetadata : RavenFsTestBase
+    public class UpdatingMetadata : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async void CanUpdateMetadata()

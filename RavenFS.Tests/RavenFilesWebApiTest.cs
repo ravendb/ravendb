@@ -5,14 +5,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Net;
+using Raven.Tests.Helpers;
 
 namespace RavenFS.Tests
 {
-    public class RavenFsWebApiTest : RavenFsTestBase
+    public class RavenFilesWebApiTest : RavenFilesTestWithLogs
     {
         protected string WebApiTestName = "RavenFS_WebApi";
 
-        public RavenFsWebApiTest()
+        public RavenFilesWebApiTest()
         {
             var ravenFsClient = (IAsyncFilesCommandsImpl) NewAsyncClient(fileSystemName: WebApiTestName);
 

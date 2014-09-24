@@ -3,7 +3,7 @@ using Xunit;
 
 namespace RavenFS.Tests
 {
-    public class FileHandling : RavenFsWebApiTest
+    public class FileHandling : RavenFilesWebApiTest
 	{
 		[Fact]
 		public void CanOverwriteFiles()

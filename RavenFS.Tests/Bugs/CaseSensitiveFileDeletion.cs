@@ -1,9 +1,10 @@
 ﻿using System.IO;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-    public class CaseSensitiveFileDeletion : RavenFsTestBase
+    public class CaseSensitiveFileDeletion : RavenFilesTestWithLogs
     {
         [Fact]
         public void FilesWithUpperCaseNamesAreDeletedProperly()

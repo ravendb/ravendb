@@ -8,11 +8,12 @@ using System;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace RavenFS.Tests.ClientApi
 {
-    public class FileSessionListenersTests : RavenFsTestBase
+    public class FileSessionListenersTests : RavenFilesTestWithLogs
     {
         [Fact]
         public async void DoNotDeleteReadOnlyFiles()

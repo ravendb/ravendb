@@ -1,12 +1,13 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Tests.Helpers;
 using Xunit;
 using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests
 {
-    public class Folders : RavenFsTestBase
+    public class Folders : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public void CanGetListOfFolders()

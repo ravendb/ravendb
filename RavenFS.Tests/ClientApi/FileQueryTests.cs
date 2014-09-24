@@ -5,11 +5,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace RavenFS.Tests.ClientApi
 {
-    public class FileQueryTests : RavenFsTestBase
+    public class FileQueryTests : RavenFilesTestWithLogs
     {
         [Fact]
         public async void CanQueryByName()

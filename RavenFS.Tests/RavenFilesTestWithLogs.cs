@@ -2,12 +2,13 @@
 using NLog;
 using NLog.Config;
 using Raven.Database.Server;
+using Raven.Tests.Helpers;
 
 namespace RavenFS.Tests
 {
-    public class WithNLog
-    {
-        static WithNLog()
+    public class RavenFilesTestWithLogs : RavenFilesTestBase
+	{
+        static RavenFilesTestWithLogs()
         {
             if (LogManager.Configuration != null)
                 return;
@@ -20,5 +21,5 @@ namespace RavenFS.Tests
                 LogManager.Configuration = new XmlLoggingConfiguration(reader, "default-config");
             }
         }
-    }
+	}
 }

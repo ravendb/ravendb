@@ -1,21 +1,22 @@
-﻿using System;
+﻿using Raven.Abstractions.FileSystem;
+using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Util;
+using Raven.Json.Linq;
+using Raven.Tests.Helpers;
+using RavenFS.Tests.Synchronization;
+using RavenFS.Tests.Synchronization.IO;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Util;
-using RavenFS.Tests.Synchronization;
-using RavenFS.Tests.Synchronization.IO;
 using Xunit;
-using Raven.Json.Linq;
-using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests
 {
-    public class StorageOperationsTests : RavenFsTestBase
+    public class StorageOperationsTests : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async Task Can_force_storage_cleanup_from_client()

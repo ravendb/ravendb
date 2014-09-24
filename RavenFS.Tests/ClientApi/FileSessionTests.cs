@@ -9,12 +9,13 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Tests.Helpers;
 using Xunit;
 using Raven.Abstractions.Extensions;
 
 namespace RavenFS.Tests.ClientApi
 {
-    public class FileSessionTests : RavenFsTestBase
+    public class FileSessionTests : RavenFilesTestWithLogs
     {
 
         private readonly IFilesStore filesStore;

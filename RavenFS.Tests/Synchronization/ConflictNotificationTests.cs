@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
+using Raven.Tests.Helpers;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Raven.Json.Linq;
@@ -11,7 +12,7 @@ using Raven.Abstractions.FileSystem.Notifications;
 
 namespace RavenFS.Tests.Synchronization
 {
-    public class ConflictNotificationTests : RavenFsTestBase
+    public class ConflictNotificationTests : RavenFilesTestWithLogs
 	{
 
         [Fact]

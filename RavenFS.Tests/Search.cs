@@ -2,11 +2,12 @@
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace RavenFS.Tests
 {
-    public class Search : RavenFsTestBase
+    public class Search : RavenFilesTestWithLogs
     {
         [Fact]
         public void CanSearchForFilesBySize()

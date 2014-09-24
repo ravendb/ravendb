@@ -14,7 +14,7 @@ using System.IO;
 
 namespace RavenFS.Tests
 {
-    public class BigFileHandling : RavenFsWebApiTest
+    public class BigFileHandling : RavenFilesWebApiTest
 	{
 		[Theory]
         [InlineData(1024 * 1024)]		// 1 mb        

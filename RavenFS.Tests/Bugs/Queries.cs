@@ -1,11 +1,12 @@
 ﻿using Raven.Json.Linq;
 using System.Collections.Specialized;
 using System.IO;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-    public class Queries : RavenFsTestBase
+    public class Queries : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public void CanQueryMultipleFiles()

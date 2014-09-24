@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database;
@@ -25,14 +26,12 @@ using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Server;
 using Raven.Client.FileSystem;
-
-using RavenFS.Tests.Tools;
-
+using Raven.Tests.Helpers.Util;
 using Xunit;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.Helpers
 {
-    public class RavenFsTestBase : WithNLog, IDisposable
+    public class RavenFilesTestBase : IDisposable
     {
         public static IEnumerable<object[]> Storages
         {
@@ -54,7 +53,7 @@ namespace RavenFS.Tests
 
         public TimeSpan SynchronizationInterval { get; protected set; }
 
-        protected RavenFsTestBase()
+        protected RavenFilesTestBase()
         {
             this.SynchronizationInterval = TimeSpan.FromMinutes(10);
         }

@@ -2,13 +2,14 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Tests.Helpers;
 using RavenFS.Tests.Synchronization;
 using Xunit;
 using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Bugs
 {
-    public class SynchronizationAfterSetUpDestinations : RavenFsTestBase
+    public class SynchronizationAfterSetUpDestinations : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async Task Should_transfer_entire_file_even_if_rename_operation_was_performed()

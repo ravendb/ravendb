@@ -57,6 +57,8 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="RavenFilesTestBase.cs" />
+    <Compile Include="TaskAssert.cs" />
     <Compile Include="Util\CommonInitializationUtil.cs" />
     <Compile Include="RavenTestBase.cs" />
     <Compile Include="Util\SettingsHelper.cs" />

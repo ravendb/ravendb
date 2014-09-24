@@ -45,7 +45,7 @@ using Xunit.Sdk;
 
 namespace Raven.Tests.Helpers
 {
-	public abstract class RavenTestBase : IDisposable
+    public abstract class RavenTestBase : IDisposable
 	{
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.FileSystem.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Tests.Helpers;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
@@ -17,7 +17,7 @@ using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests
 {
-    public class CommandsUsage : RavenFsTestBase
+    public class CommandsUsage : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async Task Can_update_just_metadata()

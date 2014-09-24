@@ -14,6 +14,7 @@ using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests.Helpers;
 using RavenFS.Tests.Synchronization.IO;
 using System;
 using System.Collections.Generic;
@@ -26,7 +27,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Auth
 {
-    public class ClientWindowsAuth : RavenFsTestBase
+    public class ClientWindowsAuth : RavenFilesTestWithLogs
     {
 		private string username = "local_user_test";
 

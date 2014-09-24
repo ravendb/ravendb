@@ -7,13 +7,14 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Tests.Helpers;
 using Xunit;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Auth
 {
-    public class ClientWithoutAuthenticationSetup : RavenFsTestBase
+    public class ClientWithoutAuthenticationSetup : RavenFilesTestWithLogs
     {
         [Fact]
         public async Task WillUseDefaultNetworkCredentialsWhenServerRequiresAuthentication()

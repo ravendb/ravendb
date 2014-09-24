@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests.Helpers;
 using RavenFS.Tests.Synchronization;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
@@ -17,7 +18,7 @@ using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Auth
 {
-    public class SynchronizationWithOAuth : RavenFsTestBase
+    public class SynchronizationWithOAuth : RavenFilesTestWithLogs
     {
         private const string apiKey = "test/ThisIsMySecret";
 

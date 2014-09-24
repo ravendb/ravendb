@@ -4,6 +4,7 @@ using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Util;
+using Raven.Tests.Helpers;
 using Xunit;
 using Xunit.Extensions;
 using Raven.Client.FileSystem;
@@ -12,7 +13,7 @@ using Raven.Client.FileSystem.Connection;
 
 namespace RavenFS.Tests.Synchronization
 {
-    public class SynchronizationStorageTests : RavenFsTestBase
+    public class SynchronizationStorageTests : RavenFilesTestWithLogs
 	{
         private readonly IAsyncFilesCommandsImpl destination;
 		private readonly RavenFileSystem destinationRfs;

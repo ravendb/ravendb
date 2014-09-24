@@ -2,11 +2,12 @@
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-    public class UploadFilesWithTheSameContentConcurrently : RavenFsTestBase
+    public class UploadFilesWithTheSameContentConcurrently : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async void ShouldWork()

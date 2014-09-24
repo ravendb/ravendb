@@ -12,6 +12,7 @@ using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Tests.Helpers;
 using RavenFS.Tests.Synchronization.IO;
 using RavenFS.Tests.Tools;
 using Xunit;
@@ -23,7 +24,7 @@ using Raven.Abstractions.Data;
 
 namespace RavenFS.Tests.Synchronization
 {
-    public class WorkingWithConflictsTests : RavenFsTestBase
+    public class WorkingWithConflictsTests : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async void Files_should_be_reindexed_when_conflict_is_applied()

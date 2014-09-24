@@ -4,6 +4,7 @@ using System.IO;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
+using Raven.Tests.Helpers;
 using Xunit;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem;
@@ -11,7 +12,7 @@ using Raven.Abstractions.FileSystem.Notifications;
 
 namespace RavenFS.Tests
 {
-    public class Notifications : RavenFsTestBase
+    public class Notifications : RavenFilesTestWithLogs
     {
 
 		[Fact]
