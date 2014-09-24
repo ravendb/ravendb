@@ -67,7 +67,7 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
-    <Compile Include="AbstractSmugglerOperation.cs" />
+    <Compile Include="SmugglerAbstractOperation.cs" />
     <Compile Include="Client\ChunkedBulkInsertOperation.cs" />
     <Compile Include="Client\ChunkedRemoteBulkInsertOperation.cs" />
     <Compile Include="SmugglerDatabaseOperationDispatcher.cs" />
@@ -78,7 +78,7 @@
     <Compile Include="ServerSupportedFeatures.cs" />
     <Compile Include="SmugglerDatabaseApi.cs" />
     <Compile Include="SmugglerExportIncremental.cs" />
-    <Compile Include="RemoteSmugglerDatabaseOperations.cs" />
+    <Compile Include="SmugglerRemoteDatabaseOperations.cs" />
     <Compile Include="SmugglerFilesApi.cs" />
     <Compile Include="SmugglerOperationDispatcher.cs" />
   </ItemGroup>

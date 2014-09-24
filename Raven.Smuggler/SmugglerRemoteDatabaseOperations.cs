@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RemoteSmugglerDatabaseOperations.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="SmugglerRemoteDatabaseOperations.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -24,7 +24,7 @@ using Raven.Smuggler.Imports;
 
 namespace Raven.Smuggler
 {
-	public class RemoteSmugglerDatabaseOperations : ISmugglerDatabaseOperations
+	public class SmugglerRemoteDatabaseOperations : ISmugglerDatabaseOperations
 	{
 		private readonly Func<DocumentStore> store;
 
@@ -58,7 +58,7 @@ namespace Raven.Smuggler
 
 		public bool LastRequestErrored { get; set; }
 
-		public RemoteSmugglerDatabaseOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported)
+		public SmugglerRemoteDatabaseOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported)
 		{
 			this.store = store;
 			this.operation = operation;

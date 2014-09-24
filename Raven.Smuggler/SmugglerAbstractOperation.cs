@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace Raven.Smuggler
 {
-    public abstract class AbstractSmugglerOperation<T> : IDisposable where T : SmugglerOptions
+    public abstract class SmugglerAbstractOperation<T> : IDisposable where T : SmugglerOptions
     {
         protected T Parameters;
 
-        protected AbstractSmugglerOperation( T parameters )
+        protected SmugglerAbstractOperation( T parameters )
         {
             this.Parameters = parameters;
         }
