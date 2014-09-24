@@ -18,7 +18,7 @@ using System;
 
 namespace Raven.Tests.Core.Smuggler
 {
-    public class SmugglerAPI : RavenCoreTestBase
+    public class SmugglerApiTests : RavenCoreTestBase
     {
         public const int Port1 = 8081;
         public const int Port2 = 8082;
@@ -27,7 +27,7 @@ namespace Raven.Tests.Core.Smuggler
 
         private string BackupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backup");
 
-        public SmugglerAPI()
+        public SmugglerApiTests()
         {
             IOExtensions.DeleteDirectory(BackupDir);
         }
