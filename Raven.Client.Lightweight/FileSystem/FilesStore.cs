@@ -294,7 +294,8 @@ namespace Raven.Client.FileSystem
             currentSessionId = sessionId;
             try
             {
-                var session = new AsyncFilesSession(this, this.AsyncFilesCommands, this.Listeners, sessionId);
+	            var client = SetupCommandsAsync(this.AsyncFilesCommands, sessionOptions);
+                var session = new AsyncFilesSession(this, client, this.Listeners, sessionId);
                 AfterSessionCreated(session);
                 return session;
             }
@@ -311,8 +312,8 @@ namespace Raven.Client.FileSystem
                 throw new ArgumentException("Filesystem cannot be null, empty or whitespace.", "FileSystem");
 
             filesCommands = filesCommands.ForFileSystem(options.FileSystem);
-            if (options.Credentials != null)
-                filesCommands = filesCommands.With(options.Credentials);
+	        if (options.ApiKey != null || options.Credentials != null)
+		        filesCommands = filesCommands.With(new OperationCredentials(options.ApiKey, options.Credentials));
             
             return filesCommands;
         }
