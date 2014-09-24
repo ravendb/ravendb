@@ -69,5 +69,9 @@ namespace Raven.Abstractions.Smuggler
 		void Initialize(SmugglerOptions options);
 
 		void Configure(SmugglerOptions options);
+
+		Task<List<KeyValuePair<string, long>>> GetIdentities();
+
+		Task SeedIdentityFor(string identityName, long identityValue);
 	}
 }

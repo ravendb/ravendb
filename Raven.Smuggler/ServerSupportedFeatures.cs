@@ -9,5 +9,6 @@ namespace Raven.Smuggler
     {
         public bool IsTransformersSupported { get; set; }
         public bool IsDocsStreamingSupported { get; set; }
+		public bool IsIdentitiesSmugglingSupported { get; set; }
     }
 }
