@@ -418,6 +418,7 @@ namespace Raven.Database
 					InMemoryIndexingQueueSize = prefetcher.GetInMemoryIndexingQueueSize(PrefetchingUser.Indexer),
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
+					CountOfResultTransformers = IndexDefinitionStorage.ResultTransformersCount,
 					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 					Errors = workContext.Errors,
 					DatabaseId = TransactionalStorage.Id,
