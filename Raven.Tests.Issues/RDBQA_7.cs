@@ -35,8 +35,7 @@ namespace Raven.Tests.Issues
         {
             var path = Path.GetTempFileName();
 
-	        var options =
-		        new SmugglerOptions
+	        var options = new SmugglerDatabaseOptions
 		        {
 			        Filters =
 				        new EquatableList<FilterSetting>
@@ -56,14 +55,14 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi(options);
-	                smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new SmugglerDatabaseApi(options);
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-					var smuggler = new SmugglerApi(options);
-	                smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new SmugglerDatabaseApi(options);
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     Assert.NotNull(store.DatabaseCommands.Get("key/1"));
 
@@ -90,8 +89,7 @@ namespace Raven.Tests.Issues
         {
             var path = Path.GetTempFileName();
 
-	        var options =
-		        new SmugglerOptions
+	        var options = new SmugglerDatabaseOptions
 		        {
 			        Filters =
 				        new EquatableList<FilterSetting>
@@ -111,14 +109,14 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-					var smuggler = new SmugglerApi(options);
-	                smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new SmugglerDatabaseApi(options);
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-					var smuggler = new SmugglerApi(options);
-	                smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new SmugglerDatabaseApi(options);
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     Assert.NotNull(store.DatabaseCommands.Get("key/1"));
 

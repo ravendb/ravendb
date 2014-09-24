@@ -114,7 +114,7 @@ for(var customFunction in customFunctions) {{
 				{
 					using (var fileStream = File.Open(uploadedFilePath, FileMode.Open, FileAccess.Read))
 					{
-						var dataDumper = new DataDumper(Database);
+						var dataDumper = new DatabaseDataDumper(Database);
 						dataDumper.Progress += s => status.LastProgress = s;
                         var smugglerOptions = dataDumper.Options;
 						smugglerOptions.BatchSize = batchSize;
@@ -195,7 +195,7 @@ for(var customFunction in customFunctions) {{
 			{
 			    try
 			    {
-				    var dataDumper = new DataDumper(Database, smugglerOptions);
+				    var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
 				    await dataDumper.ExportData(
                         new SmugglerExportOptions<RavenConnectionStringOptions>
 					    {
@@ -231,7 +231,7 @@ for(var customFunction in customFunctions) {{
 
 			using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
 			{
-                var dataDumper = new DataDumper(Database) { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false } };
+                var dataDumper = new DatabaseDataDumper(Database) { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false } };
                 await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = sampleData });
 			}
 

@@ -25,26 +25,26 @@ namespace Raven.Tests.Issues
 
 			using (var server = GetNewServer(configureConfig: configuration => configuration.MaxNumberOfItemsToProcessInSingleBatch = 1234))
 			{
-				var dumper = new DataDumper(server.SystemDatabase, options: new SmugglerOptions { BatchSize = 4321 });
-				Assert.Equal(4321, dumper.SmugglerOptions.BatchSize);
+                var dumper = new DatabaseDataDumper(server.SystemDatabase, options: new SmugglerDatabaseOptions { BatchSize = 4321 });
+				Assert.Equal(4321, dumper.Options.BatchSize);
 
-				dumper.ExportData(new SmugglerExportOptions { ToFile = path }).ResultUnwrap();
+                dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path }).ResultUnwrap();
 
-				Assert.Equal(1234, dumper.SmugglerOptions.BatchSize);
+				Assert.Equal(1234, dumper.Options.BatchSize);
 
-				dumper = new DataDumper(server.SystemDatabase, options: new SmugglerOptions { BatchSize = 4321 });
-				Assert.Equal(4321, dumper.SmugglerOptions.BatchSize);
+                dumper = new DatabaseDataDumper(server.SystemDatabase, options: new SmugglerDatabaseOptions { BatchSize = 4321 });
+				Assert.Equal(4321, dumper.Options.BatchSize);
 
-				dumper.ImportData(new SmugglerImportOptions { FromFile = path }).Wait();
+                dumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path }).Wait();
 
-				Assert.Equal(1234, dumper.SmugglerOptions.BatchSize);
+				Assert.Equal(1234, dumper.Options.BatchSize);
 
-				dumper = new DataDumper(server.SystemDatabase, options: new SmugglerOptions { BatchSize = 1000 });
-				Assert.Equal(1000, dumper.SmugglerOptions.BatchSize);
+                dumper = new DatabaseDataDumper(server.SystemDatabase, options: new SmugglerDatabaseOptions { BatchSize = 1000 });
+				Assert.Equal(1000, dumper.Options.BatchSize);
 
-				dumper.ExportData(new SmugglerExportOptions { ToFile = path }).ResultUnwrap();
+                dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path }).ResultUnwrap();
 
-				Assert.Equal(1000, dumper.SmugglerOptions.BatchSize);
+				Assert.Equal(1000, dumper.Options.BatchSize);
 			}
 		}
 
@@ -55,26 +55,26 @@ namespace Raven.Tests.Issues
 
 			using (var server = GetNewServer(configureConfig: configuration => configuration.MaxNumberOfItemsToProcessInSingleBatch = 1234))
 			{
-				var smuggler = new SmugglerApi(options: new SmugglerOptions { BatchSize = 4321 });
-				Assert.Equal(4321, smuggler.SmugglerOptions.BatchSize);
+                var smuggler = new SmugglerDatabaseApi(options: new SmugglerDatabaseOptions { BatchSize = 4321 });
+				Assert.Equal(4321, smuggler.Options.BatchSize);
 
-				smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } }).ResultUnwrap();
+                smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } }).ResultUnwrap();
 
-				Assert.Equal(1234, smuggler.SmugglerOptions.BatchSize);
+				Assert.Equal(1234, smuggler.Options.BatchSize);
 
-				smuggler = new SmugglerApi(options: new SmugglerOptions { BatchSize = 4321 });
-				Assert.Equal(4321, smuggler.SmugglerOptions.BatchSize);
+                smuggler = new SmugglerDatabaseApi(options: new SmugglerDatabaseOptions { BatchSize = 4321 });
+				Assert.Equal(4321, smuggler.Options.BatchSize);
 
-				smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } }).Wait();
+                smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } }).Wait();
 
-				Assert.Equal(1234, smuggler.SmugglerOptions.BatchSize);
+				Assert.Equal(1234, smuggler.Options.BatchSize);
 
-				smuggler = new SmugglerApi(options: new SmugglerOptions { BatchSize = 1000 });
-				Assert.Equal(1000, smuggler.SmugglerOptions.BatchSize);
+                smuggler = new SmugglerDatabaseApi(options: new SmugglerDatabaseOptions { BatchSize = 1000 });
+				Assert.Equal(1000, smuggler.Options.BatchSize);
 
-				smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } }).ResultUnwrap();
+                smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } }).ResultUnwrap();
 
-				Assert.Equal(1000, smuggler.SmugglerOptions.BatchSize);
+				Assert.Equal(1000, smuggler.Options.BatchSize);
 			}
 		}
 	}

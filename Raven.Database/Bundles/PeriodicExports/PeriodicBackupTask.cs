@@ -155,7 +155,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 					{
 						try
 						{
-							var dataDumper = new DataDumper(documentDatabase);
+							var dataDumper = new DatabaseDataDumper(documentDatabase);
 							var localBackupConfigs = exportConfigs;
 							var localBackupStatus = exportStatus;
 							if (localBackupConfigs == null)

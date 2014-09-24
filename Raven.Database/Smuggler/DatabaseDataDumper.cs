@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="DataDumper.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="DatabaseDataDumper.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -13,12 +13,12 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Smuggler
 {
-	public class DataDumper : SmugglerDatabaseApiBase
+	public class DatabaseDataDumper : SmugglerDatabaseApiBase
 	{
-        public DataDumper(DocumentDatabase database, SmugglerDatabaseOptions options = null)
+        public DatabaseDataDumper(DocumentDatabase database, SmugglerDatabaseOptions options = null)
             : base(options ?? new SmugglerDatabaseOptions())
 		{
-			Operations = new EmbeddedSmugglerDatabaseOperations(database);
+			Operations = new SmugglerEmbeddedDatabaseOperations(database);
 		}
 
 		public override async Task ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtagsToFetch)
@@ -43,12 +43,12 @@ namespace Raven.Database.Smuggler
 		{
 			get
 			{
-				return ((EmbeddedSmugglerDatabaseOperations)Operations).Progress;
+				return ((SmugglerEmbeddedDatabaseOperations)Operations).Progress;
 			}
 
 			set
 			{
-				((EmbeddedSmugglerDatabaseOperations)Operations).Progress = value;
+				((SmugglerEmbeddedDatabaseOperations)Operations).Progress = value;
 			}
 		}
 	}

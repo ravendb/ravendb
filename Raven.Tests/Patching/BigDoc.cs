@@ -18,7 +18,7 @@ namespace Raven.Tests.Patching
 	        {
 				using (var stream = typeof(BigDoc).Assembly.GetManifestResourceStream("Raven.Tests.Patching.failingdump11.ravendump"))
 	            {
-                    new DataDumper(store.SystemDatabase).ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = stream }).Wait(TimeSpan.FromSeconds(15));
+                    new DatabaseDataDumper(store.SystemDatabase).ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = stream }).Wait(TimeSpan.FromSeconds(15));
 	            }
 
 	            using (var session = store.OpenSession())

@@ -12,6 +12,8 @@ namespace Raven.Abstractions.Smuggler
     {
         public SmugglerFilesOptions Options { get; private set; }
 
+        public ISmugglerFilesOperations Operations { get; protected set; }
+
         protected SmugglerFilesApiBase(SmugglerFilesOptions options)
         {
             this.Options = options;

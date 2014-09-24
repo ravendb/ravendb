@@ -48,10 +48,10 @@ namespace Raven.Tests.Issues
             store1.DatabaseCommands.Put("1", null, new RavenJObject(), new RavenJObject());
             store1.DatabaseCommands.Put("2", null, new RavenJObject(), new RavenJObject());
 
-	        var smuggler = new SmugglerApi();
+            var smuggler = new SmugglerDatabaseApi();
 
 	        smuggler.ExportData(
-		        new SmugglerExportOptions
+                new SmugglerExportOptions<RavenConnectionStringOptions>
 		        {
 			        ToFile = DumpFile,
 			        From = new RavenConnectionStringOptions
@@ -62,9 +62,9 @@ namespace Raven.Tests.Issues
 		        }).Wait(TimeSpan.FromSeconds(15));
             Assert.True(File.Exists(DumpFile));
 
-	        smuggler = new SmugglerApi();
+            smuggler = new SmugglerDatabaseApi();
 	        smuggler.ImportData(
-		        new SmugglerImportOptions
+                new SmugglerImportOptions<RavenConnectionStringOptions>
 		        {
 			        FromFile = DumpFile,
 			        To = new RavenConnectionStringOptions

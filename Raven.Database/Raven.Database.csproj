@@ -251,7 +251,9 @@
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LocalFileSynchronizationConflictResolver.cs" />
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationConfig.cs" />
     <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
-    <Compile Include="Smuggler\EmbeddedSmugglerDatabaseOperations.cs" />
+    <Compile Include="Smuggler\FilesDataDumper.cs" />
+    <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
+    <Compile Include="Smuggler\SmugglerEmbeddedFilesOperations.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
@@ -968,7 +970,7 @@
     <Compile Include="Server\WebApi\IRavenServer.cs" />
     <Compile Include="Server\WebApi\Handlers\GZipToJsonAndCompressHandler.cs" />
     <Compile Include="Server\WebApi\RequestManager.cs" />
-    <Compile Include="Smuggler\DataDumper.cs" />
+    <Compile Include="Smuggler\DatabaseDataDumper.cs" />
     <Compile Include="Storage\BaseBackupOperation.cs" />
     <Compile Include="Storage\BaseRestoreOperation.cs" />
     <Compile Include="Storage\DatabaseSizeInformation.cs" />

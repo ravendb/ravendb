@@ -43,16 +43,16 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi();
+                    var smuggler = new SmugglerDatabaseApi();
 
-					smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new SmugglerApi();
+                    var smuggler = new SmugglerDatabaseApi();
 
-					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -83,14 +83,14 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-	                var smuggler = new SmugglerApi(new SmugglerOptions { ShouldExcludeExpired = true });
-	                smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions { ShouldExcludeExpired = true });
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-					var smuggler = new SmugglerApi(new SmugglerOptions { ShouldExcludeExpired = true });
-					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions { ShouldExcludeExpired = true });
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -121,16 +121,16 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi {SmugglerOptions = {ShouldExcludeExpired = true}};
-	                smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new SmugglerDatabaseApi { Options = { ShouldExcludeExpired = true } };
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
                     SystemTime.UtcDateTime = () => DateTime.Now.AddMinutes(10);
 
-	                var smuggler = new SmugglerApi {SmugglerOptions = {ShouldExcludeExpired = true}};
-					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new SmugglerDatabaseApi { Options = { ShouldExcludeExpired = true } };
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {

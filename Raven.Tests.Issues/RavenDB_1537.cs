@@ -69,8 +69,8 @@ namespace Raven.Tests.Issues
                 }
                 using (var store = NewDocumentStore())
                 {
-	                var dataDumper = new DataDumper(store.SystemDatabase) { SmugglerOptions = { Incremental = false } };
-	                dataDumper.ImportData(new SmugglerImportOptions
+	                var dataDumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = false } };
+                    dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
                     {
                         FromFile = Directory.GetFiles(Path.GetFullPath(backupPath))
                           .Where(file => ".ravendb-full-dump".Equals(Path.GetExtension(file), StringComparison.InvariantCultureIgnoreCase))
@@ -177,9 +177,9 @@ namespace Raven.Tests.Issues
         {
             using (var store = NewDocumentStore())
             {
-                var dataDumper = new DataDumper(store.SystemDatabase);
-	            dataDumper.SmugglerOptions.Incremental = false;
-	            dataDumper.ImportData(new SmugglerImportOptions { FromFile = file }).Wait();
+                var dataDumper = new DatabaseDataDumper(store.SystemDatabase);
+	            dataDumper.Options.Incremental = false;
+                dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = file }).Wait();
 
                 WaitForIndexing(store);
 
@@ -231,10 +231,10 @@ namespace Raven.Tests.Issues
 
             using (var store = NewRemoteDocumentStore())
             {
-	            var dataDumper = new SmugglerApi();
-	            dataDumper.SmugglerOptions.Incremental = true;
+                var dataDumper = new SmugglerDatabaseApi();
+	            dataDumper.Options.Incremental = true;
                 dataDumper.ImportData(
-					new SmugglerImportOptions
+                    new SmugglerImportOptions<RavenConnectionStringOptions>
 					{
 						FromFile = backupPath,
 						To = new RavenConnectionStringOptions { Url = store.Url }
@@ -289,8 +289,8 @@ namespace Raven.Tests.Issues
 
             using (var store = NewDocumentStore())
             {
-                var dataDumper = new DataDumper(store.SystemDatabase) { SmugglerOptions = { Incremental = true } };
-	            dataDumper.ImportData(new SmugglerImportOptions { FromFile = backupPath }).Wait();
+                var dataDumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = true } };
+                dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = backupPath }).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -333,8 +333,8 @@ namespace Raven.Tests.Issues
 
             using (var store = NewDocumentStore())
             {
-                var dataDumper = new DataDumper(store.SystemDatabase) { SmugglerOptions = { Incremental = true } };
-	            dataDumper.ImportData(new SmugglerImportOptions { FromFile = backupPath }).Wait();
+                var dataDumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = true } };
+                dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = backupPath }).Wait();
 
                 Assert.Null(store.DatabaseCommands.GetAttachment("attach/1"));
             }
@@ -590,7 +590,7 @@ namespace Raven.Tests.Issues
             {
                 FilePath = backupPath
             };
-            SmugglerApiBase.ReadLastEtagsFromFile(result);
+            SmugglerDatabaseApiBase.ReadLastEtagsFromFile(result);
 
             Assert.Equal("00000000-0000-0000-0000-000000000001", result.LastDocsEtag.ToString());
             Assert.Equal("00000000-0000-0000-0000-000000000002", result.LastAttachmentsEtag.ToString());
@@ -601,7 +601,7 @@ namespace Raven.Tests.Issues
         /// <summary>
         /// Purpose of this class is to expose few protected method and make them easily testable without using reflection.
         /// </summary>
-        public class CustomDataDumper : DataDumper
+        public class CustomDataDumper : DatabaseDataDumper
         {
             public CustomDataDumper(DocumentDatabase database)
                 : base(database)
@@ -610,14 +610,14 @@ namespace Raven.Tests.Issues
 
             public Task<Etag> ExportDocuments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
-				Operations.Initialize(SmugglerOptions);
+				Operations.Initialize(Options);
 
                 return ExportDocuments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
             public Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
-				Operations.Initialize(SmugglerOptions);
+				Operations.Initialize(Options);
 
                 return ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }

@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="EmbeddedSmugglerDatabaseOperations.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="SmugglerEmbeddedDatabaseOperations.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -22,13 +22,13 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Smuggler
 {
-	public class EmbeddedSmugglerDatabaseOperations : ISmugglerDatabaseOperations
+	public class SmugglerEmbeddedDatabaseOperations : ISmugglerDatabaseOperations
 	{
 		private readonly DocumentDatabase database;
 
 		private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
 
-		public EmbeddedSmugglerDatabaseOperations(DocumentDatabase database)
+		public SmugglerEmbeddedDatabaseOperations(DocumentDatabase database)
 		{
 			this.database = database;
 		}

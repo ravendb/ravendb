@@ -21,8 +21,8 @@ namespace Raven.Smuggler
 {
 	public class SmugglerDatabaseApi : SmugglerDatabaseApiBase
 	{
-		public SmugglerDatabaseApi(SmugglerDatabaseOptions databaseOptions = null)
-			: base(databaseOptions ?? new SmugglerDatabaseOptions())
+		public SmugglerDatabaseApi(SmugglerDatabaseOptions options = null)
+			: base(options ?? new SmugglerDatabaseOptions())
 		{
 			Operations = new SmugglerRemoteDatabaseOperations(() => store, () => operation, () => IsDocsStreamingSupported, () => IsTransformersSupported);
 		}
