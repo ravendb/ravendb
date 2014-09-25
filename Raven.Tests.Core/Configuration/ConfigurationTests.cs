@@ -117,7 +117,8 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.MaxRecentTouchesToRemember.Value, actual => actual.MaxRecentTouchesToRemember);
 			configurationComparer.Assert(expected => expected.AdditionalStepsForScriptBasedOnDocumentSize.Value, actual => actual.AdditionalStepsForScriptBasedOnDocumentSize);
 			configurationComparer.Assert(expected => expected.MaxIndexWritesBeforeRecreate.Value, actual => actual.MaxIndexWritesBeforeRecreate);
-			configurationComparer.Assert(expected => expected.MaxIndexOutputsPerDocument.Value, actual => actual.MaxIndexOutputsPerDocument);
+			configurationComparer.Assert(expected => expected.MaxSimpleIndexOutputsPerDocument.Value, actual => actual.MaxSimpleIndexOutputsPerDocument);
+			configurationComparer.Assert(expected => expected.MaxMapReduceIndexOutputsPerDocument.Value, actual => actual.MaxMapReduceIndexOutputsPerDocument);
 			configurationComparer.Assert(expected => expected.PrewarmFacetsOnIndexingMaxAge.Value, actual => actual.PrewarmFacetsOnIndexingMaxAge);
 			configurationComparer.Assert(expected => expected.PrewarmFacetsSyncronousWaitTime.Value, actual => actual.PrewarmFacetsSyncronousWaitTime);
 			configurationComparer.Assert(expected => expected.MaxNumberOfParallelProcessingTasks.Value, actual => actual.MaxNumberOfParallelProcessingTasks);

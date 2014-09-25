@@ -1698,7 +1698,8 @@ namespace Raven.Database.Indexing
 
 		protected bool EnsureValidNumberOfOutputsForDocument(string sourceDocumentId, int numberOfAlreadyProducedOutputs)
 		{
-			var maxNumberOfIndexOutputs = indexDefinition.MaxIndexOutputsPerDocument ?? context.Configuration.MaxIndexOutputsPerDocument;
+			var maxNumberOfIndexOutputs = indexDefinition.MaxIndexOutputsPerDocument ?? 
+										(IsMapReduce ? context.Configuration.MaxMapReduceIndexOutputsPerDocument : context.Configuration.MaxSimpleIndexOutputsPerDocument);
 
 			if (maxNumberOfIndexOutputs == -1)
 				return true;

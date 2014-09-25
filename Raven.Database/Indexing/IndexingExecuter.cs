@@ -118,8 +118,9 @@ namespace Raven.Database.Indexing
 	        var groupedIndexes = indexingGroups.Values.ToList();
 
 			var maxIndexOutputsPerDoc = groupedIndexes.Max(x => x.Max(y => y.Index.MaxIndexOutputsPerDocument));
+	        var containsMapReduceIndexes = groupedIndexes.Any(x => x.Any(y => y.Index.IsMapReduce));
 
-			var recoverTunerState = ((IndexBatchSizeAutoTuner)autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(maxIndexOutputsPerDoc);
+			var recoverTunerState = ((IndexBatchSizeAutoTuner)autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(maxIndexOutputsPerDoc, containsMapReduceIndexes);
 
 			var usedPrefetchers = new ConcurrentSet<PrefetchingBehavior>();
 

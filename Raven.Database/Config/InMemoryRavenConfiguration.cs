@@ -129,8 +129,8 @@ namespace Raven.Database.Config
 			// Index settings
 			MaxProcessingRunLatency = ravenSettings.MaxProcessingRunLatency.Value;
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
-			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
-
+			MaxSimpleIndexOutputsPerDocument = ravenSettings.MaxSimpleIndexOutputsPerDocument.Value;
+			MaxMapReduceIndexOutputsPerDocument = ravenSettings.MaxMapReduceIndexOutputsPerDocument.Value;
 
 		    PrewarmFacetsOnIndexingMaxAge = ravenSettings.PrewarmFacetsOnIndexingMaxAge.Value;
 		    PrewarmFacetsSyncronousWaitTime = ravenSettings.PrewarmFacetsSyncronousWaitTime.Value;
@@ -902,11 +902,18 @@ namespace Raven.Database.Config
 		public int MaxIndexWritesBeforeRecreate { get; set; }
 
 		/// <summary>
-		/// Limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to the one document
+		/// Limits the number of map outputs that a simple index is allowed to create for a one source document. If a map operation applied to the one document
 		/// produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
 		/// Default value: 15. In order to disable this check set value to -1.
 		/// </summary>
-		public int MaxIndexOutputsPerDocument { get; set; }
+		public int MaxSimpleIndexOutputsPerDocument { get; set; }
+
+		/// <summary>
+		/// Limits the number of map outputs that a simple index is allowed to create for a one source document. If a map operation applied to the one document
+		/// produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+		/// Default value: 50. In order to disable this check set value to -1.
+		/// </summary>
+		public int MaxMapReduceIndexOutputsPerDocument { get; set; }
 
 		/// <summary>
         /// What is the maximum age of a facet query that we should consider when prewarming
