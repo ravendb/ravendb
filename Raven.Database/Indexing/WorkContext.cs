@@ -7,11 +7,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
@@ -20,6 +23,7 @@ using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using System.Linq;
 using Raven.Database.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -30,7 +34,7 @@ namespace Raven.Database.Indexing
 		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.OrdinalIgnoreCase);
 
 		private readonly SizeLimitedConcurrentSet<IndexingBatchInfo> lastActualIndexingBatchInfo = new SizeLimitedConcurrentSet<IndexingBatchInfo>(25);
-		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
+		private readonly ConcurrentQueue<IndexingError> indexingErrors = new ConcurrentQueue<IndexingError>();
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
 		private volatile bool doIndexing = true;
@@ -38,6 +42,7 @@ namespace Raven.Database.Indexing
 		private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly ThreadLocal<List<Func<string>>> shouldNotifyOnWork = new ThreadLocal<List<Func<string>>>(() => new List<Func<string>>());
+		private long errorsCounter = 0;
 
 	    public WorkContext()
 	    {
@@ -81,9 +86,9 @@ namespace Raven.Database.Indexing
 
 		public ITransactionalStorage TransactionalStorage { get; set; }
 
-		public ServerError[] Errors
+		public IndexingError[] Errors
 		{
-			get { return serverErrors.ToArray(); }
+			get { return indexingErrors.ToArray(); }
 		}
 
 		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
@@ -104,6 +109,30 @@ namespace Raven.Database.Indexing
         {
             MetricsCounters.AddGauge(GetType(), "RunningQueriesCount", () => CurrentlyRunningQueries.Count);
         }
+
+		public void RecoverIndexingErrors()
+		{
+			var storedIndexingErrors = new List<ListItem>();
+			TransactionalStorage.Batch(accessor =>
+			{
+				foreach (var indexName in IndexDefinitionStorage.IndexNames)
+				{
+					storedIndexingErrors.AddRange(accessor.Lists.Read("Raven/Indexing/Errors/" + indexName, Etag.Empty, null, 50));
+				}
+			});
+
+			if(storedIndexingErrors.Count == 0)
+				return;
+
+			var errors = storedIndexingErrors.Select(x => x.Data.JsonDeserialization<IndexingError>()).OrderBy(x => x.Timestamp);
+
+			foreach (var error in errors)
+			{
+				indexingErrors.Enqueue(error);
+			}
+
+			errorsCounter = errors.Max(x => x.Id);
+		}
 
 		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, Action beforeWait, string name)
 		{
@@ -197,19 +226,30 @@ namespace Raven.Database.Indexing
 
 		public void AddError(int index, string indexName, string key, string error, string component)
 		{
-			serverErrors.Enqueue(new ServerError
+			errorsCounter = Interlocked.Increment(ref errorsCounter);
+
+			var indexingError = new IndexingError
 			{
+				Id = errorsCounter,
 				Document = key,
 				Error = error,
 				Index = index,
-                IndexName = indexName,
-                Action = component,
+				IndexName = indexName,
+				Action = component,
 				Timestamp = SystemTime.UtcNow
-			});
-			if (serverErrors.Count <= 50)
+			};
+
+			indexingErrors.Enqueue(indexingError);
+
+			TransactionalStorage.Batch(accessor => accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing));
+
+			if (indexingErrors.Count <= 50)
 				return;
-			ServerError ignored;
-			serverErrors.TryDequeue(out ignored);
+
+			IndexingError ignored;
+			indexingErrors.TryDequeue(out ignored);
+
+			TransactionalStorage.Batch(accessor => accessor.Lists.Remove("Raven/Indexing/Errors/" + ignored.IndexName, ignored.Id.ToString(CultureInfo.InvariantCulture)));
 		}
 
 		public void StopWorkRude()
@@ -233,22 +273,32 @@ namespace Raven.Database.Indexing
 			cancellationTokenSource.Dispose();
 		}
 
-		public void ClearErrorsFor(string name)
+		public void ClearErrorsFor(string indexName)
 		{
+			var list = new List<IndexingError>();
+			var removed = new List<IndexingError>();
 
-			var list = new List<ServerError>();
-
-			ServerError error;
-			while (serverErrors.TryDequeue(out error))
+			IndexingError error;
+			while (indexingErrors.TryDequeue(out error))
 			{
-				if (StringComparer.OrdinalIgnoreCase.Equals(error.IndexName, name) == false)
+				if (StringComparer.OrdinalIgnoreCase.Equals(error.IndexName, indexName) == false)
 					list.Add(error);
+				else
+					removed.Add(error);
 			}
 
-			foreach (var serverError in list)
+			foreach (var indexingError in list)
 			{
-				serverErrors.Enqueue(serverError);
+				indexingErrors.Enqueue(indexingError);
 			}
+
+			TransactionalStorage.Batch(accessor =>
+			{
+				foreach (var removedError in removed)
+				{
+					accessor.Lists.Remove("Raven/Indexing/Errors/" + indexName, removedError.Id.ToString(CultureInfo.InvariantCulture));
+				}
+			});
 		}
 
 		public Action<IndexChangeNotification> RaiseIndexChangeNotification { get; set; }

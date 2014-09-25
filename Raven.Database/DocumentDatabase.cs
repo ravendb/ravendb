@@ -975,6 +975,7 @@ namespace Raven.Database
 			workContext.IndexStorage = IndexStorage;
 			workContext.TransactionalStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
+			workContext.RecoverIndexingErrors();
 		}
 
 		private static decimal ConvertBytesToMBs(long bytes)

@@ -33,7 +33,7 @@ namespace Raven.Abstractions.Data
 
 		public IndexStats[] Indexes { get; set; }
 
-		public ServerError[] Errors { get; set; }
+		public IndexingError[] Errors { get; set; }
 
 		public IndexingBatchInfo[] IndexingBatchInfo { get; set; }
 
