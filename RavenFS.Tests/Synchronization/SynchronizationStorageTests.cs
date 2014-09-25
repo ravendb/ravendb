@@ -1,15 +1,13 @@
 ﻿using System.IO;
+using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Connection;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Util;
-using Raven.Tests.Helpers;
 using Xunit;
 using Xunit.Extensions;
-using Raven.Client.FileSystem;
-using Raven.Abstractions.FileSystem;
-using Raven.Client.FileSystem.Connection;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -25,8 +23,8 @@ namespace RavenFS.Tests.Synchronization
             source = (IAsyncFilesCommandsImpl)NewAsyncClient(0);
             destination = (IAsyncFilesCommandsImpl) NewAsyncClient(1);
 
-			sourceRfs = GetRavenFileSystem(0);
-			destinationRfs = GetRavenFileSystem(1);
+			sourceRfs = GetFileSystem(0);
+			destinationRfs = GetFileSystem(1);
 		}
 
 		[Theory]

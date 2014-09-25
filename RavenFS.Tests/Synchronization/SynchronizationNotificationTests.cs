@@ -1,27 +1,24 @@
 using System;
-using System.Collections.Specialized;
 using System.IO;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
-using Raven.Tests.Helpers;
-using Xunit;
-using Raven.Json.Linq;
-using Raven.Client.FileSystem;
-using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Client.FileSystem;
+using Raven.Json.Linq;
+using Xunit;
 
 namespace RavenFS.Tests.Synchronization
 {
 	public class SynchronizationNotificationTests : RavenFilesTestWithLogs
 	{
-        private readonly IFilesStore sourceStore;
-        private readonly IFilesStore destinationStore;
+	    private readonly IAsyncFilesCommands destinationClient;
+	    private readonly IFilesStore destinationStore;
+	    private readonly IAsyncFilesCommands sourceClient;
+	    private readonly IFilesStore sourceStore;
 
-        private readonly IAsyncFilesCommands destinationClient;
-        private readonly IAsyncFilesCommands sourceClient;
-
-        public SynchronizationNotificationTests()
+	    public SynchronizationNotificationTests()
         {
             sourceStore = NewStore(0);
             sourceClient = sourceStore.AsyncFilesCommands;

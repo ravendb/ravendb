@@ -12,44 +12,50 @@ namespace Raven.Tests.Helpers
     {
         public static T Throws<T>(Func<Task> f) where T : Exception
         {
-            return Assert.Throws<T>(() =>
+            try
             {
-                try
+                Assert.Throws<T>(() =>
                 {
-                    f().Wait();
-                }
-                catch (AggregateException e)
-                {
-                    return e.SimplifyException();
-                }
-                catch (Exception ex)
-                {
-                    return ex;
-                }
-
-                return null;
-            });
+                    try
+                    {
+                        f().Wait();
+                    }
+                    catch (AggregateException e)
+                    {
+                        throw e.SimplifyException();
+                    }
+                });
+            }
+            catch (Exception e)
+            {
+                return e as T;
+            }
+            
+            return null;
         }
 
         public static T Throws<T>(Func<Task<T>> f) where T : Exception
         {
-            return Assert.Throws<T>(() =>
+            try
             {
-                try
+                Assert.Throws<T>(() =>
                 {
-                    f().Wait();
-                }
-                catch (AggregateException e)
-                {
-                    return e.SimplifyException();
-                }
-                catch (Exception ex)
-                {
-                    return ex;
-                }
-
-                return null;
-            });
+                    try
+                    {
+                        f().Wait();
+                    }
+                    catch (AggregateException e)
+                    {
+                        throw e.SimplifyException();
+                    }
+                });
+            }
+            catch (Exception e)
+            {
+                return e as T;
+            }
+            
+            return null;
         }
     }
 }

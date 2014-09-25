@@ -148,15 +148,11 @@
     <Compile Include="Synchronization\FileChangesPropagationTests.cs" />
     <Compile Include="Synchronization\WorkingWithConflictsTests.cs" />
     <Compile Include="Tools\HttpWebRequestExtensions.cs" />
-    <Compile Include="Tools\IisDeploymentUtil.cs" />
     <Compile Include="NarrowedStreamTests.cs" />
     <Compile Include="Synchronization\IO\RandomCharacterStream.cs" />
     <Compile Include="RemoteFilesHandlerTests.cs" />
     <Compile Include="PagesTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Tools\SettingsHelper.cs" />
-    <Compile Include="Tools\TimeMeasure.cs" />
-    <Compile Include="WithNLog.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

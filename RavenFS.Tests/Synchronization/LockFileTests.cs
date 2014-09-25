@@ -1,16 +1,13 @@
 ﻿using System;
-using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Util;
-using Raven.Tests.Helpers;
+using Raven.Json.Linq;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
-using Raven.Json.Linq;
-using Raven.Client.FileSystem;
-using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Synchronization
 {

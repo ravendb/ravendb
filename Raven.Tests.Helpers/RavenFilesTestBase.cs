@@ -15,9 +15,8 @@ using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Encryptors;
-using Raven.Client.FileSystem.Extensions;
+using Raven.Client.FileSystem;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -25,7 +24,6 @@ using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Server;
-using Raven.Client.FileSystem;
 using Raven.Tests.Helpers.Util;
 using Xunit;
 
@@ -58,7 +56,7 @@ namespace Raven.Tests.Helpers
             this.SynchronizationInterval = TimeSpan.FromMinutes(10);
         }
 
-        protected RavenDbServer CreateRavenDbServer(int port,
+        protected RavenDbServer CreateServer(int port,
                                                     string dataDirectory = null,
                                                     bool runInMemory = true,
                                                     string requestedStorage = null,
@@ -70,22 +68,17 @@ namespace Raven.Tests.Helpers
             var storageType = GetDefaultStorageType(requestedStorage);
             var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
 
-            var ravenConfiguration = new RavenConfiguration()
+            var ravenConfiguration = new RavenConfiguration
             {
-				Port = port,
-				DataDirectory = directory,
-				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+                Port = port,
+                DataDirectory = directory,
+                RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 #if DEBUG
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
+                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif
-				DefaultStorageTypeName = storageType,
-				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,                
-			};
-
-	        ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
-            ravenConfiguration.FileSystem.MaximumSynchronizationInterval = this.SynchronizationInterval;
-	        ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
-	        ravenConfiguration.FileSystem.DefaultStorageTypeName = storageType;
+                DefaultStorageTypeName = storageType,
+                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, Encryption = {UseFips = SettingsHelper.UseFipsEncryptionAlgorithms}, FileSystem = {MaximumSynchronizationInterval = this.SynchronizationInterval, DataDirectory = Path.Combine(directory, "FileSystem"), DefaultStorageTypeName = storageType},
+            };
 
             if (customConfig != null)
             {
@@ -121,7 +114,7 @@ namespace Raven.Tests.Helpers
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            var server = CreateRavenDbServer(Ports[index], 
+            var server = CreateServer(Ports[index], 
                 fileSystemName: fileSystemName,
                 enableAuthentication: enableAuthentication, 
                 customConfig: customConfig,
@@ -148,7 +141,7 @@ namespace Raven.Tests.Helpers
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            var server = CreateRavenDbServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage);
+            var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage);
 
             var store = new FilesStore()
             {
@@ -168,7 +161,7 @@ namespace Raven.Tests.Helpers
             return client;       
         }
 
-        protected RavenFileSystem GetRavenFileSystem(int index = 0, [CallerMemberName] string fileSystemName = null)
+        protected RavenFileSystem GetFileSystem(int index = 0, [CallerMemberName] string fileSystemName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 

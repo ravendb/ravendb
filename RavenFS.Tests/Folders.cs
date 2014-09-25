@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Tests.Helpers;
 using Xunit;
 using Raven.Abstractions.FileSystem;
 
