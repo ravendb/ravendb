@@ -196,6 +196,8 @@ namespace Raven.Database.Config
 
 			FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
 			JournalsStoragePath = new StringSetting(settings["Raven/Esent/LogsPath"] ?? settings[Constants.RavenTxJournalPath], (string)null);
+
+			TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
 		}
 
 		private string GetDefaultWebDir()
@@ -334,6 +336,8 @@ namespace Raven.Database.Config
 		public IntegerSetting FlushIndexToDiskSizeInMb { get; set; }
 
 		public StringSetting JournalsStoragePath { get; private set; }
+
+		public TimeSpanSetting TombstoneRetentionTime { get; private set; }
 
 		public class VoronConfiguration
 		{

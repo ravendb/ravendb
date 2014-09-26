@@ -274,10 +274,18 @@ namespace Raven.Database.Config
 
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
+			TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
+
 			PostInit();
 
 			return this;
 		}
+
+		/// <summary>
+		/// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
+		/// purged on next database startup. Default: 14 days.
+		/// </summary>
+		public TimeSpan TombstoneRetentionTime { get; set; }
 
 		public int MaxConcurrentServerRequests { get; set; }
 
