@@ -88,8 +88,8 @@ namespace Raven.Tests.Linq
 				                    .Customize(customization => customization.WaitForNonStaleResults())
 				                    .ToList();
 
-				ServerError[] serverErrors = store.DatabaseCommands.GetStatistics().Errors;
-				Assert.Empty(serverErrors);
+				IndexingError[] indexingErrors = store.DatabaseCommands.GetStatistics().Errors;
+				Assert.Empty(indexingErrors);
 
 				Assert.Equal(2, result.Count);
 				Assert.Equal("creative/1", result.First().CreativeId);

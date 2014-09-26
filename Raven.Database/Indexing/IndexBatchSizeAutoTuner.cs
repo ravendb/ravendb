@@ -61,9 +61,9 @@ namespace Raven.Database.Indexing
 			return lastAmountOfItemsToIndex;
 		}
 
-		public Action ConsiderLimitingNumberOfItemsToProcessForThisBatch(int? maxIndexOutputsPerDoc)
+		public Action ConsiderLimitingNumberOfItemsToProcessForThisBatch(int? maxIndexOutputsPerDoc, bool containsMapReduceIndexes)
 		{
-			if (maxIndexOutputsPerDoc == null || maxIndexOutputsPerDoc <= context.Configuration.MaxIndexOutputsPerDocument)
+			if (maxIndexOutputsPerDoc == null || maxIndexOutputsPerDoc <= (containsMapReduceIndexes ? context.Configuration.MaxMapReduceIndexOutputsPerDocument : context.Configuration.MaxSimpleIndexOutputsPerDocument))
 				return null;
 
 			var oldValue = NumberOfItemsToProcessInSingleBatch;

@@ -116,7 +116,7 @@
     <Compile Include="Replication\ManualConfilctResolution.cs" />
     <Compile Include="Session\Advanced.cs" />
     <Compile Include="Shard\Sharding.cs" />
-    <Compile Include="Smuggler\SmugglerApi.cs" />
+    <Compile Include="Smuggler\SmugglerApiTests.cs" />
     <Compile Include="Utils\Entities\Camera.cs" />
     <Compile Include="Utils\Entities\Event.cs" />
     <Compile Include="Utils\Entities\Headquater.cs" />

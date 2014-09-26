@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Data;
 using Raven.Database.Storage;
@@ -32,6 +33,8 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["name"], name, Encoding.Unicode);
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["key"], key, Encoding.Unicode);
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["etag"], uuidGenerator.CreateSequentialUuid(uuidType).TransformToValueForEsentSorting());
+				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["created_at"], SystemTime.UtcNow);
+
 				using (var columnStream = new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"]))
 				{
 					if (exists)
@@ -75,6 +78,24 @@ namespace Raven.Storage.Esent.StorageActions
 
 		}
 
+		public void RemoveAllOlderThan(string name, DateTime dateTime)
+		{
+			Api.JetSetCurrentIndex(session, Lists, "by_name_and_created_at");
+			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Lists, dateTime, MakeKeyGrbit.None);
+			if (Api.TrySeek(session, Lists, SeekGrbit.SeekLE) == false)
+				return;
+			do
+			{
+				var nameFromDb = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["name"], Encoding.Unicode);
+				if (string.Equals(name, nameFromDb, StringComparison.OrdinalIgnoreCase) == false)
+					break;
+
+				Api.JetDelete(session, Lists);
+
+			} while (Api.TryMovePrevious(session, Lists));
+		}
+
 		public IEnumerable<ListItem> Read(string name, Etag start, Etag end, int take)
 		{
 			Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
@@ -103,7 +124,8 @@ namespace Raven.Storage.Esent.StorageActions
 					{
 						Etag = etag,
 						Data = stream.ToJObject(),
-						Key = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["key"], Encoding.Unicode)
+						Key = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["key"], Encoding.Unicode),
+						CreatedAt =  Api.RetrieveColumnAsDateTime(session, Lists, tableColumnsCache.ListsColumns["created_at"]).Value
 					};
 				}
 			} while (Api.TryMoveNext(session, Lists) && count < take);
@@ -125,7 +147,8 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					Data = stream.ToJObject(),
 					Key = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["key"], Encoding.Unicode),
-					Etag = Etag.Parse(Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]))
+					Etag = Etag.Parse(Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"])),
+					CreatedAt = Api.RetrieveColumnAsDateTime(session, Lists, tableColumnsCache.ListsColumns["created_at"]).Value
 				};
 			}
 		}
@@ -149,7 +172,8 @@ namespace Raven.Storage.Esent.StorageActions
                 {
                     Data = stream.ToJObject(),
                     Key = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["key"], Encoding.Unicode),
-                    Etag = Etag.Parse(Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]))
+                    Etag = Etag.Parse(Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"])),
+					CreatedAt = Api.RetrieveColumnAsDateTime(session, Lists, tableColumnsCache.ListsColumns["created_at"]).Value
                 };
             }
         }

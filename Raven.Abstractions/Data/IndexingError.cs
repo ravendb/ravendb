@@ -7,8 +7,9 @@ using System;
 
 namespace Raven.Abstractions.Data
 {
-	public class ServerError
+	public class IndexingError
 	{
+		public long Id { get; set; }
 		public int Index { get; set; }
         public string IndexName { get; set; }
 		public string Error { get; set; }

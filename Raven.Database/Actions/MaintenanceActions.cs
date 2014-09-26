@@ -110,5 +110,24 @@ namespace Raven.Database.Actions
 
             TransactionalStorage.StartBackupOperation(Database, backupDestinationDirectory, incrementalBackup, databaseDocument);
         }
+
+	    public void PurgeOutdatedTombstones()
+	    {
+		    var tomstoneLists = new[]
+		    {
+			    Constants.RavenPeriodicExportsAttachmentsTombstones,
+			    Constants.RavenPeriodicExportsDocsTombstones,
+			    Constants.RavenReplicationAttachmentsTombstones,
+			    Constants.RavenReplicationDocsTombstones
+		    };
+
+			var olderThan = SystemTime.UtcNow.Subtract(Database.Configuration.TombstoneRetentionTime);
+
+		    foreach (var listName in tomstoneLists)
+		    {
+			    string name = listName;
+			    TransactionalStorage.Batch(accessor => accessor.Lists.RemoveAllOlderThan(name, olderThan));
+		    }
+	    }
     }
 }

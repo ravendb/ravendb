@@ -125,15 +125,16 @@ namespace Raven.Database.Indexing
 			var usedPrefetchers = new ConcurrentSet<PrefetchingBehavior>();
 
 			var groupedIndexes = indexingGroups.Select(x => new IndexingGroup
-	        {
-		        LastIndexedEtag = x.Key,
-		        Indexes = x.Value,
-		        PrefetchingBehavior = GetPrefetcherFor(x.Key, usedPrefetchers)
-	        }).ToList();
+			{
+				LastIndexedEtag = x.Key,
+				Indexes = x.Value,
+				PrefetchingBehavior = GetPrefetcherFor(x.Key, usedPrefetchers)
+			}).ToList();
 
-			var maxIndexOutputsPerDoc = indexingGroups.Values.Max(x => x.Max(y => y.Index.MaxIndexOutputsPerDocument));
+	        var maxIndexOutputsPerDoc = groupedIndexes.Max(x => x.Indexes.Max(y => y.Index.MaxIndexOutputsPerDocument));
+	        var containsMapReduceIndexes = groupedIndexes.Any(x => x.Indexes.Any(y => y.Index.IsMapReduce));
 
-			var recoverTunerState = ((IndexBatchSizeAutoTuner)autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(maxIndexOutputsPerDoc);
+			var recoverTunerState = ((IndexBatchSizeAutoTuner)autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(maxIndexOutputsPerDoc, containsMapReduceIndexes);
 
 			BackgroundTaskExecuter.Instance.ExecuteAll(context, groupedIndexes, (indexingGroup, i) =>
 			{
