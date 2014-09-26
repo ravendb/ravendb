@@ -134,6 +134,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.CompiledIndexCacheDirectory.Value.ToFullPath(null), actual => actual.CompiledIndexCacheDirectory);
 			configurationComparer.Assert(expected => expected.JournalsStoragePath.Value, actual => actual.JournalsStoragePath);
 			configurationComparer.Assert(expected => expected.FlushIndexToDiskSizeInMb.Value, actual => actual.FlushIndexToDiskSizeInMb);
+			configurationComparer.Assert(expected => expected.TombstoneRetentionTime.Value, actual => actual.TombstoneRetentionTime);
 
 			Assert.NotNull(inMemoryConfiguration.OAuthTokenKey);
 			Assert.Equal("/", inMemoryConfiguration.VirtualDirectory);
