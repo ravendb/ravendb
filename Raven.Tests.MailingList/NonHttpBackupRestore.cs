@@ -21,7 +21,7 @@ namespace Raven.Tests.MailingList
 {
 	public class NonHttpBackupRestore : RavenTest
 	{
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task CanImportFromDumpFile()
 		{
 		    var file = Path.GetTempFileName();
@@ -49,7 +49,7 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task ImportReplacesAnExistingDatabase()
 		{
 		    var file = Path.GetTempFileName();

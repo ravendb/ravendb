@@ -42,7 +42,7 @@ namespace Raven.Tests.Issues
             public string Id { get; set; }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void CanFullBackupToDirectory()
         {
             var backupPath = NewDataPath("BackupFolder", forceCreateDir: true);
@@ -92,7 +92,7 @@ namespace Raven.Tests.Issues
 
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void CanFullBackupToDirectory_MultipleBackups()
         {
             var backupPath = NewDataPath("BackupFolder", forceCreateDir:true);
@@ -190,7 +190,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void SmugglerCanUnderstandPeriodicBackupFormat()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -250,7 +250,7 @@ namespace Raven.Tests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void CanBackupDocumentDeletion()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -301,7 +301,7 @@ namespace Raven.Tests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void CanBackupAttachmentDeletion()
         {
             var backupPath = NewDataPath("BackupFolder");

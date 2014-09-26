@@ -16,7 +16,7 @@ using Raven.Tests.Common;
 using Xunit;
 
 namespace Raven.SlowTests.Issues
-{
+{    
 	public class RavenDB_1594 : RavenTest
 	{
 		protected readonly string path;
@@ -68,7 +68,7 @@ namespace Raven.SlowTests.Issues
 			configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
 		}
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task PeriodicBackup_should_export_all_relevant_documents()
 		{
 			var existingData = new List<DummyDataEntry>();

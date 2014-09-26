@@ -22,4 +22,18 @@ namespace Raven.Abstractions.Smuggler.Data
         [Obsolete("Use RavenFS instead.")]
 		public Etag LastAttachmentsDeleteEtag { get; set; }
 	}
+
+    public class LastFilesEtagsInfo
+    {
+        public LastFilesEtagsInfo()
+        {
+            this.LastFileEtag = Etag.Empty;
+            this.LastDeletedFileEtag = Etag.Empty;
+        }
+
+        public Etag LastDeletedFileEtag { get; set; }
+
+        public Etag LastFileEtag { get; set; }
+    }
+
 }

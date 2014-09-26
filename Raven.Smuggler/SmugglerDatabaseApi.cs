@@ -33,7 +33,7 @@ namespace Raven.Smuggler
 
         public override Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions)
 		{
-            return SmugglerBetweenOperation.Between(betweenOptions, Options);
+            return SmugglerDatabaseBetweenOperation.Between(betweenOptions, Options);
 		}
 
         [Obsolete("Use RavenFS instead.")]
@@ -52,8 +52,8 @@ namespace Raven.Smuggler
 
         public override async Task ImportData(SmugglerImportOptions<RavenConnectionStringOptions> importOptions, Stream stream)
 		{
-			using (store = CreateStore(importOptions.To))
-			{
+            using (store = CreateStore(importOptions.To))
+            {
 				Task disposeTask;
 
 				try
@@ -64,7 +64,7 @@ namespace Raven.Smuggler
 				}
 				finally
 				{
-					disposeTask = operation.DisposeAsync();
+				    disposeTask = operation.DisposeAsync();
 				}
 
 				if (disposeTask != null)
@@ -76,10 +76,10 @@ namespace Raven.Smuggler
 
         public override async Task<ExportDataResult> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
 		{
-			using (store = CreateStore(exportOptions.From))
-			{
-				return await base.ExportData(exportOptions);
-			}
+            using (store = CreateStore(exportOptions.From))
+            {
+                return await base.ExportData(exportOptions);
+            }
 		}
 
 		private async Task CreateBulkInsertOperation()

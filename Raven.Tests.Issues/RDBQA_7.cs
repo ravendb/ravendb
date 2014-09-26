@@ -30,7 +30,7 @@ namespace Raven.Tests.Issues
             public string Value { get; set; }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void NegativeFiltersShouldNotFilterOutWhenThereAreNoMatches()
         {
             var path = Path.GetTempFileName();
@@ -84,7 +84,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void NegativeMetadataFiltersShouldNotFilterOutWhenThereAreNoMatches()
         {
             var path = Path.GetTempFileName();

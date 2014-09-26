@@ -35,6 +35,7 @@ using Xunit;
 namespace Raven.SlowTests.Issues
 {
 
+
     public class RavenDB_1603 : RavenTest
     {
         public class User
@@ -54,7 +55,7 @@ namespace Raven.SlowTests.Issues
                                                                    typeof(HiddenDocumentsTrigger)));
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanPerformDump_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -80,7 +81,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanPerformDump_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -111,7 +112,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanPerformDumpWithLimit_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -141,7 +142,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanPerformDumpWithLimit_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -188,7 +189,7 @@ namespace Raven.SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanPerformDumpWithLimitAndFilter_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -224,7 +225,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanPerformDumpWithLimitAndFilter_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -322,7 +323,7 @@ namespace Raven.SlowTests.Issues
         }
 
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpWhenHiddenDocs_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -354,7 +355,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpWhenHiddenDocs_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -397,7 +398,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpEmptyDatabase_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -416,7 +417,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpEmptyDatabase_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -442,7 +443,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpWhenHiddenDocsWithLimit_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -474,7 +475,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpWhenHiddenDocsWithLimit_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -528,7 +529,7 @@ namespace Raven.SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpAttachments_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -544,7 +545,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpAttachments_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -569,7 +570,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpAttachmentsWithLimit_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -585,7 +586,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpAttachmentsWithLimit_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -610,7 +611,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpAttachmentsEmpty_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -627,7 +628,7 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpAttachmentsEmpty_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -662,7 +663,7 @@ namespace Raven.SlowTests.Issues
         }
 
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanHandleDocumentExceptionsGracefully_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -759,7 +760,7 @@ namespace Raven.SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanHandleAttachmentExceptionsGracefully_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");

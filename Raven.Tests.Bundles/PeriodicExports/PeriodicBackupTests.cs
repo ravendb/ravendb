@@ -28,7 +28,7 @@ namespace Raven.Tests.Bundles.PeriodicExports
 			public string Name { get; set; }
 		}
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public void CanBackupToDirectory()
 		{
 			var backupPath = NewDataPath("BackupFolder");
@@ -64,7 +64,7 @@ namespace Raven.Tests.Bundles.PeriodicExports
 			IOExtensions.DeleteDirectory(backupPath);
 		}
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public void CanBackupToDirectory_MultipleBackups()
 		{
 			var backupPath = NewDataPath("BackupFolder");

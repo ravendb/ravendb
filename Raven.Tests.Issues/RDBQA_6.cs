@@ -22,7 +22,7 @@ namespace Raven.Tests.Issues
 
     public class RDBQA_6 : RavenTest
     {
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task SmugglerShouldThrowIfDatabaseDoesNotExist()
         {
             var path = Path.GetTempFileName();
@@ -56,7 +56,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task SmugglerShouldNotThrowIfDatabaseExist1()
         {
             var path = Path.GetTempFileName();
@@ -80,7 +80,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task SmugglerShouldNotThrowIfDatabaseExist2()
         {
             var path = Path.GetTempFileName();
@@ -102,7 +102,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task SmugglerBehaviorWhenServerIsDown()
         {
             var path = Path.GetTempFileName();

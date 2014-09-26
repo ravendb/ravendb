@@ -1600,6 +1600,11 @@ namespace Raven.Client.FileSystem
 				}
 			}
 
+            public Task EnsureFileSystemExistsAsync(string fileSystem)
+            {
+                throw new NotImplementedException();
+            }
+
             public async Task StartRestore(FilesystemRestoreRequest restoreRequest)
             {
                 var requestUrlString = string.Format("{0}/admin/fs/restore", client.ServerUrl);

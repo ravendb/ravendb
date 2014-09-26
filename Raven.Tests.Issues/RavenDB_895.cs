@@ -42,7 +42,7 @@ namespace Raven.Tests.Issues
                 File.Delete(file);
 	    }
 
-	    [Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task TransformScriptFiltering()
 		{
 	        using (var store = NewRemoteDocumentStore())
@@ -110,7 +110,7 @@ namespace Raven.Tests.Issues
 	        }
 		}
 
-	    [Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task TransformScriptModifying()
 		{
 	        using (var store = NewRemoteDocumentStore())

@@ -18,7 +18,7 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_2605 : RavenTest
 	{
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public void MaxNumberOfItemsToProcessInSingleBatchShouldBeRespectedByDataDumper()
 		{
 			var path = Path.Combine(NewDataPath(forceCreateDir: true), "raven.dump");
@@ -48,7 +48,7 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public void MaxNumberOfItemsToProcessInSingleBatchShouldBeRespectedBySmuggler()
 		{
 			var path = Path.Combine(NewDataPath(forceCreateDir: true), "raven.dump");

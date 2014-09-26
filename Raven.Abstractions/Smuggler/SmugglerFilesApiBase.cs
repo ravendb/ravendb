@@ -18,18 +18,18 @@ namespace Raven.Abstractions.Smuggler
         {
             this.Options = options;
         }
-        
-        public Task<FilesExportDataResult> ExportData(SmugglerExportOptions<FilesConnectionStringOptions> exportOptions)
+
+        public virtual Task<FilesExportDataResult> ExportData(SmugglerExportOptions<FilesConnectionStringOptions> exportOptions)
         {
             throw new NotImplementedException();
         }
 
-        public Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions)
+        public virtual Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions)
         {
             throw new NotImplementedException();
         }
 
-        public Task Between(SmugglerBetweenOptions<FilesConnectionStringOptions> betweenOptions)
+        public virtual Task Between(SmugglerBetweenOptions<FilesConnectionStringOptions> betweenOptions)
         {
             throw new NotImplementedException();
         }

@@ -44,7 +44,7 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public void CanExportImportTransformers()
 		{
 		    var file = Path.GetTempFileName();

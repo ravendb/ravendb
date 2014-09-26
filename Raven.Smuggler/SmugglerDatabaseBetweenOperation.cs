@@ -16,7 +16,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Smuggler
 {
-	internal static class SmugglerBetweenOperation
+    internal static class SmugglerDatabaseBetweenOperation
 	{
 		const int RetriesCount = 5;
 

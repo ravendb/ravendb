@@ -32,7 +32,7 @@ namespace Raven.Tests.Issues
             configuration.Settings["Raven/ActiveBundles"] = "DocumentExpiration";
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void SmugglerWithoutExcludeExpiredDocumentsShouldWork()
         {
             var path = Path.GetTempFileName();
@@ -72,7 +72,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void SmugglerWithExcludeExpiredDocumentsShouldWork1()
         {
             var path = Path.GetTempFileName();
@@ -110,7 +110,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void SmugglerWithExcludeExpiredDocumentsShouldWork2()
         {
             var path = Path.GetTempFileName();

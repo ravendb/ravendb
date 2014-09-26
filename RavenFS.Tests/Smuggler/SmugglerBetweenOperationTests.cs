@@ -14,37 +14,37 @@ namespace RavenFS.Tests.Smuggler
 {
     public class SmugglerBetweenOperationTests : RavenFilesTestWithLogs
     {
-        [Fact]
-        public void SmugglerBetweenOperationShouldNotCreateFilesystem()
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task BetweenOperationShouldNotCreateFilesystem()
         {
-            //using (var store = NewRemoteFilesStore())
-            //{
-            //    var smugglerApi = new SmugglerFilesApi();
+            using (var store = NewStore())
+            {
+                var smugglerApi = new SmugglerFilesApi();                
 
-            //    var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
-            //    {
-            //        From = new FilesConnectionStringOptions
-            //        {
-            //            Url = store.Url,
-            //            DefaultFileSystem = "DB1"
-            //        },
-            //        To = new FilesConnectionStringOptions
-            //        {
-            //            Url = store.Url,
-            //            DefaultFileSystem = "DB2"
-            //        }
-            //    };
+                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
+                {
+                    From = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = "DB1"
+                    },
+                    To = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = "DB2"
+                    }
+                };
 
-            //    var aggregateException = TaskAssert.Throws<AggregateException>(() => smugglerApi.Between(options));
-            //    var exception = aggregateException.ExtractSingleInnerException();
-            //    Assert.True(exception.Message.StartsWith("Smuggler does not support filesystem creation (filesystem 'DB1' on server"));
+                var aggregateException = TaskAssert.Throws<AggregateException>(() => smugglerApi.Between(options));
+                var exception = aggregateException.ExtractSingleInnerException();
+                Assert.True(exception.Message.StartsWith("Smuggler does not support filesystem creation (filesystem 'DB1' on server"));
 
-            //    store.Commands.GlobalAdmin.EnsureFileSystemExists("DB1");
+                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync("DB1");
 
-            //    aggregateException = TaskAssert.Throws<AggregateException>(() => smugglerApi.Between(options));
-            //    exception = aggregateException.ExtractSingleInnerException();
-            //    Assert.True(exception.Message.StartsWith("Smuggler does not support filesystem creation (filesystem 'DB2' on server"));
-            //}
+                aggregateException = TaskAssert.Throws<AggregateException>(() => smugglerApi.Between(options));
+                exception = aggregateException.ExtractSingleInnerException();
+                Assert.True(exception.Message.StartsWith("Smuggler does not support filesystem creation (filesystem 'DB2' on server"));
+            }
         }
     }
 }

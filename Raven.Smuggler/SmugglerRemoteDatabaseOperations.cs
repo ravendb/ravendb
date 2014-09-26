@@ -24,7 +24,7 @@ using Raven.Smuggler.Imports;
 
 namespace Raven.Smuggler
 {
-	public class SmugglerRemoteDatabaseOperations : ISmugglerDatabaseOperations
+    public class SmugglerRemoteDatabaseOperations : ISmugglerDatabaseOperations
 	{
 		private readonly Func<DocumentStore> store;
 
@@ -38,18 +38,12 @@ namespace Raven.Smuggler
 
 		private DocumentStore Store
 		{
-			get
-			{
-				return store();
-			}
+			get { return store(); }
 		}
 
 		private BulkInsertOperation Operation
 		{
-			get
-			{
-				return operation();
-			}
+			get { return operation(); }
 		}
 
 		private readonly SmugglerJintHelper jintHelper = new SmugglerJintHelper();

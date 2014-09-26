@@ -17,7 +17,7 @@ namespace Raven.Tests.MailingList
             public DateTime Created { get; set; }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void DateTimePreserved()
         {
             var file = Path.GetTempFileName();

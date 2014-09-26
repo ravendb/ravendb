@@ -112,7 +112,9 @@
     <Compile Include="RavenFilesTestWithLogs.cs" />
     <Compile Include="RavenFilesWebApiTest.cs" />
     <Compile Include="Shard\SimpleSharding.cs" />
+    <Compile Include="Smuggler\DataDumperTests.cs" />
     <Compile Include="Smuggler\SmugglerBetweenOperationTests.cs" />
+    <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
     <Compile Include="StorageOperationsTests.cs" />
     <Compile Include="MtaFactAttribute.cs" />
     <Compile Include="Notifications.cs" />

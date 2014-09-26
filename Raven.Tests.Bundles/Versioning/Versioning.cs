@@ -445,7 +445,7 @@ namespace Raven.Tests.Bundles.Versioning
 			}
 		}
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public void Previously_deleted_docs_will_survive_export_import_cycle_if_purge_is_false()
 		{
 			using (var session = documentStore.OpenSession())
