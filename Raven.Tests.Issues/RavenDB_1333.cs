@@ -219,8 +219,8 @@ namespace Raven.Tests.Issues
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
 
-				store.Changes()
-					.ForDocumentsOfType(ReflectionUtil.GetFullNameWithoutVersionInformation(typeof(User)))
+				store.Changes().Task.Result
+					.ForDocumentsOfType(ReflectionUtil.GetFullNameWithoutVersionInformation(typeof(User))).Task.Result
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -247,8 +247,8 @@ namespace Raven.Tests.Issues
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
 
-				store.Changes()
-					.ForDocumentsOfType(typeof(User))
+				store.Changes().Task.Result
+					.ForDocumentsOfType(typeof(User)).Task.Result
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -275,8 +275,8 @@ namespace Raven.Tests.Issues
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
 
-				store.Changes()
-					.ForDocumentsOfType<Person>()
+				store.Changes().Task.Result
+					.ForDocumentsOfType<Person>().Task.Result
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -311,8 +311,8 @@ namespace Raven.Tests.Issues
 
 				var list = new BlockingCollection<DocumentChangeNotification>();
 
-				store.Changes()
-					.ForDocumentsOfType<Person>()
+				store.Changes().Task.Result
+					.ForDocumentsOfType<Person>().Task.Result
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
