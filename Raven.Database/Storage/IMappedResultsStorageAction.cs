@@ -40,7 +40,7 @@ namespace Raven.Database.Storage
 		void UpdatePerformedReduceType(int index, string reduceKey, ReduceType performedReduceType);
 		ReduceType GetLastPerformedReduceType(int index, string reduceKey);
 		IEnumerable<int> GetMappedBuckets(int index, string reduceKey);
-		IEnumerable<MappedResultInfo> GetMappedResults(int index, IEnumerable<string> keysToReduce, bool loadData);
+		IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned);
 		IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(int view, int start, int take);
 	}
 

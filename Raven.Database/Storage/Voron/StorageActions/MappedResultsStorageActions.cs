@@ -845,19 +845,22 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResults(int view, IEnumerable<string> keysToReduce, bool loadData)
+		public IEnumerable<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned)
 		{
 			var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
 			var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
-
+			var keysToReduce = new HashSet<string>(keysLeftToReduce);
 			foreach (var reduceKey in keysToReduce)
 			{
+				keysLeftToReduce.Remove(reduceKey);
+				
                 var reduceKeyHash = HashKey(reduceKey);
                 var viewAndReduceKey = CreateKey(view, reduceKey, reduceKeyHash);
 				using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(Snapshot, viewAndReduceKey))
 				{
 					if (!iterator.Seek(Slice.BeforeAllKeys))
 						continue;
+					keysReturned.Add(reduceKey);
 
 					do
 					{
@@ -876,6 +879,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						};
 					}
 					while (iterator.MoveNext());
+				}
+
+				if (take < 0)
+				{
+					yield break;
 				}
 			}
 		}
