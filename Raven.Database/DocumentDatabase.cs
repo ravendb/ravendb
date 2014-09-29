@@ -1154,5 +1154,41 @@ namespace Raven.Database
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
 			}
 		}
+
+        public void GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Action<RavenJObject> addDocument)
+        {
+            TransactionalStorage.Batch(actions =>
+            {
+                bool returnedDocs = false;
+                while (true)
+                {
+                    var documents = etag == null
+                                        ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
+                                        : actions.Documents.GetDocumentsAfter(etag, pageSize, WorkContext.CancellationToken);
+                    var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
+                    int docCount = 0;
+                    foreach (var doc in documents)
+                    {
+                        docCount++;
+                        token.ThrowIfCancellationRequested();
+                        if (etag != null)
+                            etag = doc.Etag;
+                        DocumentRetriever.EnsureIdInMetadata(doc);
+                        var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+                        var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
+                        document = documentRetriever
+                            .ExecuteReadTriggers(document, null, ReadOperation.Load);
+                        if (document == null)
+                            continue;
+
+                        addDocument(document.ToJson());
+                        returnedDocs = true;
+                    }
+                    if (returnedDocs || docCount == 0)
+                        break;
+                    start += docCount;
+                }
+            });
+        }
 	}
 }

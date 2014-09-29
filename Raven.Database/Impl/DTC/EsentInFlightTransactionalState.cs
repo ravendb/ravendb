@@ -7,13 +7,16 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
+using Mono.Cecil;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
+using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -38,7 +41,7 @@ namespace Raven.Database.Impl.DTC
 			_database = database;
 			this.storage = storage;
 			this.txMode = txMode;
-			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 		}
 
 	    public EsentTransactionContext CreateEsentTransactionContext()
@@ -51,12 +54,31 @@ namespace Raven.Database.Impl.DTC
 
 		private void CleanupOldTransactions(object state)
 		{
-			var oldestAllowedTransaction = SystemTime.UtcNow;
-			foreach (var ctx in transactionContexts.ToArray())
+			using (LogContext.WithDatabase(docDb.Name ?? Constants.SystemDatabase))
 			{
-				var age = oldestAllowedTransaction - ctx.Value.CreatedAt;
-				if (age.TotalMinutes >= 5)
+				var now = SystemTime.UtcNow;
+				log.Info("Performing Transactions Cleanup Sequence for db {0}", docDb.Name ?? Constants.SystemDatabase);
+				foreach (var pendingTx in transactionStates)
 				{
+					var age = now - pendingTx.Value.LastSeen.Value;
+					if (age > pendingTx.Value.Timeout)
+					{
+						log.Info("Rolling back DTC transaction {0} because it is too old {1}", pendingTx.Key, age);
+						try
+						{
+							Rollback(pendingTx.Key);
+						}
+						catch (Exception e)
+						{
+							log.WarnException("Could not properly rollback transaction", e);
+						}
+					}
+				}
+				foreach (var ctx in transactionContexts)
+				{
+					var age = now - ctx.Value.CreatedAt;
+					if (age.TotalMinutes >= 3)
+					{
 					log.Info("Rolling back DTC transaction {0} because it is too old {1}", ctx.Key, age);
 					try
 					{
@@ -68,6 +90,7 @@ namespace Raven.Database.Impl.DTC
 					}
 				}
 			}
+		}
 		}
 
 		public override void Commit(string id)
@@ -99,7 +122,7 @@ namespace Raven.Database.Impl.DTC
 						}
 					}
 
-					context.Transaction.Commit(txMode);
+				    context.Transaction.Commit(txMode);
 
 					if (context.DocumentIdsToTouch != null)
 					{
@@ -139,7 +162,10 @@ namespace Raven.Database.Impl.DTC
 
 		public override void Prepare(string id, Guid? resourceManagerId, byte[] recoveryInformation)
 		{
+			try
+			{
 			EsentTransactionContext context;
+				List<DocumentInTransactionData> changes = null;
 			if (transactionContexts.TryGetValue(id, out context) == false)
 			{
 				var myContext = CreateEsentTransactionContext();
@@ -157,7 +183,7 @@ namespace Raven.Database.Impl.DTC
 			try
 			{
 			    List<DocumentInTransactionData> changes = null;
-				using (storage.SetTransactionContext(context))
+                using (storage.SetTransactionContext(context))
 				{
 					storage.Batch(accessor =>
 					{
@@ -180,7 +206,7 @@ namespace Raven.Database.Impl.DTC
 			                {
 			                    new JsonToJsonConverter(),
                                 new EtagJsonConverter()
-			}
+			                }
 			            })
 			            },
 			            {"ResourceManagerId", resourceManagerId.ToString()},
@@ -211,14 +237,40 @@ namespace Raven.Database.Impl.DTC
 			{
                 storage.Batch(accessor => accessor.Lists.Remove("Raven/Transactions/Pending", id));
 
-			context.Dispose();
-		}
+				context.Dispose();
+			}
 			finally
 			{
 				if (lockTaken)
 					Monitor.Exit(context);
 			}
 		}
+
+		internal List<TransactionContextData> GetPreparedTransactions()
+		{
+			var results = new List<TransactionContextData>();
+
+			foreach (var transactionName in transactionContexts.Keys)
+			{
+				EsentTransactionContext curContext;
+				if (!transactionContexts.TryGetValue(transactionName, out curContext))
+					continue;
+
+				var documentIdsToTouch = curContext.DocumentIdsToTouch;
+				var actionsAfterCommit = curContext.ActionsAfterCommit;
+				results.Add(new TransactionContextData()
+				{
+
+					Id = transactionName,
+					CreatedAt = curContext.CreatedAt,
+					DocumentIdsToTouch = documentIdsToTouch != null ? documentIdsToTouch.ToList() : null,
+					IsAlreadyInContext = curContext.AlreadyInContext,
+					NumberOfActionsAfterCommit = actionsAfterCommit != null ? actionsAfterCommit.Count : 0
+				});
+			}
+			return results;
+		}
+
 
 		public void Dispose()
 		{
