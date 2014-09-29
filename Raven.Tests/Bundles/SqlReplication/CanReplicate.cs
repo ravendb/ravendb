@@ -317,7 +317,7 @@ var nameArr = this.StepName.split('.');");
 				
 				var databaseMemoryTarget = LogManager.GetTarget<DatabaseMemoryTarget>();
 				var foo = databaseMemoryTarget[Constants.SystemDatabase].WarnLog.First(x=>x.LoggerName == typeof(SqlReplicationTask).FullName);
-				Assert.Equal("Could parse SQL Replication script for OrdersAndLines", foo.FormattedMessage);
+				Assert.Equal("Could not parse SQL Replication script for OrdersAndLines", foo.FormattedMessage);
 			}
 		}
 
