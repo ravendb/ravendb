@@ -3,7 +3,7 @@
 class file implements documentBase {
     id: string;
     size: string;
-    lastModified: string;
+    lastModified: Date;
     directory: string;
     fullPath: string;
 
@@ -25,8 +25,8 @@ class file implements documentBase {
 
             this.directory = dto.Directory;
             this.fullPath = dto.FullPath;
-            this.size = dto.HumaneTotalSize;
-            this.lastModified = dto.Metadata["Last-Modified"];
+            this.size = dto.HumaneTotalSize;            
+            this.lastModified = dto.LastModified;
 
             this.__metadata = new fileMetadata(dto.Metadata);
         }
@@ -37,11 +37,11 @@ class file implements documentBase {
     }
 
     getUrl() {
-        return this.fullPath;
+        return this.fullPath ? this.fullPath : this.id;
     }
 
     getDocumentPropertyNames(): Array<string> {
-        return ["Size", "LastModified"];
+        return ["size", "lastModified"];
     }
 
 }
