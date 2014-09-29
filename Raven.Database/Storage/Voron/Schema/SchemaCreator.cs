@@ -14,7 +14,6 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Storage.Voron.Impl;
-using Raven.Database.Storage.Voron.Schema.Updates;
 using Raven.Database.Util;
 
 using Voron;
@@ -30,7 +29,7 @@ namespace Raven.Database.Storage.Voron.Schema
 
 		private readonly ILog log;
 
-		public const string SchemaVersion = "1.0";
+		public const string SchemaVersion = "1.1";
 
 		[ImportMany]
 		public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
