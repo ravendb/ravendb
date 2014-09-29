@@ -3,8 +3,9 @@
 class file implements documentBase {
     id: string;
     Size: string;
-    LastModified: string;
+    LastModified: Date;
     directory: string;
+    fullPath: string;
 
     __metadata: fileMetadata;
 
@@ -13,10 +14,8 @@ class file implements documentBase {
             if (dto.FullPath && dto.FullPath[0] === "/") {
                 dto.FullPath = dto.FullPath.replace("/", "");
             }
-
             if (excludeDirectoryInId) {
-                this.id = dto.FullPath.substring(dto.FullPath.lastIndexOf("/") + 1);
-                this.directory = dto.FullPath.substring(0, dto.FullPath.lastIndexOf("/"));
+                this.id = dto.Name
             }
             else {
                 this.id = dto.FullPath;
@@ -24,6 +23,9 @@ class file implements documentBase {
             if (dto.HumaneTotalSize === " Bytes") {
                 dto.HumaneTotalSize = "0 Bytes";
             }
+
+            this.directory = dto.Directory;
+            this.fullPath = dto.FullPath;
             this.Size = dto.HumaneTotalSize;
             this.LastModified = dto.Metadata["Last-Modified"];
 
@@ -36,7 +38,7 @@ class file implements documentBase {
     }
 
     getUrl() {
-        return this.directory ? this.directory + "/" +this.id : this.id;
+        return this.fullPath ? this.fullPath : this.id;
     }
 
     getDocumentPropertyNames(): Array<string> {
