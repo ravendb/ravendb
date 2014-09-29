@@ -692,5 +692,19 @@ namespace Raven.Database.Server.Controllers.Admin
 
             return new HttpResponseMessage { Content = logsTransport };
         }
+
+		[HttpPost]
+		[Route("databases/{databaseName}/admin/transactions/rollbackAll")]
+		[Route("admin/transactions/rollbackAll")]
+		public HttpResponseMessage Transactions()
+		{
+			var transactions = Database.TransactionalStorage.GetPreparedTransactions();
+			foreach (var transactionContextData in transactions)
+			{
+				Database.Rollback(transactionContextData.Id);
+			}
+
+			return GetMessageWithObject(new { RolledBackTransactionsAmount = transactions.Count });
+		}
 	}
 }

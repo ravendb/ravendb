@@ -14,6 +14,8 @@ using Xunit;
 
 namespace Raven.Tests.Storage
 {
+	using System.Threading;
+
 	public class DocEtag : RavenTest
 	{
 		private readonly string dataDir;

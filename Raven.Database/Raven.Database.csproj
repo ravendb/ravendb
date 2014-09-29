@@ -1051,6 +1051,7 @@
     <Compile Include="Storage\Voron\StorageActions\TasksStorageActions.cs" />
     <Compile Include="Storage\Voron\TransactionalStorage.cs" />
     <Compile Include="Storage\Voron\UndisposableStream.cs" />
+    <Compile Include="Storage\TransactionContextData.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
