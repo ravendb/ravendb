@@ -153,7 +153,7 @@ class filesystemEditFile extends viewModelBase {
                 "From", "Host", "If-MatTemp-Index-Scorech", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Referer", "TE", "User-Agent", "Accept-Ranges",
                 "Age", "Allow", "ETag", "Location", "Retry-After", "Server", "Set-Cookie2", "Set-Cookie", "Vary", "Www-Authenticate", "Cache-Control", "Connection", "Date", "Pragma",
                 "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL",
-                "RavenFS-Size", "Temp-Request-Time", "DNT"];
+                "RavenFS-Size", "Temp-Request-Time", "DNT","Creation-Date","Raven-Synchronization-History","Raven-Synchronization-Version","Raven-Synchronization-Source"];
 
             for (var property in metaDto) {
                 if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {
