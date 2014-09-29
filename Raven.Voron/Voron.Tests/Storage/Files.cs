@@ -48,7 +48,7 @@ namespace Voron.Tests.Storage
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(path);
             using (var env = new StorageEnvironment(options))
             {
-                var scratchFile = Path.Combine(path, "scratch.buffers");
+                var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
                 Assert.True(File.Exists(scratchFile));
             }
         }
@@ -59,8 +59,8 @@ namespace Voron.Tests.Storage
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(path, temp);
             using (var env = new StorageEnvironment(options))
             {
-                var scratchFile = Path.Combine(path, "scratch.buffers");
-                var scratchFileTemp = Path.Combine(temp, "scratch.buffers");
+				var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
+				var scratchFileTemp = Path.Combine(temp, StorageEnvironmentOptions.ScratchBufferName(0));
 
                 Assert.False(File.Exists(scratchFile));
                 Assert.True(File.Exists(scratchFileTemp));

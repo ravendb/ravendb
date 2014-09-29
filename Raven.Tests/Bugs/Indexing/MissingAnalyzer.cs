@@ -35,7 +35,7 @@ namespace Raven.Tests.Bugs.Indexing
 																									   }
 																							   }));
 
-				Assert.Equal("Could not create analyzer for field: 'Name' because the type 'foo bar' was not found", e.Message);
+				Assert.Equal("Cannot find analyzer type 'foo bar' for field: Name", e.Message);
 			}
 		}
 	}

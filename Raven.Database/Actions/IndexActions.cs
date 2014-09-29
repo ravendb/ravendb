@@ -256,12 +256,10 @@ namespace Raven.Database.Actions
 
         private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
         {
-            foreach (var analyzer in from analyzer in indexDefinition.Analyzers
-                                     let analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzer.Value) ?? Type.GetType(analyzer.Value, throwOnError: false)
-                                     where analyzerType == null
-                                     select analyzer)
+            foreach (var analyzer in indexDefinition.Analyzers)
             {
-                throw new ArgumentException(string.Format("Could not create analyzer for field: '{0}' because the type '{1}' was not found", analyzer.Key, analyzer.Value));
+				//this throws if the type cannot be found
+				IndexingExtensions.GetAnalyzerType(analyzer.Key, analyzer.Value);
             }
         }
 

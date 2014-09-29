@@ -16,14 +16,8 @@ namespace Voron.Util
 	/// </summary>
 	public class PageTable
 	{
-		private class PageValue
-		{
-			public long Transaction;
-			public JournalFile.PagePosition Value;
-		}
-
-		private readonly ConcurrentDictionary<long, ImmutableAppendOnlyList<PageValue>> _values =
-			new ConcurrentDictionary<long, ImmutableAppendOnlyList<PageValue>>();
+		private readonly ConcurrentDictionary<long, ImmutableAppendOnlyList<PagePosition>> _values =
+			new ConcurrentDictionary<long, ImmutableAppendOnlyList<PagePosition>>();
 
 		private long _maxSeenTransaction;
 
@@ -35,22 +29,15 @@ namespace Voron.Util
 			}
 		}
 
-		public void SetItems(Transaction tx, Dictionary<long, JournalFile.PagePosition> items)
+		public void SetItems(Transaction tx, Dictionary<long, PagePosition> items)
 		{
 			UpdateMaxSeenTxId(tx);
 
 			foreach (var item in items)
 			{
 				var copy = item;
-				_values.AddOrUpdate(copy.Key, l => ImmutableAppendOnlyList<PageValue>.Empty.Append(new PageValue
-				{
-					Transaction = tx.Id,
-					Value = copy.Value
-				}), (l, list) => list.Append(new PageValue
-				{
-					Transaction = tx.Id,
-					Value = copy.Value
-				}));
+				_values.AddOrUpdate(copy.Key, l => ImmutableAppendOnlyList<PagePosition>.Empty.Append(copy.Value),
+				(l, list) => list.Append(copy.Value));
 			}
 		}	
 
@@ -64,15 +51,15 @@ namespace Voron.Util
 			_maxSeenTransaction = tx.Id;
 		}
 
-		public void Remove(IEnumerable<long> pages, long lastSyncedTransactionId)
+		public void Remove(IEnumerable<long> pages, long lastSyncedTransactionId, List<PagePosition> unusedPages)
 		{
 			foreach (var page in pages)
 			{
-				ImmutableAppendOnlyList<PageValue> list;
+				ImmutableAppendOnlyList<PagePosition> list;
 				if (_values.TryGetValue(page, out list) == false)
 					continue;
 
-				var newList = list.RemoveWhile(value => value.Transaction <= lastSyncedTransactionId);
+				var newList = list.RemoveWhile(value => value.TransactionId <= lastSyncedTransactionId, unusedPages);
 
 				if (newList.Count != 0)
 					_values.AddOrUpdate(page, newList, (l, values) => newList);
@@ -81,9 +68,9 @@ namespace Voron.Util
 			}
 		}
 
-		public bool TryGetValue(Transaction tx, long page, out JournalFile.PagePosition value)
+		public bool TryGetValue(Transaction tx, long page, out PagePosition value)
 		{
-			ImmutableAppendOnlyList<PageValue> list;
+			ImmutableAppendOnlyList<PagePosition> list;
 			if (_values.TryGetValue(page, out list) == false)
 			{
 				value = null;
@@ -93,13 +80,13 @@ namespace Voron.Util
 			{
 				var it = list[i];
 
-				if (it.Transaction > tx.Id)
+				if (it.TransactionId > tx.Id)
 					continue;
 
-				if (it.Value.IsFreedPageMarker)
+				if (it.IsFreedPageMarker)
 					break;
 
-				value = it.Value;
+				value = it;
 				Debug.Assert(value != null);
 				return true;
 			}
@@ -111,19 +98,23 @@ namespace Voron.Util
 
 		public long MaxTransactionId()
 		{
-			return _values.Values.Select(x => x[x.Count - 1].Value)
+			return _values.Values.Select(x => x[x.Count - 1])
 				.Where(x => x != null)
 				.Max(x => x.TransactionId);
 		}
 
-		public List<KeyValuePair<long, JournalFile.PagePosition>> AllPagesOlderThan(long oldestActiveTransaction)
+		public List<long> KeysWhereAllPagesOlderThan(long lastSyncedTransactionId)
 		{
 			return _values.Where(x =>
 			{
 				var val = x.Value[x.Value.Count - 1];
-				return val.Value.TransactionId < oldestActiveTransaction && val.Value.IsFreedPageMarker == false;
-			}).Select(x => new KeyValuePair<long, JournalFile.PagePosition>(x.Key, x.Value[x.Value.Count - 1].Value))
-				.ToList();
+				return val.TransactionId <= lastSyncedTransactionId;
+			}).Select(x => x.Key).ToList();
+		}
+
+		public List<long> KeysWhereSomePagesOlderThan(long lastSyncedTransactionId)
+		{
+			return _values.Where(x => x.Value.Any(p => p.TransactionId <= lastSyncedTransactionId)).Select(x => x.Key).ToList();
 		}
 
 		public long GetLastSeenTransactionId()
@@ -131,20 +122,20 @@ namespace Voron.Util
 			return Thread.VolatileRead(ref _maxSeenTransaction);
 		}
 
-		public IEnumerable<KeyValuePair<long, JournalFile.PagePosition>> IterateLatestAsOf(long latestTxId)
+		public IEnumerable<KeyValuePair<long, PagePosition>> IterateLatestAsOf(long latestTxId)
 		{
 			foreach (var value in _values)
 			{
 				for (var i = value.Value.Count - 1; i >= 0; i--)
 				{
 					var val = value.Value[i];
-					if (val.Transaction > latestTxId)
+					if (val.TransactionId > latestTxId)
 						continue;
 
-					if(val.Value.IsFreedPageMarker)
+					if(val.IsFreedPageMarker)
 						break;
 
-					yield return new KeyValuePair<long, JournalFile.PagePosition>(value.Key, val.Value);
+					yield return new KeyValuePair<long, PagePosition>(value.Key, val);
 					break;
 				}
 			}

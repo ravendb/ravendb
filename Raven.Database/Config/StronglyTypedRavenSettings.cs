@@ -79,8 +79,11 @@ namespace Raven.Database.Config
 				                    TimeSpanArgumentType.FromParse);
 			MaxIndexWritesBeforeRecreate =
 				new IntegerSetting(settings["Raven/MaxIndexWritesBeforeRecreate"], 256 * 1024);
-			MaxIndexOutputsPerDocument = 
-				new IntegerSetting(settings["Raven/MaxIndexOutputsPerDocument"], 15);
+			MaxSimpleIndexOutputsPerDocument = 
+				new IntegerSetting(settings["Raven/MaxSimpleIndexOutputsPerDocument"], 15);
+
+			MaxMapReduceIndexOutputsPerDocument =
+				new IntegerSetting(settings["Raven/MaxMapReduceIndexOutputsPerDocument"], 50);
 
 			MaxNumberOfItemsToProcessInSingleBatch =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToProcessInSingleBatch"] ?? settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
@@ -196,6 +199,8 @@ namespace Raven.Database.Config
 
 			FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
 			JournalsStoragePath = new StringSetting(settings["Raven/Esent/LogsPath"] ?? settings[Constants.RavenTxJournalPath], (string)null);
+
+			TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
 		}
 
 		private string GetDefaultWebDir()
@@ -323,7 +328,9 @@ namespace Raven.Database.Config
 
 		public IntegerSetting MaxIndexWritesBeforeRecreate { get; private set; }
 
-		public IntegerSetting MaxIndexOutputsPerDocument { get; private set; }
+		public IntegerSetting MaxSimpleIndexOutputsPerDocument { get; private set; }
+
+		public IntegerSetting MaxMapReduceIndexOutputsPerDocument { get; private set; }
     
 		public TimeSpanSetting DatbaseOperationTimeout { get; private set; }
 
@@ -334,6 +341,8 @@ namespace Raven.Database.Config
 		public IntegerSetting FlushIndexToDiskSizeInMb { get; set; }
 
 		public StringSetting JournalsStoragePath { get; private set; }
+
+		public TimeSpanSetting TombstoneRetentionTime { get; private set; }
 
 		public class VoronConfiguration
 		{

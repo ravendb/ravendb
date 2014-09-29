@@ -14,7 +14,7 @@ namespace Raven.Tests.Bugs
 {
 	public class ExplicitTransaction : RavenTest
 	{
-		[Theory]
+		[Fact]
 		public void Can_use_transactions_to_isolate_saves()
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage:"esent"))
@@ -40,7 +40,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		[Theory]
+		[Fact]
 		public void Will_process_all_different_documents_enlisted_in_a_transaction()
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage:"esent"))

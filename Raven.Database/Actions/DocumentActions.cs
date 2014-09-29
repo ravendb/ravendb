@@ -417,7 +417,7 @@ namespace Raven.Database.Actions
                 {
                     var documents = etag == null
                                         ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                                        : actions.Documents.GetDocumentsAfter(etag, pageSize, WorkContext.CancellationToken);
+										: actions.Documents.GetDocumentsAfter(etag, pageSize, token);
                     var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState);
                     int docCount = 0;
                     foreach (var doc in documents)
@@ -599,7 +599,13 @@ namespace Raven.Database.Actions
                             Etag = newEtag,
                             LastModified = addDocumentResult.SavedAt,
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
-                        }, documents => Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents));
+                        }, documents =>
+                        {
+							if(Database.IndexDefinitionStorage.IndexesCount == 0 || Database.WorkContext.RunIndexing == false)
+								return;
+
+	                        Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
+                        });
 
                         if (addDocumentResult.Updated)
                             Database.Prefetcher.AfterUpdate(key, addDocumentResult.PrevEtag);

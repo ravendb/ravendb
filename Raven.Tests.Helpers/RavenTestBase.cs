@@ -703,12 +703,12 @@ namespace Raven.Tests.Helpers
 				throw new AggregateException(errors);
 		}
 
-		protected static void PrintServerErrors(ServerError[] serverErrors)
+		protected static void PrintServerErrors(IndexingError[] indexingErrors)
 		{
-			if (serverErrors.Any())
+			if (indexingErrors.Any())
 			{
-				Console.WriteLine("Server errors count: " + serverErrors.Count());
-				foreach (var serverError in serverErrors)
+				Console.WriteLine("Server errors count: " + indexingErrors.Count());
+				foreach (var serverError in indexingErrors)
 				{
 					Console.WriteLine("Server error: " + serverError.ToString());
 				}

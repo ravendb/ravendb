@@ -29,50 +29,6 @@ namespace Voron.Impl.Journal
         private readonly List<PagePosition> _unusedPages = new List<PagePosition>();
         private readonly object _locker = new object();
 
-        public class PagePosition
-        {
-            protected bool Equals(PagePosition other)
-            {
-	            return ScratchPos == other.ScratchPos && JournalPos == other.JournalPos && TransactionId == other.TransactionId && JournalNumber == other.JournalNumber && IsFreedPageMarker == other.IsFreedPageMarker;
-            }
-
-            public override int GetHashCode()
-            {
-                unchecked
-                {
-                    int hashCode = ScratchPos.GetHashCode();
-                    hashCode = (hashCode * 397) ^ JournalPos.GetHashCode();
-                    hashCode = (hashCode * 397) ^ TransactionId.GetHashCode();
-                    hashCode = (hashCode * 397) ^ JournalNumber.GetHashCode();
-					hashCode = (hashCode * 397) ^ IsFreedPageMarker.GetHashCode();
-                    return hashCode;
-                }
-            }
-
-            public long ScratchPos;
-            public long JournalPos;
-            public long TransactionId;
-	        public long JournalNumber;
-	        public bool IsFreedPageMarker;
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj))
-                    return false;
-                if (ReferenceEquals(this, obj))
-                    return true;
-                if (obj.GetType() != GetType())
-                    return false;
-
-                return Equals((PagePosition)obj);
-            }
-
-	        public override string ToString()
-	        {
-		        return string.Format("ScratchPos: {0}, JournalPos: {1}, TransactionId: {2}, JournalNumber: {3}, IsFreedPageMarker: {4}", ScratchPos, JournalPos, TransactionId, JournalNumber, IsFreedPageMarker);
-	        }
-        }
-
         public JournalFile(IJournalWriter journalWriter, long journalNumber)
         {
             Number = journalNumber;
@@ -213,6 +169,7 @@ namespace Voron.Impl.Journal
 				{
 					ScratchPos = -1,
 					JournalPos = -1,
+					ScratchNumber = -1,
 					TransactionId = tx.Id,
 					JournalNumber = Number,
 					IsFreedPageMarker = true
@@ -222,12 +179,15 @@ namespace Voron.Impl.Journal
 		    for (int index = 1; index < txPages.Count; index++)
 		    {
 			    var txPage = txPages[index];
-			    var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
+			    var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
 			    var pageNumber = scratchPage.PageNumber;
 
 				PagePosition value;
-				if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
-					unused.Add(value);
+			    if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
+			    {
+				    value.UnusedInPTT = true;
+				    unused.Add(value);
+			    }
 
 				PagePosition pagePosition;
 				if (ptt.TryGetValue(pageNumber, out pagePosition) && pagePosition.IsFreedPageMarker == false)
@@ -236,6 +196,7 @@ namespace Voron.Impl.Journal
 				ptt[pageNumber] = new PagePosition
 				{
 					ScratchPos = txPage.PositionInScratchBuffer,
+					ScratchNumber = txPage.ScratchFileNumber,
 					JournalPos = -1, // needed only during recovery and calculated there
 					TransactionId = tx.Id,
 					JournalNumber = Number
@@ -247,6 +208,7 @@ namespace Voron.Impl.Journal
 			    unused.Add(new PagePosition
 			    {
 				    ScratchPos = freedPage.PositionInScratchBuffer,
+					ScratchNumber = freedPage.ScratchFileNumber,
 				    JournalPos = -1, // needed only during recovery and calculated there
 				    TransactionId = tx.Id,
 				    JournalNumber = Number
@@ -261,30 +223,50 @@ namespace Voron.Impl.Journal
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
 	    
-	    public void FreeScratchPagesOlderThan(Transaction tx, long lastSyncedTransactionId)
+	    public void FreeScratchPagesOlderThan(Transaction tx, long lastSyncedTransactionId, bool forceToFreeAllPages = false)
 	    {
 		    if (tx == null) throw new ArgumentNullException("tx");
-		    List<KeyValuePair<long, PagePosition>> unusedPages;
+		    var unusedPages = new List<PagePosition>();
 
             List<PagePosition> unusedAndFree;
+		    List<long> keysToRemove;
+
             lock (_locker)
             {
-                unusedAndFree = _unusedPages.FindAll(position => position.TransactionId < lastSyncedTransactionId);
-                _unusedPages.RemoveAll(position => position.TransactionId < lastSyncedTransactionId);
+                unusedAndFree = _unusedPages.FindAll(position => position.TransactionId <= lastSyncedTransactionId);
+                _unusedPages.RemoveAll(position => position.TransactionId <= lastSyncedTransactionId);
 
-                unusedPages = _pageTranslationTable.AllPagesOlderThan(lastSyncedTransactionId);
-                _pageTranslationTable.Remove(unusedPages.Select(x => x.Key), lastSyncedTransactionId);
+	            if (forceToFreeAllPages)
+		            keysToRemove = _pageTranslationTable.KeysWhereSomePagesOlderThan(lastSyncedTransactionId);
+	            else
+					keysToRemove = _pageTranslationTable.KeysWhereAllPagesOlderThan(lastSyncedTransactionId);
+
+				_pageTranslationTable.Remove(keysToRemove, lastSyncedTransactionId, unusedPages);
             }
 
             foreach (var unusedScratchPage in unusedAndFree)
             {
-                tx.Environment.ScratchBufferPool.Free(unusedScratchPage.ScratchPos, tx.Id);
+				if (unusedScratchPage.IsFreedPageMarker)
+					continue;
+
+                tx.Environment.ScratchBufferPool.Free(unusedScratchPage.ScratchNumber, unusedScratchPage.ScratchPos, tx.Id);
             }
 
-            foreach (var unusedScratchPage in unusedPages)
-            {
-				tx.Environment.ScratchBufferPool.Free(unusedScratchPage.Value.ScratchPos, tx.Id);
-            }
+			foreach (var page in unusedPages)
+			{
+				if (page.IsFreedPageMarker)
+					continue;
+
+				if (page.UnusedInPTT) // to prevent freeing a page that was already freed as unusedAndFree
+				{
+					// the page could be either freed in the current run, then just skip it to avoid freeing an unallocated page, or
+					// it could be released in an earlier run, but it still resided in PTT because a under a relevant page number of PTT 
+					// there were overwrites by newer transactions (> lastSyncedTransactionId) and we didn't remove it from there
+					continue;
+				}
+
+				tx.Environment.ScratchBufferPool.Free(page.ScratchNumber, page.ScratchPos, tx.Id);
+			}
         }
     }
 }

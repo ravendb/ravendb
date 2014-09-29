@@ -14,8 +14,13 @@ namespace Raven.Abstractions.Data
 
         [Obsolete("Use RavenFS instead.")]
 		public Etag LastAttachmentEtag { get; set; }
+
 		public int CountOfIndexes { get; set; }
+
+		public int CountOfResultTransformers { get; set; }
+
 		public int InMemoryIndexingQueueSize { get; set; }
+
 		public long ApproximateTaskCount { get; set; }
 
 		public long CountOfDocuments { get; set; }
@@ -33,7 +38,7 @@ namespace Raven.Abstractions.Data
 
 		public IndexStats[] Indexes { get; set; }
 
-		public ServerError[] Errors { get; set; }
+		public IndexingError[] Errors { get; set; }
 
 		public IndexingBatchInfo[] IndexingBatchInfo { get; set; }
 

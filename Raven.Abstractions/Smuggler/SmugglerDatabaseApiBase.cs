@@ -171,6 +171,8 @@ namespace Raven.Abstractions.Smuggler
 						await ExportDeletions(jsonWriter, result, maxEtags);
 					}
 
+					await ExportIdentities(jsonWriter, Options.OperateOnTypes);
+
 					jsonWriter.WriteEndObject();
 					streamWriter.Flush();
 				}
@@ -192,6 +194,49 @@ namespace Raven.Abstractions.Smuggler
 				if (ownedStream && stream != null)
 					stream.Dispose();
 			}
+		}
+
+		private async Task ExportIdentities(JsonTextWriter jsonWriter, ItemType operateOnTypes)
+		{
+			Operations.ShowProgress("Exporting Identities");
+
+			var identities = await Operations.GetIdentities();
+
+			Operations.ShowProgress("Exported {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
+
+			var filteredIdentities = identities.Where(x => FilterIdentity(x.Key, operateOnTypes)).ToList();
+
+			Operations.ShowProgress("After filtering {0} identities need to be exported: {1}", filteredIdentities.Count, string.Join(", ", filteredIdentities.Select(x => x.Key)));
+
+			jsonWriter.WritePropertyName("Identities");
+			jsonWriter.WriteStartArray();
+
+			foreach (var identityInfo in filteredIdentities)
+			{
+				new RavenJObject
+						{
+							{ "Key", identityInfo.Key }, 
+							{ "Value", identityInfo.Value }
+						}.WriteTo(jsonWriter);
+			}
+
+			jsonWriter.WriteEndArray();
+
+			Operations.ShowProgress("Done with exporting indentities");
+		}
+
+		public bool FilterIdentity(string indentityName, ItemType operateOnTypes)
+		{
+			if ("Raven/Etag".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
+				return true;
+
+			if ("IndexId".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase) && operateOnTypes.HasFlag(ItemType.Indexes))
+				return true;
+
+			if (operateOnTypes.HasFlag(ItemType.Documents))
+				return true;
+
+			return false;
 		}
 
 		public static void ReadLastEtagsFromFile(ExportDataResult result)
@@ -613,6 +658,14 @@ namespace Raven.Abstractions.Smuggler
 				return deletedAttachmentsCount;
 			});
 
+			exportSectionRegistar.Add("Identities", () =>
+			{
+				Operations.ShowProgress("Begin reading identities");
+				var identitiesCount = ImportIdentities(jsonReader).Result;
+				Operations.ShowProgress(string.Format("Done with reading identities, total: {0}", identitiesCount));
+				return identitiesCount;
+			});
+
 			exportSectionRegistar.Keys.ForEach(k => exportCounts[k] = 0);
 
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndObject)
@@ -644,6 +697,31 @@ namespace Raven.Abstractions.Smuggler
 			Operations.ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments, deleted {2:#,#;;0} documents and {3:#,#;;0} attachments in {4:#,#.###;;0} s", exportCounts["Docs"], exportCounts["Attachments"], exportCounts["DocsDeletions"], exportCounts["AttachmentsDeletions"], sw.ElapsedMilliseconds / 1000f);
 
             Options.CancelToken.Token.ThrowIfCancellationRequested();
+		}
+
+		private async Task<int> ImportIdentities(JsonTextReader jsonReader)
+		{
+			var count = 0;
+
+			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+			{
+				Options.CancelToken.Token.ThrowIfCancellationRequested();
+
+				var identity = RavenJToken.ReadFrom(jsonReader);
+
+				var identityName = identity.Value<string>("Key");
+
+				if(FilterIdentity(identityName, Options.OperateOnTypes) == false)
+					continue;
+
+				await Operations.SeedIdentityFor(identityName, identity.Value<long>("Value"));
+
+				count++;
+			}
+
+			await Operations.SeedIdentityFor(null, -1); // force flush
+
+			return count;
 		}
 
 		private async Task<int> ImportDeletedDocuments(JsonReader jsonReader)

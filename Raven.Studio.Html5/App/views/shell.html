@@ -164,7 +164,7 @@
                 </div>
 
                 <div>
-                    <ul class="nav navbar-nav navbar-right hidden-xs hidden-sm databases col-md-3">
+                    <ul class="nav navbar-nav navbar-right hidden-xs hidden-sm databases">
                         <li class="navbar-right" style="padding-left: 5px;">
                             <a class="navbar-brand" href="http://ravendb.net" target="_blank">
                                 <img style="height: 24px" src="content/images/raven.png" />
@@ -232,7 +232,7 @@
                             </div>
                         </li>
                         <li class="navbar-right" data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)" title="Show errors" style="padding-left: 0;">
-                            <a href="#"><i class="fa fa-warning text-danger"></i></a>
+                            <a href="#" style="padding-left: 0; padding-right: 0"><i class="fa fa-warning text-danger"></i></a>
                         </li>
                     </ul>
                 </div>
@@ -254,7 +254,7 @@
         </div>
     </div>
 
-    <div class="page-host" data-bind="router: { cacheViews: false }"></div>
+    <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
 </div>
 
 <footer style="z-index: 999" id="shellFooter">

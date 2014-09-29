@@ -12,6 +12,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Client.Linq;
 using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
@@ -105,6 +106,14 @@ namespace Raven.Database.Indexing
 			};
 		}
 
+		private class IndexingGroup
+		{
+			public Etag LastIndexedEtag;
+			public DateTime? LastQueryTime;
+			public List<IndexToWorkOn> Indexes; 
+			public PrefetchingBehavior PrefetchingBehavior;
+		}
+
         protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexes)
         {
 	        var indexingGroups = context.Configuration.IndexingClassifier.GroupMapIndexes(indexes);
@@ -114,22 +123,27 @@ namespace Raven.Database.Indexing
 			if (indexingGroups.Count == 0)
 				return;
 
-	        var lastIndexedEtagsPerGroup = indexingGroups.Keys.ToList();
-	        var groupedIndexes = indexingGroups.Values.ToList();
-
-			var maxIndexOutputsPerDoc = groupedIndexes.Max(x => x.Max(y => y.Index.MaxIndexOutputsPerDocument));
-
-			var recoverTunerState = ((IndexBatchSizeAutoTuner)autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(maxIndexOutputsPerDoc);
-
 			var usedPrefetchers = new ConcurrentSet<PrefetchingBehavior>();
 
-			BackgroundTaskExecuter.Instance.ExecuteAll(context, groupedIndexes, (indexesToWorkOn, i) =>
+			var groupedIndexes = indexingGroups.Select(x => new IndexingGroup
 			{
-				var lastIndexedEtagForIndexGroup = lastIndexedEtagsPerGroup[(int) i];
+				LastIndexedEtag = x.Key,
+				Indexes = x.Value,
+				LastQueryTime = x.Value.Max(y => y.Index.LastQueryTime),
+				PrefetchingBehavior = GetPrefetcherFor(x.Key, usedPrefetchers)
+			}).OrderByDescending(x => x.LastQueryTime).ToList();
 
-				var prefetchingBehavior = GetPrefetcherFor(lastIndexedEtagForIndexGroup, usedPrefetchers);
+	        var maxIndexOutputsPerDoc = groupedIndexes.Max(x => x.Indexes.Max(y => y.Index.MaxIndexOutputsPerDocument));
+	        var containsMapReduceIndexes = groupedIndexes.Any(x => x.Indexes.Any(y => y.Index.IsMapReduce));
 
+			var recoverTunerState = ((IndexBatchSizeAutoTuner)autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(maxIndexOutputsPerDoc, containsMapReduceIndexes);
+
+			BackgroundTaskExecuter.Instance.ExecuteAll(context, groupedIndexes, (indexingGroup, i) =>
+			{
 				context.CancellationToken.ThrowIfCancellationRequested();
+
+				var prefetchingBehavior = indexingGroup.PrefetchingBehavior;
+				var indexesToWorkOn = indexingGroup.Indexes;
 
 				var operationCancelled = false;
 				TimeSpan indexingDuration = TimeSpan.Zero;
@@ -138,14 +152,14 @@ namespace Raven.Database.Indexing
 				List<JsonDocument> jsonDocs;
 
 				using (MapIndexingInProgress(indexesToWorkOn))
-				using (prefetchingBehavior.DocumentBatchFrom(lastIndexedEtagForIndexGroup, out jsonDocs))
+				using (prefetchingBehavior.DocumentBatchFrom(indexingGroup.LastIndexedEtag, out jsonDocs))
 				{
 					try
 					{
 						if (Log.IsDebugEnabled)
 						{
 							Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-								jsonDocs.Count, lastIndexedEtagForIndexGroup, string.Join(", ", jsonDocs.Select(x => x.Key)));
+								jsonDocs.Count, indexingGroup.LastIndexedEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
 						}
 
 						context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
@@ -201,7 +215,20 @@ namespace Raven.Database.Indexing
 			}
 
 			var newPrefetcher = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
-			
+
+			var recentEtag = Etag.Empty;
+			context.Database.TransactionalStorage.Batch(accessor =>
+			{
+				recentEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+			});
+
+			if (recentEtag.Restarts != fromEtag.Restarts || Math.Abs(recentEtag.Changes - fromEtag.Changes) > context.CurrentNumberOfItemsToIndexInSingleBatch)
+			{
+				// If the distance between etag of a recent document in db and etag to index from is greater than NumberOfItemsToProcessInSingleBatch
+				// then prevent the prefetcher from loading newly added documents. For such prefetcher we will relay only on future batches to prefetch docs.
+				newPrefetcher.IgnoreJustCommitedDocuments = true;
+			}
+
 			prefetchingBehaviors.Add(newPrefetcher);
 			usedPrefetchers.Add(newPrefetcher);
 
@@ -240,7 +267,7 @@ namespace Raven.Database.Indexing
 
             context.MetricsCounters.IndexedPerSecond.Mark(jsonDocs.Count);
             
-			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).ToList();
+			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).OrderByDescending(x => x.Index.LastQueryTime).ToList();
 
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, result,
 																  index => HandleIndexingFor(index, lastEtag, lastModified));

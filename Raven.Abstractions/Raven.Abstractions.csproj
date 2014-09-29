@@ -200,7 +200,7 @@
     <Compile Include="Data\PatchRequest.cs" />
     <Compile Include="Data\PatchResult.cs" />
     <Compile Include="Data\PutResult.cs" />
-    <Compile Include="Data\ServerError.cs" />
+    <Compile Include="Data\IndexingError.cs" />
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />
     <Compile Include="Data\StopWordsSetup.cs" />

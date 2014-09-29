@@ -5,13 +5,16 @@ using Raven.Tests.Core.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using System;
-using Xunit;
+using System.Linq;
+using System.Threading.Tasks;
+using Xunit;using Raven.Tests.Core.Utils.Transformers;
 
 namespace Raven.Tests.Core.ChangesApi
 {
     public class Subscribing : RavenReplicationCoreTest
     {
         private volatile string output, output2;
+
         [Fact]
         public void CanSubscribeToDocumentChanges()
         {
@@ -19,7 +22,7 @@ namespace Raven.Tests.Core.ChangesApi
             {
 
                 store.Changes().Task.Result
-                    .ForAllDocuments().Task.Result
+                    .ForAllDocuments()
                     .Subscribe(change =>
                     {
                         if (output == null)
@@ -27,14 +30,28 @@ namespace Raven.Tests.Core.ChangesApi
                     });
 
                 store.Changes().Task.Result
-                    .ForDocumentsStartingWith("companies").Task.Result
+                    .ForDocumentsStartingWith("companies")
                     .Subscribe(change => 
                     {
                         output = "passed_forfordocumentsstartingwith";
                     });
 
                 store.Changes().Task.Result
-                    .ForDocument("companies/1").Task.Result
+                    .ForDocumentsInCollection("posts")
+                    .Subscribe(change =>
+                    {
+                        output = "passed_ForDocumentsInCollection";
+                    });
+
+                store.Changes().Task.Result
+                    .ForDocumentsOfType(new Camera().GetType())
+                    .Subscribe(changes =>
+                    {
+                        output = "passed_ForDocumentsOfType";
+                    });
+
+                store.Changes().Task.Result
+                    .ForDocument("companies/1")
                     .Subscribe(change => 
                     {
                         if (change.Type == DocumentChangeTypes.Delete)
@@ -58,6 +75,20 @@ namespace Raven.Tests.Core.ChangesApi
                     });
                     session.SaveChanges();
                     WaitUntilOutput("passed_forfordocumentsstartingwith");
+
+                    session.Store(new Post
+                    {
+                        Id = "posts/1"
+                    });
+                    session.SaveChanges();
+                    WaitUntilOutput("passed_ForDocumentsInCollection");
+
+                    session.Store(new Camera
+                    {
+                        Id = "cameras/1"
+                    });
+                    session.SaveChanges();
+                    WaitUntilOutput("passed_ForDocumentsOfType");
 
                     session.Delete("companies/1");
                     session.SaveChanges();
@@ -181,6 +212,60 @@ namespace Raven.Tests.Core.ChangesApi
                 source.Replication.WaitAsync(eTag, replicas: 1).Wait();
 
                 WaitUntilOutput("conflict");
+            }
+        }
+
+        [Fact]
+        public void CanSubscribeToBulkInsert()
+        {
+            using (var store = GetDocumentStore())
+            {
+	            using (var bulkInsert = store.BulkInsert())
+	            {
+		            store.Changes().Task.Result
+			            .ForBulkInsert(bulkInsert.OperationId).Task.Result
+			            .Subscribe(changes =>
+			            {
+				            output = "passed_bulkInsert";
+			            });
+
+		            bulkInsert.Store(new User
+		            {
+			            Name = "User"
+		            });
+
+	            }
+
+				// perform the check after dispose of bulk insert operation to make sure that we already flushed everyting to the server to the notification shold already arrive
+				WaitUntilOutput("passed_bulkInsert");
+            }
+        }
+
+        [Fact]
+        public void CanSubscribeToAllTransformers()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Changes().Task.Result
+                    .ForAllTransformers()
+                    .Subscribe(changes => 
+                    {
+                        if (changes.Type == TransformerChangeTypes.TransformerAdded)
+                        {
+                            output = "passed_CanSubscribeToAllTransformers_TransformerAdded";
+                        }
+                        if (changes.Type == TransformerChangeTypes.TransformerRemoved)
+                        {
+                            output = "passed_CanSubscribeToAllTransformers_TransformerRemoved";
+                        }
+                    });
+
+                var transformer = new CompanyFullAddressTransformer();
+                transformer.Execute(store);
+                WaitUntilOutput("passed_CanSubscribeToAllTransformers_TransformerAdded");
+
+                store.DatabaseCommands.DeleteTransformer(transformer.TransformerName);
+                WaitUntilOutput("passed_CanSubscribeToAllTransformers_TransformerRemoved");
             }
         }
     }

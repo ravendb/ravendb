@@ -134,5 +134,34 @@ namespace Voron.Tests.Bugs
 				throw ex;
 			}
 		}
+
+		[Fact]
+		public void AllScratchPagesShouldBeReleased()
+		{
+			var options = StorageEnvironmentOptions.CreateMemoryOnly();
+			options.ManualFlushing = true;
+			using (var env = new StorageEnvironment(options))
+			{
+				using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					env.CreateTree(txw, "test");
+
+					txw.Commit();
+				}
+
+				using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = txw.Environment.State.GetTree(txw, "test");
+
+					tree.Add("key/1", new MemoryStream(new byte[100]));
+					tree.Add("key/1", new MemoryStream(new byte[200]));
+					txw.Commit();
+				}
+
+				env.FlushLogToDataFile(); // non read nor write transactions, so it should flush and release everything from scratch
+
+				Assert.Equal(0, env.ScratchBufferPool.GetNumberOfAllocations(0));
+			}
+		}
 	}
 }

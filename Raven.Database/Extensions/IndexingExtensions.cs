@@ -24,10 +24,8 @@ namespace Raven.Database.Extensions
 	{
 		public static Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
 		{
-			var analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzerTypeAsString) ?? Type.GetType(analyzerTypeAsString);
-			if (analyzerType == null)
-				throw new InvalidOperationException("Cannot find analyzer type '" + analyzerTypeAsString + "' for field: " + name);
-			
+			var analyzerType = GetAnalyzerType(name, analyzerTypeAsString);
+
 			try
 			{
 				var assembly = analyzerType.Assembly;
@@ -47,12 +45,24 @@ namespace Raven.Database.Extensions
 			catch (Exception e)
 			{
 				throw new InvalidOperationException(
-					"Could not create new analyzer instance '" + name + "' for field: " +
+					"Could not create new analyzer instance '" + analyzerTypeAsString + "' for field: " +
 						name, e);
 			}
 
 			throw new InvalidOperationException(
-				"Could not create new analyzer instance '" + name + "' for field: " + name + ". No recognizable constructor found.");
+				"Could not create new analyzer instance '" + analyzerTypeAsString + "' for field: " + name + ". No recognizable constructor found.");
+		}
+
+		public static Type GetAnalyzerType(string name, string analyzerTypeAsString)
+		{
+			var luceneAssembly = typeof (StandardAnalyzer).Assembly;
+			var analyzerType = luceneAssembly.GetType(analyzerTypeAsString) ??
+			                   Type.GetType(analyzerTypeAsString) ??
+			                   luceneAssembly.GetType("Lucene.Net.Analysis." + analyzerTypeAsString) ??
+			                   luceneAssembly.GetType("Lucene.Net.Analysis.Standard." + analyzerTypeAsString);
+			if (analyzerType == null)
+				throw new InvalidOperationException("Cannot find analyzer type '" + analyzerTypeAsString + "' for field: " + name);
+			return analyzerType;
 		}
 
 		public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index? defaultIndex)

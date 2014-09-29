@@ -15,6 +15,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
+using Voron.Impl.Scratch;
 using Voron.Trees;
 using Voron.Util;
 
@@ -434,7 +435,7 @@ namespace Voron
             if (tx.FlushedToJournal == false)
                 return;
 
-            Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Count);
+            Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Sum(x => x.NumberOfPages));
 			_flushWriter.Set();
         }
 
@@ -528,22 +529,22 @@ namespace Voron
 		        }, TaskCreationOptions.LongRunning);
         }
 
-        public void FlushLogToDataFile(Transaction tx = null)
+        public void FlushLogToDataFile(Transaction tx = null, bool allowToFlushOverwrittenPages = false)
         {
 	        if (_options.ManualFlushing == false)
 				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 
-	        ForceLogFlushToDataFile(tx);
+	        ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages);
         }
 
-	    internal void ForceLogFlushToDataFile(Transaction tx)
+		internal void ForceLogFlushToDataFile(Transaction tx, bool allowToFlushOverwrittenPages)
 	    {
 		    if (IsDebugRecording)
 		    {
 			    _debugJournal.RecordFlushAction(DebugActionType.FlushStart, tx);
 		    }
 
-		    _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx);
+		    _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx, allowToFlushOverwrittenPages);
 
 		    if (IsDebugRecording)
 		    {

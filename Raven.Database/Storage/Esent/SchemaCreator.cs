@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-	    public const string SchemaVersion = "5.0";
+	    public const string SchemaVersion = "5.1";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -762,6 +762,13 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
 			}, null, 0, out columnid);
 
+			Api.JetAddColumn(session, tableid, "created_at", new JET_COLUMNDEF
+			{
+				cbMax = 1024,
+				coltyp = JET_coltyp.DateTime,
+				grbit = ColumndefGrbit.ColumnNotNULL,
+			}, null, 0, out columnid);
+
 
 			CreateIndexes(tableid,
 				new JET_INDEXCREATE
@@ -781,6 +788,12 @@ namespace Raven.Storage.Esent
 					szIndexName = "by_name_and_key",
 					szKey = "+name\0+key\0\0",
 					grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_name_and_created_at",
+					szKey = "+name\0+created_at\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull
 				});
 		}
 

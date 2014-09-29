@@ -66,7 +66,7 @@ namespace Voron.Impl.Journal
 				    {
 					    try
 					    {
-						    var dest = _env.ScratchBufferPool.AcquirePagePointer(decompressBuffer.PositionInScratchBuffer);
+							var dest = _env.ScratchBufferPool.AcquirePagePointer(decompressBuffer.ScratchFileNumber, decompressBuffer.PositionInScratchBuffer);
 						    LZ4.Decode64(dataPages, transactionHeader->CompressedSize, dest, transactionHeader->UncompressedSize, true);
 					    }
 					    catch (Exception e)
@@ -81,7 +81,7 @@ namespace Voron.Impl.Journal
 					}
 				    finally 
 				    {
-						_env.ScratchBufferPool.Free(decompressBuffer.PositionInScratchBuffer, -1);
+						_env.ScratchBufferPool.Free(decompressBuffer.ScratchFileNumber, decompressBuffer.PositionInScratchBuffer, -1);
 				    }
 				    tx.Commit();
 

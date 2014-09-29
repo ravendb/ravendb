@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{3CB57F77-123A-45BB-A3E2-487065D18B90}</ProjectGuid>
+    <ProjectGuid>{93287FBA-732A-4603-9BBE-9CFDC82FC8BE}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Tests.Core</RootNamespace>
@@ -100,17 +100,23 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Auth\Authentication.cs" />
+    <Compile Include="Bundles\MoreLikeThis.cs" />
     <Compile Include="ChangesApi\ImplementingChangesClient.cs" />
     <Compile Include="ChangesApi\Subscribing.cs" />
     <Compile Include="ChangesApi\WebsocketsTests.cs" />
     <Compile Include="Commands\Batches.cs" />
+    <Compile Include="Commands\Patching.cs" />
     <Compile Include="Commands\Querying.cs" />
     <Compile Include="Commands\Transformers.cs" />
     <Compile Include="Configuration\ConfigurationTests.cs" />
     <Compile Include="Indexing\MultiMap.cs" />
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
+    <Compile Include="Replication\ManualConfilctResolution.cs" />
+    <Compile Include="Session\Advanced.cs" />
     <Compile Include="Shard\Sharding.cs" />
+    <Compile Include="Smuggler\SmugglerApiTests.cs" />
     <Compile Include="Utils\Entities\Camera.cs" />
     <Compile Include="Utils\Entities\Event.cs" />
     <Compile Include="Utils\Entities\Headquater.cs" />
@@ -120,12 +126,15 @@
     <Compile Include="Utils\Indexes\Events_SpatialIndex.cs" />
     <Compile Include="Utils\Entities\ISearchable.cs" />
     <Compile Include="Utils\Indexes\MultiMapIndex.cs" />
+    <Compile Include="Utils\Indexes\Posts_ByTitleAndContent.cs" />
     <Compile Include="Utils\Indexes\Post_LoadAttachment.cs" />
     <Compile Include="Utils\Indexes\TShirtIndex.cs" />
+    <Compile Include="Utils\Indexes\Users_CountByLastName.cs" />
     <Compile Include="Utils\Transformers\CompanyFullAddressTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithAsDocumentTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithMetadataForTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithContentTransformer.cs" />
+    <Compile Include="Utils\Transformers\UsersTransformer.cs" />
     <Compile Include="Utils\Transformers\UserWithCustomDataAndAddressIncludeTransformer.cs" />
     <Compile Include="Utils\Indexes\Companies_WithReferencedEmployees.cs" />
     <Compile Include="Utils\Transformers\CompanyEmployeesTransformer.cs" />
@@ -158,12 +167,12 @@
       <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
+      <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>
+      <Name>Raven.Smuggler</Name>
+    </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Auth\" />
-    <Folder Include="BackupRestore\" />
-    <Folder Include="Patching\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
@@ -186,7 +195,6 @@
     <Compile Include="Indexing\ReferencedDocuments.cs" />
     <Compile Include="Session\Includes.cs" />
     <Compile Include="Session\Keys.cs" />
-    <Compile Include="Session\UnitOfWork.cs" />
     <Compile Include="Streaming\DocumentStreaming.cs" />
     <Compile Include="Streaming\QueryStreaming.cs" />
     <Compile Include="Utils\Entities\Company.cs" />

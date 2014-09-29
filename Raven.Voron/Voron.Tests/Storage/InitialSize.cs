@@ -7,7 +7,6 @@ using System;
 using System.IO;
 
 using Voron.Impl;
-using Voron.Platform.Win32;
 using Xunit;
 
 namespace Voron.Tests.Storage
@@ -23,11 +22,18 @@ namespace Voron.Tests.Storage
 				Directory.Delete(path, true);
 		}
 
+		public int GetExpectedInitialSize()
+		{
+//			Win32NativeMethods.SYSTEM_INFO systemInfo;
+//			Win32NativeMethods.GetSystemInfo(out systemInfo);
+
+			return 64 * 1024;
+		}
+
 		[Fact]
 		public void WhenInitialFileSizeIsNotSetTheFileSizeForDataFileAndScratchFileShouldBeSetToSystemAllocationGranularity()
 		{
-			Win32NativeMethods.SYSTEM_INFO systemInfo;
-			Win32NativeMethods.GetSystemInfo(out systemInfo);
+
 
 			var options = StorageEnvironmentOptions.ForPath(path);
 			options.InitialFileSize = null;
@@ -35,48 +41,42 @@ namespace Voron.Tests.Storage
 			using (new StorageEnvironment(options))
 			{
 				var dataFile = Path.Combine(path, Constants.DatabaseFilename);
-				var scratchFile = Path.Combine(path, "scratch.buffers");
+				var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
 
-				Assert.Equal(systemInfo.allocationGranularity, new FileInfo(dataFile).Length);
-				Assert.Equal(systemInfo.allocationGranularity, new FileInfo(scratchFile).Length);
+				Assert.Equal(GetExpectedInitialSize(), new FileInfo(dataFile).Length);
+				Assert.Equal(GetExpectedInitialSize(), new FileInfo(scratchFile).Length);
 			}
 		}
 
 		[Fact]
 		public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordingly()
 		{
-			Win32NativeMethods.SYSTEM_INFO systemInfo;
-			Win32NativeMethods.GetSystemInfo(out systemInfo);
-
 			var options = StorageEnvironmentOptions.ForPath(path);
-			options.InitialFileSize = systemInfo.allocationGranularity * 2;
+			options.InitialFileSize = GetExpectedInitialSize()* 2;
 
 			using (new StorageEnvironment(options))
 			{
 				var dataFile = Path.Combine(path, Constants.DatabaseFilename);
-				var scratchFile = Path.Combine(path, "scratch.buffers");
+				var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
 
-				Assert.Equal(systemInfo.allocationGranularity * 2, new FileInfo(dataFile).Length);
-				Assert.Equal(systemInfo.allocationGranularity * 2, new FileInfo(scratchFile).Length);
+				Assert.Equal(GetExpectedInitialSize() * 2, new FileInfo(dataFile).Length);
+				Assert.Equal(GetExpectedInitialSize() * 2, new FileInfo(scratchFile).Length);
 			}
 		}
 
 		[Fact]
 		public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordinglyAndItWillBeRoundedToTheNearestGranularity()
 		{
-			Win32NativeMethods.SYSTEM_INFO systemInfo;
-			Win32NativeMethods.GetSystemInfo(out systemInfo);
-
 			var options = StorageEnvironmentOptions.ForPath(path);
-			options.InitialFileSize = systemInfo.allocationGranularity * 2 + 1;
+			options.InitialFileSize = GetExpectedInitialSize() * 2 + 1;
 
 			using (new StorageEnvironment(options))
 			{
 				var dataFile = Path.Combine(path, Constants.DatabaseFilename);
-				var scratchFile = Path.Combine(path, "scratch.buffers");
+				var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
 
-				Assert.Equal(systemInfo.allocationGranularity * 3, new FileInfo(dataFile).Length);
-				Assert.Equal(systemInfo.allocationGranularity * 3, new FileInfo(scratchFile).Length);
+				Assert.Equal(GetExpectedInitialSize() * 3, new FileInfo(dataFile).Length);
+				Assert.Equal(GetExpectedInitialSize() * 3, new FileInfo(scratchFile).Length);
 			}
 		}
 

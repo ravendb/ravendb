@@ -217,20 +217,20 @@ namespace Raven.Database
 		}
 
 		[ImportMany]
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
 
 		[ImportMany]
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
 
 		[ImportMany]
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
 
 		internal PutSerialLock DocumentLock { get; private set; }
 
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public AttachmentActions Attachments { get; private set; }
 
 		public TaskScheduler BackgroundTaskScheduler
@@ -418,6 +418,7 @@ namespace Raven.Database
 					InMemoryIndexingQueueSize = prefetcher.GetInMemoryIndexingQueueSize(PrefetchingUser.Indexer),
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
+					CountOfResultTransformers = IndexDefinitionStorage.ResultTransformersCount,
 					DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 					Errors = workContext.Errors,
 					DatabaseId = TransactionalStorage.Id,
@@ -725,10 +726,10 @@ namespace Raven.Database
 
 			if (IndexStorage != null)
 				exceptionAggregator.Execute(IndexStorage.Dispose);
-			
+
 			if (TransactionalStorage != null)
 				exceptionAggregator.Execute(TransactionalStorage.Dispose);
-			
+
 			if (Configuration != null)
 				exceptionAggregator.Execute(Configuration.Dispose);
 
@@ -975,6 +976,7 @@ namespace Raven.Database
 			workContext.IndexStorage = IndexStorage;
 			workContext.TransactionalStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
+			workContext.RecoverIndexingErrors();
 		}
 
 		private static decimal ConvertBytesToMBs(long bytes)

@@ -57,6 +57,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Exceptions\ScratchBufferSizeLimitException.cs" />
+    <Compile Include="Impl\PagePosition.cs" />
+    <Compile Include="Impl\Scratch\PageFromScratchBuffer.cs" />
+    <Compile Include="Impl\Scratch\ScratchBufferFile.cs" />
     <Compile Include="MemorySlice.cs" />
     <Compile Include="Debugging\DebugActionType.cs" />
     <Compile Include="Debugging\DebugJournal.cs" />
@@ -110,7 +113,7 @@
     <Compile Include="Impl\Paging\FragmentedPureMemoryPager.cs" />
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
     <Compile Include="Impl\Paging\TemporaryPage.cs" />
-    <Compile Include="Impl\ScratchBufferPool.cs" />
+    <Compile Include="Impl\Scratch\ScratchBufferPool.cs" />
     <Compile Include="Impl\SliceEqualityComparer.cs" />
     <Compile Include="Impl\SnapshotReader.cs" />
     <Compile Include="Impl\TransactionMergingWriter.cs" />

@@ -61,11 +61,11 @@ namespace Raven.Database.Bundles.SqlReplication
 
     public class SqlReplicationConnections
     {
-        public List<PredefinedSqlConnection> predefinedConnections { get; set; }
+        public List<PredefinedSqlConnection> PredefinedConnections { get; set; }
 
         public SqlReplicationConnections()
         {
-            predefinedConnections = new List<PredefinedSqlConnection>();
+            PredefinedConnections = new List<PredefinedSqlConnection>();
         }
         public class PredefinedSqlConnection
         {
