@@ -46,20 +46,16 @@ interface filesystemStatisticsDto {
 }
 
 interface filesystemFileHeaderDto {
-    CreationDate: Date;
-    Directory: string;
-    Etag: string;
-    Extension: string;
-    FullPath: string;    
-    HumaneTotalSize: string;
-    LastModified: Date;
-    Metadata: any;
     Name: string;
-    OriginalMetadata: any;
+    FullPath: string;
+
     TotalSize?: number;
     UploadedSize: number;
-    
-    HumaneUploadedSize: string;   
+
+    HumaneTotalSize: string;
+    HumaneUploadedSize: string;
+
+    Metadata: any;
 }
 
 interface fileMetadataDto {

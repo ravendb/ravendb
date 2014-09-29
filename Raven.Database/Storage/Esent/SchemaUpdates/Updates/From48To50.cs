@@ -53,37 +53,6 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                 }, 1);
 			}
 
-			using (var tbl = new Table(session, dbid, "lists", OpenTableGrbit.None))
-			{
-				JET_COLUMNID columnid;
-				Api.JetAddColumn(session, tbl, "created_at", new JET_COLUMNDEF
-				{
-					cbMax = 1024,
-					coltyp = JET_coltyp.DateTime,
-					grbit = ColumndefGrbit.ColumnNotNULL,
-				}, null, 0, out columnid);
-
-				if (Api.TryMoveFirst(session, tbl))
-				{
-					do
-					{
-						using (var update = new Update(session, tbl, JET_prep.Replace))
-						{
-							var createdAt = Api.GetTableColumnid(session, tbl, "created_at");
-							Api.SetColumn(session, tbl, createdAt, SystemTime.UtcNow);
-							update.Save();
-						}
-					} while (Api.TryMoveNext(session, tbl));
-				}
-
-				SchemaCreator.CreateIndexes(session, tbl, new JET_INDEXCREATE
-				{
-					szIndexName = "by_name_and_created_at",
-					szKey = "+name\0+created_at\0\0",
-					grbit = CreateIndexGrbit.IndexDisallowNull
-				});
-			}
-
 			// So first we allocate ids and crap
 			// and write that to disk in a safe manner
 			// I might want to look at keeping a list of written files to delete if it all goes tits up at any point

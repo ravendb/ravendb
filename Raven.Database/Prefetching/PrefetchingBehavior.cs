@@ -627,6 +627,6 @@ namespace Raven.Database.Prefetching
         public void OutOfMemoryExceptionHappened()
 	    {
 	        autoTuner.HandleOutOfMemory();
+	    }
 	}
-}
 }

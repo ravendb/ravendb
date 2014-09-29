@@ -32,19 +32,19 @@ namespace Raven.Database.Impl.DTC
 		public Session Session { get; private set; }
 		public DateTime CreatedAt { get; private set; }
 		public Transaction Transaction { get; private set; }
-	    private bool alreadyInContext;
+	    public bool AlreadyInContext { get; private set; }
 
 		public IDisposable EnterSessionContext()
 		{
-		    if (alreadyInContext)
+		    if (AlreadyInContext)
 		        return new DisposableAction(() => { });
 
 			Api.JetSetSessionContext(Session, sessionContext);
-		    alreadyInContext = true;
+		    AlreadyInContext = true;
 			return new DisposableAction(() =>
 			{
 			    Api.JetResetSessionContext(Session);
-			    alreadyInContext = false;
+			    AlreadyInContext = false;
 			});
 		}
 

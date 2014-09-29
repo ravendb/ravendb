@@ -200,7 +200,7 @@ namespace Raven.Abstractions.Linq
                     if (value is long)
                     {
                         var l = (long)value;
-                        if (l > int.MinValue && int.MaxValue > l)
+                        if (l >= int.MinValue && l <= int.MaxValue)
                             return (int)l;
                     }
                     if (value is Guid)

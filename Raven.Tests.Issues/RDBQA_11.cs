@@ -127,7 +127,7 @@ namespace Raven.Tests.Issues
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    SystemTime.UtcDateTime = () => DateTime.Now.AddMinutes(10);
+                    SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
 
 	                var smuggler = new SmugglerApi {SmugglerOptions = {ShouldExcludeExpired = true}};
 					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));

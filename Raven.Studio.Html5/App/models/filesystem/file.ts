@@ -5,16 +5,18 @@ class file implements documentBase {
     Size: string;
     LastModified: string;
     directory: string;
-    fullPath: string;
-
 
     __metadata: fileMetadata;
 
     constructor(dto?: filesystemFileHeaderDto, excludeDirectoryInId?: boolean) {
-        if (dto) {           
+        if (dto) {
+            if (dto.FullPath && dto.FullPath[0] === "/") {
+                dto.FullPath = dto.FullPath.replace("/", "");
+            }
 
             if (excludeDirectoryInId) {
-                this.id = dto.Name
+                this.id = dto.FullPath.substring(dto.FullPath.lastIndexOf("/") + 1);
+                this.directory = dto.FullPath.substring(0, dto.FullPath.lastIndexOf("/"));
             }
             else {
                 this.id = dto.FullPath;
@@ -22,11 +24,8 @@ class file implements documentBase {
             if (dto.HumaneTotalSize === " Bytes") {
                 dto.HumaneTotalSize = "0 Bytes";
             }
-
-            this.directory = dto.Directory;
-            this.fullPath = dto.FullPath;
-            this.Size = dto.HumaneTotalSize;            
-            this.LastModified = moment(dto.LastModified).format();
+            this.Size = dto.HumaneTotalSize;
+            this.LastModified = dto.Metadata["Last-Modified"];
 
             this.__metadata = new fileMetadata(dto.Metadata);
         }
@@ -37,7 +36,7 @@ class file implements documentBase {
     }
 
     getUrl() {
-        return this.fullPath ? this.fullPath : this.id;
+        return this.directory ? this.directory + "/" +this.id : this.id;
     }
 
     getDocumentPropertyNames(): Array<string> {
