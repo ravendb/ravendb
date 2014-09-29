@@ -1,6 +1,6 @@
 ﻿class fileMetadata {
 
-    standardProps = ["RavenFs-Size","Raven-Synchronization-History", "Raven-Synchronization-Version", "Raven-Synchronization-Source", "Last-Modified", "ETag"];
+    standardProps = ["RavenFs-Size", "Raven-Synchronization-History", "Raven-Synchronization-Version", "Raven-Synchronization-Source", "Last-Modified", "ETag", "Creation-Date"];
 
     ravenFSSize: string;
     ravenSynchronizationHistory: any;
@@ -8,6 +8,7 @@
     ravenSynchronizationSource: string;
     lastModified: string;
     etag: string;
+    creationDate: string;
     nonStandardProps: Array<any>;
 
     constructor(dto?: any) {
@@ -16,7 +17,8 @@
             this.ravenSynchronizationHistory = dto['Raven-Synchronization-History'];
             this.ravenSynchronizationVersion = dto['Raven-Synchronization-Version'];
             this.ravenSynchronizationSource = dto['Raven-Synchronization-Source'];
-            this.lastModified = dto['Last-Modified'];
+            this.creationDate = dto['Creation-Date'];
+            this.lastModified = dto['Last-Modified'];            
             this.etag = dto['ETag'];
 
             for (var property in dto) {
@@ -34,6 +36,7 @@
 
     toDto(): fileMetadataDto {
         var dto: any = {
+            'Creation-Date':this.creationDate,
             'Last-Modified': this.lastModified,
             'ETag': this.etag,
             'Raven-Synchronization-History': this.ravenSynchronizationHistory,
