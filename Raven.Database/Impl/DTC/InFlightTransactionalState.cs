@@ -135,9 +135,6 @@ namespace Raven.Database.Impl.DTC
 				return null;// shouldn't happen, but we have better be on the safe side
 			}
 
-			if (currentlyCommittingTransaction.Value == existing.transactionId)
-				return null;
-
 			return document =>
 			{
 				if (document == null)

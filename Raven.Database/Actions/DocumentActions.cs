@@ -417,7 +417,7 @@ namespace Raven.Database.Actions
                 {
                     var documents = etag == null
                                         ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                                        : actions.Documents.GetDocumentsAfter(etag, pageSize, WorkContext.CancellationToken);
+										: actions.Documents.GetDocumentsAfter(etag, pageSize, token);
                     var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState);
                     int docCount = 0;
                     foreach (var doc in documents)

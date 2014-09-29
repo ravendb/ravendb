@@ -544,6 +544,17 @@ namespace Raven.Database.Server.Controllers
 				IOExtensions.DeleteFile(tempFileName);
 			}
 		}
+
+		[HttpGet]
+		[Route("databases/{databaseName}/debug/transactions")]
+		[Route("debug/transactions")]
+		public HttpResponseMessage Transactions()
+		{
+			return GetMessageWithObject(new
+			{
+				PreparedTransactions = Database.TransactionalStorage.GetPreparedTransactions()
+			});
+		}
 	}
 
 	public class RouteInfo

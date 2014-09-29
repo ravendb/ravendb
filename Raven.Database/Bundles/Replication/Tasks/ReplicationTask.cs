@@ -85,7 +85,7 @@ namespace Raven.Bundles.Replication.Tasks
 				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ??
 				60 * 1000;
 			
-			autoTuner = new IndependentBatchSizeAutoTuner(docDb.WorkContext);
+			autoTuner = new IndependentBatchSizeAutoTuner(docDb.WorkContext, PrefetchingUser.Replicator);
 			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
 			nonBufferedHttpRavenRequestFactory = new HttpRavenRequestFactory
 			{
@@ -243,7 +243,7 @@ namespace Raven.Bundles.Replication.Tasks
 			// also remove prefetchers if the destination is failing for a long time
 			foreach (var failingDestination in failingDestinations)
 			{
-				var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(failingDestination), null);
+				var jsonDocument = docDb.Documents.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(failingDestination), null);
 				if (jsonDocument == null)
 					continue;
 

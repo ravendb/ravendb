@@ -217,20 +217,20 @@ namespace Raven.Database
 		}
 
 		[ImportMany]
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
 
 		[ImportMany]
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
 
 		[ImportMany]
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
 
 		internal PutSerialLock DocumentLock { get; private set; }
 
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public AttachmentActions Attachments { get; private set; }
 
 		public TaskScheduler BackgroundTaskScheduler
@@ -726,10 +726,10 @@ namespace Raven.Database
 
 			if (IndexStorage != null)
 				exceptionAggregator.Execute(IndexStorage.Dispose);
-			
+
 			if (TransactionalStorage != null)
 				exceptionAggregator.Execute(TransactionalStorage.Dispose);
-			
+
 			if (Configuration != null)
 				exceptionAggregator.Execute(Configuration.Dispose);
 
@@ -1154,41 +1154,5 @@ namespace Raven.Database
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
 			}
 		}
-
-        public void GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Action<RavenJObject> addDocument)
-        {
-            TransactionalStorage.Batch(actions =>
-            {
-                bool returnedDocs = false;
-                while (true)
-                {
-                    var documents = etag == null
-                                        ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                                        : actions.Documents.GetDocumentsAfter(etag, pageSize, WorkContext.CancellationToken);
-                    var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
-                    int docCount = 0;
-                    foreach (var doc in documents)
-                    {
-                        docCount++;
-                        token.ThrowIfCancellationRequested();
-                        if (etag != null)
-                            etag = doc.Etag;
-                        DocumentRetriever.EnsureIdInMetadata(doc);
-                        var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
-                        var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
-                        document = documentRetriever
-                            .ExecuteReadTriggers(document, null, ReadOperation.Load);
-                        if (document == null)
-                            continue;
-
-                        addDocument(document.ToJson());
-                        returnedDocs = true;
-                    }
-                    if (returnedDocs || docCount == 0)
-                        break;
-                    start += docCount;
-                }
-            });
-        }
 	}
 }
