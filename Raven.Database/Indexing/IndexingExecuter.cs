@@ -12,6 +12,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Client.Linq;
 using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
@@ -108,9 +109,9 @@ namespace Raven.Database.Indexing
 		private class IndexingGroup
 		{
 			public Etag LastIndexedEtag;
+			public DateTime? LastQueryTime;
 			public List<IndexToWorkOn> Indexes; 
 			public PrefetchingBehavior PrefetchingBehavior;
-
 		}
 
         protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexes)
@@ -128,8 +129,9 @@ namespace Raven.Database.Indexing
 			{
 				LastIndexedEtag = x.Key,
 				Indexes = x.Value,
+				LastQueryTime = x.Value.Max(y => y.Index.LastQueryTime),
 				PrefetchingBehavior = GetPrefetcherFor(x.Key, usedPrefetchers)
-			}).ToList();
+			}).OrderByDescending(x => x.LastQueryTime).ToList();
 
 	        var maxIndexOutputsPerDoc = groupedIndexes.Max(x => x.Indexes.Max(y => y.Index.MaxIndexOutputsPerDocument));
 	        var containsMapReduceIndexes = groupedIndexes.Any(x => x.Indexes.Any(y => y.Index.IsMapReduce));
