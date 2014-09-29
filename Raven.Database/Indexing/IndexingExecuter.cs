@@ -267,7 +267,7 @@ namespace Raven.Database.Indexing
 
             context.MetricsCounters.IndexedPerSecond.Mark(jsonDocs.Count);
             
-			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).ToList();
+			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).OrderByDescending(x => x.Index.LastQueryTime).ToList();
 
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, result,
 																  index => HandleIndexingFor(index, lastEtag, lastModified));
