@@ -1002,11 +1002,13 @@ namespace Raven.Storage.Esent.StorageActions
 				
 				Api.MakeKey(session, MappedResults, view, MakeKeyGrbit.NewKey);
 				var hashReduceKey = HashReduceKey(reduceKey);
+				
+				keysReturned.Add(reduceKey);
+			
 				Api.MakeKey(session, MappedResults, hashReduceKey, MakeKeyGrbit.None);
 				if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekGE) == false)
 					continue;
 				
-				keysReturned.Add(reduceKey);
 				do
 				{
 					var indexFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);

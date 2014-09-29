@@ -858,9 +858,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 var viewAndReduceKey = CreateKey(view, reduceKey, reduceKeyHash);
 				using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(Snapshot, viewAndReduceKey))
 				{
+					keysReturned.Add(reduceKey);
+
 					if (!iterator.Seek(Slice.BeforeAllKeys))
 						continue;
-					keysReturned.Add(reduceKey);
 
 					do
 					{
