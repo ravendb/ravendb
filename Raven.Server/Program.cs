@@ -139,6 +139,8 @@ namespace Raven.Server
 			string restoreDatabaseName = null;
 		    string restoreFilesystemName = null;
 			bool defrag = false;
+            var requiresRestoreAction = new HashSet<string>();
+		    bool isRestoreAction = false;
 			Action actionToTake = null;
 			bool launchBrowser = false;
 			bool noLog = false;
@@ -180,66 +182,99 @@ namespace Raven.Server
 					actionToTake = () => PrintConfig(ravenConfiguration.GetConfigOptionsDocs());
 				}},
 				{"restore", "[Obsolete] Use --restore-system-database or --restore-database",
-					key => actionToTake = () =>
+					key =>
 					{
-						throw new OptionException("This method is obsolete, use --restore-system-database or --restore-database", "restore");
+					    actionToTake = () =>
+					    {
+					        throw new OptionException("This method is obsolete, use --restore-system-database or --restore-database", "restore");
+					    };
+					    isRestoreAction = true;
 					}
 				},
 				{"restore-system-database", "Restores a SYSTEM database from backup.",
-					key => actionToTake = () =>
+					key =>
 					{
-						if(backupLocation == null || restoreLocation == null)
-						{
-							throw new OptionException("when using --restore-system-database, --restore-source and --restore-destination must be specified", "restore-system-database");
-						}
-
-						RunSystemDatabaseRestoreOperation(backupLocation, restoreLocation, defrag);
+					    actionToTake = () =>
+					    {
+					        if (backupLocation == null || restoreLocation == null)
+					        {
+					            throw new OptionException("when using --restore-system-database, --restore-source and --restore-destination must be specified", "restore-system-database");
+					        }
+					        RunSystemDatabaseRestoreOperation(backupLocation, restoreLocation, defrag);
+					    };
+					    isRestoreAction = true;
 					}
 				},
 				{"restore-database=", "Starts a restore operation from a backup on a REMOTE server found under specified {0:url}.", 
-					url => actionToTake = () =>
-				    {
-					    if (backupLocation == null)
+					url =>
+					{
+					    actionToTake = () =>
 					    {
-						    throw new OptionException("when using --restore-database, --restore-source must be specified", "restore-database");
-					    }
+					        if (backupLocation == null)
+					        {
+					            throw new OptionException("when using --restore-database, --restore-source must be specified", "restore-database");
+					        }
 
-					    Uri uri;
-					    if (Uri.TryCreate(url, UriKind.Absolute, out uri) == false)
-					    {
-						    throw new OptionException("specified destination server url is not valid", "restore-database");
-					    }
+					        Uri uri;
+					        if (Uri.TryCreate(url, UriKind.Absolute, out uri) == false)
+					        {
+					            throw new OptionException("specified destination server url is not valid", "restore-database");
+					        }
 
-					    RunRemoteDatabaseRestoreOperation(backupLocation, restoreLocation, restoreDatabaseName, defrag, uri);
-					    Environment.Exit(0);
-				    }
+					        RunRemoteDatabaseRestoreOperation(backupLocation, restoreLocation, restoreDatabaseName, defrag, uri);
+					        Environment.Exit(0);
+					    };
+					    isRestoreAction = true;
+					}
 				},
                 {"restore-filesystem=", "Starts a restore operation from a backup on a REMOTE server found under specified {0:url}.",
-                    url => actionToTake = () =>
+                    url =>
                     {
-                       if (backupLocation == null)
-                       {
-                           throw new OptionException("when using --restore-filesystem, --restore-source must be specified", "restore-filesystem");
-                       }
-
-                       Uri uri;
-                        if (Uri.TryCreate(url, UriKind.Absolute, out uri) == false)
+                        actionToTake = () =>
                         {
-                            throw new OptionException("specified destination server url is not valid", "restore-database");
-                        }
+                            if (backupLocation == null)
+                            {
+                                throw new OptionException("when using --restore-filesystem, --restore-source must be specified", "restore-filesystem");
+                            }
 
-                        RunRemoteFilesystemRestoreOperation(backupLocation, restoreLocation, restoreFilesystemName, defrag, uri);
-                        Environment.Exit(0);
-                    }},
+                            Uri uri;
+                            if (Uri.TryCreate(url, UriKind.Absolute, out uri) == false)
+                            {
+                                throw new OptionException("specified destination server url is not valid", "restore-database");
+                            }
+
+                            RunRemoteFilesystemRestoreOperation(backupLocation, restoreLocation, restoreFilesystemName, defrag, uri);
+                            Environment.Exit(0);
+                        };
+                        isRestoreAction = true;
+                    }
+                },
 				{"restore-defrag", 
 					"Applicable only during restore, execute defrag after the restore is completed", key =>
 					{
 						defrag = true;
+					    requiresRestoreAction.Add("restore-defrag");
 					}},
-				{"restore-destination=", "The {0:path} of the new database. If not specified it will be located in default data directory", value => restoreLocation = value},
-				{"restore-source=", "The {0:path} of the backup", value => backupLocation = value},
-				{"restore-database-name=", "The {0:name} of the new database. If not specified, it will be extracted from backup. Only applicable during REMOTE restore", value => restoreDatabaseName = value},
-                {"restore-filesystem-name", "The {0:name} of the new filesystem. If not specified, it will be extracted from backup.", value => restoreFilesystemName = value},
+				{"restore-destination=", "The {0:path} of the new database. If not specified it will be located in default data directory", value =>
+				{
+				    restoreLocation = value;
+				    requiresRestoreAction.Add("restore-destination");
+				}},
+				{"restore-source=", "The {0:path} of the backup", value =>
+				{
+				    backupLocation = value;
+				    requiresRestoreAction.Add("restore-source");
+				}},
+				{"restore-database-name=", "The {0:name} of the new database. If not specified, it will be extracted from backup. Only applicable during REMOTE restore", value =>
+				{
+				    restoreDatabaseName = value;
+				    requiresRestoreAction.Add("restore-database-name");
+				}},
+                {"restore-filesystem-name", "The {0:name} of the new filesystem. If not specified, it will be extracted from backup.", value =>
+                {
+                    restoreFilesystemName = value;
+                    requiresRestoreAction.Add("restore-filesystem-name");
+                }},
 				{"encrypt-self-config", "Encrypt the RavenDB configuration file", file =>
 						{
 							actionToTake = () => ProtectConfiguration(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile);
@@ -284,6 +319,12 @@ namespace Raven.Server
 				PrintUsage(optionSet);
 				return;
 			}
+
+            if (!isRestoreAction && requiresRestoreAction.Any())
+            {
+                var joinedActions = string.Join(", ", requiresRestoreAction);
+                throw new OptionException(string.Format("when using {0}, --restore-source must be specified", joinedActions), joinedActions);
+            }
 
 			if (actionToTake == null)
 				actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser, noLog);
