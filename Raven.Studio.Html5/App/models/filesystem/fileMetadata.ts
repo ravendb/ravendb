@@ -14,9 +14,6 @@
     constructor(dto?: any) {
         if (dto) {
             this.ravenFSSize = dto['RavenFS-Size'];
-            this.ravenSynchronizationHistory = dto['Raven-Synchronization-History'];
-            this.ravenSynchronizationVersion = dto['Raven-Synchronization-Version'];
-            this.ravenSynchronizationSource = dto['Raven-Synchronization-Source'];
             this.creationDate = dto['Creation-Date'];
             this.lastModified = dto['Last-Modified'];            
             this.etag = dto['ETag'];
@@ -39,9 +36,6 @@
             'Creation-Date':this.creationDate,
             'Last-Modified': this.lastModified,
             'ETag': this.etag,
-            'Raven-Synchronization-History': this.ravenSynchronizationHistory,
-            'Raven-Synchronization-Version': this.ravenSynchronizationVersion,
-            'Raven-Synchronization-Source': this.ravenSynchronizationSource,
             'RavenFS-Size': this.ravenFSSize,
         };
 
