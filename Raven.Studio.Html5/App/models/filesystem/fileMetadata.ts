@@ -1,6 +1,6 @@
 ﻿class fileMetadata {
 
-    standardProps = ["RavenFs-Size", "Raven-Synchronization-History", "Raven-Synchronization-Version", "Raven-Synchronization-Source", "Last-Modified", "ETag", "Creation-Date"];
+    standardProps = ["RavenFs-Size", "Last-Modified", "ETag", "Creation-Date"];
 
     ravenFSSize: string;
     ravenSynchronizationHistory: any;
@@ -22,8 +22,6 @@
                 if (!this.standardProps.contains(property)) {
                     this.nonStandardProps = this.nonStandardProps || [];
                     var value = dto[property];
-                    //if (typeof(value) != "string" && typeof(value) != "number")
-                    //    value = JSON.parse(value);
                     this[property] = value;
                     this.nonStandardProps.push(property);
                 }

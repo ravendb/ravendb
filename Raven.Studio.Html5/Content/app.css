@@ -1,4 +1,4 @@
-@font-face {
+﻿@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -6681,7 +6681,7 @@ body {
   padding-left: 1em;
   text-decoration: underline;
   margin-top: 1em;
-  margin-bottom: 2em!important;
+  margin-bottom: 2em !important;
 }
 #sqlReplicationStats .subSectionTitle {
   text-align: left;
@@ -8037,10 +8037,37 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   margin-top: 95px;
   padding-top: 10px;
   padding-bottom: 40px;
+  max-width: 41%;
 }
 #editFileContainer hr {
-  border-color: red;
   margin-top: 5px;
+}
+#editFileContainer .query-metadata {
+  padding-top: 20px;
+}
+#editFileContainer .documents-links-container {
+  -webkit-column-count: 2;
+  /* Chrome, Safari, Opera */
+  -moz-column-count: 2;
+  /* Firefox */
+  column-count: 2;
+  -webkit-column-gap: 30px;
+  /* Chrome, Safari, Opera */
+  -moz-column-gap: 30px;
+  /* Firefox */
+  column-gap: 30px;
+  -moz-column-width: 10px;
+  -webkit-column-width: 10px;
+  column-width: 10px;
+}
+#editFileContainer .documents-links-container .document-link {
+  margin-left: 10px;
+  width: 80%;
+  overflow: hidden;
+  white-space: nowrap;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
 }
 .upload-queue {
   position: fixed;

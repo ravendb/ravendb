@@ -614,6 +614,12 @@ class appUrl {
         return "#filesystems/configuration?" + filesystemPart;
     }
 
+    static forEditFile(id: string, fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        var fileIdPart = id ? "&id=" + encodeURIComponent(id) : "";        
+        return "#filesystems/edit?" + fileIdPart + filesystemPart;
+    }
+
     /**
     * Gets the resource from the current web browser address. Returns the system database if no resource name is found.
     */

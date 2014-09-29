@@ -24,11 +24,11 @@ html, body {
 }
 
 .alert-warning h2 {
-	color: white;
+    color: white;
 }
 
 .alert-info h2 {
-	color: white;
+    color: white;
 }
 
 .alert-text {
@@ -84,57 +84,65 @@ html, body {
 .replicationError {
     color: red;
 }
-.exceptionText{
-    white-space: pre-wrap!important;
 
+.exceptionText {
+    white-space: pre-wrap !important;
 }
-#sqlReplicationStats{
-    .sqlStatsPanel
-    {
-        overflow-x:auto;
-        overflow-y:auto;
-        max-width:80vw;
-        
+
+#sqlReplicationStats {
+    .sqlStatsPanel {
+        overflow-x: auto;
+        overflow-y: auto;
+        max-width: 80vw;
     }
-    .sectionTitle{
-        text-align:left;
-        padding-left:1em;
-        text-decoration:underline;
-        margin-top:1em;
-        margin-bottom:2em!important;
+
+    .sectionTitle {
+        text-align: left;
+        padding-left: 1em;
+        text-decoration: underline;
+        margin-top: 1em;
+        margin-bottom: 2em !important;
     }
-    .subSectionTitle{
-        text-align:left;
-        padding-left:6em;
-        text-decoration:underline;        
-        margin-right:10em;
+
+    .subSectionTitle {
+        text-align: left;
+        padding-left: 6em;
+        text-decoration: underline;
+        margin-right: 10em;
     }
-    .statisticsSection{
-        .form-group{
-            margin-bottom:0;
-            label{
-                padding-top:0;
+
+    .statisticsSection {
+        .form-group {
+            margin-bottom: 0;
+
+            label {
+                padding-top: 0;
             }
-            p{
-                padding-top:0;
-                padding-bottom:0;
+
+            p {
+                padding-top: 0;
+                padding-bottom: 0;
             }
         }
     }
-    .meterTable{
-        overflow-x:visible;
-        overflow-y:visible;
-        margin-bottom:1%;
-        margin-top:1%;
-        padding-left:10%;
-        .column{
-            display:inline-block;
+
+    .meterTable {
+        overflow-x: visible;
+        overflow-y: visible;
+        margin-bottom: 1%;
+        margin-top: 1%;
+        padding-left: 10%;
+
+        .column {
+            display: inline-block;
         }
-        .headers{
+
+        .headers {
             white-space: nowrap;
         }
     }
 }
+
 #sqlReplications {
     .replications-container {
         margin-top: 10px;
@@ -415,7 +423,6 @@ html, body {
             @hoverColor: darken(@selectColor, 10%);
             @enabledColor: darken(@brand-success, 20%); //#3A822D;
             @disabledColor: @brand-danger; // #d9534f;
-
             .checkbox {
                 display: none;
                 position: absolute;
@@ -592,8 +599,8 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     }
 }
 
-#index-merge-suggestions{
-    .index-name{
+#index-merge-suggestions {
+    .index-name {
         text-decoration: underline;
         font-weight: bold;
     }
@@ -617,7 +624,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 .indexes-container, #index-merge-suggestions {
     margin-top: 10px;
 
-    .index-group { 
+    .index-group {
         .panel-heading {
             padding-top: 0;
 
@@ -640,21 +647,22 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 
 #logsContainer {
-	.logButtons {
-		margin-left:0;
-	}
-	.form-group {
-        margin-left:1%;
-    } 
+    .logButtons {
+        margin-left: 0;
+    }
 
-	.statsBar{        
-        padding-left:5%;
+    .form-group {
+        margin-left: 1%;
+    }
+
+    .statsBar {
+        padding-left: 5%;
         background-color: aliceblue;
     }
 }
 
 
-#watchTrafficContainer{
+#watchTrafficContainer {
 
     .logButtons {
         margin-left: 0;
@@ -1367,15 +1375,15 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         .navbar-nav {
             padding-left: 10px;
         }
-		.navbar-right {
-			padding-left: 0px;
-		}
+
+        .navbar-right {
+            padding-left: 0px;
+        }
     }
 
-	  #goToDocInput {
-		  width: 9em;
-      }
-
+    #goToDocInput {
+        width: 9em;
+    }
     /* When the screen width < 1150, shrink down the padding between the nav bar items. */
     @media (max-width: 1150px) {
         .nav {
@@ -1394,6 +1402,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         .navbar-form {
             padding-left: 5px;
             padding-right: 5px;
+
             #goToDocInput {
                 width: 6em;
             }
@@ -1775,11 +1784,37 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
         margin-top: 95px;
         padding-top: 10px;
         padding-bottom: 40px;
+        max-width: 41%;
     }
 
     hr {
-        border-color: red;
         margin-top: 5px;
+    }
+
+    .query-metadata {
+        padding-top: 20px;
+    }
+
+    .documents-links-container {
+        -webkit-column-count: 2; /* Chrome, Safari, Opera */
+        -moz-column-count: 2; /* Firefox */
+        column-count: 2;
+        -webkit-column-gap: 30px; /* Chrome, Safari, Opera */
+        -moz-column-gap: 30px; /* Firefox */
+        column-gap: 30px;
+        -moz-column-width: 10px;
+        -webkit-column-width: 10px;
+        column-width: 10px;
+
+        .document-link {
+            margin-left: 10px;
+            width: 80%;
+            overflow: hidden;
+            white-space: nowrap;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+        }
     }
 }
 
@@ -1968,29 +2003,29 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 }
 
 .jsContent, .nvtooltip {
-	.string {
-		color: #D14;
-	}
+    .string {
+        color: #D14;
+    }
 
-	.number {
-		color: #099;
-	}
+    .number {
+        color: #099;
+    }
 
-	.boolean {
-		color: #0000ff;
-	}
+    .boolean {
+        color: #0000ff;
+    }
 
-	.null {
-		color: #0000ff;
-	}
+    .null {
+        color: #0000ff;
+    }
 
-	.key {
-		color: #000;
-	}
+    .key {
+        color: #000;
+    }
 }
 
 
 .nvtooltip {
-	border-radius: 5px;
-	box-shadow: 2px 2px 5px 0 rgba(50, 50, 50, 0.61);
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px 0 rgba(50, 50, 50, 0.61);
 }
