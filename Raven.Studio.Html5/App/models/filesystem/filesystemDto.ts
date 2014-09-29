@@ -47,6 +47,7 @@ interface filesystemStatisticsDto {
 
 interface filesystemFileHeaderDto {
     Name: string;
+    FullPath: string;
 
     TotalSize?: number;
     UploadedSize: number;

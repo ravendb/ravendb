@@ -10,16 +10,16 @@ class file implements documentBase {
 
     constructor(dto?: filesystemFileHeaderDto, excludeDirectoryInId?: boolean) {
         if (dto) {
-            if (dto.Name && dto.Name[0] === "/") {
-                dto.Name = dto.Name.replace("/", "");
+            if (dto.FullPath && dto.FullPath[0] === "/") {
+                dto.FullPath = dto.FullPath.replace("/", "");
             }
 
             if (excludeDirectoryInId) {
-                this.id = dto.Name.substring(dto.Name.lastIndexOf("/") + 1);
-                this.directory = dto.Name.substring(0, dto.Name.lastIndexOf("/"))
+                this.id = dto.FullPath.substring(dto.FullPath.lastIndexOf("/") + 1);
+                this.directory = dto.FullPath.substring(0, dto.FullPath.lastIndexOf("/"));
             }
             else {
-                this.id = dto.Name;
+                this.id = dto.FullPath;
             }
             if (dto.HumaneTotalSize === " Bytes") {
                 dto.HumaneTotalSize = "0 Bytes";
