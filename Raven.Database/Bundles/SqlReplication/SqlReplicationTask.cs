@@ -620,9 +620,9 @@ namespace Raven.Database.Bundles.SqlReplication
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				const string prefix = "Raven/SqlReplication/Configuration/";
-			    
+
                 var connectionsDoc = accessor.Documents.DocumentByKey(connectionsDocumentName);
-                var sqlReplicationConnections = connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>();
+				var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections(); // backward compatibility
                 
 				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(prefix, 0, int.MaxValue, null))
 				{
@@ -653,7 +653,7 @@ namespace Raven.Database.Bundles.SqlReplication
 	        }
 	        if (string.IsNullOrWhiteSpace(cfg.PredefinedConnectionStringSettingName) == false)
 	        {
-	            var matchingConnection = sqlReplicationConnections.predefinedConnections.FirstOrDefault(x => string.Compare(x.Name, cfg.PredefinedConnectionStringSettingName, StringComparison.InvariantCultureIgnoreCase) == 0);
+	            var matchingConnection = sqlReplicationConnections.PredefinedConnections.FirstOrDefault(x => string.Compare(x.Name, cfg.PredefinedConnectionStringSettingName, StringComparison.InvariantCultureIgnoreCase) == 0);
 	            if (matchingConnection != null)
 	            {
 	                cfg.ConnectionString = matchingConnection.ConnectionString;
