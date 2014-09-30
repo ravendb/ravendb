@@ -24,22 +24,19 @@ namespace Raven.Database.Server.RavenFS.Storage
     {
         protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 
-        protected readonly DocumentDatabase systemDatabase;
         protected readonly RavenFileSystem filesystem;
         protected readonly string backupSourceDirectory;
         protected string backupDestinationDirectory;
         protected bool incrementalBackup;
         protected readonly FileSystemDocument filesystemDocument;
 
-        protected BaseBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupSourceDirectory, string backupDestinationDirectory, bool incrementalBackup, FileSystemDocument filesystemDocument)
+        protected BaseBackupOperation(RavenFileSystem filesystem, string backupSourceDirectory, string backupDestinationDirectory, bool incrementalBackup, FileSystemDocument filesystemDocument)
         {
             if (filesystem == null) throw new ArgumentNullException("filesystem");
             if (filesystemDocument == null) throw new ArgumentNullException("filesystemDocument");
-            if (systemDatabase == null) throw new ArgumentNullException("systemDatabase");
             if (backupSourceDirectory == null) throw new ArgumentNullException("backupSourceDirectory");
             if (backupDestinationDirectory == null) throw new ArgumentNullException("backupDestinationDirectory");
 
-            this.systemDatabase = systemDatabase;
             this.filesystem = filesystem;
             this.backupSourceDirectory = backupSourceDirectory.ToFullPath();
             this.backupDestinationDirectory = backupDestinationDirectory.ToFullPath();
@@ -51,17 +48,8 @@ namespace Raven.Database.Server.RavenFS.Storage
 
         protected abstract void ExecuteBackup(string backupPath, bool isIncrementalBackup);
 
-         protected virtual void OperationFinished()
-         {
-             
-         }
-
-        protected string BackupStatusDocumentKey
+        protected virtual void OperationFinished()
         {
-            get
-            {
-                return BackupStatus.RavenFilesystemBackupStatusDocumentKey(filesystemDocument.Id);
-            }
         }
 
         public void Execute()
@@ -148,28 +136,50 @@ namespace Raven.Database.Server.RavenFS.Storage
             }
         }
 
+        private BackupStatus GetBackupStatus()
+        {
+            RavenJObject backupStatus = null;
+            try
+            {
+                filesystem.Storage.Batch(accessor => backupStatus = accessor.GetConfig(BackupStatus.RavenBackupStatusDocumentKey));
+            }
+            catch (FileNotFoundException e)
+            {
+                // config doesn't exists
+                return null;
+            }
+            return backupStatus.JsonDeserialization<BackupStatus>();
+        }
+
+        private void SetBackupStatus(BackupStatus backupStatus)
+        {
+            filesystem.Storage.Batch(accessor => accessor.SetConfig(BackupStatus.RavenBackupStatusDocumentKey, RavenJObject.FromObject(backupStatus)));
+        }
+
+        private void DeleteBackupStatus()
+        {
+            filesystem.Storage.Batch(accessor => accessor.DeleteConfig(BackupStatus.RavenBackupStatusDocumentKey));
+        }
+
         protected void CompleteBackup()
         {
             try
             {
                 log.Info("Backup completed");
-                var jsonDocument = systemDatabase.Documents.Get(BackupStatusDocumentKey, null);
-                if (jsonDocument == null)
+                var backupStatus = GetBackupStatus();
+                if (backupStatus == null)
                     return;
 
-                var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
                 backupStatus.IsRunning = false;
                 backupStatus.Completed = SystemTime.UtcNow;
-                systemDatabase.Documents.Put(BackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
-                             jsonDocument.Metadata,
-                             null);
+                SetBackupStatus(backupStatus);
             }
             catch (Exception e)
             {
                 log.WarnException("Failed to update completed backup status, will try deleting document", e);
                 try
                 {
-                    systemDatabase.Documents.Delete(BackupStatusDocumentKey, null, null);
+                    DeleteBackupStatus();
                 }
                 catch (Exception ex)
                 {
@@ -183,10 +193,9 @@ namespace Raven.Database.Server.RavenFS.Storage
             try
             {
                 log.Info(newMsg);
-                var jsonDocument = systemDatabase.Documents.Get(BackupStatusDocumentKey, null);
-                if (jsonDocument == null)
+                var backupStatus = GetBackupStatus();
+                if (backupStatus == null)
                     return;
-                var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
                 backupStatus.Messages.Add(new BackupStatus.BackupMessage
                 {
                     Message = newMsg,
@@ -194,9 +203,7 @@ namespace Raven.Database.Server.RavenFS.Storage
                     Severity = severity,
                     Details = details
                 });
-                systemDatabase.Documents.Put(BackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
-                             jsonDocument.Metadata,
-                             null);
+                SetBackupStatus(backupStatus);
             }
             catch (Exception e)
             {

@@ -511,7 +511,7 @@ namespace Raven.Client.Connection.Async
         /// <summary>
         /// Begins an async restore operation
         /// </summary>
-        Task StartRestoreAsync(DatabaseRestoreRequest restoreRequest);
+        Task<Operation> StartRestoreAsync(DatabaseRestoreRequest restoreRequest);
 
         /// <summary>
         /// Begins an async backup operation

@@ -1,10 +1,4 @@
-﻿using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Raven.Client.Connection;
-using Raven.Client.Document;
-using Raven.Json.Linq;
-using System;
-using System.Net;
+﻿using System.Net;
 namespace Raven.Backup
 {
     public class BackupParameters

@@ -54,9 +54,9 @@ namespace Raven.Client.Connection
             asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument, incremental, databaseName).WaitUnwrap();
 		}
 
-		public void StartRestore(DatabaseRestoreRequest restoreRequest)
+		public Operation StartRestore(DatabaseRestoreRequest restoreRequest)
 		{
-			asyncAdminServerClient.StartRestoreAsync(restoreRequest).WaitUnwrap();
+		    return asyncAdminServerClient.StartRestoreAsync(restoreRequest).ResultUnwrap();
 		}
 
 		public string GetIndexingStatus()

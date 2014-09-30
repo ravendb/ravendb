@@ -254,10 +254,20 @@ namespace Raven.Database.Server.RavenFS.Controllers
             var filesystemDocument = backupRequest.FileSystemDocument;
             var backupDestinationDirectory = backupRequest.BackupLocation;
 
-            var document = Database.Documents.Get(BackupStatus.RavenFilesystemBackupStatusDocumentKey(FilesystemName), null);
+            RavenJObject document = null;
+            try
+            {
+                FileSystem.Storage.Batch(accessor => document = accessor.GetConfig(BackupStatus.RavenBackupStatusDocumentKey));
+            }
+            catch (FileNotFoundException e)
+            {
+                // ok, there isn't another backup in progress
+            }
+            
+
             if (document != null)
             {
-                var backupStatus = document.DataAsJson.JsonDeserialization<BackupStatus>();
+                var backupStatus = document.JsonDeserialization<BackupStatus>();
                 if (backupStatus.IsRunning)
                 {
                     throw new InvalidOperationException("Backup is already running");
@@ -279,11 +289,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
             }
 
-            Database.Documents.Put(BackupStatus.RavenFilesystemBackupStatusDocumentKey(FilesystemName), null, RavenJObject.FromObject(new BackupStatus
+            FileSystem.Storage.Batch(accessor => accessor.SetConfig(BackupStatus.RavenBackupStatusDocumentKey, RavenJObject.FromObject(new BackupStatus
             {
                 Started = SystemTime.UtcNow,
                 IsRunning = true,
-            }), new RavenJObject(), null);
+            })));
 
             if (filesystemDocument.Settings.ContainsKey("Raven/StorageTypeName") == false)
                 filesystemDocument.Settings["Raven/StorageTypeName"] = transactionalStorage.FriendlyName ?? transactionalStorage.GetType().AssemblyQualifiedName;
@@ -364,7 +374,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             if (bool.TryParse(GetQueryStringValue("defrag"), out defrag))
                 restoreRequest.Defrag = defrag;
 
-            //TODO: add task to pending task list like in ImportDatabase
+            // as we don't support Operations in RavenFS simply start new task 
             Task.Factory.StartNew(() =>
             {
                 if (!string.IsNullOrWhiteSpace(restoreRequest.FilesystemLocation))

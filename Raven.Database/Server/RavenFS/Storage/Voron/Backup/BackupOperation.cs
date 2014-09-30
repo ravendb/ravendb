@@ -15,10 +15,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Backup
     {
         private readonly StorageEnvironment env;
 
-        public BackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupSourceDirectory,
+        public BackupOperation(RavenFileSystem filesystem, string backupSourceDirectory,
                                string backupDestinationDirectory, StorageEnvironment env, bool incrementalBackup,
                                FileSystemDocument fileSystemDocument)
-            : base(systemDatabase, filesystem, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, fileSystemDocument)
+            : base(filesystem, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, fileSystemDocument)
         {
             if (env == null) throw new ArgumentNullException("env");
 
