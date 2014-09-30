@@ -25,6 +25,15 @@ class replications extends viewModelBase {
     isConfigSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
 
+    readFromAllAllowWriteToSecondaries = ko.computed(() => {
+        var behaviour = this.replicationsSetup().clientFailoverBehaviour();
+        if (behaviour == null) {
+            return false;
+        }
+        var tokens = behaviour.split(",");
+        return tokens.contains('ReadFromAllServers') && tokens.contains('AllowReadsFromSecondariesAndWritesToSecondaries');
+    });
+
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
         var db = this.activeDatabase();
