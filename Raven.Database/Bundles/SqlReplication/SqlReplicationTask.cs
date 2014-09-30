@@ -38,8 +38,16 @@ namespace Raven.Database.Bundles.SqlReplication
 	[ExportMetadata("Bundle", "sqlReplication")]
 	public class SqlReplicationTask : IStartupTask, IDisposable
 	{
-		public const string RavenSqlreplicationStatus = "Raven/SqlReplication/Status";
-        const string connectionsDocumentName = "Raven/SqlReplication/Connections";
+		private class ReplicatedDoc
+		{
+			public RavenJObject Document;
+			public Etag Etag;
+			public int SerializedSizeOnDisk;
+			public string Key;
+		}
+
+		private const string RavenSqlreplicationStatus = "Raven/SqlReplication/Status";
+        private const string connectionsDocumentName = "Raven/SqlReplication/Connections";
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 
 		public event Action<int> AfterReplicationCompleted = delegate { };
@@ -58,7 +66,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		private Etag lastLatestEtag;
         public readonly ConcurrentDictionary<string, SqlReplicationMetricsCountersManager> SqlReplicationMetricsCounters = 
             new ConcurrentDictionary<string, SqlReplicationMetricsCountersManager>();
-        
+
 		public void Execute(DocumentDatabase database)
 		{
 			prefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
@@ -233,6 +241,21 @@ namespace Raven.Database.Bundles.SqlReplication
 				var successes = new ConcurrentQueue<Tuple<SqlReplicationConfig, Etag>>();
 				try
 				{
+					var itemsToReplicate = documents.Select(x =>
+					{
+						DocumentRetriever.EnsureIdInMetadata(x);
+						var doc = x.ToJson();
+						doc[Constants.DocumentIdFieldName] = x.Key;
+
+						return new ReplicatedDoc
+						{
+							Document = doc,
+							Etag = x.Etag,
+							Key = x.Key,
+							SerializedSizeOnDisk = x.SerializedSizeOnDisk
+						};
+					}).ToList();
+
 					BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(Database.WorkContext, relevantConfigs, replicationConfig =>
 					{
 						try
@@ -242,7 +265,7 @@ namespace Raven.Database.Bundles.SqlReplication
 							var lastReplicatedEtag = GetLastEtagFor(localReplicationStatus, replicationConfig);
 
 							var deletedDocs = deletedDocsByConfig[replicationConfig];
-							var docsToReplicate = documents
+							var docsToReplicate = itemsToReplicate
 								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
                                 .Where(document =>
                                 {
@@ -360,7 +383,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		private Etag HandleDeletesAndChangesMerging(List<ListItem> deletedDocs, List<JsonDocument> docsToReplicate)
+		private Etag HandleDeletesAndChangesMerging(List<ListItem> deletedDocs, List<ReplicatedDoc> docsToReplicate)
 		{
 			// This code is O(N^2), I don't like it, but we don't have a lot of deletes, and in order for it to be really bad
 			// we need a lot of deletes WITH a lot of changes at the same time
@@ -489,16 +512,16 @@ namespace Raven.Database.Bundles.SqlReplication
 		}
 
 
-		private ConversionScriptResult ApplyConversionScript(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
+		private ConversionScriptResult ApplyConversionScript(SqlReplicationConfig cfg, IEnumerable<ReplicatedDoc> docs)
 		{
 			var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
 			var result = new ConversionScriptResult();
-			foreach (var jsonDocument in docs)
+			foreach (var replicatedDoc in docs)
 			{
 				Database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 				if (string.IsNullOrEmpty(cfg.RavenEntityName) == false)
 				{
-					var entityName = jsonDocument.Metadata.Value<string>(Constants.RavenEntityName);
+					var entityName = replicatedDoc.Document[Constants.Metadata].Value<string>(Constants.RavenEntityName);
 					if (string.Equals(cfg.RavenEntityName, entityName, StringComparison.InvariantCultureIgnoreCase) == false)
 						continue;
 				}
@@ -506,36 +529,33 @@ namespace Raven.Database.Bundles.SqlReplication
 				var patcher = new SqlReplicationScriptedJsonPatcher(Database, result, cfg, jsonDocument.Key);
 				using (var scope = new SqlReplicationScriptedJsonPatcherOperationScope(Database))
 				{
-					try
-					{
-						DocumentRetriever.EnsureIdInMetadata(jsonDocument);
-						var document = jsonDocument.ToJson();
-						document[Constants.DocumentIdFieldName] = jsonDocument.Key;
+				try
+				{
 						patcher.Apply(scope, document, new ScriptedPatchRequest { Script = cfg.Script }, jsonDocument.SerializedSizeOnDisk);
 
-						if (log.IsDebugEnabled && patcher.Debug.Count > 0)
-						{
-							log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", jsonDocument.Key, cfg.Name, string.Join("\r\n", patcher.Debug));
-
-							patcher.Debug.Clear();
-						}
-
-						replicationStats.ScriptSuccess();
-					}
-					catch (ParseException e)
+					if (log.IsDebugEnabled && patcher.Debug.Count > 0)
 					{
-						replicationStats.MarkScriptAsInvalid(Database, cfg.Script);
+						log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", replicatedDoc.Key, cfg.Name, string.Join("\r\n", patcher.Debug));
 
-						log.WarnException("Could not parse SQL Replication script for " + cfg.Name, e);
+						patcher.Debug.Clear();
+					}
 
-						return result;
-					}
-					catch (Exception e)
-					{
-						replicationStats.RecordScriptError(Database);
-						log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + jsonDocument.Key, e);
-					}
+					replicationStats.ScriptSuccess();
 				}
+				catch (ParseException e)
+				{
+					replicationStats.MarkScriptAsInvalid(Database, cfg.Script);
+
+					log.WarnException("Could not parse SQL Replication script for " + cfg.Name, e);
+
+					return result;
+				}
+				catch (Exception e)
+				{
+					replicationStats.RecordScriptError(Database);
+					log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + replicatedDoc.Key, e);
+				}
+			}
 			}
 			return result;
 		}
@@ -596,7 +616,7 @@ namespace Raven.Database.Bundles.SqlReplication
                 alert = stats.LastAlert;
             }
             catch (Exception e)
-            {
+		{
                 alert = new Alert()
                 {
                     AlertLevel = AlertLevel.Error,
@@ -637,7 +657,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		}
 
         private bool PrepareSqlReplicationConfig(SqlReplicationConfig cfg, string sqlReplicationConfigDocumentKey, SqlReplicationStatistics replicationStats, SqlReplicationConnections sqlReplicationConnections, bool writeToLog = true, bool validateSqlReplicationName = true)
-	    {
+					{
             if (validateSqlReplicationName && string.IsNullOrWhiteSpace(cfg.Name))
 	        {
                 if (writeToLog)
@@ -650,9 +670,9 @@ namespace Raven.Database.Bundles.SqlReplication
                     Message = string.Format("Could not find name for sql replication document {0}, ignoring", sqlReplicationConfigDocumentKey)
 	            };
 	            return false;
-	        }
+					}
 	        if (string.IsNullOrWhiteSpace(cfg.PredefinedConnectionStringSettingName) == false)
-	        {
+					{
 	            var matchingConnection = sqlReplicationConnections.PredefinedConnections.FirstOrDefault(x => string.Compare(x.Name, cfg.PredefinedConnectionStringSettingName, StringComparison.InvariantCultureIgnoreCase) == 0);
 	            if (matchingConnection != null)
 	            {
@@ -679,12 +699,12 @@ namespace Raven.Database.Bundles.SqlReplication
 	        }
 	        else if (string.IsNullOrWhiteSpace(cfg.ConnectionStringName) == false)
 	        {
-	            var connectionString = ConfigurationManager.ConnectionStrings[cfg.ConnectionStringName];
-	            if (connectionString == null)
-	            {
+						var connectionString = ConfigurationManager.ConnectionStrings[cfg.ConnectionStringName];
+						if (connectionString == null)
+						{
                     if (writeToLog)
-	                log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
-	                    cfg.ConnectionStringName,
+							log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
+								cfg.ConnectionStringName,
                         sqlReplicationConfigDocumentKey);
 
 	                replicationStats.LastAlert = new Alert()
@@ -697,16 +717,16 @@ namespace Raven.Database.Bundles.SqlReplication
                             sqlReplicationConfigDocumentKey)
 	                };
                     return false;
-	            }
-	            cfg.ConnectionString = connectionString.ConnectionString;
-	        }
-	        else if (string.IsNullOrWhiteSpace(cfg.ConnectionStringSettingName) == false)
-	        {
-	            var setting = Database.Configuration.Settings[cfg.ConnectionStringSettingName];
-	            if (string.IsNullOrWhiteSpace(setting))
-	            {
+						}
+						cfg.ConnectionString = connectionString.ConnectionString;
+					}
+					else if (string.IsNullOrWhiteSpace(cfg.ConnectionStringSettingName) == false)
+					{
+						var setting = Database.Configuration.Settings[cfg.ConnectionStringSettingName];
+						if (string.IsNullOrWhiteSpace(setting))
+						{
                     if (writeToLog)
-	                log.Warn("Could not find setting named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
+							log.Warn("Could not find setting named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
 	                    cfg.ConnectionStringSettingName,
                         sqlReplicationConfigDocumentKey);
 	                replicationStats.LastAlert = new Alert()
@@ -719,15 +739,15 @@ namespace Raven.Database.Bundles.SqlReplication
                             sqlReplicationConfigDocumentKey)
 	                };
                     return false;
-	            }
-	        }
+						}
+					}
 	        return true;
-	    }
+				}
 
-	    public void Dispose()
+		public void Dispose()
 		{
 			if(prefetchingBehavior != null)
-				prefetchingBehavior.Dispose();
+			prefetchingBehavior.Dispose();
 		}
 	}
 }
