@@ -18,6 +18,10 @@ using Xunit;
 
 namespace Raven.Tests.Bundles.SqlReplication
 {
+	using System.Diagnostics;
+	using Database.Extensions;
+	using Database.Tasks;
+
 	public class CanReplicate : RavenTest
 	{
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
@@ -44,7 +48,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 	});
 }";
 
-		private void CreateRdbmsSchema()
+		private void CreateRdbmsSchema(string tablePrefix = null)
 		{
 			var providerFactory = DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
 			using (var con = providerFactory.CreateConnection())
@@ -60,6 +64,11 @@ IF OBJECT_ID('Orders') is not null
 IF OBJECT_ID('OrderLines') is not null 
 	DROP TABLE [dbo].[OrderLines]
 ";
+					if (tablePrefix != null)
+					{
+						dbCommand.CommandText = dbCommand.CommandText.Replace("Orders", "Orders" + tablePrefix).Replace("OrderLines", "OrderLines" + tablePrefix);
+					}
+
 					dbCommand.ExecuteNonQuery();
 
 					dbCommand.CommandText = @"
@@ -79,6 +88,11 @@ CREATE TABLE [dbo].[Orders]
 	[TotalCost] [int] NOT NULL
 )
 ";
+					if (tablePrefix != null)
+					{
+						dbCommand.CommandText = dbCommand.CommandText.Replace("[Orders]", "[Orders" + tablePrefix + "]").Replace("[OrderLines]", "[OrderLines" + tablePrefix + "]");
+					}
+
 					dbCommand.ExecuteNonQuery();
 				}
 			}
@@ -129,7 +143,106 @@ CREATE TABLE [dbo].[Orders]
 						Assert.Equal(2, dbCommand.ExecuteScalar());
 					}
 				}
+			}
+		}
 
+		[FactIfSqlServerIsAvailable]
+		public void MultipleScriptsRunOverTheSameCollection()
+		{
+			CreateRdbmsSchema();
+			CreateRdbmsSchema("2");
+
+			using (var store = NewDocumentStore())
+			{
+				var eventSlim = new ManualResetEventSlim(false);
+
+				int testCount = 1000;
+				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+					.First().AfterReplicationCompleted += successCount =>
+					{
+						if (GetOrdersCount() == testCount)
+						{
+							if (GetOrdersCount("2") == testCount)
+								eventSlim.Set();
+						}
+					};
+
+				using (var session = store.OpenSession())
+				{
+					for (int i = 0; i < testCount; i++)
+					{
+						session.Store(new Order
+						{
+							OrderLines = new List<OrderLine>
+							{
+								new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+								new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+							}
+						});
+					}
+					
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new SqlReplicationConfig
+					{
+						Id = "Raven/SqlReplication/Configuration/OrdersAndLines",
+						Name = "OrdersAndLines",
+						ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString,
+						FactoryName = FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
+						RavenEntityName = "Orders",
+						SqlReplicationTables =
+						{
+							new SqlReplicationTable
+							{
+								TableName = "Orders",
+								DocumentKeyColumn = "Id"
+							},
+							new SqlReplicationTable
+							{
+								TableName = "OrderLines",
+								DocumentKeyColumn = "OrderId"
+							},
+						},
+						Script = defaultScript
+					});
+
+					session.Store(new SqlReplicationConfig
+					{
+						Id = "Raven/SqlReplication/Configuration/OrdersAndLines2",
+						Name = "OrdersAndLines2",
+						ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString,
+						FactoryName = FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
+						RavenEntityName = "Orders",
+						SqlReplicationTables =
+						{
+							new SqlReplicationTable
+							{
+								TableName = "Orders2",
+								DocumentKeyColumn = "Id"
+							},
+							new SqlReplicationTable
+							{
+								TableName = "OrderLines2",
+								DocumentKeyColumn = "OrderId"
+							},
+						},
+						Script = defaultScript.Replace("replicateToOrders", "replicateToOrders2").Replace("replicateToOrderLines", "replicateToOrderLines2")
+					});
+
+					session.SaveChanges();
+				}
+
+				eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+				Assert.Null(store.DocumentDatabase.Get(Constants.RavenAlerts, null));
+				Assert.Equal(testCount, GetOrdersCount());
+				Assert.Equal(2 * testCount, GetOrderLinesCount());
+
+				Assert.Equal(testCount, GetOrdersCount("2"));
+				Assert.Equal(2 * testCount, GetOrderLinesCount("2"));
 			}
 		}
 
@@ -170,11 +283,12 @@ CREATE TABLE [dbo].[Orders]
 				eventSlim.Wait(TimeSpan.FromMinutes(5));
 
 				Assert.Equal(testCount, GetOrdersCount());
+				Assert.Equal(2 * testCount, GetOrderLinesCount());
 
 			}
 		}
 
-		private static int GetOrdersCount()
+		private static int GetOrdersCount(string tableSuffix = "")
 		{
 			var providerFactory =
 					DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
@@ -185,8 +299,25 @@ CREATE TABLE [dbo].[Orders]
 
 				using (var dbCommand = con.CreateCommand())
 				{
-					dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+					dbCommand.CommandText = " SELECT COUNT(*) FROM Orders" + tableSuffix;
 					return (int) dbCommand.ExecuteScalar();
+				}
+			}
+		}
+
+		private static int GetOrderLinesCount(string tableSuffix = "")
+		{
+			var providerFactory =
+					DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+			using (var con = providerFactory.CreateConnection())
+			{
+				con.ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+				con.Open();
+
+				using (var dbCommand = con.CreateCommand())
+				{
+					dbCommand.CommandText = " SELECT COUNT(*) FROM OrderLines" + tableSuffix;
+					return (int)dbCommand.ExecuteScalar();
 				}
 			}
 		}
