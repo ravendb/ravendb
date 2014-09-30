@@ -35,6 +35,14 @@ namespace Raven.Database.Bundles.SqlReplication
 	[ExportMetadata("Bundle", "sqlReplication")]
 	public class SqlReplicationTask : IStartupTask, IDisposable
 	{
+		private class ReplicatedDoc
+		{
+			public RavenJObject Document;
+			public Etag Etag;
+			public int SerializedSizeOnDisk;
+			public string Key;
+		}
+
 		private const string RavenSqlreplicationStatus = "Raven/SqlReplication/Status";
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 
@@ -214,6 +222,21 @@ namespace Raven.Database.Bundles.SqlReplication
 				var successes = new ConcurrentQueue<Tuple<SqlReplicationConfig, Etag>>();
 				try
 				{
+					var itemsToReplicate = documents.Select(x =>
+					{
+						DocumentRetriever.EnsureIdInMetadata(x);
+						var doc = x.ToJson();
+						doc[Constants.DocumentIdFieldName] = x.Key;
+
+						return new ReplicatedDoc
+						{
+							Document = doc,
+							Etag = x.Etag,
+							Key = x.Key,
+							SerializedSizeOnDisk = x.SerializedSizeOnDisk
+						};
+					}).ToList();
+
 					BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(Database.WorkContext, relevantConfigs, replicationConfig =>
 					{
 						try
@@ -221,7 +244,7 @@ namespace Raven.Database.Bundles.SqlReplication
 							var lastReplicatedEtag = GetLastEtagFor(localReplicationStatus, replicationConfig);
 
 							var deletedDocs = deletedDocsByConfig[replicationConfig];
-							var docsToReplicate = documents
+							var docsToReplicate = itemsToReplicate
 								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
                                 .Where(document =>
                                 {
@@ -327,7 +350,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		private Etag HandleDeletesAndChangesMerging(List<ListItem> deletedDocs, List<JsonDocument> docsToReplicate)
+		private Etag HandleDeletesAndChangesMerging(List<ListItem> deletedDocs, List<ReplicatedDoc> docsToReplicate)
 		{
 			// This code is O(N^2), I don't like it, but we don't have a lot of deletes, and in order for it to be really bad
 			// we need a lot of deletes WITH a lot of changes at the same time
@@ -411,7 +434,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			return leastReplicatedEtag;
 		}
 
-		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
+		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<ReplicatedDoc> docs)
 		{
 			var scriptResult = ApplyConversionScript(cfg, docs);
 			if (scriptResult.Data.Count == 0)
@@ -455,33 +478,30 @@ namespace Raven.Database.Bundles.SqlReplication
 		}
 
 
-		private ConversionScriptResult ApplyConversionScript(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
+		private ConversionScriptResult ApplyConversionScript(SqlReplicationConfig cfg, IEnumerable<ReplicatedDoc> docs)
 		{
 			var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
 			var result = new ConversionScriptResult();
-			foreach (var jsonDocument in docs)
+			foreach (var replicatedDoc in docs)
 			{
 				Database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 				if (string.IsNullOrEmpty(cfg.RavenEntityName) == false)
 				{
-					var entityName = jsonDocument.Metadata.Value<string>(Constants.RavenEntityName);
+					var entityName = replicatedDoc.Document[Constants.Metadata].Value<string>(Constants.RavenEntityName);
 					if (string.Equals(cfg.RavenEntityName, entityName, StringComparison.InvariantCultureIgnoreCase) == false)
 						continue;
 				}
-				var patcher = new SqlReplicationScriptedJsonPatcher(Database, result, cfg, jsonDocument.Key);
+				var patcher = new SqlReplicationScriptedJsonPatcher(Database, result, cfg, replicatedDoc.Key);
 				try
 				{
-					DocumentRetriever.EnsureIdInMetadata(jsonDocument);
-					var document = jsonDocument.ToJson();
-					document[Constants.DocumentIdFieldName] = jsonDocument.Key;
-					patcher.Apply(document, new ScriptedPatchRequest
+					patcher.Apply(replicatedDoc.Document, new ScriptedPatchRequest
 					{
 						Script = cfg.Script
-					}, jsonDocument.SerializedSizeOnDisk);
+					}, replicatedDoc.SerializedSizeOnDisk);
 
 					if (log.IsDebugEnabled && patcher.Debug.Count > 0)
 					{
-						log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", jsonDocument.Key, cfg.Name, string.Join("\r\n", patcher.Debug));
+						log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", replicatedDoc.Key, cfg.Name, string.Join("\r\n", patcher.Debug));
 
 						patcher.Debug.Clear();
 					}
@@ -499,7 +519,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				catch (Exception e)
 				{
 					replicationStats.RecordScriptError(Database);
-					log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + jsonDocument.Key, e);
+					log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + replicatedDoc.Key, e);
 				}
 			}
 			return result;
