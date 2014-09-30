@@ -9,11 +9,12 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Configuration;
 using System.Diagnostics;
-using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using ICSharpCode.NRefactory.PatternMatching;
+
 using metrics;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -26,11 +27,10 @@ using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
-using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+
 using Task = System.Threading.Tasks.Task;
-using System.Linq;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
@@ -46,8 +46,8 @@ namespace Raven.Database.Bundles.SqlReplication
 			public string Key;
 		}
 
-		private const string RavenSqlreplicationStatus = "Raven/SqlReplication/Status";
-        private const string connectionsDocumentName = "Raven/SqlReplication/Connections";
+		public const string RavenSqlReplicationStatus = "Raven/SqlReplication/Status";
+        private const string ConnectionsDocumentName = "Raven/SqlReplication/Connections";
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 
 		public event Action<int> AfterReplicationCompleted = delegate { };
@@ -63,8 +63,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		}
 		private PrefetchingBehavior prefetchingBehavior;
 
-		private Etag lastLatestEtag;
-        public readonly ConcurrentDictionary<string, SqlReplicationMetricsCountersManager> SqlReplicationMetricsCounters = 
+		public readonly ConcurrentDictionary<string, SqlReplicationMetricsCountersManager> SqlReplicationMetricsCounters = 
             new ConcurrentDictionary<string, SqlReplicationMetricsCountersManager>();
 
 		public void Execute(DocumentDatabase database)
@@ -134,7 +133,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private SqlReplicationStatus GetReplicationStatus()
 		{
-			var jsonDocument = Database.Documents.Get(RavenSqlreplicationStatus, null);
+			var jsonDocument = Database.Documents.Get(RavenSqlReplicationStatus, null);
 			return jsonDocument == null
 									? new SqlReplicationStatus()
 									: jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
@@ -371,9 +370,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				try
 				{
 					var obj = RavenJObject.FromObject(localReplicationStatus);
-					Database.Documents.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
+					Database.Documents.Put(RavenSqlReplicationStatus, null, obj, new RavenJObject(), null);
 
-					lastLatestEtag = latestEtag;
 					break;
 				}
 				catch (ConcurrencyException)
@@ -467,7 +465,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			return leastReplicatedEtag;
 		}
 
-		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs, out int countOfReplicatedItems)
+		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<ReplicatedDoc> docs, out int countOfReplicatedItems)
 		{
 		    countOfReplicatedItems = 0;
 			var scriptResult = ApplyConversionScript(cfg, docs);
@@ -511,7 +509,6 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-
 		private ConversionScriptResult ApplyConversionScript(SqlReplicationConfig cfg, IEnumerable<ReplicatedDoc> docs)
 		{
 			var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
@@ -526,40 +523,39 @@ namespace Raven.Database.Bundles.SqlReplication
 						continue;
 				}
 
-				var patcher = new SqlReplicationScriptedJsonPatcher(Database, result, cfg, jsonDocument.Key);
+				var patcher = new SqlReplicationScriptedJsonPatcher(Database, result, cfg, replicatedDoc.Key);
 				using (var scope = new SqlReplicationScriptedJsonPatcherOperationScope(Database))
 				{
-				try
-				{
-						patcher.Apply(scope, document, new ScriptedPatchRequest { Script = cfg.Script }, jsonDocument.SerializedSizeOnDisk);
-
-					if (log.IsDebugEnabled && patcher.Debug.Count > 0)
+					try
 					{
-						log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", replicatedDoc.Key, cfg.Name, string.Join("\r\n", patcher.Debug));
+						patcher.Apply(scope, replicatedDoc.Document, new ScriptedPatchRequest { Script = cfg.Script }, replicatedDoc.SerializedSizeOnDisk);
 
-						patcher.Debug.Clear();
+						if (log.IsDebugEnabled && patcher.Debug.Count > 0)
+						{
+							log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", replicatedDoc.Key, cfg.Name, string.Join("\r\n", patcher.Debug));
+
+							patcher.Debug.Clear();
+						}
+
+						replicationStats.ScriptSuccess();
 					}
+					catch (ParseException e)
+					{
+						replicationStats.MarkScriptAsInvalid(Database, cfg.Script);
 
-					replicationStats.ScriptSuccess();
-				}
-				catch (ParseException e)
-				{
-					replicationStats.MarkScriptAsInvalid(Database, cfg.Script);
+						log.WarnException("Could not parse SQL Replication script for " + cfg.Name, e);
 
-					log.WarnException("Could not parse SQL Replication script for " + cfg.Name, e);
-
-					return result;
+						return result;
+					}
+					catch (Exception e)
+					{
+						replicationStats.RecordScriptError(Database);
+						log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + replicatedDoc.Key, e);
+					}
 				}
-				catch (Exception e)
-				{
-					replicationStats.RecordScriptError(Database);
-					log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + replicatedDoc.Key, e);
-				}
-			}
 			}
 			return result;
 		}
-
 
 		private Etag GetLastEtagFor(SqlReplicationStatus replicationStatus, SqlReplicationConfig sqlReplicationConfig)
 		{
@@ -579,10 +575,25 @@ namespace Raven.Database.Bundles.SqlReplication
             try
             {
                 var stats = new SqlReplicationStatistics(sqlReplication.Name);
-                var docs = new List<JsonDocument>() { Database.Documents.Get(strDocumentId, null) };
+
+	            var jsonDocument = Database.Documents.Get(strDocumentId, null);
+				DocumentRetriever.EnsureIdInMetadata(jsonDocument);
+				var doc = jsonDocument.ToJson();
+				doc[Constants.DocumentIdFieldName] = jsonDocument.Key;
+
+                var docs = new List<ReplicatedDoc>
+                           {
+	                           new ReplicatedDoc
+	                           {
+		                           Document = doc,
+								   Etag = jsonDocument.Etag,
+								   Key = jsonDocument.Key,
+								   SerializedSizeOnDisk = jsonDocument.SerializedSizeOnDisk
+	                           }
+                           };
                 var scriptResult = ApplyConversionScript(sqlReplication, docs);
 
-                var connectionsDoc = Database.Documents.Get(connectionsDocumentName, null);
+                var connectionsDoc = Database.Documents.Get(ConnectionsDocumentName, null);
                 var sqlReplicationConnections = connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>();
 
                 if (PrepareSqlReplicationConfig( sqlReplication, sqlReplication.Name,  stats, sqlReplicationConnections, false,false))
@@ -641,7 +652,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			{
 				const string prefix = "Raven/SqlReplication/Configuration/";
 
-                var connectionsDoc = accessor.Documents.DocumentByKey(connectionsDocumentName);
+                var connectionsDoc = accessor.Documents.DocumentByKey(ConnectionsDocumentName);
 				var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections(); // backward compatibility
                 
 				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(prefix, 0, int.MaxValue, null))

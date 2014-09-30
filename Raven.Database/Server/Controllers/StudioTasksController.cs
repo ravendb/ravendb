@@ -347,13 +347,13 @@ for(var customFunction in customFunctions) {{
                 }, HttpStatusCode.NotFound);
             SqlReplicationStatistics stats;
             task.Statistics.TryRemove(sqlReplicationName, out stats);
-            var jsonDocument = Database.Documents.Get(SqlReplicationTask.RavenSqlreplicationStatus, null);
+            var jsonDocument = Database.Documents.Get(SqlReplicationTask.RavenSqlReplicationStatus, null);
             if (jsonDocument != null)
             {
                 var replicationStatus = jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
                 replicationStatus.LastReplicatedEtags.RemoveAll(x => x.Name == sqlReplicationName);
                 
-                Database.Documents.Put(SqlReplicationTask.RavenSqlreplicationStatus, null, RavenJObject.FromObject(replicationStatus), new RavenJObject(), null);
+                Database.Documents.Put(SqlReplicationTask.RavenSqlReplicationStatus, null, RavenJObject.FromObject(replicationStatus), new RavenJObject(), null);
             }
 
             return GetEmptyMessageAsTask(HttpStatusCode.NoContent);
