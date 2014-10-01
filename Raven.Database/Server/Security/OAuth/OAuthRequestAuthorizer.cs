@@ -140,13 +140,13 @@ namespace Raven.Database.Server.Security.OAuth
                         Host = controller.InnerRequest.RequestUri.Host,
 						Port = controller.InnerRequest.RequestUri.Port,
 					}.Uri.ToString(), msg);
-
 				}
+                controller.AddHeader("Access-Control-Expose-Headers", "OAuth-Source", msg);
 			}
 			msg.StatusCode = (HttpStatusCode)statusCode;
  
 			msg.Headers.Add("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
-
+            msg.Headers.Add("Access-Control-Expose-Headers", "WWW-Authenticate");
 			return msg;
 		}
 
