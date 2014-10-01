@@ -164,6 +164,7 @@
     <Compile Include="Data\QueryHeaderInformation.cs" />
     <Compile Include="Data\ReplicationInfoStatus.cs" />
     <Compile Include="Data\DatabaseRestoreRequest.cs" />
+    <Compile Include="Data\RestoreInProgress.cs" />
     <Compile Include="Data\RestoreStatus.cs" />
     <Compile Include="Data\ScriptedIndexResults.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />

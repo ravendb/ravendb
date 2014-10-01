@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
@@ -18,6 +19,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.RavenFS.Extensions;
@@ -367,7 +369,40 @@ namespace Raven.Database.Server.RavenFS.Controllers
             string documentDataDir;
             ravenConfiguration.FileSystem.DataDirectory = ResolveTenantDataDirectory(restoreRequest.FilesystemLocation, filesystemName, out documentDataDir);
             restoreRequest.FilesystemLocation = ravenConfiguration.FileSystem.DataDirectory;
-            
+
+            string anotherRestoreResourceName;
+            if (IsAnotherRestoreInProgress(out anotherRestoreResourceName))
+            {
+                if (restoreRequest.RestoreStartTimeout.HasValue)
+                {
+                    try
+                    {
+                        using (var cts = new CancellationTokenSource())
+                        {
+                            cts.CancelAfter(TimeSpan.FromSeconds(restoreRequest.RestoreStartTimeout.Value));
+                            var token = cts.Token;
+                            do
+                            {
+                                await Task.Delay(500, token);
+                            }
+                            while (IsAnotherRestoreInProgress(out anotherRestoreResourceName));
+                        }
+                    }
+                    catch (OperationCanceledException e)
+                    {
+                        return GetMessageWithString(string.Format("Another restore is still in progress (resource name = {0}). Waited {1} seconds for other restore to complete.", anotherRestoreResourceName, restoreRequest.RestoreStartTimeout.Value), HttpStatusCode.ServiceUnavailable);
+                    }
+                }
+                else
+                {
+                    return GetMessageWithString(string.Format("Another restore is in progress (resource name = {0})", anotherRestoreResourceName), HttpStatusCode.ServiceUnavailable);
+                }
+            }
+            Database.Documents.Put(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, RavenJObject.FromObject(new RestoreInProgress
+            {
+                Resource = filesystemName
+            }), new RavenJObject(), null);
+
             DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, null);
 
             bool defrag;
@@ -375,7 +410,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 restoreRequest.Defrag = defrag;
 
             // as we don't support Operations in RavenFS simply start new task 
-            Task.Factory.StartNew(() =>
+            var task = Task.Factory.StartNew(() =>
             {
                 if (!string.IsNullOrWhiteSpace(restoreRequest.FilesystemLocation))
                 {
@@ -407,9 +442,21 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 restoreStatus.Messages.Add("The new filesystem was created");
                 DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null,
                     RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+                Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
             }, TaskCreationOptions.LongRunning);
 
-            return GetEmptyMessage();
+            long id;
+            Database.Tasks.AddTask(task, new object(), new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.RestoreFilesystem,
+                Payload = "Restoring filesystem " + filesystemName + " from " + restoreRequest.BackupLocation
+            }, out id);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            });
         }
 
         private string FindFilesystemDocument(string rootBackupPath)

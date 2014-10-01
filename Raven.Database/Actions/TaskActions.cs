@@ -174,7 +174,9 @@ namespace Raven.Database.Actions
 
 			ImportDatabase,
 
-			RestoreDatabase
+			RestoreDatabase,
+
+            RestoreFilesystem
         }
 
       

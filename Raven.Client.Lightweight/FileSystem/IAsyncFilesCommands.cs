@@ -97,7 +97,7 @@ namespace Raven.Client.FileSystem
         Task CreateOrUpdateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null);
         Task DeleteFileSystemAsync(string fileSystemName = null, bool hardDelete = false);
 
-        Task StartRestore(FilesystemRestoreRequest restoreRequest);
+        Task<long> StartRestore(FilesystemRestoreRequest restoreRequest);
         Task StartBackup(string backupLocation, FileSystemDocument databaseDocument, bool incremental, string filesystemName);
     }
 
