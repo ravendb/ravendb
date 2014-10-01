@@ -20,9 +20,9 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent.Backup
 		private readonly JET_INSTANCE instance;
 	    private string backupConfigPath;
 
-        public BackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupSourceDirectory, string backupDestinationDirectory, bool incrementalBackup,
+        public BackupOperation(RavenFileSystem filesystem, string backupSourceDirectory, string backupDestinationDirectory, bool incrementalBackup,
 	                           FileSystemDocument filesystemDocument)
-            : base(systemDatabase, filesystem, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, filesystemDocument)
+            : base(filesystem, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, filesystemDocument)
         {
             instance = ((TransactionalStorage)filesystem.Storage).Instance;
             backupConfigPath = Path.Combine(backupDestinationDirectory, "RavenDB.Backup");

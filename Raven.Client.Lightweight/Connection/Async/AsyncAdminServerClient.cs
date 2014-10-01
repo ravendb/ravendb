@@ -85,11 +85,15 @@ namespace Raven.Client.Connection.Async
             }));
 		}
 
-		public Task StartRestoreAsync(DatabaseRestoreRequest restoreRequest)
+		public async Task<Operation> StartRestoreAsync(DatabaseRestoreRequest restoreRequest)
 		{
 		    var request = adminRequest.CreateRestoreRequest();
 
-			return request.WriteAsync(RavenJObject.FromObject(restoreRequest));
+			await request.WriteAsync(RavenJObject.FromObject(restoreRequest));
+
+		    var jsonResponse = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+
+		    return new Operation(innerAsyncServerClient, jsonResponse.Value<long>("OperationId"));
 		}
 
 		public Task<string> GetIndexingStatusAsync()

@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
@@ -18,6 +19,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.RavenFS.Extensions;
@@ -254,10 +256,20 @@ namespace Raven.Database.Server.RavenFS.Controllers
             var filesystemDocument = backupRequest.FileSystemDocument;
             var backupDestinationDirectory = backupRequest.BackupLocation;
 
-            var document = Database.Documents.Get(BackupStatus.RavenFilesystemBackupStatusDocumentKey(FilesystemName), null);
+            RavenJObject document = null;
+            try
+            {
+                FileSystem.Storage.Batch(accessor => document = accessor.GetConfig(BackupStatus.RavenBackupStatusDocumentKey));
+            }
+            catch (FileNotFoundException e)
+            {
+                // ok, there isn't another backup in progress
+            }
+            
+
             if (document != null)
             {
-                var backupStatus = document.DataAsJson.JsonDeserialization<BackupStatus>();
+                var backupStatus = document.JsonDeserialization<BackupStatus>();
                 if (backupStatus.IsRunning)
                 {
                     throw new InvalidOperationException("Backup is already running");
@@ -279,11 +291,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
             }
 
-            Database.Documents.Put(BackupStatus.RavenFilesystemBackupStatusDocumentKey(FilesystemName), null, RavenJObject.FromObject(new BackupStatus
+            FileSystem.Storage.Batch(accessor => accessor.SetConfig(BackupStatus.RavenBackupStatusDocumentKey, RavenJObject.FromObject(new BackupStatus
             {
                 Started = SystemTime.UtcNow,
                 IsRunning = true,
-            }), new RavenJObject(), null);
+            })));
 
             if (filesystemDocument.Settings.ContainsKey("Raven/StorageTypeName") == false)
                 filesystemDocument.Settings["Raven/StorageTypeName"] = transactionalStorage.FriendlyName ?? transactionalStorage.GetType().AssemblyQualifiedName;
@@ -357,15 +369,47 @@ namespace Raven.Database.Server.RavenFS.Controllers
             string documentDataDir;
             ravenConfiguration.FileSystem.DataDirectory = ResolveTenantDataDirectory(restoreRequest.FilesystemLocation, filesystemName, out documentDataDir);
             restoreRequest.FilesystemLocation = ravenConfiguration.FileSystem.DataDirectory;
-            
+
+            string anotherRestoreResourceName;
+            if (IsAnotherRestoreInProgress(out anotherRestoreResourceName))
+            {
+                if (restoreRequest.RestoreStartTimeout.HasValue)
+                {
+                    try
+                    {
+                        using (var cts = new CancellationTokenSource())
+                        {
+                            cts.CancelAfter(TimeSpan.FromSeconds(restoreRequest.RestoreStartTimeout.Value));
+                            var token = cts.Token;
+                            do
+                            {
+                                await Task.Delay(500, token);
+                            }
+                            while (IsAnotherRestoreInProgress(out anotherRestoreResourceName));
+                        }
+                    }
+                    catch (OperationCanceledException e)
+                    {
+                        return GetMessageWithString(string.Format("Another restore is still in progress (resource name = {0}). Waited {1} seconds for other restore to complete.", anotherRestoreResourceName, restoreRequest.RestoreStartTimeout.Value), HttpStatusCode.ServiceUnavailable);
+                    }
+                }
+                else
+                {
+                    return GetMessageWithString(string.Format("Another restore is in progress (resource name = {0})", anotherRestoreResourceName), HttpStatusCode.ServiceUnavailable);
+                }
+            }
+            Database.Documents.Put(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, RavenJObject.FromObject(new RestoreInProgress
+            {
+                Resource = filesystemName
+            }), new RavenJObject(), null);
+
             DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, null);
 
             bool defrag;
             if (bool.TryParse(GetQueryStringValue("defrag"), out defrag))
                 restoreRequest.Defrag = defrag;
 
-            //TODO: add task to pending task list like in ImportDatabase
-            Task.Factory.StartNew(() =>
+            var task = Task.Factory.StartNew(() =>
             {
                 if (!string.IsNullOrWhiteSpace(restoreRequest.FilesystemLocation))
                 {
@@ -397,9 +441,21 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 restoreStatus.Messages.Add("The new filesystem was created");
                 DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null,
                     RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+                Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
             }, TaskCreationOptions.LongRunning);
 
-            return GetEmptyMessage();
+            long id;
+            Database.Tasks.AddTask(task, new object(), new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.RestoreFilesystem,
+                Payload = "Restoring filesystem " + filesystemName + " from " + restoreRequest.BackupLocation
+            }, out id);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            });
         }
 
         private string FindFilesystemDocument(string rootBackupPath)
