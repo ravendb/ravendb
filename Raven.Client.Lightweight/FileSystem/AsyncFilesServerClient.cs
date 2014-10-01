@@ -1609,8 +1609,9 @@ namespace Raven.Client.FileSystem
 
                 try
                 {
-                    request.WriteWithObjectAsync(restoreRequest).Wait();
-                    var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                    await request.WriteWithObjectAsync(restoreRequest);
+
+                    var response = await request.ReadResponseJsonAsync();
                     return response.Value<long>("OperationId");
                 }
                 catch (Exception e)

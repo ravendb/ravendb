@@ -43,6 +43,8 @@ using Raven.Abstractions.Connection;
 
 using Raven.Client.Connection;
 
+using Raven.Client.Extensions;
+
 namespace Raven.Server
 {
 	using Raven.Abstractions.Util;
@@ -387,7 +389,7 @@ namespace Raven.Server
             }
 		}
 
-        private async static void RunRemoteFilesystemRestoreOperation(string backupLocation, string restoreLocation, string restoreFilesystemName, bool defrag, Uri uri, bool waitForRestore, int? timeout)
+        private static void RunRemoteFilesystemRestoreOperation(string backupLocation, string restoreLocation, string restoreFilesystemName, bool defrag, Uri uri, bool waitForRestore, int? timeout)
         {
             long operationId;
             using (var filesStore = new FilesStore
@@ -395,16 +397,14 @@ namespace Raven.Server
                                         Url = uri.AbsoluteUri
                                     }.Initialize())
             {
-                System.Threading.Tasks.TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
-
-                operationId = await filesStore.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
-                                                                 {
-                                                                     BackupLocation = backupLocation,
-                                                                     FilesystemLocation = restoreLocation,
-                                                                     FilesystemName = restoreFilesystemName,
-                                                                     Defrag = defrag,
-                                                                     RestoreStartTimeout = timeout
-                                                                 });
+                operationId = filesStore.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
+                                                                               {
+                                                                                   BackupLocation = backupLocation,
+                                                                                   FilesystemLocation = restoreLocation,
+                                                                                   FilesystemName = restoreFilesystemName,
+                                                                                   Defrag = defrag,
+                                                                                   RestoreStartTimeout = timeout
+                                                                               }).ResultUnwrap();
                 Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
             }
 
