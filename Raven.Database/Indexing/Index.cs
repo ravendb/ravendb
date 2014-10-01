@@ -527,18 +527,57 @@ namespace Raven.Database.Indexing
 
 		protected void UpdateIndexingStats(WorkContext workContext, IndexingWorkStats stats)
 		{
-			switch (stats.Operation)
+			// we'll try this for ten times, and if we get concurrency conflict, we do NOT fail, we'll retry
+			// if we can't run even after ten times, we just give up. The stats might be a bit out, but that is fine for us
+			bool run = true;
+			for (int i = 0; i < 10 && run; i++)
 			{
-				case IndexingWorkStats.Status.Map:
-					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateIndexingStats(indexId, stats));
-					break;
-				case IndexingWorkStats.Status.Reduce:
-					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateReduceStats(indexId, stats));
-					break;
-				case IndexingWorkStats.Status.Ignore:
-					break;
-				default:
-					throw new ArgumentOutOfRangeException();
+				run = false;
+				switch (stats.Operation)
+				{
+					case IndexingWorkStats.Status.Map:
+						workContext.TransactionalStorage.Batch(accessor =>
+						{
+							try
+							{
+								accessor.Indexing.UpdateIndexingStats(indexId, stats);
+							}
+							catch (Exception e)
+							{
+								if (accessor.IsWriteConflict(e))
+								{
+									run = true;
+									return;
+								}
+								throw;
+							}
+						});
+						break;
+					case IndexingWorkStats.Status.Reduce:
+						workContext.TransactionalStorage.Batch(accessor =>
+						{
+							try
+							{
+								accessor.Indexing.UpdateReduceStats(indexId, stats);
+							}
+							catch (Exception e)
+							{
+								if (accessor.IsWriteConflict(e))
+								{
+									run = true;
+									return;
+								}
+								throw;
+							}
+						});
+						break;
+					case IndexingWorkStats.Status.Ignore:
+						break;
+					default:
+						throw new ArgumentOutOfRangeException();
+				}
+				if(run)
+					Thread.Sleep(11);
 			}
 		}
 
@@ -1698,7 +1737,7 @@ namespace Raven.Database.Indexing
 
 		protected bool EnsureValidNumberOfOutputsForDocument(string sourceDocumentId, int numberOfAlreadyProducedOutputs)
 		{
-			var maxNumberOfIndexOutputs = indexDefinition.MaxIndexOutputsPerDocument ?? 
+			var maxNumberOfIndexOutputs = indexDefinition.MaxIndexOutputsPerDocument ??
 										(IsMapReduce ? context.Configuration.MaxMapReduceIndexOutputsPerDocument : context.Configuration.MaxSimpleIndexOutputsPerDocument);
 
 			if (maxNumberOfIndexOutputs == -1)
@@ -1708,7 +1747,7 @@ namespace Raven.Database.Indexing
 				return true;
 
 			var msg = string.Format("Index '{0}' has already produced {1} map results for a source document '{2}', while the allowed max number of outputs is {3} per one document. " +
-			                        "Please verify this index definition and consider a re-design of your entities or index.",
+									"Please verify this index definition and consider a re-design of your entities or index.",
 				PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs);
 			logIndexing.Warn(msg);
 			this.context.AddError(this.indexId, this.PublicName, sourceDocumentId, msg);
