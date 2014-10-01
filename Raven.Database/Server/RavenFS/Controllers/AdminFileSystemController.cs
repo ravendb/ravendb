@@ -409,7 +409,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
             if (bool.TryParse(GetQueryStringValue("defrag"), out defrag))
                 restoreRequest.Defrag = defrag;
 
-            // as we don't support Operations in RavenFS simply start new task 
             var task = Task.Factory.StartNew(() =>
             {
                 if (!string.IsNullOrWhiteSpace(restoreRequest.FilesystemLocation))
