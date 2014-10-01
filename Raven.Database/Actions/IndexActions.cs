@@ -459,7 +459,7 @@ namespace Raven.Database.Actions
 						if (sb.Length != 0)
 							sb.Append(" OR ");
 
-					    sb.Append("Tag:[[").Append(entityName).Append("]]");
+						sb.Append("Tag:[[").Append(term).Append("]]");
 				    }
 			    }
 		    }
