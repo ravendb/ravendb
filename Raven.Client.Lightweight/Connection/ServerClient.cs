@@ -13,6 +13,7 @@ using System.Net;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Replication;
 using Raven.Client.Changes;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -140,20 +141,11 @@ namespace Raven.Client.Connection
 				disableRequestCompression);
 		}
 
-		internal void ExecuteWithReplication(string method, Action<string> operation)
-		{
-			asyncServerClient.ExecuteWithReplication(method, operationMetadata =>
-			{
-				operation(operationMetadata.Url);
-				return null;
-			}).WaitUnwrap();
-		}
-
-		internal T ExecuteWithReplication<T>(string method, Func<string, T> operation)
+		internal T ExecuteWithReplication<T>(string method, Func<OperationMetadata, T> operation)
 		{
 			return
 				asyncServerClient.ExecuteWithReplication(method,
-					operationMetadata => Task.FromResult(operation(operationMetadata.Url))).ResultUnwrap();
+					operationMetadata => Task.FromResult(operation(operationMetadata))).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -805,6 +797,11 @@ namespace Raven.Client.Connection
 		{
 			return asyncServerClient.DisableAllCaching();
 		}
+
+        internal ReplicationDocument DirectGetReplicationDestinations(OperationMetadata operationMetadata)
+        {
+            return asyncServerClient.DirectGetReplicationDestinationsAsync(operationMetadata).ResultUnwrap();
+        }
 
 		#endregion
 

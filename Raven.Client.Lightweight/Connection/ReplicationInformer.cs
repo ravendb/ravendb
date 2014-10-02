@@ -34,10 +34,10 @@ namespace Raven.Client.Connection
 
 		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient)
 		{
-			return UpdateReplicationInformationIfNeededInternal(serverClient.Url, key => serverClient.DirectGetAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials), key).ResultUnwrap());
+			return UpdateReplicationInformationIfNeededInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)).ResultUnwrap());
 		}
 
-		private Task UpdateReplicationInformationIfNeededInternal(string url, Func<string, JsonDocument> getDocument)
+        private Task UpdateReplicationInformationIfNeededInternal(string url, Func<ReplicationDocument> getReplicationDestinations)
 		{
 			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
@@ -67,7 +67,7 @@ namespace Raven.Client.Connection
 				if (taskCopy != null)
 					return taskCopy;
 
-				return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformationInternal(url, getDocument))
+                return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformationInternal(url, getReplicationDestinations))
 					.ContinueWith(task =>
 					{
 						if (task.Exception != null)
@@ -121,20 +121,20 @@ namespace Raven.Client.Connection
 
 	    protected override string GetServerCheckUrl(string baseUrl)
 	    {
-	        return baseUrl.Doc(Constants.RavenReplicationDestinations) + "?check-server-reachable";
+	        return baseUrl + "/replication/topology?check-server-reachable";
 	    }
 
 	    public void RefreshReplicationInformation(AsyncServerClient serverClient)
 		{
-			RefreshReplicationInformationInternal(serverClient.Url, key => serverClient.DirectGetAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials), key).ResultUnwrap());
+			RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)).ResultUnwrap());
 		}
 
         public override void RefreshReplicationInformation(ServerClient serverClient)
         {
-            RefreshReplicationInformationInternal(serverClient.Url, key => serverClient.DirectGet(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials), key));
+            RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinations(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials)));
         }
 
-		private void RefreshReplicationInformationInternal(string url, Func<string, JsonDocument> getDocument)
+		private void RefreshReplicationInformationInternal(string url, Func<ReplicationDocument> getReplicationDestinations)
 		{
 			lock (this)
 			{
@@ -145,7 +145,7 @@ namespace Raven.Client.Connection
 
 				try
 				{
-					document = getDocument(Constants.RavenReplicationDestinations);
+				    document = RavenJObject.FromObject(getReplicationDestinations()).ToJsonDocument();
 					failureCounts[url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
 				catch (Exception e)
