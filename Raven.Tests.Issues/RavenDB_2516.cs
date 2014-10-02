@@ -52,7 +52,7 @@ namespace Raven.Tests.Issues
 
 				WaitForDocument<Person>(store5, "people/1");
 
-				var url = store1.Url.ForDatabase(store1.DefaultDatabase) + "/admin/replication/topology";
+				var url = store1.Url.ForDatabase(store1.DefaultDatabase) + "/admin/replication/topology/view";
 
 				var request = store1
 					.JsonRequestFactory
@@ -135,7 +135,7 @@ namespace Raven.Tests.Issues
 
 				WaitForDocument<Person>(store5, "people/1");
 
-				var url = store1.Url.ForDatabase(store1.DefaultDatabase) + "/admin/replication/topology";
+				var url = store1.Url.ForDatabase(store1.DefaultDatabase) + "/admin/replication/topology/view";
 
 				var request = store1
 					.JsonRequestFactory
