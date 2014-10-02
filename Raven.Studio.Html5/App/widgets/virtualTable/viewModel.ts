@@ -269,6 +269,9 @@ class ctor {
                 if (!firstVisibleRowIndexHasChanged) {
                     this.virtualRowCount(resultSet.totalResultCount);
                     resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
+
+                    // when we have few rows and we delete once of them there might be old rows that must be removed
+                    this.recycleRows().filter((r,i) => i >= resultSet.items.length && r.isInUse()).map(r => r.isInUse(false));
                     
                     // Because processing all columns can take time for many columns, we
                     // asynchronously load the column information in the next animation frame.
