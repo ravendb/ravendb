@@ -9,31 +9,33 @@ using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
+using Raven.Database.Server.RavenFS;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Smuggler
 {
     public class SmugglerEmbeddedFilesOperations : ISmugglerFilesOperations
     {
+        private readonly RavenFileSystem filesystem;
+
         public SmugglerFilesOptions Options { get; private set; }
 
         public Action<string> Progress { get; set; }
 
-        public SmugglerEmbeddedFilesOperations(SmugglerFilesOptions options)
+        public SmugglerEmbeddedFilesOperations(RavenFileSystem filesystem)
         {
-            Options = options;
+            this.filesystem = filesystem;
         }
         
         public void Initialize(SmugglerFilesOptions options)
         {
-            throw new NotImplementedException();
+            this.Options = options;
         }
 
         public void Configure(SmugglerFilesOptions options)
         {
             throw new NotImplementedException();
         }
-
 
         public Task<FileSystemStats[]> GetStats()
         {

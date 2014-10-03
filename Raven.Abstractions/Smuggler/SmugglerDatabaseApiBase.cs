@@ -66,7 +66,7 @@ namespace Raven.Abstractions.Smuggler
 					ReadLastEtagsFromFile(result);
 				}
 
-				result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
+                result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
 				if (File.Exists(result.FilePath))
 				{
 					var counter = 1;
@@ -241,10 +241,10 @@ namespace Raven.Abstractions.Smuggler
 
 		public static void ReadLastEtagsFromFile(ExportDataResult result)
 		{
-			var log = LogManager.GetCurrentClassLogger();
-			var etagFileLocation = Path.Combine(result.FilePath, IncrementalExportStateFile);
-			if (!File.Exists(etagFileLocation))
-				return;
+            var log = LogManager.GetCurrentClassLogger();
+            var etagFileLocation = Path.Combine(result.FilePath, IncrementalExportStateFile);
+            if (!File.Exists(etagFileLocation))
+                return;
 
 			using (var streamReader = new StreamReader(new FileStream(etagFileLocation, FileMode.Open)))
 			using (var jsonReader = new JsonTextReader(streamReader))

@@ -1,10 +1,9 @@
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler.Data;
 
 namespace Raven.Abstractions.Smuggler
 {
-    public interface ISmugglerApi<TIn, TOptions, TOut>
+    public interface ISmugglerApi<TIn, out TOptions, TOut>
         where TIn : ConnectionStringOptions, new()
         where TOptions : SmugglerOptions<TIn>
     {

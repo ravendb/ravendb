@@ -26,7 +26,7 @@ namespace Raven.Smuggler
             return SmugglerFilesBetweenOperation.Between(betweenOptions, Options);
         }
 
-        public override async Task<FilesExportDataResult> ExportData(SmugglerExportOptions<FilesConnectionStringOptions> exportOptions)
+        public override async Task<ExportFilesResult> ExportData(SmugglerExportOptions<FilesConnectionStringOptions> exportOptions)
         {
 			using (store = CreateStores(exportOptions.From))
 			{

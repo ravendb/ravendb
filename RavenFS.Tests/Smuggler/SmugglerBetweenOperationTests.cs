@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Smuggler;
+using Raven.Tests.Common;
 using Raven.Tests.Helpers;
 using Xunit;
 
@@ -35,13 +36,13 @@ namespace RavenFS.Tests.Smuggler
                     }
                 };
 
-                var aggregateException = TaskAssert.Throws<AggregateException>(() => smugglerApi.Between(options));
+                var aggregateException = await AssertAsync.Throws<AggregateException>(() => smugglerApi.Between(options));
                 var exception = aggregateException.ExtractSingleInnerException();
                 Assert.True(exception.Message.StartsWith("Smuggler does not support filesystem creation (filesystem 'DB1' on server"));
 
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync("DB1");
 
-                aggregateException = TaskAssert.Throws<AggregateException>(() => smugglerApi.Between(options));
+                aggregateException = await AssertAsync.Throws<AggregateException>(() => smugglerApi.Between(options));
                 exception = aggregateException.ExtractSingleInnerException();
                 Assert.True(exception.Message.StartsWith("Smuggler does not support filesystem creation (filesystem 'DB2' on server"));
             }

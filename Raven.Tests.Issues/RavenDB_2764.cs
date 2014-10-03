@@ -35,7 +35,7 @@ namespace Raven.Tests.Issues
 				IOExtensions.DeleteDirectory(ExportDir);
         }
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task ShouldSmuggleIdentitiesBetweenDatabases()
 		{
 			using (var server1 = GetNewServer(port: 8079))
@@ -76,7 +76,7 @@ namespace Raven.Tests.Issues
             }
 		}
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task ShouldSmuggleIdentitiesInExportImport()
 		{
 			using (var server1 = GetNewServer(port: 8079))

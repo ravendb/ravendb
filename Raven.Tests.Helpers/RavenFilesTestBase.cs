@@ -108,7 +108,7 @@ namespace Raven.Tests.Helpers
             return ravenDbServer;
         }
 
-        protected virtual IFilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
+        protected virtual FilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
                                                 ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null, 
                                                 bool runInMemory = true, Action<RavenConfiguration> customConfig = null)
         {

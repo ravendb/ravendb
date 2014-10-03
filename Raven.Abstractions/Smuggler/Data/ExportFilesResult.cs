@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Abstractions.Smuggler.Data
 {
-    public class FilesExportDataResult
+    public class ExportFilesResult : LastFilesEtagsInfo
     {
         public string FilePath { get; set; }
     }

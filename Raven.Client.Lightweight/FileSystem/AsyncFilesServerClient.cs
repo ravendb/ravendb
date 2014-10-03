@@ -375,7 +375,7 @@ namespace Raven.Client.FileSystem
         }
         private async Task<FileHeader[]> GetAsyncImpl(string[] filenames, OperationMetadata operation)
         {
-            StringBuilder requestUriBuilder = new StringBuilder("/files/metadata?");
+            var requestUriBuilder = new StringBuilder("/files/metadata?");
             for( int i = 0; i < filenames.Length; i++ )
             {
                 requestUriBuilder.Append("fileNames=" + Uri.EscapeDataString(filenames[i]));
@@ -1600,9 +1600,21 @@ namespace Raven.Client.FileSystem
 				}
 			}
 
-            public Task EnsureFileSystemExistsAsync(string fileSystem)
+            public async Task EnsureFileSystemExistsAsync(string fileSystem)
             {
-                throw new NotImplementedException();
+                var filesystems = await GetNamesAsync();
+                if (filesystems.Contains(fileSystem))
+                    return;
+
+                await CreateOrUpdateFileSystemAsync(
+                    new FileSystemDocument
+                    {
+                        Id = "Raven/FileSystem/" + fileSystem,
+                        Settings =
+                        {
+                            {"Raven/FileSystem/DataDir", Path.Combine("~", Path.Combine("FileSystems", fileSystem))}
+                        }
+                    }, fileSystem);
             }
 
             public async Task StartRestore(FilesystemRestoreRequest restoreRequest)

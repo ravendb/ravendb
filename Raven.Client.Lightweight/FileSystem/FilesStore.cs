@@ -68,7 +68,7 @@ namespace Raven.Client.FileSystem
             if (string.IsNullOrWhiteSpace(filesystem))
                 filesystem = this.DefaultFileSystem;
 
-            return fileSystemChanges.GetOrAdd(filesystem,  x => CreateFileSystemChanges (x) );
+            return fileSystemChanges.GetOrAdd(filesystem, CreateFileSystemChanges );
         }
         
 
@@ -225,10 +225,7 @@ namespace Raven.Client.FileSystem
 
         protected virtual void InitializeInternal()
         {
-            asyncFilesCommandsGenerator = () =>
-            {
-                return new AsyncFilesServerClient(Url, DefaultFileSystem, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, this.Listeners.ConflictListeners);
-            };
+            asyncFilesCommandsGenerator = () => new AsyncFilesServerClient(Url, DefaultFileSystem, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, this.Listeners.ConflictListeners);
         }
 
         /// <summary>
