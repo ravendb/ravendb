@@ -9,12 +9,12 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Client.FileSystem;
 using Raven.Database.Extensions;
-using Raven.Database.Server.RavenFS;
-using Raven.Database.Smuggler;
+using Raven.Json.Linq;
 using Raven.Smuggler;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Util;
@@ -244,6 +244,60 @@ namespace RavenFS.Tests.Smuggler
             }
         }
 
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task MetadataIsPreserved()
+        {
+            var backupPath = NewDataPath("BackupFolder");
+            try
+            {
+                var dumper = new SmugglerFilesApi { Options = { Incremental = true } };
+
+                FileHeader originalFile;
+                using (var server = NewStore())
+                {
+                    using (var session = server.OpenAsyncSession())
+                    {
+                        session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                        await session.SaveChangesAsync();
+
+                        // content update after a metadata change
+                        originalFile = await session.LoadFileAsync("test1.file");
+                        originalFile.Metadata["Test"] = new RavenJValue("Value");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (new FilesStore { Url = "http://localhost:8079" }.Initialize())
+                    {
+                        // now perform full backup                    
+                        await dumper.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { ToFile = backupPath });
+                    }
+                }
+
+                VerifyDump(backupPath, store =>
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var file = session.LoadFileAsync("test1.file").Result;
+                        Assert.Equal(originalFile.CreationDate, file.CreationDate);
+                        Assert.Equal(originalFile.Directory, file.Directory);
+                        Assert.Equal(originalFile.Extension, file.Extension);
+                        Assert.Equal(originalFile.FullPath, file.FullPath);
+                        Assert.Equal(originalFile.LastModified, file.LastModified);
+                        Assert.Equal(originalFile.Name, file.Name);
+                        Assert.Equal(originalFile.TotalSize, file.TotalSize);
+                        Assert.Equal(originalFile.UploadedSize, file.UploadedSize);
+                        Assert.True(file.Metadata.ContainsKey("Test"));
+                    }
+                });
+            }
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);
+            }
+        }
+
+
         private async Task InitializeUniformFile(IFilesStore store, string name, int size, char content)
         {
             using (var session = store.OpenAsyncSession())
@@ -274,7 +328,7 @@ namespace RavenFS.Tests.Smuggler
         {
             using (var store = NewStore())
             {
-                var dumper = new FilesDataDumper(null as RavenFileSystem) { Options = { Incremental = true } };
+                var dumper = new SmugglerFilesApi { Options = { Incremental = true } };
                 dumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = backupPath }).Wait();
 
                 action(store);
