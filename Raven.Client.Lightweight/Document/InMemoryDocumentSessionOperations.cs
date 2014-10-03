@@ -149,7 +149,7 @@ namespace Raven.Client.Document
 			this.documentStore = documentStore;
 			this.theListeners = listeners;
 			ResourceManagerId = documentStore.ResourceManagerId;
-			UseOptimisticConcurrency = false;
+			UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
 			AllowNonAuthoritativeInformation = true;
 			NonAuthoritativeInformationTimeout = TimeSpan.FromSeconds(15);
 			MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
