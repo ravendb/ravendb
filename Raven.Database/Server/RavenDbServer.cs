@@ -113,6 +113,16 @@ namespace Raven.Server
 	        return this;
 	    }
 
+		public void EnableHttpServer()
+		{
+			owinHttpServer.EnableHttpServer(configuration);
+		}
+
+		public void DisableHttpServer()
+		{
+			owinHttpServer.DisableHttpServer();
+		}
+
 	    public RavenDBOptions Options
 	    {
 	        get { return options; }
