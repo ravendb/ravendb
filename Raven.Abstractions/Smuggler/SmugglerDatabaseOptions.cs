@@ -20,19 +20,17 @@ namespace Raven.Abstractions.Smuggler
 	{
         public const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
 	    private int chunkSize;
-        private int batchSize;
+
 	   
 	    private long? totalDocumentSizeInChunkLimitInBytes;
 
         public SmugglerDatabaseOptions()
 		{
 			Filters = new List<FilterSetting>();
-            BatchSize = 16 * 1024;
 		    ChunkSize = int.MaxValue;
             OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
             Timeout = TimeSpan.FromSeconds(30);
-			ShouldExcludeExpired = false;
-			Limit = int.MaxValue;
+			ShouldExcludeExpired = false;			
 	        StartDocsDeletionEtag = StartAttachmentsDeletionEtag = StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
 		    MaxStepsForTransformScript = 10*1000;
 	        ExportDeletions = false;
@@ -92,19 +90,7 @@ namespace Raven.Abstractions.Smuggler
         [Obsolete("Use RavenFS instead.")]
         public Etag StartAttachmentsDeletionEtag { get; set; }
 
-        /// <summary>
-        /// The number of document or attachments or indexes or transformers to load in each call to the RavenDB database.
-        /// </summary>
-        public int BatchSize
-		{
-            get { return batchSize; }
-            set
-			{
-                if (value < 1)
-                    throw new InvalidOperationException("Batch size cannot be zero or a negative number");
-                batchSize = value;
-			}
-		}
+
 
 		/// <summary>
         /// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.
@@ -112,8 +98,6 @@ namespace Raven.Abstractions.Smuggler
         /// Usage example: OperateOnTypes = ItemType.Indexes | ItemType.Transformers | ItemType.Documents | ItemType.Attachments.
 		/// </summary>
         public ItemType OperateOnTypes { get; set; }
-
-        public int Limit { get; set; }
 
 		/// <summary>
         /// Filters to use to filter the documents that we will export/import.

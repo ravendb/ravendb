@@ -121,8 +121,8 @@ namespace Raven.Abstractions.Smuggler
 					}
 					jsonWriter.WriteEndArray();
 
-					// used to synchronize max returned values for put/delete operations
-					var maxEtags = Operations.FetchCurrentMaxEtags();
+                    // used to synchronize max returned values for put/delete operations
+                    var maxEtags = Operations.FetchCurrentMaxEtags();
 
 					jsonWriter.WritePropertyName("Docs");
 					jsonWriter.WriteStartArray();
@@ -132,12 +132,12 @@ namespace Raven.Abstractions.Smuggler
 						{
 							result.LastDocsEtag = await ExportDocuments(exportOptions.From, jsonWriter, result.LastDocsEtag, maxEtags.LastDocsEtag);
 						}
-						catch (SmugglerExportException e)
-						{
-							result.LastDocsEtag = e.LastEtag;
-							e.File = ownedStream ? result.FilePath : null;
-							lastException = e;
-						}
+                        catch (SmugglerExportException e)
+                        {
+                            result.LastDocsEtag = e.LastEtag;
+                            e.File = ownedStream ? result.FilePath : null;
+                            lastException = e;
+                        }
 					}
 					jsonWriter.WriteEndArray();
 
@@ -189,11 +189,11 @@ namespace Raven.Abstractions.Smuggler
 
 				return result;
 			}
-			finally
-			{
-				if (ownedStream && stream != null)
-					stream.Dispose();
-			}
+            finally
+            {
+                if (ownedStream && stream != null)
+                    stream.Dispose();
+            }
 		}
 
 		private async Task ExportIdentities(JsonTextWriter jsonWriter, ItemType operateOnTypes)
@@ -374,7 +374,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		protected async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+        protected async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 			var now = SystemTime.UtcNow;
 			var totalCount = 0;
@@ -383,7 +383,7 @@ namespace Raven.Abstractions.Smuggler
 			var errorsCount = 0;
 			var reachedMaxEtag = false;
 			Operations.ShowProgress("Exporting Documents");
-
+           
 			while (true)
 			{
 				bool hasDocs = false;
@@ -403,14 +403,14 @@ namespace Raven.Abstractions.Smuggler
 
 								var tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 
-								Debug.Assert(!String.IsNullOrWhiteSpace(document.Value<RavenJObject>("@metadata").Value<string>("@id")));
+                                Debug.Assert(!String.IsNullOrWhiteSpace(document.Value<RavenJObject>("@metadata").Value<string>("@id")));
 
-								if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
-								{
-									reachedMaxEtag = true;
-									break;
-								}
-								lastEtag = tempLastEtag;
+                                if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
+                                {
+                                    reachedMaxEtag = true;
+                                    break;
+                                }
+                                lastEtag = tempLastEtag;
 
                                 if (!Options.MatchFilters(document))
 									continue;
@@ -421,14 +421,14 @@ namespace Raven.Abstractions.Smuggler
 								document.WriteTo(jsonWriter);
 								totalCount++;
 
-								if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-								{
-									Operations.ShowProgress("Exported {0} documents", totalCount);
-									lastReport = SystemTime.UtcNow;
-								}
+                                if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                                {
+                                    Operations.ShowProgress("Exported {0} documents", totalCount);
+                                    lastReport = SystemTime.UtcNow;
+                                }
 
-								if (watch.ElapsedMilliseconds > 100)
-									errorsCount++;
+                                if (watch.ElapsedMilliseconds > 100)
+                                    errorsCount++;
 
 								watch.Start();
 							}
@@ -948,24 +948,24 @@ namespace Raven.Abstractions.Smuggler
 		private async Task DetectServerSupportedFeatures(RavenConnectionStringOptions server)
 		{
 			var serverVersion = await Operations.GetVersion(server);
-			if (string.IsNullOrEmpty(serverVersion))
+            if (string.IsNullOrEmpty(serverVersion))
 			{
 				SetLegacyMode();
 				return;
 			}
 
-			var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerDatabaseApiBase>()).ProductVersion;
+            var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerDatabaseApiBase>()).ProductVersion;
 
-			var subServerVersion = serverVersion.Substring(0, 3);
-			var subSmugglerVersion = smugglerVersion.Substring(0, 3);
+            var subServerVersion = serverVersion.Substring(0, 3);
+            var subSmugglerVersion = smugglerVersion.Substring(0, 3);
 
-			var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
+            var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
 
 			if (intServerVersion < 25)
 			{
 				IsTransformersSupported = false;
 				IsDocsStreamingSupported = false;
-				Operations.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+                Operations.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
 				return;
 			}
 

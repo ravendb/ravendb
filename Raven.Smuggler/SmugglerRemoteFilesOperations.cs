@@ -64,7 +64,7 @@ namespace Raven.Smuggler
             };
         }
 
-        public Task<IAsyncEnumerator<SmugglerFileInfo>> GetFiles(FilesConnectionStringOptions src, Etag lastEtag, int take)
+        public Task<IAsyncEnumerator<FileHeader>> GetFiles(FilesConnectionStringOptions src, Etag lastEtag, int take)
         {
             throw new NotImplementedException();
         }

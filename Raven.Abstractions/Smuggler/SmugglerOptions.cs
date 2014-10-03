@@ -38,16 +38,36 @@ namespace Raven.Abstractions.Smuggler
     }
 
     public class SmugglerOptions<T> : SmugglerOptions where T : ConnectionStringOptions, new()
-    {        
+    {
+        private int batchSize;
+
         public T Source { get; set; }
         public T Destination { get; set; }
 
         public override string SourceUrl { get { return Source.Url; } }
         public override string DestinationUrl { get { return Destination.Url; } }
 
+        public int Limit { get; set; }        
+
+        /// <summary>
+        /// The number of entities to load in each call to the RavenDB database.
+        /// </summary>
+        public int BatchSize
+        {
+            get { return batchSize; }
+            set
+            {
+                if (value < 1)
+                    throw new InvalidOperationException("Batch size cannot be zero or a negative number");
+                batchSize = value;
+            }
+        }
+
         public SmugglerOptions()
         {
             CancelToken = new CancellationTokenSource();
+            Limit = int.MaxValue;
+            BatchSize = 16 * 1024;
             Source = new T();
             Destination = new T();
         }

@@ -1,14 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition.Primitives;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -27,7 +32,7 @@ namespace Raven.Abstractions.Smuggler
             this.Options = options;
         }
 
-        public virtual Task<ExportFilesResult> ExportData(SmugglerExportOptions<FilesConnectionStringOptions> exportOptions)
+        public virtual async Task<ExportFilesResult> ExportData(SmugglerExportOptions<FilesConnectionStringOptions> exportOptions)
         {
             Operations.Configure(Options);
             Operations.Initialize(Options);
@@ -74,10 +79,136 @@ namespace Raven.Abstractions.Smuggler
 
             bool ownedStream = exportOptions.ToStream == null;
             var stream = exportOptions.ToStream ?? File.Create(result.FilePath);
+            try
+            {
+                await DetectServerSupportedFeatures(exportOptions.From);
+            }
+            catch (WebException e)
+            {
+                throw new SmugglerExportException("Failed to query server for supported features. Reason : " + e.Message)
+                {
+                    LastEtag = Etag.Empty,
+                    File = ownedStream ? result.FilePath : null
+                };
+            }
 
+            try
+            {
+
+                using (var gZipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
+                using (var streamWriter = new StreamWriter(gZipStream))
+                {
+                    // used to synchronize max returned values for put/delete operations
+                    var maxEtags = Operations.FetchCurrentMaxEtags();
+
+                    try
+                    {
+                        await ExportFiles(exportOptions.From, streamWriter, result.LastFileEtag, maxEtags.LastFileEtag);
+                    }
+                    catch (SmugglerExportException e)
+                    {
+                        result.LastFileEtag = e.LastEtag;
+                        e.File = ownedStream ? result.FilePath : null;
+                        lastException = e;
+                    }
+                }
+
+                if (lastException != null)
+                    throw lastException;
+
+                return result;
+            }
+            finally
+            {
+                if (ownedStream && stream != null)
+                    stream.Dispose();
+            }
+        }
+
+        private async Task<Etag> ExportFiles(FilesConnectionStringOptions src, StreamWriter metadataStreamWriter, Etag lastEtag, Etag maxEtag)
+        {
+            var jsonWriter = new JsonTextWriter(metadataStreamWriter)
+            {
+                Formatting = Formatting.Indented
+            };
+
+            var now = SystemTime.UtcNow;
+            var totalCount = 0;
+            var lastReport = SystemTime.UtcNow;
+            var reportInterval = TimeSpan.FromSeconds(2);
+            var reachedMaxEtag = false;
+            Operations.ShowProgress("Exporting Files");
+
+            while (true)
+            {
+                bool hasFiles = false;
+                try
+                {
+                    var maxRecords = Options.Limit - totalCount;
+                    if (maxRecords > 0 && reachedMaxEtag == false)
+                    {
+                        using (var files = await Operations.GetFiles(src, lastEtag, Math.Min(Options.BatchSize, maxRecords)))
+                        {
+                            while (await files.MoveNextAsync())
+                            {
+                                hasFiles = true;
+                                var file = files.Current;
+
+                                var tempLastEtag = file.Etag;
+                                if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
+                                {
+                                    reachedMaxEtag = true;
+                                    break;
+                                }
+                                lastEtag = tempLastEtag;                                
+
+                                // Retrieve the file and write it to the stream. 
+
+                                // Write the metadata (which includes the stream size and file container name)
+
+
+                                totalCount++;
+                                if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                                {
+                                    //TODO: Show also the MB/sec and total GB exported.
+                                    Operations.ShowProgress("Exported {0} files. ", totalCount);
+                                    lastReport = SystemTime.UtcNow;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
+                    Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+                    throw new SmugglerExportException(e.Message, e)
+                    {
+                        LastEtag = lastEtag,
+                    };
+                }
+
+                Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+                return lastEtag;
+            }
 
 
             throw new NotImplementedException();
+        }
+
+        private async Task DetectServerSupportedFeatures(FilesConnectionStringOptions filesConnectionStringOptions)
+        {
+            var serverVersion = await this.Operations.GetVersion(filesConnectionStringOptions);
+            if (string.IsNullOrEmpty(serverVersion))
+                throw new SmugglerExportException("Server version is not available.");
+
+            var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerFilesApiBase>()).ProductVersion;
+            var subServerVersion = serverVersion.Substring(0, 3);
+            var subSmugglerVersion = smugglerVersion.Substring(0, 3);
+
+            var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
+            if (intServerVersion < 30)
+                throw new SmugglerExportException(string.Format("File Systems are not available on Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion));
         }
 
         private static void ReadLastEtagsFromFile(ExportFilesResult result)
