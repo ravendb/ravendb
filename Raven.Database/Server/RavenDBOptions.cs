@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Server.Connections;
@@ -18,6 +18,8 @@ namespace Raven.Database.Server
 		private readonly RequestManager requestManager;
 	    private readonly FileSystemsLandlord fileSystemLandlord;
 		private readonly CountersLandlord countersLandlord;
+
+		private bool preventDisposing = false;
 
 		public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
 		{
@@ -83,6 +85,9 @@ namespace Raven.Database.Server
 
 		public void Dispose()
 		{
+			if(preventDisposing)
+				return;
+
 		    var toDispose = new List<IDisposable>
 		                    {
 		                        mixedModeRequestAuthorizer, 
@@ -111,6 +116,13 @@ namespace Raven.Database.Server
 
 			if (errors.Count != 0)
                 throw new AggregateException(errors);
+		}
+
+		public IDisposable PreventDispose()
+		{
+			preventDisposing = true;
+
+			return new DisposableAction(() => preventDisposing = false);
 		}
 
 		private class RavenServer : IRavenServer

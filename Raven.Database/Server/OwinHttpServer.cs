@@ -13,7 +13,7 @@ namespace Raven.Database.Server
 {
 	public sealed class OwinHttpServer : IDisposable
 	{
-	    private readonly IDisposable server;
+	    private IDisposable server;
 		private readonly Startup startup;
 		private static readonly byte[] NotFoundBody = Encoding.UTF8.GetBytes("Route invalid");
 	    private readonly OwinEmbeddedHost owinEmbeddedHost;
@@ -30,16 +30,24 @@ namespace Raven.Database.Server
 	            return;
 	        }
 
-	        var schema = config.Encryption.UseSsl ? "https" : "http";
+	        EnableHttpServer(config);
+		}
 
-            server = WebApp.Start(schema + "://+:" + config.Port, app =>  //TODO DH: configuration.ServerUrl doesn't bind properly
+		public void EnableHttpServer(InMemoryRavenConfiguration config)
+		{
+			if(server != null)
+				throw new InvalidOperationException("Http server is already running");
+
+			var schema = config.Encryption.UseSsl ? "https" : "http";
+
+			server = WebApp.Start(schema + "://+:" + config.Port, app => //TODO DH: configuration.ServerUrl doesn't bind properly
 			{
 				var listener = (HttpListener) app.Properties["System.Net.HttpListener"];
-			    if (listener != null)
-			    {
-			        new WindowsAuthConfigureHttpListener().Configure(listener, config);
-			    }
-			    startup.Configuration(app);
+				if (listener != null)
+				{
+					new WindowsAuthConfigureHttpListener().Configure(listener, config);
+				}
+				startup.Configuration(app);
 				app.Use(async (context, _) =>
 				{
 					context.Response.StatusCode = 404;
@@ -49,7 +57,20 @@ namespace Raven.Database.Server
 			});
 		}
 
-	    public Task Invoke(IDictionary<string, object> environment)
+		public void DisableHttpServer()
+		{
+			if(server == null)
+				return;
+
+			using (Options.PreventDispose())
+			{
+				server.Dispose();
+
+				server = null;
+			}
+		}
+
+		public Task Invoke(IDictionary<string, object> environment)
 	    {
 	        return owinEmbeddedHost.Invoke(environment);
 	    }
