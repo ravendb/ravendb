@@ -59,6 +59,7 @@ class editDocument extends viewModelBase {
     queryIndex = ko.observable<String>();
     docTitle: KnockoutComputed<string>;
     isNewLineFriendlyMode = ko.observable(false);
+    autoCollapseMode = ko.observable(false);
     isFirstDocumenNavtDisabled: KnockoutComputed<boolean>;
     isLastDocumentNavDisabled: KnockoutComputed<boolean>;
     newLineToggle = '\\n';
@@ -409,6 +410,22 @@ class editDocument extends viewModelBase {
         }
     }
 
+    toggleAutoCollapse() {
+        this.autoCollapseMode.toggle();
+        if (this.autoCollapseMode()) {
+            this.foldAll();
+        } else {
+            this.docEditor.getSession().unfold(null, true);
+        }
+    }
+
+    foldAll() {
+        var AceRange = require("ace/range").Range;
+        this.docEditor.getSession().foldAll();
+        var folds = <any[]> this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
+        folds.map(f => this.docEditor.getSession().expandFold(f));
+    }
+
     unescapeNewlinesAndTabsInTextFields(str: string): any {
         var AceDocumentClass = require("ace/document").Document;
         var AceEditSessionClass = require("ace/edit_session").EditSession;
@@ -634,6 +651,9 @@ class editDocument extends viewModelBase {
 
             this.loadRelatedDocumentsList(document);
             this.appendRecentDocument(id);
+            if (this.autoCollapseMode()) {
+                this.foldAll();
+            }
         });
         loadDocTask.fail(response => this.failedToLoadDoc(id, response));
         loadDocTask.always(() => this.isBusy(false));

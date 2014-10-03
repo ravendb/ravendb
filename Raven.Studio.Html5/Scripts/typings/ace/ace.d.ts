@@ -477,6 +477,8 @@ declare module AceAjax {
 
         expandFold(arg: any);
 
+        foldAll();
+
         unfold(arg1: any, arg2: boolean);
 
         screenToDocumentColumn(row: number, column: number);
