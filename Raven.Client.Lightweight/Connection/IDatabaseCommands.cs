@@ -537,7 +537,7 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Begins a restore operation
         /// </summary>
-        void StartRestore(DatabaseRestoreRequest restoreRequest);
+        Operation StartRestore(DatabaseRestoreRequest restoreRequest);
 
         /// <summary>
         /// Begins a backup operation

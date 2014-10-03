@@ -112,6 +112,9 @@ task Test -depends Compile {
 		&"$xUnit" "$_"
 		if ($lastexitcode -ne 0) {
 	        $hasErrors = $true
+	        Write-Host "-------- ---------- -------- ---"
+	        Write-Host "Failure for $_ - $lastexitcode"
+	        Write-Host "-------- ---------- -------- ---"
 	    }
 	}
 	if ($hasErrors) {

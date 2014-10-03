@@ -326,6 +326,7 @@
     <TypeScriptCompile Include="App\commands\adminLogsConfigureCommand.ts" />
     <TypeScriptCompile Include="App\commands\compactDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingPerfStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getOperationAlertsCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />

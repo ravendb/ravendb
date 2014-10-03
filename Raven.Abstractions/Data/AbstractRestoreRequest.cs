@@ -17,5 +17,6 @@ namespace Raven.Abstractions.Data
         public string JournalsLocation { get; set; }
         public string IndexesLocation { get; set; }
 	    public bool Defrag { get; set; }
+        public int? RestoreStartTimeout { get; set; }
 	}
 }

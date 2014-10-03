@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Runtime;
 using System.Security.Principal;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -162,6 +163,40 @@ namespace Raven.Database.Server.Controllers.Admin
 			string documentDataDir;
 			ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
 			restoreRequest.DatabaseLocation = ravenConfiguration.DataDirectory;
+
+            string anotherRestoreResourceName;
+            if (IsAnotherRestoreInProgress(out anotherRestoreResourceName))
+            {
+                if (restoreRequest.RestoreStartTimeout.HasValue)
+                {
+                    try
+                    {
+                        using (var cts = new CancellationTokenSource())
+                        {
+                            cts.CancelAfter(TimeSpan.FromSeconds(restoreRequest.RestoreStartTimeout.Value));
+                            var token = cts.Token;
+                            do
+                            {
+                                await Task.Delay(500, token);
+                            }
+                            while (IsAnotherRestoreInProgress(out anotherRestoreResourceName));
+                        }
+                    }
+                    catch (OperationCanceledException e)
+                    {
+                        return GetMessageWithString(string.Format("Another restore is still in progress (resource name = {0}). Waited {1} seconds for other restore to complete.", anotherRestoreResourceName, restoreRequest.RestoreStartTimeout.Value), HttpStatusCode.ServiceUnavailable);    
+                    }
+                }
+                else
+                {
+                    return GetMessageWithString(string.Format("Another restore is in progress (resource name = {0})", anotherRestoreResourceName), HttpStatusCode.ServiceUnavailable);    
+                }
+            }
+            Database.Documents.Put(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, RavenJObject.FromObject(new RestoreInProgress
+                                                                                                                {
+                                                                                                                    Resource = databaseName
+                                                                                                                }), new RavenJObject(), null);
+
 			DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
 		    
             bool defrag;
@@ -194,10 +229,12 @@ namespace Raven.Database.Server.Controllers.Admin
                 restoreStatus.Messages.Add("The new database was created");
                 DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
                     RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+
+                Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
             }, TaskCreationOptions.LongRunning);
 
 			long id;
-			Database.Tasks.AddTask(task, new object(), new TaskActions.PendingTaskDescription
+			Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
 			{
 				StartTime = SystemTime.UtcNow,
 				TaskType = TaskActions.PendingTaskType.RestoreDatabase,

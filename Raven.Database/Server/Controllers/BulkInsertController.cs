@@ -21,6 +21,8 @@ using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 
+using Raven.Client.FileSystem;
+
 namespace Raven.Database.Server.Controllers
 {
     [RoutePrefix("")]
@@ -86,12 +88,21 @@ namespace Raven.Database.Server.Controllers
                 {
                     // happens on timeout
                     currentDatabase.Notifications.RaiseNotifications(new BulkInsertChangeNotification { OperationId = operationId, Message = "Operation cancelled, likely because of a batch timeout", Type = DocumentChangeTypes.BulkInsertError });
-                    status.Completed = true;
                     status.IsTimedOut = true;
+                    status.Faulted = true;
                     throw;
                 }
-                status.Completed = true;
-                status.Documents = documents;
+                catch (Exception e)
+                {
+                    status.Faulted = true;
+                    status.State = RavenJObject.FromObject(new { Error = e.SimplifyException().Message });
+                    throw;
+                }
+                finally
+                {
+                    status.Completed = true;
+                    status.Documents = documents;
+                }
             });
 
             long id;
@@ -195,10 +206,14 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-        public class BulkInsertStatus
+        public class BulkInsertStatus : IOperationState
         {
             public int Documents { get; set; }
             public bool Completed { get; set; }
+
+            public bool Faulted { get; set; }
+
+            public RavenJToken State { get; set; } 
 
             public bool IsTimedOut { get; set; }
         }

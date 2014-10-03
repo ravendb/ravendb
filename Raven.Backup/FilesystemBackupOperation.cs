@@ -94,7 +94,7 @@ namespace Raven.Backup
 
         public override BackupStatus GetStatusDoc()
         {
-            var req = CreateRequest("/docs/" + BackupStatus.RavenFilesystemBackupStatusDocumentKey(parameters.Filesystem), "GET");
+            var req = CreateRequest("/fs/" + parameters.Filesystem + "/config/" + BackupStatus.RavenBackupStatusDocumentKey, "GET");
 
             try
             {

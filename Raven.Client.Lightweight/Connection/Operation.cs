@@ -10,7 +10,7 @@ namespace Raven.Client.Connection
 {
 	public class Operation
 	{
-		private readonly AsyncServerClient asyncServerClient;
+	    private readonly Func<long, Task<RavenJToken>> statusFetcher;
 		private readonly long id;
 		private readonly RavenJToken state;
 		private readonly bool done;
@@ -22,10 +22,15 @@ namespace Raven.Client.Connection
 			this.done = true;
 		}
 
+        public Operation(Func<long, Task<RavenJToken>> statusFetcher, long id)
+        {
+            this.statusFetcher = statusFetcher;
+            this.id = id;
+        }
+
 		public Operation(AsyncServerClient asyncServerClient, long id)
+		    : this(asyncServerClient.GetOperationStatusAsync, id)
 		{
-			this.asyncServerClient = asyncServerClient;
-			this.id = id;
 		}
 
 
@@ -33,12 +38,12 @@ namespace Raven.Client.Connection
 		{
 			if (done)
 				return state;
-			if (asyncServerClient == null)
+			if (statusFetcher == null)
 				throw new InvalidOperationException("Cannot use WaitForCompletionAsync() when the operation was executed syncronously");
 
 			while (true)
 			{
-                var status = await asyncServerClient.GetOperationStatusAsync(id).ConfigureAwait(false);
+                var status = await statusFetcher(id).ConfigureAwait(false);
 				if (status == null)
 					return null;
 

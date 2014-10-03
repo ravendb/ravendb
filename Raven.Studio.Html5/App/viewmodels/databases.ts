@@ -5,6 +5,7 @@ import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import changesApi = require('common/changesApi');
 import shell = require('viewmodels/shell');
+import getOperationAlertsCommand = require("commands/getOperationAlertsCommand");
 
 class databases extends viewModelBase {
 
@@ -16,6 +17,7 @@ class databases extends viewModelBase {
     systemDb: database;
     optionsClicked = ko.observable<boolean>(false);
     appUrls: computedAppUrls;
+    operationAlerts = ko.observable<string[]>([]);
 
     constructor() {
         super();
@@ -58,6 +60,7 @@ class databases extends viewModelBase {
 
             return disabledStatus;
         });
+        this.fetchOperationAlerts();
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -68,6 +71,10 @@ class databases extends viewModelBase {
     attached() {
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
         this.databasesLoaded();
+    }
+
+    private fetchOperationAlerts() {
+        new getOperationAlertsCommand(this.activeDatabase()).execute().then(result => this.operationAlerts(result));
     }
 
     private databasesLoaded() {

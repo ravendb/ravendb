@@ -99,8 +99,8 @@ namespace Raven.Tests.Issues
 				}
 				var list = new BlockingCollection<DocumentChangeNotification>();
 
-				store.Changes()
-					.ForDocumentsInCollection<Person>()
+				store.Changes().Task.Result
+					.ForDocumentsInCollection<Person>().Task.Result
 					.Subscribe(list.Add);
 				using (var session = store.OpenSession())
 				{

@@ -27,6 +27,9 @@ using Raven.Server;
 using Raven.Tests.Helpers.Util;
 using Xunit;
 
+
+using Raven.Client.Extensions;
+
 namespace Raven.Tests.Helpers
 {
     public class RavenFilesTestBase : IDisposable
@@ -358,17 +361,14 @@ namespace Raven.Tests.Helpers
             return ms;
         }
 
-        protected void WaitForBackup(string fileStoreName, bool checkError)
+        protected void WaitForBackup(IAsyncFilesCommands filesCommands, bool checkError)
         {
-            Func<string, JsonDocument> getDocument = fsName => servers.First().SystemDatabase.Documents.Get(BackupStatus.RavenFilesystemBackupStatusDocumentKey(fsName), null);
             var done = SpinWait.SpinUntil(() =>
             {
-                // We expect to get the doc from database that we tried to backup
-                var jsonDocument = getDocument(fileStoreName);
-                if (jsonDocument == null)
+                var backupStatus = filesCommands.Configuration.GetKeyAsync<BackupStatus>(BackupStatus.RavenBackupStatusDocumentKey).ResultUnwrap();
+                if (backupStatus == null)
                     return true;
 
-                var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
                 if (backupStatus.IsRunning == false)
                 {
                     if (checkError)

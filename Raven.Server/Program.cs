@@ -16,6 +16,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using System.ServiceProcess;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using Microsoft.Win32;
@@ -24,6 +25,10 @@ using NLog.Config;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Client;
+using Raven.Client.Connection.Async;
+using Raven.Client.Document;
+using Raven.Client.FileSystem;
 using Raven.Database;
 using Raven.Database.Actions;
 using Raven.Database.Config;
@@ -33,6 +38,12 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
+
+using Raven.Abstractions.Connection;
+
+using Raven.Client.Connection;
+
+using Raven.Client.Extensions;
 
 namespace Raven.Server
 {
@@ -145,6 +156,8 @@ namespace Raven.Server
 			bool launchBrowser = false;
 			bool noLog = false;
 			var ravenConfiguration = new RavenConfiguration();
+		    bool waitForRestore = true;
+		    int? restoreStartTimeout = 15;
 
 			OptionSet optionSet = null;
 			optionSet = new OptionSet
@@ -221,7 +234,7 @@ namespace Raven.Server
 					            throw new OptionException("specified destination server url is not valid", "restore-database");
 					        }
 
-					        RunRemoteDatabaseRestoreOperation(backupLocation, restoreLocation, restoreDatabaseName, defrag, uri);
+					        RunRemoteDatabaseRestoreOperation(backupLocation, restoreLocation, restoreDatabaseName, defrag, uri, waitForRestore, restoreStartTimeout);
 					        Environment.Exit(0);
 					    };
 					    isRestoreAction = true;
@@ -243,12 +256,29 @@ namespace Raven.Server
                                 throw new OptionException("specified destination server url is not valid", "restore-database");
                             }
 
-                            RunRemoteFilesystemRestoreOperation(backupLocation, restoreLocation, restoreFilesystemName, defrag, uri);
+                            RunRemoteFilesystemRestoreOperation(backupLocation, restoreLocation, restoreFilesystemName, defrag, uri, waitForRestore, restoreStartTimeout);
                             Environment.Exit(0);
                         };
                         isRestoreAction = true;
                     }
                 },
+				{
+				    "restore-no-wait", "Return immediately without waiting for a restore to complete", value =>
+				    {
+				        waitForRestore = false;
+				        requiresRestoreAction.Add("restore-no-wait");
+				    }
+				},
+                { "restore-start-timeout=", "The maximum {0:timeout} in seconds to wait for another restore to complete. Default: 15 seconds.", value =>
+                {
+                    int timeout;
+                    if (int.TryParse(value, out timeout) == false)
+                    {
+                        throw new OptionException("specified restore start timeout is not valid", "restore-start-timeout");
+                    }
+                    restoreStartTimeout = timeout;
+                    requiresRestoreAction.Add("restore-start-timeout");
+                }},
 				{"restore-defrag", 
 					"Applicable only during restore, execute defrag after the restore is completed", key =>
 					{
@@ -333,55 +363,70 @@ namespace Raven.Server
 
 		}
 
-		private static void RunRemoteDatabaseRestoreOperation(string backupLocation, string restoreLocation, string restoreDatabaseName, bool defrag, Uri uri)
+        private static void RunRemoteDatabaseRestoreOperation(string backupLocation, string restoreLocation, string restoreDatabaseName, bool defrag, Uri uri, bool waitForRestore, int? timeout)
 		{
-			var url = uri.AbsoluteUri + "/admin/restore";
-			var request = WebRequest.Create(url);
-			request.Method = "POST";
-			request.ContentType = "application/json; charset=utf-8";
-			using (var stream = request.GetRequestStream())
-			using (var writer = new StreamWriter(stream))
-			{
-				var json = RavenJObject.FromObject(new DatabaseRestoreRequest
-				                                   {
-					                                   BackupLocation = backupLocation, 
-													   DatabaseLocation = restoreLocation,
-													   DatabaseName = restoreDatabaseName,
-													   Defrag = defrag
-				                                   }).ToString(Formatting.None);
-				writer.Write(json);
-			}
+            using (var store = new DocumentStore
+                               {
+                                   Url = uri.AbsoluteUri
+                               }.Initialize())
+            {
+                var operation = store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
+                                                                {
+                                                                    BackupLocation = backupLocation,
+                                                                    DatabaseLocation = restoreLocation,
+                                                                    DatabaseName = restoreDatabaseName,
+                                                                    Defrag = defrag,
+                                                                    RestoreStartTimeout = timeout
+                                                                });
+                Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
 
-			request.GetResponse();
-
-			Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
+                if (waitForRestore)
+                {
+                    operation.WaitForCompletion();
+                    Console.WriteLine("Completed restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
+                }
+                
+            }
 		}
 
-        private static void RunRemoteFilesystemRestoreOperation(string backupLocation, string restoreLocation, string restoreFilesystemName, bool defrag, Uri uri)
+        private static void RunRemoteFilesystemRestoreOperation(string backupLocation, string restoreLocation, string restoreFilesystemName, bool defrag, Uri uri, bool waitForRestore, int? timeout)
         {
-            var url = uri.AbsoluteUri + "/admin/fs/restore";
-            var request = WebRequest.Create(url);
-            request.Method = "POST";
-            request.ContentType = "application/json; charset=utf-8";
-            using (var stream = request.GetRequestStream())
-            using (var writer = new StreamWriter(stream))
+            long operationId;
+            using (var filesStore = new FilesStore
+                                    {
+                                        Url = uri.AbsoluteUri
+                                    }.Initialize())
             {
-                var json = RavenJObject.FromObject(new FilesystemRestoreRequest
-                {
-                    BackupLocation = backupLocation,
-                    FilesystemLocation = restoreLocation,
-                    FilesystemName = restoreFilesystemName,
-                    Defrag = defrag
-                }).ToString(Formatting.None);
-                writer.Write(json);
+                operationId = filesStore.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
+                                                                               {
+                                                                                   BackupLocation = backupLocation,
+                                                                                   FilesystemLocation = restoreLocation,
+                                                                                   FilesystemName = restoreFilesystemName,
+                                                                                   Defrag = defrag,
+                                                                                   RestoreStartTimeout = timeout
+                                                                               }).ResultUnwrap();
+                Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
             }
 
-            request.GetResponse();
-
-            Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
+            if (waitForRestore)
+            {
+                using (var sysDbStore = new DocumentStore
+                                        {
+                                            Url = uri.AbsoluteUri
+                                        }.Initialize())
+                {
+                    new Operation((AsyncServerClient)sysDbStore.AsyncDatabaseCommands, operationId).WaitForCompletion();
+                    Console.WriteLine("Completed restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
+                }
+            }
         }
 
-		public static void DumpToCsv(RavenConfiguration ravenConfiguration)
+	    private static void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
+	    {
+	        e.SetObserved();
+	    }
+
+	    public static void DumpToCsv(RavenConfiguration ravenConfiguration)
 		{
 			using (var db = new DocumentDatabase(ravenConfiguration))
 			{

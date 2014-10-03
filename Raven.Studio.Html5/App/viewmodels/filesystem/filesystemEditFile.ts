@@ -18,6 +18,8 @@ class filesystemEditFile extends viewModelBase {
 
     fileName = ko.observable<string>();
     file = ko.observable<file>();
+    filesystemForEditedFile: filesystem;
+    topRecentFiles = ko.computed(() => this.getTopRecentFiles());
     metadata: KnockoutComputed<fileMetadata>;
     fileMetadataEditor: AceAjax.Editor;
     fileMetadataText = ko.observable<string>();
@@ -25,6 +27,7 @@ class filesystemEditFile extends viewModelBase {
     metaPropsToRestoreOnSave = [];
 
     static editFileSelector = "#editFileContainer";
+    static recentDocumentsInFilesystem = ko.observableArray<{ filesystemName: string; recentFiles: KnockoutObservableArray<string> }>();
 
     constructor() {
         super();
@@ -37,8 +40,9 @@ class filesystemEditFile extends viewModelBase {
     activate(args) {
         super.activate(args);
         this.metadata = ko.computed(() => this.file() ? this.file().__metadata : null);
-
+        this.filesystemForEditedFile = appUrl.getFileSystem();
         if (args.id != null) {
+            this.appendRecentFile(args.id);
             this.fileName(args.id);
         }
 
@@ -138,6 +142,28 @@ class filesystemEditFile extends viewModelBase {
         this.dirtyFlag().reset(); // Resync Changes
     }
 
+    getTopRecentFiles() {
+        var currentFilesystemName = this.activeFilesystem().name;
+        var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().first(x => x.filesystemName === currentFilesystemName);
+        if (recentFilesForCurFilesystem) {
+            var value = recentFilesForCurFilesystem
+                .recentFiles()
+                .filter((x: string) => {
+                    return x !== this.fileName();
+                })
+                .slice(0, 5)
+                .map((fileId: string) => {
+                    return {
+                        fileId: fileId,
+                        fileUrl: appUrl.forEditFile(fileId, this.activeFilesystem())
+                    };
+                });
+            return value;
+        } else {
+            return [];
+        }
+    }
+
     metadataChanged(meta: fileMetadata) {
         if (meta) {
             //this.metaPropsToRestoreOnSave.length = 0;
@@ -153,7 +179,7 @@ class filesystemEditFile extends viewModelBase {
                 "From", "Host", "If-MatTemp-Index-Scorech", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Referer", "TE", "User-Agent", "Accept-Ranges",
                 "Age", "Allow", "ETag", "Location", "Retry-After", "Server", "Set-Cookie2", "Set-Cookie", "Vary", "Www-Authenticate", "Cache-Control", "Connection", "Date", "Pragma",
                 "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL",
-                "RavenFS-Size", "Temp-Request-Time", "DNT"];
+                "RavenFS-Size", "Temp-Request-Time", "DNT", "Creation-Date", "Raven-Synchronization-History", "Raven-Synchronization-Version", "Raven-Synchronization-Source"];
 
             for (var property in metaDto) {
                 if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {
@@ -167,6 +193,24 @@ class filesystemEditFile extends viewModelBase {
             var metaString = this.stringify(metaDto);
             this.fileMetadataText(metaString);
         }
+    }
+
+    appendRecentFile(fileId: string) {
+
+        var existingRecentFilesStore = filesystemEditFile.recentDocumentsInFilesystem.first(x=> x.filesystemName == this.filesystemForEditedFile.name);
+        if (existingRecentFilesStore) {
+            var existingDocumentInStore = existingRecentFilesStore.recentFiles.first(x=> x === fileId);
+            if (!existingDocumentInStore) {
+                if (existingRecentFilesStore.recentFiles().length == 5) {
+                    existingRecentFilesStore.recentFiles.pop();
+                }
+                existingRecentFilesStore.recentFiles.unshift(fileId);
+            }
+
+        } else {
+            filesystemEditFile.recentDocumentsInFilesystem.push({ filesystemName: this.filesystemForEditedFile.name, recentFiles: ko.observableArray([fileId]) });
+        }
+
     }
 
     private stringify(obj: any) {

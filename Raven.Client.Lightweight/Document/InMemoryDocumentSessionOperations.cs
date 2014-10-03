@@ -378,7 +378,8 @@ more responsive application.
 			{
 				var actual = typeof(T).Name;
 				var expected = entity.GetType().Name;
-				var message = string.Format("The query results type is '{0}' but you expected to get results of type '{1}'. If you want to return a projection, you should use .AsProjection<{1}>() before calling to .ToList().", expected, actual);
+                var message = string.Format("The query results type is '{0}' but you expected to get results of type '{1}'. " +
+                                            "If you want to return a projection, you should use .ProjectFromIndexFieldsInto<{1}>() (for Query) or .SelectFields<{1}>() (for DocumentQuery) before calling to .ToList().", expected, actual);
 				throw new InvalidOperationException(message, e);
 			}
 		}

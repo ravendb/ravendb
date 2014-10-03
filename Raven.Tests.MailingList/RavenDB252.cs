@@ -63,10 +63,14 @@ namespace Raven.Tests.MailingList
 					{Constants.RavenEntityName, "users"}
 				});
 
+				WaitForIndexing(store);
+
 				store.DatabaseCommands.PutIndex("UsersByName", new IndexDefinition
 				{
 					Map = "docs.users.Select(x=>new {x.FirstName })"
 				});
+
+				WaitForIndexing(store);
 
 				using (var session = store.OpenSession())
 				{

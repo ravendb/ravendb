@@ -122,32 +122,53 @@ namespace Raven.Database.Prefetching
 			return i;
 		}
 
-	    public int LoadedSize
-	    {
-	        get
+		public int LoadedSize
+		{
+			get
+			{
+				slim.EnterReadLock();
+				try
+				{
+					return loadedSize;
+				}
+				finally
+				{
+					slim.ExitReadLock();
+				}
+			}
+		}
+
+		public T Aggregate<T>(T seed, Func<T, JsonDocument, T> aggregate)
 		{
 			slim.EnterReadLock();
 			try
 			{
-                    return loadedSize;
-	            }
-	            finally
-				{
-	                slim.ExitReadLock();
-				}
-	        }
-	    }
-
-	    public T Aggregate<T>(T seed, Func<T, JsonDocument, T> aggregate)
-				{
-            slim.EnterReadLock();
-	        try
-					{
-	            return innerList.Aggregate(seed, aggregate);
-					}
+				return innerList.Aggregate(seed, aggregate);
+			}
 			finally
 			{
 				slim.ExitReadLock();
+			}
+		}
+
+		public void RemoveAfter(Etag etag)
+		{
+			slim.EnterWriteLock();
+			try
+			{
+				for (var i = innerList.Count - 1; i >= 0; i--)
+				{
+					var elementEtag = innerList[i].Etag;
+
+					if (elementEtag.CompareTo(etag) < 0)
+						break;
+
+					innerList.RemoveAt(i);
+				}
+			}
+			finally
+			{
+				slim.ExitWriteLock();
 			}
 		}
 	}

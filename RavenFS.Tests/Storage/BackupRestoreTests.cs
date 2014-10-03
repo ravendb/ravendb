@@ -11,10 +11,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem;
 using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Json.Linq;
 using Raven.Tests.Helpers;
 using RavenFS.Tests.Synchronization.IO;
 
@@ -57,7 +55,7 @@ namespace RavenFS.Tests.Storage
 
                 // create backup
                 await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, false, store.DefaultFileSystem);
-                WaitForBackup(store.DefaultFileSystem, true);
+                WaitForBackup(store.AsyncFilesCommands, true);
 
                 // restore newly created backup
                 await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
@@ -93,7 +91,7 @@ namespace RavenFS.Tests.Storage
                 await CreateSampleData(store);
                 // create backup
                 await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
-                WaitForBackup(store.DefaultFileSystem, true);
+                WaitForBackup(store.AsyncFilesCommands, true);
 
                 await CreateSampleData(store, 3, 5);
                 
@@ -102,7 +100,7 @@ namespace RavenFS.Tests.Storage
 
                 // create second backup
                 await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
-                WaitForBackup(store.DefaultFileSystem, true);
+                WaitForBackup(store.AsyncFilesCommands, true);
 
                 // restore newly created backup
                 await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest

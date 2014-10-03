@@ -1617,7 +1617,7 @@ namespace Raven.Client.FileSystem
                     }, fileSystem);
             }
 
-            public async Task StartRestore(FilesystemRestoreRequest restoreRequest)
+            public async Task<long> StartRestore(FilesystemRestoreRequest restoreRequest)
             {
                 var requestUrlString = string.Format("{0}/admin/fs/restore", client.ServerUrl);
 
@@ -1627,6 +1627,9 @@ namespace Raven.Client.FileSystem
                 try
                 {
                     await request.WriteWithObjectAsync(restoreRequest);
+
+                    var response = await request.ReadResponseJsonAsync();
+                    return response.Value<long>("OperationId");
                 }
                 catch (Exception e)
                 {

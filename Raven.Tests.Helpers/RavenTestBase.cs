@@ -692,7 +692,15 @@ namespace Raven.Tests.Helpers
 					}
 					else if (Directory.Exists(pathToDelete))
 					{
-						var filePath = Directory.GetFiles(pathToDelete, "*", SearchOption.AllDirectories).FirstOrDefault() ?? pathToDelete;
+						string filePath;
+						try
+						{
+							filePath = Directory.GetFiles(pathToDelete, "*", SearchOption.AllDirectories).FirstOrDefault() ?? pathToDelete;
+						}
+						catch (Exception e)
+						{
+							filePath = pathToDelete;
+						}
 						errors.Add(new IOException(string.Format("We tried to delete the '{0}' directory.\r\n{1}", pathToDelete,
 							WhoIsLocking.ThisFile(filePath))));
 					}

@@ -463,11 +463,9 @@ namespace Raven.Client.Indexes
 		    var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
 		    if (asyncServerClient == null)
 		        return;
-		    var doc = await asyncServerClient.GetAsync(Constants.RavenReplicationDestinations);
-		    if (doc == null)
+            var replicationDocument = await asyncServerClient.ExecuteWithReplication("GET", asyncServerClient.DirectGetReplicationDestinationsAsync);
+            if (replicationDocument == null)
 		        return;
-		    var replicationDocument =
-		        documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.DataAsJson));
             if (replicationDocument == null || replicationDocument.Destinations == null || replicationDocument.Destinations.Count == 0)
 		        return;
 		    var tasks = (
@@ -504,12 +502,8 @@ namespace Raven.Client.Indexes
 			var serverClient = databaseCommands as ServerClient;
 			if (serverClient == null)
 				return;
-			var doc = serverClient.Get(Constants.RavenReplicationDestinations);
-			if (doc == null)
-				return;
-			var replicationDocument =
-				documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.DataAsJson));
-			if (replicationDocument == null)
+            var replicationDocument = serverClient.ExecuteWithReplication("GET", serverClient.DirectGetReplicationDestinations);
+            if (replicationDocument == null)
 				return;
 
 			foreach (var replicationDestination in replicationDocument.Destinations)
