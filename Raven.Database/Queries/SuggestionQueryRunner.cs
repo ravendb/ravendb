@@ -74,7 +74,7 @@ namespace Raven.Database.Queries
 
 				long _;
 				var task = Task.Factory.StartNew(() => suggestionQueryIndexExtension.Init(indexReader));
-				database.Tasks.AddTask(task, new object(), new TaskActions.PendingTaskDescription
+				database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
 				                                           {
                                                                Payload = indexName,
                                                                TaskType = TaskActions.PendingTaskType.SuggestionQuery,

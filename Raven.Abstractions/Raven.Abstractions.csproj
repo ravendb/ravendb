@@ -159,6 +159,7 @@
     <Compile Include="Data\BulkInsertOptions.cs" />
     <Compile Include="Data\Etag.cs" />
     <Compile Include="Data\IndexFailureInformation.cs" />
+    <Compile Include="Data\IOperationState.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\QueryHeaderInformation.cs" />
@@ -210,6 +211,7 @@
     <Compile Include="Data\StringDistanceTypes.cs" />
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />
+    <Compile Include="Data\TaskBasedOperationState.cs" />
     <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
     <Compile Include="Data\UserInfo.cs" />

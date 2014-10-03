@@ -138,10 +138,14 @@ for(var customFunction in customFunctions) {{
 				}
 				catch (Exception e)
 				{
-					status.ExceptionDetails = e.ToString();
+				    status.Faulted = true;
+				    status.State = RavenJObject.FromObject(new
+				                                           {
+				                                               Error = e.ToString()
+				                                           });
 					if (cts.Token.IsCancellationRequested)
 					{
-						status.ExceptionDetails = "Task was cancelled";
+                        status.State = RavenJObject.FromObject(new { Error = "Task was cancelled"  });
 						cts.Token.ThrowIfCancellationRequested(); //needed for displaying the task status as canceled and not faulted
 					}
 					throw;
@@ -575,11 +579,13 @@ for(var customFunction in customFunctions) {{
 			return value;
 		}
 
-		private class ImportOperationStatus
+		private class ImportOperationStatus : IOperationState
 		{
 			public bool Completed { get; set; }
 			public string LastProgress { get; set; }
 			public string ExceptionDetails { get; set; }
+		    public bool Faulted { get; set; }
+		    public RavenJToken State { get; set; }
 		}
 	}
 }

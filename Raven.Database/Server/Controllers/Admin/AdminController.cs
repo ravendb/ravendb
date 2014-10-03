@@ -234,7 +234,7 @@ namespace Raven.Database.Server.Controllers.Admin
             }, TaskCreationOptions.LongRunning);
 
 			long id;
-			Database.Tasks.AddTask(task, new object(), new TaskActions.PendingTaskDescription
+			Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
 			{
 				StartTime = SystemTime.UtcNow,
 				TaskType = TaskActions.PendingTaskType.RestoreDatabase,

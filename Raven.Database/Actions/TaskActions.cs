@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Data;
@@ -65,7 +66,7 @@ namespace Raven.Database.Actions
             }).ToList();
         }
 
-        public void AddTask(Task task, object state, PendingTaskDescription description, out long id, CancellationTokenSource tokenSource = null)
+        public void AddTask(Task task, IOperationState state, PendingTaskDescription description, out long id, CancellationTokenSource tokenSource = null)
         {
             if (task.Status == TaskStatus.Created)
                 throw new ArgumentException("Task must be started before it gets added to the database.", "task");
@@ -141,7 +142,7 @@ namespace Raven.Database.Actions
         public class PendingTaskWithStateAndDescription
         {
             public Task Task;
-            public object State;
+            public IOperationState State;
             public PendingTaskDescription Description;
             public CancellationTokenSource TokenSource;
         }
