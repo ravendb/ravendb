@@ -12,7 +12,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Client.Linq;
 using Raven.Database.Impl;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
@@ -35,6 +34,7 @@ namespace Raven.Database.Indexing
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			this.prefetcher = prefetcher;
 			defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
+			defaultPrefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
 			prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
 		}
 
@@ -225,8 +225,9 @@ namespace Raven.Database.Indexing
 			if (recentEtag.Restarts != fromEtag.Restarts || Math.Abs(recentEtag.Changes - fromEtag.Changes) > context.CurrentNumberOfItemsToIndexInSingleBatch)
 			{
 				// If the distance between etag of a recent document in db and etag to index from is greater than NumberOfItemsToProcessInSingleBatch
-				// then prevent the prefetcher from loading newly added documents. For such prefetcher we will relay only on future batches to prefetch docs.
-				newPrefetcher.IgnoreJustCommitedDocuments = true;
+				// then prevent the prefetcher from loading newly added documents. For such prefetcher we will relay only on future batches to prefetch docs to avoid
+				// large memory consumption by in memory prefetching queue that would hold all the new documents, but it would be a long time before we can reach them.
+				newPrefetcher.DisableCollectingDocumentsAfterCommit = true;
 			}
 
 			prefetchingBehaviors.Add(newPrefetcher);
