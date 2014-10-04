@@ -3,6 +3,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import shell = require("viewmodels/shell");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import monitorRestoreCommand = require("commands/filesystem/monitorRestoreCommand");
 
 class startRestoreCommand extends commandBase {
     private db: database = new database("<system>");
@@ -26,7 +27,7 @@ class startRestoreCommand extends commandBase {
                     this.reportError("Failed to restore backup!", response.responseText, response.statusText);
                     this.logError(response, result);
                 })
-                .done(() => this.getRestoreStatus(result));
+                .done(() => new monitorRestoreCommand(result, this.restoreRequest.FilesystemName, this.updateRestoreStatus).execute());
             });
 
         return result;
@@ -37,34 +38,6 @@ class startRestoreCommand extends commandBase {
         var restoreStatus: restoreStatusDto = { Messages: [r.Error], IsRunning: false };
         this.updateRestoreStatus(restoreStatus);
         result.reject();
-    }
-
-    private getRestoreStatus(result: JQueryDeferred<any>) {
-        new getDocumentWithMetadataCommand("Raven/FileSystem/Restore/Status/" + this.restoreRequest.FilesystemName, this.db)
-            .execute()
-            .fail((response: JQueryXHR) => {
-                setTimeout(() => this.getRestoreStatus(result), 1000);
-            })
-            .done((restoreStatus: restoreStatusDto)=> {
-                var lastMessage = restoreStatus.Messages.last();
-                var isRestoreFinished =
-                    lastMessage.contains("The new filesystem was created") ||
-                    lastMessage.contains("Restore Canceled") ||
-                    lastMessage.contains("A filesystem name must be supplied if the restore location does not contain a valid") ||
-                    lastMessage.contains("Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name");
-
-                restoreStatus.IsRunning = !isRestoreFinished;
-                this.updateRestoreStatus(restoreStatus);
-
-                if (!isRestoreFinished) {
-                    setTimeout(() => this.getRestoreStatus(result), 1000);
-                } else {
-                    this.reportSuccess("Filesystem was successfully restored!");
-                    result.resolve();
-                    // restore operation can create new filesystem, so reload file systems list
-                    shell.loadFileSystems();
-                }
-            });
     }
 }
 
