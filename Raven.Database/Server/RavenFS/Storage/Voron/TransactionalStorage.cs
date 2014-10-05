@@ -230,7 +230,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             new RestoreOperation(restoreRequest, configuration, output).Execute();
         }
 
-		private void Output(string message)
+        public void Compact(InMemoryRavenConfiguration configuration)
+        {
+            throw new NotSupportedException("Voron storage does not support compaction");
+        }
+
+        private void Output(string message)
 		{
 			Log.Info(message);
 			Console.Write(message);

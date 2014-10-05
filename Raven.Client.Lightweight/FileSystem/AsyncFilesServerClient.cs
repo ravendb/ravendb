@@ -1620,6 +1620,24 @@ namespace Raven.Client.FileSystem
                 }
             }
 
+            public async Task<long> StartCompact(string filesystemName)
+            {
+                var requestUrlString = string.Format("{0}/admin/fs/compact?filesystem={1}", client.ServerUrl, Uri.EscapeDataString(filesystemName));
+
+                var request = client.RequestFactory.CreateHttpJsonRequest(
+                    new CreateHttpJsonRequestParams(this, requestUrlString, "POST", client.PrimaryCredentials, convention));
+
+                try
+                {
+                    var response = await request.ReadResponseJsonAsync();
+                    return response.Value<long>("OperationId");
+                }
+                catch (Exception e)
+                {
+                    throw e.SimplifyException();
+                }
+            }
+
             public async Task StartBackup(string backupLocation, FileSystemDocument databaseDocument, bool incremental, string filesystemName)
             {
                 var requestUrlString = string.Format("{0}/fs/{1}/admin/fs/backup?incremental={2}", client.ServerUrl, filesystemName, incremental);
