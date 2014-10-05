@@ -532,7 +532,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Sends an async command to compact a database. During the compaction the specified database will be offline.
 		/// </summary>
-		void CompactDatabase(string databaseName);
+		Operation CompactDatabase(string databaseName);
 
         /// <summary>
         /// Begins a restore operation
