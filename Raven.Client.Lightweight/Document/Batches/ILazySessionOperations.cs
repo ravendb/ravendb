@@ -118,9 +118,9 @@ namespace Raven.Client.Document.Batches
 		/// </remarks>
 		Lazy<TResult[]> Load<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval);
 
-		Lazy<TResult> Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new();
+		Lazy<TResult> Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
 
-		Lazy<TResult[]> Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new();
+		Lazy<TResult[]> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		/// Load documents with the specified key prefix
