@@ -532,7 +532,7 @@ namespace Raven.Client.Shard
 
 		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<TResult> onEval)
 		{
-			var lazy = Lazily.Load<TTransformer, TResult>(new[] {id});
+			var lazy = Lazily.Load<TTransformer, TResult>(new[] { id }, configure);
 			return new Lazy<TResult>(() => lazy.Value[0]);
 		}
 
@@ -559,7 +559,11 @@ namespace Raven.Client.Shard
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 			var op = new LoadTransformerOperation(this, transformer, idsArray);
 
-			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(idsArray, transformer, op, false);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(idsArray, transformer, configuration.QueryInputs, op, false);
 
 			return AddLazyOperation<TResult[]>(lazyLoadOperation, null, cmds);
 		}

@@ -223,7 +223,7 @@ namespace Raven.Client.Document.Batches
         /// </remarks>
         Lazy<Task<TResult>> LoadAsync<TResult>(ValueType id, Action<TResult> onEval);
 
-        /// <summary>
+		/// <summary>
         /// Loads the specified entities with the specified id after applying
         /// conventions on the provided id to get the real document id.
         /// </summary>
@@ -284,12 +284,12 @@ namespace Raven.Client.Document.Batches
 		Lazy<Task<TResult>> LoadAsync<TResult>(string id, Type transformerType, Action<TResult> onEval = null);
 
         /// <summary>
-        /// Load documents with the specified key prefix
-        /// </summary>
+		/// Load documents with the specified key prefix
+		/// </summary>
         Lazy<Task<TResult[]>> LoadStartingWithAsync<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 
         Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query);
-    }
+	}
 
 	/// <summary>
 	/// Allow to perform eager operations on the session
@@ -308,5 +308,5 @@ namespace Raven.Client.Document.Batches
         /// Execute all the lazy requests pending within this session
         /// </summary>
         Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync();
-    }
+}
 }
