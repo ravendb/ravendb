@@ -121,7 +121,7 @@ namespace Raven.Client.Document.Batches
 		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
 		/// <param name="id"></param>
 		/// <returns></returns>
-		Lazy<TResult> Load<TTransformer, TResult>(string id, Action<TResult> onEval = null) where TTransformer : AbstractTransformerCreationTask, new();
+		Lazy<TResult> Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		/// Performs a load that will use the specified results transformer against the specified id
@@ -130,7 +130,7 @@ namespace Raven.Client.Document.Batches
 		/// <param name="id"></param>
 		/// <param name="transformerType">The transformer to use in this load operation</param>
 		/// <returns></returns>
-		Lazy<TResult> Load<TResult>(string id, Type transformerType, Action<TResult> onEval = null);
+		Lazy<TResult> Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null);
 
 		/// <summary>
 		/// Performs a load that will use the specified results transformer against the specified id
@@ -139,7 +139,7 @@ namespace Raven.Client.Document.Batches
 		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
 		/// <param name="ids"></param>
 		/// <returns></returns>
-		Lazy<TResult[]> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<TResult> onEval = null) where TTransformer : AbstractTransformerCreationTask, new();
+		Lazy<TResult[]> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		/// Performs a load that will use the specified results transformer against the specified id
@@ -148,7 +148,7 @@ namespace Raven.Client.Document.Batches
 		/// <param name="ids"></param>
 		/// <param name="transformerType">The transformer to use in this load operation</param>
 		/// <returns></returns>
-		Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<TResult> onEval = null);
+		Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null);
 
 		/// <summary>
 		/// Load documents with the specified key prefix
@@ -272,7 +272,7 @@ namespace Raven.Client.Document.Batches
 		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
 		/// <param name="id"></param>
 		/// <returns></returns>
-		Lazy<Task<TResult>> LoadAsync<TTransformer, TResult>(string id, Action<TResult> onEval = null) where TTransformer : AbstractTransformerCreationTask, new();
+		Lazy<Task<TResult>> LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		/// Performs a load that will use the specified results transformer against the specified id
@@ -281,7 +281,7 @@ namespace Raven.Client.Document.Batches
 		/// <param name="id"></param>
 		/// <param name="transformerType">The transformer to use in this load operation</param>
 		/// <returns></returns>
-		Lazy<Task<TResult>> LoadAsync<TResult>(string id, Type transformerType, Action<TResult> onEval = null);
+		Lazy<Task<TResult>> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null);
 
         /// <summary>
 		/// Load documents with the specified key prefix

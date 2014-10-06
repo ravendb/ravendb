@@ -1,20 +1,18 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenDB_2793.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="RavenDB_2794.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Client.Indexes;
-
-using Rhino.Mocks.Constraints;
+using Raven.Tests.Common;
 
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_2793 : RavenTest
+	public class RavenDB_2794 : RavenTest
 	{
 		private class Person
 		{
@@ -34,14 +32,14 @@ namespace Raven.Tests.Issues
 			{
 				TransformResults = people => from person in people
 											 select new
-											 {
-												 FirstName = person.FirstName + Query("value")
-											 };
+													{
+														FirstName = person.FirstName
+													};
 			}
 		}
 
 		[Fact]
-		public void TransformerParametersShouldWorkWithLazyLoadWithTransformer()
+		public void LazyLoadWithTransformerShouldReturnNullIfThereAreNoResults()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -49,32 +47,25 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenSession())
 				{
-					session.Store(new Person { FirstName = "John" });
-					session.Store(new Person { FirstName = "Alfred" });
-
-					session.SaveChanges();
-				}
-
-				using (var session = store.OpenSession())
-				{
 					var lazy1 = session
 						.Advanced
 						.Lazily
-						.Load<People_FirstName, Person>("people/1", configure => configure.AddQueryParam("value", 10));
+						.Load<People_FirstName, Person>("people/1");
 
 					var value1 = lazy1.Value;
 
-					Assert.Equal("John10", value1.FirstName);
+					Assert.Null(value1);
 
 					var lazy2 = session
 						.Advanced
 						.Lazily
-						.Load<People_FirstName, Person>(new List<string> { "people/1", "people/2" }, configure => configure.AddQueryParam("value", 15));
+						.Load<People_FirstName, Person>(new[] { "people/1" });
 
 					var value2 = lazy2.Value;
 
-					Assert.Equal("John15", value2[0].FirstName);
-					Assert.Equal("Alfred15", value2[1].FirstName);
+					Assert.NotNull(value2);
+					Assert.Equal(1, value2.Length);
+					Assert.Null(value2[0]);
 				}
 			}
 		}

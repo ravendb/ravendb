@@ -35,7 +35,7 @@ namespace Raven.Client.Document.Batches
 				query += "&transformer=" + transformer;
 
 				if (transformerParameters != null)
-					query = transformerParameters.Aggregate(query, (current, queryInput) => current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
+					query = transformerParameters.Aggregate(query, (current, queryInput) => current + ("&" + string.Format("tp-{0}={1}", queryInput.Key, queryInput.Value)));
 			}
 
 			return new GetRequest
@@ -76,17 +76,6 @@ namespace Raven.Client.Document.Batches
 			return null;
 		}
 
-		public object ExecuteEmbedded(IDatabaseCommands commands)
-		{
-			return commands.Get(ids, null, transformer);
-		}
-
-		public void HandleEmbeddedResponse(object result)
-		{
-			var multiLoadResult = (MultiLoadResult)result;
-			HandleRespose(multiLoadResult);
-		}
-
 		private void HandleRespose(MultiLoadResult multiLoadResult)
 		{
 			T[] complete = loadTransformerOperation.Complete<T>(multiLoadResult);
@@ -94,8 +83,9 @@ namespace Raven.Client.Document.Batches
 			{
 				Result = complete.Length > 0 ? complete[0] : (object)null;
 				return;
-		}
+			}
 
 			Result = complete;
+		}
 	}
 }

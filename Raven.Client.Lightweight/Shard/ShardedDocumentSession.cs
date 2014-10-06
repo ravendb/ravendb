@@ -530,24 +530,24 @@ namespace Raven.Client.Shard
 			return Lazily.Load(documentKeys, onEval);
 		}
 
-		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<TResult> onEval)
+		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval)
 		{
 			var lazy = Lazily.Load<TTransformer, TResult>(new[] { id }, configure);
 			return new Lazy<TResult>(() => lazy.Value[0]);
 		}
 
-		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id, Type transformerType, Action<TResult> onEval)
+		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
 		{
-			var lazy = Lazily.Load(new[] { id }, transformerType, onEval);
+			var lazy = Lazily.Load(new[] { id }, transformerType, configure, onEval);
 			return new Lazy<TResult>(() => lazy.Value[0]);
 		}
 
-		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(IEnumerable<string> ids, Action<TResult> onEval)
+		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure, Action<TResult> onEval)
 		{
-			return Lazily.Load(ids, typeof(TTransformer), onEval);
+			return Lazily.Load(ids, typeof(TTransformer), configure, onEval);
 		}
 
-		Lazy<TResult[]> ILazySessionOperations.Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<TResult> onEval)
+		Lazy<TResult[]> ILazySessionOperations.Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
 		{
 			var idsArray = ids.ToArray();
 			var cmds = GetCommandsToOperateOn(new ShardRequestData
@@ -563,7 +563,7 @@ namespace Raven.Client.Shard
 			if (configure != null)
 				configure(configuration);
 
-			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(idsArray, transformer, configuration.QueryInputs, op, false);
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(idsArray, transformer, configuration.TransformerParameters, op, false);
 
 			return AddLazyOperation<TResult[]>(lazyLoadOperation, null, cmds);
 		}
