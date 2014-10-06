@@ -167,6 +167,10 @@ class appUrl {
         return "#admin/settings/backupFilesystem";
     }
 
+    static forCompactFilesystem(): string {
+        return "#admin/settings/compactFilesystem";
+    }
+
     static forRestoreFilesystem(): string {
         return "#admin/settings/restoreFilesystem";
     }

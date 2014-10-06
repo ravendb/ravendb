@@ -3,6 +3,7 @@ using System.Diagnostics;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
+using Raven.Database.Config;
 
 namespace Raven.Database.Server.RavenFS.Storage
 {
@@ -19,5 +20,7 @@ namespace Raven.Database.Server.RavenFS.Storage
 
         void StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup, FileSystemDocument fileSystemDocument);
         void Restore(FilesystemRestoreRequest restoreRequest, Action<string> output);
+
+        void Compact(InMemoryRavenConfiguration configuration);
     }
 }

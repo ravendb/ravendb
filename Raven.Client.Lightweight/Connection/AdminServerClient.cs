@@ -34,9 +34,9 @@ namespace Raven.Client.Connection
 
 		public IDatabaseCommands Commands { get { return new ServerClient(asyncServerClient); } }
 
-		public void CompactDatabase(string databaseName)
+		public Operation CompactDatabase(string databaseName)
 		{
-			asyncAdminServerClient.CompactDatabaseAsync(databaseName).WaitUnwrap();
+		    return asyncAdminServerClient.CompactDatabaseAsync(databaseName).ResultUnwrap();
 		}
 
 		public void StopIndexing()

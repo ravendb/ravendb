@@ -46,8 +46,8 @@ class compactDatabase extends viewModelBase {
         this.isBusy(true);
 
         require(["commands/compactDatabaseCommand"], compactDatabaseCommand => {
-            var dbToBackup = shell.databases.first((db: database) => db.name == this.databaseName());
-            new compactDatabaseCommand(dbToBackup)
+            var dbToCompact = shell.databases.first((db: database) => db.name == this.databaseName());
+            new compactDatabaseCommand(dbToCompact)
                 .execute()
                 .always(() => this.isBusy(false));
         });

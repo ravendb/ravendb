@@ -977,6 +977,8 @@ interface operationIdDto {
 
 interface operationStatusDto {
     Completed: boolean;
+    Faulted: boolean;
+    State: any;
 }
 
 interface bulkOperationStatusDto extends operationStatusDto{

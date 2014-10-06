@@ -19,6 +19,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.Extensions;
 using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Server.Controllers.Admin;
@@ -303,6 +304,39 @@ namespace Raven.Database.Server.RavenFS.Controllers
             transactionalStorage.StartBackupOperation(DatabasesLandlord.SystemDatabase, FileSystem, backupDestinationDirectory, incrementalBackup, filesystemDocument);
 
             return GetEmptyMessage(HttpStatusCode.Created);
+        }
+
+        [HttpPost]
+        [Route("admin/fs/compact")]
+        public HttpResponseMessage Compact()
+        {
+            var fs = InnerRequest.RequestUri.ParseQueryString()["filesystem"];
+            if (string.IsNullOrWhiteSpace(fs))
+                return GetMessageWithString("Compact request requires a valid filesystem parameter", HttpStatusCode.BadRequest);
+
+            var configuration = FileSystemsLandlord.CreateTenantConfiguration(fs);
+            if (configuration == null)
+                return GetMessageWithString("No filesystem named: " + fs, HttpStatusCode.NotFound);
+
+            var task = Task.Factory.StartNew(() =>
+            {
+                // as we perform compact async we don't catch exceptions here - they will be propaged to operation
+                var targetFs = FileSystemsLandlord.GetFileSystemInternal(fs).ResultUnwrap();
+                FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration));
+                return GetEmptyMessage();
+            });
+            long id;
+            Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.CompactFilesystem,
+                Payload = "Compact filesystem " + fs,
+            }, out id);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            });
         }
 
         [HttpPost]
