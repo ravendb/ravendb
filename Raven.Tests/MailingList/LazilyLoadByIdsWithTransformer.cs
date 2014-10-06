@@ -1,6 +1,10 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Tests.Helpers;
+
+using Rhino.Mocks.Constraints;
+
 using Xunit;
 
 namespace Raven.Tests.MailingList
@@ -30,7 +34,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					var items = session.Advanced.Lazily.Load<ItemsTransformer, Item>("items/1", "items/2").Value;
+					var items = session.Advanced.Lazily.Load<ItemsTransformer, Item>(new List<string> {"items/1", "items/2" }).Value;
 					Assert.Equal(1 * 3, items[0].Position);
 					Assert.Equal(2 * 3, items[1].Position);
 				}
