@@ -74,14 +74,20 @@ namespace Raven.Client.Document.Batches
 
 		public void HandleEmbeddedResponse(object result)
 		{
-			var multiLoadResult = (MultiLoadResult) result;
+			var multiLoadResult = (MultiLoadResult)result;
 			HandleRespose(multiLoadResult);
 		}
 
 		private void HandleRespose(MultiLoadResult multiLoadResult)
 		{
 			T[] complete = loadTransformerOperation.Complete<T>(multiLoadResult);
-			Result = singleResult ? (object) complete[0] : complete;
+			if (singleResult)
+			{
+				Result = complete.Length > 0 ? complete[0] : (object)null;
+				return;
+			}
+
+			Result = complete;
 		}
 	}
 #endif
