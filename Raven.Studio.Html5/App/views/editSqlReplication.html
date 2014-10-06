@@ -209,7 +209,7 @@
                 </label>
 
                 <div class="col-sm-11">
-                    <pre tabindex="9" class="form-control editor" data-bind="aceEditor: { code: script, lang: 'ace/mode/javascript' ,minHeight:450}"></pre>
+                    <pre tabindex="9" id="sqlReplicationEditor" class="form-control editor" data-bind="aceEditor: { code: script, lang: 'ace/mode/javascript' }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 40 }"></pre>
                 </div>
             </div>
         </div>

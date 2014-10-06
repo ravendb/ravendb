@@ -292,12 +292,15 @@ class editDocument extends viewModelBase {
     // Called when the view is attached to the DOM.
     attached() {
         this.setupKeyboardShortcuts();
-
+        $("#docEditor").resize();
         this.isNewLineFriendlyMode.subscribe(val => {
             this.updateNewlineLayoutInDocument(val);
-
-
         });
+    }
+
+    detached() {
+        super.detached();
+        $("#docEditor").off('DynamicHeightSet');
     }
 
     compositionComplete() {
@@ -309,6 +312,8 @@ class editDocument extends viewModelBase {
         if (editorElement.length > 0) {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
+
+        $("#docEditor").on('DynamicHeightSet', () => this.docEditor.resize());
         this.focusOnEditor();
     }
 

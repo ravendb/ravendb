@@ -10,6 +10,6 @@
     </div>
     
     <br />
-    <pre class="editor" data-bind="aceEditor: { code: documentText, fontSize:'18px', lang: 'ace/mode/javascript' }"></pre>
+    <pre class="editor" id="customFunctionsEditor" data-bind="aceEditor: { code: documentText, fontSize: '18px', lang: 'ace/mode/javascript' }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 40 }"></pre>
     
 </form>                                                                                                           

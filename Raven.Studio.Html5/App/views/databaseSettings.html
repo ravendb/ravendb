@@ -14,6 +14,6 @@
         <li accesskey="d" data-bind="click: activateDoc, css: { active: isEditingMetadata() === false }" title="Edit document data (Alt+Shift+D)"><a style="cursor: pointer;">Data</a></li>
         <li accesskey="m" data-bind="click: activateMeta, css: { active: isEditingMetadata }" title="Edit document metadata (Alt+Shift+M)"><a style="cursor: pointer;">Metadata</a></li>
     </ul>
-    <pre id="dbDocEditor" data-bind="aceEditor: { code: text, fontSize:'18px', lang: 'ace/mode/json', readOnly:'true' }"></pre>
+    <pre id="dbDocEditor" data-bind="aceEditor: { code: text, fontSize: '18px', lang: 'ace/mode/json', readOnly: 'true' }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 40 }"></pre>
     
 </form>

@@ -31,7 +31,8 @@ class configuration extends viewModelBase {
     isBusy = ko.observable(false);
     isSaveEnabled: KnockoutComputed<boolean>;
 	editor: AceAjax.Editor;
-	enabled: boolean = true;
+    enabled: boolean = true;
+
     constructor() {
         super();
         aceEditorBindingHandler.install();
@@ -58,6 +59,7 @@ class configuration extends viewModelBase {
         this.dirtyFlag = new ko.DirtyFlag([this.configurationKeyText]);
 
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
+        return this.loadKeys(this.activeFilesystem());
     }
 
     attached() {
@@ -70,7 +72,6 @@ class configuration extends viewModelBase {
         });
 
         this.initializeDocEditor();
-        this.loadKeys(this.activeFilesystem());
         this.configurationEditor.focus();
         this.setupKeyboardShortcuts();
     }
@@ -82,12 +83,16 @@ class configuration extends viewModelBase {
         if (editorElement.length > 0) {
             this.editor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
+        $("#configurationEditor").on('DynamicHeightSet', () => this.editor.resize());
+
         this.focusOnEditor();
     }
 
     detached() {
         super.detached();
         this.selectedKey.unsubscribeFrom("ActivateConfigurationKey");
+        $("#configurationEditor").off('DynamicHeightSet');
+
     }
 
     private focusOnEditor() {
@@ -138,7 +143,7 @@ class configuration extends viewModelBase {
 
     loadKeys(fs: filesystem) {
         if (this.enabled) {
-            new getConfigurationCommand(fs)
+            return new getConfigurationCommand(fs)
                 .execute()
                 .done( (x: configurationKey[]) => {
                     this.keys(x);
@@ -150,6 +155,7 @@ class configuration extends viewModelBase {
                     }
                 });
         }
+        return $.Deferred().resolve();
     }
 
     selectKey(key: configurationKey) {

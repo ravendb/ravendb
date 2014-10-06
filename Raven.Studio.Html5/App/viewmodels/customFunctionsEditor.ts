@@ -45,7 +45,13 @@ class customFunctionsEditor extends viewModelBase {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
 
+        $("#customFunctionsEditor").on('DynamicHeightSet', () => this.docEditor.resize());
         this.fetchCustomFunctions();
+    }
+
+    detached() {
+        super.detached();
+        $("#customFunctionsEditor").off('DynamicHeightSet');
     }
 
     fetchCustomFunctions() {
