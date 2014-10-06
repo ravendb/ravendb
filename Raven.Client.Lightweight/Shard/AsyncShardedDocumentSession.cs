@@ -95,12 +95,12 @@ namespace Raven.Client.Shard
 	        throw new NotImplementedException();
 	    }
 
-		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<TResult> onEval)
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval)
 		{
 			throw new NotImplementedException();
 		}
 
-		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, Type transformerType, Action<TResult> onEval)
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
 		{
 			throw new NotImplementedException();
 		}
