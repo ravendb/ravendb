@@ -41,6 +41,25 @@ namespace Raven.Abstractions.Data
             return (errors / (float)attempts) > 0.15;
         }
 
+		public static bool CheckIndexIsGoingToBeInvalid(int attempts, int errors, int? reduceAttempts, int? reduceErrors)
+		{
+			if (attempts == 0 || (errors == 0 && (reduceErrors == null || reduceErrors == 0)))
+				return false;
+
+			if (reduceAttempts != null)
+			{
+				// we don't have enough attempts to make a useful determination
+				if (attempts + reduceAttempts < 20)
+					return false;
+				if((errors + (reduceErrors ?? 0)) / (float)(attempts + (reduceAttempts ?? 0)) > 0.05)
+					return true;
+			}
+			// we don't have enough attempts to make a useful determination
+			if (attempts < 20)
+				return false;
+			return (errors / (float)attempts) > 0.05;
+		}
+
 		/// <summary>
 		/// Gets or sets the id
 		/// </summary>
