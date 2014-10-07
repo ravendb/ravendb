@@ -1040,3 +1040,10 @@ interface adminLogsConfigEntryDto {
     category: string;
     level: string;
 }
+
+interface fileSystemSettingsDto {
+    name: string;
+    path: string;
+    logsPath: string;
+    storageEngine: string;
+}

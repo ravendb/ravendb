@@ -213,6 +213,7 @@ namespace Raven.Database.Server.Tenancy
             config.CustomizeValuesForTenant(tenantId);
 
             config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
+            config.Settings["Raven/FileSystem/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
 
             foreach (var setting in document.Settings)
             {
@@ -226,6 +227,9 @@ namespace Raven.Database.Server.Tenancy
             }
 
 	        config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
+            config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
+            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);
+            
             config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
 
             config.DatabaseName = tenantId;
