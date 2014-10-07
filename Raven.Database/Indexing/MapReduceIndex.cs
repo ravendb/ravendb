@@ -192,6 +192,18 @@ namespace Raven.Database.Indexing
 			});
 			BatchCompleted("Current Map");
 			logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
+
+			if (IndexFailureInformation.CheckIndexIsGoingToBeInvalid(stats.IndexingAttempts, stats.IndexingErrors, stats.ReduceAttempts, stats.ReduceErrors))
+			{
+				context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
+				
+				context.Database.Notifications.RaiseNotifications(new IndexChangeNotification()
+				{
+					Name = PublicName,
+					Type = IndexChangeTypes.IndexMarkedAsErrored
+				});
+			}
+
 		}
 
 		private int ProcessBatch(AbstractViewGenerator viewGenerator, List<object> currentDocumentResults, string currentKey, HashSet<ReduceKeyAndBucket> changes,
