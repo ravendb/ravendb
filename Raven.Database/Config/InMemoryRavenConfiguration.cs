@@ -1099,6 +1099,9 @@ namespace Raven.Database.Config
 			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
 
             FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
+
+		    Encryption.UseSsl = defaultConfiguration.Encryption.UseSsl;
+		    Encryption.UseFips = defaultConfiguration.Encryption.UseFips;
 		}
 
 		public IEnumerable<string> GetConfigOptionsDocs()
