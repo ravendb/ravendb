@@ -64,9 +64,15 @@ namespace Raven.Smuggler
             };
         }
 
-        public Task<IAsyncEnumerator<FileHeader>> GetFiles(FilesConnectionStringOptions src, Etag lastEtag, int take)
+        public async Task<IAsyncEnumerator<FileHeader>> GetFiles(FilesConnectionStringOptions src, Etag lastEtag, int take)
         {
-            throw new NotImplementedException();
+            ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
+            return await Store.AsyncFilesCommands.StreamFilesAsync(lastEtag, pageSize: take);
+        }
+
+        public Task<Stream> DownloadFile(FileHeader file)
+        {
+            return Store.AsyncFilesCommands.DownloadAsync(file.FullPath);
         }
 
         public Task PutFiles(Stream files, RavenJObject metadata)

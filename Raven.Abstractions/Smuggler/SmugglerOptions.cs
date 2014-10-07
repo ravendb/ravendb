@@ -50,7 +50,7 @@ namespace Raven.Abstractions.Smuggler
         public int Limit { get; set; }        
 
         /// <summary>
-        /// The number of entities to load in each call to the RavenDB database.
+        /// The number of entities to load in each call to the server.
         /// </summary>
         public int BatchSize
         {

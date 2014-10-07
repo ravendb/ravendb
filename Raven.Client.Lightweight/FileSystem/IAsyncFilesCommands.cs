@@ -2,6 +2,7 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
 using System;
@@ -84,6 +85,8 @@ namespace Raven.Client.FileSystem
         Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 1024);
 
         Task<FileHeader[]> GetAsync(string[] filename);
+
+        Task<IAsyncEnumerator<FileHeader>> StreamFilesAsync(Etag fromEtag, int pageSize = int.MaxValue);
     }
 
     public interface IAsyncFilesAdminCommands : IDisposable, IHoldProfilingInformation

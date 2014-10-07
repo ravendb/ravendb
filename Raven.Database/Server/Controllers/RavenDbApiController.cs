@@ -245,14 +245,6 @@ namespace Raven.Database.Server.Controllers
             return false;
         }
 
-        public int GetNextPageStart()
-        {
-            bool isNextPage;
-            if (bool.TryParse(GetQueryStringValue("next-page"), out isNextPage) && isNextPage)
-                return GetStart();
-
-            return 0;
-        }
 
 		protected TransactionInformation GetRequestTransaction()
 		{

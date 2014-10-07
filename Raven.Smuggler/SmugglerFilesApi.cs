@@ -28,7 +28,7 @@ namespace Raven.Smuggler
 
         public override async Task<ExportFilesResult> ExportData(SmugglerExportOptions<FilesConnectionStringOptions> exportOptions)
         {
-			using (store = CreateStores(exportOptions.From))
+			using (store = CreateStore(exportOptions.From))
 			{
 				return await base.ExportData(exportOptions);
 			}
@@ -36,13 +36,18 @@ namespace Raven.Smuggler
 
         public override async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions)
         {
-            using (store = CreateStores(importOptions.To))
+            using (store = CreateStore(importOptions.To))
             {
                 await base.ImportData(importOptions);
             }
         }
 
-        private FilesStore CreateStores(FilesConnectionStringOptions options)
+        private FilesStore CreateStore(FilesConnectionStringOptions options)
+        {
+            throw new NotImplementedException();
+        }
+
+        private DocumentStore CreateDocumentStore(FilesConnectionStringOptions options)
         {
             throw new NotImplementedException();
         }

@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
@@ -94,7 +95,6 @@ namespace Raven.Abstractions.Smuggler
 
             try
             {
-
                 using (var gZipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
                 using (var streamWriter = new StreamWriter(gZipStream))
                 {
@@ -103,7 +103,7 @@ namespace Raven.Abstractions.Smuggler
 
                     try
                     {
-                        await ExportFiles(exportOptions.From, streamWriter, result.LastFileEtag, maxEtags.LastFileEtag);
+                        await ExportFiles(exportOptions, streamWriter, result.LastFileEtag, maxEtags.LastFileEtag);
                     }
                     catch (SmugglerExportException e)
                     {
@@ -125,18 +125,14 @@ namespace Raven.Abstractions.Smuggler
             }
         }
 
-        private async Task<Etag> ExportFiles(FilesConnectionStringOptions src, StreamWriter metadataStreamWriter, Etag lastEtag, Etag maxEtag)
+        private async Task<Etag> ExportFiles(SmugglerExportOptions<FilesConnectionStringOptions> options, StreamWriter metadataStreamWriter, Etag lastEtag, Etag maxEtag)
         {
-            var jsonWriter = new JsonTextWriter(metadataStreamWriter)
-            {
-                Formatting = Formatting.Indented
-            };
+            Operations.Configure(Options);
+            Operations.Initialize(Options);
 
-            var now = SystemTime.UtcNow;
             var totalCount = 0;
             var lastReport = SystemTime.UtcNow;
             var reportInterval = TimeSpan.FromSeconds(2);
-            var reachedMaxEtag = false;
             Operations.ShowProgress("Exporting Files");
 
             while (true)
@@ -145,9 +141,9 @@ namespace Raven.Abstractions.Smuggler
                 try
                 {
                     var maxRecords = Options.Limit - totalCount;
-                    if (maxRecords > 0 && reachedMaxEtag == false)
+                    if (maxRecords > 0)
                     {
-                        using (var files = await Operations.GetFiles(src, lastEtag, Math.Min(Options.BatchSize, maxRecords)))
+                        using (var files = await Operations.GetFiles(options.From, lastEtag, Math.Min(Options.BatchSize, maxRecords)))
                         {
                             while (await files.MoveNextAsync())
                             {
@@ -156,16 +152,15 @@ namespace Raven.Abstractions.Smuggler
 
                                 var tempLastEtag = file.Etag;
                                 if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
-                                {
-                                    reachedMaxEtag = true;
                                     break;
-                                }
+
                                 lastEtag = tempLastEtag;                                
 
                                 // Retrieve the file and write it to the stream. 
-
+                                var fileStream = await Operations.DownloadFile(file);
+                                
                                 // Write the metadata (which includes the stream size and file container name)
-
+                                metadataStreamWriter.Write( RavenJObject.FromObject(file) );
 
                                 totalCount++;
                                 if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)

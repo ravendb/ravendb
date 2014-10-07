@@ -149,6 +149,15 @@ namespace Raven.Database.Server.Controllers
 			return Math.Max(0, start);
 		}
 
+        public int GetNextPageStart()
+        {
+            bool isNextPage;
+            if (bool.TryParse(GetQueryStringValue("next-page"), out isNextPage) && isNextPage)
+                return GetStart();
+
+            return 0;
+        }
+
 		public int GetPageSize(int maxPageSize)
 		{
 			int pageSize;
@@ -160,6 +169,8 @@ namespace Raven.Database.Server.Controllers
 				pageSize = maxPageSize;
 			return pageSize;
 		}
+
+
 
 		public bool MatchEtag(Etag etag)
 		{

@@ -12,12 +12,6 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Smuggler
 {
-    //public class SmugglerFileInfo
-    //{
-    //    public string File { get; set; }
-    //    public RavenJObject Metadata { get; set; }
-    //    public Etag Etag { get; set; }
-    //}
 
     public interface ISmugglerFilesOperations
     {
@@ -31,7 +25,8 @@ namespace Raven.Abstractions.Smuggler
 
 
         Task<IAsyncEnumerator<FileHeader>> GetFiles(FilesConnectionStringOptions src, Etag lastEtag, int take);
-        Task PutFiles(Stream files, RavenJObject metadata);
+        Task<Stream> DownloadFile(FileHeader file);
+        Task PutFiles(Stream files, RavenJObject metadata);                
 
         
         void Initialize(SmugglerFilesOptions options);
