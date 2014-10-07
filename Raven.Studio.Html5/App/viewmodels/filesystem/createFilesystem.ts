@@ -6,7 +6,7 @@ import filesystem = require("models/filesystem/filesystem");
 
 class createFilesystem extends dialogViewModelBase {
 
-    public creationTask = $.Deferred();
+    public creationTask = $.Deferred<fileSystemSettingsDto>();
     creationTaskStarted = false;
 
     public fileSystemName = ko.observable('');
@@ -14,6 +14,8 @@ class createFilesystem extends dialogViewModelBase {
     fileSystemPath = ko.observable('');
     pathCustomValidityError: KnockoutComputed<string>;
     fileSystemLogsPath = ko.observable('');
+    storageEngine = ko.observable('');
+
     logsCustomValidityError: KnockoutComputed<string>;
     fileSystemNameFocus = ko.observable(true);
 
@@ -66,7 +68,12 @@ class createFilesystem extends dialogViewModelBase {
         // For now we're just creating the filesystem.
         this.creationTaskStarted = true;
         dialog.close(this);
-        this.creationTask.resolve(this.fileSystemName(), this.fileSystemPath(), this.fileSystemLogsPath());
+        this.creationTask.resolve({
+            name: this.fileSystemName(),
+            path: this.fileSystemPath(),
+            logsPath: this.fileSystemLogsPath(),
+            storageEngine: this.storageEngine()
+        });
     }
 
     private isFilesystemNameExists(fileSystemName: string, filesystems: filesystem[]): boolean {
