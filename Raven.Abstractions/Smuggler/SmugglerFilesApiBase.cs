@@ -127,9 +127,6 @@ namespace Raven.Abstractions.Smuggler
 
         private async Task<Etag> ExportFiles(SmugglerExportOptions<FilesConnectionStringOptions> options, StreamWriter metadataStreamWriter, Etag lastEtag, Etag maxEtag)
         {
-            Operations.Configure(Options);
-            Operations.Initialize(Options);
-
             var totalCount = 0;
             var lastReport = SystemTime.UtcNow;
             var reportInterval = TimeSpan.FromSeconds(2);

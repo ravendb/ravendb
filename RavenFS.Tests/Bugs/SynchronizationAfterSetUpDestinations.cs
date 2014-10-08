@@ -1,8 +1,7 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Tests.Helpers;
+using Raven.Database.Extensions;
 using RavenFS.Tests.Synchronization;
 using Xunit;
 using Raven.Abstractions.FileSystem;

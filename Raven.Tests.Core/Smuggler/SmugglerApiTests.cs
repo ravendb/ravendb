@@ -3,6 +3,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Core.Utils.Entities;
@@ -13,7 +14,6 @@ using Xunit;
 using Raven.Abstractions.Data;
 using Raven.Smuggler;
 using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Extensions;
 using System;
 
 namespace Raven.Tests.Core.Smuggler

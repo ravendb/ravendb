@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Extensions;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;

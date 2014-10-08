@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Extensions;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;

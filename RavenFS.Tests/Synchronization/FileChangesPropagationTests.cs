@@ -1,9 +1,7 @@
 ﻿using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Extensions;
 using Raven.Json.Linq;
-using Raven.Tests.Helpers;
-using RavenFS.Tests.Synchronization.IO;
 using System;
 using System.IO;
 using System.Linq;

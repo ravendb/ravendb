@@ -239,6 +239,10 @@ namespace Raven.Client.FileSystem
                     var response = (RavenJObject) await request.ReadResponseJsonAsync();
                     return response.JsonDeserialization<FileSystemStats>();
                 }
+                catch (ErrorResponseException)
+                {
+                    throw;
+                }
                 catch (Exception e)
                 {
                     throw e.SimplifyException();

@@ -424,7 +424,6 @@
     <Compile Include="Server\RavenFS\Extensions\ConfigurationExtension.cs" />
     <Compile Include="Server\RavenFS\Extensions\EnumExtensions.cs" />
     <Compile Include="Server\RavenFS\Extensions\HttpExtensions.cs" />
-    <Compile Include="Server\RavenFS\Extensions\IOExtensions.cs" />
     <Compile Include="Server\RavenFS\Extensions\MetadataExtensions.cs" />
     <Compile Include="Server\RavenFS\Extensions\StreamExtensions.cs" />
     <Compile Include="Server\RavenFS\Infrastructure\Historian.cs" />

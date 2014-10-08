@@ -21,6 +21,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Database.Actions;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Storage;
