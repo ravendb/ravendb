@@ -264,6 +264,7 @@ namespace Raven.Database.Config
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
 
 			Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
+			Replication.ReplicationRequestTimeoutInMilliseconds = ravenSettings.Replication.ReplicationRequestTimeoutInMilliseconds.Value;
 
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
 			FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
@@ -1165,6 +1166,11 @@ namespace Raven.Database.Config
 			/// Number of seconds after which replication will stop reading documents/attachments from disk. Default: 30.
 			/// </summary>
 			public int FetchingFromDiskTimeoutInSeconds { get; set; }
+
+			/// <summary>
+			/// Number of milliseconds before replication requests will timeout. Default: 60 * 1000.
+			/// </summary>
+			public int ReplicationRequestTimeoutInMilliseconds { get; set; }
 		}
 
         public class FileSystemConfiguration
