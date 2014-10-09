@@ -71,6 +71,7 @@
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
     <Compile Include="Bundles\Replication\ReadStriping.cs" />
     <Compile Include="Faceted\FacetPaging.cs" />
+    <Compile Include="IncrementalBackupTest.cs" />
     <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
     <Compile Include="Issues\RavenDB_1033.cs" />
     <Compile Include="Issues\RavenDB_1280.cs" />
