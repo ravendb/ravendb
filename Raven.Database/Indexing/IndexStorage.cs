@@ -1047,7 +1047,15 @@ namespace Raven.Database.Indexing
 				if ((SystemTime.UtcNow - value.LastIndexTime).TotalMinutes < 1)
 					continue;
 
-                value.Flush(value.GetLastEtagFromStats());
+				try
+				{
+					value.Flush(value.GetLastEtagFromStats());
+				}
+				catch (Exception)
+				{
+					value.IncrementWriteErrors();
+					throw;
+				}
 			}
 
 			SetUnusedIndexesToIdle();
@@ -1234,7 +1242,15 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values.Where(value => !value.IsMapReduce))
 			{
-                value.Flush(value.GetLastEtagFromStats());
+				try
+				{
+					value.Flush(value.GetLastEtagFromStats());
+				}
+				catch (Exception)
+				{
+					value.IncrementWriteErrors();
+					throw;
+				}
 			}
 		}
 
@@ -1242,7 +1258,15 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values.Where(value => value.IsMapReduce))
 			{
-                value.Flush(value.GetLastEtagFromStats());
+				try
+				{
+					value.Flush(value.GetLastEtagFromStats());
+				}
+				catch (Exception)
+				{
+					value.IncrementWriteErrors();
+					throw;
+				}
 			}
 		}
 
