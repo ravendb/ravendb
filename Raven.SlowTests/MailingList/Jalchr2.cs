@@ -100,6 +100,7 @@ namespace Raven.SlowTests.MailingList
                 }
             }
         }
+
         class User
         {
             public Guid Id { get; set; }
