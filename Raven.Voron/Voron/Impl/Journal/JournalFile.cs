@@ -168,7 +168,6 @@ namespace Voron.Impl.Journal
 				ptt[freedPageNumber] = new PagePosition
 				{
 					ScratchPos = -1,
-					JournalPos = -1,
 					ScratchNumber = -1,
 					TransactionId = tx.Id,
 					JournalNumber = Number,
@@ -197,7 +196,6 @@ namespace Voron.Impl.Journal
 				{
 					ScratchPos = txPage.PositionInScratchBuffer,
 					ScratchNumber = txPage.ScratchFileNumber,
-					JournalPos = -1, // needed only during recovery and calculated there
 					TransactionId = tx.Id,
 					JournalNumber = Number
 				};
@@ -209,7 +207,6 @@ namespace Voron.Impl.Journal
 			    {
 				    ScratchPos = freedPage.PositionInScratchBuffer,
 					ScratchNumber = freedPage.ScratchFileNumber,
-				    JournalPos = -1, // needed only during recovery and calculated there
 				    TransactionId = tx.Id,
 				    JournalNumber = Number
 			    });

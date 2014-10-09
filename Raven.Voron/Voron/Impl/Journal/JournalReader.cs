@@ -9,13 +9,21 @@ namespace Voron.Impl.Journal
 {
     public unsafe class JournalReader
     {
+		public class RecoveryPagePosition
+		{
+			public long JournalPos;
+			public long TransactionId;
+			public bool IsOverflow;
+			public int NumberOfOverflowPages = -1;
+		}
+
         private readonly IVirtualPager _pager;
         private readonly IVirtualPager _recoveryPager;
 
         private readonly long _lastSyncedTransactionId;
         private long _readingPage;
 
-	    private readonly Dictionary<long, PagePosition> _transactionPageTranslation = new Dictionary<long, PagePosition>();
+	    private readonly Dictionary<long, RecoveryPagePosition> _transactionPageTranslation = new Dictionary<long, RecoveryPagePosition>();
         private int _recoveryPage;
 
         public bool RequireHeaderUpdate { get; private set; }
@@ -75,7 +83,7 @@ namespace Voron.Impl.Journal
                 return false;   
             }
 
-            var tempTransactionPageTranslaction = new Dictionary<long, PagePosition>();
+			var tempTransactionPageTranslaction = new Dictionary<long, RecoveryPagePosition>();
 
             for (var i = 0; i < current->PageCount; i++)
             {
@@ -84,21 +92,27 @@ namespace Voron.Impl.Journal
 
                 var page = _recoveryPager.Read(_recoveryPage);
 
-				 tempTransactionPageTranslaction[page.PageNumber] = new PagePosition
-                {
-                    JournalPos = _recoveryPage,
-                    TransactionId = current->TransactionId
-                };
-
+	            var pagePosition = new RecoveryPagePosition
+	            {
+		            JournalPos = _recoveryPage,
+		            TransactionId = current->TransactionId
+	            };
+	            
                 if (page.IsOverflow)
                 {
                     var numOfPages = _recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
-                    _recoveryPage += numOfPages;
+
+	                pagePosition.IsOverflow = true;
+	                pagePosition.NumberOfOverflowPages = numOfPages;
+					
+					_recoveryPage += numOfPages;
                 }
                 else
                 {
                     _recoveryPage++;
                 }
+
+				tempTransactionPageTranslaction[page.PageNumber] = pagePosition;
             }
 
             _readingPage += compressedPages;
@@ -108,6 +122,16 @@ namespace Voron.Impl.Journal
             foreach (var pagePosition in tempTransactionPageTranslaction)
             {
                 _transactionPageTranslation[pagePosition.Key] = pagePosition.Value;
+
+	            if (pagePosition.Value.IsOverflow)
+	            {
+					Debug.Assert(pagePosition.Value.NumberOfOverflowPages != -1);
+
+		            for (int i = 1; i < pagePosition.Value.NumberOfOverflowPages; i++)
+		            {
+			            _transactionPageTranslation.Remove(pagePosition.Key + i);
+		            }
+	            }
             }
 
             return true;
@@ -120,7 +144,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public Dictionary<long, PagePosition> TransactionPageTranslation
+        public Dictionary<long, RecoveryPagePosition> TransactionPageTranslation
         {
             get { return _transactionPageTranslation; }
         }
