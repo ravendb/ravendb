@@ -491,31 +491,31 @@ namespace Raven.Tests.Linq
 			}
 		}
 
-        [Fact]
-        public void Throws_exception_when_overloaded_distinct_called()
-        {
-            using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
-            {
-                store.Initialize();
+		[Fact]
+		public void Throws_exception_when_overloaded_distinct_called()
+		{
+			using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+			{
+				store.Initialize();
 
-                using (var s = store.OpenSession())
-                {
-                    s.Store(new OrderItem { Description = "Test", Cost = 10.0m });
-                    s.Store(new OrderItem { Description = "Test1", Cost = 10.0m });
+				using (var s = store.OpenSession())
+				{
+					s.Store(new OrderItem { Description = "Test", Cost = 10.0m });
+					s.Store(new OrderItem { Description = "Test1", Cost = 10.0m });
 
-                    s.SaveChanges();
-                }
+					s.SaveChanges();
+				}
 
-                using (var s = store.OpenSession())
-                {
-                    var shouldThrow = s.Query<OrderItem>().Distinct(new OrderItemCostComparer());
-                    Assert.Throws<NotSupportedException>(() => shouldThrow.ToArray());
+				using (var s = store.OpenSession())
+				{
+					var shouldThrow = s.Query<OrderItem>().Distinct(new OrderItemCostComparer());
+					Assert.Throws<NotSupportedException>(() => shouldThrow.ToArray());
 
-                    var shouldNotThrow = s.Query<OrderItem>().Distinct();
-                    Assert.DoesNotThrow(() => shouldNotThrow.ToArray());
-                }
-            }
-        }
+					var shouldNotThrow = s.Query<OrderItem>().Distinct();
+					Assert.DoesNotThrow(() => shouldNotThrow.ToArray());
+				}
+			}
+		}
 
 		public class SomeDataProjection
 		{
