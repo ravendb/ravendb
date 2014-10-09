@@ -359,7 +359,15 @@ namespace Raven.Database.Indexing
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
 			onlyFoundIdleWork.Value = false;
-		    return actions.Staleness.IsReduceStale(indexesStat.Id);
+			var isReduceStale = actions.Staleness.IsReduceStale(indexesStat.Id);
+
+			if (isReduceStale == false)
+				return false;
+
+			if (indexesStat.Priority.HasFlag(IndexingPriority.Error))
+				return false;
+
+			return true;
 		}
 
 		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
