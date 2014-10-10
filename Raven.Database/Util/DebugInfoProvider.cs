@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -287,23 +288,29 @@ namespace Raven.Database.Util
 
 				if (compareToCollection.Any(x => x.Value < 0))
 				{
-					result.Add(new
-					{
-						ForIndexingGroup = group,
-						HasCorrectlyOrderedEtags = true,
-						EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-					});
-
-					continue;
+				    result.Add(new
+				    {
+                        ForIndexingGroup = group,
+                        HasCorrectlyOrderedEtags = false,
+                        IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
+                        EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
+				    });
 				}
-
-				result.Add(new
+				else
 				{
-					ForIndexingGroup = group,
-					HasCorrectlyOrderedEtags = false,
-					IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
-					EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-				});
+                    var elementsToTake = Math.Min(5, prefetcherDocs.Count());
+                    var etagsWithKeysTail = Enumerable.Range(0, elementsToTake).Select(
+                        i => prefetcherDocs[prefetcherDocs.Count() - elementsToTake + i]).ToDictionary(x => x.Etag, x => x.Key);
+
+                    result.Add(new
+                    {
+                        ForIndexingGroup = group,
+                        HasCorrectlyOrderedEtags = true,
+                        EtagsWithKeysHead = prefetcherDocs.Take(5).ToDictionary(x => x.Etag, x => x.Key),
+                        EtagsWithKeysTail = etagsWithKeysTail,
+                        EtagsWithKeysCount = prefetcherDocs.Count()
+                    });
+				}
 			}
 
 			return result;
