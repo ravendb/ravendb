@@ -10,6 +10,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Management;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Utils;
@@ -115,6 +116,15 @@ namespace Raven.Database.Util
                 jsonWriter.Flush();
             }
 
+            var indexes = package.CreateEntry(zipEntryPrefix + "indexes.json", compressionLevel);
+
+            using (var indexesStream = indexes.Open())
+            using (var streamWriter = new StreamWriter(indexesStream))
+            {
+                jsonSerializer.Serialize(streamWriter, database.IndexDefinitionStorage.IndexDefinitions.ToDictionary(x => x.Key, x => x.Value));
+                streamWriter.Flush();
+            }
+
             var currentlyIndexing = package.CreateEntry(zipEntryPrefix + "currently-indexing.json", compressionLevel);
 
             using (var currentlyIndexingStream = currentlyIndexing.Open())
@@ -130,6 +140,19 @@ namespace Raven.Database.Util
             using (var streamWriter = new StreamWriter(queriesStream))
             {
                 jsonSerializer.Serialize(streamWriter, database.WorkContext.CurrentlyRunningQueries);
+                streamWriter.Flush();
+            }
+
+            var version = package.CreateEntry(zipEntryPrefix + "version.json", compressionLevel);
+
+            using (var versionStream = version.Open())
+            using (var streamWriter = new StreamWriter(versionStream))
+            {
+                jsonSerializer.Serialize(streamWriter, new
+                {
+                    DocumentDatabase.ProductVersion,
+                    DocumentDatabase.BuildVersion   
+                });
                 streamWriter.Flush();
             }
 
@@ -200,7 +223,7 @@ namespace Raven.Database.Util
 			}
         }
 
-		internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
+	    internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
 		{
 			return requestManager.GetRecentRequests(databaseName).Select(x => new
 			{
