@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
-using Raven.Tests.Common;
 using Raven.Tests.Helpers;
 
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace Raven.SlowTests.MailingList
 {
 	public class FailingBulkInsertTest : RavenTestBase
 	{
