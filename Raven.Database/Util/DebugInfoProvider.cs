@@ -109,7 +109,7 @@ namespace Raven.Database.Util
 
             using (var configStream = config.Open())
             using (var streamWriter = new StreamWriter(configStream))
-            using (var jsonWriter = new JsonTextWriter(streamWriter))
+            using (var jsonWriter = new JsonTextWriter(streamWriter) { Formatting = Formatting.Indented })
             {
                 GetConfigForDebug(database).WriteTo(jsonWriter, new EtagJsonConverter());
                 jsonWriter.Flush();
