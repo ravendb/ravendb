@@ -276,6 +276,8 @@ namespace Raven.Database.Indexing
 				{
 					waitReason = "Flush";
 					indexWriter.Commit(highestETag);
+
+					ResetWriteErrors();
 				}
 				finally
 				{
@@ -299,6 +301,8 @@ namespace Raven.Database.Indexing
 					}
 					indexWriter.Optimize();
 					logIndexing.Info("Done merging {0} - took {1}", indexId, sp.Elapsed);
+
+					ResetWriteErrors();
 				}
 				catch (Exception)
 				{
@@ -625,6 +629,8 @@ namespace Raven.Database.Indexing
 				dir.Dispose();
 
 				CreateIndexWriter();
+
+				ResetWriteErrors();
 			}
 		}
 
@@ -1761,7 +1767,7 @@ namespace Raven.Database.Indexing
 									"Please verify this index definition and consider a re-design of your entities or index.",
 				PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs);
 			logIndexing.Warn(msg);
-			this.context.AddError(this.indexId, this.PublicName, sourceDocumentId, msg);
+			context.AddError(indexId, PublicName, sourceDocumentId, msg);
 
 			return false;
 		}
@@ -1776,7 +1782,7 @@ namespace Raven.Database.Indexing
 			context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
 			Priority = IndexingPriority.Error;
 
-			context.Database.Notifications.RaiseNotifications(new IndexChangeNotification()
+			context.Database.Notifications.RaiseNotifications(new IndexChangeNotification
 			{
 				Name = PublicName,
 				Type = IndexChangeTypes.IndexMarkedAsErrored
@@ -1785,8 +1791,21 @@ namespace Raven.Database.Indexing
 			var msg = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
 
 			logIndexing.Warn(msg);
+
 			context.AddError(indexId, PublicName, null, msg);
 
+			context.Database.AddAlert(new Alert
+			{
+				AlertLevel = AlertLevel.Error,
+				CreatedAt = SystemTime.UtcNow,
+				Message = msg,
+				Title = string.Format("Index '{0}' marked as errored due to write errors", PublicName),
+				UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
+			});
+		}
+
+		private void ResetWriteErrors()
+		{
 			writeErrors = Interlocked.Exchange(ref writeErrors, 0);
 		}
 
