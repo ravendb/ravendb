@@ -26,6 +26,7 @@ class index {
     lockMode = ko.observable<string>();
     isIdle = ko.observable(false);
     isAbandoned = ko.observable(false);
+    isErrored = ko.observable(false);
     isDisabled = ko.observable(false);
     isInvalid = ko.observable(false);
     editUrl: KnockoutComputed<string>;
@@ -34,6 +35,7 @@ class index {
     static priorityNormal = "Normal";
     static priorityIdle = "Idle";
     static priorityDisabled = "Disabled";
+    static priorityErrored = "Error";
     static priorityAbandoned = "Abandoned";
     static priorityIdleForced = "Idle,Forced";
     static priorityDisabledForced = "Disabled,Forced";
@@ -65,6 +67,7 @@ class index {
 
         this.isAbandoned(this.priority && this.priority.indexOf(index.priorityAbandoned) !== -1);
         this.isDisabled(this.priority && this.priority.indexOf(index.priorityDisabled) !== -1);
+        this.isErrored(this.priority && this.priority.indexOf(index.priorityErrored) !== -1);
         this.isIdle(this.priority && this.priority.indexOf(index.priorityIdle) !== -1);
         this.editUrl = appUrl.forCurrentDatabase().editIndex(encodeURIComponent(this.name));
         this.queryUrl = appUrl.forCurrentDatabase().query(this.name);
