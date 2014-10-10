@@ -8,7 +8,7 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Linq
 {
-	public class DynamicCompilerBase
+	internal class DynamicCompilerBase
 	{
 		protected const string uniqueTextToken = "96E65595-1C9E-4BFB-A0E5-80BF2D6FC185";
 		

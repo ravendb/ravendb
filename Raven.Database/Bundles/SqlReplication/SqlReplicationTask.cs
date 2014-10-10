@@ -36,6 +36,7 @@ namespace Raven.Database.Bundles.SqlReplication
 {
 	[InheritedExport(typeof(IStartupTask))]
 	[ExportMetadata("Bundle", "sqlReplication")]
+	[CLSCompliant(false)]
 	public class SqlReplicationTask : IStartupTask, IDisposable
 	{
 		private class ReplicatedDoc

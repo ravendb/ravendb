@@ -697,7 +697,7 @@ namespace Raven.Tests.Helpers
 						{
 							filePath = Directory.GetFiles(pathToDelete, "*", SearchOption.AllDirectories).FirstOrDefault() ?? pathToDelete;
 						}
-						catch (Exception e)
+						catch (Exception)
 						{
 							filePath = pathToDelete;
 						}

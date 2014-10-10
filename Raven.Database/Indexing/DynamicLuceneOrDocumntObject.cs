@@ -14,7 +14,7 @@ using System.Linq;
 namespace Raven.Database.Indexing
 {
 	[JsonObject]
-    public class DynamicLuceneOrParentDocumntObject : DynamicJsonObject
+	internal class DynamicLuceneOrParentDocumntObject : DynamicJsonObject
     {
         private readonly DocumentRetriever retriever;
         private dynamic parentDoc;

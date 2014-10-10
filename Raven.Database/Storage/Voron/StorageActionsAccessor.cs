@@ -21,7 +21,7 @@ namespace Raven.Database.Storage.Voron
 	using global::Voron.Exceptions;
 	using global::Voron.Impl;
 
-	public class StorageActionsAccessor : IStorageActionsAccessor
+	internal class StorageActionsAccessor : IStorageActionsAccessor
 	{
         private readonly DateTime createdAt = SystemTime.UtcNow;
 		public event Action OnDispose;

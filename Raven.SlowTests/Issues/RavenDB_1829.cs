@@ -34,7 +34,7 @@ namespace Raven.SlowTests.Issues
         }
 
         [Fact]
-        public async Task StreamQueryShouldHandleFailover()
+        public void StreamQueryShouldHandleFailover()
         {
             var index = new RavenDocumentsByEntityName();
 
@@ -92,7 +92,7 @@ namespace Raven.SlowTests.Issues
         }
 
         [Fact]
-        public async Task StreamDocsWithStartsWithShouldHandleFailover()
+        public void StreamDocsWithStartsWithShouldHandleFailover()
         {
             using (var store1 = CreateStore(configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries))
             using (var store2 = CreateStore())

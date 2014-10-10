@@ -30,7 +30,7 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron
 {
-    public class StorageActionsAccessor : StorageActionsBase, IStorageActionsAccessor
+    internal class StorageActionsAccessor : StorageActionsBase, IStorageActionsAccessor
     {
         private readonly TableStorage storage;
 

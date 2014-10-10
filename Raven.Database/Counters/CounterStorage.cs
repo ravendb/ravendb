@@ -64,6 +64,7 @@ namespace Raven.Database.Counters
             Initialize();
 		}
 
+		[CLSCompliant(false)]
         public CountersMetricsManager MetricsCounters
         {
             get { return metricsCounters; }
@@ -229,11 +230,13 @@ namespace Raven.Database.Counters
 			return options;
 		}
 
+		[CLSCompliant(false)]
 		public Reader CreateReader()
 		{
 			return new Reader(this, storageEnvironment);
 		}
 
+		[CLSCompliant(false)]
 		public Writer CreateWriter()
 		{
 			
@@ -254,6 +257,7 @@ namespace Raven.Database.Counters
             metricsCounters.Dispose();
 		}
 
+		[CLSCompliant(false)]
 		public class Reader : IDisposable
 		{
 		    private readonly CounterStorage parent;
@@ -264,6 +268,7 @@ namespace Raven.Database.Counters
             public Reader(CounterStorage parent, StorageEnvironment storageEnvironment)
                 : this(parent, storageEnvironment.NewTransaction(TransactionFlags.Read)) { }
 
+			[CLSCompliant(false)]
             public Reader(CounterStorage parent, Transaction t)
             {
                 this.parent = parent;
@@ -505,6 +510,7 @@ namespace Raven.Database.Counters
 			}
 		}
 
+		[CLSCompliant(false)]
 		public class Writer : IDisposable
 		{
 			private readonly CounterStorage parent;

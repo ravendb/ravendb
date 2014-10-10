@@ -6,7 +6,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper.Unmanaged
 	[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 	[Guid("96236A73-9DBC-11DA-9E3F-0011114AE311")]
 	[ComImport]
-	public interface IRdcGenerator
+	internal interface IRdcGenerator
 	{
 		Int32 GetGeneratorParameters(uint level, [Out] out IRdcGeneratorParameters iGeneratorParameters);
 

@@ -262,7 +262,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             {
                 FileSystem.Storage.Batch(accessor => document = accessor.GetConfig(BackupStatus.RavenBackupStatusDocumentKey));
             }
-            catch (FileNotFoundException e)
+            catch (FileNotFoundException)
             {
                 // ok, there isn't another backup in progress
             }
@@ -422,7 +422,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                             while (IsAnotherRestoreInProgress(out anotherRestoreResourceName));
                         }
                     }
-                    catch (OperationCanceledException e)
+                    catch (OperationCanceledException)
                     {
                         return GetMessageWithString(string.Format("Another restore is still in progress (resource name = {0}). Waited {1} seconds for other restore to complete.", anotherRestoreResourceName, restoreRequest.RestoreStartTimeout.Value), HttpStatusCode.ServiceUnavailable);
                     }

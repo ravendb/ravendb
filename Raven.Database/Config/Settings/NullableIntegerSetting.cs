@@ -7,7 +7,7 @@ using System;
 
 namespace Raven.Database.Config.Settings
 {
-	public class NullableIntegerSetting : Setting<int?>
+	internal class NullableIntegerSetting : Setting<int?>
 	{
 		public NullableIntegerSetting(string value, int? defaultValue)
 			: base(value, defaultValue)

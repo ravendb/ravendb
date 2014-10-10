@@ -3,7 +3,7 @@ using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper.Unmanaged;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 {
-	public class RdcException : Exception
+	internal class RdcException : Exception
 	{
 		public RdcException(string message, Exception innerException) :
 			base(message, innerException)

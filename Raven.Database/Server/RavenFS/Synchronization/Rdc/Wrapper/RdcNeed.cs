@@ -7,7 +7,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 	/// Make sure we align on the 8 byte boundry.
 	/// </summary>
 	[StructLayout(LayoutKind.Sequential, Pack = 8)]
-	public struct RdcNeed
+	internal struct RdcNeed
 	{
 		public RdcNeedType BlockType;
 		public UInt64 FileOffset;

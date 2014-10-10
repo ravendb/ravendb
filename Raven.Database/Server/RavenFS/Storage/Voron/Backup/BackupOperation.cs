@@ -11,7 +11,7 @@ using Voron.Impl.Backup;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron.Backup
 {
-    public class BackupOperation : BaseBackupOperation, IDisposable
+	internal class BackupOperation : BaseBackupOperation, IDisposable
     {
         private readonly StorageEnvironment env;
 

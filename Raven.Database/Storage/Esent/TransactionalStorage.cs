@@ -434,6 +434,7 @@ namespace Raven.Storage.Esent
             return StorageSizes.ReportOn(this);
         }
 
+		[CLSCompliant(false)]
         public InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
 	    {
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy

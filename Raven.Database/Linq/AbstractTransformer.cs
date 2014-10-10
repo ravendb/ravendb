@@ -19,6 +19,7 @@ namespace Raven.Database.Linq
 		public string Name { get { return transformerDefinition.Name; } }
 		public string ViewText { get; set; }
 
+		[CLSCompliant(false)]
 		// ReSharper disable once InconsistentNaming
 		protected DynamicNullObject __dynamic_null = new DynamicNullObject();
 

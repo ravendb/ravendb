@@ -7,7 +7,7 @@ using System;
 
 namespace Raven.Database.Config.Settings
 {
-	public class IntegerSettingWithMin : Setting<int>
+	internal class IntegerSettingWithMin : Setting<int>
 	{
 		private readonly int min;
 

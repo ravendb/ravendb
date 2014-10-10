@@ -167,6 +167,7 @@ namespace Raven.Database.Server.RavenFS
 			get { return conflictResolver; }
 		}
 
+		[CLSCompliant(false)]
 	    public MetricsCountersManager MetricsCounters
 	    {
 	        get { return metricsCounters; }

@@ -958,6 +958,7 @@ namespace Raven.Database.Indexing
 			});
 		}
 
+		[CLSCompliant(false)]
         public void Index(int index,
 			AbstractViewGenerator viewGenerator,
 			IndexingBatch batch,
@@ -983,6 +984,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		[CLSCompliant(false)]
 		public void Reduce(
             int index,
 			AbstractViewGenerator viewGenerator,

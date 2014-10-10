@@ -7,7 +7,7 @@ using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 {
-	public class NeedListParser
+	internal class NeedListParser
 	{
 		public static async Task ParseAsync(IPartialDataAccess source, IPartialDataAccess seed, Stream output,
 											IEnumerable<RdcNeed> needList, CancellationToken token)

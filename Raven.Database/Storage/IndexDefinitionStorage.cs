@@ -33,7 +33,7 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Storage
 {
-    public class IndexDefinitionStorage
+	public class IndexDefinitionStorage
     {
         private const string IndexDefDir = "IndexDefinitions";
 
@@ -70,7 +70,9 @@ namespace Raven.Database.Storage
 	    private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 
         private List<IndexMergeSuggestion> IndexMergeSuggestions { get; set; }
-        public IndexDefinitionStorage(
+
+		[CLSCompliant(false)]
+		public IndexDefinitionStorage(
             InMemoryRavenConfiguration configuration,
             ITransactionalStorage transactionalStorage,
             string path,
@@ -260,6 +262,7 @@ namespace Raven.Database.Storage
                               JsonConvert.SerializeObject(transformerDefinition, Formatting.Indented, Default.Converters));
         }
 
+		[CLSCompliant(false)]
         public string CreateAndPersistTransform(TransformerDefinition transformerDefinition, AbstractTransformer transformer)
         {
 			transformCache.AddOrUpdate(transformerDefinition.TransfomerId, transformer, (s, viewGenerator) => transformer);
@@ -293,6 +296,7 @@ namespace Raven.Database.Storage
             return transformer;
         }
 
+		[CLSCompliant(false)]
 	    public AbstractTransformer CompileTransform(TransformerDefinition transformerDefinition)
         {
             var transformer = new DynamicTransformerCompiler(transformerDefinition, configuration, extensions,
@@ -395,6 +399,7 @@ namespace Raven.Database.Storage
             return value;
         }
 
+		[CLSCompliant(false)]
         public AbstractViewGenerator GetViewGenerator(string name)
         {
             int id = 0;
@@ -403,6 +408,7 @@ namespace Raven.Database.Storage
             return null;
         }
 
+		[CLSCompliant(false)]
         public AbstractViewGenerator GetViewGenerator(int id)
         {
             AbstractViewGenerator value;
@@ -461,6 +467,7 @@ namespace Raven.Database.Storage
             return Interlocked.Read(ref currentlyIndexing) != 0;
         }
 
+		[CLSCompliant(false)]
         public IDisposable CurrentlyIndexing()
         {
             currentlyIndexingLock.EnterReadLock();
@@ -500,6 +507,7 @@ namespace Raven.Database.Storage
             UpdateTransformerMappingFile();
         }
 
+		[CLSCompliant(false)]
         public AbstractTransformer GetTransformer(int id)
         {
             AbstractTransformer value;
@@ -508,6 +516,7 @@ namespace Raven.Database.Storage
             return value;
         }
 
+		[CLSCompliant(false)]
         public AbstractTransformer GetTransformer(string name)
         {
             int id = 0;

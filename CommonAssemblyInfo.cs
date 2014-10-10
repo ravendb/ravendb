@@ -16,7 +16,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("RavenDB")]
 [assembly: AssemblyDescription("RavenDB is a second generation LINQ enabled document database for .NET")]
 
-[assembly: CLSCompliant(false)]
+[assembly: CLSCompliant(true)]
 [assembly: SuppressIldasm()]
 
 #if DEBUG

@@ -995,6 +995,7 @@ namespace Raven.Database.Config
 			return null;
 		}
 
+		[CLSCompliant(false)]
 		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork)
 		{
 			storageEngine = StorageEngineAssemblyNameByTypeName(storageEngine);

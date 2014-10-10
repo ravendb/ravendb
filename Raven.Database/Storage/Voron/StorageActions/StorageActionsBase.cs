@@ -20,7 +20,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	using global::Voron;
 	using global::Voron.Impl;
 
-	public abstract class StorageActionsBase
+	internal abstract class StorageActionsBase
 	{
 	    private readonly Reference<SnapshotReader> snapshotReference;
 

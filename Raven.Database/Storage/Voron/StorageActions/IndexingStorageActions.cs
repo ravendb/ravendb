@@ -26,7 +26,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	using global::Voron;
 	using global::Voron.Impl;
 
-	public class IndexingStorageActions : StorageActionsBase, IIndexingStorageActions
+	internal class IndexingStorageActions : StorageActionsBase, IIndexingStorageActions
 	{
 		private readonly TableStorage tableStorage;
 

@@ -384,6 +384,7 @@ namespace Raven.Storage.Voron
             throw new NotSupportedException("Not valid for Voron storage");
         }
 
+		[CLSCompliant(false)]
 		public InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
 		{            
 		    return new DtcNotSupportedTransactionalState(FriendlyName, put, delete);
