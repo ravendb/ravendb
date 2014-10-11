@@ -132,18 +132,9 @@ namespace Raven.Abstractions.Extensions
 
 			protected override Expression VisitMember(MemberExpression node)
 			{
-
-			    if (node.Member.Name == "Value" || node.Member.Name == "Values")
-			    {
-			        return base.VisitMember(node);
-			    }
-			    else
-			    {
-                    Results.Push(propertySeparator);
-			        Results.Push(node.Member.Name);
-			        return base.VisitMember(node);
-			    }
-
+				Results.Push(propertySeparator);
+				Results.Push(node.Member.Name);
+				return base.VisitMember(node);
 			}
 
 			protected override Expression VisitMethodCall(MethodCallExpression node)
