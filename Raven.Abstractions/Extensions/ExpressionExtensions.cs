@@ -132,9 +132,33 @@ namespace Raven.Abstractions.Extensions
 
 			protected override Expression VisitMember(MemberExpression node)
 			{
+				if (IsDictionaryProperty(node))
+				{
+					return base.VisitMember(node);
+				}
 				Results.Push(propertySeparator);
 				Results.Push(node.Member.Name);
 				return base.VisitMember(node);
+			}
+
+			private static bool IsDictionaryProperty(MemberExpression node)
+			{
+				if (node.Member.DeclaringType == null)
+					return false;
+				if (node.Member.DeclaringType.IsGenericType == false)
+					return false;
+				var genericTypeDefinition = node.Member.DeclaringType.GetGenericTypeDefinition();
+				if (node.Member.Name == "Value")
+				{
+					return genericTypeDefinition == typeof (KeyValuePair<,>);
+				}
+				if (node.Member.Name == "Values")
+				{
+					return genericTypeDefinition == typeof (Dictionary<,>) ||
+					       genericTypeDefinition == typeof (IDictionary<,>);
+
+				}
+				return false;
 			}
 
 			protected override Expression VisitMethodCall(MethodCallExpression node)
