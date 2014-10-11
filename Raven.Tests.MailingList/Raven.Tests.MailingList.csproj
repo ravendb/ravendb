@@ -248,6 +248,7 @@
     <Compile Include="JustFacetSearch.cs" />
     <Compile Include="Justin.cs" />
     <Compile Include="kendaleiv.cs" />
+    <Compile Include="Kijana.cs" />
     <Compile Include="Kushnir.cs" />
     <Compile Include="Kwoodard.cs" />
     <Compile Include="LargeQuery.cs" />
@@ -298,7 +299,9 @@
     <Compile Include="nberardi.cs" />
     <Compile Include="Nemitoff.cs" />
     <Compile Include="Nick.cs" />
+    <Compile Include="NickDoubleValues.cs" />
     <Compile Include="NicolasGarfinkiel.cs" />
+    <Compile Include="NimaHa.cs" />
     <Compile Include="NoBuiltinDuplicates.cs" />
     <Compile Include="NonHttpBackupRestore.cs" />
     <Compile Include="NSB.cs" />
