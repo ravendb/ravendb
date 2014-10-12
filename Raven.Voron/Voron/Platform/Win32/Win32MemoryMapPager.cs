@@ -250,9 +250,11 @@ namespace Voron.Platform.Win32
 		{
 			ThrowObjectDisposedIfNeeded();
 
-			if (PagerState.AllocationInfos.Any(allocationInfo => 
-			                                   Win32MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress, new IntPtr(allocationInfo.Size)) == false))
+			foreach (var allocationInfo in PagerState.AllocationInfos)
+			{
+				if (Win32MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress, new IntPtr(allocationInfo.Size)) == false)
 					throw new Win32Exception();
+			}
 
 			if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
 				throw new Win32Exception();

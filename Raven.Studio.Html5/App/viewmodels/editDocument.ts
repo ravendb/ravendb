@@ -59,6 +59,7 @@ class editDocument extends viewModelBase {
     queryIndex = ko.observable<String>();
     docTitle: KnockoutComputed<string>;
     isNewLineFriendlyMode = ko.observable(false);
+    autoCollapseMode = ko.observable(false);
     isFirstDocumenNavtDisabled: KnockoutComputed<boolean>;
     isLastDocumentNavDisabled: KnockoutComputed<boolean>;
     newLineToggle = '\\n';
@@ -291,12 +292,15 @@ class editDocument extends viewModelBase {
     // Called when the view is attached to the DOM.
     attached() {
         this.setupKeyboardShortcuts();
-
+        $("#docEditor").resize();
         this.isNewLineFriendlyMode.subscribe(val => {
             this.updateNewlineLayoutInDocument(val);
-
-
         });
+    }
+
+    detached() {
+        super.detached();
+        $("#docEditor").off('DynamicHeightSet');
     }
 
     compositionComplete() {
@@ -308,6 +312,8 @@ class editDocument extends viewModelBase {
         if (editorElement.length > 0) {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
+
+        $("#docEditor").on('DynamicHeightSet', () => this.docEditor.resize());
         this.focusOnEditor();
     }
 
@@ -407,6 +413,22 @@ class editDocument extends viewModelBase {
         {
             this.isNewLineFriendlyMode.toggle();
         }
+    }
+
+    toggleAutoCollapse() {
+        this.autoCollapseMode.toggle();
+        if (this.autoCollapseMode()) {
+            this.foldAll();
+        } else {
+            this.docEditor.getSession().unfold(null, true);
+        }
+    }
+
+    foldAll() {
+        var AceRange = require("ace/range").Range;
+        this.docEditor.getSession().foldAll();
+        var folds = <any[]> this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
+        folds.map(f => this.docEditor.getSession().expandFold(f));
     }
 
     unescapeNewlinesAndTabsInTextFields(str: string): any {
@@ -634,6 +656,9 @@ class editDocument extends viewModelBase {
 
             this.loadRelatedDocumentsList(document);
             this.appendRecentDocument(id);
+            if (this.autoCollapseMode()) {
+                this.foldAll();
+            }
         });
         loadDocTask.fail(response => this.failedToLoadDoc(id, response));
         loadDocTask.always(() => this.isBusy(false));

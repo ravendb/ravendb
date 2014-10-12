@@ -1,5 +1,10 @@
 ﻿using System;
+using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Tests.Issues;
 using Raven.Tests.Notifications;
 
 namespace Raven.Tryouts
@@ -8,14 +13,18 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			for (int i = 0; i < 10; i++)
+			using (var store =
+				  new DocumentStore
+				  {
+					  Url = "http://localhost.fiddler:8080",
+					  DefaultDatabase = "VoronIndexTest"
+				  }.Initialize())
 			{
-				Console.WriteLine(i);
-				using (var x = new Embedded())
-				{
-					x.CanGetNotificationAboutDocumentPut();
-				}
+				new ScratchIndex().Execute(store);
 			}
 		}
 	}
+
+
+	
 }

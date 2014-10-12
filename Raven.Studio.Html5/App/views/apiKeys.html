@@ -25,7 +25,9 @@
                     <div class="panel-heading">
                         <h3 class="panel-title">
                             <span data-bind="text: name() ? name() : '[new api key]'"></span>
-                            <button type="button" style="display: inline-block;" class="close" data-bind="click: $root.removeApiKey.bind($root)" title="Remove this API key"></button>
+                            <button type="button" style="display: inline-block;" class="close" data-bind="click: $root.removeApiKey.bind($root)" title="Remove this API key">
+                                <i class="fa fa-times"></i>
+                            </button>
                         </h3>
                     </div>
                     <div class="panel-body">

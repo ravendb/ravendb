@@ -1600,7 +1600,7 @@ namespace Raven.Client.FileSystem
 				}
 			}
 
-            public async Task StartRestore(FilesystemRestoreRequest restoreRequest)
+            public async Task<long> StartRestore(FilesystemRestoreRequest restoreRequest)
             {
                 var requestUrlString = string.Format("{0}/admin/fs/restore", client.ServerUrl);
 
@@ -1610,6 +1610,27 @@ namespace Raven.Client.FileSystem
                 try
                 {
                     await request.WriteWithObjectAsync(restoreRequest);
+
+                    var response = await request.ReadResponseJsonAsync();
+                    return response.Value<long>("OperationId");
+                }
+                catch (Exception e)
+                {
+                    throw e.SimplifyException();
+                }
+            }
+
+            public async Task<long> StartCompact(string filesystemName)
+            {
+                var requestUrlString = string.Format("{0}/admin/fs/compact?filesystem={1}", client.ServerUrl, Uri.EscapeDataString(filesystemName));
+
+                var request = client.RequestFactory.CreateHttpJsonRequest(
+                    new CreateHttpJsonRequestParams(this, requestUrlString, "POST", client.PrimaryCredentials, convention));
+
+                try
+                {
+                    var response = await request.ReadResponseJsonAsync();
+                    return response.Value<long>("OperationId");
                 }
                 catch (Exception e)
                 {

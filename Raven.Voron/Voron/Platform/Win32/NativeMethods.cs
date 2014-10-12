@@ -325,7 +325,8 @@ namespace Voron.Platform.Win32
 		public static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
 
-		[DllImport("kernel32.dll")]
+		[DllImport("kernel32.dll", SetLastError = true)]
+		[return: MarshalAs(UnmanagedType.Bool)]
 		public static extern bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
 	}
 	public static unsafe class Win32NativeMethods

@@ -102,6 +102,7 @@ class aceEditorBindingHandler {
 
     minHeight: number;
     maxHeight: number;
+    allowResize: boolean;
 
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement,
@@ -120,6 +121,7 @@ class aceEditorBindingHandler {
             selectAll?: boolean;
             bubbleEscKey: boolean;
             bubbleEnterKey: boolean;
+            allowResize: boolean;
         },
         allBindings,
         viewModel,
@@ -136,6 +138,7 @@ class aceEditorBindingHandler {
         var completerHostObject = bindingValues.completerHostObject;
         this.minHeight = bindingValues.minHeight ? bindingValues.minHeight : 140;
         this.maxHeight = bindingValues.maxHeight ? bindingValues.maxHeight : 400;
+        this.allowResize = bindingValues.allowResize ? bindingValues.allowResize : false;
         var selectAll = bindingValues.selectAll || this.defaults.selectAll;
         var bubbleEscKey = bindingValues.bubbleEscKey || this.defaults.bubbleEscKey;
         var bubbleEnterKey = bindingValues.bubbleEnterKey || this.defaults.bubbleEnterKey;
@@ -246,12 +249,17 @@ class aceEditorBindingHandler {
         if (code !== editorCode) {
             aceEditor.getSession().setValue(code);
         }
-        this.alterHeight(element, aceEditor);
+        if (this.allowResize) {
+            this.alterHeight(element, aceEditor);
+        }
     }
 
     previousLinesCount = -1;
 
     alterHeight(element: HTMLElement, aceEditor: AceAjax.Editor) {
+        if (!this.allowResize) {
+            return;
+        }
         // update only if line count changes
         var currentLinesCount = aceEditor.getSession().getScreenLength();
         if (this.previousLinesCount != currentLinesCount) {

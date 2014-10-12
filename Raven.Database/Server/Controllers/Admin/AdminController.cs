@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Runtime;
 using System.Security.Principal;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -162,6 +163,40 @@ namespace Raven.Database.Server.Controllers.Admin
 			string documentDataDir;
 			ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
 			restoreRequest.DatabaseLocation = ravenConfiguration.DataDirectory;
+
+            string anotherRestoreResourceName;
+            if (IsAnotherRestoreInProgress(out anotherRestoreResourceName))
+            {
+                if (restoreRequest.RestoreStartTimeout.HasValue)
+                {
+                    try
+                    {
+                        using (var cts = new CancellationTokenSource())
+                        {
+                            cts.CancelAfter(TimeSpan.FromSeconds(restoreRequest.RestoreStartTimeout.Value));
+                            var token = cts.Token;
+                            do
+                            {
+                                await Task.Delay(500, token);
+                            }
+                            while (IsAnotherRestoreInProgress(out anotherRestoreResourceName));
+                        }
+                    }
+                    catch (OperationCanceledException e)
+                    {
+                        return GetMessageWithString(string.Format("Another restore is still in progress (resource name = {0}). Waited {1} seconds for other restore to complete.", anotherRestoreResourceName, restoreRequest.RestoreStartTimeout.Value), HttpStatusCode.ServiceUnavailable);    
+                    }
+                }
+                else
+                {
+                    return GetMessageWithString(string.Format("Another restore is in progress (resource name = {0})", anotherRestoreResourceName), HttpStatusCode.ServiceUnavailable);    
+                }
+            }
+            Database.Documents.Put(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, RavenJObject.FromObject(new RestoreInProgress
+                                                                                                                {
+                                                                                                                    Resource = databaseName
+                                                                                                                }), new RavenJObject(), null);
+
 			DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
 		    
             bool defrag;
@@ -194,10 +229,12 @@ namespace Raven.Database.Server.Controllers.Admin
                 restoreStatus.Messages.Add("The new database was created");
                 DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
                     RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+
+                Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
             }, TaskCreationOptions.LongRunning);
 
 			long id;
-			Database.Tasks.AddTask(task, new object(), new TaskActions.PendingTaskDescription
+			Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
 			{
 				StartTime = SystemTime.UtcNow,
 				TaskType = TaskActions.PendingTaskType.RestoreDatabase,
@@ -270,16 +307,25 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (configuration == null)
 				return GetMessageWithString("No database named: " + db, HttpStatusCode.NotFound);
 
-            try
-            {
+		    var task = Task.Factory.StartNew(() =>
+		    {
+                // as we perform compact async we don't catch exceptions here - they will be propaged to operation
                 var targetDb = DatabasesLandlord.GetDatabaseInternal(db).ResultUnwrap();
                 DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration));
                 return GetEmptyMessage();
-            }
-            catch (NotSupportedException e)
+		    });
+            long id;
+            Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
             {
-                return GetMessageWithString(e.Message, HttpStatusCode.BadRequest);
-            }
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.CompactDatabase,
+                Payload = "Compact database " + db,
+            }, out id);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            });
 		}
 
 		[HttpGet]
@@ -692,5 +738,19 @@ namespace Raven.Database.Server.Controllers.Admin
 
             return new HttpResponseMessage { Content = logsTransport };
         }
+
+		[HttpPost]
+		[Route("databases/{databaseName}/admin/transactions/rollbackAll")]
+		[Route("admin/transactions/rollbackAll")]
+		public HttpResponseMessage Transactions()
+		{
+			var transactions = Database.TransactionalStorage.GetPreparedTransactions();
+			foreach (var transactionContextData in transactions)
+			{
+				Database.Rollback(transactionContextData.Id);
+			}
+
+			return GetMessageWithObject(new { RolledBackTransactionsAmount = transactions.Count });
+		}
 	}
 }

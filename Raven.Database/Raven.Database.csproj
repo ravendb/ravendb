@@ -220,6 +220,7 @@
     <Compile Include="Actions\PatchActions.cs" />
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Plugins\Builtins\PurgeOutdatedTombstones.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Bundles\Replication\Data\ReplicationTopologyNode.cs" />
     <Compile Include="Bundles\Replication\Data\ReplicationTopology.cs" />
@@ -238,6 +239,7 @@
     <Compile Include="Server\Connections\LogPushContent.cs" />
     <Compile Include="Server\Connections\AdminLogsConnectionState.cs" />
     <Compile Include="Server\Connections\AdminLogsTarget.cs" />
+    <Compile Include="Server\RavenFS\Controllers\HttpTraceFsController.cs" />
     <Compile Include="Server\RavenFS\Storage\BaseBackupOperation.cs" />
     <Compile Include="Server\RavenFS\Storage\BaseRestoreOperation.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\Backup\BackupOperation.cs" />
@@ -252,7 +254,9 @@
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationConfig.cs" />
     <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
     <Compile Include="Smuggler\EmbeddedSmugglerOperations.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
+    <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
@@ -1050,6 +1054,7 @@
     <Compile Include="Storage\Voron\StorageActions\TasksStorageActions.cs" />
     <Compile Include="Storage\Voron\TransactionalStorage.cs" />
     <Compile Include="Storage\Voron\UndisposableStream.cs" />
+    <Compile Include="Storage\TransactionContextData.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />

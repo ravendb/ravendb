@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Document
 {
@@ -40,18 +41,14 @@ namespace Raven.Client.Document
 			if (etag == Etag.Empty || etag == null)
 				return replicas; // if the etag is empty, nothing to do
 
-			var asyncDatabaseCommands = documentStore.AsyncDatabaseCommands;
+			var asyncDatabaseCommands = (AsyncServerClient)documentStore.AsyncDatabaseCommands;
 			if (database != null)
-				asyncDatabaseCommands = asyncDatabaseCommands.ForDatabase(database);
+				asyncDatabaseCommands = (AsyncServerClient)asyncDatabaseCommands.ForDatabase(database);
 
 			asyncDatabaseCommands.ForceReadFromMaster();
 
-			var doc = await asyncDatabaseCommands.GetAsync(Constants.RavenReplicationDestinations);
-			if (doc == null)
-				return -1;
-
-			var replicationDocument = doc.DataAsJson.JsonDeserialization<ReplicationDocument>();
-			if (replicationDocument == null)
+            var replicationDocument = await asyncDatabaseCommands.ExecuteWithReplication("GET", operationMetadata => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata));
+            if (replicationDocument == null)
 				return -1;
 
 			var destinationsToCheck = replicationDocument.Destinations

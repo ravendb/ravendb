@@ -123,11 +123,12 @@
                                 <div class="panel-body">
                                     <h4 class="pull-left">
                                         <a data-bind="attr: { href: queryUrl }" title="Query this index">
-                                            <span data-bind="text: name, css: { 'text-warning': isIdle, 'text-muted': isDisabled, 'text-danger': isAbandoned() || isInvalid() }"></span>
+                                            <span data-bind="text: name, css: { 'text-warning': isIdle, 'text-muted': isDisabled, 'text-danger': isAbandoned() || isInvalid() || isErrored() }"></span>
                                         </a>
                                         <small class="text-warning" data-bind="visible: isIdle">Idle</small>
                                         <small class="text-danger" data-bind="visible: isAbandoned">Abandoned</small>
                                         <small class="badge" data-bind="visible: isInvalid"><i class="fa fa-bug" /> Invalid index</small>
+                                        <small class="badge" data-bind="visible: isErrored"><i class="fa fa-bug" /> Errored index</small>
                                         <small class="text-muted" data-bind="visible: isDisabled">Disabled</small>
                                         <small class="text-muted" data-bind="text: ' - ' + docsCount + ' entries' " title=" the number of documents affected by this index"></small>
                                         <label>

@@ -6681,7 +6681,7 @@ body {
   padding-left: 1em;
   text-decoration: underline;
   margin-top: 1em;
-  margin-bottom: 2em!important;
+  margin-bottom: 2em !important;
 }
 #sqlReplicationStats .subSectionTitle {
   text-align: left;
@@ -7688,6 +7688,12 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 #shellHeader .container-fluid .navbar-nav {
   padding-left: 10px;
 }
+#shellHeader .container-fluid .navbar-right {
+  padding-left: 0px;
+}
+#shellHeader #goToDocInput {
+  width: 9em;
+}
 @media (max-width: 1150px) {
   #shellHeader .nav li a {
     padding-left: 8px;
@@ -7701,7 +7707,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     padding-right: 5px;
   }
   #shellHeader .navbar-form #goToDocInput {
-    width: 8em;
+    width: 6em;
   }
 }
 @media (max-width: 767px) {
@@ -8031,10 +8037,37 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   margin-top: 95px;
   padding-top: 10px;
   padding-bottom: 40px;
+  max-width: 41%;
 }
 #editFileContainer hr {
-  border-color: red;
   margin-top: 5px;
+}
+#editFileContainer .query-metadata {
+  padding-top: 20px;
+}
+#editFileContainer .documents-links-container {
+  -webkit-column-count: 2;
+  /* Chrome, Safari, Opera */
+  -moz-column-count: 2;
+  /* Firefox */
+  column-count: 2;
+  -webkit-column-gap: 30px;
+  /* Chrome, Safari, Opera */
+  -moz-column-gap: 30px;
+  /* Firefox */
+  column-gap: 30px;
+  -moz-column-width: 10px;
+  -webkit-column-width: 10px;
+  column-width: 10px;
+}
+#editFileContainer .documents-links-container .document-link {
+  margin-left: 10px;
+  width: 80%;
+  overflow: hidden;
+  white-space: nowrap;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
 }
 .upload-queue {
   position: fixed;
@@ -8199,4 +8232,11 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .nvtooltip {
   border-radius: 5px;
   box-shadow: 2px 2px 5px 0 rgba(50, 50, 50, 0.61);
+}
+.nvd3 .nv-brushBackground rect {
+  stroke: none;
+}
+.nvd3 .nv-brush .extent {
+  fill: gray;
+  fill-opacity: 0.1 !important;
 }

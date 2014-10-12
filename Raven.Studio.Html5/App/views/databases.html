@@ -11,6 +11,13 @@
             </h3>
         </li>
     </ul>
+    
+    <!-- ko if: operationAlerts().length > 0 -->
+        <!-- ko foreach: operationAlerts -->
+        <div class="alert alert-warning" role="alert" data-bind="text: $data">
+        </div>
+        <!-- /ko -->
+    <!-- /ko -->
 
     <div class="btn-toolbar" data-bind="visible: databases().length > 1">
         <div class="btn-group">

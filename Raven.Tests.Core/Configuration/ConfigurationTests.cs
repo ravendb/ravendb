@@ -117,7 +117,8 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.MaxRecentTouchesToRemember.Value, actual => actual.MaxRecentTouchesToRemember);
 			configurationComparer.Assert(expected => expected.AdditionalStepsForScriptBasedOnDocumentSize.Value, actual => actual.AdditionalStepsForScriptBasedOnDocumentSize);
 			configurationComparer.Assert(expected => expected.MaxIndexWritesBeforeRecreate.Value, actual => actual.MaxIndexWritesBeforeRecreate);
-			configurationComparer.Assert(expected => expected.MaxIndexOutputsPerDocument.Value, actual => actual.MaxIndexOutputsPerDocument);
+			configurationComparer.Assert(expected => expected.MaxSimpleIndexOutputsPerDocument.Value, actual => actual.MaxSimpleIndexOutputsPerDocument);
+			configurationComparer.Assert(expected => expected.MaxMapReduceIndexOutputsPerDocument.Value, actual => actual.MaxMapReduceIndexOutputsPerDocument);
 			configurationComparer.Assert(expected => expected.PrewarmFacetsOnIndexingMaxAge.Value, actual => actual.PrewarmFacetsOnIndexingMaxAge);
 			configurationComparer.Assert(expected => expected.PrewarmFacetsSyncronousWaitTime.Value, actual => actual.PrewarmFacetsSyncronousWaitTime);
 			configurationComparer.Assert(expected => expected.MaxNumberOfParallelProcessingTasks.Value, actual => actual.MaxNumberOfParallelProcessingTasks);
@@ -133,6 +134,8 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.CompiledIndexCacheDirectory.Value.ToFullPath(null), actual => actual.CompiledIndexCacheDirectory);
 			configurationComparer.Assert(expected => expected.JournalsStoragePath.Value, actual => actual.JournalsStoragePath);
 			configurationComparer.Assert(expected => expected.FlushIndexToDiskSizeInMb.Value, actual => actual.FlushIndexToDiskSizeInMb);
+			configurationComparer.Assert(expected => expected.TombstoneRetentionTime.Value, actual => actual.TombstoneRetentionTime);
+			configurationComparer.Assert(expected => expected.Replication.ReplicationRequestTimeoutInMilliseconds.Value, actual => actual.Replication.ReplicationRequestTimeoutInMilliseconds);
 
 			Assert.NotNull(inMemoryConfiguration.OAuthTokenKey);
 			Assert.Equal("/", inMemoryConfiguration.VirtualDirectory);

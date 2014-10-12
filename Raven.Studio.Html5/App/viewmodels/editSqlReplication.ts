@@ -51,6 +51,7 @@ class editSqlReplication extends viewModelBase {
     availableConnectionStrings = ko.observableArray<string>();
     sqlReplicationStatsAndMetricsHref = appUrl.forCurrentDatabase().statusDebugSqlReplication;
     appUrls: computedAppUrls;
+    docEditor: AceAjax.Editor;
 
     isBusy = ko.observable(false);
     initialReplicationId: string = '';
@@ -67,7 +68,7 @@ class editSqlReplication extends viewModelBase {
         var popOverSettings: PopoverOptions = {
             html: true,
             trigger: 'hover',
-            content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.OrderLines.length,<br/>   TotalCost: 0<br/>};<br/><br/>replicateToOrders(\'Id\', orderData);<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.OrderLines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.OrderLines[i];<br/>   orderData.TotalCost += line.Cost;<br/>   replicateToOrderLines(\'OrderId\', {"<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: line.Cost<br/>   });<br/>}</pre>',
+            content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.OrderLines.length,<br/>   TotalCost: 0<br/>};<br/><br/>replicateToOrders(orderData);<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.OrderLines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.OrderLines[i];<br/>   orderData.TotalCost += line.Cost;<br/>   replicateToOrderLines({"<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: line.Cost<br/>   });<br/>}</pre>',
             selector: '.script-label',
             placement: "right"
         };
@@ -193,6 +194,14 @@ class editSqlReplication extends viewModelBase {
         $('pre').each((index, currentPreElement) => {
             this.initializeAceValidity(currentPreElement);
         });
+
+        var editorElement = $("#sqlReplicationEditor");
+        if (editorElement.length > 0) {
+            this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
+        }
+
+        $("#sqlReplicationEditor").on('DynamicHeightSet', () => this.docEditor.resize());
+
     }
 
     createSqlReplication(): sqlReplication {
@@ -228,6 +237,12 @@ class editSqlReplication extends viewModelBase {
                 });
         });
     }
+
+    detached() {
+        super.detached();
+        $("#sqlReplicationEditor").off('DynamicHeightSet');
+    }
+
 
     private isSqlReplicationNameExists(name): boolean {
         var count = 0;

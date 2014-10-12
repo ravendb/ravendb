@@ -227,8 +227,6 @@ namespace Raven.Database.Indexing
 
 			Log.Debug(() => string.Format("Executing single step reducing for {0} keys [{1}]", keysToReduce.Length, string.Join(", ", keysToReduce)));
 			var batchTimeWatcher = Stopwatch.StartNew();
-			var count = 0;
-			var size = 0;
 			var state = new ConcurrentQueue<Tuple<HashSet<string>, List<MappedResultInfo>>>();
 			var reducingBatchThrottlerId = Guid.NewGuid();
 			try
@@ -299,36 +297,43 @@ namespace Raven.Database.Indexing
 							actions.MapReduce.RemoveReduceResults(index.IndexId, 2, reduceKey, mappedBucket / 1024);
 						}
 					}
-
-					var mappedResults = actions.MapReduce.GetMappedResults(
-							index.IndexId,
-							localKeys,
-							loadData: true
-						).ToList();
-
-					Interlocked.Add(ref count, mappedResults.Count);
-					Interlocked.Add(ref size, mappedResults.Sum(x => x.Size));
-
-					mappedResults.ApplyIfNotNull(x => x.Bucket = 0);
-
-					state.Enqueue(Tuple.Create(localKeys, mappedResults));
 				});
 			});
 
-			var reduceKeys = new HashSet<string>(state.SelectMany(x => x.Item1));
+			var keysLeftToReduce = new HashSet<string>(keysToReduce);
+			while (keysLeftToReduce.Count > 0)
+			{
+				context.TransactionalStorage.Batch(
+					actions =>
+					{
+						context.CancellationToken.ThrowIfCancellationRequested();
+						var take = context.CurrentNumberOfItemsToReduceInSingleBatch;
+						var keysReturned = new HashSet<string>();
+						var mappedResults = actions.MapReduce.GetMappedResults(
+							index.IndexId,
+							keysLeftToReduce,
+							true,
+							take,
+							keysReturned
+							).ToList();
 
-			var results = state.SelectMany(x => x.Item2)
-						.Where(x => x.Data != null)
-						.GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
-						.ToArray();
+						var count = mappedResults.Count;
+						var size = mappedResults.Sum(x => x.Size);
 
-            context.MetricsCounters.ReducedPerSecond.Mark(results.Length);
+						mappedResults.ApplyIfNotNull(x => x.Bucket = 0);
 
-			context.TransactionalStorage.Batch(actions =>
-				context.IndexStorage.Reduce(index.IndexId, viewGenerator, results, 2, context, actions, reduceKeys, state.Sum(x=>x.Item2.Count))
-				);
+						var results =
+							mappedResults.Where(x => x.Data != null).GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data)).ToArray();
 
-			autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);
+						context.MetricsCounters.ReducedPerSecond.Mark(results.Length);
+
+						context.CancellationToken.ThrowIfCancellationRequested();
+
+						context.IndexStorage.Reduce(index.IndexId, viewGenerator, results, 2, context, actions, keysReturned, mappedResults.Count);
+						
+						autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);
+					});
+			}
 
 			var needToMoveToSingleStep = new HashSet<string>();
 			HashSet<string> set;
@@ -354,7 +359,15 @@ namespace Raven.Database.Indexing
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
 			onlyFoundIdleWork.Value = false;
-		    return actions.Staleness.IsReduceStale(indexesStat.Id);
+			var isReduceStale = actions.Staleness.IsReduceStale(indexesStat.Id);
+
+			if (isReduceStale == false)
+				return false;
+
+			if (indexesStat.Priority.HasFlag(IndexingPriority.Error))
+				return false;
+
+			return true;
 		}
 
 		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)

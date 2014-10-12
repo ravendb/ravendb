@@ -129,8 +129,8 @@ namespace Raven.Database.Config
 			// Index settings
 			MaxProcessingRunLatency = ravenSettings.MaxProcessingRunLatency.Value;
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
-			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
-
+			MaxSimpleIndexOutputsPerDocument = ravenSettings.MaxSimpleIndexOutputsPerDocument.Value;
+			MaxMapReduceIndexOutputsPerDocument = ravenSettings.MaxMapReduceIndexOutputsPerDocument.Value;
 
 		    PrewarmFacetsOnIndexingMaxAge = ravenSettings.PrewarmFacetsOnIndexingMaxAge.Value;
 		    PrewarmFacetsSyncronousWaitTime = ravenSettings.PrewarmFacetsSyncronousWaitTime.Value;
@@ -264,6 +264,7 @@ namespace Raven.Database.Config
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
 
 			Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
+			Replication.ReplicationRequestTimeoutInMilliseconds = ravenSettings.Replication.ReplicationRequestTimeoutInMilliseconds.Value;
 
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
 			FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
@@ -274,10 +275,18 @@ namespace Raven.Database.Config
 
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
+			TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
+
 			PostInit();
 
 			return this;
 		}
+
+		/// <summary>
+		/// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
+		/// purged on next database startup. Default: 14 days.
+		/// </summary>
+		public TimeSpan TombstoneRetentionTime { get; set; }
 
 		public int MaxConcurrentServerRequests { get; set; }
 
@@ -902,11 +911,18 @@ namespace Raven.Database.Config
 		public int MaxIndexWritesBeforeRecreate { get; set; }
 
 		/// <summary>
-		/// Limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to the one document
+		/// Limits the number of map outputs that a simple index is allowed to create for a one source document. If a map operation applied to the one document
 		/// produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
 		/// Default value: 15. In order to disable this check set value to -1.
 		/// </summary>
-		public int MaxIndexOutputsPerDocument { get; set; }
+		public int MaxSimpleIndexOutputsPerDocument { get; set; }
+
+		/// <summary>
+		/// Limits the number of map outputs that a map-reduce index is allowed to create for a one source document. If a map operation applied to the one document
+		/// produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+		/// Default value: 50. In order to disable this check set value to -1.
+		/// </summary>
+		public int MaxMapReduceIndexOutputsPerDocument { get; set; }
 
 		/// <summary>
         /// What is the maximum age of a facet query that we should consider when prewarming
@@ -1081,7 +1097,6 @@ namespace Raven.Database.Config
 			OAuthTokenKey = defaultConfiguration.OAuthTokenKey;
 			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
 
-            FileSystem.DefaultStorageTypeName = defaultConfiguration.FileSystem.DefaultStorageTypeName;
             FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
 		}
 
@@ -1151,6 +1166,11 @@ namespace Raven.Database.Config
 			/// Number of seconds after which replication will stop reading documents/attachments from disk. Default: 30.
 			/// </summary>
 			public int FetchingFromDiskTimeoutInSeconds { get; set; }
+
+			/// <summary>
+			/// Number of milliseconds before replication requests will timeout. Default: 60 * 1000.
+			/// </summary>
+			public int ReplicationRequestTimeoutInMilliseconds { get; set; }
 		}
 
         public class FileSystemConfiguration

@@ -226,6 +226,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		public ConsistencyOptions DefaultQueryingConsistency { get; set; }
 
+
+		/// <summary>
+		/// Whether UseOptimisticConcurrency is set to true by default for all opened sessions
+		/// </summary>
+		public bool DefaultUseOptimisticConcurrency { get; set; }
+
 		/// <summary>
 		/// Generates the document key using identity.
 		/// </summary>

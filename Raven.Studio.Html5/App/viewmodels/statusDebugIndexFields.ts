@@ -6,12 +6,29 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 
 class statusDebugIndexFields extends viewModelBase {
+    editor: AceAjax.Editor;
     result = ko.observable<statusDebugIndexFieldsDto>();
     indexStr = ko.observable("");
 
     constructor() {
         super();
         aceEditorBindingHandler.install();
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+
+        var editorElement = $("#statusDebugIndexFieldsEditor");
+        if (editorElement.length > 0) {
+            this.editor = ko.utils.domData.get(editorElement[0], "aceEditor");
+        }
+
+        $("#statusDebugIndexFieldsEditor").on('DynamicHeightSet', () => this.editor.resize());
+    }
+
+    detached() {
+        super.detached();
+        $("#statusDebugIndexFieldsEditor").off('DynamicHeightSet');
     }
 
     attached() {

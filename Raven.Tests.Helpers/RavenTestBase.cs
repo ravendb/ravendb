@@ -692,7 +692,15 @@ namespace Raven.Tests.Helpers
 					}
 					else if (Directory.Exists(pathToDelete))
 					{
-						var filePath = Directory.GetFiles(pathToDelete, "*", SearchOption.AllDirectories).FirstOrDefault() ?? pathToDelete;
+						string filePath;
+						try
+						{
+							filePath = Directory.GetFiles(pathToDelete, "*", SearchOption.AllDirectories).FirstOrDefault() ?? pathToDelete;
+						}
+						catch (Exception e)
+						{
+							filePath = pathToDelete;
+						}
 						errors.Add(new IOException(string.Format("We tried to delete the '{0}' directory.\r\n{1}", pathToDelete,
 							WhoIsLocking.ThisFile(filePath))));
 					}
@@ -703,12 +711,12 @@ namespace Raven.Tests.Helpers
 				throw new AggregateException(errors);
 		}
 
-		protected static void PrintServerErrors(ServerError[] serverErrors)
+		protected static void PrintServerErrors(IndexingError[] indexingErrors)
 		{
-			if (serverErrors.Any())
+			if (indexingErrors.Any())
 			{
-				Console.WriteLine("Server errors count: " + serverErrors.Count());
-				foreach (var serverError in serverErrors)
+				Console.WriteLine("Server errors count: " + indexingErrors.Count());
+				foreach (var serverError in indexingErrors)
 				{
 					Console.WriteLine("Server error: " + serverError.ToString());
 				}

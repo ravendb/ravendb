@@ -396,6 +396,16 @@ namespace Raven.Storage.Voron
 		                       .ToList();
 		}
 
+		public List<TransactionContextData> GetPreparedTransactions()
+		{
+			throw new NotSupportedException("Voron storage does not support DTC");
+		}
+
+		public object GetInFlightTransactionsInternalStateForDebugOnly()
+		{
+			throw new NotSupportedException("Voron storage does not support DTC");
+		}
+
 		internal IStorageActionsAccessor GetCurrentBatch()
 		{
 			var batch = current.Value;

@@ -159,11 +159,13 @@
     <Compile Include="Data\BulkInsertOptions.cs" />
     <Compile Include="Data\Etag.cs" />
     <Compile Include="Data\IndexFailureInformation.cs" />
+    <Compile Include="Data\IOperationState.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\QueryHeaderInformation.cs" />
     <Compile Include="Data\ReplicationInfoStatus.cs" />
     <Compile Include="Data\DatabaseRestoreRequest.cs" />
+    <Compile Include="Data\RestoreInProgress.cs" />
     <Compile Include="Data\RestoreStatus.cs" />
     <Compile Include="Data\ScriptedIndexResults.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />
@@ -200,7 +202,7 @@
     <Compile Include="Data\PatchRequest.cs" />
     <Compile Include="Data\PatchResult.cs" />
     <Compile Include="Data\PutResult.cs" />
-    <Compile Include="Data\ServerError.cs" />
+    <Compile Include="Data\IndexingError.cs" />
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />
     <Compile Include="Data\StopWordsSetup.cs" />
@@ -209,6 +211,7 @@
     <Compile Include="Data\StringDistanceTypes.cs" />
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />
+    <Compile Include="Data\TaskBasedOperationState.cs" />
     <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
     <Compile Include="Data\UserInfo.cs" />

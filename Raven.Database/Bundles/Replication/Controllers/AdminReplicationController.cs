@@ -85,8 +85,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/replication/topology")]
-		[Route("databases/{databaseName}/admin/replication/topology")]
+		[Route("admin/replication/topology/view")]
+		[Route("databases/{databaseName}/admin/replication/topology/view")]
 		public Task<HttpResponseMessage> ReplicationTopology()
 		{
 			var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(Database, new RavenJArray(), 10, Log);

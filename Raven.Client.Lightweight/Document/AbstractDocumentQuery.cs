@@ -1737,9 +1737,13 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void WaitForNonStaleResultsAsOfLastWrite(TimeSpan waitTimeout)
 		{
-			theWaitForNonStaleResults = true;
-			timeout = waitTimeout;
-			cutoffEtag = theSession.DocumentStore.GetLastWrittenEtag();
+		    var lastWrittenEtag = theSession.DocumentStore.GetLastWrittenEtag();
+            if (lastWrittenEtag != null)
+            {
+                theWaitForNonStaleResults = true;
+                timeout = waitTimeout;
+                cutoffEtag = theSession.DocumentStore.GetLastWrittenEtag();    
+            }
 		}
 
 		/// <summary>

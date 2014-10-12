@@ -198,7 +198,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
@@ -215,7 +215,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 
-				if (untilEtag != null)
+				if (untilEtag != null && count > 0)
 				{
 					var docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 					if (EtagUtil.IsGreaterThan(docEtag, untilEtag))

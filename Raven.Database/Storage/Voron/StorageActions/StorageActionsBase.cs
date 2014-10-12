@@ -75,7 +75,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			{
 				version = 0;
 				return null;
-			} 
+			}
 			
 			using (var stream = read.Reader.AsStream())
 			{

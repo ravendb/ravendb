@@ -14,6 +14,8 @@ using Xunit;
 
 namespace Raven.Tests.Storage
 {
+	using System.Threading;
+
 	public class DocumentKeys : RavenTest
 	{
 		[Fact]

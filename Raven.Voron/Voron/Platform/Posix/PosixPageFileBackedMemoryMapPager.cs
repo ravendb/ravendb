@@ -98,7 +98,6 @@ namespace Voron
 			PagerState = newPagerState;
 			tmp.Release(); //replacing the pager state --> so one less reference for it
 
-			_totalAllocationSize += allocationSize;
 			NumberOfAllocatedPages = _totalAllocationSize / PageSize;
 		}
 

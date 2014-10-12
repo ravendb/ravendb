@@ -94,7 +94,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                        {"id", newId},
                        {"page_strong_hash", hashKey.Strong},
                        {"page_weak_hash", hashKey.Weak},
-                       {"usage_count", 0}
+                       {"usage_count", 1}
                    };
 
             storage.Pages.Add(writeBatch.Value, newKey, newPage, 0);

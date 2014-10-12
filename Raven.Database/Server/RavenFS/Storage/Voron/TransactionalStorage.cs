@@ -215,7 +215,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             if (tableStorage == null)
                 throw new InvalidOperationException("Cannot begin database backup - table store is not initialized");
 
-            var backupOperation = new BackupOperation(systemDatabase, filesystem, systemDatabase.Configuration.DataDirectory,
+            var backupOperation = new BackupOperation(filesystem, systemDatabase.Configuration.DataDirectory,
                 backupDestinationDirectory, tableStorage.Environment, incrementalBackup, fileSystemDocument);
 
             Task.Factory.StartNew(() =>
@@ -230,7 +230,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             new RestoreOperation(restoreRequest, configuration, output).Execute();
         }
 
-		private void Output(string message)
+        public void Compact(InMemoryRavenConfiguration configuration)
+        {
+            throw new NotSupportedException("Voron storage does not support compaction");
+        }
+
+        private void Output(string message)
 		{
 			Log.Info(message);
 			Console.Write(message);

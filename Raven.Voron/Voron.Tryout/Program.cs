@@ -23,74 +23,9 @@ namespace Voron.Tryout
 	{
 		public static void Main()
 		{
-			
-			var basePath = @"C:\Work\ravendb-3.0\Raven.Voron\Voron.Tryout\bin\Debug\v4";
-
-			var win = new Win32MemoryMapPager(Path.Combine(basePath, "v2", "Raven.voron"));
-			var lin = new Win32MemoryMapPager(Path.Combine(basePath, "v2l", "Raven.voron"));
-
-			var winPage = (PageHeader*)win.AcquirePagePointer(0);
-			var linPage = (PageHeader*)lin.AcquirePagePointer(0);
-
-			return;
-			var path = "v4";
-			if (Directory.Exists(path))
-				Directory.Delete(path, true);
-			Console.WriteLine(Process.GetCurrentProcess().Id);
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
-			{
-				var batch = new WriteBatch();
-				batch.Add("ayende@ayende.com", "Oren Eini", "Names");
-				env.Writer.Write(batch);
-
-				using (var snp = env.CreateSnapshot())
-				{
-					var reader = snp.Read("Names", "ayende@ayende.com");
-					if (reader == null)
-					{
-						Console.WriteLine("Couldn't find it");
-					}
-					else
-					{
-						Console.WriteLine(reader.Reader.ToStringValue());
-					}
-				}
-			}
-
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
-			{
-				//				using (var snp = env.CreateSnapshot()) 
-				//				{
-				//					var reader = snp.Read ("Names", "ayende@ayende.com");
-				//					if (reader == null) 
-				//					{
-				//						Console.WriteLine ("Couldn't find it");
-				//					} 
-				//					else 
-				//					{
-				//						Console.WriteLine (reader.Reader.ToStringValue());
-				//					}
-				//				}
-			}
-
-
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
-			{
-
-				using (var snp = env.CreateSnapshot())
-				{
-					var reader = snp.Read("Names", "ayende@ayende.com");
-					if (reader == null)
-					{
-						Console.WriteLine("Couldn't find it");
-					}
-					else
-					{
-						Console.WriteLine(reader.Reader.ToStringValue());
-					}
-				}
-			}
-			Console.WriteLine("Done");
+			var b = new MultiTransactions ();
+				b.ShouldWork ();
+			Console.WriteLine ("done");
 		}
 	}
 }

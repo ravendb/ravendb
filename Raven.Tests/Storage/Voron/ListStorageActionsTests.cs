@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using Raven.Abstractions;
 using Raven.Tests.Common;
 
 namespace Raven.Tests.Storage.Voron
@@ -216,6 +218,89 @@ namespace Raven.Tests.Storage.Voron
                 });
             }
         }
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void RemoveBefore(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor => accessor.Lists.Set("name1", "key1", new RavenJObject { { "data", "123" } }, UuidType.ReduceResults));
+				storage.Batch(accessor => accessor.Lists.Set("name1", "key2", new RavenJObject { { "data", "111" } }, UuidType.ReduceResults));
+				storage.Batch(accessor => accessor.Lists.Set("name2", "key1", new RavenJObject { { "data", "000" } }, UuidType.ReduceResults));
+
+				Etag name1Etag = null;
+				Etag name2Etag = null;
+				storage.Batch(accessor =>
+				{
+					name1Etag = accessor.Lists.Read("name1", Etag.Empty, null, 10).Max(x => x.Etag);
+					name2Etag = accessor.Lists.Read("name2", Etag.Empty, null, 10).Max(x => x.Etag);
+				});
+
+				storage.Batch(accessor => accessor.Lists.Set("name1", "key3", new RavenJObject { { "data", "321" } }, UuidType.ReduceResults));
+				storage.Batch(accessor => accessor.Lists.Set("name2", "key2", new RavenJObject { { "data", "000" } }, UuidType.ReduceResults));
+
+				storage.Batch(accessor =>
+				{
+					accessor.Lists.RemoveAllBefore("name1", name1Etag);
+					accessor.Lists.RemoveAllBefore("name2", name2Etag);
+				});
+
+				storage.Batch(accessor =>
+				{
+					var items1 = accessor.Lists.Read("name1", Etag.Empty, null, 10).ToList();
+					var items2 = accessor.Lists.Read("name2", Etag.Empty, null, 10).ToList();
+
+					Assert.Equal(1, items1.Count);
+					Assert.Equal("key3", items1[0].Key);
+					Assert.Equal("321", items1[0].Data.Value<string>("data"));
+
+					Assert.Equal(1, items2.Count);
+					Assert.Equal("key2", items2[0].Key);
+					Assert.Equal("000", items2[0].Data.Value<string>("data"));
+				});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void RemoveOlderThan(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				SystemTime.UtcDateTime = () => DateTime.Now.AddDays(-2);
+
+				storage.Batch(accessor => accessor.Lists.Set("name1", "key1", new RavenJObject { { "data", "123" } }, UuidType.ReduceResults));
+				storage.Batch(accessor => accessor.Lists.Set("name1", "key2", new RavenJObject { { "data", "111" } }, UuidType.ReduceResults));
+
+				storage.Batch(accessor => accessor.Lists.Set("name2", "key1", new RavenJObject { { "data", "000" } }, UuidType.ReduceResults));
+
+				SystemTime.UtcDateTime = () => DateTime.Now;
+
+				storage.Batch(accessor => accessor.Lists.Set("name1", "key3", new RavenJObject { { "data", "321" } }, UuidType.ReduceResults));
+				storage.Batch(accessor => accessor.Lists.Set("name2", "key2", new RavenJObject { { "data", "000" } }, UuidType.ReduceResults));
+
+				storage.Batch(accessor =>
+				{
+					accessor.Lists.RemoveAllOlderThan("name1", SystemTime.UtcNow.Subtract(TimeSpan.FromDays(1)));
+					accessor.Lists.RemoveAllOlderThan("name2", SystemTime.UtcNow.Subtract(TimeSpan.FromDays(1)));
+				});
+
+				storage.Batch(accessor =>
+				{
+					var items1 = accessor.Lists.Read("name1", Etag.Empty, null, 10).ToList();
+					var items2 = accessor.Lists.Read("name2", Etag.Empty, null, 10).ToList();
+
+					Assert.Equal(1, items1.Count);
+					Assert.Equal("key3", items1[0].Key);
+					Assert.Equal("321", items1[0].Data.Value<string>("data"));
+
+					Assert.Equal(1, items2.Count);
+					Assert.Equal("key2", items2[0].Key);
+					Assert.Equal("000", items2[0].Data.Value<string>("data"));
+				});
+			}
+		}
 
 		private void CompareListItems(ListItem expected, ListItem actual)
 		{

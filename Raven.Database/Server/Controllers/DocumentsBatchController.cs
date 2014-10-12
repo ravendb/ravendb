@@ -153,7 +153,7 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(new { OperationId = id });
 		}
 
-		public class BulkOperationStatus
+		public class BulkOperationStatus : IOperationState
 		{
 			public RavenJToken State { get; set; }
 			public bool Completed { get; set; }

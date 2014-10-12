@@ -62,6 +62,7 @@ namespace Raven.Database.Config
 
 			// Replication
 			{"Raven/Replication/FetchingFromDiskTimeout", "int", null, "Number of seconds after which replication will stop reading documents/attachments from disk. Default: 30."},
+			{"Raven/Replication/ReplicationRequestTimeout", "int", null, "Number of milliseconds before replication requests will timeout. Default: 60 * 1000."},
 			
 			// Prefetcher
 			{"Raven/Prefetcher/FetchingDocumentsFromDiskTimeout", "int", null, "Number of seconds after which prefetcher will stop reading documents from disk. Default: 5."},

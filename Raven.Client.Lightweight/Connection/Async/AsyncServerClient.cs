@@ -2480,5 +2480,29 @@ namespace Raven.Client.Connection.Async
 			return new AsyncServerClient(url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId,
 										 replicationInformerGetter, databaseName, conflictListeners);
 		}
+
+        internal async Task<ReplicationDocument> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata)
+        {
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/replication/topology", "GET", operationMetadata.Credentials, convention);
+            var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders))
+                                            .AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+            try
+            {
+                var requestJson = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                return requestJson.JsonDeserialization<ReplicationDocument>();
+            }
+            catch (ErrorResponseException e)
+            {
+                switch (e.StatusCode)
+                {
+                    case HttpStatusCode.NotFound:
+                    case HttpStatusCode.BadRequest: //replication bundle if not enabled
+                        return null;
+                    default:
+                        throw;
+                }
+            }
+        }
 	}
-	}
+}

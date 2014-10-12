@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using Raven.Abstractions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Util.Streams;
 
@@ -43,6 +45,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			var etag = generator.CreateSequentialUuid(type);
 			var etagAsString = etag.ToString();
+			var createdAt = SystemTime.UtcNow;
 
 			tableStorage.Lists.Add(
 				writeBatch.Value,
@@ -52,7 +55,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					{ "name", name }, 
 					{ "key", key }, 
 					{ "etag", etag.ToByteArray() }, 
-					{ "data", data }
+					{ "data", data },
+					{ "createdAt", createdAt}
 				});
 
 			listsByName.MultiAdd(writeBatch.Value, CreateKey(name), etagAsString);
@@ -75,6 +79,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				using (var reader = new StreamReader(stream))
 				{
 					var etag = reader.ReadToEnd();
+
 					tableStorage.Lists.Delete(writeBatch.Value, etag);
 					listsByName.MultiDelete(writeBatch.Value, CreateKey(name), etag);
 					listsByNameAndKey.Delete(writeBatch.Value, nameAndKey);
@@ -168,9 +173,41 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						var key = value.Value<string>("key");
 
 						tableStorage.Lists.Delete(writeBatch.Value, currentEtag.ToString());
-                        listsByName.MultiDelete(writeBatch.Value, nameKey, currentEtag.ToString());
+                        listsByName.MultiDelete(writeBatch.Value, CreateKey(nameKey), currentEtag.ToString());
 						listsByNameAndKey.Delete(writeBatch.Value, CreateKey(name, key));
 					}
+				}
+				while (iterator.MoveNext());
+			}
+		}
+
+		public void RemoveAllOlderThan(string name, DateTime dateTime)
+		{
+			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
+			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
+
+			var nameKey = CreateKey(name);
+
+			using (var iterator = listsByName.MultiRead(Snapshot, nameKey))
+			{
+				if (!iterator.Seek(Slice.BeforeAllKeys))
+					return;
+				
+				do
+				{
+					ushort version;
+					var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
+					var createdAt = value.Value<DateTime>("createdAt");
+					
+					if(createdAt > dateTime)
+						break;
+
+					var key = value.Value<string>("key");
+					var etag = Etag.Parse(iterator.CurrentKey.ToString());
+
+					tableStorage.Lists.Delete(writeBatch.Value, etag.ToString());
+					listsByName.MultiDelete(writeBatch.Value, nameKey, etag.ToString());
+					listsByNameAndKey.Delete(writeBatch.Value, CreateKey(name, key));
 				}
 				while (iterator.MoveNext());
 			}
@@ -184,13 +221,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return null;
 
 			var etag = Etag.Parse(value.Value<byte[]>("etag"));
-			var k = value.Value<string>("key");
+			var key = value.Value<string>("key");
+			var createdAt = value.Value<DateTime>("createdAt");
 
 			return new ListItem
 			{
 				Data = value.Value<RavenJObject>("data"),
 				Etag = etag,
-				Key = k
+				Key = key,
+				CreatedAt = createdAt
 			};
 		}
 	}

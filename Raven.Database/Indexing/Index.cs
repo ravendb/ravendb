@@ -52,11 +52,15 @@ namespace Raven.Database.Indexing
 	{
 		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
 		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
+
+		private const long WriteErrorsLimit = 10;
+
 		private readonly List<Document> currentlyIndexDocuments = new List<Document>();
 		protected Directory directory;
 		protected readonly IndexDefinition indexDefinition;
 		private volatile string waitReason;
 		private readonly long flushSize;
+		private long writeErrors;
 
 		public IndexingPriority Priority { get; set; }
 
@@ -272,6 +276,8 @@ namespace Raven.Database.Indexing
 				{
 					waitReason = "Flush";
 					indexWriter.Commit(highestETag);
+
+					ResetWriteErrors();
 				}
 				finally
 				{
@@ -295,6 +301,13 @@ namespace Raven.Database.Indexing
 					}
 					indexWriter.Optimize();
 					logIndexing.Info("Done merging {0} - took {1}", indexId, sp.Elapsed);
+
+					ResetWriteErrors();
+				}
+				catch (Exception)
+				{
+					IncrementWriteErrors();
+					throw;
 				}
 				finally
 				{
@@ -483,6 +496,8 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception e)
 				{
+					IncrementWriteErrors();
+
 					throw new InvalidOperationException("Could not properly write to index " + PublicName, e);
 				}
 				finally
@@ -527,18 +542,57 @@ namespace Raven.Database.Indexing
 
 		protected void UpdateIndexingStats(WorkContext workContext, IndexingWorkStats stats)
 		{
-			switch (stats.Operation)
+			// we'll try this for ten times, and if we get concurrency conflict, we do NOT fail, we'll retry
+			// if we can't run even after ten times, we just give up. The stats might be a bit out, but that is fine for us
+			bool run = true;
+			for (int i = 0; i < 10 && run; i++)
 			{
-				case IndexingWorkStats.Status.Map:
-					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateIndexingStats(indexId, stats));
-					break;
-				case IndexingWorkStats.Status.Reduce:
-					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateReduceStats(indexId, stats));
-					break;
-				case IndexingWorkStats.Status.Ignore:
-					break;
-				default:
-					throw new ArgumentOutOfRangeException();
+				run = false;
+				switch (stats.Operation)
+				{
+					case IndexingWorkStats.Status.Map:
+						workContext.TransactionalStorage.Batch(accessor =>
+						{
+							try
+							{
+								accessor.Indexing.UpdateIndexingStats(indexId, stats);
+							}
+							catch (Exception e)
+							{
+								if (accessor.IsWriteConflict(e))
+								{
+									run = true;
+									return;
+								}
+								throw;
+							}
+						});
+						break;
+					case IndexingWorkStats.Status.Reduce:
+						workContext.TransactionalStorage.Batch(accessor =>
+						{
+							try
+							{
+								accessor.Indexing.UpdateReduceStats(indexId, stats);
+							}
+							catch (Exception e)
+							{
+								if (accessor.IsWriteConflict(e))
+								{
+									run = true;
+									return;
+								}
+								throw;
+							}
+						});
+						break;
+					case IndexingWorkStats.Status.Ignore:
+						break;
+					default:
+						throw new ArgumentOutOfRangeException();
+				}
+				if(run)
+					Thread.Sleep(11);
 			}
 		}
 
@@ -575,6 +629,8 @@ namespace Raven.Database.Indexing
 				dir.Dispose();
 
 				CreateIndexWriter();
+
+				ResetWriteErrors();
 			}
 		}
 
@@ -1698,7 +1754,8 @@ namespace Raven.Database.Indexing
 
 		protected bool EnsureValidNumberOfOutputsForDocument(string sourceDocumentId, int numberOfAlreadyProducedOutputs)
 		{
-			var maxNumberOfIndexOutputs = indexDefinition.MaxIndexOutputsPerDocument ?? context.Configuration.MaxIndexOutputsPerDocument;
+			var maxNumberOfIndexOutputs = indexDefinition.MaxIndexOutputsPerDocument ??
+										(IsMapReduce ? context.Configuration.MaxMapReduceIndexOutputsPerDocument : context.Configuration.MaxSimpleIndexOutputsPerDocument);
 
 			if (maxNumberOfIndexOutputs == -1)
 				return true;
@@ -1707,12 +1764,49 @@ namespace Raven.Database.Indexing
 				return true;
 
 			var msg = string.Format("Index '{0}' has already produced {1} map results for a source document '{2}', while the allowed max number of outputs is {3} per one document. " +
-			                        "Please verify this index definition and consider a re-design of your entities or index.",
+									"Please verify this index definition and consider a re-design of your entities or index.",
 				PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs);
 			logIndexing.Warn(msg);
-			this.context.AddError(this.indexId, this.PublicName, sourceDocumentId, msg);
+			context.AddError(indexId, PublicName, sourceDocumentId, msg);
 
 			return false;
+		}
+
+		public void IncrementWriteErrors()
+		{
+			writeErrors = Interlocked.Increment(ref writeErrors);
+
+			if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error) 
+				return;
+			
+			context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
+			Priority = IndexingPriority.Error;
+
+			context.Database.Notifications.RaiseNotifications(new IndexChangeNotification
+			{
+				Name = PublicName,
+				Type = IndexChangeTypes.IndexMarkedAsErrored
+			});
+
+			var msg = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
+
+			logIndexing.Warn(msg);
+
+			context.AddError(indexId, PublicName, null, msg);
+
+			context.Database.AddAlert(new Alert
+			{
+				AlertLevel = AlertLevel.Error,
+				CreatedAt = SystemTime.UtcNow,
+				Message = msg,
+				Title = string.Format("Index '{0}' marked as errored due to write errors", PublicName),
+				UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
+			});
+		}
+
+		private void ResetWriteErrors()
+		{
+			writeErrors = Interlocked.Exchange(ref writeErrors, 0);
 		}
 
 		internal class IndexByIdEqualityComparer : IEqualityComparer<Index>

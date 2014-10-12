@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 
@@ -24,6 +25,12 @@ namespace Raven.Database.Prefetching
 
 	public class PrefetchingBehavior : IDisposable
 	{
+		private class DocAddedAfterCommit
+		{
+			public Etag Etag;
+			public DateTime AddedAt;
+		}
+
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly BaseBatchSizeAutoTuner autoTuner;
 		private readonly WorkContext context;
@@ -38,6 +45,7 @@ namespace Raven.Database.Prefetching
 
 		private readonly ConcurrentJsonDocumentSortedList prefetchingQueue = new ConcurrentJsonDocumentSortedList();
 
+		private DocAddedAfterCommit lowestInMemoryDocumentAddedAfterCommit;
 		private int currentIndexingAge;
 
 		public PrefetchingBehavior(PrefetchingUser prefetchingUser, WorkContext context, BaseBatchSizeAutoTuner autoTuner)
@@ -49,7 +57,8 @@ namespace Raven.Database.Prefetching
 
 		public PrefetchingUser PrefetchingUser { get; private set; }
 
-		public bool IgnoreJustCommitedDocuments { get; set; }
+		public bool DisableCollectingDocumentsAfterCommit { get; set; }
+		public bool ShouldHandleUnusedDocumentsAddedAfterCommit { get; set; }
 
 		public int InMemoryIndexingQueueSize
 		{
@@ -74,6 +83,8 @@ namespace Raven.Database.Prefetching
 
 		public List<JsonDocument> GetDocumentsBatchFrom(Etag etag)
 		{
+			HandleCollectingDocumentsAfterCommit(etag);
+
 			var results = GetDocsFromBatchWithPossibleDuplicates(etag);
 			// a single doc may appear multiple times, if it was updated while we were fetching things, 
 			// so we have several versions of the same doc loaded, this will make sure that we will only  
@@ -87,6 +98,42 @@ namespace Raven.Database.Prefetching
 				}
 			}
 			return results;
+		}
+
+		private void HandleCollectingDocumentsAfterCommit(Etag reqestedEtag)
+		{
+			if(ShouldHandleUnusedDocumentsAddedAfterCommit == false)
+				return;
+
+			if (DisableCollectingDocumentsAfterCommit)
+			{
+				if (lowestInMemoryDocumentAddedAfterCommit != null && reqestedEtag.CompareTo(lowestInMemoryDocumentAddedAfterCommit.Etag) > 0)
+				{
+					lowestInMemoryDocumentAddedAfterCommit = null;
+					DisableCollectingDocumentsAfterCommit = false;
+				}
+			}
+			else
+			{
+				if (lowestInMemoryDocumentAddedAfterCommit != null && SystemTime.UtcNow - lowestInMemoryDocumentAddedAfterCommit.AddedAt > TimeSpan.FromMinutes(10))
+				{
+					DisableCollectingDocumentsAfterCommit = true;
+				}
+			}
+		}
+
+		private void HandleCleanupOfUnusedDocumentsInQueue()
+		{
+			if (ShouldHandleUnusedDocumentsAddedAfterCommit == false)
+				return;
+
+			if(DisableCollectingDocumentsAfterCommit == false)
+				return;
+
+			if(lowestInMemoryDocumentAddedAfterCommit == null)
+				return;
+
+			prefetchingQueue.RemoveAfter(lowestInMemoryDocumentAddedAfterCommit.Etag);
 		}
 
 		private bool CanBeConsideredAsDuplicate(JsonDocument document)
@@ -399,7 +446,7 @@ namespace Raven.Database.Prefetching
 
 		public static JsonDocument GetHighestJsonDocumentByEtag(List<JsonDocument> past)
 		{
-			var highest = new Abstractions.Util.ComparableByteArray(Etag.Empty);
+			var highest = Etag.Empty;
 			JsonDocument highestDoc = null;
 			for (int i = past.Count - 1; i >= 0; i--)
 			{
@@ -408,7 +455,7 @@ namespace Raven.Database.Prefetching
 				{
 					continue;
 				}
-				highest = new Abstractions.Util.ComparableByteArray(etag);
+				highest = etag;
 				highestDoc = past[i];
 			}
 			return highestDoc;
@@ -445,7 +492,7 @@ namespace Raven.Database.Prefetching
 
 		public void AfterStorageCommitBeforeWorkNotifications(JsonDocument[] docs)
 		{
-			if (context.Configuration.DisableDocumentPreFetching || docs.Length == 0 || IgnoreJustCommitedDocuments)
+			if (context.Configuration.DisableDocumentPreFetching || docs.Length == 0 || DisableCollectingDocumentsAfterCommit)
 				return;
 
 			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
@@ -453,10 +500,29 @@ namespace Raven.Database.Prefetching
 				prefetchingQueue.Aggregate(0, (x,c) => x + SelectSerializedSizeOnDiskIfNotNull(c)) > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
 				return;
 
+			Etag lowestEtag = null;
+
 			foreach (var jsonDocument in docs)
 			{
 				DocumentRetriever.EnsureIdInMetadata(jsonDocument);
 				prefetchingQueue.Add(jsonDocument);
+
+				if (ShouldHandleUnusedDocumentsAddedAfterCommit && (lowestEtag == null || jsonDocument.Etag.CompareTo(lowestEtag) < 0))
+				{
+					lowestEtag = jsonDocument.Etag;
+				}
+			}
+
+			if (ShouldHandleUnusedDocumentsAddedAfterCommit && lowestEtag != null)
+			{
+				if (lowestInMemoryDocumentAddedAfterCommit == null || lowestEtag.CompareTo(lowestInMemoryDocumentAddedAfterCommit.Etag) < 0)
+				{
+					lowestInMemoryDocumentAddedAfterCommit = new DocAddedAfterCommit
+					{
+						Etag = lowestEtag,
+						AddedAt = SystemTime.UtcNow
+					};
+				}
 			}
 		}
 
@@ -491,6 +557,8 @@ namespace Raven.Database.Prefetching
 			{
 				prefetchingQueue.TryDequeue(out result);
 			}
+
+			HandleCleanupOfUnusedDocumentsInQueue();
 		}
 
 		public bool FilterDocuments(JsonDocument document)
@@ -627,6 +695,6 @@ namespace Raven.Database.Prefetching
         public void OutOfMemoryExceptionHappened()
 	    {
 	        autoTuner.HandleOutOfMemory();
+	    }
 	}
-}
 }

@@ -103,6 +103,7 @@ namespace Raven.Tests.Issues
 										g.Key.ErrorMessage,
 										Count = g.Sum(x => x.Count)
 									};
+				MaxIndexOutputsPerDocument = 15;
 			}
 		}
 
@@ -118,7 +119,8 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
-				var serverError = store.DatabaseCommands.GetStatistics().Errors.First();
+				var databaseStatistics = store.DatabaseCommands.GetStatistics();
+				var serverError = databaseStatistics.Errors.First();
 				Assert.Equal(index.IndexName, serverError.IndexName);
 
 				var queryResult = store.DatabaseCommands.Query(index.IndexName, new IndexQuery());

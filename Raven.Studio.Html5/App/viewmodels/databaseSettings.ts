@@ -84,6 +84,12 @@ class databaseSettings extends viewModelBase {
         {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
+        $("#dbDocEditor").on('DynamicHeightSet', () => this.docEditor.resize());
+    }
+
+    detached() {
+        super.detached();
+        $("#dbDocEditor").off('DynamicHeightSet');
     }
 
     editDatabaseSettings() {

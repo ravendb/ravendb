@@ -506,12 +506,12 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Sends an async command to compact a database. During the compaction the specified database will be offline.
 		/// </summary>
-		Task CompactDatabaseAsync(string databaseName);
+		Task<Operation> CompactDatabaseAsync(string databaseName);
 
         /// <summary>
         /// Begins an async restore operation
         /// </summary>
-        Task StartRestoreAsync(DatabaseRestoreRequest restoreRequest);
+        Task<Operation> StartRestoreAsync(DatabaseRestoreRequest restoreRequest);
 
         /// <summary>
         /// Begins an async backup operation

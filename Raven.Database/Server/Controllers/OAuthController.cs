@@ -119,6 +119,7 @@ namespace Raven.Database.Server.Controllers
 			var msg = GetEmptyMessage(HttpStatusCode.PreconditionFailed);
 			var value = OAuthHelper.Keys.WWWAuthenticateHeaderKey + " " + OAuthHelper.DictionaryToString(responseData);
 			msg.Headers.TryAddWithoutValidation("WWW-Authenticate", value);
+			msg.Headers.Add("Access-Control-Expose-Headers", "WWW-Authenticate, OAuth-Source");
 
 			return msg;
 		}

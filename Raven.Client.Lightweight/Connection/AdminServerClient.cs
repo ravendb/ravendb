@@ -34,9 +34,9 @@ namespace Raven.Client.Connection
 
 		public IDatabaseCommands Commands { get { return new ServerClient(asyncServerClient); } }
 
-		public void CompactDatabase(string databaseName)
+		public Operation CompactDatabase(string databaseName)
 		{
-			asyncAdminServerClient.CompactDatabaseAsync(databaseName).WaitUnwrap();
+		    return asyncAdminServerClient.CompactDatabaseAsync(databaseName).ResultUnwrap();
 		}
 
 		public void StopIndexing()
@@ -54,9 +54,9 @@ namespace Raven.Client.Connection
             asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument, incremental, databaseName).WaitUnwrap();
 		}
 
-		public void StartRestore(DatabaseRestoreRequest restoreRequest)
+		public Operation StartRestore(DatabaseRestoreRequest restoreRequest)
 		{
-			asyncAdminServerClient.StartRestoreAsync(restoreRequest).WaitUnwrap();
+		    return asyncAdminServerClient.StartRestoreAsync(restoreRequest).ResultUnwrap();
 		}
 
 		public string GetIndexingStatus()

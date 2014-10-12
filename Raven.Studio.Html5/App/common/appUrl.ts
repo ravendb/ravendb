@@ -167,6 +167,10 @@ class appUrl {
         return "#admin/settings/backupFilesystem";
     }
 
+    static forCompactFilesystem(): string {
+        return "#admin/settings/compactFilesystem";
+    }
+
     static forRestoreFilesystem(): string {
         return "#admin/settings/restoreFilesystem";
     }
@@ -612,6 +616,12 @@ class appUrl {
     static forFilesystemConfigurationWithKey(fs: filesystem, key: string): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs) + "&key=" + encodeURIComponent(key);
         return "#filesystems/configuration?" + filesystemPart;
+    }
+
+    static forEditFile(id: string, fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        var fileIdPart = id ? "&id=" + encodeURIComponent(id) : "";        
+        return "#filesystems/edit?" + fileIdPart + filesystemPart;
     }
 
     /**

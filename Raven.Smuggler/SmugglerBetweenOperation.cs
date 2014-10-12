@@ -1,8 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-
+using NDesk.Options;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -76,6 +77,10 @@ namespace Raven.Smuggler
 				{
 					incremental.LastAttachmentsEtag = await ExportAttachments(exportStore, importStore, options, exportBatchSize);
 				}
+				if (exportStoreSupportedFeatures.IsIdentitiesSmugglingSupported && importStoreSupportedFeatures.IsIdentitiesSmugglingSupported)
+				{
+					await ExportIdentities(exportStore, importStore, options.OperateOnTypes);
+				}
 
 				if (options.Incremental)
 				{
@@ -89,6 +94,60 @@ namespace Raven.Smuggler
 					await importStore.AsyncDatabaseCommands.PutAsync(SmugglerExportIncremental.RavenDocumentKey, null, RavenJObject.FromObject(smugglerExportIncremental), new RavenJObject());
 				}
 			}
+		}
+
+		private static async Task ExportIdentities(DocumentStore exportStore, DocumentStore importStore, ItemType operateOnTypes)
+		{
+			int start = 0;
+			const int pageSize = 1024;
+			long totalIdentitiesCount;
+			var identities = new List<KeyValuePair<string, long>>();
+
+			ShowProgress("Exporting Identities");
+
+			do
+			{
+				var url = exportStore.Url.ForDatabase(exportStore.DefaultDatabase) + "/debug/identities?start=" + start + "&pageSize=" + pageSize;
+				var request = exportStore.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", exportStore.DatabaseCommands.PrimaryCredentials, exportStore.Conventions));
+
+				var identitiesInfo = (RavenJObject) await request.ReadResponseJsonAsync();
+				totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");
+
+				foreach (var identity in identitiesInfo.Value<RavenJArray>("Identities"))
+				{
+					identities.Add(new KeyValuePair<string, long>(identity.Value<string>("Key"), identity.Value<long>("Value")));	
+				}
+
+				start += pageSize;
+
+			} while (identities.Count < totalIdentitiesCount);
+
+			ShowProgress("Exported {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
+
+			var filteredIdentities = identities.Where(x =>
+			{
+				if ("Raven/Etag".Equals(x.Key, StringComparison.InvariantCultureIgnoreCase))
+					return true;
+
+				if ("IndexId".Equals(x.Key, StringComparison.InvariantCultureIgnoreCase) && operateOnTypes.HasFlag(ItemType.Indexes))
+					return true;
+
+				if (operateOnTypes.HasFlag(ItemType.Documents))
+					return true;
+
+				return false;
+			}).ToList();
+
+			ShowProgress("After filtering {0} identities need to be imported: {1}", filteredIdentities.Count, string.Join(", ", filteredIdentities.Select(x => x.Key)));
+
+			foreach (var identityInfo in filteredIdentities)
+			{
+				importStore.DatabaseCommands.SeedIdentityFor(identityInfo.Key, identityInfo.Value);
+
+				ShowProgress("Identity '{0}' imported with value {1}", identityInfo.Key, identityInfo.Value);
+			}
+
+			ShowProgress("Done with importing indentities");
 		}
 
 		private static int GetBatchSize(DocumentStore store, SmugglerOptions options)
@@ -355,13 +414,14 @@ namespace Raven.Smuggler
 			var buildNumber = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
 			if (buildNumber == null || string.IsNullOrEmpty(buildNumber.ProductVersion))
 			{
-				ShowProgress("Server version is not available. Running in legacy mode which does not support transformers and documents streaming.");
+				ShowProgress("Server version is not available. Running in legacy mode which does not support transformers, documents streaming and identities smuggling.");
 				return new ServerSupportedFeatures
 				       {
 					       IsTransformersSupported = false,
 					       IsDocsStreamingSupported = false,
+						   IsIdentitiesSmugglingSupported = false,
 				       };
-			}
+			}	
 
 			var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerApiBase>()).ProductVersion;
 			var subSmugglerVersion = smugglerVersion.Substring(0, 3);
@@ -371,11 +431,12 @@ namespace Raven.Smuggler
 
 			if (intServerVersion < 25)
 			{
-				ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+				ShowProgress("Running in legacy mode, importing/exporting transformers and identities is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
 				return new ServerSupportedFeatures
 				       {
 					       IsTransformersSupported = false,
 					       IsDocsStreamingSupported = false,
+						   IsIdentitiesSmugglingSupported = false,
 				       };
 			}
 
@@ -383,6 +444,7 @@ namespace Raven.Smuggler
 			       {
 				       IsTransformersSupported = true,
 				       IsDocsStreamingSupported = true,
+					   IsIdentitiesSmugglingSupported = true,
 			       };
 		}
 

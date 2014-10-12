@@ -37,6 +37,7 @@ namespace Raven.Tests.Issues
 							LoadAttachmentForIndexing(item.Content)
 					      }
 				      };
+
 				Index("Search", FieldIndexing.Analyzed);
 			}
 		}

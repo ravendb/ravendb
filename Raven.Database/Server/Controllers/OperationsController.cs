@@ -1,6 +1,10 @@
-﻿using System.Net;
+﻿using System;
+using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+
+using System.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -50,6 +54,20 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage CurrentOperations()
         {
             return GetMessageWithObject(Database.Tasks.GetAll());
+        }
+
+        [HttpGet]
+        [Route("operation/alerts")]
+        [Route("databases/{databaseName}/operation/alerts")]
+        public HttpResponseMessage Alerts()
+        {
+            const int FreeThreshold = 15;
+            var drives = DriveInfo.GetDrives();
+            string[] alerts = drives
+                .Where(x => x.DriveType == DriveType.Fixed && x.TotalFreeSpace*1.0 / x.TotalSize < FreeThreshold / 100.0)
+                .Select(x => string.Format("Database disk ({0}) has less than {1}% free space.", x.Name, FreeThreshold))
+                .ToArray();
+            return GetMessageWithObject(alerts);
         }
 	}
 }

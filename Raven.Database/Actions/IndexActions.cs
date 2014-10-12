@@ -362,22 +362,18 @@ namespace Raven.Database.Actions
 
         private void ApplyPrecomputedBatchForNewIndex(Index index, AbstractViewGenerator generator)
         {
-            const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
-
             PrecomputedIndexingBatch result = null;
 
             var docsToIndex = new List<JsonDocument>();
             TransactionalStorage.Batch(actions =>
             {
-                var tags = generator.ForEntityNames.Select(entityName => "Tag:[[" + entityName + "]]").ToList();
-
-                var query = string.Join(" OR ", tags);
+	            var query = GetQueryForAllMatchingDocumentsForIndex(generator);
 
 	            JsonDocument highestByEtag = null;
 
                 var cts = new CancellationTokenSource();
                 using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
-                using (var op = new QueryActions.DatabaseQueryOperation(Database, DocumentsByEntityNameIndex, new IndexQuery
+				using (var op = new QueryActions.DatabaseQueryOperation(Database, Constants.DocumentsByEntityNameIndex, new IndexQuery
                 {
                     Query = query,
 					PageSize = Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch
@@ -448,7 +444,31 @@ namespace Raven.Database.Actions
 
         }
 
-        private void InvokeSuggestionIndexing(string name, IndexDefinition definition)
+	    private string GetQueryForAllMatchingDocumentsForIndex(AbstractViewGenerator generator)
+	    {
+		    var terms = new TermsQueryRunner(Database).GetTerms(Constants.DocumentsByEntityNameIndex, "Tag", null, int.MaxValue);
+
+		    var sb = new StringBuilder();
+
+		    foreach (var entityName in generator.ForEntityNames)
+		    {
+			    foreach (var term in terms)
+			    {
+				    if (string.Equals(entityName, term, StringComparison.OrdinalIgnoreCase))
+				    {
+						if (sb.Length != 0)
+							sb.Append(" OR ");
+
+						sb.Append("Tag:[[").Append(term).Append("]]");
+				    }
+			    }
+		    }
+
+		    var query = sb.ToString();
+		    return query;
+	    }
+
+	    private void InvokeSuggestionIndexing(string name, IndexDefinition definition)
         {
             foreach (var suggestion in definition.Suggestions)
             {

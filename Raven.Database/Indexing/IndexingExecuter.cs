@@ -34,6 +34,7 @@ namespace Raven.Database.Indexing
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			this.prefetcher = prefetcher;
 			defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
+			defaultPrefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
 			prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
 		}
 
@@ -108,9 +109,9 @@ namespace Raven.Database.Indexing
 		private class IndexingGroup
 		{
 			public Etag LastIndexedEtag;
+			public DateTime? LastQueryTime;
 			public List<IndexToWorkOn> Indexes; 
 			public PrefetchingBehavior PrefetchingBehavior;
-
 		}
 
         protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexes)
@@ -125,15 +126,17 @@ namespace Raven.Database.Indexing
 			var usedPrefetchers = new ConcurrentSet<PrefetchingBehavior>();
 
 			var groupedIndexes = indexingGroups.Select(x => new IndexingGroup
-	        {
-		        LastIndexedEtag = x.Key,
-		        Indexes = x.Value,
-		        PrefetchingBehavior = GetPrefetcherFor(x.Key, usedPrefetchers)
-	        }).ToList();
+			{
+				LastIndexedEtag = x.Key,
+				Indexes = x.Value,
+				LastQueryTime = x.Value.Max(y => y.Index.LastQueryTime),
+				PrefetchingBehavior = GetPrefetcherFor(x.Key, usedPrefetchers)
+			}).OrderByDescending(x => x.LastQueryTime).ToList();
 
-			var maxIndexOutputsPerDoc = indexingGroups.Values.Max(x => x.Max(y => y.Index.MaxIndexOutputsPerDocument));
+	        var maxIndexOutputsPerDoc = groupedIndexes.Max(x => x.Indexes.Max(y => y.Index.MaxIndexOutputsPerDocument));
+	        var containsMapReduceIndexes = groupedIndexes.Any(x => x.Indexes.Any(y => y.Index.IsMapReduce));
 
-			var recoverTunerState = ((IndexBatchSizeAutoTuner)autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(maxIndexOutputsPerDoc);
+			var recoverTunerState = ((IndexBatchSizeAutoTuner)autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(maxIndexOutputsPerDoc, containsMapReduceIndexes);
 
 			BackgroundTaskExecuter.Instance.ExecuteAll(context, groupedIndexes, (indexingGroup, i) =>
 			{
@@ -222,8 +225,9 @@ namespace Raven.Database.Indexing
 			if (recentEtag.Restarts != fromEtag.Restarts || Math.Abs(recentEtag.Changes - fromEtag.Changes) > context.CurrentNumberOfItemsToIndexInSingleBatch)
 			{
 				// If the distance between etag of a recent document in db and etag to index from is greater than NumberOfItemsToProcessInSingleBatch
-				// then prevent the prefetcher from loading newly added documents. For such prefetcher we will relay only on future batches to prefetch docs.
-				newPrefetcher.IgnoreJustCommitedDocuments = true;
+				// then prevent the prefetcher from loading newly added documents. For such prefetcher we will relay only on future batches to prefetch docs to avoid
+				// large memory consumption by in memory prefetching queue that would hold all the new documents, but it would be a long time before we can reach them.
+				newPrefetcher.DisableCollectingDocumentsAfterCommit = true;
 			}
 
 			prefetchingBehaviors.Add(newPrefetcher);
@@ -264,7 +268,7 @@ namespace Raven.Database.Indexing
 
             context.MetricsCounters.IndexedPerSecond.Mark(jsonDocs.Count);
             
-			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).ToList();
+			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).OrderByDescending(x => x.Index.LastQueryTime).ToList();
 
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, result,
 																  index => HandleIndexingFor(index, lastEtag, lastModified));

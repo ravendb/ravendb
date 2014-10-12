@@ -977,6 +977,8 @@ interface operationIdDto {
 
 interface operationStatusDto {
     Completed: boolean;
+    Faulted: boolean;
+    State: any;
 }
 
 interface bulkOperationStatusDto extends operationStatusDto{
@@ -1037,4 +1039,11 @@ interface runningTaskDto {
 interface adminLogsConfigEntryDto {
     category: string;
     level: string;
+}
+
+interface fileSystemSettingsDto {
+    name: string;
+    path: string;
+    logsPath: string;
+    storageEngine: string;
 }

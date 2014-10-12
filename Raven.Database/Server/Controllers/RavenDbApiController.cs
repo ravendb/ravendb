@@ -25,6 +25,8 @@ using System.Linq;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 
+using Raven.Client.Connection;
+
 namespace Raven.Database.Server.Controllers
 {
 	public abstract class RavenDbApiController : RavenBaseApiController
@@ -229,6 +231,19 @@ namespace Raven.Database.Server.Controllers
 		{
 			return DatabasesLandlord.SystemDatabase == Database;
 		}
+
+        protected bool IsAnotherRestoreInProgress(out string resourceName)
+        {
+            resourceName = null;
+            var restoreDoc = Database.Documents.Get(RestoreInProgress.RavenRestoreInProgressDocumentKey, null);
+            if (restoreDoc != null)
+            {
+                var restore = restoreDoc.DataAsJson.JsonDeserialization<RestoreInProgress>();
+                resourceName = restore.Resource;
+                return true;
+            }
+            return false;
+        }
 
         public int GetNextPageStart()
         {

@@ -412,7 +412,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
             if (new InstanceParameters(instance).Recovery == false)
                 throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to false.");
 
-            var backupOperation = new BackupOperation(systemDatabase, filesystem, systemDatabase.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, fileSystemDocument);
+            var backupOperation = new BackupOperation(filesystem, systemDatabase.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, fileSystemDocument);
             Task.Factory.StartNew(backupOperation.Execute);
         }
 
@@ -421,7 +421,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
             new RestoreOperation(restoreRequest, configuration, output).Execute();
         }
 
-		private void Output(string message)
+        void ITransactionalStorage.Compact(InMemoryRavenConfiguration cfg)
+        {
+            Compact(cfg, (sesid, snp, snt, data) => JET_err.Success);
+        }
+
+	    private void Output(string message)
 		{
 			Console.Write(message);
 			Console.WriteLine();

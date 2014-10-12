@@ -245,6 +245,31 @@ namespace Raven.Database.Smuggler
 			options.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
 		}
 
+		public Task<List<KeyValuePair<string, long>>> GetIdentities()
+		{
+			var start = 0;
+			const int pageSize = 1024;
+
+			long totalCount = 0;
+			var identities = new List<KeyValuePair<string, long>>();
+
+			do
+			{
+				database.TransactionalStorage.Batch(accessor => identities.AddRange(accessor.General.GetIdentities(start, pageSize, out totalCount)));
+				start += pageSize;
+			} while (identities.Count < totalCount);
+
+			return new CompletedTask<List<KeyValuePair<string, long>>>(identities);
+		}
+
+		public Task SeedIdentityFor(string identityName, long identityValue)
+		{
+			if(identityName != null)
+				database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(identityName, identityValue));
+
+			return new CompletedTask();
+		}
+
 		public void ShowProgress(string format, params object[] args)
 		{
 			if (Progress != null)

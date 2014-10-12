@@ -7,11 +7,28 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class statusDebugRoutes extends viewModelBase {
     data = ko.observable<string>();
+    editor: AceAjax.Editor;
 
     constructor() {
         super();
 
         aceEditorBindingHandler.install();
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+
+        var editorElement = $("#statusDebugRoutesEditor");
+        if (editorElement.length > 0) {
+            this.editor = ko.utils.domData.get(editorElement[0], "aceEditor");
+        }
+
+        $("#statusDebugRoutesEditor").on('DynamicHeightSet', () => this.editor.resize());
+    }
+
+    detached() {
+        super.detached();
+        $("#statusDebugRoutesEditor").off('DynamicHeightSet');
     }
 
     activate(args) {
