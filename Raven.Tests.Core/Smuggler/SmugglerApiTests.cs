@@ -21,7 +21,7 @@ namespace Raven.Tests.Core.Smuggler
 {
     public class SmugglerApiTests : RavenCoreTestBase
     {
-        public const int Port1 = 8079;
+        public const int Port1 = 8077;
         public const int Port2 = 8078;
         public const string ServerName1 = "Raven.Tests.Core.Server";
         public const string ServerName2 = "Raven.Tests.Core.Server2";
