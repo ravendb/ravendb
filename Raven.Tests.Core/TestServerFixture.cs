@@ -8,6 +8,7 @@ using System.IO;
 
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Server;
 using Raven.Server;
 
 namespace Raven.Tests.Core
@@ -26,6 +27,8 @@ namespace Raven.Tests.Core
 			configuration.DataDirectory = Path.Combine(configuration.DataDirectory, "Tests");
 
 			IOExtensions.DeleteDirectory(configuration.DataDirectory);
+
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port);
 
 			Server = new RavenDbServer(configuration)
 			{
