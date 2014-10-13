@@ -52,7 +52,7 @@
                     <button type="button" class="btn btn-default" data-bind="click: deleteSelectedFiles" title="Delete selected documents (DEL)">
                         <i class="fa fa-trash-o"></i>
                     </button>
-                    <button type="button" class="btn btn-default" data-bind="click: downloadSelectedFiles" title="Download selected document">
+                    <button type="button" class="btn btn-default" data-bind="enable: selectedFilesIndices().length == 1, click: downloadSelectedFiles" title="Download selected document">
                         <i class="fa fa-download"></i>
                     </button>
                 </div>

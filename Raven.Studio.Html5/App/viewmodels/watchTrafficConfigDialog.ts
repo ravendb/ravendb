@@ -4,6 +4,9 @@ import resource = require("models/resource");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import messagePublisher = require("common/messagePublisher");
 import adminLogsConfig = require("models/adminLogsConfig");
+import shell = require("viewmodels/shell");
+import database = require("models/database");
+import filesystem = require("models/filesystem/filesystem");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
@@ -14,12 +17,14 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     public configurationTask = $.Deferred();
     
     watchedResourceMode = ko.observable("SingleResourceView");
-    resourceName = ko.observable<string>();
+    resourceName = ko.observable<string>('');
     lastSearchedwatchedResourceName = ko.observable<string>();
     isAutoCompleteVisible: KnockoutComputed<boolean>;
     resourceAutocompletes = ko.observableArray<string>([]);
     maxEntries = ko.observable<number>(1000);
     allResources = ko.observableArray<resource>([]);
+    nameCustomValidityError: KnockoutComputed<string>;
+
     constructor() {
         super();
         this.resourceName.throttle(250).subscribe(search => this.fetchResourcesAutocompletes(search));
@@ -30,6 +35,19 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
 
         $(window).resize(() => {
             this.alignBoxVertically();
+        });
+
+        this.nameCustomValidityError = ko.computed(() => {
+            var errorMessage: string = '';
+            var newResourceName = this.resourceName();
+            var foundDb = shell.databases.first((db: database) => newResourceName == db.name);
+            var foundFs = shell.fileSystems.first((fs: filesystem) => newResourceName == fs.name);
+
+            if (!foundDb && !foundFs && newResourceName.length > 0) {
+                errorMessage = "Database or filesystem name doesn't exist!";
+            }
+
+            return errorMessage;
         });
     }
 

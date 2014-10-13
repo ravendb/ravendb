@@ -145,7 +145,8 @@ namespace Raven.Client.Connection
 
 				try
 				{
-				    document = RavenJObject.FromObject(getReplicationDestinations()).ToJsonDocument();
+					var replicationDestinations = getReplicationDestinations();
+					document = replicationDestinations == null ? null : RavenJObject.FromObject(replicationDestinations).ToJsonDocument();
 					failureCounts[url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
 				catch (Exception e)

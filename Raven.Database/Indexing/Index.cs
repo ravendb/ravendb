@@ -52,11 +52,15 @@ namespace Raven.Database.Indexing
 	{
 		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
 		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
+
+		private const long WriteErrorsLimit = 10;
+
 		private readonly List<Document> currentlyIndexDocuments = new List<Document>();
 		protected Directory directory;
 		protected readonly IndexDefinition indexDefinition;
 		private volatile string waitReason;
 		private readonly long flushSize;
+		private long writeErrors;
 
 		public IndexingPriority Priority { get; set; }
 
@@ -272,6 +276,8 @@ namespace Raven.Database.Indexing
 				{
 					waitReason = "Flush";
 					indexWriter.Commit(highestETag);
+
+					ResetWriteErrors();
 				}
 				finally
 				{
@@ -295,6 +301,13 @@ namespace Raven.Database.Indexing
 					}
 					indexWriter.Optimize();
 					logIndexing.Info("Done merging {0} - took {1}", indexId, sp.Elapsed);
+
+					ResetWriteErrors();
+				}
+				catch (Exception)
+				{
+					IncrementWriteErrors();
+					throw;
 				}
 				finally
 				{
@@ -483,6 +496,8 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception e)
 				{
+					IncrementWriteErrors();
+
 					throw new InvalidOperationException("Could not properly write to index " + PublicName, e);
 				}
 				finally
@@ -614,6 +629,8 @@ namespace Raven.Database.Indexing
 				dir.Dispose();
 
 				CreateIndexWriter();
+
+				ResetWriteErrors();
 			}
 		}
 
@@ -1750,9 +1767,46 @@ namespace Raven.Database.Indexing
 									"Please verify this index definition and consider a re-design of your entities or index.",
 				PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs);
 			logIndexing.Warn(msg);
-			this.context.AddError(this.indexId, this.PublicName, sourceDocumentId, msg);
+			context.AddError(indexId, PublicName, sourceDocumentId, msg);
 
 			return false;
+		}
+
+		public void IncrementWriteErrors()
+		{
+			writeErrors = Interlocked.Increment(ref writeErrors);
+
+			if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error) 
+				return;
+			
+			context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
+			Priority = IndexingPriority.Error;
+
+			context.Database.Notifications.RaiseNotifications(new IndexChangeNotification
+			{
+				Name = PublicName,
+				Type = IndexChangeTypes.IndexMarkedAsErrored
+			});
+
+			var msg = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
+
+			logIndexing.Warn(msg);
+
+			context.AddError(indexId, PublicName, null, msg);
+
+			context.Database.AddAlert(new Alert
+			{
+				AlertLevel = AlertLevel.Error,
+				CreatedAt = SystemTime.UtcNow,
+				Message = msg,
+				Title = string.Format("Index '{0}' marked as errored due to write errors", PublicName),
+				UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
+			});
+		}
+
+		private void ResetWriteErrors()
+		{
+			writeErrors = Interlocked.Exchange(ref writeErrors, 0);
 		}
 
 		internal class IndexByIdEqualityComparer : IEqualityComparer<Index>

@@ -8,6 +8,7 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
+using Raven.Client.FileSystem;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Database.Config;
@@ -57,6 +58,11 @@ namespace Raven.Database.Client
 					.ResultUnwrap();
 			}
 		}
+
+        public IFilesStore FilesStore
+        {
+            get { return server.FilesStore; }
+        }
 
         public string ConnectionStringName
         {

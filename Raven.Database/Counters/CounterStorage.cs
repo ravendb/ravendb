@@ -57,7 +57,7 @@ namespace Raven.Database.Counters
             ReplicationTask = new RavenCounterReplication(this);
 
 			//TODO: add an option to create a ReplicationRequestTimeout when creating a new counter storage
-		    ReplicationTimeoutInMs = configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 60*1000;
+			ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
 
             metricsCounters = new CountersMetricsManager();
 			transportState = recievedTransportState ?? new TransportState();

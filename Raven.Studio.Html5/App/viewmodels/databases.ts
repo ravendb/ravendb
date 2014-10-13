@@ -112,7 +112,7 @@ class databases extends viewModelBase {
                         "Raven/ActiveBundles": bundles.join(";")
                     };
                     if (storageEngine) {
-                        settings["Raven/StorageEngine"] = storageEngine;
+                        settings["Raven/StorageTypeName"] = storageEngine;
                     }
                     settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/Databases/" + databaseName;
                     if (!this.isEmptyStringOrWhitespace(databaseLogs)) {

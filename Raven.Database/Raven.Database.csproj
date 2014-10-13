@@ -239,6 +239,7 @@
     <Compile Include="Server\Connections\LogPushContent.cs" />
     <Compile Include="Server\Connections\AdminLogsConnectionState.cs" />
     <Compile Include="Server\Connections\AdminLogsTarget.cs" />
+    <Compile Include="Server\RavenFS\Controllers\HttpTraceFsController.cs" />
     <Compile Include="Server\RavenFS\Storage\BaseBackupOperation.cs" />
     <Compile Include="Server\RavenFS\Storage\BaseRestoreOperation.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\Backup\BackupOperation.cs" />

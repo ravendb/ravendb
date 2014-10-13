@@ -29,17 +29,17 @@
                             </div>
                             <div class="col-sm-9">
                                 <input id="watchedResource" placeholder="Resource Name" type="text" class="form-control"
-                                       data-bind="enable:watchedResourceMode()=='SingleResourceView',value: resourceName, valueUpdate: 'afterkeydown'" autocomplete="off" />
-                                <div data-bind="visible:isAutoCompleteVisible">
-                                    <ul class="dropdown-menu" role="menu" style="display: none;"
-                                        data-bind="autoComplete: '#watchedResource', foreach: resourceAutocompletes">
-                                        <li role="presentation" data-bind="click:function(){$root.resourceName($data); }">
+                                       data-bind="enable:watchedResourceMode()=='SingleResourceView', customValidity: nameCustomValidityError, value: resourceName, valueUpdate: 'afterkeydown'" autocomplete="off" />
+                                <ul class="dropdown-menu"  role="menu" style="display: none;"
+                                    data-bind="autoComplete: '#watchedResource', foreach: resourceAutocompletes">
+                                    <li role="presentation" data-bind="click:function(){$root.resourceName($data); }">
+                                        <a role="menuitem" tabindex="-1" href="#">
                                             <span role=" menuitem" tabindex="-1">
-                                            <span data-bind="text: $data"></span>
+                                                <span data-bind="text: $data"></span>
                                             </span>
-                                        </li>
-                                    </ul>
-                                </div>
+                                        </a>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                         <div class="col-sm-12">

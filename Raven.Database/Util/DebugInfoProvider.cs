@@ -4,12 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Management;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Utils;
@@ -109,10 +111,19 @@ namespace Raven.Database.Util
 
             using (var configStream = config.Open())
             using (var streamWriter = new StreamWriter(configStream))
-            using (var jsonWriter = new JsonTextWriter(streamWriter))
+            using (var jsonWriter = new JsonTextWriter(streamWriter) { Formatting = Formatting.Indented })
             {
                 GetConfigForDebug(database).WriteTo(jsonWriter, new EtagJsonConverter());
                 jsonWriter.Flush();
+            }
+
+            var indexes = package.CreateEntry(zipEntryPrefix + "indexes.json", compressionLevel);
+
+            using (var indexesStream = indexes.Open())
+            using (var streamWriter = new StreamWriter(indexesStream))
+            {
+                jsonSerializer.Serialize(streamWriter, database.IndexDefinitionStorage.IndexDefinitions.ToDictionary(x => x.Key, x => x.Value));
+                streamWriter.Flush();
             }
 
             var currentlyIndexing = package.CreateEntry(zipEntryPrefix + "currently-indexing.json", compressionLevel);
@@ -130,6 +141,19 @@ namespace Raven.Database.Util
             using (var streamWriter = new StreamWriter(queriesStream))
             {
                 jsonSerializer.Serialize(streamWriter, database.WorkContext.CurrentlyRunningQueries);
+                streamWriter.Flush();
+            }
+
+            var version = package.CreateEntry(zipEntryPrefix + "version.json", compressionLevel);
+
+            using (var versionStream = version.Open())
+            using (var streamWriter = new StreamWriter(versionStream))
+            {
+                jsonSerializer.Serialize(streamWriter, new
+                {
+                    DocumentDatabase.ProductVersion,
+                    DocumentDatabase.BuildVersion   
+                });
                 streamWriter.Flush();
             }
 
@@ -200,7 +224,7 @@ namespace Raven.Database.Util
 			}
         }
 
-		internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
+	    internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
 		{
 			return requestManager.GetRecentRequests(databaseName).Select(x => new
 			{
@@ -287,23 +311,29 @@ namespace Raven.Database.Util
 
 				if (compareToCollection.Any(x => x.Value < 0))
 				{
-					result.Add(new
-					{
-						ForIndexingGroup = group,
-						HasCorrectlyOrderedEtags = true,
-						EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-					});
-
-					continue;
+				    result.Add(new
+				    {
+                        ForIndexingGroup = group,
+                        HasCorrectlyOrderedEtags = false,
+                        IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
+                        EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
+				    });
 				}
-
-				result.Add(new
+				else
 				{
-					ForIndexingGroup = group,
-					HasCorrectlyOrderedEtags = false,
-					IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
-					EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
-				});
+                    var elementsToTake = Math.Min(5, prefetcherDocs.Count());
+                    var etagsWithKeysTail = Enumerable.Range(0, elementsToTake).Select(
+                        i => prefetcherDocs[prefetcherDocs.Count() - elementsToTake + i]).ToDictionary(x => x.Etag, x => x.Key);
+
+                    result.Add(new
+                    {
+                        ForIndexingGroup = group,
+                        HasCorrectlyOrderedEtags = true,
+                        EtagsWithKeysHead = prefetcherDocs.Take(5).ToDictionary(x => x.Etag, x => x.Key),
+                        EtagsWithKeysTail = etagsWithKeysTail,
+                        EtagsWithKeysCount = prefetcherDocs.Count()
+                    });
+				}
 			}
 
 			return result;
