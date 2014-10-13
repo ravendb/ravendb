@@ -161,7 +161,7 @@ namespace Raven.Client.FileSystem
                 return null;
             };
 
-            Conventions.HandleUnauthorizedResponseAsync = (unauthorizedResponse, credentials) =>
+            Conventions.HandleUnauthorizedResponseAsync = async (unauthorizedResponse, credentials) =>
             {
                 var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
 
@@ -175,7 +175,7 @@ namespace Raven.Client.FileSystem
                 if (string.IsNullOrEmpty(oauthSource) == false &&
                     oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
                 {
-                    return basicAuthenticator.HandleOAuthResponseAsync(oauthSource, credentials.ApiKey);
+                    return await basicAuthenticator.HandleOAuthResponseAsync(oauthSource, credentials.ApiKey).ConfigureAwait(false);
                 }
 
                 if (credentials.ApiKey == null)
@@ -187,7 +187,7 @@ namespace Raven.Client.FileSystem
                 if (string.IsNullOrEmpty(oauthSource))
                     oauthSource = ServerUrl + "/OAuth/API-Key";
 
-                return securedAuthenticator.DoOAuthRequestAsync(ServerUrl, oauthSource, credentials.ApiKey);
+                return await securedAuthenticator.DoOAuthRequestAsync(ServerUrl, oauthSource, credentials.ApiKey).ConfigureAwait(false);
             };
 
         }
@@ -432,7 +432,7 @@ namespace Raven.Client.FileSystem
 
         public Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadataRef = null, long? from = null, long? to = null)
         {
-            return ExecuteWithReplication("GET", operation => DownloadAsyncImpl("/files/", filename, metadataRef, from, to, operation));
+            return ExecuteWithReplication("GET", async operation => await DownloadAsyncImpl("/files/", filename, metadataRef, from, to, operation).ConfigureAwait(false));
         }
 
         private async Task<Stream> DownloadAsyncImpl(string path, string filename, Reference<RavenJObject> metadataRef, long? @from, long? to, OperationMetadata operation)
@@ -451,11 +451,11 @@ namespace Raven.Client.FileSystem
 
             try
             {
-                var response = await request.ExecuteRawResponseAsync();
+                var response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
                 if (response.StatusCode == HttpStatusCode.NotFound)
                     throw new FileNotFoundException("The file requested does not exists on the file system.", operation.Url + path + filename);
 
-                await response.AssertNotFailingResponse();
+                await response.AssertNotFailingResponse().ConfigureAwait(false);
 
                 if ( metadataRef != null )
                 {
@@ -488,7 +488,7 @@ namespace Raven.Client.FileSystem
                     metadataRef.Value = metadata;
                 }
 
-                return await response.GetResponseStreamWithHttpDecompression();
+                return await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false);
             }
             catch (Exception e)
             {

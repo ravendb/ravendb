@@ -12,7 +12,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("RavenDB")]
 [assembly: AssemblyVersion("3.0.0")]
 [assembly: AssemblyFileVersion("3.0.13.0")]
-[assembly: AssemblyInformationalVersion("3.0.0 / {commit} / {stable}")]
+[assembly: AssemblyInformationalVersion("3.0.0 / c3950f3 / ")]
 [assembly: AssemblyProduct("RavenDB")]
 [assembly: AssemblyDescription("RavenDB is a second generation LINQ enabled document database for .NET")]
 
