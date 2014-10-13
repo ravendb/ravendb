@@ -1,6 +1,8 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import collection = require("models/collection");
+import getIndexTermsCommand = require("commands/getIndexTermsCommand");
+import getCollectionsCountCommand = require("commands/getCollectionsCountCommand");
 
 class getCollectionsCommand extends commandBase {
 
@@ -16,8 +18,6 @@ class getCollectionsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<collection[]> {
-       
-
         var finalResult = $.Deferred<collection[]>();
         this.runQuery()
             .fail((xhr: JQueryXHR) => this.createSystemIndexAndTryAgain(finalResult, xhr))
@@ -26,17 +26,23 @@ class getCollectionsCommand extends commandBase {
     }
 
     runQuery(): JQueryPromise<collection[]> {
-        var facetsArray = [{ Name: 'Tag' }];
-        var args = {
-            facets: JSON.stringify(facetsArray)
-        }
+        var task = $.Deferred();
 
-        var resultsSelector = (dto: facetResultSetDto) => {
-            var tag: facetResultDto = dto.Results.Tag;
-            return tag.Values.map((value: facetValueDto) => new collection(value.Range, this.ownerDb, value.Hits));
-        };
+        new getIndexTermsCommand("Raven/DocumentsByEntityName", "Tag", this.ownerDb)
+            .execute()
+            .done((terms: string[]) => {
+                var collections = terms.map(term => new collection(term, this.ownerDb, 0));
+                new getCollectionsCountCommand(collections, this.ownerDb)
+                    .execute()
+                    .done(result => task.resolve(result))
+                    .fail(result => task.reject(result));
+            })
+            .fail((response) => {
+                this.reportError("Can't fetch collection names");
+                task.reject(response);
+            });
 
-        return this.query("/facets/Raven/DocumentsByEntityName", args, this.ownerDb, resultsSelector);
+        return task;
     }
 
     createSystemIndexAndTryAgain(deferred: JQueryDeferred<collection[]>, originalReadError: JQueryXHR) {
