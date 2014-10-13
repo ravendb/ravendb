@@ -1207,7 +1207,7 @@ namespace Raven.Database.Indexing
 
 				if (fieldsToFetch.IsDistinctQuery)
 				{
-					for (int i = 0; i < start && i < search.ScoreDocs.Length; i++)
+					for (int i = 0; alreadySeenProjections.Count < start && i < search.ScoreDocs.Length; i++)
 					{
 						var scoreDoc = search.ScoreDocs[i];
 						var document = indexSearcher.Doc(scoreDoc.Doc);
