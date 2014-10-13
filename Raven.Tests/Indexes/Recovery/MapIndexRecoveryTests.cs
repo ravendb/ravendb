@@ -8,9 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Tests.Common;
@@ -311,6 +309,9 @@ namespace Raven.Tests.Indexes.Recovery
 						session.SaveChanges(); // first commit point
 						WaitForIndexing(store);
 
+						server.SystemDatabase.IndexStorage.FlushMapIndexes();
+						server.SystemDatabase.IndexStorage.FlushReduceIndexes();
+
 						session.Store(new Recovery
 						{
 							Name = "Two",
@@ -320,6 +321,9 @@ namespace Raven.Tests.Indexes.Recovery
 						session.SaveChanges(); // second commit point
 						WaitForIndexing(store);
 
+						server.SystemDatabase.IndexStorage.FlushMapIndexes();
+						server.SystemDatabase.IndexStorage.FlushReduceIndexes();
+
 						session.Store(new Recovery
 						{
 							Name = "Three",
@@ -328,6 +332,9 @@ namespace Raven.Tests.Indexes.Recovery
 
 						session.SaveChanges(); // second commit point
 						WaitForIndexing(store, timeout: TimeSpan.FromSeconds(60));
+
+						server.SystemDatabase.IndexStorage.FlushMapIndexes();
+						server.SystemDatabase.IndexStorage.FlushReduceIndexes();
 					}
 				}
                 Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);

@@ -27,7 +27,15 @@ namespace Raven.Database.Server.Controllers
                     Error = "Could not open database named: " + DatabaseName + ", " + e.Message
                 }, HttpStatusCode.ServiceUnavailable);
             }
-			if (!db.Configuration.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName,StringComparison.InvariantCultureIgnoreCase)))
+			if (db == null)
+			{
+				return GetMessageWithObject(new
+				{
+					Error = "Could not open database named: " + DatabaseName + ", database does not exists" 
+				}, HttpStatusCode.ServiceUnavailable);
+			}
+			if (db.Configuration == null || db.Configuration.ActiveBundles == null ||
+				!db.Configuration.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName,StringComparison.InvariantCultureIgnoreCase)))
 			{
 				return GetMessageWithObject(new
 				{

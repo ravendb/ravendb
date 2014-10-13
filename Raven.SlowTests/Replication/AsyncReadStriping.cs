@@ -1,14 +1,14 @@
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Replication;
-using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Tests.Common;
 using Raven.Tests.Document;
+
 using Xunit;
 
-namespace Raven.Tests.Bundles.Replication.Async
+namespace Raven.SlowTests.Replication
 {
 	public class AsyncReadStriping : ReplicationBase
 	{

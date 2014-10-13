@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading;
 using Voron.Debugging;
 using Voron.Impl;
-using Voron.Impl.Paging;
 using Voron.Trees;
 
 namespace Voron.Tests
@@ -16,6 +15,7 @@ namespace Voron.Tests
 	{
 		private StorageEnvironment _storageEnvironment;
 		protected StorageEnvironmentOptions _options;
+		protected const string DataDir = "test.data";
 
 		public StorageEnvironment Env
 		{
@@ -40,7 +40,7 @@ namespace Voron.Tests
 
 		protected StorageTest()
 		{
-			DeleteDirectory("test.data");
+			DeleteDirectory(DataDir);
 		    _options = StorageEnvironmentOptions.CreateMemoryOnly();
 			Configure(_options);
 		}
@@ -58,8 +58,8 @@ namespace Voron.Tests
                 throw new InvalidOperationException("Too late");
             if (_options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
 	            return;
-            DeleteDirectory("test.data");
-            _options = StorageEnvironmentOptions.ForPath("test.data");
+            DeleteDirectory(DataDir);
+            _options = StorageEnvironmentOptions.ForPath(DataDir);
             Configure(_options);
 	    }
 
@@ -118,7 +118,7 @@ namespace Voron.Tests
 		    if (_storageEnvironment != null)
 		        _storageEnvironment.Dispose();
 			_options.Dispose();
-			DeleteDirectory("test.data");
+			DeleteDirectory(DataDir);
 
 			_storageEnvironment = null;
 			_options = null;
