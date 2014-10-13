@@ -9,7 +9,6 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Bundles.Versioning.Data;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -89,13 +88,13 @@ namespace Raven.Bundles.Versioning.Triggers
 			}
 		}
 
-		private int GetNextRevisionNumber(string key)
+		private long GetNextRevisionNumber(string key)
 		{
-			var revision = 0;
+			long revision = 0;
 
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				revision = (int)accessor.General.GetNextIdentityValue(key + "/revisions/");
+				revision = Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key + "/revisions/", accessor);
 
 				if (revision == 1)
 				{
@@ -173,9 +172,9 @@ namespace Raven.Bundles.Versioning.Triggers
 			return true;
 		}
 
-		private void RemoveOldRevisions(string key, int revision, VersioningConfiguration versioningConfiguration, TransactionInformation transactionInformation)
+		private void RemoveOldRevisions(string key, long revision, VersioningConfiguration versioningConfiguration, TransactionInformation transactionInformation)
 		{
-			int latestValidRevision = revision - versioningConfiguration.MaxRevisions;
+			long latestValidRevision = revision - versioningConfiguration.MaxRevisions;
 			if (latestValidRevision <= 0)
 				return;
 
