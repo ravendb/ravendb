@@ -13,15 +13,15 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			using (var store =
-				  new DocumentStore
-				  {
-					  Url = "http://localhost.fiddler:8080",
-					  DefaultDatabase = "VoronIndexTest"
-				  }.Initialize())
-			{
-				new ScratchIndex().Execute(store);
-			}
+			//using (var store =
+			//	  new DocumentStore
+			//	  {
+			//		  Url = "http://localhost.fiddler:8080",
+			//		  DefaultDatabase = "VoronIndexTest"
+			//	  }.Initialize())
+			//{
+			//	new ScratchIndex().Execute(store);
+			//}
 		}
 	}
 
