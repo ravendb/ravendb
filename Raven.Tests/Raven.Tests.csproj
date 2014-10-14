@@ -870,6 +870,7 @@
     <Compile Include="MailingList\MultiLoadInTransaction.cs" />
     <Compile Include="MailingList\nberardi.cs" />
     <Compile Include="MailingList\Nemitoff.cs" />
+    <Compile Include="MailingList\NoTracking.cs" />
     <Compile Include="MailingList\NullableGuidIndexTest.cs" />
     <Compile Include="MailingList\NullableInIndex.cs" />
     <Compile Include="MailingList\Nullables.cs" />
