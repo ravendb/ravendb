@@ -140,7 +140,8 @@ namespace Raven.Client.Document.SessionOperations
 				.Select(x => x != null ? Deserialize<T>(x) : default(T))
 				.ToList();
 
-			sessionOperations.RegisterMissingIncludes(queryResult.Results.Where(x => x != null), includes);
+			if(disableEntitiesTracking == false)
+				sessionOperations.RegisterMissingIncludes(queryResult.Results.Where(x => x != null), includes);
 
 			if (transformResults == null)
 				return list;
