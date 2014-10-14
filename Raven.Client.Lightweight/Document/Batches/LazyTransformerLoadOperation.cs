@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -13,13 +14,17 @@ namespace Raven.Client.Document.Batches
 	{
 		private readonly string[] ids;
 		private readonly string transformer;
+
+		private readonly Dictionary<string, RavenJToken> transformerParameters;
+
 		private readonly LoadTransformerOperation loadTransformerOperation;
 		private readonly bool singleResult;
 
-		public LazyTransformerLoadOperation(string[] ids, string transformer, LoadTransformerOperation loadTransformerOperation, bool singleResult)
+		public LazyTransformerLoadOperation(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters, LoadTransformerOperation loadTransformerOperation, bool singleResult)
 		{
 			this.ids = ids;
 			this.transformer = transformer;
+			this.transformerParameters = transformerParameters;
 			this.loadTransformerOperation = loadTransformerOperation;
 			this.singleResult = singleResult;
 		}
@@ -27,8 +32,14 @@ namespace Raven.Client.Document.Batches
 		public GetRequest CreateRequest()
 		{
 			string query = "?" + string.Join("&", ids.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
-			if (!string.IsNullOrEmpty(transformer))
+			if (string.IsNullOrEmpty(transformer) == false)
+			{
 				query += "&transformer=" + transformer;
+
+				if (transformerParameters != null)
+					query = transformerParameters.Aggregate(query, (current, queryInput) => current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
+			}
+
 			return new GetRequest
 			{
 				Url = "/queries/",
@@ -74,14 +85,20 @@ namespace Raven.Client.Document.Batches
 
 		public void HandleEmbeddedResponse(object result)
 		{
-			var multiLoadResult = (MultiLoadResult) result;
+			var multiLoadResult = (MultiLoadResult)result;
 			HandleRespose(multiLoadResult);
 		}
 
 		private void HandleRespose(MultiLoadResult multiLoadResult)
 		{
 			T[] complete = loadTransformerOperation.Complete<T>(multiLoadResult);
-			Result = singleResult ? (object) complete[0] : complete;
+			if (singleResult)
+			{
+				Result = complete.Length > 0 ? complete[0] : (object)null;
+				return;
+			}
+
+			Result = complete;
 		}
 	}
 #endif

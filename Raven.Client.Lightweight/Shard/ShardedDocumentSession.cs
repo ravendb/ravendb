@@ -495,23 +495,28 @@ namespace Raven.Client.Shard
 			return Lazily.Load(documentKeys, onEval);
 		}
 
-		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id)
+		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure)
 		{
-			var lazy = Lazily.Load<TTransformer, TResult>(new[] {id});
+			var lazy = Lazily.Load<TTransformer, TResult>(new[] { id }, configure);
 			return new Lazy<TResult>(() => lazy.Value[0]);
 		}
 
-		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(params string[] ids)
+		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure)
 		{
+			var idsArray = ids.ToArray();
 			var cmds = GetCommandsToOperateOn(new ShardRequestData
 			{
-				Keys = ids,
+				Keys = idsArray,
 				EntityType = typeof(TTransformer)
 			});
 			var transformer = new TTransformer().TransformerName;
-			var op = new LoadTransformerOperation(this, transformer, ids);
+			var op = new LoadTransformerOperation(this, transformer, idsArray);
 
-			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer, op, false);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(idsArray, transformer, configuration.QueryInputs, op, false);
 
 			return AddLazyOperation<TResult[]>(lazyLoadOperation, null, cmds);
 		}
