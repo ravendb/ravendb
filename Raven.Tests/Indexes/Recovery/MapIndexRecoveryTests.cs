@@ -16,6 +16,12 @@ using Xunit;
 
 namespace Raven.Tests.Indexes.Recovery
 {
+	using Client.Connection;
+	using Imports.Newtonsoft.Json.Linq;
+	using Raven.Abstractions.Data;
+	using Raven.Abstractions.Extensions;
+	using Raven.Json.Linq;
+
 	public class MapIndexRecoveryTests : RavenTest
 	{
 		private void CommitPointAfterEachCommit(InMemoryRavenConfiguration configuration)
@@ -278,16 +284,18 @@ namespace Raven.Tests.Indexes.Recovery
 			var dataDir = NewDataPath("ShouldDeleteCommitPointIfCouldNotRecoverFromIt");
 			string indexFullPath;
 			string commitPointsDirectory;
+			string indexStoragePath;
 			var index = new MapRecoveryTestIndex();
 
 			using (var server = GetNewServer(runInMemory: false, dataDirectory: dataDir))
 			{
 				CommitPointAfterEachCommit(server.Database.Configuration);
 
-				indexFullPath = Path.Combine(server.Database.Configuration.IndexStoragePath,
+				indexStoragePath = server.Database.Configuration.IndexStoragePath;
+				indexFullPath = Path.Combine(indexStoragePath,
 											 MonoHttpUtility.UrlEncode(index.IndexName));
 
-				commitPointsDirectory = Path.Combine(server.Database.Configuration.IndexStoragePath,
+				commitPointsDirectory = Path.Combine(indexStoragePath,
 													 MonoHttpUtility.UrlEncode(index.IndexName) + "\\CommitPoints");
 
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
@@ -330,45 +338,24 @@ namespace Raven.Tests.Indexes.Recovery
 			var directories = Directory.GetDirectories(commitPointsDirectory);
 			Assert.Equal(3, directories.Length);
 
-			// mess "index.CommitPoint" file in the SECOND commit point by adding additional files required to recover from it
-			using (var commitPointFile = File.Open(Path.Combine(directories[1], "index.CommitPoint"), FileMode.Open))
+			// mess "index.CommitPoint" file in the SECOND and THIRD commit points by adding additional files required to recover from it
+
+			for (int i = 1; i < 3; i++)
 			{
-				var jsonSerializer = new JsonSerializer();
-				var textReader = new JsonTextReader(new StreamReader(commitPointFile));
+				IndexCommitPoint commitPoint;
+				Assert.True(IndexStorage.TryGetCommitPoint(new IndexCommitPointDirectory(indexStoragePath, index.IndexName, directories[i].Split(new[] { '\\' }).Last()), out commitPoint));
 
-				var indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
-				indexCommit.SegmentsInfo.ReferencedFiles.Add("file-that-doesnt-exist");
+				commitPoint.SegmentsInfo.ReferencedFiles.Add("file-that-doesnt-exist");
 
-				commitPointFile.Position = 0;
-
-				using (var sw = new StreamWriter(commitPointFile))
+				using (var commitPointFile = File.Open(Path.Combine(directories[i], "index.CommitPoint"), FileMode.Open))
 				{
-					var textWriter = new JsonTextWriter(sw);
+					using (var sw = new StreamWriter(commitPointFile))
+					{
+						var textWriter = new JsonTextWriter(sw);
 
-					jsonSerializer.Serialize(textWriter, indexCommit);
-
-					sw.Flush();
-				}
-			}
-
-			// mess "index.CommitPoint" file in the THIRD commit point by adding additional files required to recover from it
-			using (var commitPointFile = File.Open(Path.Combine(directories[2], "index.CommitPoint"), FileMode.Open))
-			{
-				var jsonSerializer = new JsonSerializer();
-				var textReader = new JsonTextReader(new StreamReader(commitPointFile));
-
-				var indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
-				indexCommit.SegmentsInfo.ReferencedFiles.Add("file-that-doesnt-exist");
-
-				commitPointFile.Position = 0;
-
-				using (var sw = new StreamWriter(commitPointFile))
-				{
-					var textWriter = new JsonTextWriter(sw);
-
-					jsonSerializer.Serialize(textWriter, indexCommit);
-
-					sw.Flush();
+						JsonExtensions.CreateDefaultJsonSerializer().Serialize(textWriter, commitPoint);
+						sw.Flush();
+					}
 				}
 			}
 
