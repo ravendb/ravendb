@@ -224,6 +224,18 @@ namespace Voron
 		    }
 	    }
 
+	    internal List<ActiveTransaction> ActiveTransactions
+	    {
+			get
+			{
+				return _activeTransactions.Select(x => new ActiveTransaction()
+				{
+					Id = x.Id,
+					Flags = x.Flags
+				}).ToList();
+			}
+	    }
+
 	    public void DeleteTree(Transaction tx, string name)
         {
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
@@ -478,12 +490,8 @@ namespace Voron
 				UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
 				UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * AbstractPager.PageSize,
 				AllocatedDataFileSizeInBytes = numberOfAllocatedPages * AbstractPager.PageSize,
-				NextWriteTransactionId = _transactionsCounter + 1,
-				ActiveTransactions = _activeTransactions.Select(x => new ActiveTransaction()
-				{
-					Id = x.Id,
-					Flags = x.Flags
-				}).ToList()
+				NextWriteTransactionId = NextWriteTransactionId,
+				ActiveTransactions = ActiveTransactions 
 			};
 		}
 
