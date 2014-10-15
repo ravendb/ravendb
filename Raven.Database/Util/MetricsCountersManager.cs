@@ -18,6 +18,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.Util
 {
+	[CLSCompliant(false)]
     public class MetricsCountersManager : IDisposable
     {
         readonly Metrics dbMetrics = new Metrics();

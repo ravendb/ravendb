@@ -84,6 +84,7 @@ namespace Raven.Database.Indexing
 		public TaskScheduler TaskScheduler { get; set; }
 		public IndexDefinitionStorage IndexDefinitionStorage { get; set; }
 
+		[CLSCompliant(false)]
 		public ITransactionalStorage TransactionalStorage { get; set; }
 
 		public IndexingError[] Errors
@@ -305,6 +306,7 @@ namespace Raven.Database.Indexing
 
 		private bool disposed;
 
+		[CLSCompliant(false)]
         public MetricsCountersManager MetricsCounters { get; private set; }
 
 		public void ReportIndexingBatchStarted(int documentsCount, long documentsSize)

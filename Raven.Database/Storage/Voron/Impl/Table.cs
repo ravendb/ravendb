@@ -6,7 +6,7 @@ namespace Raven.Database.Storage.Voron.Impl
 	using System;
 	using System.Collections.Concurrent;
 
-	public class Table : TableBase
+	internal class Table : TableBase
 	{
 		private readonly ConcurrentDictionary<string, Index> tableIndexes;
 

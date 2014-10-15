@@ -274,6 +274,7 @@ namespace Raven.Database
 			}
 		}
 
+		[CLSCompliant(false)]
 		public InFlightTransactionalState InFlightTransactionalState
 		{
 			get { return inFlightTransactionalState; }
@@ -297,6 +298,7 @@ namespace Raven.Database
 
 		public IndexActions Indexes { get; private set; }
 
+		[CLSCompliant(false)]
 		public IndexingExecuter IndexingExecuter
 		{
 			get { return indexingExecuter; }
@@ -333,6 +335,7 @@ namespace Raven.Database
 		[ImportMany]
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
 
+		[CLSCompliant(false)]
 		public ReducingExecuter ReducingExecuter { get; private set; }
 
 		public string ServerUrl
@@ -502,8 +505,10 @@ namespace Raven.Database
 
 		public TaskActions Tasks { get; private set; }
 
+		[CLSCompliant(false)]
 		public ITransactionalStorage TransactionalStorage { get; private set; }
 
+		[CLSCompliant(false)]
 		public TransformerActions Transformers { get; private set; }
 
 		public TransportState TransportState

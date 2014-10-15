@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 {
-    public class Table : TableBase
+	internal class Table : TableBase
 	{
 		private readonly ConcurrentDictionary<string, Index> tableIndexes;
 

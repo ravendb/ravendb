@@ -151,6 +151,7 @@ namespace Raven.Database.Extensions
 			}
 		}
 
+		[CLSCompliant(false)]
 		public static Sort GetSort(this IndexQuery self, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
 		{
 			var spatialQuery = self as SpatialIndexQuery;

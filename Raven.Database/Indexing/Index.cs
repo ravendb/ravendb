@@ -95,6 +95,7 @@ namespace Raven.Database.Indexing
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
 
+		[CLSCompliant(false)]
 		protected Index(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
 			currentIndexSearcherHolder = new IndexSearcherHolder(id, context);
@@ -155,6 +156,7 @@ namespace Raven.Database.Indexing
 
 		public int? MaxIndexOutputsPerDocument { get { return indexDefinition.MaxIndexOutputsPerDocument; } }
 
+		[CLSCompliant(false)]
 		public volatile bool IsMapIndexingInProgress;
 
 		protected void RecordCurrentBatch(string indexingStep, int size)
@@ -969,6 +971,7 @@ namespace Raven.Database.Indexing
 				sb.ToString());
 		}
 
+		[CLSCompliant(false)]
 		public static void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQuery indexQuery, AbstractViewGenerator viewGenerator)
 		{
 			if (string.IsNullOrWhiteSpace(indexQuery.Query) == false)

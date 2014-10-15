@@ -7,7 +7,7 @@ using Spatial4n.Core.Shapes;
 
 namespace Raven.Database.Indexing.Spatial
 {
-	public class BBoxStrategyThatSupportsAllShapes : BBoxStrategy
+	internal class BBoxStrategyThatSupportsAllShapes : BBoxStrategy
 	{
 		public BBoxStrategyThatSupportsAllShapes(SpatialContext ctx, string fieldNamePrefix) : base(ctx, fieldNamePrefix)
 		{

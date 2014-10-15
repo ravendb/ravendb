@@ -14,7 +14,7 @@ using Voron;
 
 namespace Raven.Database.Storage.Voron.Schema.Updates
 {
-	public class From10To11 : SchemaUpdateBase
+	internal class From10To11 : SchemaUpdateBase
 	{
 		public override string FromSchemaVersion
 		{

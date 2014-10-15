@@ -7,7 +7,7 @@ using System;
 
 namespace Raven.Database.Config.Settings
 {
-	public abstract class Setting<T>
+	internal abstract class Setting<T>
 	{
 		protected readonly string value;
 		protected readonly Func<T> getDefaultValue;

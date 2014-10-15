@@ -22,7 +22,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	using global::Voron;
 	using global::Voron.Impl;
 
-	public class ListsStorageActions : StorageActionsBase, IListsStorageActions
+	internal class ListsStorageActions : StorageActionsBase, IListsStorageActions
 	{
 		private readonly TableStorage tableStorage;
 

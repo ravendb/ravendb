@@ -13,7 +13,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
-    public static class IndexedTerms
+    internal static class IndexedTerms
     {
         public static void ReadEntriesForFieldsFromTermVectors(
             IndexSearcherHolder.IndexSearcherHoldingState state,

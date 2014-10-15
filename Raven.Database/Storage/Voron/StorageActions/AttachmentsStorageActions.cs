@@ -20,7 +20,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	using System.IO;
 
     [Obsolete("Use RavenFS instead.")]
-    public class AttachmentsStorageActions : StorageActionsBase, IAttachmentsStorageActions
+    internal class AttachmentsStorageActions : StorageActionsBase, IAttachmentsStorageActions
 	{
 		private readonly Table attachmentsTable;
 

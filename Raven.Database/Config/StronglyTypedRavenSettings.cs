@@ -12,7 +12,7 @@ using Raven.Database.Config.Settings;
 
 namespace Raven.Database.Config
 {
-	public class StronglyTypedRavenSettings
+	internal class StronglyTypedRavenSettings
 	{
 		private readonly NameValueCollection settings;
 

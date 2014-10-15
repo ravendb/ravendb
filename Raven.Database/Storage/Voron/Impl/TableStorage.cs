@@ -18,7 +18,7 @@ namespace Raven.Database.Storage.Voron.Impl
 	using global::Voron.Debugging;
 	using global::Voron.Impl;
 
-	public class TableStorage : IDisposable
+	internal class TableStorage : IDisposable
 	{
 	    private readonly StorageEnvironmentOptions _options;
 	    private readonly IBufferPool bufferPool;

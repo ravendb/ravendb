@@ -4,7 +4,7 @@ using Raven.Database.Linq.Ast;
 
 namespace Raven.Database.Indexing.IndexMerging
 {
-    public class IndexVisitor : DepthFirstAstVisitor
+	internal class IndexVisitor : DepthFirstAstVisitor
     {
         private readonly IndexData indexData;
 

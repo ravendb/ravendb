@@ -30,7 +30,10 @@ namespace Raven.Database.Impl.DTC
 		protected class TransactionState
 		{
 			public readonly List<DocumentInTransactionData> Changes = new List<DocumentInTransactionData>();
+
+			[CLSCompliant(false)]
 			public volatile Reference<DateTime> LastSeen = new Reference<DateTime>();
+
 			private TimeSpan timeout;
 			public TimeSpan Timeout
 			{

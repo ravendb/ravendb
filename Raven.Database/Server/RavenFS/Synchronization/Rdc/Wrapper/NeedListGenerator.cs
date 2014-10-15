@@ -8,7 +8,7 @@ using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper.Unmanaged;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 {
-	public class NeedListGenerator : CriticalFinalizerObject, IDisposable
+	internal class NeedListGenerator : CriticalFinalizerObject, IDisposable
 	{
 		private const int ComparatorBufferSize = 0x8000000;
 		private const int InputBufferSize = 0x100000;

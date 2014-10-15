@@ -16,7 +16,7 @@ using System.Linq;
 
 namespace Raven.Database.Server.RavenFS.Storage.Esent.Backup
 {
-	public class RestoreOperation : BaseRestoreOperation
+	internal class RestoreOperation : BaseRestoreOperation
 	{
         public RestoreOperation(FilesystemRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
             : base(restoreRequest, configuration, operationOutputCallback)

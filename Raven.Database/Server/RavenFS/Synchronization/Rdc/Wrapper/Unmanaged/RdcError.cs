@@ -1,6 +1,6 @@
 ﻿namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper.Unmanaged
 {
-	public enum RdcError : uint
+	internal enum RdcError : uint
 	{
 		NoError = 0,
 		HeaderVersionNewer,

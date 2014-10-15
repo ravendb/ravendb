@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Raven.Database.Indexing.IndexMerging
 {
-    public class MergeProposal
+    internal class MergeProposal
     {
 
         public List<IndexData> ProposedForMerge = new List<IndexData>();
