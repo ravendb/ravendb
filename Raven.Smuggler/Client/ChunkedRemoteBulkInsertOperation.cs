@@ -5,9 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
@@ -32,13 +30,13 @@ namespace Raven.Smuggler.Client
 
 		private RemoteBulkInsertOperation current;
 
-		private readonly IList<Task> tasks = new List<Task>();
-
 		private readonly long? documentSizeInChunkLimit;
 
 		private long documentSizeInChunk;
 
 		private bool disposed;
+
+		private Task<int> previousTask;
 
 		public ChunkedRemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes, int chunkSize,long? documentSizeInChunkLimit = null)
 		{
@@ -48,8 +46,6 @@ namespace Raven.Smuggler.Client
 			this.chunkSize = chunkSize;
 			this.documentSizeInChunkLimit = documentSizeInChunkLimit;
 			documentSizeInChunk = 0;
-			if(documentSizeInChunkLimit.HasValue)
-				Console.WriteLine("Limit of document size in chunk = " + documentSizeInChunkLimit.Value);
 		}
 
 		public Guid OperationId
@@ -75,39 +71,47 @@ namespace Raven.Smuggler.Client
 		private RemoteBulkInsertOperation GetBulkInsertOperation()
 		{
 			if (current == null)
-				return current = CreateBulkInsertOperation();
+				return current = CreateBulkInsertOperation(Task.FromResult(0));
 
-			//
 			if (processedItemsInCurrentOperation < chunkSize)
 				if (!documentSizeInChunkLimit.HasValue || documentSizeInChunk < documentSizeInChunkLimit.Value)
 					return current;
 
+			// if we haven't flushed the previous one yet, we will force 
+			// a disposal of both the previous one and the one before, to avoid 
+			// consuming a lot of memory, and to have _too_ much concurrency.
+			if (previousTask != null)
+			{
+				previousTask.ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+			previousTask = current.DisposeAsync();
+
 			documentSizeInChunk = 0;
 			processedItemsInCurrentOperation = 0;
-			tasks.Add(current.DisposeAsync());
-			return current = CreateBulkInsertOperation();
+			current = CreateBulkInsertOperation(previousTask);
+			return current;
 		}
 
-		private RemoteBulkInsertOperation CreateBulkInsertOperation()
+		private RemoteBulkInsertOperation CreateBulkInsertOperation(Task<int> disposeAsync)
 		{
-			var operation = new RemoteBulkInsertOperation(options, client, changes);
+			var operation = new RemoteBulkInsertOperation(options, client, changes, disposeAsync);
 			if (Report != null)
 				operation.Report += Report;
 
 			return operation;
 		}
 
-		public async Task DisposeAsync()
+		public async Task<int> DisposeAsync()
 		{
 			if (disposed)
-				return;
+				return -1;
 
 			disposed = true;
 
 			if (current != null)
-				tasks.Add(current.DisposeAsync());
+				return await (current.DisposeAsync());
 
-			await Task.WhenAll(tasks);
+			return 0;
 		}
 
 		public event Action<string> Report;
