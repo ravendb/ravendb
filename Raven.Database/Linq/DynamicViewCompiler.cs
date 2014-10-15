@@ -26,7 +26,7 @@ namespace Raven.Database.Linq
 	/// 	Along the way we apply some minimal transformations, the end result is an instance
 	/// 	of AbstractViewGenerator, representing the map/reduce functions
 	/// </summary>
-	public class DynamicViewCompiler : DynamicCompilerBase
+	internal class DynamicViewCompiler : DynamicCompilerBase
 	{
 		private readonly IndexDefinition indexDefinition;
 
@@ -391,7 +391,6 @@ Reduce only fields: {2}
 			return variableDeclaration;
 		}
 
-		[CLSCompliant(false)]
 		public class AddDocumentIdToLambdas : DepthFirstAstVisitor<object, object>
 		{
 			public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)
@@ -437,7 +436,6 @@ Reduce only fields: {2}
 			}
 		}
 
-		[CLSCompliant(false)]
 		public class AddDocumentIdToQueries : DepthFirstAstVisitor<object, object>
 		{
 			public override object VisitAnonymousTypeCreateExpression(AnonymousTypeCreateExpression objectCreateExpression, object data)

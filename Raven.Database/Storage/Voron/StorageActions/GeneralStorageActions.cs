@@ -11,7 +11,7 @@ using Voron.Impl;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
-    public class GeneralStorageActions : StorageActionsBase, IGeneralStorageActions
+    internal class GeneralStorageActions : StorageActionsBase, IGeneralStorageActions
     {
 	    private const int PulseTreshold = 16 * 1024;
 

@@ -35,6 +35,7 @@ namespace Raven.Database.Linq
 		private readonly HashSet<string> mapFields = new HashSet<string>();
 		private readonly HashSet<string> reduceFields = new HashSet<string>();
 
+		[CLSCompliant(false)]
 // ReSharper disable once InconsistentNaming
 		protected DynamicNullObject __dynamic_null = new DynamicNullObject();
 

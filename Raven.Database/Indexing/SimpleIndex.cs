@@ -27,7 +27,7 @@ using Spatial4n.Core.Exceptions;
 
 namespace Raven.Database.Indexing
 {
-	public class SimpleIndex : Index
+	internal class SimpleIndex : Index
 	{
 		public SimpleIndex(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 			: base(directory, id, indexDefinition, viewGenerator, context)

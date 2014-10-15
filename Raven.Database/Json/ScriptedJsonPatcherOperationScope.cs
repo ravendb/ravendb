@@ -15,7 +15,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Json
 {
-	public abstract class ScriptedJsonPatcherOperationScope : JintOperationScope
+	internal abstract class ScriptedJsonPatcherOperationScope : JintOperationScope
 	{
 		private readonly bool debugMode;
 
@@ -79,7 +79,7 @@ namespace Raven.Database.Json
 		}
 	}
 
-	public class DefaultScriptedJsonPatcherOperationScope : ScriptedJsonPatcherOperationScope
+	internal class DefaultScriptedJsonPatcherOperationScope : ScriptedJsonPatcherOperationScope
 	{
 		private readonly Dictionary<string, JsonDocument> documentKeyContext = new Dictionary<string, JsonDocument>();
 		private readonly List<JsonDocument> incompleteDocumentKeyContext = new List<JsonDocument>();

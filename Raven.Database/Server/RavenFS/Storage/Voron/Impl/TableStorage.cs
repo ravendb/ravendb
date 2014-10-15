@@ -17,7 +17,7 @@ using Voron.Impl;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 {
-    public class TableStorage : IDisposable
+	internal class TableStorage : IDisposable
     {
         private readonly StorageEnvironmentOptions _options;
         private readonly IBufferPool bufferPool;

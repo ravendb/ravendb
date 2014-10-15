@@ -30,6 +30,7 @@ namespace Raven.Database.Actions
 
         protected ILog Log { get; private set; }
 
+		[CLSCompliant(false)]
         protected ITransactionalStorage TransactionalStorage { get; private set; }
 
         protected WorkContext WorkContext { get; private set; }

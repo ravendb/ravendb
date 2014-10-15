@@ -182,7 +182,7 @@ namespace Raven.Database.Server.Controllers.Admin
                             while (IsAnotherRestoreInProgress(out anotherRestoreResourceName));
                         }
                     }
-                    catch (OperationCanceledException e)
+                    catch (OperationCanceledException)
                     {
                         return GetMessageWithString(string.Format("Another restore is still in progress (resource name = {0}). Waited {1} seconds for other restore to complete.", anotherRestoreResourceName, restoreRequest.RestoreStartTimeout.Value), HttpStatusCode.ServiceUnavailable);    
                     }

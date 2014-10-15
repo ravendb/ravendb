@@ -13,7 +13,7 @@ using Voron.Impl;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron
 {
-    public class IdGenerator
+	internal class IdGenerator
     {
         private readonly ConcurrentDictionary<string, int> tableIds;
 

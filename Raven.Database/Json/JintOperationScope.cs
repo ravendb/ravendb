@@ -11,7 +11,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Json
 {
-    public abstract class JintOperationScope : IDisposable
+    internal abstract class JintOperationScope : IDisposable
     {
 		private Dictionary<string, KeyValuePair<RavenJValue, JsValue>> propertiesByValue = new Dictionary<string, KeyValuePair<RavenJValue, JsValue>>();
 

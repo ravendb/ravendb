@@ -8,7 +8,7 @@ using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.Impl
 {
-	public class Index : TableBase
+	internal class Index : TableBase
 	{
 		public Index(string indexName, IBufferPool bufferPool)
 			: base(indexName, bufferPool)

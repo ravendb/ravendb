@@ -10,7 +10,7 @@ using Raven.Database.Json;
 
 namespace Raven.Database.Bundles.ScriptedIndexResults
 {
-	public class ScriptedIndexResultsJsonPatcherScope : DefaultScriptedJsonPatcherOperationScope
+	internal class ScriptedIndexResultsJsonPatcherScope : DefaultScriptedJsonPatcherOperationScope
 	{
 		private readonly HashSet<string> entityNames;
 

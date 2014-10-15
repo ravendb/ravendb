@@ -24,7 +24,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Impl
 {
-	public class DocumentRetriever : ITranslatorDatabaseAccessor
+	internal class DocumentRetriever : ITranslatorDatabaseAccessor
 	{
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 

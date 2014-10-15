@@ -5,7 +5,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
-	public class CurrentTransformationScope : IDisposable
+	internal class CurrentTransformationScope : IDisposable
 	{
 		private readonly DocumentDatabase database;
 		private readonly DocumentRetriever retriever;

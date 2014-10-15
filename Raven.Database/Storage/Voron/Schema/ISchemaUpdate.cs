@@ -12,7 +12,7 @@ using Raven.Database.Storage.Voron.Impl;
 namespace Raven.Database.Storage.Voron.Schema
 {
 	[InheritedExport]
-	public interface ISchemaUpdate
+	internal interface ISchemaUpdate
 	{
 		string FromSchemaVersion { get; }
 

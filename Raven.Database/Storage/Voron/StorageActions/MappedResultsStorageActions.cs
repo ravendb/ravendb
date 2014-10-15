@@ -28,7 +28,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 	using Index = Raven.Database.Storage.Voron.Impl.Index;
 
-	public class MappedResultsStorageActions : StorageActionsBase, IMappedResultsStorageAction
+	internal class MappedResultsStorageActions : StorageActionsBase, IMappedResultsStorageAction
 	{
 		private readonly TableStorage tableStorage;
 
@@ -1046,7 +1046,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
         }
 	}
 
-    public class ScheduledReductionDeleter
+    internal class ScheduledReductionDeleter
     {
         private readonly ConcurrentSet<object> innerSet;
 

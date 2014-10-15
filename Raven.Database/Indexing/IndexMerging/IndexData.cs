@@ -6,7 +6,7 @@ using Raven.Abstractions.Indexing;
 
 namespace Raven.Database.Indexing.IndexMerging
 {
-    public class IndexData
+	internal class IndexData
     {
         private readonly IndexDefinition index;
         public Dictionary<string, Expression> SelectExpressions = new Dictionary<string, Expression>();

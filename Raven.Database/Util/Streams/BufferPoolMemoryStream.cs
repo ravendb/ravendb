@@ -15,8 +15,13 @@ namespace Raven.Database.Util.Streams
     public class BufferPoolMemoryStream : Stream
     {
         private readonly IBufferPool _bufferPool;
+
+		[CLSCompliant(false)]
         protected byte[] _buffer;
+		
+		[CLSCompliant(false)]
         protected long _length;
+
         private int _position;
 
         public BufferPoolMemoryStream(IBufferPool bufferPool)

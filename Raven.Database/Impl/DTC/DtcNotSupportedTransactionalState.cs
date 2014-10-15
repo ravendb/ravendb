@@ -11,7 +11,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Impl.DTC
 {
-    public class DtcNotSupportedTransactionalState : InFlightTransactionalState
+	internal class DtcNotSupportedTransactionalState : InFlightTransactionalState
     {
         private readonly string storageName;
 

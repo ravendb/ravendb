@@ -25,7 +25,7 @@ namespace Raven.Client.FileSystem
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
         private readonly LinqPathProvider linqPathProvider;
-        protected readonly FilesConvention conventions;
+        private readonly FilesConvention conventions;
 
         /// <summary>
         /// The query to use

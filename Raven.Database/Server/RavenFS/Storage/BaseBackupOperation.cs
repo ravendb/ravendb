@@ -143,7 +143,7 @@ namespace Raven.Database.Server.RavenFS.Storage
             {
                 filesystem.Storage.Batch(accessor => backupStatus = accessor.GetConfig(BackupStatus.RavenBackupStatusDocumentKey));
             }
-            catch (FileNotFoundException e)
+            catch (FileNotFoundException)
             {
                 // config doesn't exists
                 return null;

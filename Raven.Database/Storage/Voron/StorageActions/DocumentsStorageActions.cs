@@ -24,7 +24,7 @@ using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
-	public class DocumentsStorageActions : StorageActionsBase, IDocumentStorageActions
+	internal class DocumentsStorageActions : StorageActionsBase, IDocumentStorageActions
 	{
 		private readonly Reference<WriteBatch> writeBatch;
 

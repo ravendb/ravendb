@@ -5,7 +5,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
-	public class SqlReplicationScriptedJsonPatcherOperationScope : DefaultScriptedJsonPatcherOperationScope
+	internal class SqlReplicationScriptedJsonPatcherOperationScope : DefaultScriptedJsonPatcherOperationScope
 	{
 		public SqlReplicationScriptedJsonPatcherOperationScope(DocumentDatabase database)
 			: base(database, false)

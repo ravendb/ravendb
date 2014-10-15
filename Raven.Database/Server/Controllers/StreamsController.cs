@@ -177,6 +177,7 @@ namespace Raven.Database.Server.Controllers
 		    private readonly CancellationTimeout _timeout;
 		    private readonly Action<string> outputContentTypeSetter;
 
+			[CLSCompliant(false)]
 			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTimeout timeout, Action<string> contentTypeSetter)
 			{
 				this.req = req;

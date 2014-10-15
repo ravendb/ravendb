@@ -27,7 +27,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
-	public class AnonymousObjectToLuceneDocumentConverter
+	internal class AnonymousObjectToLuceneDocumentConverter
 	{
 		private readonly AbstractViewGenerator viewGenerator;
 

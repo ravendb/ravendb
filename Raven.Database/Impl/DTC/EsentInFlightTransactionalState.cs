@@ -24,7 +24,7 @@ using Raven.Storage.Esent;
 
 namespace Raven.Database.Impl.DTC
 {
-	public class EsentInFlightTransactionalState : InFlightTransactionalState, IDisposable
+	internal class EsentInFlightTransactionalState : InFlightTransactionalState, IDisposable
 	{
 		private readonly DocumentDatabase _database;
 		private readonly TransactionalStorage storage;

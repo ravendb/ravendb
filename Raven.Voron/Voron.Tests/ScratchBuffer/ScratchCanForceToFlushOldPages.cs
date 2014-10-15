@@ -83,9 +83,7 @@ namespace Voron.Tests.ScratchBuffer
 					var read = Env.State.GetTree(txr2, "foo").Read("bars/1");
 
 					Assert.NotNull(read);
-					int _;
 					Assert.Equal(new string('c', 1000), read.Reader.AsSlice().ToString());
-
 				}
 			}
 		} 
