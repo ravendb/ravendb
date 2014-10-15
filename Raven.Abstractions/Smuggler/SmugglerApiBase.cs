@@ -594,7 +594,7 @@ namespace Raven.Abstractions.Smuggler
 
 				sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
 
-				var streamReader = new StreamReader(stream);
+				var streamReader = new StreamReader(sizeStream);
 
 				jsonReader = new JsonTextReader(streamReader);
 
@@ -883,7 +883,7 @@ namespace Raven.Abstractions.Smuggler
 
 				if (count % SmugglerOptions.BatchSize == 0)
 				{
-					Operations.ShowProgress("Read {0} documents", count);
+					Operations.ShowProgress("Read {0:#,#;;0} documents", count);
 				}
 			}
 
