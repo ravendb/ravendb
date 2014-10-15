@@ -22,7 +22,7 @@ namespace Raven.Database.Prefetching
 {
 	using Util;
 
-	public class PrefetchingBehavior : IDisposable
+	public class PrefetchingBehavior : IDisposable, ILowMemoryHandler
 	{
 		private class DocAddedAfterCommit
 		{
@@ -52,6 +52,7 @@ namespace Raven.Database.Prefetching
 			this.context = context;
 			this.autoTuner = autoTuner;
 			PrefetchingUser = prefetchingUser;
+			MemoryStatistics.RegisterLowMemoryHandler(this);
 		}
 
 		public PrefetchingUser PrefetchingUser { get; private set; }
@@ -696,5 +697,11 @@ namespace Raven.Database.Prefetching
 	    {
 	        autoTuner.HandleOutOfMemory();
 	    }
+
+		public void HandleLowMemory()
+		{
+			futureIndexBatches.Clear();	
+			prefetchingQueue.Clear();
+		}
 	}
 }
