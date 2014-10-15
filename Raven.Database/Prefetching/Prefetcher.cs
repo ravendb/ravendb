@@ -65,12 +65,9 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
-		public int GetInMemoryIndexingQueueSize(PrefetchingUser user)
+		public int[] GetInMemoryIndexingQueueSizes(PrefetchingUser user)
 		{
-			var value = prefetchingBehaviors.FirstOrDefault(x => x.PrefetchingUser == user);
-			if (value != null)
-				return value.InMemoryIndexingQueueSize;
-			return -1;
+			return prefetchingBehaviors.Where(x => x.PrefetchingUser == user).Select(value => value.InMemoryIndexingQueueSize).ToArray();
 		}
 
 		public void AfterStorageCommitBeforeWorkNotifications(PrefetchingUser user, JsonDocument[] documents)

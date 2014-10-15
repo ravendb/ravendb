@@ -83,7 +83,7 @@ interface databaseStatisticsDto {
     DatabaseId: string;
     DatabaseTransactionVersionSizeInMB: number;
     Errors: serverErrorDto[];
-    InMemoryIndexingQueueSize: number;
+    InMemoryIndexingQueueSizes: number[];
     Indexes: indexStatisticsDto[];
     IndexingBatchInfo: indexingBatchInfoDto[];
     LastAttachmentEtag: string;
