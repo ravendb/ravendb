@@ -304,6 +304,7 @@
     <Compile Include="NimaHa.cs" />
     <Compile Include="NoBuiltinDuplicates.cs" />
     <Compile Include="NonHttpBackupRestore.cs" />
+    <Compile Include="NoTracking.cs" />
     <Compile Include="NSB.cs" />
     <Compile Include="NullableBoolQuery.cs" />
     <Compile Include="NullableEnums.cs" />

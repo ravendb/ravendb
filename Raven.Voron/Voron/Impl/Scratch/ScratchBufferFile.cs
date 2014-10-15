@@ -179,6 +179,11 @@ namespace Voron.Impl.Scratch
 			return result * AbstractPager.PageSize;
 		}
 
+		internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
+		{
+			return _freePagesBySize.Keys.ToDictionary(size => size, size => _freePagesBySize[size].Last.Value.ValidAfterTransactionId);
+		}
+
 		public void Dispose()
 		{
 			_scratchPager.Dispose();
