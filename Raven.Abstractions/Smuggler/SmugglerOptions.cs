@@ -20,7 +20,7 @@ namespace Raven.Abstractions.Smuggler
 
     public class SmugglerOptions
 	{
-        public const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
+        public const int DefaultDocumentSizeInChunkLimitInBytes = 32 * 1024 * 1024;
 	    private int chunkSize;
         private int batchSize;
 	    private TimeSpan timeout;
