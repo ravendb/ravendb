@@ -124,7 +124,7 @@ namespace Raven.Tests.Helpers
                 requestedStorage: requestedStorage, 
                 runInMemory:runInMemory);
 
-            var store = new FilesStore()
+            var store = new FilesStore
             {
                 Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl),
                 DefaultFileSystem = fileSystemName,

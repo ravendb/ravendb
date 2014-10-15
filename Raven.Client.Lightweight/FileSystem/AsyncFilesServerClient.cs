@@ -537,7 +537,7 @@ namespace Raven.Client.FileSystem
 
             try
             {                
-                var response = await request.ReadResponseJsonAsync();
+                await request.ReadResponseJsonAsync();
 
                 var metadata = request.ResponseHeaders.HeadersToObject();
                 metadata["etag"] = new RavenJValue(Guid.Parse(request.ResponseHeaders[Constants.MetadataEtagField].Trim('\"')));

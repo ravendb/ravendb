@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Primitives;
+using System.Data.Odbc;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -9,8 +10,10 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler.Data;
@@ -22,6 +25,22 @@ namespace Raven.Abstractions.Smuggler
 {
     public class SmugglerFilesApiBase : ISmugglerApi<FilesConnectionStringOptions, SmugglerFilesOptions, ExportFilesResult>
     {
+        private enum CompressionEncoding
+        {
+            None,
+            GZip,
+            Defrate,
+        };
+
+        private class FileContainer
+        {
+            public FileHeader Metadata;
+            public string Filename;
+            public long Start;
+            public long Length;
+            public CompressionEncoding Encoding;
+        }
+
         public SmugglerFilesOptions Options { get; private set; }
 
         public ISmugglerFilesOperations Operations { get; protected set; }
@@ -45,16 +64,14 @@ namespace Raven.Abstractions.Smuggler
                 LastDeletedFileEtag = Options.StartFilesDeletionEtag,
             };
 
+            if (!Directory.Exists(result.FilePath))
+            {
+                if (!File.Exists(result.FilePath))
+                    Directory.CreateDirectory(result.FilePath);
+            }
+
             if (Options.Incremental)
             {
-                if (Directory.Exists(result.FilePath) == false)
-                {
-                    if (File.Exists(result.FilePath))
-                        result.FilePath = Path.GetDirectoryName(result.FilePath) ?? result.FilePath;
-                    else
-                        Directory.CreateDirectory(result.FilePath);
-                }
-
                 if (Options.StartFilesEtag == Etag.Empty)
                 {
                     ReadLastEtagsFromFile(result);
@@ -75,11 +92,13 @@ namespace Raven.Abstractions.Smuggler
                     }
                 }
             }
+            else
+            {
+                result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravenfs-dump"); 
+            }
 
             SmugglerExportException lastException = null;
 
-            bool ownedStream = exportOptions.ToStream == null;
-            var stream = exportOptions.ToStream ?? File.Create(result.FilePath);
             try
             {
                 await DetectServerSupportedFeatures(exportOptions.From);
@@ -89,12 +108,16 @@ namespace Raven.Abstractions.Smuggler
                 throw new SmugglerExportException("Failed to query server for supported features. Reason : " + e.Message)
                 {
                     LastEtag = Etag.Empty,
-                    File = ownedStream ? result.FilePath : null
+                    File = result.FilePath
                 };
             }
 
+            if (string.IsNullOrWhiteSpace(result.FilePath))
+                throw new SmugglerException("Output directory cannot be null, empty or whitespace.");
+            
+            var stream = File.Create(result.FilePath);
             try
-            {
+            {              
                 using (var gZipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
                 using (var streamWriter = new StreamWriter(gZipStream))
                 {
@@ -103,12 +126,12 @@ namespace Raven.Abstractions.Smuggler
 
                     try
                     {
-                        await ExportFiles(exportOptions, streamWriter, result.LastFileEtag, maxEtags.LastFileEtag);
+                        await ExportFiles(exportOptions, result.FilePath, streamWriter, result.LastFileEtag, maxEtags.LastFileEtag);
                     }
                     catch (SmugglerExportException e)
                     {
                         result.LastFileEtag = e.LastEtag;
-                        e.File = ownedStream ? result.FilePath : null;
+                        e.File = result.FilePath;
                         lastException = e;
                     }
                 }
@@ -120,72 +143,88 @@ namespace Raven.Abstractions.Smuggler
             }
             finally
             {
-                if (ownedStream && stream != null)
-                    stream.Dispose();
+                stream.Dispose();
             }
         }
 
-        private async Task<Etag> ExportFiles(SmugglerExportOptions<FilesConnectionStringOptions> options, StreamWriter metadataStreamWriter, Etag lastEtag, Etag maxEtag)
+        private async Task<Etag> ExportFiles(SmugglerExportOptions<FilesConnectionStringOptions> options, string filenamePrefix, StreamWriter metadataStreamWriter, Etag lastEtag, Etag maxEtag)
         {
             var totalCount = 0;
             var lastReport = SystemTime.UtcNow;
             var reportInterval = TimeSpan.FromSeconds(2);
             Operations.ShowProgress("Exporting Files");
 
-            while (true)
+            string filename = filenamePrefix + ".1.data";
+            using (var stream = File.Create(filename))
+            using (var countingStream = new CountingStream(stream))
+            using (var gZipStream = new GZipStream(countingStream, CompressionMode.Compress, leaveOpen: true))            
             {
-                bool hasFiles = false;
-                try
+                while (true)
                 {
-                    var maxRecords = Options.Limit - totalCount;
-                    if (maxRecords > 0)
+                    try
                     {
-                        using (var files = await Operations.GetFiles(options.From, lastEtag, Math.Min(Options.BatchSize, maxRecords)))
+                        var maxRecords = Options.Limit - totalCount;
+                        if (maxRecords > 0)
                         {
-                            while (await files.MoveNextAsync())
+                            using (var files = await Operations.GetFiles(options.From, lastEtag, Math.Min(Options.BatchSize, maxRecords)))
                             {
-                                hasFiles = true;
-                                var file = files.Current;
-
-                                var tempLastEtag = file.Etag;
-                                if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
-                                    break;
-
-                                lastEtag = tempLastEtag;                                
-
-                                // Retrieve the file and write it to the stream. 
-                                var fileStream = await Operations.DownloadFile(file);
-                                
-                                // Write the metadata (which includes the stream size and file container name)
-                                metadataStreamWriter.Write( RavenJObject.FromObject(file) );
-
-                                totalCount++;
-                                if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                                while (await files.MoveNextAsync())
                                 {
-                                    //TODO: Show also the MB/sec and total GB exported.
-                                    Operations.ShowProgress("Exported {0} files. ", totalCount);
-                                    lastReport = SystemTime.UtcNow;
+                                    var file = files.Current;
+
+                                    var tempLastEtag = file.Etag;
+                                    if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
+                                        break;
+
+                                    lastEtag = tempLastEtag;
+
+                                    // Retrieve the file and write it to the stream. 
+                                    // TODO: We are wasting precious resources decompressing and then compressing again. 
+                                    long startPosition = countingStream.NumberOfWrittenBytes;
+                                    using (var fileStream = await Operations.DownloadFile(file))
+                                    {
+                                        await fileStream.CopyToAsync(gZipStream).ConfigureAwait(false);
+                                    }
+                                    long endPosition = countingStream.NumberOfWrittenBytes;
+
+                                    // Write the metadata (which includes the stream size and file container name)
+                                    var fileContainer = new FileContainer
+                                    {
+                                        Filename = Path.GetFileName(filename),                                        
+                                        Start = startPosition,
+                                        Length = endPosition - startPosition,
+                                        Metadata = file,
+                                        Encoding = CompressionEncoding.GZip,
+                                    };
+
+                                    metadataStreamWriter.Write(RavenJObject.FromObject(fileContainer));
+
+                                    totalCount++;
+                                    if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                                    {
+                                        //TODO: Show also the MB/sec and total GB exported.
+                                        Operations.ShowProgress("Exported {0} files. ", totalCount);
+                                        lastReport = SystemTime.UtcNow;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                catch (Exception e)
-                {
-                    Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
-                    Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalCount, lastEtag);
-                    throw new SmugglerExportException(e.Message, e)
+                    catch (Exception e)
                     {
-                        LastEtag = lastEtag,
-                    };
+                        Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
+                        Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+                        throw new SmugglerExportException(e.Message, e)
+                        {
+                            LastEtag = lastEtag,
+                        };
+                    }
+
+                    Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+
+                    return lastEtag;
                 }
-
-                Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
-                return lastEtag;
             }
-
-
-            throw new NotImplementedException();
         }
 
         private async Task DetectServerSupportedFeatures(FilesConnectionStringOptions filesConnectionStringOptions)
@@ -242,9 +281,121 @@ namespace Raven.Abstractions.Smuggler
             }
         }
 
-        public virtual Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions)
+        public virtual async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions)
         {
+            Operations.Configure(Options);
+            Operations.Initialize(Options);
+
+            await DetectServerSupportedFeatures(importOptions.To);
+
+            if (Options.Incremental == false)
+            {
+                await ImportData(importOptions, importOptions.FromFile);
+                return;
+            }
+
+            var files = Directory.GetFiles(Path.GetFullPath(importOptions.FromFile))
+                            .Where(file => ".ravenfs-incremental-dump".Equals(Path.GetExtension(file), StringComparison.CurrentCultureIgnoreCase))
+                            .OrderBy(File.GetLastWriteTimeUtc)
+                            .ToArray();
+
+            if (files.Length == 0)
+                return;
+
+            foreach (string filename in files)
+                await ImportData(importOptions, filename);
+        }
+
+        private async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions, string file)
+        {
+            using (var stream = File.OpenRead(importOptions.FromFile))
+            {
+                var sw = Stopwatch.StartNew();
+
+                // Try to read the stream compressed, otherwise continue uncompressed.
+                stream.Position = 0;
+                var sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
+                var streamReader = new StreamReader(sizeStream);
+
+                var jsonReader = new JsonTextReader(streamReader);
+                if (jsonReader.Read() == false)
+                    return;
+
+                if (jsonReader.TokenType != JsonToken.StartObject)
+                    throw new InvalidDataException("StartObject was expected");
+
+                var importCounts = new Dictionary<string, int>();
+                var importSectionRegistar = new Dictionary<string, Func<int>>();
+
+                Options.CancelToken.Token.ThrowIfCancellationRequested();
+
+                importSectionRegistar.Add("Files", () =>
+                {
+                    Operations.ShowProgress("Begin reading files");
+                    var filesCount = ImportFiles(importOptions, jsonReader).Result;
+                    Operations.ShowProgress(string.Format("Done with reading files, total: {0}", filesCount));
+                    return filesCount;
+                });
+
+                importSectionRegistar.Keys.ForEach(k => importCounts[k] = 0);
+
+                while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndObject)
+                {
+                    Options.CancelToken.Token.ThrowIfCancellationRequested();
+
+                    if (jsonReader.TokenType != JsonToken.PropertyName)
+                        throw new InvalidDataException("PropertyName was expected");
+                                        
+                    var currentSection = jsonReader.Value.ToString();
+
+                    Func<int> currentAction;
+                    if (importSectionRegistar.TryGetValue(currentSection, out currentAction) == false)
+                        throw new InvalidDataException("Unexpected property found: " + jsonReader.Value);
+
+                    if (jsonReader.Read() == false)
+                    {
+                        importCounts[currentSection] = 0;
+                        continue;
+                    }
+
+                    if (jsonReader.TokenType != JsonToken.StartArray)
+                        throw new InvalidDataException("StartArray was expected");
+
+                    importCounts[currentSection] = currentAction();
+                }
+
+                sw.Stop();
+
+                Operations.ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments, deleted {2:#,#;;0} documents and {3:#,#;;0} attachments in {4:#,#.###;;0} s", exportCounts["Docs"], exportCounts["Attachments"], exportCounts["DocsDeletions"], exportCounts["AttachmentsDeletions"], sw.ElapsedMilliseconds / 1000f);
+            }
+
+
+
             throw new NotImplementedException();
+        }
+
+        private async Task<int> ImportFiles(SmugglerImportOptions<FilesConnectionStringOptions> options, JsonTextReader jsonReader)
+        {
+            var count = 0;
+
+            while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+            {
+                Options.CancelToken.Token.ThrowIfCancellationRequested();
+
+                var item = RavenJToken.ReadFrom(jsonReader);
+               
+
+
+                // Operations.ShowProgress("Importing file {0}", attachmentExportInfo.Key);
+
+                // await Operations.PutAttachment(dst, attachmentExportInfo);
+
+                count++;
+            }
+
+            // await Operations.PutAttachment(dst, null); // force flush
+
+            return count;
         }
 
         public virtual Task Between(SmugglerBetweenOptions<FilesConnectionStringOptions> betweenOptions)

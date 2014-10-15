@@ -571,7 +571,7 @@ namespace Raven.Abstractions.Smuggler
 
 			Stream sizeStream;
 
-			var sw = Stopwatch.StartNew();
+            var sw = Stopwatch.StartNew();
 			// Try to read the stream compressed, otherwise continue uncompressed.
 			JsonTextReader jsonReader;
 			try
@@ -610,13 +610,13 @@ namespace Raven.Abstractions.Smuggler
 
             Options.CancelToken.Token.ThrowIfCancellationRequested();
 
-			exportSectionRegistar.Add("Indexes", () =>
-			{
-				Operations.ShowProgress("Begin reading indexes");
-				var indexCount = ImportIndexes(jsonReader).Result;
-				Operations.ShowProgress(string.Format("Done with reading indexes, total: {0}", indexCount));
-				return indexCount;
-			});
+            exportSectionRegistar.Add("Indexes", () =>
+            {
+                Operations.ShowProgress("Begin reading indexes");
+                var indexCount = ImportIndexes(jsonReader).Result;
+                Operations.ShowProgress(string.Format("Done with reading indexes, total: {0}", indexCount));
+                return indexCount;
+            });
 			
 			exportSectionRegistar.Add("Docs", () =>
 			{
