@@ -256,6 +256,7 @@
     <Compile Include="Smuggler\EmbeddedSmugglerOperations.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
+    <Compile Include="Storage\IncrementalBackupState.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />

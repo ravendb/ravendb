@@ -90,7 +90,7 @@ namespace Raven.Database.Server.RavenFS.Storage
                 ExecuteBackup(backupDestinationDirectory, incrementalBackup);
 
                 if (filesystemDocument != null)
-                    File.WriteAllText(Path.Combine(backupDestinationDirectory, BackupMethods.FilesystemDocumentFilename), RavenJObject.FromObject(filesystemDocument).ToString());
+                    File.WriteAllText(Path.Combine(backupDestinationDirectory, Constants.FilesystemDocumentFilename), RavenJObject.FromObject(filesystemDocument).ToString());
 
                 OperationFinished();
 

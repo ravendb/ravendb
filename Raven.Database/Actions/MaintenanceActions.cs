@@ -35,10 +35,10 @@ namespace Raven.Database.Actions
 
             var backupPath = Directory.GetDirectories(rootBackupPath, "Inc*")
                                        .OrderByDescending(dir => dir)
-                                       .Select(dir => Path.Combine(dir, BackupMethods.DatabaseDocumentFilename))
+                                       .Select(dir => Path.Combine(dir, Constants.DatabaseDocumentFilename))
                                        .FirstOrDefault();
 
-            return backupPath ?? Path.Combine(rootBackupPath, BackupMethods.DatabaseDocumentFilename);
+            return backupPath ?? Path.Combine(rootBackupPath, Constants.DatabaseDocumentFilename);
         }
 
         public static void Restore(RavenConfiguration configuration, DatabaseRestoreRequest restoreRequest, Action<string> output)
