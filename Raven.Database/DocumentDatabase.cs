@@ -814,7 +814,13 @@ namespace Raven.Database
                             Etag = newEtag,
                             LastModified = addDocumentResult.SavedAt,
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
-                        }, documents => prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents));
+                        }, documents =>
+                        {
+	                        if(IndexDefinitionStorage.IndexesCount == 0 || WorkContext.RunIndexing == false)
+								return;
+
+	                        prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
+                        });
 
                         if (addDocumentResult.Updated)
                             prefetcher.AfterUpdate(key, addDocumentResult.PrevEtag);
