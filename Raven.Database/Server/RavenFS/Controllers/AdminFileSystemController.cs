@@ -369,8 +369,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
             if (string.IsNullOrWhiteSpace(filesystemName))
             {
                 var errorMessage = (filesystemDocument == null || String.IsNullOrWhiteSpace(filesystemDocument.Id))
-                                ? BackupMethods.FilesystemDocumentFilename +  " file is invalid - filesystem name was not found and not supplied in the request (Id property is missing or null). This is probably a bug - should never happen."
-                                : "A filesystem name must be supplied if the restore location does not contain a valid " + BackupMethods.FilesystemDocumentFilename + " file";
+                                ? Constants.FilesystemDocumentFilename +  " file is invalid - filesystem name was not found and not supplied in the request (Id property is missing or null). This is probably a bug - should never happen."
+                                : "A filesystem name must be supplied if the restore location does not contain a valid " + Constants.FilesystemDocumentFilename + " file";
 
                 restoreStatus.Messages.Add(errorMessage);
                 DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
@@ -498,10 +498,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             var backupPath = Directory.GetDirectories(rootBackupPath, "Inc*")
                                        .OrderByDescending(dir => dir)
-                                       .Select(dir => Path.Combine(dir, BackupMethods.FilesystemDocumentFilename))
+                                       .Select(dir => Path.Combine(dir, Constants.FilesystemDocumentFilename))
                                        .FirstOrDefault();
 
-            return backupPath ?? Path.Combine(rootBackupPath, BackupMethods.FilesystemDocumentFilename);
+            return backupPath ?? Path.Combine(rootBackupPath, Constants.FilesystemDocumentFilename);
         }
 
         private string ResolveTenantDataDirectory(string filesystemLocation, string filesystemName, out string documentDataDir)

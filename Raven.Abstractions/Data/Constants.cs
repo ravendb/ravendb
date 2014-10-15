@@ -167,5 +167,11 @@ namespace Raven.Abstractions.Data
 
 		public const string DataCouldNotBeDecrypted = "<data could not be decrypted>";
 
+		// Backup
+
+		public const string DatabaseDocumentFilename = "Database.Document";
+		public const string FilesystemDocumentFilename = "Filesystem.Document";
+
+		public const string IncrementalBackupState = "IncrementalBackupState.Document";
 	}
 }
