@@ -17,6 +17,12 @@ using Xunit;
 
 namespace Raven.Tests.Indexes.Recovery
 {
+	using Client.Connection;
+	using Imports.Newtonsoft.Json.Linq;
+	using Raven.Abstractions.Data;
+	using Raven.Abstractions.Extensions;
+	using Raven.Json.Linq;
+
 	public class MapIndexRecoveryTests : RavenTest
 	{
 		private void CommitPointAfterEachCommit(InMemoryRavenConfiguration configuration)
@@ -33,19 +39,19 @@ namespace Raven.Tests.Indexes.Recovery
 			configuration.MaxIndexCommitPointStoreTimeInterval = TimeSpan.MaxValue;
 		}
 
-	    protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
-	    {
-	        configuration.DefaultStorageTypeName = "esent";
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+		{
+			configuration.DefaultStorageTypeName = "esent";
 			configuration.FlushIndexToDiskSizeInMb = 0;
-	    }
+		}
 
-	    [Fact]
+		[Fact]
 		public void ShouldCreateCommitPointsForMapIndexes()
 		{
 			var index = new MapRecoveryTestIndex();
 
-            string commitPointsDirectory;
-            using (var server = GetNewServer(runInMemory: false))
+			string commitPointsDirectory;
+			using (var server = GetNewServer(runInMemory: false))
 			{
 				CommitPointAfterEachCommit(server.SystemDatabase.Configuration);
 
@@ -74,13 +80,13 @@ namespace Raven.Tests.Indexes.Recovery
 						WaitForIndexing(store);
 					}
 
-                    Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
+					Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                    commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
-                                                         indexInstance.IndexId + "\\CommitPoints");
+					commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+														 indexInstance.IndexId + "\\CommitPoints");
 				}
 
-			    Assert.True(Directory.Exists(commitPointsDirectory));
+				Assert.True(Directory.Exists(commitPointsDirectory));
 
 				var commitPoints = Directory.GetDirectories(commitPointsDirectory);
 
@@ -127,10 +133,10 @@ namespace Raven.Tests.Indexes.Recovery
 							WaitForIndexing(store);
 						}
 
-                        Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
+						Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                       var  commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
-                                                             indexInstance.IndexId + "\\CommitPoints");
+						var commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+															  indexInstance.IndexId + "\\CommitPoints");
 
 						var commitPoints = Directory.GetDirectories(commitPointsDirectory);
 
@@ -178,13 +184,13 @@ namespace Raven.Tests.Indexes.Recovery
 					}
 				}
 
-                Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
+				Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
-                                                     indexInstance.IndexId + "\\CommitPoints");
+				commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+													 indexInstance.IndexId + "\\CommitPoints");
 
-                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
-                                         indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
+				indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+										 indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
 			}
 
 			// make sure that there is only one commit point - which doesn't have the second entity indexed
@@ -255,13 +261,13 @@ namespace Raven.Tests.Indexes.Recovery
 					}
 				}
 
-                Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
+				Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
-                                                     indexInstance.IndexId + "\\CommitPoints");
+				commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+													 indexInstance.IndexId + "\\CommitPoints");
 
-                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
-                                         indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
+				indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+										 indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
 			}
 
 			// make sure that there is only one commit point - which doesn't have the second entity indexed
@@ -271,7 +277,7 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (GetNewServer(runInMemory: false, dataDirectory: dataDir)) // do not delete previous directory
 			{
-				using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
 					using (var session = store.OpenSession())
 					{
@@ -287,13 +293,15 @@ namespace Raven.Tests.Indexes.Recovery
 		{
 			var dataDir = NewDataPath("ShouldDeleteCommitPointIfCouldNotRecoverFromIt");
 			string indexFullPath;
+			string indexStoragePath;
+			int indexId;
 			string commitPointsDirectory;
 			var index = new MapRecoveryTestIndex();
 
 			using (var server = GetNewServer(runInMemory: false, dataDirectory: dataDir))
 			{
 				CommitPointAfterEachCommit(server.SystemDatabase.Configuration);
-			  
+
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
 					index.Execute(store);
@@ -337,60 +345,42 @@ namespace Raven.Tests.Indexes.Recovery
 						server.SystemDatabase.IndexStorage.FlushReduceIndexes();
 					}
 				}
-                Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
+				Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
-                                                     indexInstance.IndexId + "\\CommitPoints");
+				commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+													 indexInstance.IndexId + "\\CommitPoints");
 
-                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
-                                         indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
+				indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+										 indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
+
+				indexStoragePath = server.SystemDatabase.Configuration.IndexStoragePath;
+
+				indexId = indexInstance.IndexId;
 
 			}
-
 
 			// make sure that there are 3 commit points
 			var directories = Directory.GetDirectories(commitPointsDirectory);
 			Assert.Equal(3, directories.Length);
 
-			// mess "index.CommitPoint" file in the SECOND commit point by adding additional files required to recover from it
-			using (var commitPointFile = File.Open(Path.Combine(directories[1], "index.CommitPoint"), FileMode.Open))
+			// mess "index.CommitPoint" file in the SECOND and THIRD commit points by adding additional files required to recover from it
+
+			for (int i = 1; i < 3; i++)
 			{
-				var jsonSerializer = new JsonSerializer();
-				var textReader = new JsonTextReader(new StreamReader(commitPointFile));
+				IndexCommitPoint commitPoint;
+				Assert.True(IndexStorage.TryGetCommitPoint(new IndexCommitPointDirectory(indexStoragePath, indexId.ToString(CultureInfo.InvariantCulture), directories[i].Split(new[] { '\\' }).Last()), out commitPoint));
 
-				var indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
-				indexCommit.SegmentsInfo.ReferencedFiles.Add("file-that-doesnt-exist");
+				commitPoint.SegmentsInfo.ReferencedFiles.Add("file-that-doesnt-exist");
 
-				commitPointFile.Position = 0;
-
-				using (var sw = new StreamWriter(commitPointFile))
+				using (var commitPointFile = File.Open(Path.Combine(directories[i], "index.CommitPoint"), FileMode.Open))
 				{
-					var textWriter = new JsonTextWriter(sw);
+					using (var sw = new StreamWriter(commitPointFile))
+					{
+						var textWriter = new JsonTextWriter(sw);
 
-					jsonSerializer.Serialize(textWriter, indexCommit);
-
-					sw.Flush();
-				}
-			}
-
-			// mess "index.CommitPoint" file in the THIRD commit point by adding additional files required to recover from it
-			using (var commitPointFile = File.Open(Path.Combine(directories[2], "index.CommitPoint"), FileMode.Open))
-			{
-				var jsonSerializer = new JsonSerializer();
-				var textReader = new JsonTextReader(new StreamReader(commitPointFile));
-
-				var indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
-				indexCommit.SegmentsInfo.ReferencedFiles.Add("file-that-doesnt-exist");
-
-				commitPointFile.Position = 0;
-
-				using (var sw = new StreamWriter(commitPointFile))
-				{
-					var textWriter = new JsonTextWriter(sw);
-
-					jsonSerializer.Serialize(textWriter, indexCommit);
-
-					sw.Flush();
+						JsonExtensions.CreateDefaultJsonSerializer().Serialize(textWriter, commitPoint);
+						sw.Flush();
+					}
 				}
 			}
 
@@ -404,7 +394,7 @@ namespace Raven.Tests.Indexes.Recovery
 					{
 						var result =
 							session.Query<Recovery, MapRecoveryTestIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
-						
+
 						Assert.Equal(3, result.Count);
 					}
 				}
