@@ -544,7 +544,6 @@
     <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
     <Compile Include="Plugins\Builtins\RecoverPendingTransactions.cs" />
     <Compile Include="Plugins\Builtins\RecoveryEnlistment.cs" />
-    <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />

@@ -162,6 +162,7 @@
     <Compile Include="Data\IOperationState.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
+    <Compile Include="Data\PrefetchingUser.cs" />
     <Compile Include="Data\QueryHeaderInformation.cs" />
     <Compile Include="Data\ReplicationInfoStatus.cs" />
     <Compile Include="Data\DatabaseRestoreRequest.cs" />

@@ -15,7 +15,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 
@@ -384,6 +383,7 @@ namespace Raven.Database.Prefetching
 			var futureBatchStat = new FutureBatchStats
 			{
 				Timestamp = SystemTime.UtcNow,
+				PrefetchingUser = PrefetchingUser
 			};
 			Stopwatch sp = Stopwatch.StartNew();
 			context.AddFutureBatch(futureBatchStat);
