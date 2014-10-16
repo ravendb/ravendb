@@ -1116,8 +1116,12 @@ namespace Raven.Database
 
 			public void InitializeEncryption()
 			{
+                if (configuration.IsTenantDatabase)
+					return;
+
 				string fipsAsString;
 				bool fips;
+                
 				if (Commercial.ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
 				{
 					if (!fips && configuration.Encryption.UseFips)

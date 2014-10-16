@@ -263,7 +263,7 @@
             <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases')() && !isActiveDatabaseDisabled()">
                 <li class="status-link"><a data-bind="attr: { href: $root.appUrls.status }" class="navbar-link">Status</a></li>
                 <!-- ko with: statistics -->
-                <li><a class="navbar-link" data-bind="text: CountOfDocuments + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
+                <li><a class="navbar-link" data-bind="text: CountOfDocuments.toLocaleString() + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
                 <li><a class="navbar-link" data-bind="text: CountOfIndexes.toLocaleString() + ' indexes', attr: { href: $parents[1].appUrls.indexes }"></a></li>
                 <li><a class="navbar-link" data-bind="text: StaleIndexes.length.toLocaleString() + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
                 <li><a class="navbar-link" data-bind="text: Errors.length.toLocaleString() + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
