@@ -62,6 +62,11 @@ class statusDebugSlowDocCounts extends viewModelBase {
         if (bytes == 0) return 'n/a';
         var i = Math.floor(Math.log(bytes) / Math.log(1024));
 
+        if (i < 0) {
+            // number < 1
+            return genUtils.formatAsCommaSeperatedString(bytes, 4) + ' Bytes';
+        }
+
         var res = bytes / Math.pow(1024, i);
         var newRes = genUtils.formatAsCommaSeperatedString(res, 2);   
        

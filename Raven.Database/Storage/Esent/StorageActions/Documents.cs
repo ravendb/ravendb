@@ -268,8 +268,7 @@ namespace Raven.Storage.Esent.StorageActions
                 stat.TotalSize += size;
 	            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
 	            {
-	                stat.System++;
-                    stat.SystemSize += size;
+                    stat.System.Update(size, doc.Key);
 	            }
 
 
@@ -279,22 +278,17 @@ namespace Raven.Storage.Esent.StorageActions
 	            var entityName = metadata.Value<string>(Constants.RavenEntityName);
 	            if (string.IsNullOrEmpty(entityName))
 	            {
-	                stat.NoCollection++;
-	                stat.NoCollectionSize += size;
+                    stat.NoCollection.Update(size, doc.Key);
 	            }
-	               
 	            else
 	            {
-                    stat.IncrementCollection(entityName, size);
+                    stat.IncrementCollection(entityName, size, doc.Key);
 	            }
-
 
 	            if (metadata.ContainsKey("Raven-Delete-Marker"))
 	                stat.Tombstones++;
 	        }
-            var sortedStat = stat.Collections.OrderByDescending(x => x.Value.Size).ToDictionary(x => x.Key, x => x.Value);
 	        stat.TimeToGenerate = sp.Elapsed;
-            stat.Collections = sortedStat;
 	       
 	        return stat;
 	    }
