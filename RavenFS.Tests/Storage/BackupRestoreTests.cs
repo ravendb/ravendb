@@ -122,6 +122,48 @@ namespace RavenFS.Tests.Storage
 
         }
 
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task RavenDB_2824_ShouldThrowWhenTryingToUseTheSameIncrementalBackupLocationForDifferentFS(string requestedStorage)
+	    {
+			using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
+			{
+				config.Settings["Raven/Esent/CircularLog"] = "false";
+				config.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
+				config.Storage.Voron.AllowIncrementalBackups = true;
+			}, fileSystemName: "RavenDB_2824_one"))
+			{
+				await CreateSampleData(store);
+				
+				await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
+				WaitForBackup(store.AsyncFilesCommands, true);
+
+				await CreateSampleData(store, 3, 5);
+
+				await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
+				WaitForBackup(store.AsyncFilesCommands, true);
+			}
+
+			using (var store = (FilesStore)NewStore(index: 1, requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
+			{
+				config.Settings["Raven/Esent/CircularLog"] = "false";
+				config.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
+				config.Storage.Voron.AllowIncrementalBackups = true;
+			}, fileSystemName: "RavenDB_2824_two"))
+			{
+				await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);  // use the same BackupDir on purpose
+				WaitForBackup(store.AsyncFilesCommands, false);
+
+				var backupStatus = await store.AsyncFilesCommands.Configuration.GetKeyAsync<BackupStatus>(BackupStatus.RavenBackupStatusDocumentKey);
+
+				var errorMessage = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
+
+				Assert.NotNull(errorMessage);
+
+				Assert.Contains("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different file system. Existing incremental data origins from 'RavenDB_2824_one' file system.", errorMessage.Message);
+			}
+	    }
+
         private string[] ComputeMd5Sums(IAsyncFilesCommands filesCommands, int filesCount = 2)
         {
             return Enumerable.Range(1, filesCount).Select(i =>
