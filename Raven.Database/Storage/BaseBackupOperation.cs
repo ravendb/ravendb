@@ -69,15 +69,15 @@ namespace Raven.Database.Storage
 	                {
 		                var state = RavenJObject.Parse(File.ReadAllText(incrementalBackupState)).JsonDeserialization<IncrementalBackupState>();
 
-						if(state.DatabaseId != database.TransactionalStorage.Id)
-							throw new InvalidOperationException(string.Format("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different database. Existing incremental data origins from '{0}' database.", state.DatabaseName));
+						if(state.ResourceId != database.TransactionalStorage.Id)
+							throw new InvalidOperationException(string.Format("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different database. Existing incremental data origins from '{0}' database.", state.ResourceName));
 	                }
 	                else
 	                {
 		                var state = new IncrementalBackupState()
 		                {
-			                DatabaseId = database.TransactionalStorage.Id,
-							DatabaseName = database.Name ?? Constants.SystemDatabase
+			                ResourceId = database.TransactionalStorage.Id,
+							ResourceName = database.Name ?? Constants.SystemDatabase
 		                };
 
 						if (!Directory.Exists(backupDestinationDirectory))
