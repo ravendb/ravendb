@@ -25,6 +25,7 @@ namespace Raven.Smuggler
 		private readonly SmugglerApi smugglerApi = new SmugglerApi();
 		private readonly OptionSet optionSet;
 		bool waitForIndexing;
+	    private bool allowImplicitDatabase = false;
 
 	    private Program()
 	    {
@@ -107,6 +108,7 @@ namespace Raven.Smuggler
 			    {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
 			    {"d2|database2:", "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => connectionStringOptions2.DefaultDatabase = value},
 			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).UserName = value},
+                {"allow-implicit-database:", _ => allowImplicitDatabase = true},
 			    {"u2|user2|username2:", "The username to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).UserName = value},
 			    {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).Password = value},
 			    {"p2|pass2|password2:", "The password to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).Password = value},
@@ -179,6 +181,8 @@ namespace Raven.Smuggler
 				PrintUsageAndExit(e);
 			}
 
+		    ValidateParameters(action);
+
 			try
 			{
 				switch (action)
@@ -249,7 +253,24 @@ namespace Raven.Smuggler
 			}
 		}
 
-		private void PrintUsageAndExit(Exception e)
+	    private void ValidateParameters(SmugglerAction action)
+	    {
+            if (allowImplicitDatabase == false)
+            {
+                if (string.IsNullOrEmpty(connectionStringOptions.DefaultDatabase))
+                {
+                    throw new OptionException("--database parameter must be specified or pass --allow-implicit-database", "database");
+                }
+
+                if (action == SmugglerAction.Between && string.IsNullOrEmpty(connectionStringOptions2.DefaultDatabase))
+                {
+                    throw new OptionException("--database2 parameter must be specified or pass --allow-implicit-database", "database2");
+                }
+            }
+        }
+
+
+	    private void PrintUsageAndExit(Exception e)
 		{
 			Console.WriteLine(e.Message);
 			PrintUsageAndExit(-1);
@@ -268,7 +289,7 @@ Usage:
 	- Export from MyDatabase database of the specified RavenDB instance to the dump.raven file:
 		Raven.Smuggler out http://localhost:8080/ dump.raven --database=MyDatabase
 	- Export from Database1 to Database2 on a different RavenDB instance:
-		Raven.Smuggler between http://localhost:8080/databases/Database1 http://localhost:8081/databases/Database2
+		Raven.Smuggler between http://localhost:8080/  http://localhost:8081/ --database=sourceDB --database2=targetDB
 
 Command line options:", SystemTime.UtcNow.Year);
 
