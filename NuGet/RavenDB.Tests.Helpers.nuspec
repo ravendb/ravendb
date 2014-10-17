@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+<package>
     <metadata>
         <id>RavenDB.Tests.Helpers</id>
         <version>{{version}}</version>
