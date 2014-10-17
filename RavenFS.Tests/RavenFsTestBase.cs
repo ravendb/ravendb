@@ -52,7 +52,7 @@ namespace RavenFS.Tests
         private readonly List<IFilesStore> filesStores = new List<IFilesStore>();
         private readonly List<IAsyncFilesCommands> asyncCommandClients = new List<IAsyncFilesCommands>();
         private readonly HashSet<string> pathsToDelete = new HashSet<string>();
-        public static readonly int[] Ports = { 19067, 19068, 19069 };
+        public static readonly int[] Ports = { 8079, 8078, 8077 };
 
         public TimeSpan SynchronizationInterval { get; protected set; }
 
