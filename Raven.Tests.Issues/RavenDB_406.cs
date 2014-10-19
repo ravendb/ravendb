@@ -37,8 +37,8 @@ namespace Raven.Tests.Issues
 
 				using (store.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 				{
-
-					// make sure that object is cached
+                    
+                    // make sure that object is cached
 					using (var session = store.OpenSession())
 					{
 						store.Changes().Task.Result.WaitForAllPendingSubscriptions();
@@ -49,8 +49,9 @@ namespace Raven.Tests.Issues
 					}
 					
 					store.GetObserveChangesAndEvictItemsFromCacheTask().Wait();
+                    int numberOfCacheResets = store.JsonRequestFactory.NumberOfCacheResets;
 
-					// change object
+				    // change object
 					using (var session = store.OpenSession())
 					{
 						session.Store(new User()
@@ -62,7 +63,7 @@ namespace Raven.Tests.Issues
 					}
 
 
-					Assert.True(SpinWait.SpinUntil(() =>store.JsonRequestFactory.NumberOfCacheResets > 0, 10000));
+                    Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets > numberOfCacheResets, 10000));
 
 					using (var session = store.OpenSession())
 					{
