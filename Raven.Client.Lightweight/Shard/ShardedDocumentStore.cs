@@ -282,6 +282,11 @@ namespace Raven.Client.Shard
             return new BulkInsertOperation(database, this, Listeners, options ?? new BulkInsertOptions(), Changes(database));
 		}
 
+		public override void InitializeProfiling()
+		{
+			ShardStrategy.Shards.ForEach(shard => shard.Value.InitializeProfiling());
+		}
+
 		/// <summary>
 		/// Initializes this instance.
 		/// </summary>

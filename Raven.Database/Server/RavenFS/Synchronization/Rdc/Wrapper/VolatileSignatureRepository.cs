@@ -70,10 +70,16 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 			return Directory.GetFiles(_tempDirectory, _fileName + "*.sig");
 		}
 
-		private string NameToPath(string name)
-		{
-			return Path.GetFullPath(Path.Combine(_tempDirectory, name));
-		}
+        private string NameToPath(string name)
+        {
+            if (Path.IsPathRooted(name))
+            {
+                string pathRoot = Path.GetPathRoot(name);
+                name = name.Substring(pathRoot.Length);
+            }
+            return Path.GetFullPath(Path.Combine(_tempDirectory, name));
+        }
+
 
 		private void CloseCreatedStreams()
 		{

@@ -739,6 +739,7 @@ namespace Raven.Client.Document
 			if (queryOperation == null)
 			{
 				ExecuteBeforeQueryListeners();
+				Take(0);
 				queryOperation = InitializeQueryOperation((key, val) => headers[key] = val);
 			}
 
