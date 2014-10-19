@@ -92,6 +92,11 @@ namespace Raven.Client.Linq
 		Lazy<int> CountLazily<T>(Expression expression);
 
 		/// <summary>
+		/// Convert the Linq query to a lazy-count Lucene query and provide a function to execute when it is being evaluated
+		/// </summary>
+		Lazy<Task<int>> CountLazilyAsync<T>(Expression expression);
+
+		/// <summary>
 		/// Move the registered after query actions
 		/// </summary>
 		void MoveAfterQueryExecuted<T>(IAsyncDocumentQuery<T> documentQuery);

@@ -327,6 +327,17 @@ namespace Raven.Client.Linq
 			return query.CountLazily();
 		}
 
+		/// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public Lazy<Task<int>> CountLazilyAsync<S>(Expression expression)
+		{
+			var processor = GetQueryProviderProcessor<S>();
+			var query = processor.GetAsyncDocumentQueryFor(expression);
+			return query.CountLazilyAsync();
+		}
+
 		protected virtual RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
 		{
 			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName,

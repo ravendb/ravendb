@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.FileSystem;
@@ -410,5 +411,15 @@ namespace Raven.Database.Client
         {
             return server.DocumentStore.RegisterListener(conflictListener);
         }
+
+	    public void InitializeProfiling()
+	    {
+		    server.DocumentStore.InitializeProfiling();
+	    }
+
+	    public ProfilingInformation GetProfilingInformationFor(Guid id)
+	    {
+		    return server.DocumentStore.GetProfilingInformationFor(id);
+	    }
     }
 }
