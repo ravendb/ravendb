@@ -184,6 +184,7 @@ interface licenseStatusDto {
         maxSizeInMb: string;
         maxRamUtilization: string;
         maxParallelism: string;
+        ravenfs: string;
     }
 }
 
