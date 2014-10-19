@@ -455,7 +455,6 @@ namespace Raven.Abstractions.Smuggler
 								lastEtag = databaseStatistics.LastDocEtag;
 							}
 							Operations.ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
-
 							continue;
 						}
 					}
@@ -597,7 +596,7 @@ namespace Raven.Abstractions.Smuggler
 
 				stream.Seek(0, SeekOrigin.Begin);
 
-				sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
+				sizeStream = new CountingStream(stream);
 
 				var streamReader = new StreamReader(sizeStream);
 
