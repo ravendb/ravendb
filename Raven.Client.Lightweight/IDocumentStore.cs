@@ -179,5 +179,8 @@ namespace Raven.Client
         DocumentSessionListeners Listeners { get; }
 
 	    void SetListeners(DocumentSessionListeners listeners);
+		void InitializeProfiling();
+
+		ProfilingInformation GetProfilingInformationFor(Guid id);
 	}
 }
