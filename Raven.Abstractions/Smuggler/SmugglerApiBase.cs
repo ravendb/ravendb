@@ -285,9 +285,10 @@ namespace Raven.Abstractions.Smuggler
 				try
 				{
 					var maxRecords = options.Limit - totalCount;
+					var amountToTakeFromServer = Math.Min(maxRecords, options.BatchSize);
 					if (maxRecords > 0)
 					{
-						using (var documents = await GetDocuments(lastEtag, Math.Min(maxRecords, options.BatchSize)))
+						using (var documents = await GetDocuments(lastEtag, amountToTakeFromServer))
 						{
 							var watch = Stopwatch.StartNew();
 
@@ -328,7 +329,11 @@ namespace Raven.Abstractions.Smuggler
 						var lastEtagComparable = new ComparableByteArray(lastEtag);
 						if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 						{
-							lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
+							lastEtag = EtagUtil.Increment(lastEtag, amountToTakeFromServer);
+							if (lastEtag.CompareTo(databaseStatistics.LastDocEtag) >= 0)
+							{
+								lastEtag = databaseStatistics.LastDocEtag;
+							}
 							ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
 
 							continue;
