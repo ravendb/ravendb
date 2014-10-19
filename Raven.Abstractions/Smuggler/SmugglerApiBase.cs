@@ -396,7 +396,8 @@ namespace Raven.Abstractions.Smuggler
 					var maxRecords = SmugglerOptions.Limit - totalCount;
 					if (maxRecords > 0 && reachedMaxEtag == false)
 					{
-						using (var documents = await Operations.GetDocuments(src, lastEtag, Math.Min(SmugglerOptions.BatchSize, maxRecords)))
+						var amountToFetchFromServer = Math.Min(SmugglerOptions.BatchSize, maxRecords);
+						using (var documents = await Operations.GetDocuments(src, lastEtag, amountToFetchFromServer))
 						{
 							var watch = Stopwatch.StartNew();
 
@@ -448,9 +449,12 @@ namespace Raven.Abstractions.Smuggler
 						var lastEtagComparable = new ComparableByteArray(lastEtag);
 						if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 						{
-							lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
+							lastEtag = EtagUtil.Increment(lastEtag, amountToFetchFromServer);
+							if (lastEtag.CompareTo(databaseStatistics.LastDocEtag) >= 0)
+							{
+								lastEtag = databaseStatistics.LastDocEtag;
+							}
 							Operations.ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
-
 							continue;
 						}
 					}
@@ -592,7 +596,7 @@ namespace Raven.Abstractions.Smuggler
 
 				stream.Seek(0, SeekOrigin.Begin);
 
-				sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
+				sizeStream = new CountingStream(stream);
 
 				var streamReader = new StreamReader(sizeStream);
 
