@@ -97,15 +97,18 @@ namespace Raven.Database.Impl
 						timeout.Delay();
 					var batchCount = 0;
                     token.ThrowIfCancellationRequested();
-					database.TransactionalStorage.Batch(actions =>
+					using (database.DocumentLock.Lock())
 					{
-						while (batchCount < batchSize && enumerator.MoveNext())
+						database.TransactionalStorage.Batch(actions =>
 						{
-							batchCount++;
-							var result = batchOperation(enumerator.Current, transactionInformation);
-							array.Add(RavenJObject.FromObject(result));
-						}
-					});
+							while (batchCount < batchSize && enumerator.MoveNext())
+							{
+								batchCount++;
+								var result = batchOperation(enumerator.Current, transactionInformation);
+								array.Add(RavenJObject.FromObject(result));
+							}
+						});
+					}
 					if (batchCount < batchSize) break;
 				}
 			}
