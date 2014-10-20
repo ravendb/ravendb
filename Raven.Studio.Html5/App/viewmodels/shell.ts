@@ -16,6 +16,7 @@ import documentClass = require("models/document");
 import collection = require("models/collection");
 import uploadItem = require("models/uploadItem");
 import changeSubscription = require("models/changeSubscription");
+import license = require("models/license");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
@@ -76,8 +77,7 @@ class shell extends viewModelBase {
     queuedAlert: alertArgs;
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
-    static licenseStatus = ko.observable<licenseStatusDto>();
-    localLicenseStatus: KnockoutObservable<licenseStatusDto> = shell.licenseStatus;
+    localLicenseStatus: KnockoutObservable<licenseStatusDto> = license.licenseStatus;
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
     recordedErrors = ko.observableArray<alertArgs>();
@@ -124,13 +124,13 @@ class shell extends viewModelBase {
         });
 
         this.isActiveDatabaseDisabled = ko.computed(() => {
-            var activeDb = this.activeDatabase();
-            return !!activeDb ? activeDb.disabled() : false;
+            var activeDb: database = this.activeDatabase();
+            return !!activeDb ? activeDb.disabled() || !activeDb.isLicensed() : false;
         });
 
         this.isActiveFileSystemDisabled = ko.computed(() => {
             var activeFs = this.activeFilesystem();
-            return !!activeFs ? activeFs.disabled() : false;
+            return !!activeFs ? activeFs.disabled() || !activeFs.isLicensed()  : false;
         });
 
         this.isCounterStorageDisabled = ko.computed(() => {
@@ -620,7 +620,7 @@ class shell extends viewModelBase {
     }
 
     private updateDbChangesApi(db: database) {
-        if (this.currentConnectedResource.name != db.name || this.currentConnectedResource.name == db.name && db.disabled()) {
+        if (this.currentConnectedResource.name != db.name || this.currentConnectedResource.name == db.name && (db.disabled() || !db.isLicensed())) {
             // disconnect from the current database changes api and set the current connected database
             shell.disconnectFromResourceChangesApi();
             this.currentConnectedResource = db;
@@ -639,13 +639,13 @@ class shell extends viewModelBase {
     }
 
     private updateFsChangesApi(fs: filesystem) {
-        if (this.currentConnectedResource.name != fs.name || this.currentConnectedResource.name == fs.name && fs.disabled()) {
+        if (this.currentConnectedResource.name != fs.name || this.currentConnectedResource.name == fs.name && (fs.disabled() || !fs.isLicensed())) {
             // disconnect from the current filesystem changes api and set the current connected filesystem
             shell.disconnectFromResourceChangesApi();
             this.currentConnectedResource = fs;
         }
 
-        if (!fs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('filesystems')())) {
+        if (!fs.disabled() && fs.isLicensed() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('filesystems')())) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
             shell.currentResourceChangesApi(new changesApi(fs, 5000));
             shell.changeSubscriptionArray = [
@@ -683,7 +683,7 @@ class shell extends viewModelBase {
     }
     
     static fetchDbStats(db: database) {
-        if (db && !db.disabled()) {
+        if (db && !db.disabled() && db.isLicensed()) {
             new getDatabaseStatsCommand(db)
                 .execute()
                 .done(result => db.statistics(result));
@@ -691,7 +691,7 @@ class shell extends viewModelBase {
     }
 
     static fetchFsStats(fs: filesystem) {
-        if (fs && !fs.disabled()) {
+        if (fs && !fs.disabled() && fs.isLicensed()) {
             new getFileSystemStatsCommand(fs)
                 .execute()
                 .done(result=> fs.statistics(result));
@@ -699,7 +699,7 @@ class shell extends viewModelBase {
     }
 
     static fetchCsStats(cs: counterStorage) {
-        if (cs && !cs.disabled()) {
+        if (cs && !cs.disabled() && cs.isLicensed()) {
             //TODO: implememnt fetching of counter storage stats
 /*            new getCounterStorageStatsCommand(cs)
                 .execute()
@@ -779,7 +779,7 @@ class shell extends viewModelBase {
                 if (result.Status.contains("AGPL")) {
                     result.Status = "Development Only";
                 }
-                shell.licenseStatus(result)
+                license.licenseStatus(result);
             });
     }
 
@@ -815,7 +815,7 @@ class shell extends viewModelBase {
 
     showLicenseStatusDialog() {
         require(["viewmodels/licensingStatus"], licensingStatus => {
-            var dialog = new licensingStatus(shell.licenseStatus());
+            var dialog = new licensingStatus(license.licenseStatus());
             app.showDialog(dialog);
         });
     }
