@@ -15,7 +15,6 @@
         <tags>nosql ravendb raven document database test</tags>
         <dependencies>
             <dependency id="RavenDB.Database" version="" />
-            <dependency id="xunit" version="1.9.2" />
         </dependencies>
     </metadata>
 </package>

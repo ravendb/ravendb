@@ -45,7 +45,7 @@ namespace Raven.Abstractions.Smuggler
 			Operations.Initialize(SmugglerOptions);
 
 			var result = new ExportDataResult
-			{
+		{
 				FilePath = exportOptions.ToFile,
 				LastAttachmentsEtag = SmugglerOptions.StartAttachmentsEtag,
 				LastDocsEtag = SmugglerOptions.StartDocsEtag,
@@ -107,7 +107,7 @@ namespace Raven.Abstractions.Smuggler
 			try
 			{
 				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
-													   leaveOpen: true))
+ leaveOpen: true))
 				using (var streamWriter = new StreamWriter(gZipStream))
 				{
 					var jsonWriter = new JsonTextWriter(streamWriter)
@@ -221,7 +221,7 @@ namespace Raven.Abstractions.Smuggler
 							{ "Key", identityInfo.Key }, 
 							{ "Value", identityInfo.Value }
 						}.WriteTo(jsonWriter);
-			}
+		}
 
 			jsonWriter.WriteEndArray();
 
@@ -526,7 +526,7 @@ namespace Raven.Abstractions.Smuggler
 					{
 						stream = File.OpenRead(importOptions.FromFile);
 						ownStream = true;
-					}
+				}
 					await ImportData(importOptions, stream);
 				}
 				finally
@@ -621,7 +621,7 @@ namespace Raven.Abstractions.Smuggler
 				Operations.ShowProgress(string.Format("Done with reading indexes, total: {0}", indexCount));
 				return indexCount;
 			});
-			
+
 			exportSectionRegistar.Add("Docs", () =>
 			{
 				Operations.ShowProgress("Begin reading documents");
@@ -647,7 +647,7 @@ namespace Raven.Abstractions.Smuggler
 			});
 
 			exportSectionRegistar.Add("DocsDeletions", () =>
-			{
+		{
 				Operations.ShowProgress("Begin reading deleted documents");
 				var deletedDocumentsCount = ImportDeletedDocuments(jsonReader).Result;
 				Operations.ShowProgress(string.Format("Done with reading deleted documents, total: {0}", deletedDocumentsCount));
@@ -676,22 +676,22 @@ namespace Raven.Abstractions.Smuggler
 			{
 				SmugglerOptions.CancelToken.Token.ThrowIfCancellationRequested();
 
-				if (jsonReader.TokenType != JsonToken.PropertyName)
-					throw new InvalidDataException("PropertyName was expected");
+			if (jsonReader.TokenType != JsonToken.PropertyName)
+				throw new InvalidDataException("PropertyName was expected");
 				Func<int> currentAction;
 				var currentSection = jsonReader.Value.ToString();
 				if (exportSectionRegistar.TryGetValue(currentSection, out currentAction) == false)
 				{
 					throw new InvalidDataException("Unexpected property found: " + jsonReader.Value);
 				}
-				if (jsonReader.Read() == false)
+			if (jsonReader.Read() == false)
 				{
 					exportCounts[currentSection] = 0;
 					continue;
 				}
 
-				if (jsonReader.TokenType != JsonToken.StartArray)
-					throw new InvalidDataException("StartArray was expected");
+			if (jsonReader.TokenType != JsonToken.StartArray)
+				throw new InvalidDataException("StartArray was expected");
 
 				exportCounts[currentSection] = currentAction();
 			}
@@ -776,7 +776,7 @@ namespace Raven.Abstractions.Smuggler
 							{
 								new JsonToJsonConverter(),
                                 new StreamFromJsonConverter()
-							}
+					}
 					}.Deserialize<Tombstone>(new RavenJTokenReader(item));
 
 				Operations.ShowProgress("Importing deleted attachments {0}", deletedAttachmentInfo.Key);
@@ -810,7 +810,7 @@ namespace Raven.Abstractions.Smuggler
 
 			await Operations.PutTransformer(null, null); // force flush
 
-			return count;
+				return count;
 		}
 
         [Obsolete("Use RavenFS instead.")]
@@ -845,7 +845,7 @@ namespace Raven.Abstractions.Smuggler
 
 			await Operations.PutAttachment(dst, null); // force flush
 
-			return count;
+				return count;
 		}
 
 
