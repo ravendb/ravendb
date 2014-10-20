@@ -55,6 +55,9 @@ namespace Raven.Database.Backup
 		{
 			if (Directory.Exists(dir) == false)
 				Directory.CreateDirectory(dir);
+			var tempPath = Path.Combine(dir, Guid.NewGuid().ToString());
+			File.WriteAllText(tempPath, "testing that we can write to this directory");
+			File.Delete(tempPath);
 		}
 
 		/// <summary>
