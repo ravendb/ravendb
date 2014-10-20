@@ -75,9 +75,9 @@ namespace Raven.Smuggler
             return Store.AsyncFilesCommands.DownloadAsync(file.FullPath);
         }
 
-        public Task PutFiles(Stream files, RavenJObject metadata)
+        public Task PutFiles(FileHeader file, Stream data, long size)
         {
-            throw new NotImplementedException();
+            return Store.AsyncFilesCommands.UploadRawAsync(file.FullPath, data, file.Metadata, size);
         }
 
         public void Initialize(SmugglerFilesOptions options)

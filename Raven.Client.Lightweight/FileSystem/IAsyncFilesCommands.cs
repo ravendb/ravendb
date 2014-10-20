@@ -73,6 +73,7 @@ namespace Raven.Client.FileSystem
 
         Task UploadAsync(string filename, Stream source, long? size = null, Action<string, long> progress = null);
         Task UploadAsync(string filename, Stream source, RavenJObject metadata, long? size = null, Action<string, long> progress = null);
+        Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size);
 
         Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null, long? from = null, long? to = null);
 
@@ -87,6 +88,8 @@ namespace Raven.Client.FileSystem
         Task<FileHeader[]> GetAsync(string[] filename);
 
         Task<IAsyncEnumerator<FileHeader>> StreamFilesAsync(Etag fromEtag, int pageSize = int.MaxValue);
+
+        
     }
 
     public interface IAsyncFilesAdminCommands : IDisposable, IHoldProfilingInformation

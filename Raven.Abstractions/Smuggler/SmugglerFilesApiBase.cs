@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition.Primitives;
-using System.Data.Odbc;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -18,6 +17,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Streams;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -34,11 +34,13 @@ namespace Raven.Abstractions.Smuggler
 
         private class FileContainer
         {
-            public FileHeader Metadata;
             public string Filename;
+            public FileHeader Metadata;
+            public long Size;
+
             public long Start;
             public long Length;
-            public CompressionEncoding Encoding;
+            public CompressionEncoding Encoding;            
         }
 
         public SmugglerFilesOptions Options { get; private set; }
@@ -156,8 +158,8 @@ namespace Raven.Abstractions.Smuggler
 
             string filename = filenamePrefix + ".1.data";
             using (var stream = File.Create(filename))
-            using (var countingStream = new CountingStream(stream))
-            using (var gZipStream = new GZipStream(countingStream, CompressionMode.Compress, leaveOpen: true))            
+            using (var afterCompressionCountingStream = new CountingStream(stream))
+            using (var gZipStream = new GZipStream(afterCompressionCountingStream, CompressionMode.Compress, leaveOpen: true))            
             {
                 while (true)
                 {
@@ -180,12 +182,16 @@ namespace Raven.Abstractions.Smuggler
 
                                     // Retrieve the file and write it to the stream. 
                                     // TODO: We are wasting precious resources decompressing and then compressing again. 
-                                    long startPosition = countingStream.NumberOfWrittenBytes;
+                                    long startPosition = afterCompressionCountingStream.NumberOfWrittenBytes;
+                                    
+                                    long totalFileSize = 0;
                                     using (var fileStream = await Operations.DownloadFile(file))
+                                    using (var beforeCompressionCountingStream = new CountingStream(fileStream))
                                     {
-                                        await fileStream.CopyToAsync(gZipStream).ConfigureAwait(false);
+                                        await beforeCompressionCountingStream.CopyToAsync(gZipStream).ConfigureAwait(false);
+                                        totalFileSize = beforeCompressionCountingStream.NumberOfReadBytes;
                                     }
-                                    long endPosition = countingStream.NumberOfWrittenBytes;
+                                    long endPosition = afterCompressionCountingStream.NumberOfWrittenBytes;
 
                                     // Write the metadata (which includes the stream size and file container name)
                                     var fileContainer = new FileContainer
@@ -193,6 +199,7 @@ namespace Raven.Abstractions.Smuggler
                                         Filename = Path.GetFileName(filename),                                        
                                         Start = startPosition,
                                         Length = endPosition - startPosition,
+                                        Size = totalFileSize,
                                         Metadata = file,
                                         Encoding = CompressionEncoding.GZip,
                                     };
@@ -294,9 +301,13 @@ namespace Raven.Abstractions.Smuggler
                 return;
             }
 
-            var files = Directory.GetFiles(Path.GetFullPath(importOptions.FromFile))
-                            .Where(file => ".ravenfs-incremental-dump".Equals(Path.GetExtension(file), StringComparison.CurrentCultureIgnoreCase))
-                            .OrderBy(File.GetLastWriteTimeUtc)
+            var directory = new DirectoryInfo(importOptions.FromFile);
+            if (!directory.Exists)
+                throw new InvalidOperationException("The directory does not exists.");
+
+            var files = Directory.GetFiles(directory.FullName)
+                            .Where(file => Path.GetExtension(file).Equals(".ravenfs-incremental-dump", StringComparison.CurrentCultureIgnoreCase))
+                            .OrderBy(x => File.GetLastWriteTimeUtc(x) )
                             .ToArray();
 
             if (files.Length == 0)
@@ -306,97 +317,77 @@ namespace Raven.Abstractions.Smuggler
                 await ImportData(importOptions, filename);
         }
 
-        private async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions, string file)
+        private async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions, string filename)
         {
-            using (var stream = File.OpenRead(importOptions.FromFile))
+            // We open the metadata file
+            using (var stream = File.OpenRead(filename))
             {
                 var sw = Stopwatch.StartNew();
 
-                // Try to read the stream compressed, otherwise continue uncompressed.
+                var directory = Path.GetDirectoryName(filename);
+
+                // Try to read the stream compressed.
                 stream.Position = 0;
                 var sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
                 var streamReader = new StreamReader(sizeStream);
 
-                var jsonReader = new JsonTextReader(streamReader);
-                if (jsonReader.Read() == false)
-                    return;
-
-                if (jsonReader.TokenType != JsonToken.StartObject)
-                    throw new InvalidDataException("StartObject was expected");
-
-                var importCounts = new Dictionary<string, int>();
-                var importSectionRegistar = new Dictionary<string, Func<int>>();
-
-                Options.CancelToken.Token.ThrowIfCancellationRequested();
-
-                importSectionRegistar.Add("Files", () =>
+                // We will store and lock for read every data file used by smuggler.
+                var dataStreams = new Dictionary<string, Stream>();
+                try
                 {
-                    Operations.ShowProgress("Begin reading files");
-                    var filesCount = ImportFiles(importOptions, jsonReader).Result;
-                    Operations.ShowProgress(string.Format("Done with reading files, total: {0}", filesCount));
-                    return filesCount;
-                });
-
-                importSectionRegistar.Keys.ForEach(k => importCounts[k] = 0);
-
-                while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndObject)
-                {
-                    Options.CancelToken.Token.ThrowIfCancellationRequested();
-
-                    if (jsonReader.TokenType != JsonToken.PropertyName)
-                        throw new InvalidDataException("PropertyName was expected");
-                                        
-                    var currentSection = jsonReader.Value.ToString();
-
-                    Func<int> currentAction;
-                    if (importSectionRegistar.TryGetValue(currentSection, out currentAction) == false)
-                        throw new InvalidDataException("Unexpected property found: " + jsonReader.Value);
-
-                    if (jsonReader.Read() == false)
+                    while (!streamReader.EndOfStream)
                     {
-                        importCounts[currentSection] = 0;
-                        continue;
+                        // For each entry in the metadata file.
+                        var container = streamReader.JsonDeserialization<FileContainer>();
+
+                        // We create the data stream if it hasnt been created before.
+                        Stream wholeDataStream;
+                        if (!dataStreams.TryGetValue(container.Filename, out wholeDataStream))
+                        {
+                            wholeDataStream = File.OpenRead(Path.Combine(directory, container.Filename));
+                            dataStreams[container.Filename] = wholeDataStream;
+                        }
+
+                        
+                        wholeDataStream.Seek(container.Start, SeekOrigin.Begin);
+
+                        // We seek to the location and read the data, no matter the encoding it was saved.
+                        var substream = new Substream(wholeDataStream, (int)container.Start, (int)container.Length);
+
+                        Stream dataStream;
+                        switch (container.Encoding)
+                        {
+                            case CompressionEncoding.GZip:
+                                dataStream = new GZipStream(substream, CompressionMode.Decompress, true);
+                                break;
+                            case CompressionEncoding.Defrate:
+                                dataStream = new DeflateStream(substream, CompressionMode.Decompress, true);
+                                break;
+                            case CompressionEncoding.None:
+                                dataStream = substream;
+                                break;   
+                            default:
+                                throw new InvalidEnumArgumentException("Cannot read data file. Unrecognized encoding: " + container.Encoding);
+                        }
+
+                        await Operations.PutFiles(container.Metadata, dataStream, container.Size);
+
+                        Options.CancelToken.Token.ThrowIfCancellationRequested();
                     }
-
-                    if (jsonReader.TokenType != JsonToken.StartArray)
-                        throw new InvalidDataException("StartArray was expected");
-
-                    importCounts[currentSection] = currentAction();
+                }
+                finally
+                {
+                    // We get rid of every data stream open during the process.
+                    foreach (var item in dataStreams)
+                        item.Value.Dispose();
                 }
 
-                sw.Stop();
-
-                Operations.ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments, deleted {2:#,#;;0} documents and {3:#,#;;0} attachments in {4:#,#.###;;0} s", exportCounts["Docs"], exportCounts["Attachments"], exportCounts["DocsDeletions"], exportCounts["AttachmentsDeletions"], sw.ElapsedMilliseconds / 1000f);
-            }
-
-
-
-            throw new NotImplementedException();
-        }
-
-        private async Task<int> ImportFiles(SmugglerImportOptions<FilesConnectionStringOptions> options, JsonTextReader jsonReader)
-        {
-            var count = 0;
-
-            while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-            {
                 Options.CancelToken.Token.ThrowIfCancellationRequested();
 
-                var item = RavenJToken.ReadFrom(jsonReader);
-               
-
-
-                // Operations.ShowProgress("Importing file {0}", attachmentExportInfo.Key);
-
-                // await Operations.PutAttachment(dst, attachmentExportInfo);
-
-                count++;
+                sw.Stop();
             }
-
-            // await Operations.PutAttachment(dst, null); // force flush
-
-            return count;
         }
+
 
         public virtual Task Between(SmugglerBetweenOptions<FilesConnectionStringOptions> betweenOptions)
         {

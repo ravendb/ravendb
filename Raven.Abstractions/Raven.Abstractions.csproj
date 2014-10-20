@@ -401,6 +401,7 @@
     <Compile Include="Util\Streams\BufferPool.cs" />
     <Compile Include="Util\Streams\IBufferPool.cs" />
     <Compile Include="Util\Streams\NoBufferPool.cs" />
+    <Compile Include="Util\Streams\Substream.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">

@@ -101,6 +101,8 @@ namespace RavenFS.Tests.Smuggler
                     var smugglerApi = new SmugglerFilesApi();
                     var export = await smugglerApi.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { From = options, ToFile = outputDirectory.ToFullPath() });
                     await smugglerApi.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = export.FilePath, To = options });
+
+                    throw new NotImplementedException("Still missing the verification");
                 }
                 finally
                 {
@@ -167,7 +169,7 @@ namespace RavenFS.Tests.Smuggler
                             }
                         });
 
-                    VerifyDump(store, export.FilePath, s => { throw new NotImplementedException(); });
+                    await VerifyDump(store, export.FilePath, s => { throw new NotImplementedException(); });
                 }
                 finally
                 {
@@ -215,7 +217,7 @@ namespace RavenFS.Tests.Smuggler
                                 ToFile = outputDirectory,
                                 From = new FilesConnectionStringOptions
                                 {
-                                    Url = store.Url,
+                                    Url = server.Url,
                                     DefaultFileSystem = store.DefaultFileSystem,
                                 }
                             });
@@ -238,7 +240,7 @@ namespace RavenFS.Tests.Smuggler
                             ToFile = outputDirectory,
                             From = new FilesConnectionStringOptions
                             {
-                                Url = store.Url,
+                                Url = server.Url,
                                 DefaultFileSystem = store.DefaultFileSystem,
                             }
                         });
@@ -281,14 +283,21 @@ namespace RavenFS.Tests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    using (new FilesStore {Url = server.Url}.Initialize())
+                    using (new FilesStore { Url = server.Url }.Initialize())
                     {
                         // now perform full backup                    
-                        await dumper.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { ToFile = outputDirectory });
+                        await dumper.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions>
+                        {
+                            ToFile = outputDirectory,
+                            From = new FilesConnectionStringOptions
+                            {
+                                Url = server.Url,
+                                DefaultFileSystem = store.DefaultFileSystem,
+                            }
+                        });
                     }
 
-
-                    VerifyDump(store, outputDirectory, s =>
+                    await VerifyDump(store, outputDirectory, s =>
                     {
                         using (var session = s.OpenAsyncSession())
                         {
@@ -339,12 +348,35 @@ namespace RavenFS.Tests.Smuggler
             await Task.WhenAll(creationTasks);
         }
 
-        private void VerifyDump(FilesStore store, string backupPath, Action<FilesStore> action)
+        private async Task VerifyDump(FilesStore store, string backupPath, Action<FilesStore> action)
         {
-            var dumper = new SmugglerFilesApi { Options = { Incremental = true } };
-            dumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = backupPath }).Wait();
+            try
+            {
+                store.DefaultFileSystem += "-Verify";
+                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(store.DefaultFileSystem);
 
-            action(store);
+                bool incremental = false;
+                var directory = new DirectoryInfo(backupPath);
+                if ( directory.Exists )
+                    incremental = true;
+
+                var dumper = new SmugglerFilesApi { Options = { Incremental = incremental } };                
+                await dumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions>
+                {
+                    FromFile = backupPath,
+                    To = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = store.DefaultFileSystem,
+                    }
+                });
+
+                action(store);
+            }
+            catch (Exception e)
+            {
+                throw e.SimplifyException();
+            }
         }
     }
 }

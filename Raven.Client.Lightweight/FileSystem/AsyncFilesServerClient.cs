@@ -661,38 +661,53 @@ namespace Raven.Client.FileSystem
 
             return ExecuteWithReplication("PUT", async operation =>
             {
-                if (source.CanRead == false)
-                    throw new Exception("Stream does not support reading");
-
-                var uploadIdentifier = Guid.NewGuid();
-                var request = RequestFactory.CreateHttpJsonRequest(
-                                new CreateHttpJsonRequestParams(this, operation.Url + "/files?name=" + Uri.EscapeDataString(filename) + "&uploadId=" + uploadIdentifier,
-                                                                "PUT", operation.Credentials, Conventions))
-                                            .AddOperationHeaders(OperationsHeaders);
-
-                metadata["RavenFS-Size"] = size.HasValue ? new RavenJValue(size.Value) : new RavenJValue(source.Length);
-                
-                AddHeaders(metadata, request);
-
-                var cts = new CancellationTokenSource();
-
-                RegisterUploadOperation(uploadIdentifier, cts);
-
-                try
-                {
-                    await request.WriteAsync(source);
-                    if (request.ResponseStatusCode == HttpStatusCode.BadRequest)
-                        throw new BadRequestException("There is a mismatch between the size reported in the RavenFS-Size header and the data read server side.");
-                }
-                catch (Exception e)
-                {
-                    throw e.SimplifyException();
-                }
-                finally
-                {
-                    UnregisterUploadOperation(uploadIdentifier);
-                }
+                await UploadAsyncImpl(operation, filename, source, metadata, false, size);
             });
+        }
+
+        public Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size)
+        {
+            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+            return UploadAsyncImpl(operationMetadata, filename, source, metadata, true, size);
+        }
+
+        private async Task UploadAsyncImpl(OperationMetadata operation, string filename, Stream source, RavenJObject metadata, bool preserveTimestamps, long? size)
+        {
+            if (source.CanRead == false)
+                throw new Exception("Stream does not support reading");
+
+            var uploadIdentifier = Guid.NewGuid();
+
+            var operationUrl = operation.Url + "/files?name=" + Uri.EscapeDataString(filename) + "&uploadId=" + uploadIdentifier;
+            if (preserveTimestamps)
+                operationUrl += "&preserve=true";
+
+            var request = RequestFactory.CreateHttpJsonRequest(
+                                new CreateHttpJsonRequestParams(this, operationUrl, "PUT", operation.Credentials, Conventions))
+                                        .AddOperationHeaders(OperationsHeaders);
+
+            metadata["RavenFS-Size"] = size.HasValue ? new RavenJValue(size.Value) : new RavenJValue(source.Length);
+
+            AddHeaders(metadata, request);
+
+            var cts = new CancellationTokenSource();
+
+            RegisterUploadOperation(uploadIdentifier, cts);
+
+            try
+            {
+                await request.WriteAsync(source);
+                if (request.ResponseStatusCode == HttpStatusCode.BadRequest)
+                    throw new BadRequestException("There is a mismatch between the size reported in the RavenFS-Size header and the data read server side.");
+            }
+            catch (Exception e)
+            {
+                throw e.SimplifyException();
+            }
+            finally
+            {
+                UnregisterUploadOperation(uploadIdentifier);
+            }
         }
 
         internal async Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string filename, FileHeader remote, string sourceServerUri, Action beforeConflictResolution)

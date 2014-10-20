@@ -95,7 +95,7 @@ namespace Raven.Tests.Helpers
 
             var ravenDbServer = new RavenDbServer(ravenConfiguration)
             {
-	            UseEmbeddedHttpServer = true
+	            UseEmbeddedHttpServer = true,                
             };
 	        ravenDbServer.Initialize();
 
@@ -124,9 +124,11 @@ namespace Raven.Tests.Helpers
                 requestedStorage: requestedStorage, 
                 runInMemory:runInMemory);
 
+            server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
+
             var store = new FilesStore
             {
-                Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl),
+                Url = server.Url,
                 DefaultFileSystem = fileSystemName,
                 Credentials = credentials,
                 ApiKey = apiKey,                 
@@ -145,10 +147,11 @@ namespace Raven.Tests.Helpers
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
             var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage);
+            server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
             var store = new FilesStore()
             {
-                Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl),
+                Url = server.Url,
                 DefaultFileSystem = fileSystemName,
                 Credentials = credentials,
                 ApiKey = apiKey,

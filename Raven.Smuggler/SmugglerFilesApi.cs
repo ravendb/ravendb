@@ -32,6 +32,9 @@ namespace Raven.Smuggler
 
         public override async Task<ExportFilesResult> ExportData(SmugglerExportOptions<FilesConnectionStringOptions> exportOptions)
         {
+            if (exportOptions.From == null)
+                throw new ArgumentNullException("exportOptions");
+
             using (store = await CreateStore(exportOptions.From))
             using (documentStore = CreateDocumentStore(exportOptions.From))
 			{
@@ -41,6 +44,9 @@ namespace Raven.Smuggler
 
         public override async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions)
         {
+            if (importOptions.To == null)
+                throw new ArgumentNullException("importOptions");
+
             using (store = await CreateStore(importOptions.To))
             using (documentStore = CreateDocumentStore(importOptions.To))
             {
@@ -51,9 +57,11 @@ namespace Raven.Smuggler
         private async Task<FilesStore> CreateStore(FilesConnectionStringOptions options)
         {
             var credentials = options.Credentials as NetworkCredential;
-            if (credentials != null && //precaution
-                (String.IsNullOrWhiteSpace(credentials.UserName) ||
-                 String.IsNullOrWhiteSpace(credentials.Password)))
+            if (credentials == null)
+            {
+                credentials = CredentialCache.DefaultNetworkCredentials;
+            }
+            else if ((String.IsNullOrWhiteSpace(credentials.UserName) || String.IsNullOrWhiteSpace(credentials.Password)))
             {
                 credentials = CredentialCache.DefaultNetworkCredentials;
             }
@@ -119,9 +127,11 @@ namespace Raven.Smuggler
         private DocumentStore CreateDocumentStore(FilesConnectionStringOptions options)
         {
             var credentials = options.Credentials as NetworkCredential;
-            if (credentials != null && //precaution
-                (String.IsNullOrWhiteSpace(credentials.UserName) ||
-                 String.IsNullOrWhiteSpace(credentials.Password)))
+            if (credentials == null)
+            {
+                credentials = CredentialCache.DefaultNetworkCredentials;
+            }
+            else if ((String.IsNullOrWhiteSpace(credentials.UserName) || String.IsNullOrWhiteSpace(credentials.Password)))
             {
                 credentials = CredentialCache.DefaultNetworkCredentials;
             }

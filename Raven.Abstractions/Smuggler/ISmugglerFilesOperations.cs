@@ -26,7 +26,7 @@ namespace Raven.Abstractions.Smuggler
 
         Task<IAsyncEnumerator<FileHeader>> GetFiles(FilesConnectionStringOptions src, Etag lastEtag, int take);
         Task<Stream> DownloadFile(FileHeader file);
-        Task PutFiles(Stream files, RavenJObject metadata);                
+        Task PutFiles(FileHeader file, Stream data, long dataSize);                
 
         
         void Initialize(SmugglerFilesOptions options);

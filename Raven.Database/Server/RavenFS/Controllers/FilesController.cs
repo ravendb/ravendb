@@ -300,7 +300,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
 
                 Historian.UpdateLastModified(headers);
-                headers[Constants.CreationDate] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture);
+                headers[Constants.CreationDate] = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture);
                 Historian.Update(name, headers);
 
                 SynchronizationTask.Cancel(name);
