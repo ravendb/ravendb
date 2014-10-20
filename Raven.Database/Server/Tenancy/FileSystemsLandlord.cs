@@ -161,17 +161,26 @@ namespace Raven.Database.Server.Tenancy
                 }
             }
 
-			string ravenFsValue;
-	        if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("ravenfs", out ravenFsValue))
+	        if (IsNotLicensed())
 	        {
-				bool active = false;
-				var result = bool.TryParse(ravenFsValue, out active);
-				if (result == false || active == false)
-					throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
+				throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
 	        }
         }
 
-        protected override DateTime LastWork(RavenFileSystem resource)
+		public static bool IsNotLicensed()
+	    {
+		    string ravenFsValue;
+			var license = ValidateLicense.CurrentLicense;
+			if (license.Attributes.TryGetValue("ravenfs", out ravenFsValue) || license.IsCommercial)
+		    {
+			    bool active = false;
+			    var result = bool.TryParse(ravenFsValue, out active);
+			    return (result == false || active == false);
+		    }
+			return true;
+	    }
+
+	    protected override DateTime LastWork(RavenFileSystem resource)
         {
             return resource.SynchronizationTask.LastSuccessfulSynchronizationTime;
         }

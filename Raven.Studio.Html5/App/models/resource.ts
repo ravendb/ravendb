@@ -6,6 +6,7 @@
     itemCountText: KnockoutComputed<string>;
     isVisible = ko.observable(true);
     disabled = ko.observable<boolean>(false);
+    isLicensed: KnockoutComputed<boolean>;
 
     constructor(public name: string, public type: string) {
     }
