@@ -10,6 +10,7 @@ namespace Raven.Client.Connection
 		public DateTimeOffset Time;
 		public NameValueCollection Headers;
 		public string Database;
+	    public int ReadTime;
 		public bool ForceServerCheck;
 	}
 

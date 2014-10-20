@@ -16,7 +16,7 @@ namespace Raven.Client.Util
 		private readonly ConcurrentLruLSet<string> lruKeys;
 		private readonly ConcurrentDictionary<string, CachedRequest> actualCache;
 
-		private readonly ConcurrentDictionary<string, DateTime> lastWritePerDb = new ConcurrentDictionary<string, DateTime>();
+        private readonly ConcurrentDictionary<string, int> lastWritePerDb = new ConcurrentDictionary<string, int>();
 
 		public SimpleCache(int maxNumberOfCacheEntries)
 		{
@@ -94,6 +94,11 @@ namespace Raven.Client.Util
 			{
 				TryClearMemory();
 			}
+		    int lastWrite;
+            if (lastWritePerDb.TryGetValue(val.Database, out lastWrite))
+            {
+                val.ReadTime = lastWrite;
+            }
 			actualCache.AddOrUpdate(key, val, (s, o) => val);
 			lruKeys.Push(key);
 		}
@@ -120,10 +125,10 @@ namespace Raven.Client.Util
 			}
 			if (value != null)
 			{
-				DateTime lastWrite;
+				int lastWrite;
 				if (lastWritePerDb.TryGetValue(value.Database, out lastWrite))
 				{
-					if (value.Time < lastWrite)
+					if (value.ReadTime < lastWrite)
 						value.ForceServerCheck = true;
 				}
 			}
@@ -143,11 +148,7 @@ namespace Raven.Client.Util
 
 		internal void ForceServerCheckOfCachedItemsForDatabase(string databaseName)
 		{
-            // we need it slightly in the future, so if we have a cached item in the same
-            // ms, we won't get that value.
-			var newTime = SystemTime.UtcNow.AddMilliseconds(16);
-			lastWritePerDb.AddOrUpdate(databaseName, newTime,
-				(db, existingTime) => existingTime > newTime ? existingTime : newTime);
+		    lastWritePerDb.AddOrUpdate(databaseName, 1, (db, existingTime) => existingTime + 1);
 		}
 	}
 }
