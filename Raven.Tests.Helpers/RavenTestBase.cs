@@ -166,7 +166,8 @@ namespace Raven.Tests.Helpers
 			var license = GetLicenseByReflection(database);
 			license.Error = false;
 			license.Status = "Commercial";
-
+		    license.Attributes["ravenfs"] = "true";
+            license.Attributes["counters"] = "true";
 			// rerun this startup task
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
