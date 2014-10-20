@@ -40,8 +40,6 @@ using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers.Util;
 
-using Xunit;
-using Xunit.Sdk;
 
 namespace Raven.Tests.Helpers
 {
@@ -364,7 +362,7 @@ namespace Raven.Tests.Helpers
 			bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(20)));
 			if (spinUntil == false && store is EmbeddableDocumentStore)
 				WaitForUserToContinueTheTest(store);
-			Assert.True(spinUntil, "Indexes took took long to become unstale");
+			Debug.Assert(spinUntil, "Indexes took took long to become unstale");
 		}
 
 
@@ -376,7 +374,7 @@ namespace Raven.Tests.Helpers
 				currentStatus = GetPerodicBackupStatus(db);
 				return compareSelector(currentStatus) != compareSelector(previousStatus);
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-			Assert.True(done);
+			Debug.Assert(done);
 			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
 			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
 			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
@@ -386,12 +384,12 @@ namespace Raven.Tests.Helpers
 
 		public static void WaitForIndexing(DocumentDatabase db)
 		{
-			Assert.True(SpinWait.SpinUntil(() => db.Statistics.StaleIndexes.Length == 0, TimeSpan.FromMinutes(5)));
+			Debug.Assert(SpinWait.SpinUntil(() => db.Statistics.StaleIndexes.Length == 0, TimeSpan.FromMinutes(5)));
 		}
 
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)
 		{
-			Assert.True(SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)));
+			Debug.Assert(SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)));
 		}
 
 		protected PeriodicExportStatus GetPerodicBackupStatus(DocumentDatabase db)
@@ -434,7 +432,7 @@ namespace Raven.Tests.Helpers
 					   currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag ||
 					   currentStatus.LastAttachmentDeletionEtag != previousStatus.LastAttachmentDeletionEtag;
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-			Assert.True(done);
+			Debug.Assert(done);
 			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
 			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
 			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
@@ -469,14 +467,14 @@ namespace Raven.Tests.Helpers
 						var firstOrDefault =
 							backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
 						if (firstOrDefault != null)
-							Assert.True(false, string.Format("{0}\n\nDetails: {1}", firstOrDefault.Message, firstOrDefault.Details));
+							Debug.Assert(false, string.Format("{0}\n\nDetails: {1}", firstOrDefault.Message, firstOrDefault.Details));
 					}
 
 					return true;
 				}
 				return false;
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-			Assert.True(done);
+			Debug.Assert(done);
 		}
 
 		protected void WaitForRestore(IDatabaseCommands databaseCommands)
@@ -513,7 +511,7 @@ namespace Raven.Tests.Helpers
 				return restoreFinishMessages.Any(status.Messages.Contains);
 			}, TimeSpan.FromMinutes(5));
 
-			Assert.True(done);
+			Debug.Assert(done);
 		}
 
 		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id)
@@ -525,7 +523,7 @@ namespace Raven.Tests.Helpers
 				return doc != null;
 			}, TimeSpan.FromMinutes(5));
 
-			Assert.True(done);
+			Debug.Assert(done);
 		}
 
 		public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079)
@@ -734,9 +732,9 @@ namespace Raven.Tests.Helpers
 
 			try
 			{
-				Assert.Empty(errors);
+				Debug.Assert(!errors.Any());
 			}
-			catch (EmptyException)
+			catch (Exception)
 			{
 				Console.WriteLine(errors.First().Error);
 				throw;
@@ -746,14 +744,14 @@ namespace Raven.Tests.Helpers
 		public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
 		{
 			var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
-			Assert.NotNull(field);
+			Debug.Assert(null != field);
 			var initializer = field.GetValue(database);
 			var validateLicenseField = initializer.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
-			Assert.NotNull(validateLicenseField);
+			Debug.Assert(null != validateLicenseField);
 			var validateLicense = validateLicenseField.GetValue(initializer);
 
 			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
-			Assert.NotNull(currentLicenseProp);
+			Debug.Assert(null != currentLicenseProp);
 
 			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
 		}
