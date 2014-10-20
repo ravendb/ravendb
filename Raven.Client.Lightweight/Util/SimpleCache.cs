@@ -143,7 +143,9 @@ namespace Raven.Client.Util
 
 		internal void ForceServerCheckOfCachedItemsForDatabase(string databaseName)
 		{
-			var newTime = SystemTime.UtcNow;
+            // we need it slightly in the future, so if we have a cached item in the same
+            // ms, we won't get that value.
+			var newTime = SystemTime.UtcNow.AddMilliseconds(16);
 			lastWritePerDb.AddOrUpdate(databaseName, newTime,
 				(db, existingTime) => existingTime > newTime ? existingTime : newTime);
 		}
