@@ -249,10 +249,10 @@ namespace Raven.Tests.Issues
 						Assert.Equal("John", user.Name);
 					}
 
-					changes.ForDocument("users/1")
+					changes.ForDocument("users/1").Task.Result
 						   .Subscribe(documentChangeNotification => canProceedEvent.Signal());
 
-					changes.ForAllIndexes()
+                    changes.ForAllIndexes().Task.Result
 						   .Subscribe(indexChangeNotification => canProceedEvent.Signal());
 
 					// change object
