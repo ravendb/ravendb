@@ -171,11 +171,15 @@ namespace Raven.Database.Server.Tenancy
 	    {
 		    string ravenFsValue;
 			var license = ValidateLicense.CurrentLicense;
-			if (license.Attributes.TryGetValue("ravenfs", out ravenFsValue) || license.IsCommercial)
+		    if (license.IsCommercial == false)
 		    {
-			    bool active = false;
-			    var result = bool.TryParse(ravenFsValue, out active);
-			    return (result == false || active == false);
+		        return false; // we allow the use of ravenfs in the OSS version
+		    }
+		    if (license.Attributes.TryGetValue("ravenfs", out ravenFsValue))
+		    {
+			    bool active;
+		        if (bool.TryParse(ravenFsValue, out active))
+		            return active == false;
 		    }
 			return true;
 	    }
