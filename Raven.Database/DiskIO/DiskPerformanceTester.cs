@@ -4,12 +4,20 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
+using Microsoft.Win32.SafeHandles;
+using Raven.Abstractions.Data;
+using Voron.Platform.Win32;
 using metrics.Core;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.DiskIO
 {
@@ -19,19 +27,13 @@ namespace Raven.Database.DiskIO
 
         private readonly Action<string> onInfo;
 
-        private readonly Action<DiskPerformanceResult> onData;
-
         private readonly CancellationTokenSource cts;
 
         private readonly List<Thread> threads;
 
-        private readonly DiskPerformanceResult result;
+        private readonly DiskPerformanceStorage dataStorage;
 
         private readonly List<Random> perThreadRandom;
-
-        private long lastTotalWrite;
-        
-        private long lastTotalRead;
 
         private Timer secondTimer;
 
@@ -39,18 +41,20 @@ namespace Raven.Database.DiskIO
 
         public DiskPerformanceResult Result
         {
-            get { return result; }
+            get
+            {
+                return new DiskPerformanceResult(dataStorage);
+            }
         }
 
-        internal DiskPerformanceTester(PerformanceTestRequest testRequest, Action<string> onInfo, Action<DiskPerformanceResult> onData)
+        internal DiskPerformanceTester(PerformanceTestRequest testRequest, Action<string> onInfo)
         {
-            VerifyFileDoesNotExists(testRequest.Path);
+            VerifyFileExtension(testRequest.Path);
             this.testRequest = testRequest;
             this.onInfo = onInfo;
-            this.onData = onData;
             cts = new CancellationTokenSource();
             threads = new List<Thread>(testRequest.ThreadCount);
-            result = new DiskPerformanceResult();
+            dataStorage = new DiskPerformanceStorage();
             perThreadRandom = Enumerable.Range(1, testRequest.ThreadCount)
                 .Select(i => testRequest.RandomSeed.HasValue ? new Random(testRequest.RandomSeed.Value) : new Random()).ToList();
 
@@ -62,51 +66,76 @@ namespace Raven.Database.DiskIO
         }
 
         /// <summary>
-        /// For security reasons we don't allow to create temporary file for performance test
-        /// Without this check user can overwrite any file on disk
+        /// For security reasons we enforce path to end with .ravendb-io-test
         /// </summary>
         /// <param name="path"></param>
-        private void VerifyFileDoesNotExists(string path)
+        private void VerifyFileExtension(string path)
         {
-            if (File.Exists(path))
+            const string expectedFileExtension = ".ravendb-io-test";
+            if (path.EndsWith(expectedFileExtension) == false)
             {
-                throw new SecurityException("For security reason temporary file for disk performance test must not exist.");
+                throw new SecurityException("For security reasons temporary file must ends with " + expectedFileExtension);
             }
         }
 
         public void TestDiskIO()
         {
-            try
-            {
-                PrepareTestFile();
-                onInfo("Starting test...");
-                StartWorkers();
-                onInfo("Waiting for all workers to complete");
-                threads.ForEach(t => t.Join());
-            }
-            finally
-            {
-                onInfo("Deleting temporary file");
-                File.Delete(testRequest.Path);
-            }
+            PrepareTestFile();
+            onInfo("Starting test...");
+            StartWorkers();
+            onInfo("Waiting for all workers to complete");
+            threads.ForEach(t => t.Join());
         }
 
         private void PrepareTestFile()
         {
-            onInfo(string.Format("Creating test file with size = {0}", testRequest.FileSize));
-            using (var fs = new FileStream(testRequest.Path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+            var sw = new Stopwatch();
+            sw.Start();
+           
+            if (File.Exists(testRequest.Path))
             {
-                const int bufferSize = 4 * 1024;
-                var buffer = new byte[bufferSize];
-                var random = new Random();
-
-                for (long i = 0; i < testRequest.FileSize; i += bufferSize)
+                var fInfo = new FileInfo(testRequest.Path);
+                if (fInfo.Length < testRequest.FileSize)
                 {
-                    random.NextBytes(buffer);
-                    fs.Write(buffer, 0, bufferSize);
+                    onInfo(string.Format("Expanding test file to {0}", testRequest.FileSize));
+                    using (var fs = new FileStream(testRequest.Path, FileMode.Append, FileAccess.Write))
+                    {
+                        const int bufferSize = 4 * 1024;
+                        var buffer = new byte[bufferSize];
+                        var random = new Random();
+
+                        for (long i = 0; i < testRequest.FileSize - fInfo.Length; i += bufferSize)
+                        {
+                            random.NextBytes(buffer);
+                            fs.Write(buffer, 0, bufferSize);
+                        }
+                    }
+                    var elapsed = sw.Elapsed;
+                    onInfo(string.Format("Test file expanded to size: {0} in {1}", testRequest.FileSize, elapsed));
+                }
+                else
+                {
+                    onInfo("Reusing existing test file.");
                 }
             }
-            onInfo(string.Format("Test file created with size = {0}", testRequest.FileSize));
+            else
+            {
+                onInfo(string.Format("Creating test file with size = {0}", testRequest.FileSize));
+                using (var fs = new FileStream(testRequest.Path, FileMode.OpenOrCreate, FileAccess.Write))
+                {
+                    const int bufferSize = 4 * 1024;
+                    var buffer = new byte[bufferSize];
+                    var random = new Random();
+
+                    for (long i = 0; i < testRequest.FileSize; i += bufferSize)
+                    {
+                        random.NextBytes(buffer);
+                        fs.Write(buffer, 0, bufferSize);
+                    }
+                }
+                var elapsed = sw.Elapsed;
+                onInfo(string.Format("Test file created with size: {0} in {1}", testRequest.FileSize, elapsed));
+            }
         }
 
         private void StartWorkers()
@@ -124,12 +153,9 @@ namespace Raven.Database.DiskIO
         private void SecondTicked(object state)
         {
             statCounter++;
-            var totalRead = result.TotalRead;
-            var totalWrite = result.TotalWritten;
-            result.UpdateHistograms(totalRead - lastTotalRead, totalWrite - lastTotalWrite);
-            lastTotalRead = totalRead;
-            lastTotalWrite = totalWrite;
-            onData(Result);
+
+            dataStorage.Update();
+
             if (statCounter >= testRequest.TimeToRunInSeconds)
             {
                 cts.Cancel();
@@ -148,7 +174,7 @@ namespace Raven.Database.DiskIO
                 switch (testRequest.OperationType)
                 {
                     case OperationType.Read:
-                        TestSequentialRead(token, start, end);
+                        TestSequentialRead(token);
                         break;
                     case OperationType.Write:
                         TestSequentialWrite(token, random, start, end);
@@ -162,7 +188,7 @@ namespace Raven.Database.DiskIO
                 switch (testRequest.OperationType)
                 {
                     case OperationType.Read:
-                        TestRandomRead(token, random, start, end);
+                        TestRandomRead(token, random);
                         break;
                     case OperationType.Write:
                         TestRandomWrite(token, random, start, end);
@@ -174,153 +200,308 @@ namespace Raven.Database.DiskIO
             }
         }
 
-        long LongRandom(long min, long max, Random rand)
+        long LongRandom(long min, long max, int mutlipleOf, Random rand)
         {
             var buf = new byte[8];
             rand.NextBytes(buf);
             var longRand = BitConverter.ToInt64(buf, 0);
-            return (Math.Abs(longRand % (max - min)) + min);
+            var value = (Math.Abs(longRand % (max - min)) + min);
+            return value/mutlipleOf*mutlipleOf;
         }
-
+        
+        /// <summary>
+        /// Each thread write to individual section
+        /// Each thread reads from any section
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="random"></param>
+        /// <param name="start"></param>
+        /// <param name="end"></param>
         private void TestRandomReadWrite(CancellationToken token, Random random, long start, long end)
         {
-            using (var fs = new FileStream(testRequest.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
+            using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
+                                                                  Win32NativeFileAccess.GenericWrite | Win32NativeFileAccess.GenericRead, 
+                                                                  Win32NativeFileShare.Write, IntPtr.Zero,
+                                                                  Win32NativeFileCreationDisposition.OpenExisting,
+                                                                  Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering, IntPtr.Zero))
             {
-                var buffer = new byte[testRequest.ChunkSize];
-                while (token.IsCancellationRequested == false)
+                ValidateHandle(handle);
+                using (var fs = new FileStream(handle, FileAccess.ReadWrite))
                 {
-                    var position = LongRandom(start, end - testRequest.ChunkSize, random);
-                    fs.Seek(position, SeekOrigin.Begin);
-                    if (random.Next(2) > 0)
+                    var buffer = new byte[testRequest.ChunkSize];
+                    var sw = new Stopwatch();
+                    while (token.IsCancellationRequested == false)
                     {
-                        fs.Read(buffer, 0, testRequest.ChunkSize);
-                        result.MarkRead(testRequest.ChunkSize);
-                    }
-                    else
-                    {
-                        random.NextBytes(buffer);
-                        fs.Write(buffer, 0, testRequest.ChunkSize);
-                        fs.Flush(true);
-                        result.MarkWrite(testRequest.ChunkSize);
+                        if (random.Next(2) > 0)
+                        {
+                            var position = LongRandom(0, testRequest.FileSize, 4096, random);
+                            sw.Restart();
+                            fs.Seek(position, SeekOrigin.Begin);
+                            fs.Read(buffer, 0, testRequest.ChunkSize);
+                            dataStorage.MarkRead(testRequest.ChunkSize, sw.ElapsedMilliseconds);
+                        }
+                        else
+                        {
+                            var position = LongRandom(start, end - testRequest.ChunkSize, 4096, random);
+                            random.NextBytes(buffer);
+                            sw.Restart();
+                            fs.Seek(position, SeekOrigin.Begin);
+                            fs.Write(buffer, 0, testRequest.ChunkSize);
+                            dataStorage.MarkWrite(testRequest.ChunkSize, sw.ElapsedMilliseconds);
+                        }
                     }
                 }
             }
         }
-
+        
+        /// <summary>
+        ///  Each thread write to individual section
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="random"></param>
+        /// <param name="start"></param>
+        /// <param name="end"></param>
         private void TestRandomWrite(CancellationToken token, Random random, long start, long end)
         {
-            using (var fs = new FileStream(testRequest.Path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+            using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
+                                                                  Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.Write, IntPtr.Zero,
+                                                                  Win32NativeFileCreationDisposition.OpenExisting,
+                                                                  Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering, IntPtr.Zero))
             {
-                var buffer = new byte[testRequest.ChunkSize];
-                while (token.IsCancellationRequested == false)
+                ValidateHandle(handle);
+
+                using (var fs = new FileStream(handle, FileAccess.Write))
                 {
-                    random.NextBytes(buffer);
-                    var position = LongRandom(start, end - testRequest.ChunkSize, random);
-                    fs.Seek(position, SeekOrigin.Begin);
-                    fs.Write(buffer, 0, testRequest.ChunkSize);
-                    fs.Flush(true);
-                    result.MarkWrite(testRequest.ChunkSize);
+                    var buffer = new byte[testRequest.ChunkSize];
+                    var sw = new Stopwatch();
+                    while (token.IsCancellationRequested == false)
+                    {
+                        random.NextBytes(buffer);
+                        var position = LongRandom(start, end - testRequest.ChunkSize, 4096, random);
+                        sw.Restart();
+                        fs.Seek(position, SeekOrigin.Begin);
+                        fs.Write(buffer, 0, testRequest.ChunkSize);
+                        dataStorage.MarkWrite(testRequest.ChunkSize, sw.ElapsedMilliseconds);
+                    }
                 }
             }
         }
 
-        private void TestRandomRead(CancellationToken token, Random random, long start, long end)
+        /// <summary>
+        /// Each thread reads from any section
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="random"></param>
+        private void TestRandomRead(CancellationToken token, Random random)
         {
-            using (var fs = new FileStream(testRequest.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
+                                                     Win32NativeFileAccess.GenericRead, Win32NativeFileShare.Read, IntPtr.Zero,
+                                                     Win32NativeFileCreationDisposition.OpenExisting,
+                                                     Win32NativeFileAttributes.NoBuffering,
+                                                     IntPtr.Zero))
             {
-                var buffer = new byte[testRequest.ChunkSize];
-                while (token.IsCancellationRequested == false)
+                ValidateHandle(handle);
+                using (var fs = new FileStream(handle, FileAccess.Read))
                 {
-                    var position = LongRandom(start, end - testRequest.ChunkSize, random);
-                    fs.Seek(position, SeekOrigin.Begin);
-                    fs.Read(buffer, 0, testRequest.ChunkSize);
-                    result.MarkRead(testRequest.ChunkSize);
+                    var buffer = new byte[testRequest.ChunkSize];
+                    var sw = new Stopwatch();
+                    while (token.IsCancellationRequested == false)
+                    {
+                        var position = LongRandom(0, testRequest.FileSize, 4096, random);
+                        sw.Restart();
+                        // for with with no_buffering seek must be multiple of 4096.
+                        fs.Seek(position, SeekOrigin.Begin);
+                        fs.Read(buffer, 0, testRequest.ChunkSize);
+                        dataStorage.MarkRead(testRequest.ChunkSize, sw.ElapsedMilliseconds);
+                    }
                 }
             }
         }
 
+        /// <summary>
+        ///  Each thread write to individual section
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="random"></param>
+        /// <param name="start"></param>
+        /// <param name="end"></param>
         private void TestSequentialWrite(CancellationToken token, Random random, long start, long end)
         {
-            using (var fs = new FileStream(testRequest.Path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+            using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
+                                                                  Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.Write, IntPtr.Zero,
+                                                                  Win32NativeFileCreationDisposition.OpenExisting,
+                                                                  Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering, IntPtr.Zero))
             {
-                var buffer = new byte[testRequest.ChunkSize];
-                var position = start;
-                fs.Seek(position, SeekOrigin.Begin);
-                while (token.IsCancellationRequested == false)
+               ValidateHandle(handle);
+                using (var fs = new FileStream(handle, FileAccess.ReadWrite))
                 {
-                    random.NextBytes(buffer);
-                    fs.Write(buffer, 0, testRequest.ChunkSize);
-                    fs.Flush(true);
-                    result.MarkWrite(testRequest.ChunkSize);
-                    position += testRequest.ChunkSize;
-                    if (position + testRequest.ChunkSize > end)
+                    var buffer = new byte[testRequest.ChunkSize];
+                    var position = start;
+                    fs.Seek(position, SeekOrigin.Begin);
+                    var sw = new Stopwatch();
+                    while (token.IsCancellationRequested == false)
                     {
-                        fs.Seek(start, SeekOrigin.Begin);
-                        position = start;
+                        random.NextBytes(buffer);
+                        sw.Restart();
+                        fs.Write(buffer, 0, testRequest.ChunkSize);
+                        dataStorage.MarkWrite(testRequest.ChunkSize, sw.ElapsedMilliseconds);
+                        position += testRequest.ChunkSize;
+                        if (position + testRequest.ChunkSize > end)
+                        {
+                            fs.Seek(start, SeekOrigin.Begin);
+                            position = start;
+                        }
                     }
                 }
             }
         }
 
-        private void TestSequentialRead(CancellationToken token, long start, long end)
+        /// <summary>
+        /// Each thread reads sequentially from beginning of file
+        /// </summary>
+        /// <param name="token"></param>
+        private void TestSequentialRead(CancellationToken token)
         {
-            using (var fs = new FileStream(testRequest.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
+                                                                  Win32NativeFileAccess.GenericRead, Win32NativeFileShare.Read, IntPtr.Zero,
+                                                                  Win32NativeFileCreationDisposition.OpenExisting,
+                                                                  Win32NativeFileAttributes.NoBuffering, IntPtr.Zero))
             {
-                var buffer = new byte[testRequest.ChunkSize];
-                var position = start;
-                fs.Seek(position, SeekOrigin.Begin);
-                while (token.IsCancellationRequested == false)
+                ValidateHandle(handle);
+
+                using (var fs = new FileStream(handle, FileAccess.Read))
                 {
-                    fs.Read(buffer, 0, testRequest.ChunkSize);
-                    result.MarkRead(testRequest.ChunkSize);
-                    position += testRequest.ChunkSize;
-                    if (position + testRequest.ChunkSize > end)
+                    var buffer = new byte[testRequest.ChunkSize];
+                    var position = 0;
+                    fs.Seek(position, SeekOrigin.Begin);
+                    var sw = new Stopwatch();
+                    while (token.IsCancellationRequested == false)
                     {
-                        fs.Seek(start, SeekOrigin.Begin);
-                        position = start;
+                        sw.Restart();
+                        fs.Read(buffer, 0, testRequest.ChunkSize);
+                        dataStorage.MarkRead(testRequest.ChunkSize, sw.ElapsedMilliseconds);
+                        position += testRequest.ChunkSize;
+                        if (position + testRequest.ChunkSize > testRequest.FileSize)
+                        {
+                            fs.Seek(0, SeekOrigin.Begin);
+                            position = 0;
+                        }
                     }
                 }
+            }
+        }
+
+        private static void ValidateHandle(SafeFileHandle handle)
+        {
+            if (handle.IsInvalid)
+            {
+                int lastWin32ErrorCode = Marshal.GetLastWin32Error();
+                throw new IOException("Failed to open test file",
+                                      new Win32Exception(lastWin32ErrorCode));
+            }
+        }
+
+    }
+
+    class DiskPerformanceStorage
+    {
+        public List<long> ReadPerSecondHistory { get; private set; }
+        public List<long> WritePerSecondHistory { get; private set; }
+        public List<double> AverageReadLatencyPerSecondHistory { get; private set; }
+        public List<double> AverageWriteLatencyPerSecondHistory { get; private set; }
+        public HistogramMetric WriteLatencyHistogram { get; private set; }
+        public HistogramMetric ReadLatencyHistogram { get; private set; }
+
+        private long totalReadLatencyInCurrentSecond;
+        private long readEventsInCurrentSecond;
+
+        private long totalWriteLatencyInCurrentSecond;
+        private long writeEventsInCurrentSecond;
+
+        private long totalRead;
+        private long totalWrite;
+        private long lastTotalWrite;
+        private long lastTotalRead;
+
+        public long TotalRead
+        {
+            get { return totalRead; }
+        }
+        public long TotalWrite
+        {
+            get { return totalWrite; }
+        }
+
+        public DiskPerformanceStorage()
+        {
+            WriteLatencyHistogram = new HistogramMetric(HistogramMetric.SampleType.Uniform);
+            ReadLatencyHistogram = new HistogramMetric(HistogramMetric.SampleType.Uniform);
+            ReadPerSecondHistory = new List<long>();
+            WritePerSecondHistory = new List<long>();
+            AverageReadLatencyPerSecondHistory = new List<double>();
+            AverageWriteLatencyPerSecondHistory = new List<double>();
+        }
+
+        public void Update()
+        {
+            lock (this)
+            {
+                ReadPerSecondHistory.Add(totalRead - lastTotalRead);
+                WritePerSecondHistory.Add(totalWrite - lastTotalWrite);
+                lastTotalRead = totalRead;
+                lastTotalWrite = totalWrite;
+
+                AverageReadLatencyPerSecondHistory.Add(readEventsInCurrentSecond > 0 ? totalReadLatencyInCurrentSecond * 1.0 / readEventsInCurrentSecond : 0);
+                AverageWriteLatencyPerSecondHistory.Add(writeEventsInCurrentSecond > 0 ? totalWriteLatencyInCurrentSecond * 1.0 / writeEventsInCurrentSecond : 0);
+            }
+          
+        }
+
+        public void MarkRead(long size, long latency)
+        {
+            lock (this)
+            {
+                ReadLatencyHistogram.Update(latency);
+                totalRead += size;
+                readEventsInCurrentSecond++;
+                totalReadLatencyInCurrentSecond += latency;
+            }
+        }
+
+        public void MarkWrite(long size, long latency)
+        {
+            lock (this)
+            {
+                WriteLatencyHistogram.Update(latency);
+                totalWrite += size;
+                writeEventsInCurrentSecond++;
+                totalWriteLatencyInCurrentSecond += latency;
             }
         }
     }
 
     class DiskPerformanceResult
     {
-        public int ReadCount { get; private set; }
-        public int WriteCount { get; private set; }
-        public long TotalWritten { get; private set; }
+        public List<long> ReadPerSecondHistory { get; private set; }
+        public List<long> WritePerSecondHistory { get; private set; }
+        public List<double> AverageReadLatencyPerSecondHistory { get; private set; }
+        public List<double> AverageWriteLatencyPerSecondHistory { get; private set; }
+        public HistogramData ReadLatency { get; private set; }
+        public HistogramData WriteLatency { get; private set; }
+
         public long TotalRead { get; private set; }
-        public PerSecondCounterMetric WriteMetric { get; private set; }
-        public PerSecondCounterMetric ReadMetric { get; private  set; }
-        public HistogramMetric WriteHistogram { get; private set; }
-        public HistogramMetric ReadHistogram { get; private set; }
+        public long TotalWrite { get; private set; }
 
-        public DiskPerformanceResult()
+        public DiskPerformanceResult(DiskPerformanceStorage storage)
         {
-            WriteMetric = PerSecondCounterMetric.New("write");
-            ReadMetric = PerSecondCounterMetric.New("read");
-            WriteHistogram = new HistogramMetric(HistogramMetric.SampleType.Uniform);
-            ReadHistogram = new HistogramMetric(HistogramMetric.SampleType.Uniform);
-        }
-
-        public void UpdateHistograms(long readDelta, long writeDelta)
-        {
-            WriteHistogram.Update(writeDelta);
-            ReadHistogram.Update(readDelta);
-        }
-
-        public void MarkRead(int count)
-        {
-            ReadMetric.Mark(count);
-            ReadCount++;
-            TotalRead += count;
-        }
-
-        public void MarkWrite(int count)
-        {
-            WriteMetric.Mark(count);
-            WriteCount++;
-            TotalWritten += count;
+            ReadPerSecondHistory = new List<long>(storage.ReadPerSecondHistory);
+            WritePerSecondHistory = new List<long>(storage.WritePerSecondHistory);
+            AverageReadLatencyPerSecondHistory = new List<double>(storage.AverageReadLatencyPerSecondHistory);
+            AverageWriteLatencyPerSecondHistory = new List<double>(storage.AverageWriteLatencyPerSecondHistory);
+            TotalRead = storage.TotalRead;
+            TotalWrite = storage.TotalWrite;
+            ReadLatency = storage.ReadLatencyHistogram.CreateHistogramData();
+            WriteLatency = storage.WriteLatencyHistogram.CreateHistogramData();
         }
     }
 }

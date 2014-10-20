@@ -187,6 +187,10 @@ class appUrl {
         return "#admin/settings/debugInfo";
     }
 
+    static forIoTest(): string {
+        return "#admin/settings/ioTest";
+    }
+
     static forStudioConfig(): string {
         return "#admin/settings/studioConfig";
     }
