@@ -169,19 +169,20 @@ namespace Raven.Database.Server.Tenancy
 
 		public static bool IsNotLicensed()
 	    {
-		    string ravenFsValue;
-			var license = ValidateLicense.CurrentLicense;
-		    if (license.IsCommercial == false)
-		    {
-		        return false; // we allow the use of ravenfs in the OSS version
-		    }
-		    if (license.Attributes.TryGetValue("ravenfs", out ravenFsValue))
-		    {
-			    bool active;
-		        if (bool.TryParse(ravenFsValue, out active))
-		            return active == false;
-		    }
-			return true;
+			//string ravenFsValue;
+			//var license = ValidateLicense.CurrentLicense;
+			//if (license.IsCommercial == false)
+			//{
+			//	return false; // we allow the use of ravenfs in the OSS version
+			//}
+			//if (license.Attributes.TryGetValue("ravenfs", out ravenFsValue))
+			//{
+			//	bool active;
+			//	if (bool.TryParse(ravenFsValue, out active))
+			//		return active == false;
+			//}
+			//return true;
+			return false;
 	    }
 
 	    protected override DateTime LastWork(RavenFileSystem resource)
