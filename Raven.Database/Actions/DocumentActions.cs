@@ -241,129 +241,132 @@ namespace Raven.Database.Actions
 
         public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId, CancellationToken token)
         {
-            var documents = 0;
-            TransactionalStorage.Batch(accessor =>
-            {
-                Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
-                {
-                    OperationId = operationId,
-                    Type = DocumentChangeTypes.BulkInsertStarted
-                });
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, WorkContext.CancellationToken))
-                foreach (var docs in docBatches)
-                {
-                    cts.Token.ThrowIfCancellationRequested();
+			var documents = 0;
 
-                    using (Database.DocumentLock.Lock())
-                    {
-                        var inserts = 0;
-                        var batch = 0;
-                        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
+			{
+				OperationId = operationId,
+				Type = DocumentChangeTypes.BulkInsertStarted
+			});
+	        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, WorkContext.CancellationToken))
+	        {
+		        foreach (var docs in docBatches)
+		        {
+			        cts.Token.ThrowIfCancellationRequested();
+
+			        using (Database.DocumentLock.Lock())
+			        {
+				        var docsToInsert = docs.ToArray();
+						var batch = 0;
+						var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 						var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
 
-                        var docsToInsert = docs.ToArray();
+				        TransactionalStorage.Batch(accessor =>
+				        {
+					        var inserts = 0;
+					        
+					        foreach (var doc in docsToInsert)
+					        {
+						        try
+						        {
+							        if (string.IsNullOrEmpty(doc.Key))
+								        throw new InvalidOperationException("Cannot try to bulk insert a document without a key");
 
-                        foreach (var doc in docsToInsert)
-                        {
-                            try
-                            {
-                                if (string.IsNullOrEmpty(doc.Key))
-                                    throw new InvalidOperationException("Cannot try to bulk insert a document without a key");
+							        RemoveReservedProperties(doc.DataAsJson);
+							        RemoveMetadataReservedProperties(doc.Metadata);
 
-                                RemoveReservedProperties(doc.DataAsJson);
-                                RemoveMetadataReservedProperties(doc.Metadata);
+							        if (options.CheckReferencesInIndexes)
+								        keys.Add(doc.Key);
+							        documents++;
+							        batch++;
+							        AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
 
-                                if (options.CheckReferencesInIndexes)
-                                    keys.Add(doc.Key);
-                                documents++;
-                                batch++;
-                                AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
+							        if (options.OverwriteExisting && options.SkipOverwriteIfUnchanged)
+							        {
+								        var existingDoc = accessor.Documents.DocumentByKey(doc.Key);
 
-								if (options.OverwriteExisting && options.SkipOverwriteIfUnchanged)
-								{
-									var existingDoc = accessor.Documents.DocumentByKey(doc.Key);
+								        if (IsTheSameDocument(doc, existingDoc))
+									        continue;
+							        }
 
-									if (IsTheSameDocument(doc, existingDoc)) 
-										continue;
-								}
+							        foreach (var trigger in Database.PutTriggers)
+							        {
+								        trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
+							        }
 
-	                            foreach (var trigger in Database.PutTriggers)
-                                {
-                                    trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
-                                }
+							        var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
+							        if (result.Updated == false)
+								        inserts++;
 
-	                            var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
-                                if (result.Updated == false)
-                                    inserts++;
+							        doc.Etag = result.Etag;
 
-                                doc.Etag = result.Etag;
+							        doc.Metadata.EnsureSnapshot(
+								        "Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+							        doc.DataAsJson.EnsureSnapshot(
+								        "Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 
-                                doc.Metadata.EnsureSnapshot(
-                                "Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
-                                doc.DataAsJson.EnsureSnapshot(
-                                "Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+							        var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
 
-	                            var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
+							        Etag highestEtagInCollection;
+							        if (string.IsNullOrEmpty(entityName) == false && (collectionsAndEtags.TryGetValue(entityName, out highestEtagInCollection) == false ||
+							                                                          result.Etag.CompareTo(highestEtagInCollection) > 0))
+							        {
+								        collectionsAndEtags[entityName] = result.Etag;
+							        }
 
-	                            Etag highestEtagInCollection;
-	                            if (string.IsNullOrEmpty(entityName) == false && (collectionsAndEtags.TryGetValue(entityName, out highestEtagInCollection) == false || 
-									result.Etag.CompareTo(highestEtagInCollection) > 0))
-	                            {
-		                            collectionsAndEtags[entityName] = result.Etag;
-	                            }
+							        foreach (var trigger in Database.PutTriggers)
+							        {
+								        trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
+							        }
+						        }
+						        catch (Exception e)
+						        {
+							        Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
+							        {
+								        OperationId = operationId,
+								        Message = e.Message,
+								        Etag = doc.Etag,
+								        Id = doc.Key,
+								        Type = DocumentChangeTypes.BulkInsertError
+							        });
 
-                                foreach (var trigger in Database.PutTriggers)
-                                {
-                                    trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
-                                {
-                                    OperationId = operationId,
-                                    Message = e.Message,
-                                    Etag = doc.Etag,
-                                    Id = doc.Key,
-                                    Type = DocumentChangeTypes.BulkInsertError
-                                });
+							        throw;
+						        }
+					        }
 
-                                throw;
-                            }
-                        }
+					        if (options.CheckReferencesInIndexes)
+					        {
+						        foreach (var key in keys)
+						        {
+							        Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, accessor);
+						        }
+					        }
 
-                        if (options.CheckReferencesInIndexes)
-                        {
-                            foreach (var key in keys)
-                            {
-                                Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, accessor);
-                            }
-                        }
+					        accessor.Documents.IncrementDocumentCount(inserts);
+				        });
 
-                        accessor.Documents.IncrementDocumentCount(inserts);
-                        accessor.General.PulseTransaction();
+						foreach (var collectionEtagPair in collectionsAndEtags)
+						{
+							Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
+						}
 
-	                    foreach (var collectionEtagPair in collectionsAndEtags)
-	                    {
-                            Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
-	                    }
+						WorkContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
+						WorkContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
+						WorkContext.UpdateFoundWork();
+			        }
+		        }
+	        }
 
-                        WorkContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
-                        WorkContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
-                        WorkContext.UpdateFoundWork();
-                    }
-                }
+	        Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
+			{
+				OperationId = operationId,
+				Type = DocumentChangeTypes.BulkInsertEnded
+			});
 
-                Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
-                {
-                    OperationId = operationId,
-                    Type = DocumentChangeTypes.BulkInsertEnded
-                });
-                if (documents == 0)
-                    return;
-                WorkContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
-            });
-            return documents;
+			if (documents > 0)
+				WorkContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
+
+			return documents;
         }
 
 	    private bool IsTheSameDocument(JsonDocument doc, JsonDocument existingDoc)
