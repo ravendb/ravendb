@@ -24,7 +24,7 @@ using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
-	public class DocumentsStorageActions : StorageActionsBase, IDocumentStorageActions
+	internal class DocumentsStorageActions : StorageActionsBase, IDocumentStorageActions
 	{
 		private readonly Reference<WriteBatch> writeBatch;
 
@@ -629,35 +629,27 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				    stat.TotalSize += size;
 				    if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
 				    {
-                        stat.System++;
-				        stat.SystemSize += size;
+                        stat.System.Update(size, doc.Key);
 				    }
 						
-
 					var metadata = ReadDocumentMetadata(key);
 
 					var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
 				    if (string.IsNullOrEmpty(entityName))
 				    {
-                        stat.NoCollection++;
-				        stat.NoCollectionSize += size;
+                        stat.NoCollection.Update(size, doc.Key);
 				    }
-				        
 				    else
 				    {
-  
-                        stat.IncrementCollection(entityName, size);
+                        stat.IncrementCollection(entityName, size, doc.Key);
  				    }
-						
 
 					if (metadata.Metadata.ContainsKey(Constants.RavenDeleteMarker))
 						stat.Tombstones++;
 
 				}
 				while (iterator.MoveNext());
-                var sortedStat = stat.Collections.OrderByDescending(x => x.Value.Size).ToDictionary(x => x.Key, x => x.Value);
                 stat.TimeToGenerate = sp.Elapsed;
-			    stat.Collections = sortedStat;
                 return stat;
 			}
 		}

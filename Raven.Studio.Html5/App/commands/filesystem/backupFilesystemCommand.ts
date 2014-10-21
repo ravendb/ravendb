@@ -3,6 +3,7 @@ import filesystem = require("models/filesystem/filesystem");
 import document = require("models/document");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import appUrl = require("common/appUrl");
+import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
 
 class backupFilesystemCommand extends commandBase {
 
@@ -28,13 +29,14 @@ class backupFilesystemCommand extends commandBase {
     }
 
     private getBackupStatus(result: JQueryDeferred<any>) {
-        new getDocumentWithMetadataCommand("Raven/FileSystem/Backup/Status/" + this.fs.name, appUrl.getSystemDatabase())
+        new getConfigurationByKeyCommand(this.fs, "Raven/Backup/Status")
             .execute()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to fetch backup status!", response.responseText, response.statusText);
                 result.reject();
             })
-            .done((backupStatus: backupStatusDto)=> {
+            .done((backupStatusAsString: string) => {
+                var backupStatus: backupStatusDto = JSON.parse(backupStatusAsString);
                 this.updateBackupStatus(backupStatus);
                 if (backupStatus.IsRunning) {
                     setTimeout(() => this.getBackupStatus(result), 1000);

@@ -36,7 +36,7 @@ using Spatial4n.Core.Exceptions;
 
 namespace Raven.Database.Indexing
 {
-	public class MapReduceIndex : Index
+	internal class MapReduceIndex : Index
 	{
 		readonly JsonSerializer jsonSerializer;
 

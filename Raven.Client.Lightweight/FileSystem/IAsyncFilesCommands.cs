@@ -106,6 +106,7 @@ namespace Raven.Client.FileSystem
         Task EnsureFileSystemExistsAsync(string fileSystem);        
         Task<long> StartRestore(FilesystemRestoreRequest restoreRequest);
         Task StartBackup(string backupLocation, FileSystemDocument databaseDocument, bool incremental, string filesystemName);
+        Task<long> StartCompact(string filesystemName);
     }
 
     public interface IAsyncFilesConfigurationCommands : IDisposable, IHoldProfilingInformation

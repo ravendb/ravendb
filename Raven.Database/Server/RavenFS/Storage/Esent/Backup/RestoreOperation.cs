@@ -16,7 +16,7 @@ using System.Linq;
 
 namespace Raven.Database.Server.RavenFS.Storage.Esent.Backup
 {
-	public class RestoreOperation : BaseRestoreOperation
+	internal class RestoreOperation : BaseRestoreOperation
 	{
         public RestoreOperation(FilesystemRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
             : base(restoreRequest, configuration, operationOutputCallback)
@@ -66,7 +66,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent.Backup
 				if (_restoreRequest.Defrag)
 				{
 					output("Esent Restore: Begin Database Compaction");
-					Raven.Storage.Esent.TransactionalStorage.Compact(Configuration, CompactStatusCallback);
+					TransactionalStorage.Compact(Configuration, CompactStatusCallback);
 					output("Esent Restore: Database Compaction Completed");
 				}
 			}

@@ -100,7 +100,7 @@ namespace Raven.Imports.Newtonsoft.Json
 			_charPos++;
 
 			ShiftBufferIfNeeded();
-			await ReadStringIntoBuffer(quote);
+			await ReadStringIntoBuffer(quote).ConfigureAwait(false);
 
 			if (_readType == ReadType.ReadAsBytes)
 			{
@@ -327,7 +327,7 @@ namespace Raven.Imports.Newtonsoft.Json
 		private async Task<bool> EnsureChars(int relativePosition, bool append)
 		{
 			if (_charPos + relativePosition >= _charsUsed)
-				return await ReadChars(relativePosition, append);
+				return await ReadChars(relativePosition, append).ConfigureAwait(false);
 
 			return true;
 		}
@@ -345,7 +345,7 @@ namespace Raven.Imports.Newtonsoft.Json
 			// repeat read until the required text is returned or the reader is out of content
 			do
 			{
-				int charsRead = await ReadData(append, charsRequired - totalCharsRead);
+				int charsRead = await ReadData(append, charsRequired - totalCharsRead).ConfigureAwait(false);
 
 				// no more content
 				if (charsRead == 0)
@@ -386,7 +386,7 @@ namespace Raven.Imports.Newtonsoft.Json
 		public async Task<bool> ReadAsync()
 		{
 			_readType = ReadType.Read;
-			if (!await ReadInternal())
+			if (await ReadInternal().ConfigureAwait(false) == false)
 			{
 				SetToken(JsonToken.None);
 				return false;
@@ -403,25 +403,25 @@ namespace Raven.Imports.Newtonsoft.Json
 		/// </returns>
 		public async Task<byte[]> ReadAsBytes()
 		{
-			return await ReadAsBytesInternal();
+			return await ReadAsBytesInternal().ConfigureAwait(false);
 		}
 
 		/// <summary>
 		/// Reads the next JSON token from the stream as a <see cref="Nullable{Decimal}"/>.
 		/// </summary>
 		/// <returns>A <see cref="Nullable{Decimal}"/>. This method will return <c>null</c> at the end of an array.</returns>
-		public  async Task<decimal?> ReadAsDecimal()
+		public async Task<decimal?> ReadAsDecimal()
 		{
-			return await ReadAsDecimalInternal();
+			return await ReadAsDecimalInternal().ConfigureAwait(false);
 		}
 
 		/// <summary>
 		/// Reads the next JSON token from the stream as a <see cref="Nullable{Int32}"/>.
 		/// </summary>
 		/// <returns>A <see cref="Nullable{Int32}"/>. This method will return <c>null</c> at the end of an array.</returns>
-		public  async Task<int?> ReadAsInt32()
+		public async Task<int?> ReadAsInt32()
 		{
-			return await ReadAsInt32Internal();
+			return await ReadAsInt32Internal().ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -430,7 +430,7 @@ namespace Raven.Imports.Newtonsoft.Json
 		/// <returns>A <see cref="String"/>. This method will return <c>null</c> at the end of an array.</returns>
 		public async Task<string> ReadAsString()
 		{
-			return await ReadAsStringInternal();
+			return await ReadAsStringInternal().ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -439,7 +439,7 @@ namespace Raven.Imports.Newtonsoft.Json
 		/// <returns>A <see cref="String"/>. This method will return <c>null</c> at the end of an array.</returns>
 		public async Task<DateTime?> ReadAsDateTime()
 		{
-			return await ReadAsDateTimeInternal();
+			return await ReadAsDateTimeInternal().ConfigureAwait(false);
 		}
 
 #if !NET20
@@ -449,7 +449,7 @@ namespace Raven.Imports.Newtonsoft.Json
 		/// <returns>A <see cref="DateTimeOffset"/>. This method will return <c>null</c> at the end of an array.</returns>
 		public async Task<DateTimeOffset?> ReadAsDateTimeOffset()
 		{
-			return await ReadAsDateTimeOffsetInternal();
+			return await ReadAsDateTimeOffsetInternal().ConfigureAwait(false);
 		}
 #endif
 
@@ -465,29 +465,29 @@ namespace Raven.Imports.Newtonsoft.Json
 					case JsonReader.State.ArrayStart:
 					case JsonReader.State.Constructor:
 					case JsonReader.State.ConstructorStart:
-						return await ParseValue();
+						return await ParseValue().ConfigureAwait(false);
 					case JsonReader.State.Complete:
 						break;
 					case JsonReader.State.Object:
 					case JsonReader.State.ObjectStart:
-						return await ParseObject();
+						return await ParseObject().ConfigureAwait(false);
 					case JsonReader.State.PostValue:
 						// returns true if it hits
 						// end of object or array
-						if (await ParsePostValue())
+						if (await ParsePostValue().ConfigureAwait(false))
 							return true;
 						break;
 					case JsonReader.State.Finished:
-						if (await EnsureChars(0, false))
+						if (await EnsureChars(0, false).ConfigureAwait(false))
 						{
-							await EatWhitespace(false);
+							await EatWhitespace(false).ConfigureAwait(false);
 							if (_isEndOfFile)
 							{
 								return false;
 							}
 							if (_chars[_charPos] == '/')
 							{
-								await ParseComment();
+								await ParseComment().ConfigureAwait(false);
 								return true;
 							}
 							else
@@ -501,7 +501,7 @@ namespace Raven.Imports.Newtonsoft.Json
 					case JsonReader.State.Error:
 						break;
 					default:
-						throw JsonReaderException.Create(this,Path, "Unexpected state: {0}.".FormatWith(CultureInfo.InvariantCulture, CurrentState), null);
+						throw JsonReaderException.Create(this, Path, "Unexpected state: {0}.".FormatWith(CultureInfo.InvariantCulture, CurrentState), null);
 				}
 			}
 		}
@@ -522,16 +522,16 @@ namespace Raven.Imports.Newtonsoft.Json
 						{
 							charPos--;
 
-							if (await ReadData(true) == 0)
+							if (await ReadData(true).ConfigureAwait(false) == 0)
 							{
 								_charPos = charPos;
-								throw JsonReaderException.Create(this,Path, "Unterminated string. Expected delimiter: {0}.".FormatWith(CultureInfo.InvariantCulture, quote), null);
+								throw JsonReaderException.Create(this, Path, "Unterminated string. Expected delimiter: {0}.".FormatWith(CultureInfo.InvariantCulture, quote), null);
 							}
 						}
 						break;
 					case '\\':
 						_charPos = charPos;
-						if (! await EnsureChars(0, true))
+						if (!await EnsureChars(0, true).ConfigureAwait(false))
 						{
 							_charPos = charPos;
 							throw JsonReaderException.Create(this, Path, "Unterminated string. Expected delimiter: {0}.".FormatWith(CultureInfo.InvariantCulture, quote), null);
@@ -579,7 +579,7 @@ namespace Raven.Imports.Newtonsoft.Json
 							case 'u':
 								charPos++;
 								_charPos = charPos;
-								writeChar = await ParseUnicode();
+								writeChar = await ParseUnicode().ConfigureAwait(false);
 
 								if (StringUtils.IsLowSurrogate(writeChar))
 								{
@@ -596,12 +596,12 @@ namespace Raven.Imports.Newtonsoft.Json
 										anotherHighSurrogate = false;
 
 										// potential start of a surrogate pair
-										if (await EnsureChars(2, true) && _chars[_charPos] == '\\' && _chars[_charPos + 1] == 'u')
+										if (await EnsureChars(2, true).ConfigureAwait(false) && _chars[_charPos] == '\\' && _chars[_charPos + 1] == 'u')
 										{
 											char highSurrogate = writeChar;
 
 											_charPos += 2;
-											writeChar = await ParseUnicode();
+											writeChar = await ParseUnicode().ConfigureAwait(false);
 
 											if (StringUtils.IsLowSurrogate(writeChar))
 											{
@@ -651,7 +651,7 @@ namespace Raven.Imports.Newtonsoft.Json
 						break;
 					case StringUtils.CarriageReturn:
 						_charPos = charPos - 1;
-						await ProcessCarriageReturn(true);
+						await ProcessCarriageReturn(true).ConfigureAwait(false);
 						charPos = _charPos;
 						break;
 					case StringUtils.LineFeed:
@@ -702,7 +702,7 @@ namespace Raven.Imports.Newtonsoft.Json
 		private async Task<char> ParseUnicode()
 		{
 			char writeChar;
-			if (await EnsureChars(4, true))
+			if (await EnsureChars(4, true).ConfigureAwait(false))
 			{
 				string hexValues = new string(_chars, _charPos, 4);
 				char hexChar = Convert.ToChar(int.Parse(hexValues, NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo));
@@ -730,7 +730,7 @@ namespace Raven.Imports.Newtonsoft.Json
 						{
 							charPos--;
 							_charPos = charPos;
-							if (await ReadData(true) == 0)
+							if (await ReadData(true).ConfigureAwait(false) == 0)
 								return;
 						}
 						break;
@@ -788,7 +788,7 @@ namespace Raven.Imports.Newtonsoft.Json
 					case '\0':
 						if (_charsUsed == _charPos)
 						{
-							if (await ReadData(false) == 0)
+							if (await ReadData(false).ConfigureAwait(false) == 0)
 							{
 								_currentState = JsonReader.State.Finished;
 								return false;
@@ -812,7 +812,7 @@ namespace Raven.Imports.Newtonsoft.Json
 						SetToken(JsonToken.EndConstructor);
 						return true;
 					case '/':
-						await ParseComment();
+						await ParseComment().ConfigureAwait(false);
 						return true;
 					case ',':
 						_charPos++;
@@ -826,7 +826,7 @@ namespace Raven.Imports.Newtonsoft.Json
 						_charPos++;
 						break;
 					case StringUtils.CarriageReturn:
-						await ProcessCarriageReturn(false);
+						await ProcessCarriageReturn(false).ConfigureAwait(false);
 						break;
 					case StringUtils.LineFeed:
 						ProcessLineFeed();
@@ -857,7 +857,7 @@ namespace Raven.Imports.Newtonsoft.Json
 					case '\0':
 						if (_charsUsed == _charPos)
 						{
-							if (await ReadData(false) == 0)
+							if (await ReadData(false).ConfigureAwait(false) == 0)
 								return false;
 						}
 						else
@@ -870,10 +870,10 @@ namespace Raven.Imports.Newtonsoft.Json
 						_charPos++;
 						return true;
 					case '/':
-						await ParseComment();
+						await ParseComment().ConfigureAwait(false);
 						return true;
 					case StringUtils.CarriageReturn:
-						await ProcessCarriageReturn(false);
+						await ProcessCarriageReturn(false).ConfigureAwait(false);
 						break;
 					case StringUtils.LineFeed:
 						ProcessLineFeed();
@@ -891,7 +891,7 @@ namespace Raven.Imports.Newtonsoft.Json
 						}
 						else
 						{
-							return await ParseProperty();
+							return await ParseProperty().ConfigureAwait(false);
 						}
 						break;
 				}
@@ -908,13 +908,13 @@ namespace Raven.Imports.Newtonsoft.Json
 				_charPos++;
 				quoteChar = firstChar;
 				ShiftBufferIfNeeded();
-				await ReadStringIntoBuffer(quoteChar);
+				await ReadStringIntoBuffer(quoteChar).ConfigureAwait(false);
 			}
 			else if (ValidIdentifierChar(firstChar))
 			{
 				quoteChar = '\0';
 				ShiftBufferIfNeeded();
-				await ParseUnquotedProperty();
+				await ParseUnquotedProperty().ConfigureAwait(false);
 			}
 			else
 			{
@@ -923,7 +923,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
 			string propertyName = _stringReference.ToString();
 
-			await EatWhitespace(false);
+			await EatWhitespace(false).ConfigureAwait(false);
 
 			if (_chars[_charPos] != ':')
 				throw JsonReaderException.Create(this, Path, "Invalid character after parsing property name. Expected ':' but got: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]), null);
@@ -954,7 +954,7 @@ namespace Raven.Imports.Newtonsoft.Json
 					case '\0':
 						if (_charsUsed == _charPos)
 						{
-							if (await ReadData(true) == 0)
+							if (await ReadData(true).ConfigureAwait(false) == 0)
 								throw JsonReaderException.Create(this, Path, "Unexpected end while parsing unquoted property name.", null);
 
 							break;
@@ -992,7 +992,7 @@ namespace Raven.Imports.Newtonsoft.Json
 					case '\0':
 						if (_charsUsed == _charPos)
 						{
-							if (await ReadData(false) == 0)
+							if (await ReadData(false).ConfigureAwait(false) == 0)
 								return false;
 						}
 						else
@@ -1002,23 +1002,23 @@ namespace Raven.Imports.Newtonsoft.Json
 						break;
 					case '"':
 					case '\'':
-						await ParseString(currentChar);
+						await ParseString(currentChar).ConfigureAwait(false);
 						return true;
 					case 't':
-						await ParseTrue();
+						await ParseTrue().ConfigureAwait(false);
 						return true;
 					case 'f':
-						await ParseFalse();
+						await ParseFalse().ConfigureAwait(false);
 						return true;
 					case 'n':
-						if (await EnsureChars(1, true))
+						if (await EnsureChars(1, true).ConfigureAwait(false))
 						{
 							char next = _chars[_charPos + 1];
 
 							if (next == 'u')
-								await ParseNull();
+								await ParseNull().ConfigureAwait(false);
 							else if (next == 'e')
-								await ParseConstructor();
+								await ParseConstructor().ConfigureAwait(false);
 							else
 								throw JsonReaderException.Create(this, Path, "Unexpected character encountered while parsing value: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]), null);
 						}
@@ -1028,22 +1028,22 @@ namespace Raven.Imports.Newtonsoft.Json
 						}
 						return true;
 					case 'N':
-						await ParseNumberNaN();
+						await ParseNumberNaN().ConfigureAwait(false);
 						return true;
 					case 'I':
-						await ParseNumberPositiveInfinity();
+						await ParseNumberPositiveInfinity().ConfigureAwait(false);
 						return true;
 					case '-':
-						if (await EnsureChars(1, true) && _chars[_charPos + 1] == 'I')
-							await ParseNumberNegativeInfinity();
+						if (await EnsureChars(1, true).ConfigureAwait(false) && _chars[_charPos + 1] == 'I')
+							await ParseNumberNegativeInfinity().ConfigureAwait(false);
 						else
-							await ParseNumber();
+							await ParseNumber().ConfigureAwait(false);
 						return true;
 					case '/':
-						await ParseComment();
+						await ParseComment().ConfigureAwait(false);
 						return true;
 					case 'u':
-						await ParseUndefined();
+						await ParseUndefined().ConfigureAwait(false);
 						return true;
 					case '{':
 						_charPos++;
@@ -1067,7 +1067,7 @@ namespace Raven.Imports.Newtonsoft.Json
 						SetToken(JsonToken.EndConstructor);
 						return true;
 					case StringUtils.CarriageReturn:
-						await ProcessCarriageReturn(false);
+						await ProcessCarriageReturn(false).ConfigureAwait(false);
 						break;
 					case StringUtils.LineFeed:
 						ProcessLineFeed();
@@ -1086,7 +1086,7 @@ namespace Raven.Imports.Newtonsoft.Json
 						}
 						else if (char.IsNumber(currentChar) || currentChar == '-' || currentChar == '.')
 						{
-							await ParseNumber();
+							await ParseNumber().ConfigureAwait(false);
 							return true;
 						}
 						else
@@ -1107,7 +1107,7 @@ namespace Raven.Imports.Newtonsoft.Json
 		{
 			_charPos++;
 
-			if (await EnsureChars(1, append) && _chars[_charPos] == StringUtils.LineFeed)
+			if (await EnsureChars(1, append).ConfigureAwait(false) && _chars[_charPos] == StringUtils.LineFeed)
 				_charPos++;
 
 			OnNewLine(_charPos);
@@ -1126,7 +1126,7 @@ namespace Raven.Imports.Newtonsoft.Json
 					case '\0':
 						if (_charsUsed == _charPos)
 						{
-							if (await ReadData(false) == 0)
+							if (await ReadData(false).ConfigureAwait(false) == 0)
 								finished = true;
 						}
 						else
@@ -1135,7 +1135,7 @@ namespace Raven.Imports.Newtonsoft.Json
 						}
 						break;
 					case StringUtils.CarriageReturn:
-						await ProcessCarriageReturn(false);
+						await ProcessCarriageReturn(false).ConfigureAwait(false);
 						break;
 					case StringUtils.LineFeed:
 						ProcessLineFeed();
@@ -1159,9 +1159,9 @@ namespace Raven.Imports.Newtonsoft.Json
 
 		private async Task ParseConstructor()
 		{
-			if (await MatchValueWithTrailingSeperator("new"))
+			if (await MatchValueWithTrailingSeperator("new").ConfigureAwait(false))
 			{
-				await EatWhitespace(false);
+				await EatWhitespace(false).ConfigureAwait(false);
 
 				int initialPosition = _charPos;
 				int endPosition;
@@ -1173,7 +1173,7 @@ namespace Raven.Imports.Newtonsoft.Json
 					{
 						if (_charsUsed == _charPos)
 						{
-							if (await ReadData(true) == 0)
+							if (await ReadData(true).ConfigureAwait(false) == 0)
 								throw JsonReaderException.Create(this, Path, "Unexpected end while parsing constructor.", null);
 						}
 						else
@@ -1190,7 +1190,7 @@ namespace Raven.Imports.Newtonsoft.Json
 					else if (currentChar == StringUtils.CarriageReturn)
 					{
 						endPosition = _charPos;
-						await ProcessCarriageReturn(true);
+						await ProcessCarriageReturn(true).ConfigureAwait(false);
 						break;
 					}
 					else if (currentChar == StringUtils.LineFeed)
@@ -1219,7 +1219,7 @@ namespace Raven.Imports.Newtonsoft.Json
 				_stringReference = new StringReference(_chars, initialPosition, endPosition - initialPosition);
 				string constructorName = _stringReference.ToString();
 
-				await EatWhitespace(false);
+				await EatWhitespace(false).ConfigureAwait(false);
 
 				if (_chars[_charPos] != '(')
 					throw JsonReaderException.Create(this, Path, "Unexpected character while parsing constructor: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]), null);
@@ -1239,7 +1239,7 @@ namespace Raven.Imports.Newtonsoft.Json
 			char firstChar = _chars[_charPos];
 			int initialPosition = _charPos;
 
-			await ReadNumberIntoBuffer();
+			await ReadNumberIntoBuffer().ConfigureAwait(false);
 
 			_stringReference = new StringReference(_chars, initialPosition, _charPos - initialPosition);
 
@@ -1329,16 +1329,16 @@ namespace Raven.Imports.Newtonsoft.Json
 
 					// it's faster to do 3 indexof with single characters than an indexofany
 					if (number.IndexOf('E') != -1 || number.IndexOf('e') != -1)
-                    {
-                        numberValue = Convert.ToDouble(number, CultureInfo.InvariantCulture);
-                        numberType = JsonToken.Float;
-                    }
-                    else if (number.IndexOf('.') != -1)
+					{
+						numberValue = Convert.ToDouble(number, CultureInfo.InvariantCulture);
+						numberType = JsonToken.Float;
+					}
+					else if (number.IndexOf('.') != -1)
 					{
 						numberValue = Convert.ToDecimal(number, CultureInfo.InvariantCulture);
 						numberType = JsonToken.Float;
 					}
-                    else
+					else
 					{
 						try
 						{
@@ -1364,8 +1364,8 @@ namespace Raven.Imports.Newtonsoft.Json
 			// should have already parsed / character before reaching this method
 			_charPos++;
 
-			if (!await EnsureChars(1, false) || _chars[_charPos] != '*')
-				throw JsonReaderException.Create(this, Path,"Error parsing comment. Expected: *, got {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]), null);
+			if (!await EnsureChars(1, false).ConfigureAwait(false) || _chars[_charPos] != '*')
+				throw JsonReaderException.Create(this, Path, "Error parsing comment. Expected: *, got {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]), null);
 			else
 				_charPos++;
 
@@ -1380,7 +1380,7 @@ namespace Raven.Imports.Newtonsoft.Json
 					case '\0':
 						if (_charsUsed == _charPos)
 						{
-							if (await ReadData(true) == 0)
+							if (await ReadData(true).ConfigureAwait(false) == 0)
 								throw JsonReaderException.Create(this, Path, "Unexpected end while parsing comment.", null);
 						}
 						else
@@ -1391,7 +1391,7 @@ namespace Raven.Imports.Newtonsoft.Json
 					case '*':
 						_charPos++;
 
-						if (await EnsureChars(0, true))
+						if (await EnsureChars(0, true).ConfigureAwait(false))
 						{
 							if (_chars[_charPos] == '/')
 							{
@@ -1403,7 +1403,7 @@ namespace Raven.Imports.Newtonsoft.Json
 						}
 						break;
 					case StringUtils.CarriageReturn:
-						await ProcessCarriageReturn(true);
+						await ProcessCarriageReturn(true).ConfigureAwait(false);
 						break;
 					case StringUtils.LineFeed:
 						ProcessLineFeed();
@@ -1421,7 +1421,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
 		private async Task<bool> MatchValue(string value)
 		{
-			if (!await EnsureChars(value.Length - 1, true))
+			if (!await EnsureChars(value.Length - 1, true).ConfigureAwait(false))
 				return false;
 
 			for (int i = 0; i < value.Length; i++)
@@ -1440,15 +1440,15 @@ namespace Raven.Imports.Newtonsoft.Json
 		private async Task<bool> MatchValueWithTrailingSeperator(string value)
 		{
 			// will match value and then move to the next character, checking that it is a seperator character
-			bool match = await MatchValue(value);
+			bool match = await MatchValue(value).ConfigureAwait(false);
 
 			if (!match)
 				return false;
 
-			if (!await EnsureChars(0, false))
+			if (!await EnsureChars(0, false).ConfigureAwait(false))
 				return true;
 
-			return await IsSeperator(_chars[_charPos]) || _chars[_charPos] == '\0';
+			return await IsSeperator(_chars[_charPos]).ConfigureAwait(false) || _chars[_charPos] == '\0';
 		}
 
 		private async Task<bool> IsSeperator(char c)
@@ -1461,7 +1461,7 @@ namespace Raven.Imports.Newtonsoft.Json
 					return true;
 				case '/':
 					// check next character to see if start of a comment
-					if (!await EnsureChars(1, false))
+					if (!await EnsureChars(1, false).ConfigureAwait(false))
 						return false;
 
 					return (_chars[_charPos + 1] == '*');
@@ -1488,7 +1488,7 @@ namespace Raven.Imports.Newtonsoft.Json
 			// check characters equal 'true'
 			// and that it is followed by either a seperator character
 			// or the text ends
-			if (await MatchValueWithTrailingSeperator(JsonConvert.True))
+			if (await MatchValueWithTrailingSeperator(JsonConvert.True).ConfigureAwait(false))
 			{
 				SetToken(JsonToken.Boolean, true);
 			}
@@ -1500,7 +1500,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
 		private async Task ParseNull()
 		{
-			if (await MatchValueWithTrailingSeperator(JsonConvert.Null))
+			if (await MatchValueWithTrailingSeperator(JsonConvert.Null).ConfigureAwait(false))
 			{
 				SetToken(JsonToken.Null);
 			}
@@ -1512,7 +1512,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
 		private async Task ParseUndefined()
 		{
-			if (await MatchValueWithTrailingSeperator(JsonConvert.Undefined))
+			if (await MatchValueWithTrailingSeperator(JsonConvert.Undefined).ConfigureAwait(false))
 			{
 				SetToken(JsonToken.Undefined);
 			}
@@ -1524,7 +1524,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
 		private async Task ParseFalse()
 		{
-			if (await MatchValueWithTrailingSeperator(JsonConvert.False))
+			if (await MatchValueWithTrailingSeperator(JsonConvert.False).ConfigureAwait(false))
 			{
 				SetToken(JsonToken.Boolean, false);
 			}
@@ -1536,7 +1536,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
 		private async Task ParseNumberNegativeInfinity()
 		{
-			if (await MatchValueWithTrailingSeperator(JsonConvert.NegativeInfinity))
+			if (await MatchValueWithTrailingSeperator(JsonConvert.NegativeInfinity).ConfigureAwait(false))
 			{
 				SetToken(JsonToken.Float, double.NegativeInfinity);
 			}
@@ -1548,7 +1548,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
 		private async Task ParseNumberPositiveInfinity()
 		{
-			if (await MatchValueWithTrailingSeperator(JsonConvert.PositiveInfinity))
+			if (await MatchValueWithTrailingSeperator(JsonConvert.PositiveInfinity).ConfigureAwait(false))
 			{
 				SetToken(JsonToken.Float, double.PositiveInfinity);
 			}
@@ -1560,7 +1560,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
 		private async Task ParseNumberNaN()
 		{
-			if (await MatchValueWithTrailingSeperator(JsonConvert.NaN))
+			if (await MatchValueWithTrailingSeperator(JsonConvert.NaN).ConfigureAwait(false))
 			{
 				SetToken(JsonToken.Float, double.NaN);
 			}
@@ -1575,9 +1575,9 @@ namespace Raven.Imports.Newtonsoft.Json
 		/// </summary>
 		public virtual void Close()
 		{
-			   _currentState = JsonReader.State.Closed;
-      _tokenType = JsonToken.None;
-      _value = null;
+			_currentState = JsonReader.State.Closed;
+			_tokenType = JsonToken.None;
+			_value = null;
 
 			if (CloseInput && _reader != null)
 #if !(PORTABLE)
@@ -1630,734 +1630,734 @@ namespace Raven.Imports.Newtonsoft.Json
 		}
 
 
-		  // current Token data
-    private JsonToken _tokenType;
-    private object _value;
-    private char _quoteChar;
-    internal JsonReader.State _currentState;
-    internal ReadType _readType;
-    private JsonPosition _currentPosition;
-    private CultureInfo _culture;
-    private DateTimeZoneHandling _dateTimeZoneHandling;
-    private int? _maxDepth;
-    private bool _hasExceededMaxDepth;
-    internal DateParseHandling _dateParseHandling;
-    private readonly List<JsonPosition> _stack;
+		// current Token data
+		private JsonToken _tokenType;
+		private object _value;
+		private char _quoteChar;
+		internal JsonReader.State _currentState;
+		internal ReadType _readType;
+		private JsonPosition _currentPosition;
+		private CultureInfo _culture;
+		private DateTimeZoneHandling _dateTimeZoneHandling;
+		private int? _maxDepth;
+		private bool _hasExceededMaxDepth;
+		internal DateParseHandling _dateParseHandling;
+		private readonly List<JsonPosition> _stack;
 
-    /// <summary>
-    /// Gets the current reader JsonReader.State.
-    /// </summary>
-    /// <value>The current reader JsonReader.State.</value>
-    internal JsonReader.State CurrentState
-    {
-      get { return _currentState; }
-    }
+		/// <summary>
+		/// Gets the current reader JsonReader.State.
+		/// </summary>
+		/// <value>The current reader JsonReader.State.</value>
+		internal JsonReader.State CurrentState
+		{
+			get { return _currentState; }
+		}
 
-    /// <summary>
-    /// Gets or sets a value indicating whether the underlying stream or
-    /// <see cref="TextReader"/> should be closed when the reader is closed.
-    /// </summary>
-    /// <value>
-    /// true to close the underlying stream or <see cref="TextReader"/> when
-    /// the reader is closed; otherwise false. The default is true.
-    /// </value>
-    public bool CloseInput { get; set; }
+		/// <summary>
+		/// Gets or sets a value indicating whether the underlying stream or
+		/// <see cref="TextReader"/> should be closed when the reader is closed.
+		/// </summary>
+		/// <value>
+		/// true to close the underlying stream or <see cref="TextReader"/> when
+		/// the reader is closed; otherwise false. The default is true.
+		/// </value>
+		public bool CloseInput { get; set; }
 
-    /// <summary>
-    /// Gets the quotation mark character used to enclose the value of a string.
-    /// </summary>
-    public virtual char QuoteChar
-    {
-      get { return _quoteChar; }
-      protected internal set { _quoteChar = value; }
-    }
+		/// <summary>
+		/// Gets the quotation mark character used to enclose the value of a string.
+		/// </summary>
+		public virtual char QuoteChar
+		{
+			get { return _quoteChar; }
+			protected internal set { _quoteChar = value; }
+		}
 
-    /// <summary>
-    /// Get or set how <see cref="DateTime"/> time zones are handling when reading JSON.
-    /// </summary>
-    public DateTimeZoneHandling DateTimeZoneHandling
-    {
-      get { return _dateTimeZoneHandling; }
-      set { _dateTimeZoneHandling = value; }
-    }
+		/// <summary>
+		/// Get or set how <see cref="DateTime"/> time zones are handling when reading JSON.
+		/// </summary>
+		public DateTimeZoneHandling DateTimeZoneHandling
+		{
+			get { return _dateTimeZoneHandling; }
+			set { _dateTimeZoneHandling = value; }
+		}
 
-    /// <summary>
-    /// Get or set how date formatted strings, e.g. "\/Date(1198908717056)\/" and "2012-03-21T05:40Z", are parsed when reading JSON.
-    /// </summary>
-    public DateParseHandling DateParseHandling
-    {
-      get { return _dateParseHandling; }
-      set { _dateParseHandling = value; }
-    }
+		/// <summary>
+		/// Get or set how date formatted strings, e.g. "\/Date(1198908717056)\/" and "2012-03-21T05:40Z", are parsed when reading JSON.
+		/// </summary>
+		public DateParseHandling DateParseHandling
+		{
+			get { return _dateParseHandling; }
+			set { _dateParseHandling = value; }
+		}
 
-    /// <summary>
-    /// Gets or sets the maximum depth allowed when reading JSON. Reading past this depth will throw a <see cref="JsonReaderException"/>.
-    /// </summary>
-    public int? MaxDepth
-    {
-      get { return _maxDepth; }
-      set
-      {
-        if (value <= 0)
-          throw new ArgumentException("Value must be positive.", "value");
+		/// <summary>
+		/// Gets or sets the maximum depth allowed when reading JSON. Reading past this depth will throw a <see cref="JsonReaderException"/>.
+		/// </summary>
+		public int? MaxDepth
+		{
+			get { return _maxDepth; }
+			set
+			{
+				if (value <= 0)
+					throw new ArgumentException("Value must be positive.", "value");
 
-        _maxDepth = value;
-      }
-    }
+				_maxDepth = value;
+			}
+		}
 
-    /// <summary>
-    /// Gets the type of the current JSON token. 
-    /// </summary>
-    public virtual JsonToken TokenType
-    {
-      get { return _tokenType; }
-    }
+		/// <summary>
+		/// Gets the type of the current JSON token. 
+		/// </summary>
+		public virtual JsonToken TokenType
+		{
+			get { return _tokenType; }
+		}
 
-    /// <summary>
-    /// Gets the text value of the current JSON token.
-    /// </summary>
-    public virtual object Value
-    {
-      get { return _value; }
-    }
+		/// <summary>
+		/// Gets the text value of the current JSON token.
+		/// </summary>
+		public virtual object Value
+		{
+			get { return _value; }
+		}
 
-    /// <summary>
-    /// Gets The Common Language Runtime (CLR) type for the current JSON token.
-    /// </summary>
-    public virtual Type ValueType
-    {
-      get { return (_value != null) ? _value.GetType() : null; }
-    }
+		/// <summary>
+		/// Gets The Common Language Runtime (CLR) type for the current JSON token.
+		/// </summary>
+		public virtual Type ValueType
+		{
+			get { return (_value != null) ? _value.GetType() : null; }
+		}
 
-    /// <summary>
-    /// Gets the depth of the current token in the JSON document.
-    /// </summary>
-    /// <value>The depth of the current token in the JSON document.</value>
-    public virtual int Depth
-    {
-      get
-      {
-        int depth = _stack.Count;
-        if (IsStartToken(TokenType) || _currentPosition.Type == JsonContainerType.None)
-          return depth;
-        else
-          return depth + 1;
-      }
-    }
+		/// <summary>
+		/// Gets the depth of the current token in the JSON document.
+		/// </summary>
+		/// <value>The depth of the current token in the JSON document.</value>
+		public virtual int Depth
+		{
+			get
+			{
+				int depth = _stack.Count;
+				if (IsStartToken(TokenType) || _currentPosition.Type == JsonContainerType.None)
+					return depth;
+				else
+					return depth + 1;
+			}
+		}
 
-    /// <summary>
-    /// Gets the path of the current JSON token. 
-    /// </summary>
-    public virtual string Path
-    {
-      get
-      {
-        if (_currentPosition.Type == JsonContainerType.None)
-          return string.Empty;
+		/// <summary>
+		/// Gets the path of the current JSON token. 
+		/// </summary>
+		public virtual string Path
+		{
+			get
+			{
+				if (_currentPosition.Type == JsonContainerType.None)
+					return string.Empty;
 
-        bool insideContainer = (_currentState != JsonReader.State.ArrayStart
-          && _currentState != JsonReader.State.ConstructorStart
-          && _currentState != JsonReader.State.ObjectStart);
+				bool insideContainer = (_currentState != JsonReader.State.ArrayStart
+				  && _currentState != JsonReader.State.ConstructorStart
+				  && _currentState != JsonReader.State.ObjectStart);
 
-        IEnumerable<JsonPosition> positions = (!insideContainer)
-          ? _stack
-          : _stack.Concat(new[] {_currentPosition});
+				IEnumerable<JsonPosition> positions = (!insideContainer)
+				  ? _stack
+				  : _stack.Concat(new[] { _currentPosition });
 
-        return JsonPosition.BuildPath(positions);
-      }
-    }
+				return JsonPosition.BuildPath(positions);
+			}
+		}
 
-    /// <summary>
-    /// Gets or sets the culture used when reading JSON. Defaults to <see cref="CultureInfo.InvariantCulture"/>.
-    /// </summary>
-    public CultureInfo Culture
-    {
-      get { return _culture ?? CultureInfo.InvariantCulture; }
-      set { _culture = value; }
-    }
+		/// <summary>
+		/// Gets or sets the culture used when reading JSON. Defaults to <see cref="CultureInfo.InvariantCulture"/>.
+		/// </summary>
+		public CultureInfo Culture
+		{
+			get { return _culture ?? CultureInfo.InvariantCulture; }
+			set { _culture = value; }
+		}
 
-    internal JsonPosition GetPosition(int depth)
-    {
-      if (depth < _stack.Count)
-        return _stack[depth];
+		internal JsonPosition GetPosition(int depth)
+		{
+			if (depth < _stack.Count)
+				return _stack[depth];
 
-      return _currentPosition;
-    }
+			return _currentPosition;
+		}
 
 
 
-    private void Push(JsonContainerType value)
-    {
-      UpdateScopeWithFinishedValue();
+		private void Push(JsonContainerType value)
+		{
+			UpdateScopeWithFinishedValue();
 
-      if (_currentPosition.Type == JsonContainerType.None)
-      {
-        _currentPosition = new JsonPosition(value);
-      }
-      else
-      {
-        _stack.Add(_currentPosition);
-        _currentPosition = new JsonPosition(value);
+			if (_currentPosition.Type == JsonContainerType.None)
+			{
+				_currentPosition = new JsonPosition(value);
+			}
+			else
+			{
+				_stack.Add(_currentPosition);
+				_currentPosition = new JsonPosition(value);
 
-        // this is a little hacky because Depth increases when first property/value is written but only testing here is faster/simpler
-        if (_maxDepth != null && Depth + 1 > _maxDepth && !_hasExceededMaxDepth)
-        {
-          _hasExceededMaxDepth = true;
-          throw JsonReaderException.Create(this, Path, "The reader's MaxDepth of {0} has been exceeded.".FormatWith(CultureInfo.InvariantCulture, _maxDepth), null);
-        }
-      }
-    }
+				// this is a little hacky because Depth increases when first property/value is written but only testing here is faster/simpler
+				if (_maxDepth != null && Depth + 1 > _maxDepth && !_hasExceededMaxDepth)
+				{
+					_hasExceededMaxDepth = true;
+					throw JsonReaderException.Create(this, Path, "The reader's MaxDepth of {0} has been exceeded.".FormatWith(CultureInfo.InvariantCulture, _maxDepth), null);
+				}
+			}
+		}
 
-    private JsonContainerType Pop()
-    {
-      JsonPosition oldPosition;
-      if (_stack.Count > 0)
-      {
-        oldPosition = _currentPosition;
-        _currentPosition = _stack[_stack.Count - 1];
-        _stack.RemoveAt(_stack.Count - 1);
-      }
-      else
-      {
-        oldPosition = _currentPosition;
-        _currentPosition = new JsonPosition();
-      }
+		private JsonContainerType Pop()
+		{
+			JsonPosition oldPosition;
+			if (_stack.Count > 0)
+			{
+				oldPosition = _currentPosition;
+				_currentPosition = _stack[_stack.Count - 1];
+				_stack.RemoveAt(_stack.Count - 1);
+			}
+			else
+			{
+				oldPosition = _currentPosition;
+				_currentPosition = new JsonPosition();
+			}
 
-      if (_maxDepth != null && Depth <= _maxDepth)
-        _hasExceededMaxDepth = false;
+			if (_maxDepth != null && Depth <= _maxDepth)
+				_hasExceededMaxDepth = false;
 
-      return oldPosition.Type;
-    }
+			return oldPosition.Type;
+		}
 
-    private JsonContainerType Peek()
-    {
-      return _currentPosition.Type;
-    }
+		private JsonContainerType Peek()
+		{
+			return _currentPosition.Type;
+		}
 
-	
+
 #if !NET20
-    internal async Task<DateTimeOffset?> ReadAsDateTimeOffsetInternal()
-    {
-      _readType = ReadType.ReadAsDateTimeOffset;
+		internal async Task<DateTimeOffset?> ReadAsDateTimeOffsetInternal()
+		{
+			_readType = ReadType.ReadAsDateTimeOffset;
 
-      do
-      {
-        if (!await ReadInternal())
-        {
-          SetToken(JsonToken.None);
-          return null;
-        }
-      } while (TokenType == JsonToken.Comment);
+			do
+			{
+				if (!await ReadInternal().ConfigureAwait(false))
+				{
+					SetToken(JsonToken.None);
+					return null;
+				}
+			} while (TokenType == JsonToken.Comment);
 
-      if (TokenType == JsonToken.Date)
-      {
-        if (Value is DateTime)
-          SetToken(JsonToken.Date, new DateTimeOffset((DateTime)Value));
+			if (TokenType == JsonToken.Date)
+			{
+				if (Value is DateTime)
+					SetToken(JsonToken.Date, new DateTimeOffset((DateTime)Value));
 
-        return (DateTimeOffset)Value;
-      }
+				return (DateTimeOffset)Value;
+			}
 
-      if (TokenType == JsonToken.Null)
-        return null;
+			if (TokenType == JsonToken.Null)
+				return null;
 
-      DateTimeOffset dt;
-      if (TokenType == JsonToken.String)
-      {
-        string s = (string)Value;
-        if (string.IsNullOrEmpty(s))
-        {
-          SetToken(JsonToken.Null);
-          return null;
-        }
+			DateTimeOffset dt;
+			if (TokenType == JsonToken.String)
+			{
+				string s = (string)Value;
+				if (string.IsNullOrEmpty(s))
+				{
+					SetToken(JsonToken.Null);
+					return null;
+				}
 
-        if (DateTimeOffset.TryParse(s, Culture, DateTimeStyles.RoundtripKind, out dt))
-        {
-          SetToken(JsonToken.Date, dt);
-          return dt;
-        }
-        else
-        {
-          throw JsonReaderException.Create(this, Path, "Could not convert string to DateTimeOffset: {0}.".FormatWith(CultureInfo.InvariantCulture, Value), null);
-        }
-      }
+				if (DateTimeOffset.TryParse(s, Culture, DateTimeStyles.RoundtripKind, out dt))
+				{
+					SetToken(JsonToken.Date, dt);
+					return dt;
+				}
+				else
+				{
+					throw JsonReaderException.Create(this, Path, "Could not convert string to DateTimeOffset: {0}.".FormatWith(CultureInfo.InvariantCulture, Value), null);
+				}
+			}
 
-      if (TokenType == JsonToken.EndArray)
-        return null;
+			if (TokenType == JsonToken.EndArray)
+				return null;
 
-      throw JsonReaderException.Create(this, Path, "Error reading date. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
-    }
+			throw JsonReaderException.Create(this, Path, "Error reading date. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
+		}
 #endif
 
-    internal async Task<byte[]> ReadAsBytesInternal()
-    {
-      _readType = ReadType.ReadAsBytes;
-
-      do
-      {
-        if (!await ReadInternal())
-        {
-          SetToken(JsonToken.None);
-          return null;
-        }
-      } while (TokenType == JsonToken.Comment);
-
-      if (await IsWrappedInTypeObject())
-      {
-        byte[] data = await ReadAsBytes();
-        await ReadInternal();
-        SetToken(JsonToken.Bytes, data);
-        return data;
-      }
-
-      // attempt to convert possible base 64 string to bytes
-      if (TokenType == JsonToken.String)
-      {
-        string s = (string)Value;
-        byte[] data = (s.Length == 0) ? new byte[0] : Convert.FromBase64String(s);
-        SetToken(JsonToken.Bytes, data);
-      }
-
-      if (TokenType == JsonToken.Null)
-        return null;
-
-      if (TokenType == JsonToken.Bytes)
-        return (byte[])Value;
-
-      if (TokenType == JsonToken.StartArray)
-      {
-        List<byte> data = new List<byte>();
-
-        while (await ReadInternal())
-        {
-          switch (TokenType)
-          {
-            case JsonToken.Integer:
-              data.Add(Convert.ToByte(Value, CultureInfo.InvariantCulture));
-              break;
-            case JsonToken.EndArray:
-              byte[] d = data.ToArray();
-              SetToken(JsonToken.Bytes, d);
-              return d;
-            case JsonToken.Comment:
-              // skip
-              break;
-            default:
-              throw JsonReaderException.Create(this, Path, "Unexpected token when reading bytes: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
-          }
-        }
-
-        throw JsonReaderException.Create(this, Path, "Unexpected end when reading bytes.", null);
-      }
-
-      if (TokenType == JsonToken.EndArray)
-        return null;
-
-      throw JsonReaderException.Create(this, Path, "Error reading bytes. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
-    }
-
-    internal async Task<decimal?> ReadAsDecimalInternal()
-    {
-      _readType = ReadType.ReadAsDecimal;
-
-      do
-      {
-        if (!await ReadInternal())
-        {
-          SetToken(JsonToken.None);
-          return null;
-        }
-      } while (TokenType == JsonToken.Comment);
-
-      if (TokenType == JsonToken.Integer || TokenType == JsonToken.Float)
-      {
-        if (!(Value is decimal))
-          SetToken(JsonToken.Float, Convert.ToDecimal(Value, CultureInfo.InvariantCulture));
-
-        return (decimal)Value;
-      }
-
-      if (TokenType == JsonToken.Null)
-        return null;
-
-      decimal d;
-      if (TokenType == JsonToken.String)
-      {
-        string s = (string)Value;
-        if (string.IsNullOrEmpty(s))
-        {
-          SetToken(JsonToken.Null);
-          return null;
-        }
-
-        if (decimal.TryParse(s, NumberStyles.Number, Culture, out d))
-        {
-          SetToken(JsonToken.Float, d);
-          return d;
-        }
-        else
-        {
-          throw JsonReaderException.Create(this, Path, "Could not convert string to decimal: {0}.".FormatWith(CultureInfo.InvariantCulture, Value), null);
-        }
-      }
-
-      if (TokenType == JsonToken.EndArray)
-        return null;
-
-      throw JsonReaderException.Create(this, Path, "Error reading decimal. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
-    }
-
-    internal async Task<int?> ReadAsInt32Internal()
-    {
-      _readType = ReadType.ReadAsInt32;
-
-      do
-      {
-        if (!await ReadInternal())
-        {
-          SetToken(JsonToken.None);
-          return null;
-        }
-      } while (TokenType == JsonToken.Comment);
-
-      if (TokenType == JsonToken.Integer || TokenType == JsonToken.Float)
-      {
-        if (!(Value is int))
-          SetToken(JsonToken.Integer, Convert.ToInt32(Value, CultureInfo.InvariantCulture));
-
-        return (int)Value;
-      }
-
-      if (TokenType == JsonToken.Null)
-        return null;
-
-      int i;
-      if (TokenType == JsonToken.String)
-      {
-        string s = (string)Value;
-        if (string.IsNullOrEmpty(s))
-        {
-          SetToken(JsonToken.Null);
-          return null;
-        }
-
-        if (int.TryParse(s, NumberStyles.Integer, Culture, out i))
-        {
-          SetToken(JsonToken.Integer, i);
-          return i;
-        }
-        else
-        {
-          throw JsonReaderException.Create(this, Path, "Could not convert string to integer: {0}.".FormatWith(CultureInfo.InvariantCulture, Value), null);
-        }
-      }
-
-      if (TokenType == JsonToken.EndArray)
-        return null;
-
-      throw JsonReaderException.Create(this, Path, "Error reading integer. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
-    }
-
-    internal async Task<string> ReadAsStringInternal()
-    {
-      _readType = ReadType.ReadAsString;
-
-      do
-      {
-        if (!await ReadInternal())
-        {
-          SetToken(JsonToken.None);
-          return null;
-        }
-      } while (TokenType == JsonToken.Comment);
-
-      if (TokenType == JsonToken.String)
-        return (string)Value;
-
-      if (TokenType == JsonToken.Null)
-        return null;
-
-      if (IsPrimitiveToken(TokenType))
-      {
-        if (Value != null)
-        {
-          string s;
-          if (Value is IFormattable)
-            s = ((IFormattable)Value).ToString(null, Culture);
-          else
-            s = Value.ToString();
-
-          SetToken(JsonToken.String, s);
-          return s;
-        }
-      }
-
-      if (TokenType == JsonToken.EndArray)
-        return null;
-
-      throw JsonReaderException.Create(this, Path, "Error reading string. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
-    }
-
-    internal async Task<DateTime?> ReadAsDateTimeInternal()
-    {
-      _readType = ReadType.ReadAsDateTime;
-
-      do
-      {
-        if (!await ReadInternal())
-        {
-          SetToken(JsonToken.None);
-          return null;
-        }
-      } while (TokenType == JsonToken.Comment);
-
-      if (TokenType == JsonToken.Date)
-        return (DateTime)Value;
-
-      if (TokenType == JsonToken.Null)
-        return null;
-
-      DateTime dt;
-      if (TokenType == JsonToken.String)
-      {
-        string s = (string)Value;
-        if (string.IsNullOrEmpty(s))
-        {
-          SetToken(JsonToken.Null);
-          return null;
-        }
-
-        if (DateTime.TryParse(s, Culture, DateTimeStyles.RoundtripKind, out dt))
-        {
-          dt = DateTimeUtils.EnsureDateTime(dt, DateTimeZoneHandling);
-          SetToken(JsonToken.Date, dt);
-          return dt;
-        }
-        else
-        {
-          throw JsonReaderException.Create(this, Path, "Could not convert string to DateTime: {0}.".FormatWith(CultureInfo.InvariantCulture, Value), null);
-        }
-      }
-
-      if (TokenType == JsonToken.EndArray)
-        return null;
-
-      throw JsonReaderException.Create(this, Path, "Error reading date. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
-    }
-
-    private async Task<bool> IsWrappedInTypeObject()
-    {
-      _readType = ReadType.Read;
-
-      if (TokenType == JsonToken.StartObject)
-      {
-        if (!await ReadInternal())
-          throw JsonReaderException.Create(this, Path, "Unexpected end when reading bytes.", null);
-
-        if (Value.ToString() == "$type")
-        {
-          await ReadInternal();
-          if (Value != null && Value.ToString().StartsWith("System.Byte[]"))
-          {
-            await ReadInternal();
-            if (Value.ToString() == "$value")
-            {
-              return true;
-            }
-          }
-        }
-
-        throw JsonReaderException.Create(this, Path, "Error reading bytes. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, JsonToken.StartObject), null);
-      }
-
-      return false;
-    }
-
-    /// <summary>
-    /// Skips the children of the current token.
-    /// </summary>
-    public async Task SkipAsync()
-    {
-      if (TokenType == JsonToken.PropertyName)
-        await ReadAsync();
-
-      if (IsStartToken(TokenType))
-      {
-        int depth = Depth;
-
-        while (await ReadAsync() && (depth < Depth))
-        {
-        }
-      }
-    }
-
-    /// <summary>
-    /// Sets the current token.
-    /// </summary>
-    /// <param name="newToken">The new token.</param>
-    protected void SetToken(JsonToken newToken)
-    {
-      SetToken(newToken, null);
-    }
-
-    /// <summary>
-    /// Sets the current token and value.
-    /// </summary>
-    /// <param name="newToken">The new token.</param>
-    /// <param name="value">The value.</param>
-    protected void SetToken(JsonToken newToken, object value)
-    {
-      _tokenType = newToken;
-      _value = value;
-
-      switch (newToken)
-      {
-        case JsonToken.StartObject:
-          _currentState = JsonReader.State.ObjectStart;
-          Push(JsonContainerType.Object);
-          break;
-        case JsonToken.StartArray:
-          _currentState = JsonReader.State.ArrayStart;
-          Push(JsonContainerType.Array);
-          break;
-        case JsonToken.StartConstructor:
-          _currentState = JsonReader.State.ConstructorStart;
-          Push(JsonContainerType.Constructor);
-          break;
-        case JsonToken.EndObject:
-          ValidateEnd(JsonToken.EndObject);
-          break;
-        case JsonToken.EndArray:
-          ValidateEnd(JsonToken.EndArray);
-          break;
-        case JsonToken.EndConstructor:
-          ValidateEnd(JsonToken.EndConstructor);
-          break;
-        case JsonToken.PropertyName:
-          _currentState = JsonReader.State.Property;
-
-          _currentPosition.PropertyName = (string) value;
-          break;
-        case JsonToken.Undefined:
-        case JsonToken.Integer:
-        case JsonToken.Float:
-        case JsonToken.Boolean:
-        case JsonToken.Null:
-        case JsonToken.Date:
-        case JsonToken.String:
-        case JsonToken.Raw:
-        case JsonToken.Bytes:
-          _currentState = (Peek() != JsonContainerType.None) ? JsonReader.State.PostValue : JsonReader.State.Finished;
-
-          UpdateScopeWithFinishedValue();
-          break;
-      }
-    }
-
-    private void UpdateScopeWithFinishedValue()
-    {
-      if (_currentPosition.HasIndex)
-        _currentPosition.Position++;
-    }
-
-    private void ValidateEnd(JsonToken endToken)
-    {
-      JsonContainerType currentObject = Pop();
-
-      if (GetTypeForCloseToken(endToken) != currentObject)
-        throw JsonReaderException.Create(this, Path, "JsonToken {0} is not valid for closing JsonType {1}.".FormatWith(CultureInfo.InvariantCulture, endToken, currentObject), null);
-
-      _currentState = (Peek() != JsonContainerType.None) ? JsonReader.State.PostValue : JsonReader.State.Finished;
-    }
-
-    /// <summary>
-    /// Sets the state based on current token type.
-    /// </summary>
-    protected void SetStateBasedOnCurrent()
-    {
-      JsonContainerType currentObject = Peek();
-
-      switch (currentObject)
-      {
-        case JsonContainerType.Object:
-          _currentState = JsonReader.State.Object;
-          break;
-        case JsonContainerType.Array:
-          _currentState = JsonReader.State.Array;
-          break;
-        case JsonContainerType.Constructor:
-          _currentState = JsonReader.State.Constructor;
-          break;
-        case JsonContainerType.None:
-          _currentState = JsonReader.State.Finished;
-          break;
-        default:
-          throw JsonReaderException.Create(this, Path, "While setting the reader state back to current object an unexpected JsonType was encountered: {0}".FormatWith(CultureInfo.InvariantCulture, currentObject), null);
-      }
-    }
-
-    internal static bool IsPrimitiveToken(JsonToken token)
-    {
-      switch (token)
-      {
-        case JsonToken.Integer:
-        case JsonToken.Float:
-        case JsonToken.String:
-        case JsonToken.Boolean:
-        case JsonToken.Undefined:
-        case JsonToken.Null:
-        case JsonToken.Date:
-        case JsonToken.Bytes:
-          return true;
-        default:
-          return false;
-      }
-    }
-
-    internal static bool IsStartToken(JsonToken token)
-    {
-      switch (token)
-      {
-        case JsonToken.StartObject:
-        case JsonToken.StartArray:
-        case JsonToken.StartConstructor:
-          return true;
-        default:
-          return false;
-      }
-    }
-
-    private JsonContainerType GetTypeForCloseToken(JsonToken token)
-    {
-      switch (token)
-      {
-        case JsonToken.EndObject:
-          return JsonContainerType.Object;
-        case JsonToken.EndArray:
-          return JsonContainerType.Array;
-        case JsonToken.EndConstructor:
-          return JsonContainerType.Constructor;
-        default:
-          throw JsonReaderException.Create(this, Path, "Not a valid close JsonToken: {0}".FormatWith(CultureInfo.InvariantCulture, token), null);
-      }
-    }
-
-    /// <summary>
-    /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-    /// </summary>
-    public void Dispose()
-    {
-      Dispose(true);
-    }
-
-    /// <summary>
-    /// Releases unmanaged and - optionally - managed resources
-    /// </summary>
-    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
-    protected virtual void Dispose(bool disposing)
-    {
-      if (_currentState != JsonReader.State.Closed && disposing)
-        Close();
-    }
+		internal async Task<byte[]> ReadAsBytesInternal()
+		{
+			_readType = ReadType.ReadAsBytes;
+
+			do
+			{
+				if (!await ReadInternal().ConfigureAwait(false))
+				{
+					SetToken(JsonToken.None);
+					return null;
+				}
+			} while (TokenType == JsonToken.Comment);
+
+			if (await IsWrappedInTypeObject().ConfigureAwait(false))
+			{
+				byte[] data = await ReadAsBytes().ConfigureAwait(false);
+				await ReadInternal().ConfigureAwait(false);
+				SetToken(JsonToken.Bytes, data);
+				return data;
+			}
+
+			// attempt to convert possible base 64 string to bytes
+			if (TokenType == JsonToken.String)
+			{
+				string s = (string)Value;
+				byte[] data = (s.Length == 0) ? new byte[0] : Convert.FromBase64String(s);
+				SetToken(JsonToken.Bytes, data);
+			}
+
+			if (TokenType == JsonToken.Null)
+				return null;
+
+			if (TokenType == JsonToken.Bytes)
+				return (byte[])Value;
+
+			if (TokenType == JsonToken.StartArray)
+			{
+				List<byte> data = new List<byte>();
+
+				while (await ReadInternal().ConfigureAwait(false))
+				{
+					switch (TokenType)
+					{
+						case JsonToken.Integer:
+							data.Add(Convert.ToByte(Value, CultureInfo.InvariantCulture));
+							break;
+						case JsonToken.EndArray:
+							byte[] d = data.ToArray();
+							SetToken(JsonToken.Bytes, d);
+							return d;
+						case JsonToken.Comment:
+							// skip
+							break;
+						default:
+							throw JsonReaderException.Create(this, Path, "Unexpected token when reading bytes: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
+					}
+				}
+
+				throw JsonReaderException.Create(this, Path, "Unexpected end when reading bytes.", null);
+			}
+
+			if (TokenType == JsonToken.EndArray)
+				return null;
+
+			throw JsonReaderException.Create(this, Path, "Error reading bytes. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
+		}
+
+		internal async Task<decimal?> ReadAsDecimalInternal()
+		{
+			_readType = ReadType.ReadAsDecimal;
+
+			do
+			{
+				if (!await ReadInternal().ConfigureAwait(false))
+				{
+					SetToken(JsonToken.None);
+					return null;
+				}
+			} while (TokenType == JsonToken.Comment);
+
+			if (TokenType == JsonToken.Integer || TokenType == JsonToken.Float)
+			{
+				if (!(Value is decimal))
+					SetToken(JsonToken.Float, Convert.ToDecimal(Value, CultureInfo.InvariantCulture));
+
+				return (decimal)Value;
+			}
+
+			if (TokenType == JsonToken.Null)
+				return null;
+
+			decimal d;
+			if (TokenType == JsonToken.String)
+			{
+				string s = (string)Value;
+				if (string.IsNullOrEmpty(s))
+				{
+					SetToken(JsonToken.Null);
+					return null;
+				}
+
+				if (decimal.TryParse(s, NumberStyles.Number, Culture, out d))
+				{
+					SetToken(JsonToken.Float, d);
+					return d;
+				}
+				else
+				{
+					throw JsonReaderException.Create(this, Path, "Could not convert string to decimal: {0}.".FormatWith(CultureInfo.InvariantCulture, Value), null);
+				}
+			}
+
+			if (TokenType == JsonToken.EndArray)
+				return null;
+
+			throw JsonReaderException.Create(this, Path, "Error reading decimal. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
+		}
+
+		internal async Task<int?> ReadAsInt32Internal()
+		{
+			_readType = ReadType.ReadAsInt32;
+
+			do
+			{
+				if (!await ReadInternal().ConfigureAwait(false))
+				{
+					SetToken(JsonToken.None);
+					return null;
+				}
+			} while (TokenType == JsonToken.Comment);
+
+			if (TokenType == JsonToken.Integer || TokenType == JsonToken.Float)
+			{
+				if (!(Value is int))
+					SetToken(JsonToken.Integer, Convert.ToInt32(Value, CultureInfo.InvariantCulture));
+
+				return (int)Value;
+			}
+
+			if (TokenType == JsonToken.Null)
+				return null;
+
+			int i;
+			if (TokenType == JsonToken.String)
+			{
+				string s = (string)Value;
+				if (string.IsNullOrEmpty(s))
+				{
+					SetToken(JsonToken.Null);
+					return null;
+				}
+
+				if (int.TryParse(s, NumberStyles.Integer, Culture, out i))
+				{
+					SetToken(JsonToken.Integer, i);
+					return i;
+				}
+				else
+				{
+					throw JsonReaderException.Create(this, Path, "Could not convert string to integer: {0}.".FormatWith(CultureInfo.InvariantCulture, Value), null);
+				}
+			}
+
+			if (TokenType == JsonToken.EndArray)
+				return null;
+
+			throw JsonReaderException.Create(this, Path, "Error reading integer. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
+		}
+
+		internal async Task<string> ReadAsStringInternal()
+		{
+			_readType = ReadType.ReadAsString;
+
+			do
+			{
+				if (!await ReadInternal().ConfigureAwait(false))
+				{
+					SetToken(JsonToken.None);
+					return null;
+				}
+			} while (TokenType == JsonToken.Comment);
+
+			if (TokenType == JsonToken.String)
+				return (string)Value;
+
+			if (TokenType == JsonToken.Null)
+				return null;
+
+			if (IsPrimitiveToken(TokenType))
+			{
+				if (Value != null)
+				{
+					string s;
+					if (Value is IFormattable)
+						s = ((IFormattable)Value).ToString(null, Culture);
+					else
+						s = Value.ToString();
+
+					SetToken(JsonToken.String, s);
+					return s;
+				}
+			}
+
+			if (TokenType == JsonToken.EndArray)
+				return null;
+
+			throw JsonReaderException.Create(this, Path, "Error reading string. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
+		}
+
+		internal async Task<DateTime?> ReadAsDateTimeInternal()
+		{
+			_readType = ReadType.ReadAsDateTime;
+
+			do
+			{
+				if (!await ReadInternal().ConfigureAwait(false))
+				{
+					SetToken(JsonToken.None);
+					return null;
+				}
+			} while (TokenType == JsonToken.Comment);
+
+			if (TokenType == JsonToken.Date)
+				return (DateTime)Value;
+
+			if (TokenType == JsonToken.Null)
+				return null;
+
+			DateTime dt;
+			if (TokenType == JsonToken.String)
+			{
+				string s = (string)Value;
+				if (string.IsNullOrEmpty(s))
+				{
+					SetToken(JsonToken.Null);
+					return null;
+				}
+
+				if (DateTime.TryParse(s, Culture, DateTimeStyles.RoundtripKind, out dt))
+				{
+					dt = DateTimeUtils.EnsureDateTime(dt, DateTimeZoneHandling);
+					SetToken(JsonToken.Date, dt);
+					return dt;
+				}
+				else
+				{
+					throw JsonReaderException.Create(this, Path, "Could not convert string to DateTime: {0}.".FormatWith(CultureInfo.InvariantCulture, Value), null);
+				}
+			}
+
+			if (TokenType == JsonToken.EndArray)
+				return null;
+
+			throw JsonReaderException.Create(this, Path, "Error reading date. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType), null);
+		}
+
+		private async Task<bool> IsWrappedInTypeObject()
+		{
+			_readType = ReadType.Read;
+
+			if (TokenType == JsonToken.StartObject)
+			{
+				if (!await ReadInternal().ConfigureAwait(false))
+					throw JsonReaderException.Create(this, Path, "Unexpected end when reading bytes.", null);
+
+				if (Value.ToString() == "$type")
+				{
+					await ReadInternal().ConfigureAwait(false);
+					if (Value != null && Value.ToString().StartsWith("System.Byte[]"))
+					{
+						await ReadInternal().ConfigureAwait(false);
+						if (Value.ToString() == "$value")
+						{
+							return true;
+						}
+					}
+				}
+
+				throw JsonReaderException.Create(this, Path, "Error reading bytes. Unexpected token: {0}.".FormatWith(CultureInfo.InvariantCulture, JsonToken.StartObject), null);
+			}
+
+			return false;
+		}
+
+		/// <summary>
+		/// Skips the children of the current token.
+		/// </summary>
+		public async Task SkipAsync()
+		{
+			if (TokenType == JsonToken.PropertyName)
+				await ReadAsync().ConfigureAwait(false);
+
+			if (IsStartToken(TokenType))
+			{
+				int depth = Depth;
+
+				while (await ReadAsync().ConfigureAwait(false) && (depth < Depth))
+				{
+				}
+			}
+		}
+
+		/// <summary>
+		/// Sets the current token.
+		/// </summary>
+		/// <param name="newToken">The new token.</param>
+		protected void SetToken(JsonToken newToken)
+		{
+			SetToken(newToken, null);
+		}
+
+		/// <summary>
+		/// Sets the current token and value.
+		/// </summary>
+		/// <param name="newToken">The new token.</param>
+		/// <param name="value">The value.</param>
+		protected void SetToken(JsonToken newToken, object value)
+		{
+			_tokenType = newToken;
+			_value = value;
+
+			switch (newToken)
+			{
+				case JsonToken.StartObject:
+					_currentState = JsonReader.State.ObjectStart;
+					Push(JsonContainerType.Object);
+					break;
+				case JsonToken.StartArray:
+					_currentState = JsonReader.State.ArrayStart;
+					Push(JsonContainerType.Array);
+					break;
+				case JsonToken.StartConstructor:
+					_currentState = JsonReader.State.ConstructorStart;
+					Push(JsonContainerType.Constructor);
+					break;
+				case JsonToken.EndObject:
+					ValidateEnd(JsonToken.EndObject);
+					break;
+				case JsonToken.EndArray:
+					ValidateEnd(JsonToken.EndArray);
+					break;
+				case JsonToken.EndConstructor:
+					ValidateEnd(JsonToken.EndConstructor);
+					break;
+				case JsonToken.PropertyName:
+					_currentState = JsonReader.State.Property;
+
+					_currentPosition.PropertyName = (string)value;
+					break;
+				case JsonToken.Undefined:
+				case JsonToken.Integer:
+				case JsonToken.Float:
+				case JsonToken.Boolean:
+				case JsonToken.Null:
+				case JsonToken.Date:
+				case JsonToken.String:
+				case JsonToken.Raw:
+				case JsonToken.Bytes:
+					_currentState = (Peek() != JsonContainerType.None) ? JsonReader.State.PostValue : JsonReader.State.Finished;
+
+					UpdateScopeWithFinishedValue();
+					break;
+			}
+		}
+
+		private void UpdateScopeWithFinishedValue()
+		{
+			if (_currentPosition.HasIndex)
+				_currentPosition.Position++;
+		}
+
+		private void ValidateEnd(JsonToken endToken)
+		{
+			JsonContainerType currentObject = Pop();
+
+			if (GetTypeForCloseToken(endToken) != currentObject)
+				throw JsonReaderException.Create(this, Path, "JsonToken {0} is not valid for closing JsonType {1}.".FormatWith(CultureInfo.InvariantCulture, endToken, currentObject), null);
+
+			_currentState = (Peek() != JsonContainerType.None) ? JsonReader.State.PostValue : JsonReader.State.Finished;
+		}
+
+		/// <summary>
+		/// Sets the state based on current token type.
+		/// </summary>
+		protected void SetStateBasedOnCurrent()
+		{
+			JsonContainerType currentObject = Peek();
+
+			switch (currentObject)
+			{
+				case JsonContainerType.Object:
+					_currentState = JsonReader.State.Object;
+					break;
+				case JsonContainerType.Array:
+					_currentState = JsonReader.State.Array;
+					break;
+				case JsonContainerType.Constructor:
+					_currentState = JsonReader.State.Constructor;
+					break;
+				case JsonContainerType.None:
+					_currentState = JsonReader.State.Finished;
+					break;
+				default:
+					throw JsonReaderException.Create(this, Path, "While setting the reader state back to current object an unexpected JsonType was encountered: {0}".FormatWith(CultureInfo.InvariantCulture, currentObject), null);
+			}
+		}
+
+		internal static bool IsPrimitiveToken(JsonToken token)
+		{
+			switch (token)
+			{
+				case JsonToken.Integer:
+				case JsonToken.Float:
+				case JsonToken.String:
+				case JsonToken.Boolean:
+				case JsonToken.Undefined:
+				case JsonToken.Null:
+				case JsonToken.Date:
+				case JsonToken.Bytes:
+					return true;
+				default:
+					return false;
+			}
+		}
+
+		internal static bool IsStartToken(JsonToken token)
+		{
+			switch (token)
+			{
+				case JsonToken.StartObject:
+				case JsonToken.StartArray:
+				case JsonToken.StartConstructor:
+					return true;
+				default:
+					return false;
+			}
+		}
+
+		private JsonContainerType GetTypeForCloseToken(JsonToken token)
+		{
+			switch (token)
+			{
+				case JsonToken.EndObject:
+					return JsonContainerType.Object;
+				case JsonToken.EndArray:
+					return JsonContainerType.Array;
+				case JsonToken.EndConstructor:
+					return JsonContainerType.Constructor;
+				default:
+					throw JsonReaderException.Create(this, Path, "Not a valid close JsonToken: {0}".FormatWith(CultureInfo.InvariantCulture, token), null);
+			}
+		}
+
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		public void Dispose()
+		{
+			Dispose(true);
+		}
+
+		/// <summary>
+		/// Releases unmanaged and - optionally - managed resources
+		/// </summary>
+		/// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+		protected virtual void Dispose(bool disposing)
+		{
+			if (_currentState != JsonReader.State.Closed && disposing)
+				Close();
+		}
 
 	}
 }

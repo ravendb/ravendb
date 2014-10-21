@@ -12,7 +12,7 @@ using Voron.Impl;
 
 namespace Raven.Database.Storage.Voron.Schema.Updates
 {
-	public abstract class SchemaUpdateBase : ISchemaUpdate
+	internal abstract class SchemaUpdateBase : ISchemaUpdate
 	{
 		public abstract string FromSchemaVersion { get; }
 

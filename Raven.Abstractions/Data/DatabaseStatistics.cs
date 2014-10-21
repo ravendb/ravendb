@@ -19,7 +19,7 @@ namespace Raven.Abstractions.Data
 
 		public int CountOfResultTransformers { get; set; }
 
-		public int InMemoryIndexingQueueSize { get; set; }
+		public int[] InMemoryIndexingQueueSizes { get; set; }
 
 		public long ApproximateTaskCount { get; set; }
 

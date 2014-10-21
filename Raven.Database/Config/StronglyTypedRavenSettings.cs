@@ -12,7 +12,7 @@ using Raven.Database.Config.Settings;
 
 namespace Raven.Database.Config
 {
-	public class StronglyTypedRavenSettings
+	internal class StronglyTypedRavenSettings
 	{
 		private readonly NameValueCollection settings;
 
@@ -185,6 +185,7 @@ namespace Raven.Database.Config
 			Voron.TempPath = new StringSetting(settings["Raven/Voron/TempPath"], (string) null);
 
 			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
+			Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
 
             FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings["Raven/FileSystem/MaximumSynchronizationInterval"], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
 			FileSystem.IndexStoragePath = new StringSetting(settings["Raven/FileSystem/IndexStoragePath"], (string)null);
@@ -367,6 +368,8 @@ namespace Raven.Database.Config
 		public class ReplicationConfiguration
 		{
 			public IntegerSetting FetchingFromDiskTimeoutInSeconds { get; set; }
+
+			public IntegerSetting ReplicationRequestTimeoutInMilliseconds { get; set; }
 }
 
         public class FileSystemConfiguration

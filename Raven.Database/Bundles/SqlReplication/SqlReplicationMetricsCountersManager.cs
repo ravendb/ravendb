@@ -11,6 +11,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
+	[CLSCompliant(false)]
     public class SqlReplicationMetricsCountersManager
     {
         readonly Metrics dbMetrics;

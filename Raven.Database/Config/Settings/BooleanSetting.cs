@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 namespace Raven.Database.Config.Settings
 {
-	public class BooleanSetting : Setting<bool>
+	internal class BooleanSetting : Setting<bool>
 	{
 		public BooleanSetting(string value, bool defaultValue) : base(value, defaultValue)
 		{

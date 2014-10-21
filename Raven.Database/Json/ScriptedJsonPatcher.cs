@@ -20,7 +20,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Json
 {
-	public class ScriptedJsonPatcher
+	internal class ScriptedJsonPatcher
 	{
 		public enum OperationType
 		{

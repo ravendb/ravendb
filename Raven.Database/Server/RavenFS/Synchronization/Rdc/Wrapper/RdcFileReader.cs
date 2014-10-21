@@ -10,7 +10,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 	[Guid("96236A89-9DBC-11DA-9E3F-0011114AE311")]
 	[SecurityPermission(SecurityAction.Demand, UnmanagedCode = true)]
 	[ComVisible(true)]
-	public class RdcFileReader : IRdcFileReader
+	internal class RdcFileReader : IRdcFileReader
 	{
 		private readonly Stream _stream;
 

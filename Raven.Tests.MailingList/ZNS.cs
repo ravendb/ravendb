@@ -109,26 +109,30 @@ namespace Raven.Tests.MailingList
 				//Get all results, paged
 				List<TestItem> pagedResult = new List<TestItem>();
 				RavenQueryStatistics stats2;
-				int sum = result.Count;
+
 				int skip = 0;
 				var take = 10;
-				for (int i = 0; i < sum; i += take)
+				int page = 0;
+
+				do
 				{
 					using (var session = store.OpenSession())
 					{
-                        var r = session.Advanced.DocumentQuery<TestItem>("TestItemsIndex")
+						var r = session.Advanced.DocumentQuery<TestItem>("TestItemsIndex")
 							.Statistics(out stats2)
 							.WhereBetweenOrEqual("EventDate", DateTime.Parse("2012-03-01"), DateTime.Parse("2012-06-01"))
 							.OrderBy("EventDate")
 							.Take(take)
-							.Skip(pagedResult.Count)
+							.Skip((page * take) + skip)
 							.ToList();
 						skip += stats2.SkippedResults;
+						page++;
 						pagedResult.AddRange(r);
 					}
-				}
 
+				} while (pagedResult.Count < result.Count);
 
+				Assert.Equal(result.Count, pagedResult.Count);
 				//Assert "all" results are equal to paged results
 				Assert.Equal(result.Select(x=>x.Id).ToArray(), pagedResult.Select(x=>x.Id).ToArray());
 			}

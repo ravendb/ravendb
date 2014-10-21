@@ -315,5 +315,7 @@ namespace Raven.Client
 
 			Encryptor.Initialize(fips);
 		}
-    }
+
+		public abstract void InitializeProfiling();
+	}
 }

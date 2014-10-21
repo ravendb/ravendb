@@ -182,7 +182,7 @@ namespace Raven.Database.Server.Controllers.Admin
                             while (IsAnotherRestoreInProgress(out anotherRestoreResourceName));
                         }
                     }
-                    catch (OperationCanceledException e)
+                    catch (OperationCanceledException)
                     {
                         return GetMessageWithString(string.Format("Another restore is still in progress (resource name = {0}). Waited {1} seconds for other restore to complete.", anotherRestoreResourceName, restoreRequest.RestoreStartTimeout.Value), HttpStatusCode.ServiceUnavailable);    
                     }
@@ -307,16 +307,25 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (configuration == null)
 				return GetMessageWithString("No database named: " + db, HttpStatusCode.NotFound);
 
-            try
-            {
+		    var task = Task.Factory.StartNew(() =>
+		    {
+                // as we perform compact async we don't catch exceptions here - they will be propaged to operation
                 var targetDb = DatabasesLandlord.GetDatabaseInternal(db).ResultUnwrap();
                 DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration));
                 return GetEmptyMessage();
-            }
-            catch (NotSupportedException e)
+		    });
+            long id;
+            Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
             {
-                return GetMessageWithString(e.Message, HttpStatusCode.BadRequest);
-            }
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.CompactDatabase,
+                Payload = "Compact database " + db,
+            }, out id);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            });
 		}
 
 		[HttpGet]

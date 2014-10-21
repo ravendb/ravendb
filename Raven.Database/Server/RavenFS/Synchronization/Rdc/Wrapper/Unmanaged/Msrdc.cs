@@ -3,7 +3,7 @@
 	/// <summary>
 	/// Internal MSRDC definitions
 	/// </summary>
-	public struct Msrdc
+	internal struct Msrdc
 	{
 		public const uint Version = 0x010000;
 		public const uint MinimumCompatibleAppVersion = 0x010000;

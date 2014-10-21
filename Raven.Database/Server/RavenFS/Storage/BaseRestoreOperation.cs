@@ -9,7 +9,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.Server.RavenFS.Storage
 {
-    public abstract class BaseRestoreOperation
+	internal abstract class BaseRestoreOperation
     {
 	    private const string IndexesSubfolder = "Indexes";
 	    protected static readonly ILog log = LogManager.GetCurrentClassLogger();

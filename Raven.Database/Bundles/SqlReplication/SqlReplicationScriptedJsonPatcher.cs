@@ -8,7 +8,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
-	public class SqlReplicationScriptedJsonPatcher : ScriptedJsonPatcher
+	internal class SqlReplicationScriptedJsonPatcher : ScriptedJsonPatcher
 	{
 		private readonly ConversionScriptResult scriptResult;
 		private readonly SqlReplicationConfig config;

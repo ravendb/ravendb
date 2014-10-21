@@ -1,4 +1,4 @@
-﻿using Raven.Database.Prefetching;
+﻿using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 

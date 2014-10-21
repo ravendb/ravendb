@@ -5,7 +5,7 @@ using Raven.Database.Impl;
 
 namespace Raven.Database.Util
 {
-	public class SequentialUuidGenerator : IUuidGenerator
+	internal class SequentialUuidGenerator : IUuidGenerator
 	{
 		private byte[] ticksAsBytes;
 		private long sequentialUuidCounterDocuments;

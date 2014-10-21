@@ -10,7 +10,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper.Unmanaged
 	[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 	[Guid("96236A78-9DBC-11DA-9E3F-0011114AE311")]
 	[ComImport]
-	public interface IRdcLibrary
+	internal interface IRdcLibrary
 	{
 		Int32 ComputeDefaultRecursionDepth(Int64 fileSize, out int depth);
 

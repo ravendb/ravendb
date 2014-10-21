@@ -421,7 +421,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
             new RestoreOperation(restoreRequest, configuration, output).Execute();
         }
 
-		private void Output(string message)
+        void ITransactionalStorage.Compact(InMemoryRavenConfiguration cfg)
+        {
+            Compact(cfg, (sesid, snp, snt, data) => JET_err.Success);
+        }
+
+	    private void Output(string message)
 		{
 			Console.Write(message);
 			Console.WriteLine();

@@ -1,26 +1,43 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import appUrl = require("common/appUrl");
+import getOperationStatusCommand = require('commands/getOperationStatusCommand');
 
-class backupDatabaseCommand extends commandBase {
+class compactDatabaseCommand extends commandBase {
 
     constructor(private db: database) {
         super();
     }
 
     execute(): JQueryPromise<any> {
+        var promise = $.Deferred();
         var url = '/admin/compact' + this.urlEncodeArgs({ database: this.db.name });
-        return this.post(url, null, appUrl.getSystemDatabase(), { dataType: 'text' })
-            .done(() => this.reportSuccess("Compact completed"))
+        this.post(url, null, appUrl.getSystemDatabase())
+            .done((result: operationIdDto) => this.monitorCompact(promise, result.OperationId))
             .fail((response: JQueryXHR) => {
-                if (response.status == 400) {
-                    this.reportWarning("Compaction is only supported for Esent.", response.responseText, response.statusText);
+                this.reportError("Failed to compact database!", response.responseText, response.statusText);
+                promise.reject();
+            });
+        return promise;
+    }
+
+    private monitorCompact(parentPromise: JQueryDeferred<any>, operationId: number) {
+        new getOperationStatusCommand(appUrl.getSystemDatabase(), operationId)
+            .execute()
+            .done((result: operationStatusDto) => {
+                if (result.Completed) {
+                    if (result.Faulted) {
+                        this.reportError("Failed to compact database!", result.State.Error);
+                        parentPromise.reject();
+                    } else {
+                        this.reportSuccess("Compact completed");
+                        parentPromise.resolve();
+                    }
                 } else {
-                    this.reportError("Failed to compact database!", response.responseText, response.statusText);
+                    setTimeout(() => this.monitorCompact(parentPromise, operationId), 500);
                 }
             });
     }
 }
 
-export = backupDatabaseCommand;
+export = compactDatabaseCommand;

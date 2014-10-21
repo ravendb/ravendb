@@ -64,6 +64,7 @@ namespace Raven.Database.Indexing
 			return GeoContext;
 		}
 
+		[CLSCompliant(false)]
 		public SpatialStrategy GetStrategy()
 		{
 			return strategy;
@@ -99,12 +100,14 @@ namespace Raven.Database.Indexing
 
 			return Enumerable.Empty<AbstractField>();	
 		}
-		
+
+		[CLSCompliant(false)]
 		public Query MakeQuery(Query existingQuery, SpatialStrategy spatialStrategy, SpatialIndexQuery spatialQuery)
 		{
 			return MakeQuery(existingQuery, spatialStrategy, spatialQuery.QueryShape, spatialQuery.SpatialRelation, spatialQuery.DistanceErrorPercentage, spatialQuery.RadiusUnitOverride);
 		}
 
+		[CLSCompliant(false)]
 		public Query MakeQuery(Query existingQuery, SpatialStrategy spatialStrategy, string shapeWKT, SpatialRelation relation,
 									  double distanceErrorPct = 0.025, SpatialUnits? unitOverride = null)
 		{
@@ -138,6 +141,7 @@ namespace Raven.Database.Indexing
 			return spatialStrategy.MakeQuery(args);
 		}
 
+		[CLSCompliant(false)]
 		public Filter MakeFilter(SpatialStrategy spatialStrategy, IndexQuery indexQuery)
 		{
 			var spatialQry = indexQuery as SpatialIndexQuery;

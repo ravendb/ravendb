@@ -115,7 +115,7 @@ namespace Raven.Client.Connection
 		public void ExpireItemsFromCache(string db)
 		{
 			cache.ForceServerCheckOfCachedItemsForDatabase(db);
-			NumberOfCacheResets++;
+		    Interlocked.Increment(ref numberOfCacheResets);
 		}
 
 		/// <summary>
@@ -124,11 +124,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public int NumberOfCacheResets
 		{
-			get { return numberOfCacheResets; }
-			private set
-			{
-				numberOfCacheResets = value;
-			}
+			get { return Thread.VolatileRead(ref numberOfCacheResets); }
 		}
 
 		/// <summary>
@@ -204,7 +200,7 @@ namespace Raven.Client.Connection
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
 
 		private volatile bool disposed;
-		private volatile int numberOfCacheResets;
+		private int numberOfCacheResets;
 
 		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest, NameValueCollection additionalHeaders)
 		{

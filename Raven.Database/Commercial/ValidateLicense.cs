@@ -39,6 +39,7 @@ namespace Raven.Database.Commercial
 			{"fips", "false"},
 			{"compression", "false"},
 			{"quotas","false"},
+			{"ravenfs", "false"},
 
 			{"authorization","true"},
 			{"documentExpiration","true"},

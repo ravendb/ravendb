@@ -1,4 +1,5 @@
 ﻿import resource = require("models/resource");
+import license = require("models/license");
 
 class filesystem extends resource {
     //isDefault = false;
@@ -14,9 +15,16 @@ class filesystem extends resource {
             var itemCount = this.itemCount();
             var text = itemCount + ' file';
             if (itemCount != 1) {
-                text = text + 's';
+                text += 's';
             }
             return text;
+        });
+        this.isLicensed = ko.computed(() => {
+            if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
+                var ravenFsValue = license.licenseStatus().Attributes.ravenfs;
+                return /^true$/i.test(ravenFsValue);
+            }
+            return true;
         });
     }
 

@@ -65,7 +65,7 @@ namespace Raven.Database.Server.Controllers
             var drives = DriveInfo.GetDrives();
             string[] alerts = drives
                 .Where(x => x.DriveType == DriveType.Fixed && x.TotalFreeSpace*1.0 / x.TotalSize < FreeThreshold / 100.0)
-                .Select(x => string.Format("Database disk ({0}) size has less than {1}% free.", x.Name, FreeThreshold))
+                .Select(x => string.Format("Database disk ({0}) has less than {1}% free space.", x.Name, FreeThreshold))
                 .ToArray();
             return GetMessageWithObject(alerts);
         }

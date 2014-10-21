@@ -12,7 +12,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	using Raven.Database.Storage.Voron.Impl;
 	using System;
 
-	public class StalenessStorageActions : StorageActionsBase, IStalenessStorageActions
+	internal class StalenessStorageActions : StorageActionsBase, IStalenessStorageActions
 	{
 		private readonly TableStorage tableStorage;
 		private readonly Reference<WriteBatch> writeBatch;

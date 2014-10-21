@@ -23,7 +23,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <NoWarn>618</NoWarn>
+    <NoWarn>618, 3016, 3005, 3003</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -32,6 +32,12 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="FizzWare.NBuilder">
@@ -248,7 +254,9 @@
     <Compile Include="JustFacetSearch.cs" />
     <Compile Include="Justin.cs" />
     <Compile Include="kendaleiv.cs" />
+    <Compile Include="Kijana.cs" />
     <Compile Include="Kushnir.cs" />
+    <Compile Include="Kwoodard.cs" />
     <Compile Include="LargeQuery.cs" />
     <Compile Include="Lars.cs" />
     <Compile Include="LastModifiedMetadataTest.cs" />
@@ -297,9 +305,12 @@
     <Compile Include="nberardi.cs" />
     <Compile Include="Nemitoff.cs" />
     <Compile Include="Nick.cs" />
+    <Compile Include="NickDoubleValues.cs" />
     <Compile Include="NicolasGarfinkiel.cs" />
+    <Compile Include="NimaHa.cs" />
     <Compile Include="NoBuiltinDuplicates.cs" />
     <Compile Include="NonHttpBackupRestore.cs" />
+    <Compile Include="NoTracking.cs" />
     <Compile Include="NSB.cs" />
     <Compile Include="NullableBoolQuery.cs" />
     <Compile Include="NullableEnums.cs" />
@@ -467,6 +478,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Raven.Database\RavenDB.snk">
+      <Link>RavenDB.snk</Link>
+    </None>
     <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>

@@ -52,7 +52,7 @@ task Compile -depends Init, CompileHtml5 {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
 	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573 /maxcpucount" }
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount }
 }
 
 task CompileHtml5 {
@@ -62,7 +62,7 @@ task CompileHtml5 {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
 	Write-Host "Compiling HTML5" -ForegroundColor Yellow
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:VisualStudioVersion=12.0 /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
 	
 	Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
 	Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
@@ -89,11 +89,11 @@ task Test -depends Compile {
 		"$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
 		"$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
 		"$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
+		"$base_dir\RavenFS.Tests\bin\$global:configuration\RavenFS.Tests.dll", `
 		"$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
 		"$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
 		"$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
-		"$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
-		"$base_dir\RavenFS.Tests\bin\$global:configuration\RavenFS.Tests.dll")
+		"$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll")
 	Write-Host $test_prjs
 	
 	$xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"

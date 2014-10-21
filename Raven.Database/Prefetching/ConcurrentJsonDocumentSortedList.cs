@@ -158,13 +158,28 @@ namespace Raven.Database.Prefetching
 			{
 				for (var i = innerList.Count - 1; i >= 0; i--)
 				{
-					var elementEtag = innerList[i].Etag;
+					var doc = innerList[i];
 
-					if (elementEtag.CompareTo(etag) < 0)
+					if (doc.Etag.CompareTo(etag) < 0)
 						break;
 
 					innerList.RemoveAt(i);
+					loadedSize -= doc.SerializedSizeOnDisk;
 				}
+			}
+			finally
+			{
+				slim.ExitWriteLock();
+			}
+		}
+
+		public void Clear()
+		{
+			slim.EnterWriteLock();
+			try
+			{
+				innerList.Clear();
+				loadedSize = 0;
 			}
 			finally
 			{

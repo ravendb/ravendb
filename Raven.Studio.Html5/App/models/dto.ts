@@ -83,7 +83,7 @@ interface databaseStatisticsDto {
     DatabaseId: string;
     DatabaseTransactionVersionSizeInMB: number;
     Errors: serverErrorDto[];
-    InMemoryIndexingQueueSize: number;
+    InMemoryIndexingQueueSizes: number[];
     Indexes: indexStatisticsDto[];
     IndexingBatchInfo: indexingBatchInfoDto[];
     LastAttachmentEtag: string;
@@ -184,6 +184,7 @@ interface licenseStatusDto {
         maxSizeInMb: string;
         maxRamUtilization: string;
         maxParallelism: string;
+        ravenfs: string;
     }
 }
 
@@ -810,17 +811,16 @@ interface debugDocumentStatsDto {
     Total: number;
     TotalSize: number;
     Tombstones: number;
-    System: number;
-    SystemSize: number;
-    NoCollection: number;
-    NoCollectionSize: number;
+    System: collectionStats;
+    NoCollection: collectionStats;
     Collections: dictionary<collectionStats>;
     TimeToGenerate: string;
 }
 
 interface collectionStats {
-    Quantity: number;
-    Size: number;
+    Stats: histogramDataDto;
+    TotalSize: number;
+    TopDocs: any[];
 }
 
 enum logTenantType {
@@ -977,6 +977,8 @@ interface operationIdDto {
 
 interface operationStatusDto {
     Completed: boolean;
+    Faulted: boolean;
+    State: any;
 }
 
 interface bulkOperationStatusDto extends operationStatusDto{
@@ -1037,4 +1039,11 @@ interface runningTaskDto {
 interface adminLogsConfigEntryDto {
     category: string;
     level: string;
+}
+
+interface fileSystemSettingsDto {
+    name: string;
+    path: string;
+    logsPath: string;
+    storageEngine: string;
 }

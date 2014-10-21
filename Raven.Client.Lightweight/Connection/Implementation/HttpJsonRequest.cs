@@ -217,7 +217,8 @@ namespace Raven.Client.Connection
 				ErrorResponseException responseException;
 				try
 				{
-					return await requestOperation().ConfigureAwait(false);
+                    return await requestOperation().ConfigureAwait(false);
+					
 				}
 				catch (ErrorResponseException e)
 				{
@@ -275,112 +276,110 @@ namespace Raven.Client.Connection
 
 		private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync(bool readErrorString)
 		{
-			if (Response.IsSuccessStatusCode == false)
-			{
-				if (Response.StatusCode == HttpStatusCode.Unauthorized ||
-					Response.StatusCode == HttpStatusCode.NotFound ||
-					Response.StatusCode == HttpStatusCode.Conflict)
-				{
-					factory.InvokeLogRequest(owner, () => new RequestResultArgs
-					{
-						DurationMilliseconds = CalculateDuration(),
-						Method = Method,
-						HttpResult = (int)Response.StatusCode,
-						Status = RequestStatus.ErrorOnServer,
-						Result = Response.StatusCode.ToString(),
-						Url = Url,
-						PostedData = postedData
-					});
+		    if (Response.IsSuccessStatusCode) 
+                return null;
+		    if (Response.StatusCode == HttpStatusCode.Unauthorized ||
+		        Response.StatusCode == HttpStatusCode.NotFound ||
+		        Response.StatusCode == HttpStatusCode.Conflict)
+		    {
+		        factory.InvokeLogRequest(owner, () => new RequestResultArgs
+		        {
+		            DurationMilliseconds = CalculateDuration(),
+		            Method = Method,
+		            HttpResult = (int)Response.StatusCode,
+		            Status = RequestStatus.ErrorOnServer,
+		            Result = Response.StatusCode.ToString(),
+		            Url = Url,
+		            PostedData = postedData
+		        });
 
-                    throw ErrorResponseException.FromResponseMessage(Response, readErrorString);
-				}
+		        throw ErrorResponseException.FromResponseMessage(Response, readErrorString);
+		    }
 
-				if (Response.StatusCode == HttpStatusCode.NotModified
-					&& CachedRequestDetails != null)
-				{
-					factory.UpdateCacheTime(this);
-					var result = factory.GetCachedResponse(this, ResponseHeaders);
+		    if (Response.StatusCode == HttpStatusCode.NotModified
+		        && CachedRequestDetails != null)
+		    {
+		        factory.UpdateCacheTime(this);
+		        var result = factory.GetCachedResponse(this, ResponseHeaders);
 
-					// here we explicitly need to get Response.Headers, and NOT ResponseHeaders because we are 
-					// getting the value _right now_ from the secondary, and don't care about the 304, the force check
-					// is still valid
-					HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
+		        // here we explicitly need to get Response.Headers, and NOT ResponseHeaders because we are 
+		        // getting the value _right now_ from the secondary, and don't care about the 304, the force check
+		        // is still valid
+		        HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
 
-					factory.InvokeLogRequest(owner, () => new RequestResultArgs
-					{
-						DurationMilliseconds = CalculateDuration(),
-						Method = Method,
-						HttpResult = (int)Response.StatusCode,
-						Status = RequestStatus.Cached,
-						Result = result.ToString(),
-						Url = Url,
-						PostedData = postedData
-					});
+		        factory.InvokeLogRequest(owner, () => new RequestResultArgs
+		        {
+		            DurationMilliseconds = CalculateDuration(),
+		            Method = Method,
+		            HttpResult = (int)Response.StatusCode,
+		            Status = RequestStatus.Cached,
+		            Result = result.ToString(),
+		            Url = Url,
+		            PostedData = postedData
+		        });
 
-					return result;
-				}
+		        return result;
+		    }
 
 
-				using (var sr = new StreamReader(await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false)))
-				{
-					var readToEnd = sr.ReadToEnd();
+		    using (var sr = new StreamReader(await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false)))
+		    {
+		        var readToEnd = sr.ReadToEnd();
 
-					factory.InvokeLogRequest(owner, () => new RequestResultArgs
-					{
-						DurationMilliseconds = CalculateDuration(),
-						Method = Method,
-						HttpResult = (int)Response.StatusCode,
-						Status = RequestStatus.Cached,
-						Result = readToEnd,
-						Url = Url,
-						PostedData = postedData
-					});
+		        factory.InvokeLogRequest(owner, () => new RequestResultArgs
+		        {
+		            DurationMilliseconds = CalculateDuration(),
+		            Method = Method,
+		            HttpResult = (int)Response.StatusCode,
+		            Status = RequestStatus.Cached,
+		            Result = readToEnd,
+		            Url = Url,
+		            PostedData = postedData
+		        });
 
-					if (string.IsNullOrWhiteSpace(readToEnd))
-						throw ErrorResponseException.FromResponseMessage(Response);
+		        if (string.IsNullOrWhiteSpace(readToEnd))
+		            throw ErrorResponseException.FromResponseMessage(Response);
 
-					RavenJObject ravenJObject;
-					try
-					{
-						ravenJObject = RavenJObject.Parse(readToEnd);
-					}
-					catch (Exception e)
-					{
-						throw new ErrorResponseException(Response, readToEnd, e);
-					}
-					if (ravenJObject.ContainsKey("IndexDefinitionProperty"))
-					{
-						throw new IndexCompilationException(ravenJObject.Value<string>("Message"))
-						{
-							IndexDefinitionProperty = ravenJObject.Value<string>("IndexDefinitionProperty"),
-							ProblematicText = ravenJObject.Value<string>("ProblematicText")
-						};
-					}
-					if (Response.StatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
-					{
-						throw new BadRequestException(ravenJObject.Value<string>("Message"), ErrorResponseException.FromResponseMessage(Response));
-					}
-					if (ravenJObject.ContainsKey("Error"))
-					{
-						var sb = new StringBuilder();
-						foreach (var prop in ravenJObject)
-						{
-							if (prop.Key == "Error")
-								continue;
+		        RavenJObject ravenJObject;
+		        try
+		        {
+		            ravenJObject = RavenJObject.Parse(readToEnd);
+		        }
+		        catch (Exception e)
+		        {
+		            throw new ErrorResponseException(Response, readToEnd, e);
+		        }
+		        if (ravenJObject.ContainsKey("IndexDefinitionProperty"))
+		        {
+		            throw new IndexCompilationException(ravenJObject.Value<string>("Message"))
+		            {
+		                IndexDefinitionProperty = ravenJObject.Value<string>("IndexDefinitionProperty"),
+		                ProblematicText = ravenJObject.Value<string>("ProblematicText")
+		            };
+		        }
+		        if (Response.StatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
+		        {
+		            throw new BadRequestException(ravenJObject.Value<string>("Message"), ErrorResponseException.FromResponseMessage(Response));
+		        }
+		        if (ravenJObject.ContainsKey("Error"))
+		        {
+		            var sb = new StringBuilder();
+		            foreach (var prop in ravenJObject)
+		            {
+		                if (prop.Key == "Error")
+		                    continue;
 
-							sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
-						}
+		                sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
+		            }
 
-						if (sb.Length > 0)
-							sb.AppendLine();
-						sb.Append(ravenJObject.Value<string>("Error"));
+		            if (sb.Length > 0)
+		                sb.AppendLine();
+		            sb.Append(ravenJObject.Value<string>("Error"));
 
-                        throw new ErrorResponseException(Response, sb.ToString(), readToEnd);
-					}
-					throw new ErrorResponseException(Response, readToEnd);
-				}
-			}
-			return null;
+		            throw new ErrorResponseException(Response, sb.ToString(), readToEnd);
+		        }
+		        throw new ErrorResponseException(Response, readToEnd);
+		    }
 		}
 
 		public async Task<byte[]> ReadResponseBytesAsync()
@@ -412,7 +411,8 @@ namespace Raven.Client.Connection
 			if (unauthorizedResponseAsync == null)
 				return false;
 
-			RecreateHttpClient(await unauthorizedResponseAsync.ConfigureAwait(false));
+		    var configureHttpClient = await unauthorizedResponseAsync.ConfigureAwait(false);
+		    RecreateHttpClient(configureHttpClient);
 			return true;
 		}
 
@@ -544,7 +544,7 @@ namespace Raven.Client.Connection
 			set { httpClient.Timeout = value; }
 		}
 
-		private HttpResponseMessage Response { get; set; }
+		public HttpResponseMessage Response { get; private set; }
 
 		private void WriteMetadata(RavenJObject metadata)
 		{
@@ -629,7 +629,7 @@ namespace Raven.Client.Connection
 			return await RunWithAuthRetry(async () =>
 			{
 				var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
-				Response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead);
+				this.Response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead);
 				SetResponseHeaders(Response);
 
 			    await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true).ConfigureAwait(false);
@@ -712,49 +712,86 @@ namespace Raven.Client.Connection
 
 		public async Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
 		{
-			var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url)
-			{
-				Content = new CompressedStringContent(data, factory.DisableRequestCompression),
-			};
+            this.Response = await RunWithAuthRetry(async () =>
+            {
 
-			CopyHeadersToHttpRequestMessage(rawRequestMessage);
-			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead)
-                                           .ConfigureAwait(false);
+                var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url)
+                {
+                    Content = new CompressedStringContent(data, factory.DisableRequestCompression),
+                };
 
-            this.ResponseStatusCode = response.StatusCode;
+                CopyHeadersToHttpRequestMessage(rawRequestMessage);
 
-			// await AssertNotFailingResponse(response);
-			return response;
+                var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead)
+                    .ConfigureAwait(false);
+
+                if (Response.IsSuccessStatusCode == false &&
+                    (Response.StatusCode == HttpStatusCode.PreconditionFailed ||
+                    Response.StatusCode == HttpStatusCode.Forbidden ||
+                    Response.StatusCode == HttpStatusCode.Unauthorized))
+                {
+                    throw new ErrorResponseException(Response, "Failed request");
+                }
+                return response;
+            }).ConfigureAwait(false);
+
+
+            this.ResponseStatusCode = this.Response.StatusCode;
+
+            return this.Response;
 		}
 
 		public async Task<HttpResponseMessage> ExecuteRawResponseAsync()
 		{
-			var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
-			CopyHeadersToHttpRequestMessage(rawRequestMessage);
-			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead);
+            this.Response = await RunWithAuthRetry(async () =>
+		    {
+                var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+                CopyHeadersToHttpRequestMessage(rawRequestMessage);
 
-            this.ResponseStatusCode = response.StatusCode;
+                var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
 
-			// await AssertNotFailingResponse(response).ConfigureAwait(false);
-			return response;
+                if (response.IsSuccessStatusCode == false &&
+                    (response.StatusCode == HttpStatusCode.PreconditionFailed ||
+                    response.StatusCode == HttpStatusCode.Forbidden ||
+                    response.StatusCode == HttpStatusCode.Unauthorized))
+                {
+                    throw new ErrorResponseException(response, "Failed request");
+                }
+                return response;
+
+		    }).ConfigureAwait(false);
+
+            this.ResponseStatusCode = this.Response.StatusCode;
+
+            return this.Response;
 		}
 
 		public async Task<HttpResponseMessage> ExecuteRawRequestAsync(Action<Stream, TaskCompletionSource<object>> action)
 		{
 			httpClient.DefaultRequestHeaders.TransferEncodingChunked = true;
 
-			var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url)
-			{
-				Content = new PushContent(action)
-			};
+            this.Response = await RunWithAuthRetry(async () =>
+            {
+                var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url)
+                {
+                    Content = new PushContent(action)
+                };
 
-			CopyHeadersToHttpRequestMessage(rawRequestMessage);
-			var response = await httpClient.SendAsync(rawRequestMessage).ConfigureAwait(false);
-            
-            this.ResponseStatusCode = response.StatusCode;
+                CopyHeadersToHttpRequestMessage(rawRequestMessage);
+                var response = await httpClient.SendAsync(rawRequestMessage).ConfigureAwait(false);
+                if (response.IsSuccessStatusCode == false && 
+                    (response.StatusCode == HttpStatusCode.PreconditionFailed || 
+                    response.StatusCode == HttpStatusCode.Forbidden || 
+                    response.StatusCode == HttpStatusCode.Unauthorized))
+                {
+                    throw new ErrorResponseException(response, "Failed request");
+                }
+                return response;
+            }).ConfigureAwait(false);
 
-			//await AssertNotFailingResponse(response).ConfigureAwait(false);
-			return response;
+            this.ResponseStatusCode = this.Response.StatusCode;
+
+            return this.Response;		
 		}
 
 		private class PushContent : HttpContent

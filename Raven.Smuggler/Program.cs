@@ -24,6 +24,7 @@ namespace Raven.Smuggler
         
         private readonly OptionSet optionSet;
         private readonly OptionSet selectionDispatching;
+	    private bool allowImplicitDatabase = false;
 
 	    private Program()
 	    {
@@ -211,10 +212,11 @@ namespace Raven.Smuggler
 			{
 				PrintUsageAndExit(e);
 			}
-            
-		    switch ( this.mode )
-		    {
+
+            switch (this.mode)
+            {
                 case SmugglerMode.Database:
+                    ValidateDatabaseParameters(smugglerApi, action);
                     var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
                     await databaseDispatcher.Execute(action);
                     break;
@@ -222,8 +224,24 @@ namespace Raven.Smuggler
                     var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
                     await filesDispatcher.Execute(action);
                     break;
-		    }
-		}
+            }
+        }
+
+        private void ValidateDatabaseParameters(SmugglerDatabaseApi api, SmugglerAction action)
+        {
+            if (allowImplicitDatabase == false)
+            {
+                if (string.IsNullOrEmpty(api.Options.Source.DefaultDatabase))
+                {
+                    throw new OptionException("--database parameter must be specified or pass --allow-implicit-database", "database");
+                }
+
+                if (action == SmugglerAction.Between && string.IsNullOrEmpty(api.Options.Destination.DefaultDatabase))
+                {
+                    throw new OptionException("--database2 parameter must be specified or pass --allow-implicit-database", "database2");
+                }
+            }
+        }
 
 		private void PrintUsageAndExit(Exception e)
 		{
@@ -244,7 +262,7 @@ Usage:
 	- Export from MyDatabase database of the specified RavenDB instance to the dump.raven file:
 		Raven.Smuggler out http://localhost:8080/ dump.raven --database=MyDatabase
 	- Export from Database1 to Database2 on a different RavenDB instance:
-		Raven.Smuggler between http://localhost:8080/databases/Database1 http://localhost:8081/databases/Database2
+		Raven.Smuggler between http://localhost:8080/  http://localhost:8081/ --database=sourceDB --database2=targetDB
     - Import a file system dump.ravenfs file to the MyFiles filesystem of the specified RavenDB instance:
 		Raven.Smuggler in http://localhost:8080/ dump.ravenfs --filesystem=MyFiles
 	- Export from MyFiles file system of the specified RavenDB instance to the dump.ravenfs file:

@@ -3,17 +3,17 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.IO;
+
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Tests.Common;
-using Raven.Tests.Storage;
+
 using Xunit;
 using Xunit.Extensions;
 
-namespace Raven.Tests
+namespace Raven.SlowTests
 {
 	public class IncrementalBackupTest : RavenTest
 	{
@@ -30,7 +30,7 @@ namespace Raven.Tests
             
 		}
 
-		[Theory(Timeout = 30000)]
+		[Theory(Timeout = 60000)]
         [PropertyData("Storages")]
 		public void CreateIncrementalBackup(string storageName)
 		{

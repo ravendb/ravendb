@@ -8,7 +8,11 @@ using System.Collections.Generic;
 using System.Threading;
 using Jint.Runtime.References;
 using Raven.Abstractions.Data;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using metrics.Core;
+using System.Linq;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Storage
 {
@@ -36,37 +40,96 @@ namespace Raven.Database.Storage
 	    DebugDocumentStats GetDocumentStatsVerySlowly();
 	}
 
+    public class CollectionDetails
+    {
+        public long TotalSize { get; private set; }
+
+        public const int TopDocsLimit = 10;
+
+        [JsonIgnore] 
+        private readonly HistogramMetric _stats;
+        public HistogramData Stats { get { return _stats.CreateHistogramData(); } }
+
+        [JsonIgnore]
+        private readonly SortedList<int, string> _topDocs;
+
+        public List<DocumentAndSize> TopDocs { get
+        {
+            return _topDocs.Select(x => new DocumentAndSize
+            {
+                DocId = x.Value,
+                Size = x.Key
+            }).ToList();
+        }}
+
+        public CollectionDetails()
+        {
+            _stats = new HistogramMetric(HistogramMetric.SampleType.Uniform);
+            _topDocs = new SortedList<int, string>(new IntDescComparer());
+        }
+
+        public void Update(int documentSize, string docId)
+        {
+            TotalSize += documentSize;
+            _stats.Update(documentSize);
+            _topDocs[documentSize] = docId;
+            if (_topDocs.Count > TopDocsLimit)
+            {
+                _topDocs.RemoveAt(TopDocsLimit);
+            }
+        }
+    }
+
+    internal class IntDescComparer : IComparer<int>
+    {
+        public int Compare(int x, int y)
+        {
+            return y.CompareTo(x);
+        }
+    }
+
+    public class DocumentAndSize
+    {
+        public string DocId { get; set; }
+        public int Size { get; set; }
+    }
+
     public class DebugDocumentStats
     {
         public long Total { get; set; }
         public long TotalSize { get; set; }
         public long Tombstones { get; set; }
-        public long System { get; set; }
-        public long SystemSize { get; set; }
-        public long NoCollection { get; set; }
-        public long NoCollectionSize { get; set; }
-        public Dictionary<string, CollectionDetails> Collections { get; set; }
+
+        public CollectionDetails System { get; set; }
+        public CollectionDetails NoCollection { get; set; }
+
+        [JsonIgnore]
+        private Dictionary<string, CollectionDetails> _collections { get; set; }
+
+        public Dictionary<string, CollectionDetails> Collections
+        {
+            get { return _collections.OrderByDescending(x => x.Value.TotalSize).ToDictionary(x => x.Key, x => x.Value); }
+        }
+
+        //public Dictionary<string, HistogramData> 
         
         public TimeSpan TimeToGenerate { get; set; }
 
-        public struct CollectionDetails
-        {
-            public long Quantity { get; set; }
-            public double Size { get; set; }
-        }
         public DebugDocumentStats()
         {
-            Collections = new Dictionary<string, CollectionDetails>(StringComparer.OrdinalIgnoreCase);
+            _collections = new Dictionary<string, CollectionDetails>(StringComparer.OrdinalIgnoreCase);
+            System = new CollectionDetails();
+            NoCollection = new CollectionDetails();
         }
 
-        public void IncrementCollection(string name,double size=0)
+        public void IncrementCollection(string name, int size, string docId)
         {
-           
             CollectionDetails value;
-            Collections.TryGetValue(name, out value);
-            value.Quantity++;
-            value.Size += size;
-            Collections[name] = value;
+            if (_collections.TryGetValue(name, out value) == false)
+            {
+                _collections[name] = value = new CollectionDetails();
+            }
+            value.Update(size, docId);
         }
     }
 

@@ -14,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
+using Raven.Database.Storage;
 using Raven.Json.Linq;
 
 using Voron.Impl.Backup;
@@ -63,6 +64,29 @@ namespace Raven.Database.Server.RavenFS.Storage
 
                 if (incrementalBackup)
                 {
+					var incrementalBackupState = Path.Combine(backupDestinationDirectory, Constants.IncrementalBackupState);
+
+					if (File.Exists(incrementalBackupState))
+					{
+						var state = RavenJObject.Parse(File.ReadAllText(incrementalBackupState)).JsonDeserialization<IncrementalBackupState>();
+
+						if (state.ResourceId != filesystem.Storage.Id)
+							throw new InvalidOperationException(string.Format("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different file system. Existing incremental data origins from '{0}' file system.", state.ResourceName));
+					}
+					else
+					{
+						var state = new IncrementalBackupState()
+						{
+							ResourceId = filesystem.Storage.Id,
+							ResourceName = filesystem.Name
+						};
+
+						if (!Directory.Exists(backupDestinationDirectory))
+							Directory.CreateDirectory(backupDestinationDirectory);
+
+						File.WriteAllText(incrementalBackupState, RavenJObject.FromObject(state).ToString());
+					}
+
                     if (CanPerformIncrementalBackup())
                     {
                         backupDestinationDirectory = DirectoryForIncrementalBackup();
@@ -90,7 +114,7 @@ namespace Raven.Database.Server.RavenFS.Storage
                 ExecuteBackup(backupDestinationDirectory, incrementalBackup);
 
                 if (filesystemDocument != null)
-                    File.WriteAllText(Path.Combine(backupDestinationDirectory, BackupMethods.FilesystemDocumentFilename), RavenJObject.FromObject(filesystemDocument).ToString());
+                    File.WriteAllText(Path.Combine(backupDestinationDirectory, Constants.FilesystemDocumentFilename), RavenJObject.FromObject(filesystemDocument).ToString());
 
                 OperationFinished();
 
@@ -143,7 +167,7 @@ namespace Raven.Database.Server.RavenFS.Storage
             {
                 filesystem.Storage.Batch(accessor => backupStatus = accessor.GetConfig(BackupStatus.RavenBackupStatusDocumentKey));
             }
-            catch (FileNotFoundException e)
+            catch (FileNotFoundException)
             {
                 // config doesn't exists
                 return null;

@@ -8,7 +8,6 @@ import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
 import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
-import shell = require("viewmodels/shell");
 import idGenerator = require("common/idGenerator");
 
 class changesApi {
@@ -72,14 +71,15 @@ class changesApi {
             .done((tokenObject: singleAuthToken) => {
                 var token = tokenObject.Token;
                 var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss +  '&isMultyTenantTransport=' +this.isMultyTenantTransport;
-
                 action.call(this, connectionString);
             })
             .fail((e) => {
                 if (e.status == 0) {
                     // Connection has closed so try to reconnect every 3 seconds.
                     setTimeout(() => this.connect(action), 3 * 1000);
-                } else if (e.status != 403) { // authorized connection
+                }
+                else if (e.status != 403) { // authorized connection
+                    this.commandBase.reportError(e.responseJSON.Error);
                     this.connectToChangesApiTask.reject();
                 }
             });

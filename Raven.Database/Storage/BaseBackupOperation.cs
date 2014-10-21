@@ -63,7 +63,30 @@ namespace Raven.Database.Storage
 
                 if (incrementalBackup)
                 {
-                    if (CanPerformIncrementalBackup())
+	                var incrementalBackupState = Path.Combine(backupDestinationDirectory, Constants.IncrementalBackupState);
+
+	                if (File.Exists(incrementalBackupState))
+	                {
+		                var state = RavenJObject.Parse(File.ReadAllText(incrementalBackupState)).JsonDeserialization<IncrementalBackupState>();
+
+						if(state.ResourceId != database.TransactionalStorage.Id)
+							throw new InvalidOperationException(string.Format("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different database. Existing incremental data origins from '{0}' database.", state.ResourceName));
+	                }
+	                else
+	                {
+		                var state = new IncrementalBackupState()
+		                {
+			                ResourceId = database.TransactionalStorage.Id,
+							ResourceName = database.Name ?? Constants.SystemDatabase
+		                };
+
+						if (!Directory.Exists(backupDestinationDirectory))
+							Directory.CreateDirectory(backupDestinationDirectory);
+
+						File.WriteAllText(incrementalBackupState, RavenJObject.FromObject(state).ToString());
+	                }
+
+	                if (CanPerformIncrementalBackup())
                     {
                         backupDestinationDirectory = DirectoryForIncrementalBackup();
                     }
@@ -110,7 +133,7 @@ namespace Raven.Database.Storage
                 ExecuteBackup(backupDestinationDirectory, incrementalBackup);
 
                 if (databaseDocument != null)
-                    File.WriteAllText(Path.Combine(backupDestinationDirectory, BackupMethods.DatabaseDocumentFilename), RavenJObject.FromObject(databaseDocument).ToString());
+                    File.WriteAllText(Path.Combine(backupDestinationDirectory, Constants.DatabaseDocumentFilename), RavenJObject.FromObject(databaseDocument).ToString());
 
                 OperationFinished();
 

@@ -24,7 +24,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	using global::Voron;
 	using global::Voron.Impl;
 
-	public class TasksStorageActions : StorageActionsBase, ITasksStorageActions
+	internal class TasksStorageActions : StorageActionsBase, ITasksStorageActions
 	{
 		private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 

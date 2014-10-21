@@ -22,7 +22,7 @@ using Voron.Trees;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 {
-    public abstract class TableBase
+    internal abstract class TableBase
 	{
         protected IBufferPool BufferPool { get; private set; }
 

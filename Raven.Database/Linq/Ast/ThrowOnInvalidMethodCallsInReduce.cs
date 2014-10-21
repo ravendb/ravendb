@@ -10,7 +10,7 @@ namespace Raven.Database.Linq.Ast
 
 	using ICSharpCode.NRefactory.CSharp;
 
-	public class ThrowOnInvalidMethodCallsInReduce : ThrowOnInvalidMethodCalls
+	internal class ThrowOnInvalidMethodCallsInReduce : ThrowOnInvalidMethodCalls
 	{
 		public ThrowOnInvalidMethodCallsInReduce(string groupByIdentifier)
 			: base(groupByIdentifier)

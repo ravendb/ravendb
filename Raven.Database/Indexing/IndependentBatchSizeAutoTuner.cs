@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
-
-using Raven.Database.Prefetching;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
 {

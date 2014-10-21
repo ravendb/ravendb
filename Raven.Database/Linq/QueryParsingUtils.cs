@@ -98,6 +98,7 @@ namespace Raven.Database.Linq
 			return stringWriter.GetStringBuilder().ToString();
 		}
 
+		[CLSCompliant(false)]
 		public static VariableInitializer GetVariableDeclarationForLinqQuery(string query, bool requiresSelectNewAnonymousType)
 		{
 			try

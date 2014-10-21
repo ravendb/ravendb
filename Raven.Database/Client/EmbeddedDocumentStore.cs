@@ -6,8 +6,10 @@ using Raven.Client;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
+using Raven.Client.FileSystem;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Database.Config;
@@ -57,6 +59,11 @@ namespace Raven.Database.Client
 					.ResultUnwrap();
 			}
 		}
+
+        public IFilesStore FilesStore
+        {
+            get { return server.FilesStore; }
+        }
 
         public string ConnectionStringName
         {
@@ -404,5 +411,15 @@ namespace Raven.Database.Client
         {
             return server.DocumentStore.RegisterListener(conflictListener);
         }
+
+	    public void InitializeProfiling()
+	    {
+		    server.DocumentStore.InitializeProfiling();
+	    }
+
+	    public ProfilingInformation GetProfilingInformationFor(Guid id)
+	    {
+		    return server.DocumentStore.GetProfilingInformationFor(id);
+	    }
     }
 }

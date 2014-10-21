@@ -42,12 +42,14 @@ using System.Security.Cryptography;
 
 namespace Raven.Database.Indexing
 {
+	using Imports.Newtonsoft.Json.Linq;
+
 	/// <summary>
 	/// 	Thread safe, single instance for the entire application
 	/// </summary>
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
-		private readonly DocumentDatabase documentDatabase;
+	    private readonly DocumentDatabase documentDatabase;
 		private const string IndexVersion = "2.0.0.1"; 
 		private const string MapReduceIndexVersion = "2.5.0.1";
 
@@ -64,7 +66,7 @@ namespace Raven.Database.Indexing
 
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
 		{
-			try
+		    try
 			{
 				this.indexDefinitionStorage = indexDefinitionStorage;
 				this.configuration = configuration;
@@ -103,7 +105,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void OpenIndexOnStartup(string indexName)
+	    private void OpenIndexOnStartup(string indexName)
 		{
 			if (indexName == null) 
                 throw new ArgumentNullException("indexName");
@@ -470,7 +472,7 @@ namespace Raven.Database.Indexing
             documentDatabase.TransactionalStorage.Batch(accessor => stats = accessor.Indexing.GetIndexStats(index.IndexId));
 
 	        return stats != null ? stats.LastIndexedEtag : Etag.Empty;
-		}
+        }
 
 		public static string IndexVersionFileName(IndexDefinition indexDefinition)
 		{
@@ -561,20 +563,20 @@ namespace Raven.Database.Indexing
 			Directory.CreateDirectory(commitPointDirectory.FullPath);
 
 			using (var commitPointFile = File.Create(commitPointDirectory.FileFullPath))
-				using (var sw = new StreamWriter(commitPointFile))
-				{
-					var jsonSerializer = new JsonSerializer();
-					var textWriter = new JsonTextWriter(sw);
+			using (var sw = new StreamWriter(commitPointFile))
+			{
+				var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+				var textWriter = new JsonTextWriter(sw);
 
-					jsonSerializer.Serialize(textWriter, indexCommit);
-					sw.Flush();
-				}
+				jsonSerializer.Serialize(textWriter, indexCommit);
+				sw.Flush();
+			}
 
 			var currentSegmentsFileName = indexCommit.SegmentsInfo.SegmentsFileName;
 
 			File.Copy(Path.Combine(commitPointDirectory.IndexFullPath, currentSegmentsFileName),
-					  Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName),
-					  overwrite: true);
+						Path.Combine(commitPointDirectory.FullPath, currentSegmentsFileName),
+						overwrite: true);
 
 			var storedCommitPoints = Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
 
@@ -721,16 +723,43 @@ namespace Raven.Database.Indexing
             return result;
         }
 
-		private static bool TryGetCommitPoint(IndexCommitPointDirectory commitPointDirectory, out IndexCommitPoint indexCommit)
+		public static bool TryGetCommitPoint(IndexCommitPointDirectory commitPointDirectory, out IndexCommitPoint indexCommit)
 		{
 			using (var commitPointFile = File.OpenRead(commitPointDirectory.FileFullPath))
 			{
-				var jsonSerializer = new JsonSerializer();
+				try
+				{
 				var textReader = new JsonTextReader(new StreamReader(commitPointFile));
+					var jsonCommitPoint = RavenJObject.Load(textReader);
+					var jsonEtag = jsonCommitPoint.Value<RavenJToken>("HighestCommitedETag");
 
-				indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
+					Etag recoveredEtag = null;
+					if (jsonEtag.Type == JTokenType.Object) // backward compatibility - HighestCommitedETag is written as {"Restarts":123,"Changes":1}
+					{
+						jsonCommitPoint.Remove("HighestCommitedETag");
+						recoveredEtag = new Etag(UuidType.Documents, jsonEtag.Value<long>("Restarts"), jsonEtag.Value<long>("Changes"));
+					}
 
-				return indexCommit != null;
+					indexCommit = jsonCommitPoint.JsonDeserialization<IndexCommitPoint>();
+
+					if (indexCommit == null)
+						return false;
+
+					if (recoveredEtag != null)
+						indexCommit.HighestCommitedETag = recoveredEtag;
+
+					if (indexCommit.HighestCommitedETag == null || indexCommit.HighestCommitedETag.CompareTo(Etag.Empty) == 0)
+						return false;
+
+					return true;
+			}
+				catch (Exception e)
+				{
+					log.Warn("Could not get commit point from the following location {0}. Exception {1}", commitPointDirectory.FileFullPath, e);
+
+					indexCommit = null;
+					return false;
+		}
 			}
 		}
 
@@ -814,7 +843,7 @@ namespace Raven.Database.Indexing
 
             var dirOnDisk = Path.Combine(path, id.ToString());
             if (!indexes.TryRemove(id, out ignored) || !Directory.Exists(dirOnDisk))
-                return;
+				return;
 
             UpdateIndexMappingFile();
         }
@@ -834,16 +863,16 @@ namespace Raven.Database.Indexing
             if (TryIndexByName(indexDefinition.Name) != null)
 			{
                 throw new InvalidOperationException("Index " + indexDefinition.Name + " already exists");
-            }
+		}
 
             indexes.AddOrUpdate(indexDefinition.IndexId, n =>
-			{
+		{
                 var directory = OpenOrCreateLuceneDirectory(indexDefinition);
                 return CreateIndexImplementation(indexDefinition, directory);
 			}, (s, index) => index);
 
             UpdateIndexMappingFile();
-		}
+			}
 
 		public Query GetDocumentQuery(string index, IndexQuery query, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
 		{
@@ -958,6 +987,7 @@ namespace Raven.Database.Indexing
 			});
 		}
 
+		[CLSCompliant(false)]
         public void Index(int index,
 			AbstractViewGenerator viewGenerator,
 			IndexingBatch batch,
@@ -983,6 +1013,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		[CLSCompliant(false)]
 		public void Reduce(
             int index,
 			AbstractViewGenerator viewGenerator,
@@ -1047,7 +1078,15 @@ namespace Raven.Database.Indexing
 				if ((SystemTime.UtcNow - value.LastIndexTime).TotalMinutes < 1)
 					continue;
 
+				try
+				{
                 value.Flush(value.GetLastEtagFromStats());
+			}
+				catch (Exception)
+				{
+					value.IncrementWriteErrors();
+					throw;
+				}
 			}
 
 			SetUnusedIndexesToIdle();
@@ -1234,7 +1273,15 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values.Where(value => !value.IsMapReduce))
 			{
+				try
+				{
                 value.Flush(value.GetLastEtagFromStats());
+			}
+				catch (Exception)
+				{
+					value.IncrementWriteErrors();
+					throw;
+		}
 			}
 		}
 
@@ -1242,7 +1289,15 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values.Where(value => value.IsMapReduce))
 			{
+				try
+				{
                 value.Flush(value.GetLastEtagFromStats());
+			}
+				catch (Exception)
+				{
+					value.IncrementWriteErrors();
+					throw;
+		}
 			}
 		}
 

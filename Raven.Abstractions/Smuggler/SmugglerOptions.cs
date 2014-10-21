@@ -9,6 +9,7 @@ namespace Raven.Abstractions.Smuggler
     {
         public CancellationTokenSource CancelToken;
 
+        public const int DefaultDocumentSizeInChunkLimitInBytes = 32 * 1024 * 1024;
         public abstract string SourceUrl { get; }
         public abstract string DestinationUrl { get; }
 

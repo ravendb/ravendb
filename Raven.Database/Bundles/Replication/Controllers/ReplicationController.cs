@@ -121,83 +121,109 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[Route("databases/{databaseName}/replication/replicateDocs")]
 		public async Task<HttpResponseMessage> DocReplicatePost()
 		{
+			const int BatchSize = 512;
+
 			var src = GetQueryStringValue("from");
 			if (string.IsNullOrEmpty(src))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
-		
+
 			while (src.EndsWith("/"))
 				src = src.Substring(0, src.Length - 1);// remove last /, because that has special meaning for Raven
 
 			if (string.IsNullOrEmpty(src))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
-			
+
 			var array = await ReadJsonArrayAsync();
 			if (ReplicationTask != null)
 				ReplicationTask.HandleHeartbeat(src);
-		
+
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				Database.TransactionalStorage.Batch(actions =>
+				string lastEtag = Etag.Empty.ToString();
+
+				var docIndex = 0;
+
+				while (docIndex < array.Length)
 				{
-					string lastEtag = Etag.Empty.ToString();
-					foreach (RavenJObject document in array)
+					using (Database.DocumentLock.Lock())
 					{
-						var metadata = document.Value<RavenJObject>("@metadata");
-						if (metadata[Constants.RavenReplicationSource] == null)
+						Database.TransactionalStorage.Batch(actions =>
 						{
-							// not sure why, old document from when the user didn't have replication
-							// that we suddenly decided to replicate, choose the source for that
-							metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
-						}
-						lastEtag = metadata.Value<string>("@etag");
-						var id = metadata.Value<string>("@id");
-						document.Remove("@metadata");
-						ReplicateDocument(actions, id, metadata, document, src);
-					}
+							for (var j = 0; j < BatchSize && docIndex < array.Length; j++, docIndex++)
+							{
+								var document = (RavenJObject) array[docIndex];
+								var metadata = document.Value<RavenJObject>("@metadata");
+								if (metadata[Constants.RavenReplicationSource] == null)
+								{
+									// not sure why, old document from when the user didn't have replication
+									// that we suddenly decided to replicate, choose the source for that
+									metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
+								}
 
-					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
-					var replicationDocument = Database.Documents.Get(replicationDocKey, null);
-					var lastAttachmentId = Etag.Empty;
-					if (replicationDocument != null)
-					{
-						lastAttachmentId =
-							replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().
-								LastAttachmentEtag;
-					}
+								lastEtag = metadata.Value<string>("@etag");
+								var id = metadata.Value<string>("@id");
+								document.Remove("@metadata");
 
-					Guid serverInstanceId;
-					if (Guid.TryParse(GetQueryStringValue("dbid"), out serverInstanceId) == false)
-						serverInstanceId = Database.TransactionalStorage.Id;
-					Database.Documents.Put(replicationDocKey, null,
-								 RavenJObject.FromObject(new SourceReplicationInformation
-								 {
-									 Source = src,
-									 LastDocumentEtag = Etag.Parse(lastEtag),
-									 LastAttachmentEtag = lastAttachmentId,
-									 ServerInstanceId = serverInstanceId
-								 }),
-								 new RavenJObject(), null);
-				});
+								ReplicateDocument(actions, id, metadata, document, src);
+							}
+
+							SaveReplicationSource(src, lastEtag);
+						});
+					}
+				}
 			}
 
 			return GetEmptyMessage();
 		}
 
+		private void SaveReplicationSource(string src, string lastEtag)
+		{
+			var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
+			var replicationDocument = Database.Documents.Get(replicationDocKey, null);
+			var lastAttachmentId = Etag.Empty;
+			if (replicationDocument != null)
+			{
+				lastAttachmentId = replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().LastAttachmentEtag;
+			}
+
+			Guid serverInstanceId;
+			if (Guid.TryParse(GetQueryStringValue("dbid"), out serverInstanceId) == false)
+			{
+				serverInstanceId = Database.TransactionalStorage.Id;
+			}
+
+			Database
+				.Documents
+				.Put(
+					replicationDocKey,
+					null,
+					RavenJObject.FromObject(
+						new SourceReplicationInformation
+						{
+							Source = src,
+							LastDocumentEtag = Etag.Parse(lastEtag),
+							LastAttachmentEtag = lastAttachmentId,
+							ServerInstanceId = serverInstanceId
+						}),
+					new RavenJObject(),
+					null);
+		}
+
 		[HttpPost]
 		[Route("replication/replicateAttachments")]
 		[Route("databases/{databaseName}/replication/replicateAttachments")]
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		public async Task<HttpResponseMessage> AttachmentReplicatePost()
 		{
 			var src = GetQueryStringValue("from");
 			if (string.IsNullOrEmpty(src))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
-			
+
 			while (src.EndsWith("/"))
 				src = src.Substring(0, src.Length - 1);// remove last /, because that has special meaning for Raven
 			if (string.IsNullOrEmpty(src))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
-			
+
 			var array = await ReadBsonArrayAsync();
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
@@ -229,7 +255,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 							replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().
 								LastDocumentEtag;
 					}
-					
+
 					Guid serverInstanceId;
 					if (Guid.TryParse(GetQueryStringValue("dbid"), out serverInstanceId) == false)
 						serverInstanceId = Database.TransactionalStorage.Id;
@@ -254,7 +280,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[Route("databases/{databaseName}/replication/info")]
 		public HttpResponseMessage ReplicationInfoGet()
 		{
-		    var replicationStatistics = ReplicationUtils.GetReplicationInformation(Database);
+			var replicationStatistics = ReplicationUtils.GetReplicationInformation(Database);
 			return GetMessageWithObject(replicationStatistics);
 		}
 
@@ -395,7 +421,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			dbid = GetQueryStringValue("dbid");
 			if (dbid == Database.TransactionalStorage.Id.ToString())
 				throw new InvalidOperationException("Both source and target databases have database id = " + dbid +
-				                                    "\r\nDatabase cannot replicate to itself.");
+													"\r\nDatabase cannot replicate to itself.");
 
 			if (string.IsNullOrEmpty(src))
 				return GetEmptyMessage(HttpStatusCode.BadRequest);
@@ -418,7 +444,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			}.Replicate(id, metadata, document);
 		}
 
-        [Obsolete("Use RavenFS instead.")]
+		[Obsolete("Use RavenFS instead.")]
 		private void ReplicateAttachment(IStorageActionsAccessor actions, string id, RavenJObject metadata, byte[] data, string src)
 		{
 			new AttachmentReplicationBehavior

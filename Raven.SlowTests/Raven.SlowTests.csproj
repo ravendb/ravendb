@@ -71,6 +71,8 @@
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
     <Compile Include="Bundles\Replication\ReadStriping.cs" />
     <Compile Include="Faceted\FacetPaging.cs" />
+    <Compile Include="IncrementalBackupTest.cs" />
+    <Compile Include="IndexationTests.cs" />
     <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
     <Compile Include="Issues\RavenDB_1033.cs" />
     <Compile Include="Issues\RavenDB_1280.cs" />
@@ -84,10 +86,12 @@
     <Compile Include="Issues\RavenDB_2134.cs" />
     <Compile Include="Issues\RavenDB_2143.cs" />
     <Compile Include="Issues\RavenDB_2660 .cs" />
+    <Compile Include="Issues\RavenDB_2812.cs" />
     <Compile Include="Issues\RavenDB_560.cs" />
     <Compile Include="MailingList\FailingBulkInsertTest.cs" />
     <Compile Include="MailingList\Jalchr.cs" />
     <Compile Include="MailingList\Jalchr2.cs" />
+    <Compile Include="MailingList\Jalchr3.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="Replication\AsyncReadStriping.cs" />

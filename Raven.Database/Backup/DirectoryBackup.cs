@@ -42,15 +42,22 @@ namespace Raven.Database.Backup
 			this.destination = destination;
 			this.tempPath = tempPath;
 			this.allowOverwrite = allowOverwrite;
-
-			if (Directory.Exists(tempPath) == false)
-				Directory.CreateDirectory(tempPath);
 			
+			EnsureDirectoryExists(tempPath);
+
 			if (!allowOverwrite && Directory.Exists(destination) && Directory.EnumerateFileSystemEntries(destination).Any())
 				throw new InvalidOperationException("Directory exists and it is not empty; overwrite was not explicitly requested by user: " + destination);
 
-			if (Directory.Exists(destination) == false)
-				Directory.CreateDirectory(destination);
+			EnsureDirectoryExists(destination);
+		}
+
+		private static void EnsureDirectoryExists(string dir)
+		{
+			if (Directory.Exists(dir) == false)
+				Directory.CreateDirectory(dir);
+			var tempPath = Path.Combine(dir, Guid.NewGuid().ToString());
+			File.WriteAllText(tempPath, "testing that we can write to this directory");
+			File.Delete(tempPath);
 		}
 
 		/// <summary>
@@ -66,8 +73,9 @@ namespace Raven.Database.Backup
 			if (allowOverwrite) // clean destination folder; we want to do this as close as possible to the actual backup operation
 			{
 				IOExtensions.DeleteDirectory(destination);
-				Directory.CreateDirectory(destination);
 			}
+
+			EnsureDirectoryExists(destination);
 
 			foreach (var file in Directory.EnumerateFiles(tempPath))
 			{

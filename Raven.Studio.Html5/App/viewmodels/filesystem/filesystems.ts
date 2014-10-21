@@ -123,16 +123,16 @@ class filesystems extends viewModelBase {
             var createFileSystemViewModel = new createFileSystem(this.fileSystems);
             createFileSystemViewModel
                 .creationTask
-                .done((fileSystemName: string, fileSystemPath: string, fileSystemLogsPath: string) => this.showCreationAdvancedStepsIfNecessary(fileSystemName, fileSystemPath, fileSystemLogsPath));
+                .done((fsSettings: fileSystemSettingsDto) => this.showCreationAdvancedStepsIfNecessary(fsSettings));
             app.showDialog(createFileSystemViewModel);
         });
     }
 
-    showCreationAdvancedStepsIfNecessary(fileSystemName: string, fileSystemPath: string, fileSystemLogsPath: string) {
+    showCreationAdvancedStepsIfNecessary(fsSettings: fileSystemSettingsDto) {
         require(["commands/filesystem/createFilesystemCommand"], createFileSystemCommand => {
-            new createFileSystemCommand(fileSystemName, fileSystemPath).execute()
+            new createFileSystemCommand(fsSettings).execute()
                 .done(() => {
-                    var newFileSystem = this.addNewFileSystem(fileSystemName);
+                    var newFileSystem = this.addNewFileSystem(fsSettings.name);
                     this.selectFileSystem(newFileSystem);
                 });
         });

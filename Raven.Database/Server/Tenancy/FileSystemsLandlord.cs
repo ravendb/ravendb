@@ -122,8 +122,9 @@ namespace Raven.Database.Server.Tenancy
             fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
 				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+
+				AssertLicenseParameters();
 				var fs = new RavenFileSystem(config, tenantId, transportState);
-                AssertLicenseParameters();
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
@@ -141,27 +142,50 @@ namespace Raven.Database.Server.Tenancy
 
         private void AssertLicenseParameters()
         {
-            string maxDatabases;
-            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfFileSystems", out maxDatabases))
+			string maxFileSystmes;
+			if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfFileSystems", out maxFileSystmes))
             {
-                if (string.Equals(maxDatabases, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
+                if (string.Equals(maxFileSystmes, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
                 {
-                    var numberOfAllowedFileSystems = int.Parse(maxDatabases);
+					var numberOfAllowedFileSystems = int.Parse(maxFileSystmes);
 
                     int nextPageStart = 0;
-                    var databases =
+                    var fileSystems =
                         systemDatabase.Documents.GetDocumentsWithIdStartingWith("Raven/FileSystems/", null, null, 0,
                             numberOfAllowedFileSystems, CancellationToken.None, ref nextPageStart).ToList();
-                    if (databases.Count >= numberOfAllowedFileSystems)
+                    if (fileSystems.Count >= numberOfAllowedFileSystems)
                         throw new InvalidOperationException(
                             "You have reached the maximum number of file systems that you can have according to your license: " +
                             numberOfAllowedFileSystems + Environment.NewLine +
                             "You can either upgrade your RavenDB license or delete a file system from the server");
                 }
             }
+
+	        if (IsNotLicensed())
+	        {
+				throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
+	        }
         }
 
-        protected override DateTime LastWork(RavenFileSystem resource)
+		public static bool IsNotLicensed()
+	    {
+			//string ravenFsValue;
+			//var license = ValidateLicense.CurrentLicense;
+			//if (license.IsCommercial == false)
+			//{
+			//	return false; // we allow the use of ravenfs in the OSS version
+			//}
+			//if (license.Attributes.TryGetValue("ravenfs", out ravenFsValue))
+			//{
+			//	bool active;
+			//	if (bool.TryParse(ravenFsValue, out active))
+			//		return active == false;
+			//}
+			//return true;
+			return false;
+	    }
+
+	    protected override DateTime LastWork(RavenFileSystem resource)
         {
             return resource.SynchronizationTask.LastSuccessfulSynchronizationTime;
         }

@@ -177,7 +177,12 @@ namespace Raven.Database.Actions
 
 			RestoreDatabase,
 
-            RestoreFilesystem
+            RestoreFilesystem,
+
+            CompactDatabase,
+
+            CompactFilesystem
+
         }
 
       

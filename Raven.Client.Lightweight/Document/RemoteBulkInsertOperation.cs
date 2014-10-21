@@ -1,7 +1,5 @@
-﻿using System.Linq;
+﻿using System.Diagnostics;
 using System.Net;
-using System.Net.Http;
-using Microsoft.VisualBasic.CompilerServices;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection.Async;
@@ -16,10 +14,8 @@ using Raven.Abstractions.Data;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
-using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -39,7 +35,7 @@ namespace Raven.Client.Document
 
         void Write(string id, RavenJObject metadata, RavenJObject data, int? dataSize = null);
 
-        Task DisposeAsync();
+        Task<int> DisposeAsync();
 
         /// <summary>
         ///     Report on the progress of the operation
@@ -51,7 +47,8 @@ namespace Raven.Client.Document
     public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification>
     {
         private readonly BulkInsertOptions options;
-        private CancellationTokenSource cancellationTokenSource;
+	    private readonly Task<int> previousTask;
+	    private CancellationTokenSource cancellationTokenSource;
         private readonly AsyncServerClient operationClient;
         private readonly MemoryStream bufferedStream = new MemoryStream();
         private readonly BlockingCollection<RavenJObject> queue;
@@ -59,15 +56,17 @@ namespace Raven.Client.Document
         private static readonly RavenJObject SkipMarker = new RavenJObject();
         private HttpJsonRequest operationRequest;
         private readonly Task operationTask;
-        private int total;
-        private bool aborted;
-
+	    private bool aborted;
+	    private bool waitedForPreviousTask;
+	    private readonly Stopwatch _timing = Stopwatch.StartNew();
         private const int BigDocumentSize = 64 * 1024;
 
-        public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
+        public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes, 
+			Task<int> previousTask = null)
         {
             this.options = options;
-            using (NoSynchronizationContext.Scope())
+	        this.previousTask = previousTask;
+	        using (NoSynchronizationContext.Scope())
             {
                 OperationId = Guid.NewGuid();
                 operationClient = client;
@@ -80,6 +79,10 @@ namespace Raven.Client.Document
 #endif
             }
         }
+
+	    public int Total { get;set; }
+	    public int localCount;
+	    public long size;
 
 #if !MONO
         private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
@@ -119,7 +122,6 @@ namespace Raven.Client.Document
                     {
                         source.TrySetException(e);
                     }
-
                 }, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
                 await response.AssertNotFailingResponse();
@@ -315,10 +317,10 @@ namespace Raven.Client.Document
 
         private long responseOperationId;
 
-        public async Task DisposeAsync()
+        public async Task<int> DisposeAsync()
         {
-            if (disposed)
-                return;
+	        if (disposed)
+		        return -1;
             disposed = true;
             queue.Add(null);
             if (subscription != null)
@@ -333,16 +335,29 @@ namespace Raven.Client.Document
                 await operationTask.ConfigureAwait(false);
                 operationTask.AssertNotFailed();
 
-                ReportInternal("Finished writing all results to server");
+	            if (previousTask == null)
+		            ReportInternal("Finished writing all results to server");
 
                 while (true)
                 {
                     if (await IsOperationCompleted(responseOperationId))
                         break;
 
-                    Thread.Sleep(500);
+	                await Task.Delay(100);
                 }
-                ReportInternal("Done writing to server");
+				if (previousTask == null)
+	            {
+		            ReportInternal("Done writing to server");
+	            }
+	            else
+	            {
+					ReportInternal("Wrote {0:#,#} [{3:#,#;;0} kb] (total {2:#,#;;0}) documents to server gzipped to {1:#,#;;0} kb in {4:#,#.#;;0} sec.",
+					   localCount,
+					   bufferedStream.Position / 1024d,
+					   Total,
+					   size / 1024d,
+					   _timing.Elapsed.TotalSeconds);   
+	            }
             }
             catch (Exception e)
             {
@@ -351,7 +366,7 @@ namespace Raven.Client.Document
                     throw new ConcurrencyException("ConcurrencyException while writing bulk insert items in the server. Did you run bulk insert operation with OverwriteExisting == false?. Exception returned from server: " + e.Message, e);
                 throw;
             }
-
+	        return Total;
         }
 
         public void Dispose()
@@ -368,34 +383,46 @@ namespace Raven.Client.Document
 
         private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)
         {
-            if (localBatch.Count == 0)
-                return;
-            if (aborted) throw new InvalidOperationException("Operation was timed out or has been aborted");
+	        if (localBatch.Count == 0)
+		        return;
+	        if (aborted) throw new InvalidOperationException("Operation was timed out or has been aborted");
 
-            bufferedStream.SetLength(0);
-            WriteToBuffer(localBatch);
+			if (previousTask != null && waitedForPreviousTask == false)
+	        {
+		        Total += previousTask.Result;
+		        waitedForPreviousTask = true;
+	        }
 
-            var requestBinaryWriter = new BinaryWriter(requestStream);
-            requestBinaryWriter.Write((int)bufferedStream.Position);
-            bufferedStream.WriteTo(requestStream);
-            requestStream.Flush();
+	        bufferedStream.SetLength(0);
+	        long bytesWrittenToServer;
+	        WriteToBuffer(localBatch, out bytesWrittenToServer);
 
-            total += localBatch.Count;
-            Action<string> report = Report;
-            if (report != null)
-            {
-                report(string.Format("Wrote {0:#,#} (total {2:#,#}) documents to server gzipped to {1:#,#.##;;0} kb",
-                    localBatch.Count,
-                    bufferedStream.Position / 1024d,
-                    total));
-            }
+	        var requestBinaryWriter = new BinaryWriter(requestStream);
+	        requestBinaryWriter.Write((int) bufferedStream.Position);
+	        var sp = Stopwatch.StartNew();
+	        bufferedStream.WriteTo(requestStream);
+	        requestStream.Flush();
+
+	        Total += localBatch.Count;
+	        localCount += localBatch.Count;
+	        size += bytesWrittenToServer;
+			if (previousTask == null)
+	        {
+		        ReportInternal("Wrote {0:#,#} [{3:#,#;;0} kb] (total {2:#,#;;0}) documents to server gzipped to {1:#,#;;0} kb in {4:#,#.#;;0} sec.",
+			        localBatch.Count,
+			        bufferedStream.Position/1024d,
+			        Total,
+			        bytesWrittenToServer/1024d,
+			        sp.Elapsed.TotalSeconds);
+	        }
         }
 
-        private void WriteToBuffer(ICollection<RavenJObject> localBatch)
+	    private void WriteToBuffer(ICollection<RavenJObject> localBatch, out long bytesWritten)
         {
-            using (var gzip = new GZipStream(bufferedStream, CompressionMode.Compress, leaveOpen: true))
+			using (var gzip = new GZipStream(bufferedStream, CompressionMode.Compress, leaveOpen: true))
+			using (var stream = new CountingStream(gzip))
             {
-                var binaryWriter = new BinaryWriter(gzip);
+                var binaryWriter = new BinaryWriter(stream);
                 binaryWriter.Write(localBatch.Count);
                 var bsonWriter = new BsonWriter(binaryWriter)
                                  {
@@ -409,7 +436,8 @@ namespace Raven.Client.Document
 
                 bsonWriter.Flush();
                 binaryWriter.Flush();
-                gzip.Flush();
+                stream.Flush();
+	            bytesWritten = stream.NumberOfWrittenBytes;
             }
         }
 

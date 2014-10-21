@@ -300,7 +300,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
 
                 Historian.UpdateLastModified(headers);
-                headers[Constants.CreationDate] = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture);
+
+
+                var now = DateTimeOffset.UtcNow;
+                headers[Constants.RavenCreationDate] = now;
+                headers[Constants.CreationDate] = now.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture); // TODO: To keep current filesystems working. We should remove when adding a new migration. 
                 Historian.Update(name, headers);
 
                 SynchronizationTask.Cancel(name);

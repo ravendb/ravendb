@@ -10,6 +10,7 @@ using Raven.Bundles.Replication.Tasks;
 
 namespace Raven.Database.Counters
 {
+	[CLSCompliant(false)]
     public class CountersMetricsManager
     {
         readonly Metrics counterMetrics = new Metrics();

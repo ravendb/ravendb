@@ -128,7 +128,7 @@ namespace Raven.Database.Indexing
         }
 
 
-        public class IndexSearcherHoldingState : IDisposable, ILowMemoryHandler
+        internal class IndexSearcherHoldingState : IDisposable, ILowMemoryHandler
         {
             public readonly IndexSearcher IndexSearcher;
 

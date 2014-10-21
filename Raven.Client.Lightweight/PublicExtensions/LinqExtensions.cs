@@ -471,6 +471,24 @@ namespace Raven.Client
 			return provider.CountLazily<T>(source.Expression);
 		}
 
+
+		/// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public static Lazy<Task<int>> CountLazilyAsync<T>(this IQueryable<T> source)
+		{
+			if (source == null)
+				throw new ArgumentNullException("source");
+
+			var provider = source.Provider as IRavenQueryProvider;
+
+			if (provider == null)
+				throw new InvalidOperationException("CountLazily only be used with IRavenQueryable");
+
+			return provider.CountLazilyAsync<T>(source.Expression);
+		}
+
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>

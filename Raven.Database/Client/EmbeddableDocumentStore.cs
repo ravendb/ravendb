@@ -11,7 +11,9 @@ using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
+using Raven.Client.FileSystem;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Database;
@@ -248,6 +250,18 @@ namespace Raven.Client.Embedded
         {
             get { return Inner.AsyncDatabaseCommands; }
         }
+
+        public IFilesStore FilesStore
+        {
+            get
+            {
+                var eds = Inner as EmbeddedDocumentStore;
+                if (eds != null)
+                    return eds.FilesStore;
+                return null;
+            }
+        }
+
         public IAsyncDocumentSession OpenAsyncSession()
         {
             return Inner.OpenAsyncSession();
@@ -350,5 +364,15 @@ namespace Raven.Client.Embedded
             Listeners.RegisterListener(listener);
             return this;
         }
+
+	    public void InitializeProfiling()
+	    {
+			_inner.InitializeProfiling();
+	    }
+
+	    public ProfilingInformation GetProfilingInformationFor(Guid id)
+	    {
+		    return _inner.GetProfilingInformationFor(id);
+	    }
     }
 }

@@ -19,11 +19,14 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.Extensions;
 using Raven.Database.Actions;
+using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Server.Tenancy;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
@@ -81,8 +84,19 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			MessageWithStatusCode fileSystemNameFormat = CheckNameFormat(id, Database.Configuration.FileSystem.DataDirectory);
 			if (fileSystemNameFormat.Message != null)
 			{
-				return GetMessageWithString(fileSystemNameFormat.Message, fileSystemNameFormat.ErrorCode);
+				return GetMessageWithObject(new
+				{
+                    Error = fileSystemNameFormat.Message
+				}, fileSystemNameFormat.ErrorCode);
 			}
+
+			if (FileSystemsLandlord.IsNotLicensed())
+	        {
+				return GetMessageWithObject(new
+				{
+                    Error = "Your license does not allow the use of RavenFS!"
+				}, HttpStatusCode.BadRequest);
+	        }
 
             var docKey = "Raven/FileSystems/" + id;
            
@@ -262,7 +276,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             {
                 FileSystem.Storage.Batch(accessor => document = accessor.GetConfig(BackupStatus.RavenBackupStatusDocumentKey));
             }
-            catch (FileNotFoundException e)
+            catch (FileNotFoundException)
             {
                 // ok, there isn't another backup in progress
             }
@@ -307,6 +321,39 @@ namespace Raven.Database.Server.RavenFS.Controllers
         }
 
         [HttpPost]
+        [Route("admin/fs/compact")]
+        public HttpResponseMessage Compact()
+        {
+            var fs = InnerRequest.RequestUri.ParseQueryString()["filesystem"];
+            if (string.IsNullOrWhiteSpace(fs))
+                return GetMessageWithString("Compact request requires a valid filesystem parameter", HttpStatusCode.BadRequest);
+
+            var configuration = FileSystemsLandlord.CreateTenantConfiguration(fs);
+            if (configuration == null)
+                return GetMessageWithString("No filesystem named: " + fs, HttpStatusCode.NotFound);
+
+            var task = Task.Factory.StartNew(() =>
+            {
+                // as we perform compact async we don't catch exceptions here - they will be propaged to operation
+                var targetFs = FileSystemsLandlord.GetFileSystemInternal(fs).ResultUnwrap();
+                FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration));
+                return GetEmptyMessage();
+            });
+            long id;
+            Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.CompactFilesystem,
+                Payload = "Compact filesystem " + fs,
+            }, out id);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            });
+        }
+
+        [HttpPost]
         [Route("admin/fs/restore")]
         [Route("fs/{fileSystemName}/admin/fs/restore")]
         public async Task<HttpResponseMessage> Restore()
@@ -336,8 +383,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
             if (string.IsNullOrWhiteSpace(filesystemName))
             {
                 var errorMessage = (filesystemDocument == null || String.IsNullOrWhiteSpace(filesystemDocument.Id))
-                                ? BackupMethods.FilesystemDocumentFilename +  " file is invalid - filesystem name was not found and not supplied in the request (Id property is missing or null). This is probably a bug - should never happen."
-                                : "A filesystem name must be supplied if the restore location does not contain a valid " + BackupMethods.FilesystemDocumentFilename + " file";
+                                ? Constants.FilesystemDocumentFilename +  " file is invalid - filesystem name was not found and not supplied in the request (Id property is missing or null). This is probably a bug - should never happen."
+                                : "A filesystem name must be supplied if the restore location does not contain a valid " + Constants.FilesystemDocumentFilename + " file";
 
                 restoreStatus.Messages.Add(errorMessage);
                 DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
@@ -389,7 +436,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                             while (IsAnotherRestoreInProgress(out anotherRestoreResourceName));
                         }
                     }
-                    catch (OperationCanceledException e)
+                    catch (OperationCanceledException)
                     {
                         return GetMessageWithString(string.Format("Another restore is still in progress (resource name = {0}). Waited {1} seconds for other restore to complete.", anotherRestoreResourceName, restoreRequest.RestoreStartTimeout.Value), HttpStatusCode.ServiceUnavailable);
                     }
@@ -465,10 +512,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             var backupPath = Directory.GetDirectories(rootBackupPath, "Inc*")
                                        .OrderByDescending(dir => dir)
-                                       .Select(dir => Path.Combine(dir, BackupMethods.FilesystemDocumentFilename))
+                                       .Select(dir => Path.Combine(dir, Constants.FilesystemDocumentFilename))
                                        .FirstOrDefault();
 
-            return backupPath ?? Path.Combine(rootBackupPath, BackupMethods.FilesystemDocumentFilename);
+            return backupPath ?? Path.Combine(rootBackupPath, Constants.FilesystemDocumentFilename);
         }
 
         private string ResolveTenantDataDirectory(string filesystemLocation, string filesystemName, out string documentDataDir)

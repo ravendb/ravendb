@@ -21,7 +21,7 @@ using Voron.Impl;
 
 namespace Raven.Database.Storage.Voron.Schema
 {
-	public class SchemaCreator
+	internal class SchemaCreator
 	{
 		private readonly TableStorage storage;
 

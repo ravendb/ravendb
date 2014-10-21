@@ -1,27 +1,28 @@
-﻿using Raven.Abstractions.Smuggler;
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using Raven.Tests.Core.Utils.Transformers;
-using System.IO;
-using Xunit;
-using Raven.Abstractions.Data;
-using Raven.Smuggler;
-using System.Threading.Tasks;
 using System;
+using System.IO;
+using System.Threading.Tasks;
+using Xunit;
 
 namespace Raven.Tests.Core.Smuggler
 {
     public class SmugglerApiTests : RavenCoreTestBase
     {
-        public const int Port1 = 8081;
-        public const int Port2 = 8082;
+        public const int Port1 = 8077;
+        public const int Port2 = 8078;
         public const string ServerName1 = "Raven.Tests.Core.Server";
         public const string ServerName2 = "Raven.Tests.Core.Server2";
 
@@ -29,6 +30,8 @@ namespace Raven.Tests.Core.Smuggler
 
         public SmugglerApiTests()
         {
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port1);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port2);
             IOExtensions.DeleteDirectory(BackupDir);
         }
 

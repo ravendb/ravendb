@@ -240,6 +240,7 @@
     <Compile Include="Server\Connections\AdminLogsConnectionState.cs" />
     <Compile Include="Server\Connections\AdminLogsTarget.cs" />
     <Compile Include="Server\RavenFS\Controllers\FilesStreamsController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\HttpTraceFsController.cs" />
     <Compile Include="Server\RavenFS\Storage\BaseBackupOperation.cs" />
     <Compile Include="Server\RavenFS\Storage\BaseRestoreOperation.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\Backup\BackupOperation.cs" />
@@ -256,6 +257,7 @@
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
+    <Compile Include="Storage\IncrementalBackupState.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
@@ -543,7 +545,6 @@
     <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
     <Compile Include="Plugins\Builtins\RecoverPendingTransactions.cs" />
     <Compile Include="Plugins\Builtins\RecoveryEnlistment.cs" />
-    <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />

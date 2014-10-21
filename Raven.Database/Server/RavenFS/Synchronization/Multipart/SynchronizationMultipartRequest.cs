@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 {
-	public class SynchronizationMultipartRequest : IHoldProfilingInformation
+	internal class SynchronizationMultipartRequest : IHoldProfilingInformation
 	{
         private readonly IAsyncFilesSynchronizationCommands destination;
 		private readonly string fileName;

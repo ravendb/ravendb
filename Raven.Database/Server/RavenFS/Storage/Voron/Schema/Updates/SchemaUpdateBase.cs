@@ -12,7 +12,7 @@ using Voron;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron.Schema.Updates
 {
-	public abstract class SchemaUpdateBase : ISchemaUpdate
+	internal abstract class SchemaUpdateBase : ISchemaUpdate
 	{
 		public abstract string FromSchemaVersion { get; }
 

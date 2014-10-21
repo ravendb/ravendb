@@ -58,7 +58,7 @@ class indexMergeSuggestions extends viewModelBase {
         this.idleOrAbandonedIndexes([]);
         this.notUsedForLastWeek([]);
         var now = moment();
-        var secondsInWeek = 100 * 3600 * 24 * 7;
+        var miliSecondsInWeek = 1000 * 3600 * 24 * 7;
         stats.Indexes.forEach(indexDto => {
             // we are using contains not equals as priority may contains 
             if (indexDto.Priority.contains("Idle") || indexDto.Priority.contains("Abandoned")) {
@@ -69,7 +69,7 @@ class indexMergeSuggestions extends viewModelBase {
                 var lastQueryDate = moment(indexDto.LastQueryTimestamp);
                 if (lastQueryDate.isValid()) {
                     var agoInMs = now.diff(lastQueryDate);
-                    if (agoInMs > secondsInWeek) {
+                    if (agoInMs > miliSecondsInWeek) {
                         indexDto['LastQueryTimestampText'] = optional.val(indexDto.LastQueryTimestamp).bind(v => v.toHumanizedDate());
                         this.notUsedForLastWeek.push(indexDto);
                     }

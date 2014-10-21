@@ -80,8 +80,11 @@ namespace Raven.Database.Server.Connections
     public class WebSocketsTransport : IEventsTransport
     {
 	    private static ILog log = LogManager.GetCurrentClassLogger();
-        
+
+		[CLSCompliant(false)]
         protected readonly IOwinContext _context;
+
+		[CLSCompliant(false)]
         protected readonly RavenDBOptions _options;
 
         private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();

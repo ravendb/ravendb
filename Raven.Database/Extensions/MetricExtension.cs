@@ -9,7 +9,7 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.Extensions
 {
-    public static class MetricExtensions
+	internal static class MetricExtensions
     {
         public static HistogramData CreateHistogramData(this HistogramMetric self)
         {

@@ -15,6 +15,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.UI;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -52,11 +53,15 @@ namespace Raven.Database.Indexing
 	{
 		protected static readonly ILog logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
 		protected static readonly ILog logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
+
+		private const long WriteErrorsLimit = 10;
+
 		private readonly List<Document> currentlyIndexDocuments = new List<Document>();
 		protected Directory directory;
 		protected readonly IndexDefinition indexDefinition;
 		private volatile string waitReason;
 		private readonly long flushSize;
+		private long writeErrors;
 
 		public IndexingPriority Priority { get; set; }
 
@@ -90,6 +95,7 @@ namespace Raven.Database.Indexing
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
 
+		[CLSCompliant(false)]
 		protected Index(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
 			currentIndexSearcherHolder = new IndexSearcherHolder(id, context);
@@ -150,6 +156,7 @@ namespace Raven.Database.Indexing
 
 		public int? MaxIndexOutputsPerDocument { get { return indexDefinition.MaxIndexOutputsPerDocument; } }
 
+		[CLSCompliant(false)]
 		public volatile bool IsMapIndexingInProgress;
 
 		protected void RecordCurrentBatch(string indexingStep, int size)
@@ -272,6 +279,8 @@ namespace Raven.Database.Indexing
 				{
 					waitReason = "Flush";
 					indexWriter.Commit(highestETag);
+
+					ResetWriteErrors();
 				}
 				finally
 				{
@@ -295,6 +304,13 @@ namespace Raven.Database.Indexing
 					}
 					indexWriter.Optimize();
 					logIndexing.Info("Done merging {0} - took {1}", indexId, sp.Elapsed);
+
+					ResetWriteErrors();
+				}
+				catch (Exception)
+				{
+					IncrementWriteErrors();
+					throw;
 				}
 				finally
 				{
@@ -483,6 +499,8 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception e)
 				{
+					IncrementWriteErrors();
+
 					throw new InvalidOperationException("Could not properly write to index " + PublicName, e);
 				}
 				finally
@@ -614,6 +632,8 @@ namespace Raven.Database.Indexing
 				dir.Dispose();
 
 				CreateIndexWriter();
+
+				ResetWriteErrors();
 			}
 		}
 
@@ -951,6 +971,7 @@ namespace Raven.Database.Indexing
 				sb.ToString());
 		}
 
+		[CLSCompliant(false)]
 		public static void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQuery indexQuery, AbstractViewGenerator viewGenerator)
 		{
 			if (string.IsNullOrWhiteSpace(indexQuery.Query) == false)
@@ -1000,11 +1021,13 @@ namespace Raven.Database.Indexing
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
-			private readonly HashSet<RavenJObject> alreadyReturned;
+			private readonly HashSet<RavenJObject> alreadySeenProjections;
 			private readonly FieldsToFetch fieldsToFetch;
-			private readonly HashSet<string> documentsAlreadySeenInPreviousPage = new HashSet<string>();
+			private readonly HashSet<string> alreadySeenDocumentKeysInPreviousPage = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			private readonly OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers;
 			private readonly List<string> reduceKeys;
+			private bool hasMultipleIndexOutputs;
+			private bool alreadyPagedItemsRecorded = false;
 
 			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, List<string> reduceKeys = null)
 			{
@@ -1016,7 +1039,7 @@ namespace Raven.Database.Indexing
 				this.reduceKeys = reduceKeys;
 
 				if (fieldsToFetch.IsDistinctQuery)
-					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
+					alreadySeenProjections = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
 			}
 
 			public IEnumerable<RavenJObject> IndexEntries(Reference<int> totalResults)
@@ -1072,56 +1095,52 @@ namespace Raven.Database.Indexing
 					{
 						var documentQuery = GetDocumentQuery();
 
-
 						int start = indexQuery.Start;
 						int pageSize = indexQuery.PageSize;
 						int returnedResults = 0;
-						int skippedResultsInCurrentLoop = 0;
-						bool readAll;
-						bool adjustStart = true;
-						DuplicateDocumentRecorder recorder = null;
-						if (indexQuery.SkipDuplicateChecking == false)
-							recorder = new DuplicateDocumentRecorder(indexSearcher, parent, documentsAlreadySeenInPreviousPage,
-								alreadyReturned, fieldsToFetch, parent.IsMapReduce || fieldsToFetch.IsProjection);
+						bool endOfResults;
+
+						int maxNumberOfIndexOutputs;
+
+						if (parent.MaxIndexOutputsPerDocument != null)
+						{
+							hasMultipleIndexOutputs = true;
+							maxNumberOfIndexOutputs = parent.MaxIndexOutputsPerDocument.Value;
+						}
+						else
+						{
+							maxNumberOfIndexOutputs = parent.IsMapReduce ? parent.context.Configuration.MaxMapReduceIndexOutputsPerDocument : parent.context.Configuration.MaxSimpleIndexOutputsPerDocument;
+
+							if (maxNumberOfIndexOutputs == -1) // configuration was set to disable output count check, probably because there exist fanout indexes
+								maxNumberOfIndexOutputs = 50;
+						}
+
+						var docsToGet = pageSize;
+						var position = start;
 
 						do
 						{
-							if (skippedResultsInCurrentLoop > 0)
-							{
-								start = start + pageSize - (start - indexQuery.Start); // need to "undo" the index adjustment
-								// trying to guesstimate how many results we will need to read from the index
-								// to get enough unique documents to match the page size
-								pageSize = Math.Max(2, skippedResultsInCurrentLoop) * pageSize;
-								skippedResultsInCurrentLoop = 0;
-							}
-							TopDocs search;
-							int moreRequired = 0;
-							do
-							{
-								token.ThrowIfCancellationRequested();
-								search = ExecuteQuery(indexSearcher, documentQuery, start, pageSize, indexQuery);
+							token.ThrowIfCancellationRequested();
 
-								if (recorder != null)
-								{
-									moreRequired = recorder.RecordResultsAlreadySeenForDistinctQuery(search, adjustStart, pageSize, ref start);
-									pageSize += moreRequired * 2;
-								}
-							} while (moreRequired > 0);
+							var search = ExecuteQuery(indexSearcher, documentQuery, start, docsToGet, indexQuery);
 
 							indexQuery.TotalSize.Value = search.TotalHits;
-							adjustStart = false;
+							
+							RecordAlreadyPagedItemsInPreviousPage(start, search, indexSearcher);
 
 							SetupHighlighter(documentQuery);
 
-							for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
+							for (;position < search.ScoreDocs.Length && pageSize > 0; position++)
 							{
-								var scoreDoc = search.ScoreDocs[i];
+								token.ThrowIfCancellationRequested();
+
+								var scoreDoc = search.ScoreDocs[position];
 								var document = indexSearcher.Doc(scoreDoc.Doc);
 								var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc);
+								
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
 									indexQuery.SkippedResults.Value++;
-									skippedResultsInCurrentLoop++;
 									continue;
 								}
 
@@ -1130,14 +1149,86 @@ namespace Raven.Database.Indexing
 								AddQueryExplanation(documentQuery, indexSearcher, scoreDoc, indexQueryResult);
 
 								returnedResults++;
+
 								yield return indexQueryResult;
-								if (returnedResults == indexQuery.PageSize)
+								if (returnedResults == pageSize)
 									yield break;
 							}
-							readAll = search.TotalHits == search.ScoreDocs.Length;
-						} while (returnedResults < indexQuery.PageSize && readAll == false);
+
+							if (hasMultipleIndexOutputs)
+								docsToGet += (pageSize - returnedResults) * maxNumberOfIndexOutputs;
+							else
+								docsToGet += (pageSize - returnedResults);
+
+							endOfResults = search.TotalHits == search.ScoreDocs.Length;
+
+						} while (returnedResults < pageSize && endOfResults == false);
 					}
 				}
+			}
+
+			private void RecordAlreadyPagedItemsInPreviousPage(int start, TopDocs search, IndexSearcher indexSearcher)
+			{
+				if(alreadyPagedItemsRecorded)
+					return;
+
+				if(start == 0)
+					return;
+
+				if(indexQuery.SkipDuplicateChecking)
+					return;
+
+				// we are paging, we need to check that we don't have duplicates in the previous pages
+				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
+
+				if (parent.IsMapReduce == false && fieldsToFetch.IsProjection == false && search.ScoreDocs.Length >= start)
+				{
+					if (IsSortingQuery(indexQuery))
+					{
+						// we need to scan all records from the beginning to requested 'start' position
+						for (int i = 0; i < start && i < search.ScoreDocs.Length; i++)
+						{
+							var scoreDoc = search.ScoreDocs[i];
+							var document = indexSearcher.Doc(scoreDoc.Doc);
+							var alreadyPagedKey = document.Get(Constants.DocumentIdFieldName);
+
+							alreadySeenDocumentKeysInPreviousPage.Add(alreadyPagedKey);
+							hasMultipleIndexOutputs = true;
+						}
+					}
+					else
+					{
+						// that's not a sorted query so we need just to ensure that we won't return the last item of the previous page
+						var scoreDoc = search.ScoreDocs[start - 1];
+						var document = indexSearcher.Doc(scoreDoc.Doc);
+						var alreadyPagedKey = document.Get(Constants.DocumentIdFieldName);
+
+						alreadySeenDocumentKeysInPreviousPage.Add(alreadyPagedKey);
+						hasMultipleIndexOutputs = true;
+					}
+				}
+
+				if (fieldsToFetch.IsDistinctQuery)
+				{
+					for (int i = 0; alreadySeenProjections.Count < start && i < search.ScoreDocs.Length; i++)
+					{
+						var scoreDoc = search.ScoreDocs[i];
+						var document = indexSearcher.Doc(scoreDoc.Doc);
+						var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc);
+
+						if (indexQueryResult.Projection.Count > 0) // we don't consider empty projections to be relevant for distinct operations
+						{
+							alreadySeenProjections.Add(indexQueryResult.Projection);
+						}
+					}
+				}
+
+				alreadyPagedItemsRecorded = true;
+			}
+
+			private bool IsSortingQuery(IndexQuery query)
+			{
+				return query.SortedFields != null && query.SortedFields.Length > 0;
 			}
 
 			private void AddHighlighterResults(IndexSearcher indexSearcher, ScoreDoc scoreDoc, IndexQueryResult indexQueryResult)
@@ -1283,12 +1374,14 @@ namespace Raven.Database.Indexing
 						{
 							Document document = indexSearcher.Doc(intersectResults[i].LuceneId);
 							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
+
 							if (ShouldIncludeInResults(indexQueryResult) == false)
 							{
 								indexQuery.SkippedResults.Value++;
 								skippedResultsInCurrentLoop++;
 								continue;
 							}
+
 							returnedResults++;
 							yield return indexQueryResult;
 							if (returnedResults == indexQuery.PageSize)
@@ -1297,43 +1390,21 @@ namespace Raven.Database.Indexing
 					}
 				}
 			}
-
 			private bool ShouldIncludeInResults(IndexQueryResult indexQueryResult)
 			{
 				if (shouldIncludeInResults(indexQueryResult) == false)
 					return false;
-				if (documentsAlreadySeenInPreviousPage.Contains(indexQueryResult.Key))
+
+				if (alreadySeenDocumentKeysInPreviousPage.Contains(indexQueryResult.Key))
+				{
+					hasMultipleIndexOutputs = true;
 					return false;
-				if (fieldsToFetch.IsDistinctQuery && alreadyReturned.Add(indexQueryResult.Projection) == false)
+				}
+				
+				if (fieldsToFetch.IsDistinctQuery && alreadySeenProjections.Add(indexQueryResult.Projection) == false)
 					return false;
+
 				return true;
-			}
-
-			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start, int pageSize)
-			{
-				var min = Math.Min(start, search.TotalHits);
-
-				// we are paging, we need to check that we don't have duplicates in the previous page
-				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
-				if (parent.IsMapReduce == false && fieldsToFetch.IsProjection == false && start - pageSize >= 0 && start < search.TotalHits)
-				{
-					for (int i = start - pageSize; i < min; i++)
-					{
-						var document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
-						documentsAlreadySeenInPreviousPage.Add(document.Get(Constants.DocumentIdFieldName));
-					}
-				}
-
-				if (fieldsToFetch.IsDistinctQuery == false)
-					return;
-
-				// add results that were already there in previous pages
-				for (int i = 0; i < min; i++)
-				{
-					Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
-					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
-					alreadyReturned.Add(indexQueryResult.Projection);
-				}
 			}
 
 			public Query GetDocumentQuery()
@@ -1432,97 +1503,6 @@ namespace Raven.Database.Indexing
 		}
 
 		#endregion
-
-		public class DuplicateDocumentRecorder
-		{
-			private int min = -1;
-			private readonly bool isProjectionOrMapReduce;
-			private readonly Searchable indexSearcher;
-			private readonly Index parent;
-			private int alreadyScannedPositions, alreadyScannedPositionsForDistinct;
-			private readonly HashSet<string> documentsAlreadySeenInPreviousPage;
-			private readonly HashSet<RavenJObject> alreadyReturned;
-			private readonly FieldsToFetch fieldsToFetch;
-
-			public DuplicateDocumentRecorder(Searchable indexSearcher,
-				Index parent,
-				HashSet<string> documentsAlreadySeenInPreviousPage,
-				HashSet<RavenJObject> alreadyReturned,
-				FieldsToFetch fieldsToFetch,
-				bool isProjectionOrMapReduce)
-			{
-				this.indexSearcher = indexSearcher;
-				this.parent = parent;
-				this.isProjectionOrMapReduce = isProjectionOrMapReduce;
-				this.alreadyReturned = alreadyReturned;
-				this.fieldsToFetch = fieldsToFetch;
-				this.documentsAlreadySeenInPreviousPage = documentsAlreadySeenInPreviousPage;
-			}
-
-
-			public int RecordResultsAlreadySeenForDistinctQuery(TopDocs search, bool adjustStart, int pageSize, ref int start)
-			{
-				int itemsSkipped = 0;
-				if (min == -1)
-				{
-					min = start;
-				}
-				min = Math.Min(min, search.TotalHits);
-
-				// we are paging, we need to check that we don't have duplicates in the previous pages
-				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
-				if (isProjectionOrMapReduce == false)
-				{
-					for (int i = alreadyScannedPositions; i < min; i++)
-					{
-						if (i >= search.ScoreDocs.Length)
-						{
-							alreadyScannedPositions = i;
-							var pageSizeIncreaseSize = min - search.ScoreDocs.Length;
-							return pageSizeIncreaseSize;
-						}
-						var document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
-						var id = document.Get(Constants.DocumentIdFieldName);
-						if (documentsAlreadySeenInPreviousPage.Add(id) == false)
-						{
-							// already seen this, need to expand the range we are scanning because the user
-							// didn't take this into account
-							min = Math.Min(min + 1, search.TotalHits);
-							itemsSkipped++;
-						}
-					}
-					alreadyScannedPositions = min;
-				}
-
-
-				if (fieldsToFetch.IsDistinctQuery)
-				{
-					// add results that were already there in previous pages
-					for (int i = alreadyScannedPositionsForDistinct; i < min; i++)
-					{
-						if (i >= search.ScoreDocs.Length)
-						{
-							alreadyScannedPositionsForDistinct = i;
-							var pageSizeIncreaseSize = min - search.ScoreDocs.Length;
-							return pageSizeIncreaseSize;
-						}
-
-						Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
-						var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
-						if (indexQueryResult.Projection.Count > 0 && // we don't consider empty projections to be relevant for distinct operations
-							alreadyReturned.Add(indexQueryResult.Projection) == false)
-						{
-							min++; // we found a duplicate
-							itemsSkipped++;
-						}
-					}
-					alreadyScannedPositionsForDistinct = min;
-				}
-				if (adjustStart)
-					start += itemsSkipped;
-				return itemsSkipped;
-			}
-		}
 
 		public IndexingPerformanceStats[] GetIndexingPerformance()
 		{
@@ -1722,8 +1702,8 @@ namespace Raven.Database.Indexing
 						continue;
 					task.ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
 				}
-
-				logIndexing.Debug("Scheduled to touch documents: {0}", String.Join(";", task.ReferencesToCheck.Select(x => x.Key + ":" + x.Value)));
+				if (task.ReferencesToCheck.Count > 0)
+					logIndexing.Debug("Scheduled to touch documents: {0}", String.Join(";", task.ReferencesToCheck.Select(x => x.Key + ":" + x.Value)));
 			}
 			if (task.ReferencesToCheck.Count == 0)
 				return;
@@ -1750,9 +1730,46 @@ namespace Raven.Database.Indexing
 									"Please verify this index definition and consider a re-design of your entities or index.",
 				PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs);
 			logIndexing.Warn(msg);
-			this.context.AddError(this.indexId, this.PublicName, sourceDocumentId, msg);
+			context.AddError(indexId, PublicName, sourceDocumentId, msg);
 
 			return false;
+		}
+
+		public void IncrementWriteErrors()
+		{
+			writeErrors = Interlocked.Increment(ref writeErrors);
+
+			if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error) 
+				return;
+			
+			context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
+			Priority = IndexingPriority.Error;
+
+			context.Database.Notifications.RaiseNotifications(new IndexChangeNotification
+			{
+				Name = PublicName,
+				Type = IndexChangeTypes.IndexMarkedAsErrored
+			});
+
+			var msg = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
+
+			logIndexing.Warn(msg);
+
+			context.AddError(indexId, PublicName, null, msg);
+
+			context.Database.AddAlert(new Alert
+			{
+				AlertLevel = AlertLevel.Error,
+				CreatedAt = SystemTime.UtcNow,
+				Message = msg,
+				Title = string.Format("Index '{0}' marked as errored due to write errors", PublicName),
+				UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
+			});
+		}
+
+		private void ResetWriteErrors()
+		{
+			writeErrors = Interlocked.Exchange(ref writeErrors, 0);
 		}
 
 		internal class IndexByIdEqualityComparer : IEqualityComparer<Index>

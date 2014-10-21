@@ -17,6 +17,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
+using Raven.Client.FileSystem;
 using Raven.Database.Config;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.RavenFS.Infrastructure;
@@ -371,7 +372,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
             }
             catch (Exception e)
             {
-                var msg = "Could not open file system named: " + tenantId;
+	            var se = e.SimplifyException();
+	            var msg = "Could not open file system named: " + tenantId + ", " + se.Message;
                 Logger.WarnException(msg, e);
                 throw new HttpException(503, msg, e);
             }
@@ -399,7 +401,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 }
                 catch (Exception e)
                 {
-                    var msg = "Could not open file system named: " + tenantId;
+                    var msg = "Could not open file system named: " + tenantId + ", " + e.InnerException.Message;
                     Logger.WarnException(msg, e);
                     throw new HttpException(503, msg, e);
                 }

@@ -51,6 +51,7 @@ class editSqlReplication extends viewModelBase {
     availableConnectionStrings = ko.observableArray<string>();
     sqlReplicationStatsAndMetricsHref = appUrl.forCurrentDatabase().statusDebugSqlReplication;
     appUrls: computedAppUrls;
+    docEditor: AceAjax.Editor;
 
     isBusy = ko.observable(false);
     initialReplicationId: string = '';
@@ -193,6 +194,14 @@ class editSqlReplication extends viewModelBase {
         $('pre').each((index, currentPreElement) => {
             this.initializeAceValidity(currentPreElement);
         });
+
+        var editorElement = $("#sqlReplicationEditor");
+        if (editorElement.length > 0) {
+            this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
+        }
+
+        $("#sqlReplicationEditor").on('DynamicHeightSet', () => this.docEditor.resize());
+
     }
 
     createSqlReplication(): sqlReplication {
@@ -228,6 +237,12 @@ class editSqlReplication extends viewModelBase {
                 });
         });
     }
+
+    detached() {
+        super.detached();
+        $("#sqlReplicationEditor").off('DynamicHeightSet');
+    }
+
 
     private isSqlReplicationNameExists(name): boolean {
         var count = 0;

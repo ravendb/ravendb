@@ -21,7 +21,7 @@ namespace Raven.Database.Storage.Voron.Impl
 	using global::Voron.Impl;
 	using global::Voron.Trees;
 
-	public abstract class TableBase
+	internal abstract class TableBase
 	{
         protected IBufferPool BufferPool { get; private set; }
 

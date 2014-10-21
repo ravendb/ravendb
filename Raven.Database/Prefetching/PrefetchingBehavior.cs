@@ -15,7 +15,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 
@@ -23,7 +22,7 @@ namespace Raven.Database.Prefetching
 {
 	using Util;
 
-	public class PrefetchingBehavior : IDisposable
+	public class PrefetchingBehavior : IDisposable, ILowMemoryHandler
 	{
 		private class DocAddedAfterCommit
 		{
@@ -53,6 +52,7 @@ namespace Raven.Database.Prefetching
 			this.context = context;
 			this.autoTuner = autoTuner;
 			PrefetchingUser = prefetchingUser;
+			MemoryStatistics.RegisterLowMemoryHandler(this);
 		}
 
 		public PrefetchingUser PrefetchingUser { get; private set; }
@@ -384,6 +384,7 @@ namespace Raven.Database.Prefetching
 			var futureBatchStat = new FutureBatchStats
 			{
 				Timestamp = SystemTime.UtcNow,
+				PrefetchingUser = PrefetchingUser
 			};
 			Stopwatch sp = Stopwatch.StartNew();
 			context.AddFutureBatch(futureBatchStat);
@@ -696,5 +697,11 @@ namespace Raven.Database.Prefetching
 	    {
 	        autoTuner.HandleOutOfMemory();
 	    }
+
+		public void HandleLowMemory()
+		{
+			futureIndexBatches.Clear();	
+			prefetchingQueue.Clear();
+		}
 	}
 }

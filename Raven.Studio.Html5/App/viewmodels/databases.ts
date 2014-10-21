@@ -6,6 +6,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import changesApi = require('common/changesApi');
 import shell = require('viewmodels/shell');
 import getOperationAlertsCommand = require("commands/getOperationAlertsCommand");
+import license = require("models/license");
 
 class databases extends viewModelBase {
 
@@ -104,7 +105,7 @@ class databases extends viewModelBase {
         // Since the database page is the common landing page, we want it to load quickly.
         // Since the createDatabase page isn't required up front, we pull it in on demand.
         require(["viewmodels/createDatabase"], createDatabase => {
-            var createDatabaseViewModel = new createDatabase(this.databases, shell.licenseStatus);
+            var createDatabaseViewModel = new createDatabase(this.databases, license.licenseStatus);
             createDatabaseViewModel
                 .creationTask
                 .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, storageEngine: string) => {
@@ -112,7 +113,7 @@ class databases extends viewModelBase {
                         "Raven/ActiveBundles": bundles.join(";")
                     };
                     if (storageEngine) {
-                        settings["Raven/StorageEngine"] = storageEngine;
+                        settings["Raven/StorageTypeName"] = storageEngine;
                     }
                     settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/Databases/" + databaseName;
                     if (!this.isEmptyStringOrWhitespace(databaseLogs)) {

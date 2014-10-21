@@ -22,7 +22,8 @@ namespace Raven.Abstractions.Data
 		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
 		public const string LastModified = "Last-Modified";
         public const string CreationDate = "Creation-Date";
-		public const string RavenLastModified = "Raven-Last-Modified";
+        public const string RavenCreationDate = "Raven-Creation-Date";
+        public const string RavenLastModified = "Raven-Last-Modified";
 		public const string SystemDatabase = "<system>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
 		public const string RandomFieldName = "__random";
@@ -64,7 +65,7 @@ namespace Raven.Abstractions.Data
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
 		public const string RavenLogsPath = "Raven/Esent/LogsPath";
-        public const string RavenTxJournalPath = "Raven/TransactionJouranlsPath";
+        public const string RavenTxJournalPath = "Raven/TransactionJournalsPath";
 		public const string RavenIndexPath = "Raven/IndexStoragePath";
 
 		//Files
@@ -167,5 +168,11 @@ namespace Raven.Abstractions.Data
 
 		public const string DataCouldNotBeDecrypted = "<data could not be decrypted>";
 
+		// Backup
+
+		public const string DatabaseDocumentFilename = "Database.Document";
+		public const string FilesystemDocumentFilename = "Filesystem.Document";
+
+		public const string IncrementalBackupState = "IncrementalBackupState.Document";
 	}
 }
