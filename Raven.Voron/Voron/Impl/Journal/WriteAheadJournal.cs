@@ -32,7 +32,7 @@ namespace Voron.Impl.Journal
 		private readonly LZ4 _lz4 = new LZ4();
 		private readonly JournalApplicator _journalApplicator;
         private readonly ShipppedTransactionsApplicator _shipppedTransactionsApplicator;
-        private readonly ReaderWriterLockSlim _journalLock = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim _journalLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 		private readonly ModifyHeaderAction _updateLogInfo;
 
 		private ImmutableAppendOnlyList<JournalFile> _files = ImmutableAppendOnlyList<JournalFile>.Empty;
@@ -422,13 +422,8 @@ namespace Voron.Impl.Journal
 
 			public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, Transaction transaction = null, bool allowToFlushOverwrittenPages = false)
 			{
-				bool locked = false;
-				if (_flushingSemaphore.IsWriteLockHeld == false)
-				{
-					if (_flushingSemaphore.TryEnterWriteLock(Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30)) == false)
-						throw new TimeoutException("Could not acquire the write lock in 30 seconds");
-					locked = true;
-				}
+				if (_flushingSemaphore.TryEnterWriteLock(Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30)) == false)
+					throw new TimeoutException("Could not acquire the write lock in 30 seconds");
 
 				try
 				{
@@ -585,8 +580,7 @@ namespace Voron.Impl.Journal
 				}
 				finally
 				{
-					if (locked)
-						_flushingSemaphore.ExitWriteLock();
+					_flushingSemaphore.ExitWriteLock();
 				}
 			}
 
