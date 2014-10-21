@@ -70,6 +70,11 @@ namespace Voron.Impl.Journal
 
 		public ShipppedTransactionsApplicator Shipper { get { return _shipppedTransactionsApplicator; } }
 
+		internal long CompressionBufferSize
+		{
+			get { return _compressionPager.NumberOfAllocatedPages*AbstractPager.PageSize; }
+		}
+
 		private JournalFile NextFile(int numberOfPages = 1)
 		{
 			_journalIndex++;
