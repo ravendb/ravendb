@@ -219,7 +219,19 @@ namespace Voron.Impl.Scratch
 
 		internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
 		{
-			return _freePagesBySize.Keys.ToDictionary(size => size, size => _freePagesBySize[size].Last.Value.ValidAfterTransactionId);
+			return _freePagesBySize.Keys.ToDictionary(size => size, size =>
+			{
+				var list = _freePagesBySize[size].Last;
+
+				if (list == null)
+					return -1;
+
+				var value = list.Value;
+				if (value == null)
+					return -1;
+
+				return value.ValidAfterTransactionId;
+			});
 		}
 
 		public void Dispose()
