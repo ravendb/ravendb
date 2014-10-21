@@ -14,7 +14,7 @@
     constructor(dto?: any) {
         if (dto) {
             this.ravenFSSize = dto['RavenFS-Size'];
-            this.creationDate = dto['Creation-Date'];
+            this.creationDate = dto['Raven-Creation-Date'];
             this.lastModified = dto['Last-Modified'];            
             this.etag = dto['ETag'];
 
@@ -31,7 +31,7 @@
 
     toDto(): fileMetadataDto {
         var dto: any = {
-            'Creation-Date':this.creationDate,
+            'Raven-Creation-Date':this.creationDate,
             'Last-Modified': this.lastModified,
             'ETag': this.etag,
             'RavenFS-Size': this.ravenFSSize,

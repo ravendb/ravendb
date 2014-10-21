@@ -40,6 +40,11 @@ namespace Raven.Json.Linq
 			get { return JTokenType.Object; }
 		}
 
+        public IEqualityComparer<string> Comparer
+        {
+            get { return comparer; }
+        }
+
 		internal DictionaryWithParentSnapshot Properties { get; set; }
 
 		public int Count
