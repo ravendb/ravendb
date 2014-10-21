@@ -247,7 +247,7 @@ namespace Raven.Tests.Core.ChangesApi
             using (var store = GetDocumentStore())
             {
                 store.Changes().Task.Result
-                    .ForAllTransformers()
+                    .ForAllTransformers().Task.Result
                     .Subscribe(changes => 
                     {
                         if (changes.Type == TransformerChangeTypes.TransformerAdded)

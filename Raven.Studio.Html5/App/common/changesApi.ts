@@ -8,7 +8,6 @@ import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
 import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
-import shell = require("viewmodels/shell");
 import idGenerator = require("common/idGenerator");
 
 class changesApi {
@@ -72,7 +71,6 @@ class changesApi {
             .done((tokenObject: singleAuthToken) => {
                 var token = tokenObject.Token;
                 var connectionString = 'singleUseAuthToken=' + token + '&id=' + this.eventsId + '&coolDownWithDataLoss=' + this.coolDownWithDataLoss +  '&isMultyTenantTransport=' +this.isMultyTenantTransport;
-
                 action.call(this, connectionString);
             })
             .fail((e) => {

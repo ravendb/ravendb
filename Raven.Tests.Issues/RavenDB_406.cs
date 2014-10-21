@@ -37,8 +37,8 @@ namespace Raven.Tests.Issues
 
 				using (store.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 				{
-
-					// make sure that object is cached
+                    
+                    // make sure that object is cached
 					using (var session = store.OpenSession())
 					{
 						store.Changes().Task.Result.WaitForAllPendingSubscriptions();
@@ -49,8 +49,9 @@ namespace Raven.Tests.Issues
 					}
 					
 					store.GetObserveChangesAndEvictItemsFromCacheTask().Wait();
+                    int numberOfCacheResets = store.JsonRequestFactory.NumberOfCacheResets;
 
-					// change object
+				    // change object
 					using (var session = store.OpenSession())
 					{
 						session.Store(new User()
@@ -62,12 +63,12 @@ namespace Raven.Tests.Issues
 					}
 
 
-					Assert.True(SpinWait.SpinUntil(() =>store.JsonRequestFactory.NumberOfCacheResets > 0, 10000));
+
+                    Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets > numberOfCacheResets, 10000));
 
 					using (var session = store.OpenSession())
 					{
 						var users = session.Load<User>(new[] { "users/1" });
-
 						Assert.Equal("Adam", users[0].Name);
 					}
 				}
@@ -105,8 +106,9 @@ namespace Raven.Tests.Issues
 						Assert.Equal("John", users[0].Name);
 					}
 
-					((DocumentStore)store).GetObserveChangesAndEvictItemsFromCacheTask().Wait();
-					// change object
+                    store.GetObserveChangesAndEvictItemsFromCacheTask().Wait();
+                    int numberOfCacheResets = store.JsonRequestFactory.NumberOfCacheResets;
+                    // change object
 					using (var session = store.OpenSession())
 					{
 						session.Store(new User()
@@ -118,7 +120,7 @@ namespace Raven.Tests.Issues
 					}
 
 
-					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets > 0, 10000));
+                    Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets > numberOfCacheResets, 10000));
 
 					using (var session = store.OpenSession())
 					{
@@ -183,7 +185,8 @@ namespace Raven.Tests.Issues
 						Assert.Equal("John", users[0].Name);
 					}
 
-					// change object on Northwind_1 ONLY
+				    int numberOfCacheResets = store.JsonRequestFactory.NumberOfCacheResets;
+				    // change object on Northwind_1 ONLY
 					using (var session = store.OpenSession("Northwind_1"))
 					{
 						session.Store(new User()
@@ -195,7 +198,7 @@ namespace Raven.Tests.Issues
 					}
 
 
-					Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets > 0, 10000));
+                    Assert.True(SpinWait.SpinUntil(() => store.JsonRequestFactory.NumberOfCacheResets > numberOfCacheResets, 10000));
 
 					using (var session = store.OpenSession("Northwind_1"))
 					{
@@ -246,10 +249,10 @@ namespace Raven.Tests.Issues
 						Assert.Equal("John", user.Name);
 					}
 
-					changes.ForDocument("users/1")
+					changes.ForDocument("users/1").Task.Result
 						   .Subscribe(documentChangeNotification => canProceedEvent.Signal());
 
-					changes.ForAllIndexes()
+                    changes.ForAllIndexes().Task.Result
 						   .Subscribe(indexChangeNotification => canProceedEvent.Signal());
 
 					// change object

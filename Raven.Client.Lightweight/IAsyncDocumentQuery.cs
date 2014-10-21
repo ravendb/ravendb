@@ -75,5 +75,7 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="transformerParameters"></param>
 		void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
+
+		Lazy<Task<int>> CountLazilyAsync();
 	}
 }

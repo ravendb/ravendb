@@ -5,11 +5,14 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
+using Raven.Client.Document.Async;
+using Raven.Client.Document.Batches;
 using Raven.Client.Listeners;
 using Raven.Client.Spatial;
 using Raven.Imports.Newtonsoft.Json.Utilities;
@@ -756,6 +759,27 @@ namespace Raven.Client.Document
 		public void SetTransformerParameters(Dictionary<string, RavenJToken> parameters)
 		{
 			transformerParameters = parameters;
+		}
+
+
+		/// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public Lazy<Task<int>> CountLazilyAsync()
+		{
+			var headers = new Dictionary<string, string>();
+			if (queryOperation == null)
+			{
+				ExecuteBeforeQueryListeners();
+				Take(0);
+				queryOperation = InitializeQueryOperation((key, val) => headers[key] = val);
+			}
+
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
+			lazyQueryOperation.SetHeaders(headers);
+
+			return ((AsyncDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
 		}
 
 		/// <summary>

@@ -365,25 +365,25 @@ namespace Raven.Database
 			get
 			{
 				var triggerInfos = PutTriggers.Select(x => new TriggerInfo
-				{
-					Name = x.ToString(),
-					Type = "Put"
-				})
-				   .Concat(DeleteTriggers.Select(x => new TriggerInfo
-				{
-					Name = x.ToString(),
-					Type = "Delete"
-				}))
-				   .Concat(ReadTriggers.Select(x => new TriggerInfo
-		{
-			Name = x.ToString(),
-			Type = "Read"
-		}))
-				   .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
 			{
 				Name = x.ToString(),
-				Type = "Index Update"
-			})).ToList();
+				Type = "Put"
+			})
+				   .Concat(DeleteTriggers.Select(x => new TriggerInfo
+		{
+			Name = x.ToString(),
+			Type = "Delete"
+		}))
+				   .Concat(ReadTriggers.Select(x => new TriggerInfo
+			{
+				Name = x.ToString(),
+				Type = "Read"
+			}))
+				   .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
+				{
+					Name = x.ToString(),
+					Type = "Index Update"
+				})).ToList();
 
 				var extensions = Configuration.ReportExtensions(
 					typeof(IStartupTask),
@@ -402,10 +402,10 @@ namespace Raven.Database
 					typeof(AbstractBackgroundTask),
 					typeof(IAlterConfiguration)).ToList();
 				return new PluginsInfo
-							{
-								Triggers = triggerInfos,
-								Extensions = extensions,
-							};
+		{
+			Triggers = triggerInfos,
+			Extensions = extensions,
+		};
 			}
 		}
 
@@ -461,14 +461,14 @@ namespace Raven.Database
 				}).ToArray();
 
 					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-					{
-						Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-						if (indexInstance == null)
-							return null;
-						x.Name = indexInstance.PublicName;
-						x.SetLastDocumentEtag(result.LastDocEtag);
-						return x;
-					})
+		{
+			Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+			if (indexInstance == null)
+				return null;
+			x.Name = indexInstance.PublicName;
+			x.SetLastDocumentEtag(result.LastDocEtag);
+			return x;
+		})
 								.Where(x => x != null)
 								.ToArray();
 				});
@@ -667,19 +667,19 @@ namespace Raven.Database
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of DatabaseDocument");
 
 			exceptionAggregator.Execute(() =>
-							{
-								if (prefetcher != null)
-									prefetcher.Dispose();
-							});
+					{
+						if (prefetcher != null)
+							prefetcher.Dispose();
+					});
 
 			exceptionAggregator.Execute(() =>
-							{
-								initializer.UnsubscribeToDomainUnloadOrProcessExit();
-								disposed = true;
+						{
+							initializer.UnsubscribeToDomainUnloadOrProcessExit();
+							disposed = true;
 
-								if (workContext != null)
-									workContext.StopWorkRude();
-							});
+							if (workContext != null)
+								workContext.StopWorkRude();
+						});
 
 			if (initializer != null)
 			{
@@ -687,22 +687,22 @@ namespace Raven.Database
 			}
 
 			exceptionAggregator.Execute(() =>
-			{
-				if (ExtensionsState == null)
-					return;
+							{
+								if (ExtensionsState == null)
+									return;
 
-				foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
-					exceptionAggregator.Execute(value.Dispose);
-			});
+								foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
+									exceptionAggregator.Execute(value.Dispose);
+							});
 
 			exceptionAggregator.Execute(() =>
-			{
-				if (toDispose == null)
-					return;
+							{
+								if (toDispose == null)
+									return;
 
-				foreach (IDisposable shouldDispose in toDispose)
-					exceptionAggregator.Execute(shouldDispose.Dispose);
-			});
+								foreach (IDisposable shouldDispose in toDispose)
+									exceptionAggregator.Execute(shouldDispose.Dispose);
+							});
 
 			exceptionAggregator.Execute(() =>
 			{
@@ -711,22 +711,22 @@ namespace Raven.Database
 			});
 
 			exceptionAggregator.Execute(() =>
-			{
-				if (indexingBackgroundTask != null)
-					indexingBackgroundTask.Wait();
-			});
+					{
+						if (indexingBackgroundTask != null)
+							indexingBackgroundTask.Wait();
+					});
 			exceptionAggregator.Execute(() =>
-			{
-				if (reducingBackgroundTask != null)
-					reducingBackgroundTask.Wait();
-			});
+				{
+					if (reducingBackgroundTask != null)
+						reducingBackgroundTask.Wait();
+				});
 
 			exceptionAggregator.Execute(() =>
-			{
-				var disposable = backgroundTaskScheduler as IDisposable;
-				if (disposable != null)
-					disposable.Dispose();
-			});
+		{
+			var disposable = backgroundTaskScheduler as IDisposable;
+			if (disposable != null)
+				disposable.Dispose();
+		});
 
 
 			if (IndexStorage != null)
@@ -1116,8 +1116,12 @@ namespace Raven.Database
 
 			public void InitializeEncryption()
 			{
+				if (configuration.IsTenantDatabase)
+					return;
+
 				string fipsAsString;
 				bool fips;
+
 				if (Commercial.ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
 				{
 					if (!fips && configuration.Encryption.UseFips)

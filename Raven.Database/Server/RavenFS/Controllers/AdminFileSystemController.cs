@@ -21,9 +21,11 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.Extensions;
 using Raven.Database.Actions;
+using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Server.Tenancy;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
@@ -81,8 +83,19 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			MessageWithStatusCode fileSystemNameFormat = CheckNameFormat(id, Database.Configuration.FileSystem.DataDirectory);
 			if (fileSystemNameFormat.Message != null)
 			{
-				return GetMessageWithString(fileSystemNameFormat.Message, fileSystemNameFormat.ErrorCode);
+				return GetMessageWithObject(new
+				{
+                    Error = fileSystemNameFormat.Message
+				}, fileSystemNameFormat.ErrorCode);
 			}
+
+			if (FileSystemsLandlord.IsNotLicensed())
+	        {
+				return GetMessageWithObject(new
+				{
+                    Error = "Your license does not allow the use of RavenFS!"
+				}, HttpStatusCode.BadRequest);
+	        }
 
             var docKey = "Raven/FileSystems/" + id;
            

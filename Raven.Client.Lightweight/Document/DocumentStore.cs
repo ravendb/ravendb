@@ -403,7 +403,7 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public void InitializeProfiling()
+		public override void InitializeProfiling()
 		{
 			if (jsonRequestFactory == null)
 				throw new InvalidOperationException("Cannot call InitializeProfiling() before Initialize() was called.");
@@ -734,7 +734,7 @@ namespace Raven.Client.Document
 			});
 		}
 
-		private IAsyncDocumentSession OpenAsyncSessionInternal(string dbName, IAsyncDatabaseCommands asyncDatabaseCommands)
+		private IAsyncDocumentSession OpenAsyncSessionInternal(OpenSessionOptions options)
 		{
 			AssertInitialized();
 			EnsureNotClosed();
@@ -743,12 +743,13 @@ namespace Raven.Client.Document
 			currentSessionId = sessionId;
 			try
 			{
+				var asyncDatabaseCommands = SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options);
 				if (AsyncDatabaseCommands == null)
 					throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-                var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, Listeners, sessionId)
+				var session = new AsyncDocumentSession(options.Database, this, asyncDatabaseCommands, Listeners, sessionId)
 				{
-				    DatabaseName = dbName ?? DefaultDatabase
+					DatabaseName = options.Database ?? DefaultDatabase
 				};
 				AfterSessionCreated(session);
 				return session;
@@ -782,7 +783,7 @@ namespace Raven.Client.Document
 
 		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
-            return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
+            return OpenAsyncSessionInternal(options);
 		}
 
 		/// <summary>

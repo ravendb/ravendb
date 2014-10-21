@@ -40,8 +40,6 @@ using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers.Util;
 
-using Xunit;
-using Xunit.Sdk;
 
 namespace Raven.Tests.Helpers
 {
@@ -166,7 +164,8 @@ namespace Raven.Tests.Helpers
 			var license = GetLicenseByReflection(database);
 			license.Error = false;
 			license.Status = "Commercial";
-
+		    license.Attributes["ravenfs"] = "true";
+            license.Attributes["counters"] = "true";
 			// rerun this startup task
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
@@ -364,7 +363,7 @@ namespace Raven.Tests.Helpers
 			bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(20)));
 			if (spinUntil == false && store is EmbeddableDocumentStore)
 				WaitForUserToContinueTheTest(store);
-			Assert.True(spinUntil, "Indexes took took long to become unstale");
+            if (!spinUntil) throw new Exception("Indexes took took long to become unstale");
 		}
 
 
@@ -376,7 +375,7 @@ namespace Raven.Tests.Helpers
 				currentStatus = GetPerodicBackupStatus(db);
 				return compareSelector(currentStatus) != compareSelector(previousStatus);
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-			Assert.True(done);
+            if (!done) throw new Exception("WaitForPeriodicExport failed");
 			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
 			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
 			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
@@ -386,12 +385,14 @@ namespace Raven.Tests.Helpers
 
 		public static void WaitForIndexing(DocumentDatabase db)
 		{
-			Assert.True(SpinWait.SpinUntil(() => db.Statistics.StaleIndexes.Length == 0, TimeSpan.FromMinutes(5)));
+			if (!SpinWait.SpinUntil(() => db.Statistics.StaleIndexes.Length == 0, TimeSpan.FromMinutes(5)))
+                throw new Exception("WaitForIndexing failed");
 		}
 
 		public static void WaitForAllRequestsToComplete(RavenDbServer server)
 		{
-			Assert.True(SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)));
+			if (!SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)))
+                throw new Exception("WaitForAllRequestsToComplete failed");
 		}
 
 		protected PeriodicExportStatus GetPerodicBackupStatus(DocumentDatabase db)
@@ -434,7 +435,7 @@ namespace Raven.Tests.Helpers
 					   currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag ||
 					   currentStatus.LastAttachmentDeletionEtag != previousStatus.LastAttachmentDeletionEtag;
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-			Assert.True(done);
+            if (!done) throw new Exception("WaitForPeriodicExport failed");
 			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
 			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
 			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
@@ -469,14 +470,14 @@ namespace Raven.Tests.Helpers
 						var firstOrDefault =
 							backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
 						if (firstOrDefault != null)
-							Assert.True(false, string.Format("{0}\n\nDetails: {1}", firstOrDefault.Message, firstOrDefault.Details));
+							throw new Exception(string.Format("{0}\n\nDetails: {1}", firstOrDefault.Message, firstOrDefault.Details));
 					}
 
 					return true;
 				}
 				return false;
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-			Assert.True(done);
+            if (!done) throw new Exception("WaitForBackup failed");
 		}
 
 		protected void WaitForRestore(IDatabaseCommands databaseCommands)
@@ -513,7 +514,7 @@ namespace Raven.Tests.Helpers
 				return restoreFinishMessages.Any(status.Messages.Contains);
 			}, TimeSpan.FromMinutes(5));
 
-			Assert.True(done);
+            if (!done) throw new Exception("WaitForRestore failed");
 		}
 
 		protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id)
@@ -525,7 +526,7 @@ namespace Raven.Tests.Helpers
 				return doc != null;
 			}, TimeSpan.FromMinutes(5));
 
-			Assert.True(done);
+            if (!done) throw new Exception("WaitForDocument failed");
 		}
 
 		public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079)
@@ -734,9 +735,9 @@ namespace Raven.Tests.Helpers
 
 			try
 			{
-				Assert.Empty(errors);
+                if (errors.Any()) throw new Exception("AssertNoIndexErrors Failed");
 			}
-			catch (EmptyException)
+			catch (Exception)
 			{
 				Console.WriteLine(errors.First().Error);
 				throw;
@@ -746,14 +747,14 @@ namespace Raven.Tests.Helpers
 		public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
 		{
 			var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
-			Assert.NotNull(field);
+            if (null == field) throw new Exception("LicensingStatus failed");
 			var initializer = field.GetValue(database);
 			var validateLicenseField = initializer.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
-			Assert.NotNull(validateLicenseField);
+            if (null == validateLicenseField) throw new Exception("LicensingStatus failed");
 			var validateLicense = validateLicenseField.GetValue(initializer);
 
 			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
-			Assert.NotNull(currentLicenseProp);
+            if (null == currentLicenseProp) throw new Exception("LicensingStatus failed");
 
 			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
 		}
