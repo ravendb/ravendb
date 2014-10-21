@@ -1,4 +1,5 @@
 import resource = require("models/resource");
+import license = require("models/license");
 
 class database extends resource {
     statistics = ko.observable<databaseStatisticsDto>();
@@ -18,12 +19,31 @@ class database extends resource {
             var itemCount = this.itemCount();
             var text = itemCount.toLocaleString() + ' document';
             if (itemCount != 1) {
-                text = text + 's';
+                text += 's';
             }
             return text;
         });
+        this.isLicensed = ko.computed(() => {
+            if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
+                var attributes = license.licenseStatus().Attributes;
+                var result = this.activeBundles()
+                    .map(bundleName => this.attributeValue(attributes, bundleName === "periodicBackup" ? "periodicExport" : bundleName))
+                    .reduce((a, b) => /^true$/i.test(a) && /^true$/i.test(b), true);
+                return result;
+            }
+            return true;
+        });
         this.recentQueriesLocalStorageName = 'ravenDB-recentQueries.' + name;
         this.mergedIndexLocalStoragePrefix = 'ravenDB-mergedIndex.' + name;
+    }
+
+    private attributeValue(attributes, bundleName: string) {
+        for (var key in attributes){
+            if (attributes.hasOwnProperty(key) && key.toLowerCase() === bundleName.toLowerCase()) {
+                return attributes[key];
+            }
+        }
+        return "true";
     }
 
 	activate() {

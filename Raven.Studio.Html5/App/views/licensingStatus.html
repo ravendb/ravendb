@@ -32,6 +32,7 @@
         <!-- ko if: licenseStatus.IsCommercial -->
         <div data-bind="text: 'Version: ' + licenseStatus.Attributes.version"></div>
         <div data-bind="text: 'Bundles: ' + bundleString + '.'"></div>
+        <div data-bind="text: 'RavenFS: ' + licenseStatus.Attributes.ravenfs"></div>
         <div data-bind="text: 'FIPS compatible: ' + licenseStatus.Attributes.fips"></div>
         <div data-bind="text: 'Authorization: ' + licenseStatus.Attributes.authorization"></div>
         <div data-bind="text: 'Max Ram Utilization: ' + licenseStatus.Attributes.maxRamUtilization"></div>

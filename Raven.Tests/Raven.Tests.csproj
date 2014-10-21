@@ -981,7 +981,6 @@
     <EmbeddedResource Include="Patching\failingdump11.ravendump" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Issues\" />
     <Folder Include="MailingList\" />
   </ItemGroup>
   <ItemGroup>

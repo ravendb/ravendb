@@ -34,21 +34,21 @@ namespace Raven.SlowTests.Issues
 		{
 			server1DataDir = NewDataPath("D1");
 			server2DataDir = NewDataPath("D2");
-			server1 = CreateServer(8001, server1DataDir);
-			server2 = CreateServer(8002, server2DataDir);
+			server1 = CreateServer(8079, server1DataDir);
+			server2 = CreateServer(8078, server2DataDir);
 
 
 			store1 = new DocumentStore
 			{
 				DefaultDatabase = "Northwind",
-				Url = "http://" + Environment.MachineName + ":8001",
+				Url = "http://" + Environment.MachineName + ":8079",
 			};
 			store1.Initialize(false);
 
 			store2 = new DocumentStore
 			{
 				DefaultDatabase = "Northwind",
-				Url = "http://" + Environment.MachineName + ":8002"
+				Url = "http://" + Environment.MachineName + ":8078"
 			};
 			store2.Initialize(false);
 
@@ -115,7 +115,7 @@ namespace Raven.SlowTests.Issues
 				var replicationTask = (await server2.Server.GetDatabaseInternal("Northwind")).StartupTasks.OfType<ReplicationTask>().First();
 				replicationTask.Heartbeats.Clear();
 
-				server1 = CreateServer(8001, server1DataDir);
+				server1 = CreateServer(8079, server1DataDir);
 
 				Assert.NotNull(store1.DatabaseCommands.Get("items/1"));
 
@@ -192,7 +192,7 @@ namespace Raven.SlowTests.Issues
 				var replicationTask = database.StartupTasks.OfType<ReplicationTask>().First();
 				replicationTask.Heartbeats.Clear();
 
-				server1 = CreateServer(8001, server1DataDir);
+				server1 = CreateServer(8079, server1DataDir);
 
 				Assert.NotNull(await store1.AsyncDatabaseCommands.GetAsync("items/1"));
 

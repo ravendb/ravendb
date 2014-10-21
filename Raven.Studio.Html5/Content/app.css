@@ -8240,3 +8240,6 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   fill: gray;
   fill-opacity: 0.1 !important;
 }
+.topBorder td {
+  border-top: solid 1px #ddd !important;
+}

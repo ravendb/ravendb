@@ -54,19 +54,22 @@
 
                     <div class="details">
                         <h4>
-                            <!-- ko ifnot: $data.disabled -->
+                            <!-- ko if: !$data.disabled() && $data.isLicensed() -->
                             <a class="resource-name" data-bind="text: name, attr: { href: $root.getFilesystemFilesUrl($data) }"></a>
                             <!-- /ko -->
-                            <!-- ko if: $data.disabled -->
+                            <!-- ko if: $data.disabled() || !$data.isLicensed() -->
                             <a class="resource-name" data-bind="text: name"></a>
                             <!-- /ko -->
                         </h4>
                         <br />
-                        <!-- ko ifnot: $data.disabled -->
+                        <!-- ko if: !$data.disabled() && $data.isLicensed() -->
                         <span class="stats" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
                         <!-- /ko -->
                         <!-- ko if: $data.disabled -->
                         <span class="stats-disabled">Disabled</span>
+                        <!-- /ko -->
+                        <!-- ko if: !$data.disabled() && !$data.isLicensed() -->
+                        <span class="stats-disabled">Unlicensed</span>
                         <!-- /ko -->
                     </div>
 

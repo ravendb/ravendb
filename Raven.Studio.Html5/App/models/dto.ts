@@ -184,6 +184,7 @@ interface licenseStatusDto {
         maxSizeInMb: string;
         maxRamUtilization: string;
         maxParallelism: string;
+        ravenfs: string;
     }
 }
 
@@ -810,17 +811,16 @@ interface debugDocumentStatsDto {
     Total: number;
     TotalSize: number;
     Tombstones: number;
-    System: number;
-    SystemSize: number;
-    NoCollection: number;
-    NoCollectionSize: number;
+    System: collectionStats;
+    NoCollection: collectionStats;
     Collections: dictionary<collectionStats>;
     TimeToGenerate: string;
 }
 
 interface collectionStats {
-    Quantity: number;
-    Size: number;
+    Stats: histogramDataDto;
+    TotalSize: number;
+    TopDocs: any[];
 }
 
 enum logTenantType {

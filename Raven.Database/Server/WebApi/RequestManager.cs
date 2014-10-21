@@ -12,17 +12,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using Microsoft.VisualBasic.Logging;
-using Mono.Cecil;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Database.Counters.Controllers;
 using Raven.Database.Impl;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
-using Raven.Database.Server.RavenFS.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Util;
@@ -420,11 +416,32 @@ namespace Raven.Database.Server.WebApi
                 CustomInfo = logHttpRequestStatsParams.CustomInfo,
                 HttpMethod = logHttpRequestStatsParams.HttpMethod,
                 ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
-                TenantName = databaseName ?? "<system>",
+				TenantName = NormalizeTennantName(databaseName),
                 TimeStamp = SystemTime.UtcNow
             }
             );
         }
+
+
+		private string NormalizeTennantName(string resourceName)
+		{
+			if (string.IsNullOrEmpty(resourceName))
+			{
+				return "<system>";
+			}
+
+			if (resourceName.IndexOf("counters/") == 0)
+			{
+				return resourceName.Substring(9);
+			}
+
+			if (resourceName.IndexOf("fs/") == 0)
+			{
+				return resourceName.Substring(3);
+			}
+
+			return resourceName;
+		}
         private void LogHttpRequestStats(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, long curReq)
         {
             if (Logger.IsDebugEnabled == false)
