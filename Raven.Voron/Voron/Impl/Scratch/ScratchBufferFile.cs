@@ -16,6 +16,7 @@ namespace Voron.Impl.Scratch
 		private class PendingPage
 		{
 			public long Page;
+			public long NumberOfPages;
 			public long ValidAfterTransactionId;
 		}
 
@@ -181,6 +182,7 @@ namespace Voron.Impl.Scratch
 				list.AddFirst(new PendingPage
 				{
 					Page = value.PositionInScratchBuffer,
+					NumberOfPages = value.NumberOfPages,
 					ValidAfterTransactionId = asOfTxId
 				});
 			}
@@ -209,7 +211,7 @@ namespace Voron.Impl.Scratch
 
 				while (item.Value.ValidAfterTransactionId >= oldestActiveTransaction)
 				{
-					result += free.Key;
+					result += item.Value.NumberOfPages;
 
 					if (item.Next == null)
 						break;
