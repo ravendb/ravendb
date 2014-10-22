@@ -8,7 +8,7 @@ import appUrl = require("common/appUrl");
 class exportDatabase extends viewModelBase {
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
-    includeTransformers = ko.observable(false);
+    includeTransformers = ko.observable(true);
     includeAttachments = ko.observable(false);
     includeExpiredDocuments = ko.observable(false);
     includeAllCollections = ko.observable(true);
