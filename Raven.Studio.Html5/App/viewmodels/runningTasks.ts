@@ -137,7 +137,7 @@ class runningTasks extends viewModelBase {
     }
 
     taskKill(task: runningTaskDto) {
-        new killRunningTaskCommand(this.activeDatabase(), task).execute()
+        new killRunningTaskCommand(this.activeDatabase(), task.Id).execute()
             .always(() => setTimeout(() => {
                 this.selectedTask(null);
                 this.fetchTasks();

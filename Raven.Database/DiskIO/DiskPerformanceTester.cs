@@ -23,11 +23,19 @@ namespace Raven.Database.DiskIO
 {
     internal class DiskPerformanceTester
     {
+        public const string PerformanceResultDocumentKey = "Raven/Disk/Performance";
+
+        public const string TemporaryFileName = "data.ravendb-io-test";
+
         private readonly PerformanceTestRequest testRequest;
 
         private readonly Action<string> onInfo;
 
-        private readonly CancellationTokenSource cts;
+        private readonly CancellationTokenSource testTimerCts;
+
+        private readonly CancellationTokenSource linkedCts;
+
+        private readonly CancellationToken taskKillToken;
 
         private readonly List<Thread> threads;
 
@@ -47,12 +55,13 @@ namespace Raven.Database.DiskIO
             }
         }
 
-        internal DiskPerformanceTester(PerformanceTestRequest testRequest, Action<string> onInfo)
+        internal DiskPerformanceTester(PerformanceTestRequest testRequest, Action<string> onInfo, CancellationToken taskKillToken = default(CancellationToken))
         {
-            VerifyFileExtension(testRequest.Path);
             this.testRequest = testRequest;
             this.onInfo = onInfo;
-            cts = new CancellationTokenSource();
+            this.taskKillToken = taskKillToken;
+            testTimerCts = new CancellationTokenSource();
+            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(taskKillToken, testTimerCts.Token);
             threads = new List<Thread>(testRequest.ThreadCount);
             dataStorage = new DiskPerformanceStorage();
             perThreadRandom = Enumerable.Range(1, testRequest.ThreadCount)
@@ -65,19 +74,6 @@ namespace Raven.Database.DiskIO
             }
         }
 
-        /// <summary>
-        /// For security reasons we enforce path to end with .ravendb-io-test
-        /// </summary>
-        /// <param name="path"></param>
-        private void VerifyFileExtension(string path)
-        {
-            const string expectedFileExtension = ".ravendb-io-test";
-            if (path.EndsWith(expectedFileExtension) == false)
-            {
-                throw new SecurityException("For security reasons temporary file must ends with " + expectedFileExtension);
-            }
-        }
-
         public void TestDiskIO()
         {
             PrepareTestFile();
@@ -85,6 +81,7 @@ namespace Raven.Database.DiskIO
             StartWorkers();
             onInfo("Waiting for all workers to complete");
             threads.ForEach(t => t.Join());
+            taskKillToken.ThrowIfCancellationRequested();
         }
 
         private void PrepareTestFile()
@@ -144,7 +141,7 @@ namespace Raven.Database.DiskIO
             for (var i = 0; i < testRequest.ThreadCount; i++)
             {
                 var threadNumber = i;
-                threads.Add(new Thread(() => MeasurePerformance(cts.Token, perThreadRandom[threadNumber], threadNumber * stripeSize, (threadNumber + 1) * stripeSize)));
+                threads.Add(new Thread(() => MeasurePerformance(linkedCts.Token, perThreadRandom[threadNumber], threadNumber * stripeSize, (threadNumber + 1) * stripeSize)));
             }
             secondTimer = new Timer(SecondTicked, null, 1000, 1000);
             threads.ForEach(t => t.Start());
@@ -158,7 +155,7 @@ namespace Raven.Database.DiskIO
 
             if (statCounter >= testRequest.TimeToRunInSeconds)
             {
-                cts.Cancel();
+                testTimerCts.Cancel();
                 secondTimer.Dispose();
             }
         }
@@ -221,9 +218,11 @@ namespace Raven.Database.DiskIO
         {
             using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
                                                                   Win32NativeFileAccess.GenericWrite | Win32NativeFileAccess.GenericRead, 
-                                                                  Win32NativeFileShare.Write, IntPtr.Zero,
+                                                                  Win32NativeFileShare.Read | Win32NativeFileShare.Write, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
-                                                                  Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering, IntPtr.Zero))
+                                                                  Win32NativeFileAttributes.Write_Through | 
+                                                                    (testRequest.Buffered ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering), 
+                                                                  IntPtr.Zero))
             {
                 ValidateHandle(handle);
                 using (var fs = new FileStream(handle, FileAccess.ReadWrite))
@@ -266,7 +265,9 @@ namespace Raven.Database.DiskIO
             using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
                                                                   Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.Write, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
-                                                                  Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering, IntPtr.Zero))
+                                                                  Win32NativeFileAttributes.Write_Through |
+                                                                    (testRequest.Buffered ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering),
+                                                                  IntPtr.Zero))
             {
                 ValidateHandle(handle);
 
@@ -297,7 +298,7 @@ namespace Raven.Database.DiskIO
             using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
                                                      Win32NativeFileAccess.GenericRead, Win32NativeFileShare.Read, IntPtr.Zero,
                                                      Win32NativeFileCreationDisposition.OpenExisting,
-                                                     Win32NativeFileAttributes.NoBuffering,
+                                                     testRequest.Buffered ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering,
                                                      IntPtr.Zero))
             {
                 ValidateHandle(handle);
@@ -330,7 +331,9 @@ namespace Raven.Database.DiskIO
             using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
                                                                   Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.Write, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
-                                                                  Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering, IntPtr.Zero))
+                                                                  Win32NativeFileAttributes.Write_Through | 
+                                                                    (testRequest.Buffered ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering), 
+                                                                  IntPtr.Zero))
             {
                ValidateHandle(handle);
                 using (var fs = new FileStream(handle, FileAccess.ReadWrite))
@@ -365,7 +368,8 @@ namespace Raven.Database.DiskIO
             using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
                                                                   Win32NativeFileAccess.GenericRead, Win32NativeFileShare.Read, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
-                                                                  Win32NativeFileAttributes.NoBuffering, IntPtr.Zero))
+                                                                  testRequest.Buffered ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering, 
+                                                                  IntPtr.Zero))
             {
                 ValidateHandle(handle);
 

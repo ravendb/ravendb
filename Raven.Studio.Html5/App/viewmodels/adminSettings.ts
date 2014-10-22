@@ -41,6 +41,7 @@ class adminSettings extends viewModelBase {
                 adminLogsRoute,
                 trafficWatchRoute,
                 debugInfoRoute,
+                ioTestRoute,
                 studioConfigRoute
             ])
             .buildNavigationModel();

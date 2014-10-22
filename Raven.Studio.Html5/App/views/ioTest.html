@@ -1,0 +1,185 @@
+﻿<form class="form-horizontal" role="form" data-bind="submit: startPerformanceTest">
+    <div class="panel panel-default">
+        <div class="panel-heading panel-info">
+            <button type="submit" title="IO Test" class="btn btn-primary" data-bind="disable: isBusy">
+                <i class="fa fa-gears"></i>
+                <span>Test Disk Performance</span>
+            </button>
+            <button class="btn btn-danger" data-bind="click: killTask, visible: isBusy"><i class="fa fa-bolt"></i> Cancel test</button>
+        </div>
+        <div class="panel-body">
+            <div>
+                <div class="form-group">
+                    <label for="path" class="col-sm-2 control-label">Temporary dir location</label>
+                    <div class="col-sm-5">
+                        <input data-bind="value: ioTestRequest.path, disable: isBusy" type="text" required class="form-control" id="path" placeholder="C:\temp\">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="fileSize" class="col-sm-2 control-label">File size</label>
+                    <div class="col-sm-5 input-group">
+                        <input data-bind="value: fileSizeMb, disable: isBusy" type="number" required class="form-control" id="fileSize" placeholder="1024"> 
+                        <span class="input-group-addon">MB</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="operationType" class="col-sm-2 control-label">Operation Type</label>
+                    <div class="col-sm-10">
+                        <div class="btn-group" data-bind="with: ioTestRequest">
+                            <button id="operationType" type="button" data-bind="disable: $root.isBusy" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: operationType() === 'Read'">Read</span>
+                                <span data-bind="visible: operationType() === 'Write'">Write</span>
+                                <span data-bind="visible: operationType() === 'Mix'">Read and write</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: operationType.bind(operationType, 'Read')">Read</a></li>
+                                <li><a href="#" data-bind="click: operationType.bind(operationType, 'Write')">Write</a></li>
+                                <li><a href="#" data-bind="click: operationType.bind(operationType, 'Mix')">Read and write</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="buffered" class="col-sm-2 control-label">Buffered</label>
+                    <div class="col-sm-10">
+                        <div class="btn-group" data-bind="with: ioTestRequest">
+                            <button  id="buffered" type="button" data-bind="disable: $root.isBusy" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: buffered()">Yes</span>
+                                <span data-bind="visible: buffered()==false">No</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: buffered.bind(buffered, true)">Yes</a></li>
+                                <li><a href="#" data-bind="click: buffered.bind(buffered, false)">No</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="sequential" class="col-sm-2 control-label">Sequential</label>
+                    <div class="col-sm-10">
+                        <div class="btn-group" data-bind="with: ioTestRequest">
+                            <button  id="sequential" type="button" data-bind="disable: $root.isBusy" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: sequential()">Yes</span>
+                                <span data-bind="visible: sequential() == false">No</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: sequential.bind(sequential, true)">Yes</a></li>
+                                <li><a href="#" data-bind="click: sequential.bind(sequential, false)">No</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="threadCount" class="col-sm-2 control-label">Thread count</label>
+                    <div class="col-sm-5">
+                        <input data-bind="value: ioTestRequest.threadCount, disable: isBusy" type="number" required class="form-control" id="threadCount">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="timeToRunInSeconds" class="col-sm-2 control-label">Time to run (in seconds)</label>
+                    <div class="col-sm-5">
+                        <input data-bind="value: ioTestRequest.timeToRunInSeconds, disable: isBusy" type="number" required class="form-control" id="timeToRunInSeconds">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="chunkSize" class="col-sm-2 control-label">Chunk size</label>
+                    <div class="col-sm-5 input-group">
+                        <input data-bind="value: chunkSizeKb, disable: isBusy, customValidity: chunkSizeCustomValidityError" type="number" required class="form-control" id="chunkSize">
+                        <span class="input-group-addon">KB</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div data-bind="with: testResult">
+        <div class="panel panel-default" >
+            <div class="panel-heading panel-info">
+                Disk Performance Test Results
+            </div>
+            <div class="panel-body">
+                <!-- ko if:hasReads -->
+                <table class="table-condensed table-striped table-hover table">
+                    <tr>
+                        <th>Total read:</th>
+                        <th>Test time:</th>
+                        <th>Avg read:</th>
+                    </tr>
+                    <tr>
+                        <td data-bind="text: totalRead"></td>
+                        <td data-bind="text: testTime"></td>
+                        <td data-bind="text: avgRead"></td>
+                    </tr>
+                    <tr>
+                        <th>Read latency min</th>
+                        <th>Read latency mean</th>
+                        <th>Read latency stdev</th>
+                        <th>Read latency max</th>
+                    </tr>
+                    <tr>
+                        <td data-bind="text: readLatencyMin"></td>
+                        <td data-bind="text: readLatencyMean"></td>
+                        <td data-bind="text: readLatencyStdev"></td>
+                        <td data-bind="text: readLatencyMax"></td>
+                    </tr>
+                </table>
+                <!-- /ko -->
+                <!-- ko if:hasWrites -->
+                <table class="table-condensed table-striped table-hover table">
+                    <tr>
+                        <th>Total write:</th>
+                        <th>Test time:</th>
+                        <th>Avg write:</th>
+                    </tr>
+                    <tr>
+                        <td data-bind="text: totalWrite"></td>
+                        <td data-bind="text: testTime"></td>
+                        <td data-bind="text: avgWrite"></td>
+                    </tr>
+                    <tr>
+                        <th>Write latency min</th>
+                        <th>Write latency mean</th>
+                        <th>Write latency stdev</th>
+                        <th>Write latency max</th>
+                    </tr>
+                    <tr>
+                        <td data-bind="text: writeLatencyMin"></td>
+                        <td data-bind="text: writeLatencyMean"></td>
+                        <td data-bind="text: writeLatencyStdev"></td>
+                        <td data-bind="text: writeLatencyMax"></td>
+                    </tr>
+                </table>
+                <!-- /ko -->
+                <!-- ko if:hasReads -->
+                <table  class="table-condensed table-striped table-hover table">
+                    <tr>
+                        <th data-bind="attr: { colspan: readPercentiles().length } ">Read latency percentiles</th>
+                    </tr>
+                    <tr data-bind="foreach: readPercentiles">
+                        <td data-bind="text: key"></td>
+                    </tr>
+                    <tr data-bind="foreach: readPercentiles">
+                        <td data-bind="text: value.toFixed(3)"></td>
+                    </tr>
+                </table>
+                <!-- /ko -->
+                <!-- ko if:hasWrites -->
+                <table  class="table-condensed table-striped table-hover table">
+                    <tr>
+                        <th data-bind="attr: { colspan: writePercentiles().length } ">Write latency percentiles</th>
+                    </tr>
+                    <tr data-bind="foreach: writePercentiles">
+                        <td data-bind="text: key"></td>
+                    </tr>
+                    <tr data-bind="foreach: writePercentiles">
+                        <td data-bind="text: value.toFixed(3)"></td>
+                    </tr>
+                </table>
+                <!-- /ko -->
+            </div> 
+        </div>
+    </div>
+</form>

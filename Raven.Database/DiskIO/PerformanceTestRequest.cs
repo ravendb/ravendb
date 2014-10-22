@@ -12,6 +12,7 @@ namespace Raven.Database.DiskIO
         public string Path { get; set; }
         public long FileSize { get; set; }
         public OperationType OperationType { get; set; }
+        public bool Buffered { get; set; }
         public bool Sequential { get; set; }
         public int ThreadCount { get; set; }
         public int TimeToRunInSeconds { get; set; }

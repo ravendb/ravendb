@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Raven.Database.DiskIO;
 using Xunit;
 
@@ -117,6 +118,27 @@ namespace Raven.SlowTests.DiskIO
             var result = tester.Result;
             Assert.True(result.TotalWrite > 0);
             Assert.True(result.TotalRead > 0);
+        }
+
+        [Fact]
+        public void TestCanCancelPerformanceTest()
+        {
+            var cts = new CancellationTokenSource();
+            cts.CancelAfter(TimeSpan.FromSeconds(5));
+
+            var performanceRequest = new PerformanceTestRequest
+            {
+                FileSize = (long)128 * 1024,
+                OperationType = OperationType.Mix,
+                Path = Path.Combine(Path.GetTempPath(), "data.ravendb-io-test"),
+                Sequential = false,
+                ThreadCount = 4,
+                TimeToRunInSeconds = 30,
+                ChunkSize = 4 * 1024
+            };
+
+            var tester = new DiskPerformanceTester(performanceRequest, s => { }, cts.Token);
+            Assert.Throws<OperationCanceledException>(() => tester.TestDiskIO());
         }
     }
 }
