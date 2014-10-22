@@ -38,9 +38,9 @@ namespace Raven.Abstractions.FileSystem
             get
             {
                 var lastModified = new DateTimeOffset();
-                if (this.Metadata.Keys.Contains(Constants.LastModified))
+                if (this.Metadata.Keys.Contains(Constants.RavenLastModified))
                 {
-                    lastModified = this.Metadata[Constants.LastModified].Value<DateTimeOffset>();
+                    lastModified = this.Metadata[Constants.RavenLastModified].Value<DateTimeOffset>();
                 }
                 return lastModified;
             }

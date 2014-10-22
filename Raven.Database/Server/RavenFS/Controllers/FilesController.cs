@@ -118,7 +118,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 							}
                         }.WithDeleteMarker();
 
-						Historian.UpdateLastModified(tombstoneMetadata);
+                        Historian.UpdateLastModified(tombstoneMetadata);
 
                         accessor.PutFile(name, 0, tombstoneMetadata, true);
                         accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name));
@@ -289,22 +289,41 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		[HttpPut]
         [Route("fs/{fileSystemName}/files/{*name}")]
-		public async Task<HttpResponseMessage> Put(string name, string uploadId = null)
-		{         
+		public async Task<HttpResponseMessage> Put(string name, string uploadId = null, bool preserveTimestamps = false)
+		{                     
 			try
 			{
                 FileSystem.MetricsCounters.FilesPerSecond.Mark();
 
                 name = FileHeader.Canonize(name);
 
-                var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
+                var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);                
+                
+                if ( preserveTimestamps )
+                {
+                    if (!headers.ContainsKey(Constants.RavenCreationDate))
+                        throw new InvalidOperationException("Preserve Timestamps requires that the client includes the Raven-Creation-Date header.");
 
-                Historian.UpdateLastModified(headers);
+                    if ( InnerHeaders.Contains(Constants.RavenLastModified))
+                    {
+                        DateTimeOffset when;
+                        if (!DateTimeOffset.TryParse(InnerHeaders.GetValues(Constants.RavenLastModified).First(), out when))
+                            when = DateTimeOffset.UtcNow;
 
+                        Historian.UpdateLastModified(headers, when);
+                    }
+                    else Historian.UpdateLastModified(headers);
+                }
+                else
+                {
+                    headers[Constants.RavenCreationDate] = DateTimeOffset.UtcNow;
 
-                var now = DateTimeOffset.UtcNow;
-                headers[Constants.RavenCreationDate] = now;
-                headers[Constants.CreationDate] = now.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture); // TODO: To keep current filesystems working. We should remove when adding a new migration. 
+                    Historian.UpdateLastModified(headers);
+                }
+
+                // TODO: To keep current filesystems working. We should remove when adding a new migration. 
+                headers[Constants.CreationDate] = headers[Constants.RavenCreationDate].Value<DateTimeOffset>().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture);
+
                 Historian.Update(name, headers);
 
                 SynchronizationTask.Cancel(name);

@@ -101,7 +101,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
             if (destinationMetadata != null && localMetadata.Value<string>("Content-MD5") == destinationMetadata.Value<string>("Content-MD5"))
             {
                 // check metadata to detect if any synchronization is needed
-                if (localMetadata.Keys.Except(new[] { Constants.MetadataEtagField, Constants.LastModified })
+                if (localMetadata.Keys.Except(new[] { Constants.MetadataEtagField, Constants.RavenLastModified, Constants.LastModified })
                                  .Any(key => !destinationMetadata.ContainsKey(key) || localMetadata[key] != destinationMetadata[key]))
                 {
                     return new MetadataUpdateWorkItem(file, localServerUrl, destinationMetadata, storage);

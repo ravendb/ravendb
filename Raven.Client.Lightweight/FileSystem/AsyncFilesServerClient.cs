@@ -590,36 +590,8 @@ namespace Raven.Client.FileSystem
 
                 await response.AssertNotFailingResponse().ConfigureAwait(false);
 
-                if ( metadataRef != null )
-                {
-                    var metadata = new RavenJObject();
-                    foreach (var header in response.Headers)
-                    {
-                        var item = header.Value.SingleOrDefault();
-                        if (item != null)
-                        {
-                            metadata[header.Key] = item;
-                        }
-                        else
-                        {
-                            metadata[header.Key] = RavenJObject.FromObject(header.Value);
-                        }
-                    }
-                    foreach (var header in response.Content.Headers)
-                    {
-                        var item = header.Value.SingleOrDefault();
-                        if (item != null)
-                        {
-                            metadata[header.Key] = item;
-                        }
-                        else
-                        {
-                            metadata[header.Key] = RavenJObject.FromObject(header.Value);
-                        }
-                    }
-
-                    metadataRef.Value = metadata;
-                }
+                if (metadataRef != null)
+                    metadataRef.Value = response.HeadersToObject();
 
                 return await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false);
             }
@@ -682,7 +654,7 @@ namespace Raven.Client.FileSystem
 
             var operationUrl = operation.Url + "/files?name=" + Uri.EscapeDataString(filename) + "&uploadId=" + uploadIdentifier;
             if (preserveTimestamps)
-                operationUrl += "&preserve=true";
+                operationUrl += "&preserveTimestamps=true";
 
             var request = RequestFactory.CreateHttpJsonRequest(
                                 new CreateHttpJsonRequestParams(this, operationUrl, "PUT", operation.Credentials, Conventions))

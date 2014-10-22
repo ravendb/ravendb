@@ -50,9 +50,21 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			return metadata;
 		}
 
+        public static T ValueOrDefault<T>(this HttpHeaders self, string name, T @default)
+        {
+            try
+            {
+                return self.Value<T>(name);
+            }
+            catch
+            {
+                return @default;
+            }
+        }
+
 		public static T Value<T>(this HttpHeaders self, string name)
 		{
-			var value = self.GetValues(name).First();
+			var value = self.GetValues(name).First();            
 			return new JsonSerializer().Deserialize<T>(new JsonTextReader(new StringReader(value)));
 		}
 
