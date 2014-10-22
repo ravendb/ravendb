@@ -180,7 +180,7 @@ namespace Raven.Database.Config
 
             Voron.MaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
 			Voron.InitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
-			Voron.MaxScratchBufferSize = new IntegerSetting(settings["Raven/Voron/MaxScratchBufferSize"], 512);
+			Voron.MaxScratchBufferSize = new IntegerSetting(settings["Raven/Voron/MaxScratchBufferSize"], 1024);
 			Voron.AllowIncrementalBackups = new BooleanSetting(settings["Raven/Voron/AllowIncrementalBackups"], false);
 			Voron.TempPath = new StringSetting(settings["Raven/Voron/TempPath"], (string) null);
 
