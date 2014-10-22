@@ -351,6 +351,7 @@
     <Compile Include="Samina2.cs" />
     <Compile Include="Samina3.cs" />
     <Compile Include="Scott.cs" />
+    <Compile Include="ScriptedIndexResultsAndDecimals.cs" />
     <Compile Include="Sean.cs" />
     <Compile Include="SeanBuchanan.cs" />
     <Compile Include="SearchByMapReduceExample.cs" />
