@@ -53,7 +53,8 @@ class trafficWatchClient {
     private connectWebSocket(connectionString: string) {
         var connectionOpened: boolean = false;
 
-        this.webSocket = new WebSocket('ws://' + window.location.host + this.resourcePath + '/traffic-watch/websocket?' + connectionString);
+        var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+        this.webSocket = new WebSocket(wsProtocol + window.location.host + this.resourcePath + '/traffic-watch/websocket?' + connectionString);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
