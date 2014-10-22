@@ -21,7 +21,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.DiskIO
 {
-    internal class DiskPerformanceTester
+    public class DiskPerformanceTester
     {
         public const string PerformanceResultDocumentKey = "Raven/Disk/Performance";
 
@@ -55,7 +55,7 @@ namespace Raven.Database.DiskIO
             }
         }
 
-        internal DiskPerformanceTester(PerformanceTestRequest testRequest, Action<string> onInfo, CancellationToken taskKillToken = default(CancellationToken))
+        public DiskPerformanceTester(PerformanceTestRequest testRequest, Action<string> onInfo, CancellationToken taskKillToken = default(CancellationToken))
         {
             this.testRequest = testRequest;
             this.onInfo = onInfo;
@@ -405,9 +405,25 @@ namespace Raven.Database.DiskIO
             }
         }
 
+        public void DescribeTestParameters()
+        {
+            var action = "read/write";
+            if (testRequest.OperationType == OperationType.Write)
+            {
+                action = "write";
+            } else if (testRequest.OperationType == OperationType.Read)
+            {
+                action = "read";
+            }
+
+            Console.WriteLine("{0} threads {1} {2} {3} for {4} seconds from file {5} (size = {6} MB) in {7} kb chunks.", 
+                testRequest.ThreadCount, action, testRequest.Buffered ? "buffered" : "unbuffered", 
+                testRequest.Sequential ? "sequential" : "random", testRequest.TimeToRunInSeconds,
+                testRequest.Path, testRequest.FileSize / 1024 / 1024, testRequest.ChunkSize / 1024);
+        }
     }
 
-    class DiskPerformanceStorage
+    public class DiskPerformanceStorage
     {
         public List<long> ReadPerSecondHistory { get; private set; }
         public List<long> WritePerSecondHistory { get; private set; }
@@ -484,7 +500,7 @@ namespace Raven.Database.DiskIO
         }
     }
 
-    class DiskPerformanceResult
+    public class DiskPerformanceResult
     {
         public List<long> ReadPerSecondHistory { get; private set; }
         public List<long> WritePerSecondHistory { get; private set; }

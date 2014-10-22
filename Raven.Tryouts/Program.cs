@@ -23,7 +23,7 @@ namespace Raven.Tryouts
                 ChunkSize = 4 * 1024
             };
 
-            var tester = new DiskPerformanceTester(performanceRequest, Console.WriteLine, new CancellationTokenSource());
+            var tester = new DiskPerformanceTester(performanceRequest, Console.WriteLine, CancellationToken.None);
             tester.TestDiskIO();
 
 		    var r = tester.Result;

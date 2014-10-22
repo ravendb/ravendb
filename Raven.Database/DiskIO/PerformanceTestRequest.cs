@@ -7,7 +7,7 @@ using System;
 
 namespace Raven.Database.DiskIO
 {
-    internal class PerformanceTestRequest
+    public class PerformanceTestRequest
     {
         public string Path { get; set; }
         public long FileSize { get; set; }
@@ -37,10 +37,11 @@ namespace Raven.Database.DiskIO
             Sequential = false;
             FileSize = 1024*1024*1024;
             TimeToRunInSeconds = 30;
+            ThreadCount = Environment.ProcessorCount;
         }
     }
 
-    internal enum OperationType
+    public enum OperationType
     {
         Read,
         Write,
