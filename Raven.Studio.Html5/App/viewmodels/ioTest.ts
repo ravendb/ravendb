@@ -33,6 +33,8 @@ class ioTest extends viewModelBase {
     constructor() {
         super();
 
+        this.ioTestRequest.sequential(false);
+
         this.chunkSizeCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             if (isNaN(this.chunkSizeKb()) || this.chunkSizeKb() % 4 != 0) {
