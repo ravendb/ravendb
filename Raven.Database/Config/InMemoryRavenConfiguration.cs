@@ -63,7 +63,6 @@ namespace Raven.Database.Config
 			CreatePluginsDirectoryIfNotExisting = true;
 			CreateAnalyzersDirectoryIfNotExisting = true;
 
-
 			IndexingClassifier = new DefaultIndexingClassifier();
 
 			Catalog = new AggregateCatalog(new AssemblyCatalog(typeof(DocumentDatabase).Assembly));
@@ -276,6 +275,8 @@ namespace Raven.Database.Config
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
 			TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
+
+			IgnoreSslCertificateErros = GetIgnoreSslCertificateErrorModeMode();
 
 			PostInit();
 
@@ -659,6 +660,8 @@ namespace Raven.Database.Config
 		/// </summary>
 		public byte[] OAuthTokenKey { get; set; }
 
+		public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErros { get; set; }
+
 		#endregion
 
 		#region Data settings
@@ -974,6 +977,16 @@ namespace Raven.Database.Config
 				return (AnonymousUserAccessMode)val;
 			}
 			return AnonymousUserAccessMode.Admin;
+		}
+
+		protected IgnoreSslCertificateErrorsMode GetIgnoreSslCertificateErrorModeMode()
+		{
+			if (string.IsNullOrEmpty(Settings["Raven/IgnoreSslCertificateErrors"]) == false)
+			{
+				var val = Enum.Parse(typeof(IgnoreSslCertificateErrorsMode), Settings["Raven/IgnoreSslCertificateErrors"]);
+				return (IgnoreSslCertificateErrorsMode)val;
+			}
+			return IgnoreSslCertificateErrorsMode.None;
 		}
 
 		public Uri GetFullUrl(string baseUrl)
