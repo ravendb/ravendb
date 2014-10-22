@@ -279,7 +279,6 @@ namespace RavenFS.Tests.Smuggler
                         // content update after a metadata change
                         originalFile = await session.LoadFileAsync("test1.file");
                         originalFile.Metadata["Test"] = new RavenJValue("Value");
-
                         await session.SaveChangesAsync();
                     }
 
@@ -302,14 +301,16 @@ namespace RavenFS.Tests.Smuggler
                         using (var session = s.OpenAsyncSession())
                         {
                             var file = session.LoadFileAsync("test1.file").Result;
+
                             Assert.Equal(originalFile.CreationDate, file.CreationDate);
                             Assert.Equal(originalFile.Directory, file.Directory);
                             Assert.Equal(originalFile.Extension, file.Extension);
                             Assert.Equal(originalFile.FullPath, file.FullPath);
-                            Assert.Equal(originalFile.LastModified, file.LastModified);
                             Assert.Equal(originalFile.Name, file.Name);
                             Assert.Equal(originalFile.TotalSize, file.TotalSize);
                             Assert.Equal(originalFile.UploadedSize, file.UploadedSize);
+                            Assert.Equal(originalFile.LastModified, file.LastModified);
+
                             Assert.True(file.Metadata.ContainsKey("Test"));
                         }
                     });

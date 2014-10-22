@@ -160,9 +160,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				log.Debug("Cannot get metadata of a file '{0}' because file was deleted", name);
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			}
-
             
-
 			var httpResponseMessage = GetEmptyMessage();
 
             var etag = new Etag(fileAndPages.Metadata.Value<string>(Constants.MetadataEtagField));
@@ -297,9 +295,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
                 name = FileHeader.Canonize(name);
 
-                var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);                
-                
-                if ( preserveTimestamps )
+                var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
+
+                if (preserveTimestamps)
                 {
                     if (!headers.ContainsKey(Constants.RavenCreationDate))
                         throw new InvalidOperationException("Preserve Timestamps requires that the client includes the Raven-Creation-Date header.");
@@ -369,7 +367,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
                         throw new HttpResponseException(HttpStatusCode.BadRequest);
                     }                        
 
-                    Historian.UpdateLastModified(headers); // update with the final file size
+                    if ( !preserveTimestamps )
+                        Historian.UpdateLastModified(headers); // update with the final file size.
 
                     log.Debug("File '{0}' was uploaded. Starting to update file metadata and indexes", name);
 
