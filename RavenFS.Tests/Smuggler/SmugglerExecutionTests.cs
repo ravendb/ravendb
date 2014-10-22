@@ -102,7 +102,14 @@ namespace RavenFS.Tests.Smuggler
                     var export = await smugglerApi.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { From = options, ToFile = outputDirectory.ToFullPath() });
                     await smugglerApi.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = export.FilePath, To = options });
 
-                    throw new NotImplementedException("Still missing the verification");
+                    await VerifyDump(store, export.FilePath, s =>
+                    {
+                        using (var session = s.OpenAsyncSession())
+                        {
+                            var files = s.AsyncFilesCommands.BrowseAsync().Result;
+                            Assert.Equal(1, files.Count());
+                        }
+                    });
                 }
                 finally
                 {
@@ -169,7 +176,14 @@ namespace RavenFS.Tests.Smuggler
                             }
                         });
 
-                    await VerifyDump(store, export.FilePath, s => { throw new NotImplementedException(); });
+                    await VerifyDump(store, export.FilePath, s =>
+                    {
+                        using (var session = s.OpenAsyncSession())
+                        {
+                            var files = s.AsyncFilesCommands.BrowseAsync().Result;
+                            Assert.Equal(0, files.Count());
+                        }
+                    });
                 }
                 finally
                 {
