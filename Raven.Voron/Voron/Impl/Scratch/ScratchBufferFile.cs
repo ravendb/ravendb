@@ -74,10 +74,14 @@ namespace Voron.Impl.Scratch
 
 		public bool HasDiscontinuousSpaceFor(Transaction tx, long size)
 		{
+			long available = (_scratchPager.NumberOfAllocatedPages - _lastUsedPage) + _freePagesBySizeAvailableImmediately.Sum(x => x.Key * x.Value.Count);
+
+			if (available >= size)
+				return true;
+
 			var sizesFromLargest = _freePagesBySize.Keys.OrderByDescending(x => x).ToList();
 
 			var oldestTransaction = tx.Environment.OldestTransaction;
-			long available = _freePagesBySizeAvailableImmediately.Sum(x => x.Key*x.Value.Count);
 
 			foreach (var sizeKey in sizesFromLargest)
 			{
