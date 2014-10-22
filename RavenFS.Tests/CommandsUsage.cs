@@ -633,27 +633,12 @@ namespace RavenFS.Tests
             Assert.Equal(fileMetadata[0].Metadata[Constants.LastModified].Value<DateTimeOffset>(), fileMetadata[0].LastModified);
             Assert.NotNull(fileMetadata[0].CreationDate);
             Assert.Equal(fileMetadata[1].Metadata[Constants.CreationDate].Value<DateTimeOffset>(), fileMetadata[1].CreationDate);
+            Assert.Equal(fileMetadata[1].Metadata[Constants.RavenCreationDate].Value<DateTimeOffset>(), fileMetadata[1].CreationDate);
             Assert.Equal(".txt", fileMetadata[0].Extension);
             Assert.Equal(".txt", fileMetadata[1].Extension);
             Assert.Equal("/", fileMetadata[0].Directory);
             Assert.Equal("/a/b", fileMetadata[1].Directory);
         }
-
-        [Fact]
-        public async Task Can_call_different_filesystem_from_client()
-        {
-            var client = NewAsyncClient(1);
-            var client2 = NewAsyncClient(2);
-
-            await client.UploadAsync("1.txt", new RandomStream(128));
-
-            await client2.UploadAsync("2.txt", new RandomStream(128));
-
-            //client.ForFileSystem(client2.)
-
-
-        }
-
 
         private static MemoryStream PrepareTextSourceStream()
 		{
