@@ -9,6 +9,8 @@ import performanceTestRequest = require("models/performanceTestRequest");
 import performanceTestResultWrapped = require("models/performanceTestResultWrapped");
 import ioTestCommand = require("commands/ioTestCommand");
 import killRunningTaskCommand = require("commands/killRunningTaskCommand");
+import d3 = require('d3/d3');
+import nv = require('nvd3');
 
 class ioTest extends viewModelBase {
 
@@ -29,6 +31,12 @@ class ioTest extends viewModelBase {
         read: () => this.ioTestRequest.chunkSize() / 1024,
         write: (value:number) => this.ioTestRequest.chunkSize(value * 1024)
     });
+
+    overTimeThroughputChart: any = null;
+    overTimeThroughputChartData = [];
+
+    overTimeLatencyChart: any = null;
+    overTimeLatencyChartData = [];
 
     constructor() {
         super();
@@ -59,7 +67,97 @@ class ioTest extends viewModelBase {
     onIoTestCompleted(result: diskPerformanceResultWrappedDto) {
         this.testResult(new performanceTestResultWrapped(result)); 
 
-        //TODO: plot charts
+        this.overTimeThroughputChartData = [];
+        this.overTimeLatencyChartData = [];
+        if (this.testResult().hasReads()) {
+            this.overTimeThroughputChartData.push({
+                key: 'Read throughput',
+                values: result.Result.ReadPerSecondHistory.map((v, idx) => { return { x : idx, y: v / 1024 / 1024} } )
+            });
+
+            this.overTimeLatencyChartData.push({
+                key: 'Read latency',
+                values: result.Result.AverageReadLatencyPerSecondHistory.map((v, idx) => { return { x: idx, y: v } })
+            });
+        }
+
+        if (this.testResult().hasWrites()) {
+            this.overTimeThroughputChartData.push({
+                key: 'Write throughput',
+                values: result.Result.WritePerSecondHistory.map((v, idx) => { return { x : idx, y: v / 1024 / 1024} } )
+            });
+
+            this.overTimeLatencyChartData.push({
+                key: 'Write latency',
+                values: result.Result.AverageWriteLatencyPerSecondHistory.map((v, idx) => { return { x: idx, y: v } })
+            });
+        }
+
+        if (this.overTimeLatencyChart === null) {
+            nv.addGraph(function () {
+                var chart = nv.models.lineChart()
+                    .margin({ left: 130 })
+                    .useInteractiveGuideline(true)
+                    .transitionDuration(350)
+                    .showLegend(true)
+                    .showYAxis(true)
+                    .showXAxis(true)
+                    .forceY([0]);
+                ;
+
+                chart.xAxis
+                    .axisLabel('Time [s]');
+
+                chart.yAxis
+                    .axisLabel('ms')
+                    .tickFormat(d3.format(',.2f'));
+
+                nv.utils.windowResize(function () { chart.update() });
+                return chart;
+            }, (chart) => {
+                this.overTimeLatencyChart = chart;
+                    d3.select('#overTimeLatencyContainer svg')
+                        .datum(this.overTimeLatencyChartData)
+                        .call(this.overTimeLatencyChart);
+                });
+        } else {
+            d3.select('#overTimeLatencyContainer svg')
+                .datum(this.overTimeLatencyChartData)
+                .call(this.overTimeLatencyChart);
+        }
+
+        if (this.overTimeThroughputChart === null) {
+            nv.addGraph(function () {
+                var chart = nv.models.lineChart()
+                    .margin({ left: 130 })
+                    .useInteractiveGuideline(true)
+                    .transitionDuration(350)
+                    .showLegend(true)
+                    .showYAxis(true)
+                    .showXAxis(true)
+                    .forceY([0]);
+                ;
+
+                chart.xAxis
+                    .axisLabel('Time [s]');
+
+                chart.yAxis
+                    .axisLabel('MB/sec')
+                    .tickFormat(d3.format(',.2f'));
+
+                nv.utils.windowResize(function () { chart.update() });
+                return chart;
+            }, (chart) => {
+                    this.overTimeThroughputChart = chart;
+                    d3.select('#overTimeThroughputContainer svg')
+                        .datum(this.overTimeThroughputChartData)
+                        .call(this.overTimeThroughputChart);
+                });
+        } else {
+            d3.select('#overTimeThroughputContainer svg')
+                .datum(this.overTimeThroughputChartData)
+                .call(this.overTimeThroughputChart);
+        }
     }
 
     killTask() {

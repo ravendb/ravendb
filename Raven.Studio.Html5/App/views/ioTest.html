@@ -107,11 +107,13 @@
                         <th>Total read:</th>
                         <th>Test time:</th>
                         <th>Avg read:</th>
+                        <th>&nbsp;</th>
                     </tr>
                     <tr>
                         <td data-bind="text: totalRead"></td>
                         <td data-bind="text: testTime"></td>
                         <td data-bind="text: avgRead"></td>
+                        <td>&nbsp;</td>
                     </tr>
                     <tr>
                         <th>Read latency min</th>
@@ -133,11 +135,13 @@
                         <th>Total write:</th>
                         <th>Test time:</th>
                         <th>Avg write:</th>
+                        <th>&nbsp;</th>
                     </tr>
                     <tr>
                         <td data-bind="text: totalWrite"></td>
                         <td data-bind="text: testTime"></td>
                         <td data-bind="text: avgWrite"></td>
+                        <td>&nbsp;</td>
                     </tr>
                     <tr>
                         <th>Write latency min</th>
@@ -162,7 +166,7 @@
                         <td data-bind="text: key"></td>
                     </tr>
                     <tr data-bind="foreach: readPercentiles">
-                        <td data-bind="text: value.toFixed(3)"></td>
+                        <td data-bind="text: value"></td>
                     </tr>
                 </table>
                 <!-- /ko -->
@@ -175,10 +179,20 @@
                         <td data-bind="text: key"></td>
                     </tr>
                     <tr data-bind="foreach: writePercentiles">
-                        <td data-bind="text: value.toFixed(3)"></td>
+                        <td data-bind="text: value"></td>
                     </tr>
                 </table>
                 <!-- /ko -->
+                
+                <h4>Disk throughput</h4>
+                <div id="overTimeThroughputContainer" class="with-3d-shadow with-transitions">
+                    <svg height="400"></svg>
+                </div>
+                
+                <h4>Disk latency</h4>
+                <div id="overTimeLatencyContainer" class="with-3d-shadow with-transitions">
+                    <svg height="400"></svg>
+                </div>
             </div> 
         </div>
     </div>

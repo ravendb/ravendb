@@ -1,4 +1,8 @@
+import d3 = require("d3/d3");
+
 class performanceTestResultWrapped {
+
+    private formatter = d3.format(",.2f");
 
     totalRead: KnockoutObservable<string>;
     totalWrite: KnockoutObservable<string>;
@@ -24,34 +28,34 @@ class performanceTestResultWrapped {
     writePercentiles: KnockoutComputed<any[]>;
 
     constructor(dto: diskPerformanceResultWrappedDto) {
-        this.totalRead = ko.computed(() => (dto.Result.TotalRead / 1024 / 1024).toLocaleString() + "MB");
-        this.totalWrite = ko.computed(() => (dto.Result.TotalWrite / 1024 / 1024).toLocaleString() + "MB");
+        this.totalRead = ko.computed(() => this.formatter(dto.Result.TotalRead / 1024 / 1024) + " MB");
+        this.totalWrite = ko.computed(() => this.formatter(dto.Result.TotalWrite / 1024 / 1024) + " MB");
         this.hasReads = ko.computed(() => dto.Request.OperationType == "Read" || dto.Request.OperationType == "Mix");
         this.hasWrites = ko.computed(() => dto.Request.OperationType == "Write" || dto.Request.OperationType == "Mix");
         this.testTime = ko.computed(() => dto.Request.TimeToRunInSeconds + "s");
-        this.avgRead = ko.computed(() => (dto.Result.TotalRead / 1024 / 1024 / dto.Request.TimeToRunInSeconds).toLocaleString() + "MB/s");
-        this.avgWrite = ko.computed(() => (dto.Result.TotalWrite / 1024 / 1024 / dto.Request.TimeToRunInSeconds).toLocaleString() + "MB/s");
+        this.avgRead = ko.computed(() => this.formatter(dto.Result.TotalRead / 1024 / 1024 / dto.Request.TimeToRunInSeconds) + "MB/s");
+        this.avgWrite = ko.computed(() => this.formatter(dto.Result.TotalWrite / 1024 / 1024 / dto.Request.TimeToRunInSeconds) + "MB/s");
 
-        this.readLatencyMin = ko.computed(() => dto.Result.ReadLatency.Min.toFixed(3) + "ms");
-        this.readLatencyMax = ko.computed(() => dto.Result.ReadLatency.Max.toFixed(3) + "ms");
-        this.readLatencyMean = ko.computed(() => dto.Result.ReadLatency.Mean.toFixed(3) + "ms");
-        this.readLatencyStdev = ko.computed(() => dto.Result.ReadLatency.Stdev.toFixed(3) + "ms");
+        this.readLatencyMin = ko.computed(() => this.formatter(dto.Result.ReadLatency.Min) + "ms");
+        this.readLatencyMax = ko.computed(() => this.formatter(dto.Result.ReadLatency.Max) + "ms");
+        this.readLatencyMean = ko.computed(() => this.formatter(dto.Result.ReadLatency.Mean) + "ms");
+        this.readLatencyStdev = ko.computed(() => this.formatter(dto.Result.ReadLatency.Stdev) + "ms");
 
-        this.writeLatencyMin = ko.computed(() => dto.Result.WriteLatency.Min.toFixed(3) + "ms");
-        this.writeLatencyMax = ko.computed(() => dto.Result.WriteLatency.Max.toFixed(3) + "ms");
-        this.writeLatencyMean = ko.computed(() => dto.Result.WriteLatency.Mean.toFixed(3) + "ms");
-        this.writeLatencyStdev = ko.computed(() => dto.Result.WriteLatency.Stdev.toFixed(3) + "ms");
+        this.writeLatencyMin = ko.computed(() => this.formatter(dto.Result.WriteLatency.Min) + "ms");
+        this.writeLatencyMax = ko.computed(() => this.formatter(dto.Result.WriteLatency.Max) + "ms");
+        this.writeLatencyMean = ko.computed(() => this.formatter(dto.Result.WriteLatency.Mean) + "ms");
+        this.writeLatencyStdev = ko.computed(() => this.formatter(dto.Result.WriteLatency.Stdev) + "ms");
 
         this.readPercentiles = ko.computed(() => $.map(dto.Result.ReadLatency.Percentiles, (value, key) => {
             return {
                 key: key,
-                value: value
+                value: this.formatter(value)
             }
         }));
         this.writePercentiles = ko.computed(() => $.map(dto.Result.WriteLatency.Percentiles, (value, key) => {
             return {
                 key: key,
-                value: value
+                value: this.formatter(value)
             }
         }));
     }
