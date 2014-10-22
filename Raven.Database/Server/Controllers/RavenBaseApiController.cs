@@ -255,11 +255,21 @@ namespace Raven.Database.Server.Controllers
 					default:
 						if (header.Value.Type == JTokenType.Date)
 						{
-							var rfc1123 = GetDateString(header.Value, "r");
-							var iso8601 = GetDateString(header.Value, "o");
-							msg.Content.Headers.Add(header.Key, rfc1123);
-							if (header.Key.StartsWith("Raven-") == false)
-								msg.Content.Headers.Add("Raven-" + header.Key, iso8601);
+                            if (header.Key.StartsWith("Raven-"))
+                            {
+                                var iso8601 = GetDateString(header.Value, "o");
+                                msg.Content.Headers.Add(header.Key, iso8601);
+                            }
+                            else
+                            {
+                                var rfc1123 = GetDateString(header.Value, "r");
+                                msg.Content.Headers.Add(header.Key, rfc1123);
+                                if (!headers.ContainsKey("Raven-" + header.Key))
+                                {
+                                    var iso8601 = GetDateString(header.Value, "o");
+                                    msg.Content.Headers.Add("Raven-" + header.Key, iso8601);
+                                }                                    
+                            }
 						}
                         else if (header.Value.Type == JTokenType.Boolean)
                         {
