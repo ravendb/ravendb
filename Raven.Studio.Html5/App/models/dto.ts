@@ -1047,3 +1047,32 @@ interface fileSystemSettingsDto {
     logsPath: string;
     storageEngine: string;
 }
+
+interface performanceTestRequestDto {
+    Path: string;
+    FileSize: number;
+    OperationType: string;
+    Buffered: boolean;
+    Sequential: boolean;
+    ThreadCount: number;
+    TimeToRunInSeconds: number;
+    RandomSeed?: number;
+    ChunkSize: number;
+}
+
+interface diskPerformanceResultDto {
+    ReadPerSecondHistory: number[];
+    WritePerSecondHistory: number[];
+    AverageReadLatencyPerSecondHistory: number[];
+    AverageWriteLatencyPerSecondHistory: number[];
+    ReadLatency: histogramDataDto;
+    WriteLatency: histogramDataDto;
+    TotalRead: number;
+    TotalWrite: number;
+}
+
+interface diskPerformanceResultWrappedDto {
+    Result: diskPerformanceResultDto;
+    Request: performanceTestRequestDto;
+    DebugMsgs: string[];
+}

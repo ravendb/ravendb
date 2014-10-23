@@ -25,6 +25,7 @@ class adminSettings extends viewModelBase {
         var adminLogsRoute = { route: 'admin/settings/adminLogs', moduleId: 'viewmodels/adminLogs', title: 'Admin Logs', nav: true, hash: appUrl.forAdminLogs() };
         var trafficWatchRoute = { route: 'admin/settings/trafficWatch', moduleId: 'viewmodels/trafficWatch', title: 'Traffic Watch', nav: true, hash: appUrl.forTrafficWatch() };
         var debugInfoRoute = { route: 'admin/settings/debugInfo', moduleId: 'viewmodels/infoPackage', title: 'Gather Debug Info', nav: true, hash: appUrl.forDebugInfo() };
+        var ioTestRoute = { route: 'admin/settings/ioTest', moduleId: 'viewmodels/ioTest', title: 'IO Test', nav: true, hash: appUrl.forIoTest() };
         var studioConfigRoute = { route: 'admin/settings/studioConfig', moduleId: 'viewmodels/studioConfig', title: 'Studio Config', nav: true, hash: appUrl.forStudioConfig() };
 
         this.router = durandalRouter.createChildRouter()
@@ -40,6 +41,7 @@ class adminSettings extends viewModelBase {
                 adminLogsRoute,
                 trafficWatchRoute,
                 debugInfoRoute,
+                ioTestRoute,
                 studioConfigRoute
             ])
             .buildNavigationModel();

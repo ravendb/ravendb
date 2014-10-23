@@ -242,6 +242,7 @@ namespace Voron.Platform.Win32
 	[Flags]
 	public enum Win32NativeFileAttributes : uint
 	{
+        None = 0x00000000,
 		Readonly = 0x00000001,
 		Hidden = 0x00000002,
 		System = 0x00000004,

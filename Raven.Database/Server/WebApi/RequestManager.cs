@@ -275,8 +275,6 @@ namespace Raven.Database.Server.WebApi
         }
 
 
-
-
         private static bool IsWriteRequest(HttpRequestMessage request)
         {
             return AbstractRequestAuthorizer.IsGetRequest(request.Method.Method, request.RequestUri.AbsoluteUri) == false;

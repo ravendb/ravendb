@@ -1,11 +1,9 @@
 ﻿using System;
+using System.Threading;
+using Raven.Database.DiskIO;
+using Raven.Json.Linq;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Tests.Issues;
-using Raven.Tests.Notifications;
+using Raven.Database.Extensions;
 
 namespace Raven.Tryouts
 {
@@ -13,9 +11,25 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			var etag = Etag.Parse("01000000-0000-0001-0000-000001C9FEE9");
-			var incrementBy = etag.IncrementBy(int.MaxValue);
-			Console.WriteLine(incrementBy.ToString());
+            var performanceRequest = new PerformanceTestRequest
+            {
+                FileSize = (long) 1024 * 1024 * 1024,
+                OperationType = OperationType.Read,
+                Buffered = true,
+                Path = "c:\\temp\\data.ravendb-io-test",
+                Sequential = true,
+                ThreadCount = 4,
+                TimeToRunInSeconds = 100,
+                ChunkSize = 4 * 1024
+            };
+
+            var tester = new DiskPerformanceTester(performanceRequest, Console.WriteLine, CancellationToken.None);
+            tester.TestDiskIO();
+
+		    var r = tester.Result;
+
+            Console.WriteLine(RavenJObject.FromObject(r));
+		    Console.ReadKey();
 		}
 	}
 
