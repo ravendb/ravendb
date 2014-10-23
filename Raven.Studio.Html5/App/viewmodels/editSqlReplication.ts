@@ -25,6 +25,7 @@ import sqlReplicationSimulationDialog = require("viewmodels/sqlReplicationSimula
 import sqlReplicationConnections = require("models/sqlReplicationConnections");
 import predefinedSqlConnection = require("models/predefinedSqlConnection");
 
+
 class editSqlReplication extends viewModelBase {
     
     static editSqlReplicationSelector = "#editSQLReplication";
@@ -48,7 +49,7 @@ class editSqlReplication extends viewModelBase {
     sqlReplicationName: KnockoutComputed<string>;
     isEditingNewReplication = ko.observable(false);
     isBasicView = ko.observable(true);
-    availableConnectionStrings = ko.observableArray<string>();
+    availableConnectionStrings = ko.observableArray<predefinedSqlConnection>();
     sqlReplicationStatsAndMetricsHref = appUrl.forCurrentDatabase().statusDebugSqlReplication;
     appUrls: computedAppUrls;
     docEditor: AceAjax.Editor;
@@ -84,7 +85,7 @@ class editSqlReplication extends viewModelBase {
                 var connections = new sqlReplicationConnections(dto);
 
                 if (connections.predefinedConnections().length > 0) {
-                    connections.predefinedConnections().forEach(x => this.availableConnectionStrings.push(x.name()));
+                    connections.predefinedConnections().forEach((x: predefinedSqlConnection) => this.availableConnectionStrings.push(x));
                 }
             });
     }
