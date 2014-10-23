@@ -342,9 +342,10 @@ namespace Raven.Database.Server.Controllers
 				{
 					Remark = "Using windows auth",
 					User = windowsPrincipal.Identity.Name,
-					IsAdminGlobal =
-						windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
+					IsAdminGlobal = windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
 				};
+
+				windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Database);
 
 				return GetMessageWithObject(windowsUser);
 			}
@@ -373,6 +374,8 @@ namespace Raven.Database.Server.Controllers
 					ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
 					ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
 				};
+
+				windowsUserWithDatabase.IsAdminCurrentDb = windowsUserWithDatabase.IsAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
 
 				return GetMessageWithObject(windowsUserWithDatabase);
 			}
