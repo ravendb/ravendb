@@ -126,6 +126,10 @@ namespace Voron.Impl.Scratch
 				{
 					// we'll try next time
 				}
+				catch (InvalidJournalFlushRequest)
+				{
+					// journals flushing already in progress
+				}
 			}
 
 			if (sizeAfterAllocation > _sizeLimit)
