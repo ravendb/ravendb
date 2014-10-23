@@ -627,6 +627,9 @@ namespace Raven.Database.Server.Controllers.Admin
 
                         process.WaitForExit();
 
+						if (process.ExitCode != 0)
+							throw new InvalidOperationException("Raven.Debug exit code is: " + process.ExitCode);
+
                         using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
                         {
                             stackDumpOutputStream.CopyTo(stacktraceStream);
