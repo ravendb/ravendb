@@ -254,6 +254,7 @@
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\RemoteFileSynchronizationConflictResolver.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LocalFileSynchronizationConflictResolver.cs" />
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationConfig.cs" />
+    <Compile Include="Server\IgnoreSslCertificateErrorsMode.cs" />
     <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
     <Compile Include="Smuggler\EmbeddedSmugglerOperations.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
