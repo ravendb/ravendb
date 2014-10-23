@@ -121,7 +121,7 @@
                     <label class="col-sm-4 control-label" data-bind="text: connectionStringSourceFieldName"></label>
                     <div class="col-sm-8">
                         <textarea tabindex="6" rows="4" required class="form-control" data-bind="attr:{required:connectionStringType() !== $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null},visible:connectionStringType() !== $data.PREDEFINED_CONNECTION_STRING_NAME ,value: connectionStringValue, valueUpdate: 'afterkeydown'" />
-                        <select tabindex="7" required class="form-control" data-bind="options:$root.availableConnectionStrings, attr:{required:connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null},visible:connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME ,value: connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME?connectionStringValue:null, valueUpdate: 'afterkeydown'" />
+                        <select tabindex="7" required class="form-control" data-bind="options:$root.availableConnectionStrings, optionsText:'name', optionsValue:'name', attr:{required:connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME?'required':null},visible:connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME ,value: connectionStringType() === $data.PREDEFINED_CONNECTION_STRING_NAME?connectionStringValue:null, valueUpdate: 'afterkeydown'" />
                     </div>
                 </div>
                 <div class="form-group">
@@ -163,7 +163,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-group" data-bind="visible:$root.isBasicView() === false &&  isSqlServerKindOfDB() === true ">
+                <div class="form-group" data-bind="visible:$root.isBasicView() === false &&  (isSqlServerKindOfFactory(factoryName()) === true  || (connectionStringType() == PREDEFINED_CONNECTION_STRING_NAME && !!$root.availableConnectionStrings.first(function(x){debugger; return x.name() == connectionStringValue() && isSqlServerKindOfFactory(x.factoryName()) == true})))">
                     <label class="col-sm-4 control-label">Query Recompiling</label>
                     <div class="checkbox col-sm-8">
                         <div class="btn-group">
