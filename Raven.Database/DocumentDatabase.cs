@@ -185,6 +185,8 @@ namespace Raven.Database
 
 		public event EventHandler DisposingEnded;
 
+		public event EventHandler StorageInaccessible;
+
 		public event Action OnIndexingWiringComplete;
 
 		public static string BuildVersion
@@ -1153,7 +1155,12 @@ namespace Raven.Database
 			public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
 			{
 				string storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
-				database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications);
+				database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications, () =>
+				{
+					if (database.StorageInaccessible != null)
+						database.StorageInaccessible(database, EventArgs.Empty);
+
+				});
 				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
 			}
 
