@@ -90,8 +90,9 @@ namespace Raven.Smuggler
 			operation = new ChunkedBulkInsertOperation(store.DefaultDatabase, store, store.Listeners, new BulkInsertOptions
 			{
 				BatchSize = SmugglerOptions.BatchSize,
-				OverwriteExisting = true
-			}, store.Changes(), SmugglerOptions.ChunkSize, SmugglerOptions.DefaultDocumentSizeInChunkLimitInBytes);
+				OverwriteExisting = true,
+				WriteTimeoutMilliseconds = (int) SmugglerOptions.Timeout.TotalMilliseconds
+			}, store.Changes(), SmugglerOptions.ChunkSize, SmugglerOptions.TotalDocumentSizeInChunkLimitInBytes);
 
 			operation.Report += text => Operations.ShowProgress(text);
 		}
