@@ -4,11 +4,13 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
+using Voron.Exceptions;
+using Voron.Impl;
+using Voron.Impl.Journal;
 using Voron.Impl.Paging;
-using Voron.Platform.Win32;
 using Voron.Util;
 
-namespace Voron.Impl.Journal
+namespace Voron.Platform.Win32
 {
 	/// <summary>
 	/// This class assumes only a single writer at any given point in time
@@ -21,7 +23,6 @@ namespace Voron.Impl.Journal
 		private const int ErrorHandleEof = 38;
 		private readonly string _filename;
 		private readonly SafeFileHandle _handle;
-		private readonly ManualResetEvent _manualResetEvent;
 		private SafeFileHandle _readHandle;
 		private FileSegmentElement* _segments;
 		private int _segmentsSize;
@@ -41,7 +42,6 @@ namespace Voron.Impl.Journal
 			Win32NativeFileMethods.SetFileLength(_handle, journalSize);
 
 			NumberOfAllocatedPages = journalSize/AbstractPager.PageSize;
-			_manualResetEvent = new ManualResetEvent(false);
 
 			_nativeOverlapped = (NativeOverlapped*) Marshal.AllocHGlobal(sizeof (NativeOverlapped));
 
@@ -55,14 +55,12 @@ namespace Voron.Impl.Journal
 			if (Disposed)
 				throw new ObjectDisposedException("Win32JournalWriter");
 
-			_manualResetEvent.Reset();
-
 			EnsureSegmentsSize(pages);
 
 		
 			_nativeOverlapped->OffsetLow = (int) (position & 0xffffffff);
 			_nativeOverlapped->OffsetHigh = (int) (position >> 32);
-			_nativeOverlapped->EventHandle = _manualResetEvent.SafeWaitHandle.DangerousGetHandle();
+			_nativeOverlapped->EventHandle = IntPtr.Zero;// _manualResetEvent.SafeWaitHandle.DangerousGetHandle();
 
 			for (int i = 0; i < pages.Length; i++)
 			{
@@ -76,17 +74,24 @@ namespace Voron.Impl.Journal
 
 			var operationCompleted = WriteFileGather(_handle, _segments, (uint) pages.Length*4096, IntPtr.Zero, _nativeOverlapped);
 
-			if (operationCompleted) 
+			uint lpNumberOfBytesWritten;
+
+			if (operationCompleted)
+			{
+				if (GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
+					throw new VoronUnrecoverableErrorException("Could not write to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
 				return;
+			}
 
 			switch (Marshal.GetLastWin32Error())
 			{
 				case ErrorSuccess:
 				case ErrorIOPending:
-					_manualResetEvent.WaitOne();
+					if (GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
+						throw new VoronUnrecoverableErrorException("Could not write to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
 					break;
 				default:
-					throw new Win32Exception(Marshal.GetLastWin32Error());
+					throw new VoronUnrecoverableErrorException("Could not write to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
 			}
 		}
 
@@ -171,9 +176,6 @@ namespace Voron.Impl.Journal
 				_segments = null;
 			}
 
-			if(_manualResetEvent != null)
-				_manualResetEvent.Dispose();
-
 			if (DeleteOnClose)
 			{
 				File.Delete(_filename);
@@ -183,13 +185,18 @@ namespace Voron.Impl.Journal
 		public bool Disposed { get; private set; }
 
 		[DllImport("kernel32.dll", SetLastError = true)]
-        [return: MarshalAsAttribute(UnmanagedType.Bool)]
+        [return: MarshalAs(UnmanagedType.Bool)]
 		private static extern bool WriteFileGather(
 			SafeFileHandle hFile,
 			FileSegmentElement* aSegmentArray,
 			uint nNumberOfBytesToWrite,
 			IntPtr lpReserved,
 			NativeOverlapped* lpOverlapped);
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		static extern bool GetOverlappedResult(SafeFileHandle hFile,
+		   NativeOverlapped* lpOverlapped,
+		   out uint lpNumberOfBytesTransferred, bool bWait);
 
 		~Win32FileJournalWriter()
 		{

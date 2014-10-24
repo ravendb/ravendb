@@ -57,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Exceptions\ScratchBufferSizeLimitException.cs" />
+    <Compile Include="Exceptions\VoronUnrecoverableErrorException.cs" />
     <Compile Include="Impl\PagePosition.cs" />
     <Compile Include="Impl\Scratch\PageFromScratchBuffer.cs" />
     <Compile Include="Impl\Scratch\ScratchBufferFile.cs" />
@@ -75,7 +76,7 @@
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
     <Compile Include="Impl\Journal\ShipppedTransactionsApplicator.cs" />
     <Compile Include="Impl\Journal\TransactionToShip.cs" />
-    <Compile Include="Platform\Posix\NativeMethods.cs" />
+    <Compile Include="Platform\Posix\PosixHelper.cs" />
     <Compile Include="Platform\Posix\PosixJournalWriter.cs" />
     <Compile Include="Platform\Posix\PosixMemoryMapPager.cs" />
     <Compile Include="Platform\Win32\Win32Helper.cs" />
@@ -167,7 +168,7 @@
     <Compile Include="Impl\StdLib.cs" />
     <Compile Include="Platform\Win32\Win32MemoryMapPager.cs" />
     <Compile Include="Platform\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
-    <Compile Include="Platform\Win32\NativeMethods.cs" />
+    <Compile Include="Platform\Win32\Win32NativeFileMethods.cs" />
     <Compile Include="Platform\Posix\PosixPageFileBackedMemoryMapPager.cs" />
   </ItemGroup>
   <ItemGroup>

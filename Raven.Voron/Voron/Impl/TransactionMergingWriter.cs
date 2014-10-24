@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Voron.Debugging;
+using Voron.Exceptions;
 using Voron.Util;
 
 namespace Voron.Impl
@@ -103,6 +107,7 @@ namespace Voron.Impl
 			}
 		}
 
+		[HandleProcessCorruptedStateExceptions]
 		private void HandleActualWrites(OutstandingWrite mine, CancellationToken token)
 		{
 			List<OutstandingWrite> writes = null;
@@ -125,7 +130,12 @@ namespace Voron.Impl
 					}
 					catch (Exception e)
 					{
-						// if we have an error duing the commit, we can't recover, just fail them all.
+						if (e is SEHException)
+						{
+							e = new VoronUnrecoverableErrorException("Error occurred during write", new Win32Exception(error: e.HResult));
+						}
+
+						// if we have an error during the commit, we can't recover, just fail them all.
 						foreach (var write in writes)
 						{
 							write.Errored(e);
@@ -141,6 +151,11 @@ namespace Voron.Impl
 			}
 			catch (Exception e)
 			{
+				if (e is SEHException)
+				{
+					e = new VoronUnrecoverableErrorException("Error occurred during write", new Win32Exception(error: e.HResult));
+				}
+
 				HandleWriteFailure(writes, mine, e);
 			}
 		}
@@ -244,6 +259,7 @@ namespace Voron.Impl
 			}
 		}
 
+		[HandleProcessCorruptedStateExceptions]
 		private void SplitWrites(List<OutstandingWrite> writes)
 		{
 			for (var index = 0; index < writes.Count; index++)
@@ -262,6 +278,11 @@ namespace Voron.Impl
 				}
 				catch (Exception e)
 				{
+					if (e is SEHException)
+					{
+						e = new VoronUnrecoverableErrorException("Error occurred during write", new Win32Exception(error: e.HResult));
+					}
+
 					write.Errored(e);
 				}
 			}
