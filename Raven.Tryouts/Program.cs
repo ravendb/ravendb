@@ -15,7 +15,7 @@ namespace Raven.Tryouts
             {
                 FileSize = (long) 1024 * 1024 * 1024,
                 OperationType = OperationType.Read,
-                Buffered = true,
+                BufferingType = BufferingType.ReadAndWrite,
                 Path = "c:\\temp\\data.ravendb-io-test",
                 Sequential = true,
                 ThreadCount = 4,

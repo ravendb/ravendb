@@ -1052,7 +1052,7 @@ interface performanceTestRequestDto {
     Path: string;
     FileSize: number;
     OperationType: string;
-    Buffered: boolean;
+    BufferingType: string;
     Sequential: boolean;
     ThreadCount: number;
     TimeToRunInSeconds: number;

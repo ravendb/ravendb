@@ -3,7 +3,7 @@ class performanceTestRequest {
     path = ko.observable<string>();
     fileSize = ko.observable<number>();
     operationType = ko.observable<string>();
-    buffered = ko.observable<boolean>();
+    bufferingType = ko.observable<string>();
     sequential = ko.observable<boolean>();
     threadCount = ko.observable<number>();
     timeToRunInSeconds = ko.observable<number>();
@@ -14,7 +14,7 @@ class performanceTestRequest {
         this.path(dto.Path);
         this.fileSize(dto.FileSize);
         this.operationType(dto.OperationType);
-        this.buffered(dto.Buffered);
+        this.bufferingType(dto.BufferingType);
         this.sequential(dto.Sequential);
         this.threadCount(dto.ThreadCount);
         this.timeToRunInSeconds(dto.TimeToRunInSeconds);
@@ -23,10 +23,10 @@ class performanceTestRequest {
 
     static empty(): performanceTestRequest {
         return new performanceTestRequest({
-            Path: null,
+            Path: "c:\\temp\\",
             FileSize: 1024 * 1024 * 1024,
             OperationType: "Write",
-            Buffered: false,
+            BufferingType: "None",
             Sequential: true,
             ThreadCount: 4,
             TimeToRunInSeconds: 30,
@@ -39,7 +39,7 @@ class performanceTestRequest {
             Path: this.path(),
             FileSize: this.fileSize(),
             OperationType: this.operationType(),
-            Buffered: this.buffered(),
+            BufferingType: this.bufferingType(),
             Sequential: this.sequential(),
             ThreadCount: this.threadCount(),
             TimeToRunInSeconds: this.timeToRunInSeconds(),
