@@ -126,6 +126,10 @@ namespace Voron.Impl.Scratch
 				{
 					// we'll try next time
 				}
+				catch (InvalidJournalFlushRequest)
+				{
+					// journals flushing already in progress
+				}
 			}
 
 			if (sizeAfterAllocation > _sizeLimit)
@@ -150,7 +154,7 @@ namespace Voron.Impl.Scratch
 
 				bool createNextFile = false;
 
-				if (_current.HasDiscontinuousSpaceFor(tx, size))
+				if (_current.HasDiscontinuousSpaceFor(tx, size, _scratchBuffers.Count))
 				{
 					// there is enough space for the requested allocation but the problem is its fragmentation
 					// so we will create a new scratch file and will allow to allocate new continuous range from there
