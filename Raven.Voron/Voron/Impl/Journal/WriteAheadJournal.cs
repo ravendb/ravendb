@@ -760,9 +760,11 @@ namespace Voron.Impl.Journal
 			{
 				bool lockTaken = false;
 				Monitor.TryEnter(_flushingLock, ref lockTaken);
+				allowRecursiveCall = true;
 
 				return new DisposableAction(() =>
 				{
+					allowRecursiveCall = false;
 					if (lockTaken)
 						Monitor.Exit(_flushingLock);
 				});
