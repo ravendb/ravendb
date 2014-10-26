@@ -1009,7 +1009,7 @@ namespace Raven.Database.Config
 		}
 
 		[CLSCompliant(false)]
-		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork)
+		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork, Action handleStorageInaccessible)
 		{
 			storageEngine = StorageEngineAssemblyNameByTypeName(storageEngine);
 			var type = Type.GetType(storageEngine);
@@ -1017,7 +1017,7 @@ namespace Raven.Database.Config
 			if (type == null)
 				throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);
 
-			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
+			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork, handleStorageInaccessible);
 		}
 
 

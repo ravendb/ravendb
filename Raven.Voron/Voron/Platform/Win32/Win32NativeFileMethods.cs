@@ -73,7 +73,7 @@ namespace Voron.Platform.Win32
 			{
 				lastError = Marshal.GetLastWin32Error();
 
-				if (lastError == (int) Win32NativeFileErrors.DiskFull)
+				if (lastError == (int) Win32NativeFileErrors.ERROR_DISK_FULL)
 				{
 					var filePath = new StringBuilder(256);
 
@@ -92,14 +92,21 @@ namespace Voron.Platform.Win32
 					throw new DiskFullException(driveInfo, fullFilePath, length);
 				}
 
-				throw new Win32Exception(lastError);
+				var exception = new Win32Exception(lastError);
+
+				if (lastError == (int) Win32NativeFileErrors.ERROR_NOT_READY || lastError == (int) Win32NativeFileErrors.ERROR_FILE_NOT_FOUND)
+					throw new VoronUnrecoverableErrorException("Could not set the file size because it is inaccessible", exception);
+
+				throw exception;
 			}
 		}
 	}
 
 	public enum Win32NativeFileErrors
 	{
-		DiskFull = 0x70
+		ERROR_FILE_NOT_FOUND = 0x2,
+		ERROR_DISK_FULL = 0x70,
+		ERROR_NOT_READY = 0x15
 	}
 
 	public enum Win32NativeFileMoveMethod : uint
