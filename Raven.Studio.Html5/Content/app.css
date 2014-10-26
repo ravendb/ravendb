@@ -1,4 +1,4 @@
-@font-face {
+﻿@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -7815,6 +7815,20 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   overflow-y: auto;
   overflow-x: hidden;
 }
+#logsContainer .log-details .exceptionText,
+#alertsContainer .log-details .exceptionText,
+#indexErrorsContainer .log-details .exceptionText,
+#requestTracingContainer .log-details .exceptionText,
+#logsContainer .alerts-details .exceptionText,
+#alertsContainer .alerts-details .exceptionText,
+#indexErrorsContainer .alerts-details .exceptionText,
+#requestTracingContainer .alerts-details .exceptionText,
+#logsContainer .index-errors-details .exceptionText,
+#alertsContainer .index-errors-details .exceptionText,
+#indexErrorsContainer .index-errors-details .exceptionText,
+#requestTracingContainer .index-errors-details .exceptionText {
+  white-space: pre-wrap;
+}
 #logsContainer .unread td,
 #alertsContainer .unread td,
 #indexErrorsContainer .unread td,
@@ -8243,3 +8257,4 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .topBorder td {
   border-top: solid 1px #ddd !important;
 }
+/*# sourceMappingURL=app.css.map */
