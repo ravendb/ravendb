@@ -59,6 +59,7 @@ namespace Raven.Tests.Issues
             RegisterRouteForOnlySysDb<AdminController>(a => a.Stats());
 			RegisterRouteForOnlySysDb<AdminController>(a => a.OnAdminLogsConfig());
 			RegisterRouteForOnlySysDb<AdminController>(a => a.OnAdminLogsFetch());
+			RegisterRouteForOnlySysDb<AdminController>(a => a.IoTest());
 			RegisterRouteForOnlySysDb<AdminController>(a => a.InfoPackage());
             RegisterRouteForOnlySysDb<AdminController>(a => a.Compact());
             RegisterRouteForOnlySysDb<AdminController>(a => a.Gc());

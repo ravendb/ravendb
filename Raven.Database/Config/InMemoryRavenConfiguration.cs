@@ -63,7 +63,6 @@ namespace Raven.Database.Config
 			CreatePluginsDirectoryIfNotExisting = true;
 			CreateAnalyzersDirectoryIfNotExisting = true;
 
-
 			IndexingClassifier = new DefaultIndexingClassifier();
 
 			Catalog = new AggregateCatalog(new AssemblyCatalog(typeof(DocumentDatabase).Assembly));
@@ -276,6 +275,8 @@ namespace Raven.Database.Config
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
 			TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
+
+			IgnoreSslCertificateErros = GetIgnoreSslCertificateErrorModeMode();
 
 			PostInit();
 
@@ -659,6 +660,8 @@ namespace Raven.Database.Config
 		/// </summary>
 		public byte[] OAuthTokenKey { get; set; }
 
+		public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErros { get; set; }
+
 		#endregion
 
 		#region Data settings
@@ -976,6 +979,16 @@ namespace Raven.Database.Config
 			return AnonymousUserAccessMode.Admin;
 		}
 
+		protected IgnoreSslCertificateErrorsMode GetIgnoreSslCertificateErrorModeMode()
+		{
+			if (string.IsNullOrEmpty(Settings["Raven/IgnoreSslCertificateErrors"]) == false)
+			{
+				var val = Enum.Parse(typeof(IgnoreSslCertificateErrorsMode), Settings["Raven/IgnoreSslCertificateErrors"]);
+				return (IgnoreSslCertificateErrorsMode)val;
+			}
+			return IgnoreSslCertificateErrorsMode.None;
+		}
+
 		public Uri GetFullUrl(string baseUrl)
 		{
 			baseUrl = Uri.EscapeUriString(baseUrl);
@@ -996,7 +1009,7 @@ namespace Raven.Database.Config
 		}
 
 		[CLSCompliant(false)]
-		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork)
+		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork, Action handleStorageInaccessible)
 		{
 			storageEngine = StorageEngineAssemblyNameByTypeName(storageEngine);
 			var type = Type.GetType(storageEngine);
@@ -1004,7 +1017,7 @@ namespace Raven.Database.Config
 			if (type == null)
 				throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);
 
-			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
+			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork, handleStorageInaccessible);
 		}
 
 

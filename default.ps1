@@ -329,6 +329,10 @@ task CopyRootFiles -depends CreateDocs {
 	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
 	cp $base_dir\acknowledgments.txt $build_dir\Output\acknowledgments.txt
 	cp $base_dir\CommonAssemblyInfo.cs $build_dir\Output\CommonAssemblyInfo.cs
+	
+	(Get-Content "$build_dir\Output\Start.cmd") | 
+		Foreach-Object { $_ -replace "{build}", "$($env:buildlabel)" } |
+		Set-Content "$build_dir\Output\Start.cmd" -Encoding Default
 }
 
 task ZipOutput {

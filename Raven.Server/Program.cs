@@ -32,6 +32,7 @@ using Raven.Client.FileSystem;
 using Raven.Database;
 using Raven.Database.Actions;
 using Raven.Database.Config;
+using Raven.Database.DiskIO;
 using Raven.Database.Server;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -145,6 +146,8 @@ namespace Raven.Server
 
 		private static void InteractiveRun(string[] args)
 		{
+		    var ioTestRequest = new PerformanceTestRequest();
+
 			string backupLocation = null;
 			string restoreLocation = null;
 			string restoreDatabaseName = null;
@@ -152,6 +155,8 @@ namespace Raven.Server
 			bool defrag = false;
             var requiresRestoreAction = new HashSet<string>();
 		    bool isRestoreAction = false;
+		    var requiresIoTestAction = new HashSet<string>();
+		    bool isIoTestAction = false;
 			Action actionToTake = null;
 			bool launchBrowser = false;
 			bool noLog = false;
@@ -305,6 +310,98 @@ namespace Raven.Server
                     restoreFilesystemName = value;
                     requiresRestoreAction.Add("restore-filesystem-name");
                 }},
+                {"io-test=", "Performs disk io test using {0:path} as temporary file path", path =>
+                {
+                    ioTestRequest.Path = path;
+                    actionToTake = () => IoTest(ioTestRequest);
+                    isIoTestAction = true;
+                }},
+			    {
+			        "io-test-file-size=", "The {0:size} of test file for io test in MB (default: 1024MB)", value =>
+			        {
+                        int fileSize;
+                        if (int.TryParse(value, out fileSize) == false)
+                        {
+                            throw new OptionException("specified test file size is not valid", "io-test-file-size");
+                        }
+			            ioTestRequest.FileSize = fileSize*1024*1024;
+			            requiresIoTestAction.Add("io-test-file-size");
+			        }
+			    },
+                 {
+			        "io-test-threads=", "The {0:number} of threads to use during test", value =>
+			        {
+                        int threads;
+                        if (int.TryParse(value, out threads) == false)
+                        {
+                            throw new OptionException("specified amount of threads is not valid", "io-test-threads");
+                        }
+			            ioTestRequest.ThreadCount = threads;
+			            requiresIoTestAction.Add("io-test-threads");
+			        }
+			    },
+                {
+			        "io-test-time=", "The {0:number} of seconds to run the test (default: 30)", value =>
+			        {
+                        int testTime;
+                        if (int.TryParse(value, out testTime) == false)
+                        {
+                            throw new OptionException("specified test time is not valid", "io-test-time");
+                        }
+                        ioTestRequest.TimeToRunInSeconds = testTime;
+			            requiresIoTestAction.Add("io-test-time");
+			        }
+			    },
+                 {
+			        "io-test-seed=", "The {0:seed} for random generator", value =>
+			        {
+                        int seed;
+                        if (int.TryParse(value, out seed) == false)
+                        {
+                            throw new OptionException("specified random seed is not valid", "io-test-seed");
+                        }
+                        ioTestRequest.RandomSeed = seed;
+			            requiresIoTestAction.Add("io-test-seed");
+			        }
+			    },
+                {
+			        "io-test-mode=", "The operation {0:mode} (read,write,mix) (default: write)", value =>
+			        {
+                        OperationType opType;
+                        if (Enum.TryParse(value, true, out opType) == false)
+                        {
+                            throw new OptionException("specified test mode is not valid", "io-test-mode");
+                        }
+                        ioTestRequest.OperationType = opType;
+                        requiresIoTestAction.Add("io-test-mode");
+			        }
+			    },
+                {
+			        "io-test-chunk-size=", "The {0:value} for chunk size in KB (default: 4 KB)", value =>
+			        {
+                        int chunkSize;
+                        if (int.TryParse(value, out chunkSize) == false)
+                        {
+                            throw new OptionException("specified test chunk size is not valid", "io-test-chunk-size");
+                        }
+                        ioTestRequest.ChunkSize = chunkSize * 1024;
+                        requiresIoTestAction.Add("io-test-chunk-size");
+			        }
+			    },
+			    {
+			        "io-test-sequential", "Perform sequential read/write (default: random)", value =>
+			        {
+			            ioTestRequest.Sequential = true;
+			            requiresIoTestAction.Add("io-test-sequential");
+			        }
+			    },
+                {
+			        "io-test-buffered", "Perform buffered read/write (default: unbuffered)", value =>
+			        {
+			            ioTestRequest.Buffered = true;
+                        requiresIoTestAction.Add("io-test-buffered");
+			        }
+			    },
 				{"encrypt-self-config", "Encrypt the RavenDB configuration file", file =>
 						{
 							actionToTake = () => ProtectConfiguration(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile);
@@ -354,6 +451,12 @@ namespace Raven.Server
             {
                 var joinedActions = string.Join(", ", requiresRestoreAction);
                 throw new OptionException(string.Format("when using {0}, --restore-source must be specified", joinedActions), joinedActions);
+            }
+
+            if (!isIoTestAction && requiresIoTestAction.Any())
+            {
+                var joinedActions = string.Join(", ", requiresRestoreAction);
+                throw new OptionException(string.Format("when using {0}, --io-test must be specified", joinedActions), joinedActions);
             }
 
 			if (actionToTake == null)
@@ -425,6 +528,59 @@ namespace Raven.Server
 	    {
 	        e.SetObserved();
 	    }
+
+        public static void IoTest(PerformanceTestRequest request)
+        {
+            var tester = new DiskPerformanceTester(request, Console.WriteLine);
+            tester.DescribeTestParameters();
+            tester.TestDiskIO();
+            var result = tester.Result;
+
+            var hasReads = request.OperationType == OperationType.Read || request.OperationType == OperationType.Mix;
+            var hasWrites = request.OperationType == OperationType.Write || request.OperationType == OperationType.Mix;
+
+            if (hasReads)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine(string.Format("Total read: {0}", SizeHelper.Humane(result.TotalRead)));
+                sb.AppendLine(string.Format("Average read: {0}/s", SizeHelper.Humane(result.TotalRead / request.TimeToRunInSeconds)));
+                sb.AppendLine("Read latency");
+                sb.AppendLine(string.Format("\tMin:   {0:#,#.##;;0}", result.ReadLatency.Min));
+                sb.AppendLine(string.Format("\tMean:  {0:#,#.##;;0}", result.ReadLatency.Mean));
+                sb.AppendLine(string.Format("\tMax:   {0:#,#.##;;0}", result.ReadLatency.Max));
+                sb.AppendLine(string.Format("\tStdev: {0:#,#.##;;0}", result.ReadLatency.Stdev));
+
+                sb.AppendLine("Read latency percentiles");
+                foreach (var percentile in result.ReadLatency.Percentiles)
+                {
+                    sb.AppendLine(string.Format("\t{0}: {1:#,#.##;;0}", percentile.Key, percentile.Value));
+                }
+
+                sb.AppendLine();
+                Console.WriteLine(sb.ToString());
+            }
+            if (hasWrites)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine(string.Format("Total write: {0}", SizeHelper.Humane(result.TotalWrite)));
+                sb.AppendLine(string.Format("Average write: {0}/s", SizeHelper.Humane(result.TotalWrite / request.TimeToRunInSeconds)));
+                sb.AppendLine("Write latency");
+                sb.AppendLine(string.Format("\tMin:   {0:#,#.##;;0}", result.WriteLatency.Min));
+                sb.AppendLine(string.Format("\tMean:  {0:#,#.##;;0}", result.WriteLatency.Mean));
+                sb.AppendLine(string.Format("\tMax:   {0:#,#.##;;0}", result.WriteLatency.Max));
+                sb.AppendLine(string.Format("\tStdev: {0:#,#.##;;0}", result.WriteLatency.Stdev));
+
+                sb.AppendLine("Write latency percentiles");
+                foreach (var percentile in result.WriteLatency.Percentiles)
+                {
+                    sb.AppendLine(string.Format("\t{0}: {1:#,#.##;;0}", percentile.Key, percentile.Value));
+                }
+
+                sb.AppendLine();
+                Console.WriteLine(sb.ToString());
+            }
+
+        }
 
 	    public static void DumpToCsv(RavenConfiguration ravenConfiguration)
 		{

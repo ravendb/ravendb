@@ -82,7 +82,8 @@ namespace Voron.Platform.Win32
 				if (_fileStream.Length == 0 || (fileLength % AllocationGranularity != 0))
 				{
 					fileLength = NearestSizeToAllocationGranularity(fileLength);
-					_fileStream.SetLength(fileLength);
+
+					Win32NativeFileMethods.SetFileLength(_handle, fileLength);
 				}
 
 				_totalAllocationSize = fileLength;
@@ -117,7 +118,7 @@ namespace Voron.Platform.Win32
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-			_fileStream.SetLength(_totalAllocationSize + allocationSize);
+			Win32NativeFileMethods.SetFileLength(_handle, _totalAllocationSize + allocationSize);
 			if (TryAllocateMoreContinuousPages(allocationSize) == false)
 			{
 				PagerState newPagerState = CreatePagerState();

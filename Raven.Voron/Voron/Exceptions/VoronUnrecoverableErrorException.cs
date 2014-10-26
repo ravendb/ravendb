@@ -1,38 +1,33 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="QuotaException.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="VoronUnrecoverableErrorException.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
 using System;
 using System.Runtime.Serialization;
 
 namespace Voron.Exceptions
 {
 	[Serializable]
-	public class QuotaException : Exception
+	public class VoronUnrecoverableErrorException : Exception
 	{
-		public QuotaException()
+		 public VoronUnrecoverableErrorException()
 		{
-
 		}
 
-		public QuotaException(string message)
+		public VoronUnrecoverableErrorException(string message) 
 			: base(message)
 		{
 		}
 
-		public QuotaException(string message, Exception inner)
+		public VoronUnrecoverableErrorException(string message, Exception inner) 
 			: base(message, inner)
 		{
-
 		}
 
-		public QuotaException(SerializationInfo info, StreamingContext context)
+		protected VoronUnrecoverableErrorException(SerializationInfo info, StreamingContext context)
 			: base(info, context)
 		{
-
 		}
 	}
 }
-

@@ -331,6 +331,7 @@
     <TypeScriptCompile Include="App\commands\monitorRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\monitorRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCollectionsCountCommand.ts" />
+    <TypeScriptCompile Include="App\commands\ioTestCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
@@ -379,6 +380,8 @@
     <TypeScriptCompile Include="App\common\adminLogsClient.ts" />
     <TypeScriptCompile Include="App\models\adminLogsConfig.ts" />
     <Content Include="App\models\adminLogsConfigEntry.ts" />
+    <TypeScriptCompile Include="App\models\performanceTestRequest.ts" />
+    <TypeScriptCompile Include="App\models\performanceTestResultWrapped.ts" />
     <Content Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
@@ -394,6 +397,7 @@
     <TypeScriptCompile Include="App\viewmodels\compactDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\backupFilesystem.ts" />
+    <TypeScriptCompile Include="App\viewmodels\ioTest.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\restoreFilesystem.ts" />
@@ -403,6 +407,7 @@
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\compactDatabase.html" />
+    <Content Include="App\views\ioTest.html" />
     <Content Include="App\views\indexStats.html" />
     <Content Include="App\views\filesystem\backupFilesystem.html" />
     <Content Include="App\views\copyTransformerDialog.html" />

@@ -101,7 +101,7 @@ namespace Raven.Database.Config
             {"Raven/Voron/TempPath", "string", null, "You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file."},
             {"Raven/Voron/MaxBufferPoolSize", "long", null, "You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). By default it is 4. Minimum value is 2."},
 			{"Raven/Voron/InitialSize", "long", null, "You can use this setting to specify an initial file size for data file (in bytes)."},
-			{"Raven/Voron/MaxScratchBufferSize", "int", null, "The maximum scratch buffer (modified data by active transactions) size that can be used by Voron. The value is in megabytes. Default: 512."},
+			{"Raven/Voron/MaxScratchBufferSize", "int", null, "The maximum scratch buffer (modified data by active transactions) size that can be used by Voron. The value is in megabytes. Default: 1024."},
 
 			// Advanced
 			{"Raven/TransactionMode", "string", "lazy,safe", "What transaction mode to use. Safe transaction mode ensures data consistency, but is slower. Lazy is faster, but may result in a data loss if the server crashes. Default: Safe."},

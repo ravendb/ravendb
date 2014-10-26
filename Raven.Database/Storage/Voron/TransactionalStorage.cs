@@ -49,15 +49,17 @@ namespace Raven.Storage.Voron
 		private readonly InMemoryRavenConfiguration configuration;
 
 		private readonly Action onCommit;
+		private readonly Action onStorageInaccessible;
 
 		private TableStorage tableStorage;
 
 	    private readonly IBufferPool bufferPool;
 
-		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
+		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible)
 		{
 			this.configuration = configuration;
 			this.onCommit = onCommit;
+			this.onStorageInaccessible = onStorageInaccessible;
 			documentCacher = new DocumentCacher(configuration);
 			exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
             bufferPool = new BufferPool(configuration.Storage.Voron.MaxBufferPoolSize * 1024 * 1024 * 1024, int.MaxValue); // 2GB max buffer size (voron limit)
@@ -159,6 +161,15 @@ namespace Raven.Storage.Voron
 
 				if (e.InnerException is VoronExceptions.ConcurrencyException)
 					throw new ConcurrencyException("Concurrent modification to the same document are not allowed", e.InnerException);
+
+				if (e.InnerException is VoronExceptions.VoronUnrecoverableErrorException)
+				{
+					Trace.WriteLine("Voron has encountered unrecoverable error. The database will be disabled.\r\n" + e.InnerException);
+
+					onStorageInaccessible();
+
+					throw e.InnerException;
+				}
 
 				throw;
 			}
