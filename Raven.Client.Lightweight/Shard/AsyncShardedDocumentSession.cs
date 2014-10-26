@@ -218,7 +218,7 @@ namespace Raven.Client.Shard
 			if (configure != null)
 				configure(configuration);
 
-            var result = await LoadAsyncInternal<T>(new[] { id }, null, new TTransformer().TransformerName, configuration.TransformerParameters).ConfigureAwait(false);
+            var result = await LoadUsingTransformerInternalAsync<T>(new[] { id }, null, new TTransformer().TransformerName, configuration.TransformerParameters).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
@@ -228,7 +228,7 @@ namespace Raven.Client.Shard
 			if (configure != null)
 				configure(configuration);
 
-			var result = await LoadAsyncInternal<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, configuration.TransformerParameters).ConfigureAwait(false);
 			return result;
 		}
 
@@ -238,7 +238,7 @@ namespace Raven.Client.Shard
 			if (configure != null)
 				configure(configuration);
 
-			var result = await LoadAsyncInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
@@ -248,7 +248,7 @@ namespace Raven.Client.Shard
 			if (configure != null)
 				configure(configuration);
 
-			return await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			return await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 		}
 
 		public async Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
@@ -259,7 +259,7 @@ namespace Raven.Client.Shard
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			var result = await LoadAsyncInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
@@ -271,7 +271,7 @@ namespace Raven.Client.Shard
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			var result = await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 			return result;
 		}
 
@@ -333,7 +333,7 @@ namespace Raven.Client.Shard
 			}).ToArray();
 		}
 
-		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+		public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
 		{
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
