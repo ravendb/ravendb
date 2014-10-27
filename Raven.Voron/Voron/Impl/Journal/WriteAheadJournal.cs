@@ -398,7 +398,7 @@ namespace Voron.Impl.Journal
 			private JournalFile _lastFlushedJournal;
 			private long? forcedIterateJournalsAsOf = null;
 			private bool forcedFlushOfOldPages = false;
-			private volatile bool allowRecursiveCall = false;
+			private volatile bool ignoreLockAlreadyTaken = false;
 
 			public JournalApplicator(WriteAheadJournal waj)
 			{
@@ -411,13 +411,13 @@ namespace Voron.Impl.Journal
 															long.MaxValue : // if there is no active transaction, let it read as of LastTransaction from a snapshot
 															oldestActiveTransaction - 1;
 				forcedFlushOfOldPages = true;
-				allowRecursiveCall = true;
+				ignoreLockAlreadyTaken = true;
 
 				return new DisposableAction(() =>
 				{
 					forcedIterateJournalsAsOf = null;
 					forcedFlushOfOldPages = false;
-					allowRecursiveCall = false;
+					ignoreLockAlreadyTaken = false;
 				});
 			}
 
@@ -426,7 +426,7 @@ namespace Voron.Impl.Journal
 				if (token.IsCancellationRequested)
 					return;
 
-				if (Monitor.IsEntered(_flushingLock) && allowRecursiveCall == false)
+				if (Monitor.IsEntered(_flushingLock) && ignoreLockAlreadyTaken == false)
 					throw new InvalidJournalFlushRequest("Applying journals to the data file has been already requested on the same thread");
 
 				bool lockTaken = false;
@@ -760,11 +760,11 @@ namespace Voron.Impl.Journal
 			{
 				bool lockTaken = false;
 				Monitor.TryEnter(_flushingLock, ref lockTaken);
-				allowRecursiveCall = true;
+				ignoreLockAlreadyTaken = true;
 
 				return new DisposableAction(() =>
 				{
-					allowRecursiveCall = false;
+					ignoreLockAlreadyTaken = false;
 					if (lockTaken)
 						Monitor.Exit(_flushingLock);
 				});
