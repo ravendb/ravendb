@@ -11,15 +11,38 @@
         <div class="row">
             <div>
                 <div class="form-group">
-                    <ul class="list-group">
-                        <li class="list-group-item"><div><strong class="col-sm-6 pull-left">Total Results:</strong><span class="pull-right col-sm-6" data-bind="text: TotalResults"></span></div></li>
-                        <li class="list-group-item"><div><strong class="col-sm-6 pull-left">Status</strong><span class="pull-right col-sm-6" data-bind="text: IsStale === true ? 'Stale' : 'Up to date'"></span></div></li>
-                        <li class="list-group-item"><strong class="col-sm-6 pull-left">Duration:</strong><span class="pull-right col-sm-6" data-bind="text: ((typeof (DurationMilliseconds) !== 'undefined') ? DurationMilliseconds : '??? ') + 'ms'"></span></li>
-                        <li class="list-group-item"><strong class="col-sm-6 pull-left">Index:</strong><span class="pull-right col-sm-6"><a data-bind="text: IndexName, click: $root.goToIndex.bind($root)"></a></span></li>
-                        <li class="list-group-item" data-bind="visible:$root.didDynamicChangeIndex === true"><strong class="col-sm-6 pull-left"><span class="pull-right col-sm-6"><a target='_blank' data-bind="attr: { href: $root.rawJsonUrl  + '&explain=true'}">Index Explain</a></span></strong></li>
-                        <li class="list-group-item"><strong class="col-sm-6 pull-left">ETag:</strong><span class="pull-right col-sm-6" data-bind="text: ResultEtag"></span></li>
-                    </ul>
+                    <div class="row">
+                        <strong class="col-sm-3">Total Results:</strong>
+                        <span class="col-sm-9" data-bind="text: TotalResults"></span>
+                    </div>
+                    <div class="row">
+                        <strong class="col-sm-3">Status</strong>
+                        <span class="col-sm-9" data-bind="text: IsStale === true ? 'Stale' : 'Up to date'"></span>
+                    </div>
+                    <div class="row">
+                        <strong class="col-sm-3">Duration:</strong>
+                        <span class="col-sm-9" data-bind="text: ((typeof (DurationMilliseconds) !== 'undefined') ? DurationMilliseconds : '??? ') + 'ms'"></span>
+                    </div>
+                    <div class="row">
+                        <strong class="col-sm-3">Index:</strong>
+                        <span class="col-sm-9">
+                            <a target='_blank' data-bind="text: IndexName, attr: { href: $root.selectedIndexEditUrl}">Click Here</a>
+                        </span>
+                    </div>
+                    <div class="row" data-bind="visible:$root.didDynamicChangeIndex === true">
+                        <strong class="col-sm-3">
+                            Index Explain:
+                        </strong>
+                        <span class="col-sm-9">
+                            <a target='_blank' data-bind="attr: { href: $root.rawJsonUrl  + '&explain=true'}">Click Here</a>
+                        </span>
+                    </div>
+                    <div class="row">
+                        <strong class="col-sm-3">ETag:</strong>
+                        <span class="col-sm-9" data-bind="text: ResultEtag"></span>
+                    </div>
                 </div>
+               
             </div>
         </div>
     </div>

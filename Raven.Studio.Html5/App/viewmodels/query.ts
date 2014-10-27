@@ -67,6 +67,7 @@ class query extends viewModelBase {
     selectedIndexLabel: KnockoutComputed<string>;
     appUrls: computedAppUrls;
     isIndexMapReduce: KnockoutComputed<boolean>;
+    isLoading = ko.observable<boolean>(false).extend({ rateLimit: 1000 });
 
     contextName = ko.observable<string>();
     didDynamicChangeIndex: KnockoutComputed<boolean>;
@@ -295,7 +296,8 @@ class query extends viewModelBase {
     runQuery(): pagedList {
         var selectedIndex = this.selectedIndex();
         if (selectedIndex) {
-
+            this.isLoading(true);
+            this.focusOnQuery();
             var queryText = this.queryText();
             var sorts = this.sortBys().filter(s => s.fieldName() != null);
             var database = this.activeDatabase();
@@ -334,10 +336,14 @@ class query extends viewModelBase {
             var db = this.activeDatabase();
             this.rawJsonUrl(appUrl.forResourceQuery(db) + queryCommand.getUrl());
             this.exportUrl(appUrl.forResourceQuery(db) + queryCommand.getCsvUrl());
+            
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
                 return command
-                    .execute()
+                    .execute().always(() => {
+                        this.isLoading(false);
+                        this.focusOnQuery();
+                        })
                     .done((queryResults: pagedResultSet) => this.queryStats(queryResults.additionalResultInfo))
                     .done((queryResults: pagedResultSet) => {
                         this.indexSuggestions([]);
@@ -350,7 +356,8 @@ class query extends viewModelBase {
                     })
                     .fail(() => {
                         recentQueriesStorage.removeIndexFromRecentQueries(db, selectedIndex);
-                    });
+                    })
+                    ;
             };
             var resultsList = new pagedList(resultsFetcher);
             this.queryResults(resultsList);
