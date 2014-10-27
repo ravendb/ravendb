@@ -15,6 +15,8 @@ namespace Voron.Debugging
     {
         public abstract class BaseActivityEntry
         {
+	        public int LineNumber;
+
             public DebugActionType ActionType { get; protected set; }
 
             public abstract string ToCsvLine(bool recordOnlyValueLength);
@@ -340,6 +342,7 @@ namespace Voron.Debugging
 
         public void Load(string journalName)
         {
+	        var lineNumber = 1;
             using (var journalReader = new StreamReader(_journalFileStream, Encoding.UTF8))
             {
                 while (journalReader.Peek() >= 0)
@@ -347,8 +350,12 @@ namespace Voron.Debugging
 	                var csvLine = journalReader.ReadLine();
 	                if (!string.IsNullOrWhiteSpace(csvLine))
 	                {
-						WriteQueue.Enqueue(BaseActivityEntry.FromCsvLine(csvLine, RecordOnlyValueLength));
-					}
+		                var activityEntry = BaseActivityEntry.FromCsvLine(csvLine, RecordOnlyValueLength);
+		                activityEntry.LineNumber = lineNumber;
+
+		                WriteQueue.Enqueue(activityEntry);
+	                }
+	                lineNumber++;
                 }
             }
         }
@@ -417,7 +424,7 @@ namespace Voron.Debugging
             }
         }
 
-        public void Replay()
+        public void Replay(Action<BaseActivityEntry> validate = null)
         {
             var wasDebugRecording = _env.IsDebugRecording;
             _env.IsDebugRecording = false;
@@ -432,6 +439,9 @@ namespace Voron.Debugging
                 if (transactionEntry != null)
                 {
                     ReplayTransactionEntry(transactionEntry, ref currentWriteTransaction, readTransactions);
+
+	                if (validate != null)
+						validate(transactionEntry);
                     continue;
                 }
 
@@ -441,6 +451,8 @@ namespace Voron.Debugging
                     if (currentWriteTransaction != null)
                     {
                         ReplayWriteAction(actionEntry, ref currentWriteTransaction);
+						if (validate != null)
+							validate(actionEntry);
                     }
                     continue;
                 }
@@ -449,6 +461,8 @@ namespace Voron.Debugging
                 if (flushEntry != null)
                 {
                     ReplayFlushAction(flushEntry, currentWriteTransaction);
+					if (validate != null)
+						validate(flushEntry);
                     continue;
                 }
                 throw new InvalidOperationException("unsupported tree action type: " + activityEntry);
