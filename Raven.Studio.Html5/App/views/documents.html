@@ -1,4 +1,4 @@
-﻿<div class="documents-page">
+﻿<div class="documents-page no-outline" tabindex="0">
     <div class="col-md-2" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0;">
         <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collections">
             <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
