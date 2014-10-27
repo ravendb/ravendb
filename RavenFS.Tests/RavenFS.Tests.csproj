@@ -190,11 +190,11 @@
       <Name>Raven.Smuggler</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
-      <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
+      <Project>{381234cc-8aa7-41ff-8cad-22330e15f993}</Project>
       <Name>Raven.Tests.Common</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
-      <Project>{1b88473f-743b-4f6b-8e5e-97bb816e6c68}</Project>
+      <Project>{14f2d508-8e06-407b-9451-97e99538e26b}</Project>
       <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
   </ItemGroup>

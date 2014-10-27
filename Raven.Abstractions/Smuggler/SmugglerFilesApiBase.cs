@@ -66,10 +66,14 @@ namespace Raven.Abstractions.Smuggler
                 LastDeletedFileEtag = Options.StartFilesDeletionEtag,
             };
 
+            var directory = result.FilePath;
             if (!Directory.Exists(result.FilePath))
             {
                 if (!File.Exists(result.FilePath))
+                {
                     Directory.CreateDirectory(result.FilePath);
+                }
+                else directory = Path.GetDirectoryName(result.FilePath);                    
             }
 
             if (Options.Incremental)
@@ -119,7 +123,7 @@ namespace Raven.Abstractions.Smuggler
             
             var stream = File.Create(result.FilePath);
             try
-            {              
+            {
                 using (var gZipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
                 using (var streamWriter = new StreamWriter(gZipStream))
                 {
@@ -130,12 +134,21 @@ namespace Raven.Abstractions.Smuggler
                     {
                         await ExportFiles(exportOptions, result.FilePath, streamWriter, result.LastFileEtag, maxEtags.LastFileEtag);
                     }
-                    catch (SmugglerExportException e)
+                    catch (SmugglerExportException ex)
                     {
-                        result.LastFileEtag = e.LastEtag;
-                        e.File = result.FilePath;
-                        lastException = e;
+                        result.LastFileEtag = ex.LastEtag;
+                        ex.File = result.FilePath;
+                        lastException = ex;
                     }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+                }
+
+                if (Options.Incremental)
+                {
+                    WriteLastEtagsToFile(result, directory);
                 }
 
                 if (lastException != null)
@@ -159,7 +172,6 @@ namespace Raven.Abstractions.Smuggler
             string filename = filenamePrefix + ".1.data";
             using (var stream = File.Create(filename))
             using (var afterCompressionCountingStream = new CountingStream(stream))
-            using (var gZipStream = new GZipStream(afterCompressionCountingStream, CompressionMode.Compress, leaveOpen: true))            
             {
                 while (true)
                 {
@@ -178,15 +190,14 @@ namespace Raven.Abstractions.Smuggler
                                     if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
                                         break;
 
-                                    lastEtag = tempLastEtag;
-
                                     // Retrieve the file and write it to the stream. 
                                     // TODO: We are wasting precious resources decompressing and then compressing again. 
                                     long startPosition = afterCompressionCountingStream.NumberOfWrittenBytes;
-                                    
                                     long totalFileSize = 0;
+
                                     using (var fileStream = await Operations.DownloadFile(file))
                                     using (var beforeCompressionCountingStream = new CountingStream(fileStream))
+                                    using (var gZipStream = new GZipStream(afterCompressionCountingStream, CompressionMode.Compress, leaveOpen: true))            
                                     {
                                         await beforeCompressionCountingStream.CopyToAsync(gZipStream).ConfigureAwait(false);
                                         totalFileSize = beforeCompressionCountingStream.NumberOfReadBytes;
@@ -201,10 +212,12 @@ namespace Raven.Abstractions.Smuggler
                                         Length = endPosition - startPosition,
                                         Size = totalFileSize,
                                         Metadata = file,
-                                        Encoding = CompressionEncoding.GZip,
+                                        Encoding = CompressionEncoding.GZip,  
                                     };
 
-                                    metadataStreamWriter.Write(RavenJObject.FromObject(fileContainer));
+                                    metadataStreamWriter.WriteLine(RavenJObject.FromObject(fileContainer));
+
+                                    lastEtag = tempLastEtag;
 
                                     totalCount++;
                                     if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
@@ -277,7 +290,7 @@ namespace Raven.Abstractions.Smuggler
         public static void WriteLastEtagsToFile(ExportFilesResult result, string backupPath)
         {
             // ReSharper disable once AssignNullToNotNullAttribute
-            var etagFileLocation = Path.Combine(Path.GetDirectoryName(backupPath), IncrementalExportStateFile);
+            var etagFileLocation = Path.Combine(backupPath, IncrementalExportStateFile);
             using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
             {
                 new RavenJObject
@@ -327,20 +340,21 @@ namespace Raven.Abstractions.Smuggler
                 var directory = Path.GetDirectoryName(filename);
 
                 // Try to read the stream compressed.
-                stream.Position = 0;
                 var sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
                 var streamReader = new StreamReader(sizeStream);
+                
+                var serializer = JsonExtensions.CreateDefaultJsonSerializer();                               
 
                 // We will store and lock for read every data file used by smuggler.
                 var dataStreams = new Dictionary<string, Stream>();
                 try
                 {
-                    while (!streamReader.EndOfStream)
+                    foreach (var json in streamReader.EnumerateJsonObjects() )
                     {
-                        // For each entry in the metadata file.
-                        var container = streamReader.JsonDeserialization<FileContainer>();
+                        // For each entry in the metadata file.                        
+                        var container = serializer.Deserialize<FileContainer>(new StringReader(json));
 
-                        // We create the data stream if it hasnt been created before.
+                        // We create the data stream if it hasn't been created before.
                         Stream wholeDataStream;
                         if (!dataStreams.TryGetValue(container.Filename, out wholeDataStream))
                         {
@@ -348,7 +362,6 @@ namespace Raven.Abstractions.Smuggler
                             dataStreams[container.Filename] = wholeDataStream;
                         }
 
-                        
                         wholeDataStream.Seek(container.Start, SeekOrigin.Begin);
 
                         // We seek to the location and read the data, no matter the encoding it was saved.

@@ -363,6 +363,39 @@ namespace Raven.Tests.Helpers
             return ms;
         }
 
+        private Random generator = new Random();
+
+        protected void ReseedRandom ( int seed )
+        {
+            generator = new Random(seed);
+        }
+
+        protected Stream CreateRandomFileStream(int size)
+        {
+            var ms = new MemoryStream();
+
+            // Write in blocks
+            byte[] buffer = new byte[4096];
+            for ( int i = 0 ; i < size / buffer.Length; i++ )
+            {
+                generator.NextBytes(buffer);
+                ms.Write(buffer, 0, buffer.Length);
+            }
+            
+            // Write last block
+            buffer = new byte[size % buffer.Length];
+            if (buffer.Length != 0)
+            {
+                generator.NextBytes(buffer);
+                ms.Write(buffer, 0, buffer.Length);
+            }                
+
+            ms.Flush();
+            ms.Position = 0;
+
+            return ms;
+        }
+
         protected void WaitForBackup(IAsyncFilesCommands filesCommands, bool checkError)
         {
             var done = SpinWait.SpinUntil(() =>

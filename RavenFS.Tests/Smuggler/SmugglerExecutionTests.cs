@@ -22,151 +22,292 @@ using Xunit;
 
 namespace RavenFS.Tests.Smuggler
 {
-    public class SmugglerExecutionTests : RavenFilesTestWithLogs
-    {
+	public class SmugglerExecutionTests : RavenFilesTestWithLogs
+	{
+		[Fact, Trait("Category", "Smuggler")]
+		public async Task ShouldThrowIfFileSystemDoesNotExist()
+		{
+			using (var store = NewStore())
+			{
+				var server = GetServer();
+				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+
+				try
+				{
+					var smugglerApi = new SmugglerFilesApi();
+
+					var options = new FilesConnectionStringOptions
+					{
+						Url = store.Url,
+						DefaultFileSystem = "DoesNotExist"
+					};
+
+					var message = string.Format("Smuggler does not support file system creation (file system 'DoesNotExist' on server '{0}' must exist before running Smuggler).", store.Url);
+
+					var e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { ToFile = outputDirectory.ToFullPath(), From = options }));
+					Assert.Equal(message, e.Message);
+
+					e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = outputDirectory.ToFullPath(), To = options }));
+					Assert.Equal(message, e.Message);
+				}
+				finally
+				{
+					IOExtensions.DeleteDirectory(outputDirectory);
+				}
+			}
+		}
+
+		[Fact, Trait("Category", "Smuggler")]
+		public async Task ShouldNotThrowIfFileSystemExists()
+		{
+			using (var store = NewStore(fileSystemName: "DoesExists", requestedStorage: "esent"))
+			{
+				var server = GetServer();
+				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");                
+
+				try
+				{
+					await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(store.DefaultFileSystem);
+					await InitializeWithRandomFiles(store, 2, 4);
+
+					var options = new FilesConnectionStringOptions { Url = store.Url, DefaultFileSystem = store.DefaultFileSystem };
+
+					var smugglerApi = new SmugglerFilesApi();
+					var export = await smugglerApi.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { From = options, ToFile = outputDirectory });
+					await smugglerApi.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = export.FilePath, To = options });
+				}
+				finally
+				{
+					IOExtensions.DeleteDirectory(outputDirectory);
+				}
+			}
+		}
+
+		[Fact, Trait("Category", "Smuggler")]
+		public async Task ShouldNotThrowIfFileSystemExistsUsingDefaultConfiguration()
+		{
+			using (var store = NewStore())
+			{
+				var server = GetServer();
+				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+
+				try
+				{
+					await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(store.DefaultFileSystem);
+					await InitializeWithRandomFiles(store, 1, 100);
+
+					var options = new FilesConnectionStringOptions {Url = store.Url, DefaultFileSystem = store.DefaultFileSystem};
+
+					var smugglerApi = new SmugglerFilesApi();
+					var export = await smugglerApi.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { From = options, ToFile = outputDirectory.ToFullPath() });
+					await smugglerApi.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = export.FilePath, To = options });
+
+					await VerifyDump(store, export.FilePath, s =>
+					{
+						using (var session = s.OpenAsyncSession())
+						{
+							var files = s.AsyncFilesCommands.BrowseAsync().Result;
+							Assert.Equal(1, files.Count());
+						}
+					});
+				}
+				finally
+				{
+					IOExtensions.DeleteDirectory(outputDirectory);
+				}
+			}
+		}
+
+		[Fact, Trait("Category", "Smuggler")]
+		public async Task BehaviorWhenServerIsDown()
+		{
+			using (var store = NewStore())
+			{
+				var server = GetServer();
+				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+				try
+				{
+
+					var options = new FilesConnectionStringOptions {Url = "http://localhost:8078/", DefaultFileSystem = store.DefaultFileSystem};
+
+					var smugglerApi = new SmugglerFilesApi();
+
+					var e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = outputDirectory.ToFullPath(), To = options }));
+					Assert.Contains("Smuggler encountered a connection problem:", e.Message);
+
+					e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { ToFile = outputDirectory.ToFullPath(), From = options }));
+					Assert.Contains("Smuggler encountered a connection problem:", e.Message);
+
+				}
+				finally
+				{
+					IOExtensions.DeleteDirectory(outputDirectory);
+				}
+			}
+		}
+
+		[Fact, Trait("Category", "Smuggler")]
+		public void MaxChunkSizeInMbShouldBeRespectedByDataDumper()
+		{
+			throw new NotImplementedException();
+		}
+
+		[Fact, Trait("Category", "Smuggler")]
+		public async Task CanDumpEmptyFileSystem()
+		{
+			using (var store = NewStore())
+			{
+				var server = GetServer();
+				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+				try
+				{
+
+					// now perform full backup
+					var dumper = new SmugglerFilesApi {Options = {Incremental = true}};
+
+					var export = await dumper.ExportData(
+						new SmugglerExportOptions<FilesConnectionStringOptions>
+						{
+							ToFile = outputDirectory,
+							From = new FilesConnectionStringOptions
+							{
+								Url = server.Url,
+								DefaultFileSystem = store.DefaultFileSystem,
+							}
+						});
+
+					await VerifyDump(store, export.FilePath, s =>
+					{
+						using (var session = s.OpenAsyncSession())
+						{
+							var files = s.AsyncFilesCommands.BrowseAsync().Result;
+							Assert.Equal(0, files.Count());
+						}
+					});
+				}
+				finally
+				{
+					IOExtensions.DeleteDirectory(outputDirectory);
+				}
+			}
+		}
+
+		[Fact, Trait("Category", "Smuggler")]
+		public async Task CanHandleFilesExceptionsGracefully()
+		{
+			using (var store = NewStore())
+			{
+				var server = GetServer();
+				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+
+				var alreadyReset = false;
+				var forwarder = new ProxyServer(8070, server.Configuration.Port)
+				{
+					VetoTransfer = (totalRead, buffer) =>
+					{
+						if (alreadyReset == false && totalRead > 28000)
+						{
+							alreadyReset = true;
+							return true;
+						}
+						return false;
+					}
+				};
+
+				try
+				{
+                    ReseedRandom(100); // Force a random distribution.
+
+					await InitializeWithRandomFiles(store, 20, 30);
+
+					// now perform full backup
+					var dumper = new SmugglerFilesApi { Options = { Incremental = true } };
+
+					ExportFilesResult exportResult = null;
+					try
+					{
+						// We will ensure this one will fail somewhere along the line.
+						exportResult = await dumper.ExportData(
+							new SmugglerExportOptions<FilesConnectionStringOptions>
+							{
+								ToFile = outputDirectory,
+								From = new FilesConnectionStringOptions
+								{
+									Url = "http://localhost:8070",
+									DefaultFileSystem = store.DefaultFileSystem,
+								}
+							});
+					}
+                    catch (SmugglerExportException inner)
+					{
+						exportResult = new ExportFilesResult
+						{
+							FilePath = inner.File
+						};
+					}
+
+					Assert.NotNull(exportResult);
+					Assert.True(!string.IsNullOrWhiteSpace(exportResult.FilePath));
+
+					// Continue with the incremental dump.
+					exportResult = await dumper.ExportData(
+						new SmugglerExportOptions<FilesConnectionStringOptions>
+						{
+							ToFile = outputDirectory,
+							From = new FilesConnectionStringOptions
+							{
+								Url = server.Url,
+								DefaultFileSystem = store.DefaultFileSystem,
+							}
+						});
+
+					// Import everything and verify all files are there. 
+					await VerifyDump(store, outputDirectory, s =>
+					{
+						using (var session = s.OpenAsyncSession())
+						{
+							var files = s.AsyncFilesCommands.BrowseAsync().Result;
+							Assert.Equal(20, files.Count());
+						}
+
+					});
+				}
+				finally
+				{
+					forwarder.Dispose();
+					IOExtensions.DeleteDirectory(outputDirectory);
+				}
+			}
+		}
+
         [Fact, Trait("Category", "Smuggler")]
-        public async Task ShouldThrowIfFileSystemDoesNotExist()
+        public async Task ContentIsPreserved_SingleFile()
         {
             using (var store = NewStore())
             {
+                ReseedRandom(100); // Force a random distribution.
+
+                int fileSize = 10000;
+
                 var server = GetServer();
                 var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
-
                 try
                 {
-                    var smugglerApi = new SmugglerFilesApi();
+                    var dumper = new SmugglerFilesApi { Options = { Incremental = false } };
 
-                    var options = new FilesConnectionStringOptions
+                    var fileContent = CreateRandomFileStream(fileSize);
+
+                    using (var session = store.OpenAsyncSession())
                     {
-                        Url = store.Url,
-                        DefaultFileSystem = "DoesNotExist"
-                    };
+                        session.RegisterUpload("test1.file", fileContent);
+                        await session.SaveChangesAsync();
+                    }
 
-                    var message = string.Format("Smuggler does not support file system creation (file system 'DoesNotExist' on server '{0}' must exist before running Smuggler).", store.Url);
-
-                    var e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { ToFile = outputDirectory.ToFullPath(), From = options }));
-                    Assert.Equal(message, e.Message);
-
-                    e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = outputDirectory.ToFullPath(), To = options }));
-                    Assert.Equal(message, e.Message);
-                }
-                finally
-                {
-                    IOExtensions.DeleteDirectory(outputDirectory);
-                }
-            }
-        }
-
-        [Fact, Trait("Category", "Smuggler")]
-        public async Task ShouldNotThrowIfFileSystemExists()
-        {
-            using (var store = NewStore(fileSystemName: "DoesExists", requestedStorage: "esent"))
-            {
-                var server = GetServer();
-                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");                
-
-                try
-                {
-                    await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(store.DefaultFileSystem);
-                    await InitializeWithRandomFiles(store, 1, 4);
-
-                    var options = new FilesConnectionStringOptions { Url = store.Url, DefaultFileSystem = store.DefaultFileSystem };
-
-                    var smugglerApi = new SmugglerFilesApi();
-                    var export = await smugglerApi.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { From = options, ToFile = outputDirectory });
-                    await smugglerApi.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = export.FilePath, To = options });
-                }
-                finally
-                {
-                    IOExtensions.DeleteDirectory(outputDirectory);
-                }
-            }
-        }
-
-        [Fact, Trait("Category", "Smuggler")]
-        public async Task ShouldNotThrowIfFileSystemExistsUsingDefaultConfiguration()
-        {
-            using (var store = NewStore())
-            {
-                var server = GetServer();
-                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
-
-                try
-                {
-                    await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(store.DefaultFileSystem);
-                    await InitializeWithRandomFiles(store, 1, 100);
-
-                    var options = new FilesConnectionStringOptions {Url = store.Url, DefaultFileSystem = store.DefaultFileSystem};
-
-                    var smugglerApi = new SmugglerFilesApi();
-                    var export = await smugglerApi.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { From = options, ToFile = outputDirectory.ToFullPath() });
-                    await smugglerApi.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = export.FilePath, To = options });
-
-                    await VerifyDump(store, export.FilePath, s =>
+                    ExportFilesResult result;
+                    using (new FilesStore { Url = server.Url }.Initialize())
                     {
-                        using (var session = s.OpenAsyncSession())
-                        {
-                            var files = s.AsyncFilesCommands.BrowseAsync().Result;
-                            Assert.Equal(1, files.Count());
-                        }
-                    });
-                }
-                finally
-                {
-                    IOExtensions.DeleteDirectory(outputDirectory);
-                }
-            }
-        }
-
-        [Fact, Trait("Category", "Smuggler")]
-        public async Task BehaviorWhenServerIsDown()
-        {
-            using (var store = NewStore())
-            {
-                var server = GetServer();
-                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
-                try
-                {
-
-                    var options = new FilesConnectionStringOptions {Url = "http://localhost:8078/", DefaultFileSystem = store.DefaultFileSystem};
-
-                    var smugglerApi = new SmugglerFilesApi();
-
-                    var e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = outputDirectory.ToFullPath(), To = options }));
-                    Assert.Contains("Smuggler encountered a connection problem:", e.Message);
-
-                    e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { ToFile = outputDirectory.ToFullPath(), From = options }));
-                    Assert.Contains("Smuggler encountered a connection problem:", e.Message);
-
-                }
-                finally
-                {
-                    IOExtensions.DeleteDirectory(outputDirectory);
-                }
-            }
-        }
-
-        [Fact, Trait("Category", "Smuggler")]
-        public void MaxChunkSizeInMbShouldBeRespectedByDataDumper()
-        {
-            throw new NotImplementedException();
-        }
-
-        [Fact, Trait("Category", "Smuggler")]
-        public async Task CanDumpEmptyFileSystem()
-        {
-            using (var store = NewStore())
-            {
-                var server = GetServer();
-                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
-                try
-                {
-
-                    // now perform full backup
-                    var dumper = new SmugglerFilesApi {Options = {Incremental = true}};
-
-                    var export = await dumper.ExportData(
-                        new SmugglerExportOptions<FilesConnectionStringOptions>
+                        // now perform full backup                    
+                        result = await dumper.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions>
                         {
                             ToFile = outputDirectory,
                             From = new FilesConnectionStringOptions
@@ -175,15 +316,53 @@ namespace RavenFS.Tests.Smuggler
                                 DefaultFileSystem = store.DefaultFileSystem,
                             }
                         });
+                    }
 
-                    await VerifyDump(store, export.FilePath, s =>
+                    await VerifyDump(store, result.FilePath, s =>
                     {
+                        fileContent.Position = 0;
                         using (var session = s.OpenAsyncSession())
                         {
-                            var files = s.AsyncFilesCommands.BrowseAsync().Result;
-                            Assert.Equal(0, files.Count());
+                            var file = session.LoadFileAsync("test1.file").Result;
+
+                            Assert.Equal(fileSize, file.TotalSize);
+
+                            var stream = session.DownloadAsync(file).Result;
+
+                            Assert.Equal(fileContent.GetMD5Hash(), stream.GetMD5Hash());
+
+                            //var memoryStream = new MemoryStream();
+                            //stream.CopyTo(memoryStream);
+                            //memoryStream.Position = 0;
+
+                            //Console.Write("Original: ");
+                            //int d = -1;
+                            //do
+                            //{
+                            //    d = fileContent.ReadByte();
+                            //    if (d != -1)
+                            //        Console.Write(d + ",");
+                            //}
+                            //while (d != -1);
+
+                            //Console.WriteLine();
+                            //Console.Write("Downloaded: ");
+
+                            //do
+                            //{
+                            //    d = memoryStream.ReadByte();
+                            //    if (d != -1)
+                            //        Console.Write(d + ",");
+                            //}
+                            //while (d != -1);
+
+                            //fileContent.Position = 0;
+                            //memoryStream.Position = 0;
+
+                            //Assert.Equal(fileContent.GetMD5Hash(), memoryStream.GetMD5Hash());
                         }
                     });
+
                 }
                 finally
                 {
@@ -193,63 +372,35 @@ namespace RavenFS.Tests.Smuggler
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public async Task CanHandleFilesExceptionsGracefully()
+        public async Task ContentIsPreserved_MultipleFiles()
         {
-            var alreadyReset = false;
-
-            var forwarder = new ProxyServer(8070, 8079)
-            {
-                VetoTransfer = (totalRead, buffer) =>
-                {
-                    if (alreadyReset == false && totalRead > 25000)
-                    {
-                        alreadyReset = true;
-                        return true;
-                    }
-                    return false;
-                }
-            };
-
             using (var store = NewStore())
             {
+                ReseedRandom(100); // Force a random distribution.
+
                 var server = GetServer();
                 var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
-
                 try
                 {
-                    await InitializeWithRandomFiles(store, 10, 64);
+                    var dumper = new SmugglerFilesApi { Options = { Incremental = false } };
 
-                    // now perform full backup
-                    var dumper = new SmugglerFilesApi { Options = { Incremental = true } };
-
-                    ExportFilesResult exportResult = null;
-                    try
+                    var files = new Stream[10];
+                    using (var session = store.OpenAsyncSession())
                     {
-                        exportResult = await dumper.ExportData(
-                            new SmugglerExportOptions<FilesConnectionStringOptions>
-                            {
-                                ToFile = outputDirectory,
-                                From = new FilesConnectionStringOptions
-                                {
-                                    Url = server.Url,
-                                    DefaultFileSystem = store.DefaultFileSystem,
-                                }
-                            });
-                    }
-                    catch (AggregateException e)
-                    {
-                        var inner = (SmugglerExportException)e.ExtractSingleInnerException();
-                        exportResult = new ExportFilesResult
+                        for (int i = 0; i < files.Length; i++)
                         {
-                            FilePath = inner.File
-                        };
+                            files[i] = CreateRandomFileStream(100 * i + 12);
+                            session.RegisterUpload("test" + i + ".file", files[i]);
+                        }
+
+                        await session.SaveChangesAsync();                        
                     }
 
-                    Assert.NotNull(exportResult);
-                    Assert.True(!string.IsNullOrWhiteSpace(exportResult.FilePath));
-
-                    exportResult = await dumper.ExportData(
-                        new SmugglerExportOptions<FilesConnectionStringOptions>
+                    ExportFilesResult result;
+                    using (new FilesStore { Url = server.Url }.Initialize())
+                    {
+                        // now perform full backup                    
+                        result = await dumper.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions>
                         {
                             ToFile = outputDirectory,
                             From = new FilesConnectionStringOptions
@@ -258,16 +409,25 @@ namespace RavenFS.Tests.Smuggler
                                 DefaultFileSystem = store.DefaultFileSystem,
                             }
                         });
-
-                    using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))
-                    using (var stream = new GZipStream(fileStream, CompressionMode.Decompress))
-                    {
-                        throw new NotImplementedException();
                     }
+
+                    await VerifyDump(store, result.FilePath, s =>
+                    {
+                        for (int i = 0; i < files.Length; i++ )
+                        {                            
+                            using (var session = s.OpenAsyncSession())
+                            {
+                                var file = session.LoadFileAsync("test" + i + ".file").Result;
+                                var stream = session.DownloadAsync(file).Result;
+
+                                files[i].Position = 0;
+                                Assert.Equal(files[i].GetMD5Hash(), stream.GetMD5Hash());
+                            }
+                        }                            
+                    });
                 }
                 finally
                 {
-                    forwarder.Dispose();
                     IOExtensions.DeleteDirectory(outputDirectory);
                 }
             }
@@ -277,24 +437,24 @@ namespace RavenFS.Tests.Smuggler
         public async Task MetadataIsPreserved()
         {
             using (var store = NewStore())
-            {
-                var server = GetServer();
-                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
-                try
-                {
-                    var dumper = new SmugglerFilesApi { Options = { Incremental = true } };
+			{
+				var server = GetServer();
+				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+				try
+				{
+					var dumper = new SmugglerFilesApi { Options = { Incremental = true } };
 
-                    FileHeader originalFile;
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        session.RegisterUpload("test1.file", CreateUniformFileStream(128));
-                        await session.SaveChangesAsync();
+					FileHeader originalFile;
+					using (var session = store.OpenAsyncSession())
+					{
+						session.RegisterUpload("test1.file", CreateRandomFileStream(12800));
+						await session.SaveChangesAsync();
 
-                        // content update after a metadata change
-                        originalFile = await session.LoadFileAsync("test1.file");
-                        originalFile.Metadata["Test"] = new RavenJValue("Value");
-                        await session.SaveChangesAsync();
-                    }
+						// content update after a metadata change
+						originalFile = await session.LoadFileAsync("test1.file");
+						originalFile.Metadata["Test"] = new RavenJValue("Value");
+						await session.SaveChangesAsync();
+					}
 
                     using (new FilesStore { Url = server.Url }.Initialize())
                     {
@@ -333,65 +493,90 @@ namespace RavenFS.Tests.Smuggler
                 {
                     IOExtensions.DeleteDirectory(outputDirectory);
                 }
-            }
-        }
+			}
+		}
 
 
-        private async Task InitializeUniformFile(IFilesStore store, string name, int size, char content)
-        {
-            using (var session = store.OpenAsyncSession())
-            {
-                session.RegisterUpload( name, CreateUniformFileStream(size, content));
-                await session.SaveChangesAsync();
-            }
-        }
+		private async Task InitializeUniformFile(IFilesStore store, string name, int size, char content)
+		{
+			using (var session = store.OpenAsyncSession())
+			{
+				session.RegisterUpload(name, CreateUniformFileStream(size, content));
+				await session.SaveChangesAsync();
+			}
+		}
 
-        private async Task InitializeWithRandomFiles(IFilesStore store, int count, int maxFileSizeInKb = 1024)
-        {
-            var rnd = new Random();
+		private async Task InitializeRandomFile(IFilesStore store, string name, int size)
+		{
+			using (var session = store.OpenAsyncSession())
+			{
+				session.RegisterUpload(name, CreateRandomFileStream(size));
+				await session.SaveChangesAsync();
+			}            
+		}
 
-            var creationTasks = new Task[count];
-            for (int i = 0; i < count; i++)
-            {               
-                string name = "file-" + rnd.Next() + ".bin";
-                int size = rnd.Next(maxFileSizeInKb) * 1024;
-                var content = (char) rnd.Next(byte.MaxValue);
+		private async Task InitializeWithUniformFiles(IFilesStore store, int count, int maxFileSizeInKb = 1024)
+		{
+			var rnd = new Random();
 
-                creationTasks[i] = InitializeUniformFile(store, name, size, content);
-            }
+			var creationTasks = new Task[count];
+			for (int i = 0; i < count; i++)
+			{
+				string name = "file-" + rnd.Next() + ".bin";
+				int size = rnd.Next(maxFileSizeInKb) * 1024;
+				var content = (char)rnd.Next(byte.MaxValue);
 
-            await Task.WhenAll(creationTasks);
-        }
+				creationTasks[i] = InitializeUniformFile(store, name, size, content);
+			}
 
-        private async Task VerifyDump(FilesStore store, string backupPath, Action<FilesStore> action)
-        {
-            try
-            {
-                store.DefaultFileSystem += "-Verify";
-                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(store.DefaultFileSystem);
+			await Task.WhenAll(creationTasks);
+		}
+		private async Task InitializeWithRandomFiles(IFilesStore store, int count, int maxFileSizeInKb = 1024)
+		{
+			var rnd = new Random();
 
-                bool incremental = false;
-                var directory = new DirectoryInfo(backupPath);
-                if ( directory.Exists )
-                    incremental = true;
+			var creationTasks = new Task[count];
+			for (int i = 0; i < count; i++)
+			{
+				string name = "file-" + rnd.Next() + ".bin";
+				int size = rnd.Next(maxFileSizeInKb) * 1024;
+				var content = (char)rnd.Next(byte.MaxValue);
 
-                var dumper = new SmugglerFilesApi { Options = { Incremental = incremental } };                
-                await dumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions>
-                {
-                    FromFile = backupPath,
-                    To = new FilesConnectionStringOptions
-                    {
-                        Url = store.Url,
-                        DefaultFileSystem = store.DefaultFileSystem,
-                    }
-                });
+				creationTasks[i] = InitializeRandomFile(store, name, size);
+			}
 
-                action(store);
-            }
-            catch (Exception e)
-            {
-                throw e.SimplifyException();
-            }
-        }
-    }
+			await Task.WhenAll(creationTasks);
+		}
+
+		private async Task VerifyDump(FilesStore store, string backupPath, Action<FilesStore> action)
+		{
+			try
+			{
+				store.DefaultFileSystem += "-Verify";
+				await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(store.DefaultFileSystem);
+
+				bool incremental = false;
+				var directory = new DirectoryInfo(backupPath);
+				if ( directory.Exists )
+					incremental = true;
+
+				var dumper = new SmugglerFilesApi { Options = { Incremental = incremental } };                
+				await dumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions>
+				{
+					FromFile = backupPath,
+					To = new FilesConnectionStringOptions
+					{
+						Url = store.Url,
+						DefaultFileSystem = store.DefaultFileSystem,
+					}
+				});
+
+				action(store);
+			}
+			catch (Exception e)
+			{
+				throw e.SimplifyException();
+			}
+		}
+	}
 }
