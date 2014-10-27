@@ -927,6 +927,7 @@
     <Compile Include="MailingList\tcoonfield.cs" />
     <Compile Include="MailingList\TermVectorsInMultiMapIndexes.cs" />
     <Compile Include="MailingList\TertiaryOperator.cs" />
+    <Compile Include="MailingList\DynamicFieldTest.cs" />
     <Compile Include="MailingList\TestIndexAndTransforSubcollections.cs" />
     <Compile Include="MailingList\TestRavenIncludes.cs" />
     <Compile Include="MailingList\ThorTimeRange\Repro.cs" />
