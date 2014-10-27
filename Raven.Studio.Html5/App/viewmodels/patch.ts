@@ -92,20 +92,6 @@ class patch extends viewModelBase {
         var rowCreatedEvent = app.on(patch.gridSelector + 'RowsCreated').then(() => {
             rowCreatedEvent.off();
         });
-
-        this.setupKeyboardShortcuts();
-    }
-
-    setupKeyboardShortcuts() {
-        var patchPageId = "#patchContainer";
-        var executePatchIfAllowed = (patchOperation: () => void) => {
-            if (this.isExecuteAllowed()) {
-                patchOperation();
-            }
-        };
-        //this.createKeyboardShortcut("ALT+P", () => executePatchIfAllowed(() => this.executePatchOnSingle()), patchPageId);
-        //this.createKeyboardShortcut("ALT+S, P", () => executePatchIfAllowed(() => this.executePatchOnSelected()), patchPageId);
-        //this.createKeyboardShortcut("ALT+A, P", () => executePatchIfAllowed(() => this.executePatchOnAll()), patchPageId);
     }
 
     loadDocumentToTest(selectedItem: string) {
