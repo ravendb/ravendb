@@ -109,6 +109,10 @@ class documents extends viewModelBase {
         this.fetchCollections(db).done(results => this.collectionsLoaded(results, db));
     }
 
+    attached() {
+        super.createKeyboardShortcut("F2", () => this.editSelectedDoc(), "#documentsGrid");
+    }
+
     private fetchCollections(db: database): JQueryPromise<Array<collection>> {
         return new getCollectionsCommand(db).execute();
     }
