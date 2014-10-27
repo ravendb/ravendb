@@ -327,6 +327,7 @@ class editDocument extends viewModelBase {
         this.createKeyboardShortcut("alt+page-up", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+page-down", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+s", () => this.saveDocument(), editDocument.editDocSelector); // Q. Why do we have to setup ALT+S, when we could just use HTML's accesskey attribute? A. Because the accesskey attribute causes the save button to take focus, thus stealing the focus from the user's editing spot in the doc editor, disrupting his workflow.
         //this.createKeyboardShortcut("/", () => this.docsList(), editDocument.editDocSelector);
     }
 
@@ -568,9 +569,14 @@ class editDocument extends viewModelBase {
         var saveTask = saveCommand.execute();
         saveTask.done((saveResult: bulkDocumentDto[]) => {
             var savedDocumentDto: bulkDocumentDto = saveResult[0];
-            this.loadDocument(savedDocumentDto.Key).always(() => {
-                this.updateNewlineLayoutInDocument(this.isNewLineFriendlyMode());
-            });
+            var currentSelection = this.docEditor.getSelectionRange();
+            this.loadDocument(savedDocumentDto.Key)
+                .always(() => {
+                    this.updateNewlineLayoutInDocument(this.isNewLineFriendlyMode());
+
+                    // Try to restore the selection.
+                    this.docEditor.selection.setRange(currentSelection, false);
+                });
             this.updateUrl(savedDocumentDto.Key);
 
             this.dirtyFlag().reset(); //Resync Changes
