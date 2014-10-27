@@ -103,7 +103,7 @@
             <div class="index-group panel panel-default index-panel">
                 <div class="panel-heading">
                     <div class="pull-right indexGroup-actions-container">
-                        <button class="btn btn-danger btn-sm" title="Delete all indexes in group" data-bind="click: $root.deleteIndexGroup.bind($root)">
+                        <button class="btn btn-danger btn-sm" data-bind="click: $root.deleteIndexGroup.bind($root), attr: { title: 'Delete all ' + entityName + ' indexes' }">
                             <i class="fa fa-trash-o"></i>
                         </button>
                     </div>

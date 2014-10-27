@@ -38,7 +38,7 @@ class deleteIndexesConfirm extends dialogViewModelBase {
     }
 
     cancel() {
-        this.deleteTask.resolve(true);
+        this.deleteTask.reject();
         dialog.close(this);
     }
 }
