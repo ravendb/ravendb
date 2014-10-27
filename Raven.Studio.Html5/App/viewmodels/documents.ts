@@ -109,6 +109,17 @@ class documents extends viewModelBase {
         this.fetchCollections(db).done(results => this.collectionsLoaded(results, db));
     }
 
+    attached() {
+        super.createKeyboardShortcut("F2", () => this.editSelectedDoc(), "#documentsGrid");
+
+        // Q. Why do we have to setup the grid shortcuts here, when the grid already catches these shortcuts?
+        // A. Because if the focus isn't on the grid, but on the docs page itself, we still need to catch the shortcuts.
+        var docsPageSelector = ".documents-page";
+        this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
+        this.createKeyboardShortcut("Ctrl+C,D", () => this.copySelectedDocs(), docsPageSelector);
+        this.createKeyboardShortcut("Ctrl+C,I", () => this.copySelectedDocIds(), docsPageSelector);
+    }
+
     private fetchCollections(db: database): JQueryPromise<Array<collection>> {
         return new getCollectionsCommand(db).execute();
     }

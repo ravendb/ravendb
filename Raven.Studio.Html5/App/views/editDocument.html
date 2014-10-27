@@ -19,7 +19,7 @@
     <form data-bind="submit: saveDocument">
         <div class="btn-toolbar">
             <div class="btn-group">
-                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save (Alt+S)"><i class="fa fa-save"></i></button>
                 <a class="btn btn-default" data-bind="click: refreshDocument, visible: lodaedDocumentName" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></a>
                 <button type="button" class="btn btn-default" data-bind="enable:isNewLineFriendlyMode()===false || $root.isEditingMetadata()===true ,click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
                 <button class="btn btn-default" title="Toggle newline mode (Alt+N)" data-toggle="button" accesskey="N" data-bind="enable: $root.isEditingMetadata() === false, click: toggleNewlineMode">

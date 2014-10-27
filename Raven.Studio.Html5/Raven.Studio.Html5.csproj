@@ -614,6 +614,9 @@
     <Content Include="Content\variables.css">
       <DependentUpon>variables.less</DependentUpon>
     </Content>
+    <Content Include="Content\variables.min.css">
+      <DependentUpon>variables.css</DependentUpon>
+    </Content>
     <Content Include="favicon.ico" />
     <Content Include="fonts\fontawesome-webfont.svg" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
@@ -995,7 +998,7 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
-    <TypeScriptSourceMap>true</TypeScriptSourceMap>
+    <TypeScriptSourceMap>False</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
