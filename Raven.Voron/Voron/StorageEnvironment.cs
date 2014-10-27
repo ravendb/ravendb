@@ -528,6 +528,9 @@ namespace Voron
 					        // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
 					        // while there isn't any other activity going on.
 
+					        if (IsDebugRecording)
+						        _debugJournal.RecordFlushAction(DebugActionType.FlushStart, null);
+
 					        try
 					        {
 						        _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token);
@@ -541,6 +544,9 @@ namespace Voron
 						        throw new VoronUnrecoverableErrorException("Error occurred during flushing journals to the data file",
 									new Win32Exception(sehException.HResult));
 					        }
+
+					        if (IsDebugRecording)
+						        _debugJournal.RecordFlushAction(DebugActionType.FlushEnd, null);
 				        }
 			        }
 		        }, TaskCreationOptions.LongRunning);

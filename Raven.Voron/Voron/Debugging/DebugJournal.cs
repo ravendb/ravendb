@@ -509,7 +509,7 @@ namespace Voron.Debugging
                 case DebugActionType.TransactionRollback:
                     currentWriteTransaction.Rollback();
                     break;
-                case DebugActionType.TransactionDisposed:
+                case DebugActionType.TransactionDisposing:
                     currentWriteTransaction.Dispose();
                     currentWriteTransaction = null;
                     break;
@@ -539,7 +539,7 @@ namespace Voron.Debugging
                         readTransactions[txId] = queue;
                     }
                     break;
-                case DebugActionType.TransactionDisposed:
+                case DebugActionType.TransactionDisposing:
                     if (readTransactions.TryGetValue(txId, out transactionGroup) && transactionGroup.Count > 0)
                     {
                         var txAboutToDestroy = transactionGroup.Dequeue();
