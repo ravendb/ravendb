@@ -242,7 +242,7 @@ namespace Raven.Database.Commercial
 			}
 			else
 			{
-				if (version != "1.2" && version != "2.0" && version != "2.5")
+				if (version != "1.2" && version != "2.0" && version != "2.5" && version != "3.0")
 					throw new LicenseExpiredException("This is not a license for RavenDB 2.x");
 			}
 
