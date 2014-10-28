@@ -396,10 +396,15 @@ namespace Raven.Server
 			        }
 			    },
                 {
-			        "io-test-buffered", "Perform buffered read/write (default: unbuffered)", value =>
+			        "io-test-buffering-type", "Buffering type (None,Read, ReadAndWrite) (default: None)", value =>
 			        {
-			            ioTestRequest.Buffered = true;
-                        requiresIoTestAction.Add("io-test-buffered");
+                          BufferingType bufferingType;
+                          if (Enum.TryParse(value, true, out bufferingType) == false)
+                        {
+                            throw new OptionException("specified buffering type is not valid", "io-test-buffering-type");
+                        }
+                        ioTestRequest.BufferingType = bufferingType;
+                        requiresIoTestAction.Add("io-test-buffering-type");
 			        }
 			    },
 				{"encrypt-self-config", "Encrypt the RavenDB configuration file", file =>

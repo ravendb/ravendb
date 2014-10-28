@@ -216,16 +216,25 @@ namespace Raven.Database.DiskIO
         /// <param name="end"></param>
         private void TestRandomReadWrite(CancellationToken token, Random random, long start, long end)
         {
-            using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
+            
+            using (var readHandle = Win32NativeFileMethods.CreateFile(testRequest.Path,
                                                                   Win32NativeFileAccess.GenericWrite | Win32NativeFileAccess.GenericRead, 
                                                                   Win32NativeFileShare.Read | Win32NativeFileShare.Write, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
-                                                                  Win32NativeFileAttributes.Write_Through | 
-                                                                    (testRequest.Buffered ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering), 
+                                                                  testRequest.BufferedReads ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering, 
+                                                                  IntPtr.Zero))
+
+            using (var writeHandle = Win32NativeFileMethods.CreateFile(testRequest.Path,
+                                                                  Win32NativeFileAccess.GenericWrite | Win32NativeFileAccess.GenericRead,
+                                                                  Win32NativeFileShare.Read | Win32NativeFileShare.Write, IntPtr.Zero,
+                                                                  Win32NativeFileCreationDisposition.OpenExisting,
+                                                                  testRequest.BufferedWrites ? Win32NativeFileAttributes.None : (Win32NativeFileAttributes.NoBuffering | Win32NativeFileAttributes.Write_Through),
                                                                   IntPtr.Zero))
             {
-                ValidateHandle(handle);
-                using (var fs = new FileStream(handle, FileAccess.ReadWrite))
+                ValidateHandle(readHandle);
+                ValidateHandle(writeHandle);
+                using (var readFs = new FileStream(readHandle, FileAccess.Read))
+                using (var writeFs = new FileStream(readHandle, FileAccess.Write))
                 {
                     var buffer = new byte[testRequest.ChunkSize];
                     var sw = new Stopwatch();
@@ -235,8 +244,8 @@ namespace Raven.Database.DiskIO
                         {
                             var position = LongRandom(0, testRequest.FileSize, 4096, random);
                             sw.Restart();
-                            fs.Seek(position, SeekOrigin.Begin);
-                            fs.Read(buffer, 0, testRequest.ChunkSize);
+                            readFs.Seek(position, SeekOrigin.Begin);
+                            readFs.Read(buffer, 0, testRequest.ChunkSize);
                             dataStorage.MarkRead(testRequest.ChunkSize, sw.ElapsedMilliseconds);
                         }
                         else
@@ -244,8 +253,8 @@ namespace Raven.Database.DiskIO
                             var position = LongRandom(start, end - testRequest.ChunkSize, 4096, random);
                             random.NextBytes(buffer);
                             sw.Restart();
-                            fs.Seek(position, SeekOrigin.Begin);
-                            fs.Write(buffer, 0, testRequest.ChunkSize);
+                            writeFs.Seek(position, SeekOrigin.Begin);
+                            writeFs.Write(buffer, 0, testRequest.ChunkSize);
                             dataStorage.MarkWrite(testRequest.ChunkSize, sw.ElapsedMilliseconds);
                         }
                     }
@@ -265,8 +274,7 @@ namespace Raven.Database.DiskIO
             using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
                                                                   Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.Write, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
-                                                                  Win32NativeFileAttributes.Write_Through |
-                                                                    (testRequest.Buffered ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering),
+                                                                  testRequest.BufferedWrites ? Win32NativeFileAttributes.None : (Win32NativeFileAttributes.NoBuffering | Win32NativeFileAttributes.Write_Through),
                                                                   IntPtr.Zero))
             {
                 ValidateHandle(handle);
@@ -298,7 +306,7 @@ namespace Raven.Database.DiskIO
             using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
                                                      Win32NativeFileAccess.GenericRead, Win32NativeFileShare.Read, IntPtr.Zero,
                                                      Win32NativeFileCreationDisposition.OpenExisting,
-                                                     testRequest.Buffered ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering,
+                                                     testRequest.BufferedReads ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering,
                                                      IntPtr.Zero))
             {
                 ValidateHandle(handle);
@@ -331,8 +339,7 @@ namespace Raven.Database.DiskIO
             using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
                                                                   Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.Write, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
-                                                                  Win32NativeFileAttributes.Write_Through | 
-                                                                    (testRequest.Buffered ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering), 
+                                                                  testRequest.BufferedWrites ? Win32NativeFileAttributes.None : (Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering), 
                                                                   IntPtr.Zero))
             {
                ValidateHandle(handle);
@@ -368,7 +375,7 @@ namespace Raven.Database.DiskIO
             using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
                                                                   Win32NativeFileAccess.GenericRead, Win32NativeFileShare.Read, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
-                                                                  testRequest.Buffered ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering, 
+                                                                  testRequest.BufferedReads ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering, 
                                                                   IntPtr.Zero))
             {
                 ValidateHandle(handle);
@@ -416,8 +423,8 @@ namespace Raven.Database.DiskIO
                 action = "read";
             }
 
-            Console.WriteLine("{0} threads {1} {2} {3} for {4} seconds from file {5} (size = {6} MB) in {7} kb chunks.", 
-                testRequest.ThreadCount, action, testRequest.Buffered ? "buffered" : "unbuffered", 
+            Console.WriteLine("{0} threads {1} {2} {3} {4} for {5} seconds from file {6} (size = {7} MB) in {8} kb chunks.", 
+                testRequest.ThreadCount, action, testRequest.BufferedReads ? "buffered reads" : "unbuffered reads", testRequest.BufferedWrites ? "buffered writes" : "unbuffered writes" ,
                 testRequest.Sequential ? "sequential" : "random", testRequest.TimeToRunInSeconds,
                 testRequest.Path, testRequest.FileSize / 1024 / 1024, testRequest.ChunkSize / 1024);
         }
