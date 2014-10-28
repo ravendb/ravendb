@@ -51,9 +51,6 @@ namespace Raven.Database.Plugins.Builtins
             var unc = pathsToCheck.Where(path => path != null && path.StartsWith("\\\\")).ToList();
             var uniqueUnc = new HashSet<string>(unc);
 
-            Console.WriteLine(uniqueRoots); //TODO: delete me
-            Console.WriteLine(uniqueUnc); //TODO: delete me
-
             //TODO: verify network shares
 
             string[] lacksFreeSpace = DriveInfo.GetDrives()
