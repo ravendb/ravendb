@@ -350,8 +350,10 @@ class query extends viewModelBase {
                         this.indexSuggestions([]);
                         if (queryResults.totalResultCount == 0) {
                             var queryFields = this.extractQueryFields();
-                            for (var i = 0; i < queryFields.length; i++) {
-                                this.getIndexSuggestions(selectedIndex, queryFields[i]);
+                            if (this.selectedIndex().indexOf(this.dynamicPrefix) !== 0) {
+                                for (var i = 0; i < queryFields.length; i++) {
+                                    this.getIndexSuggestions(selectedIndex, queryFields[i]);
+                                }
                             }
                         }
                     })
