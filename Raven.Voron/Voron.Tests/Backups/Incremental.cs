@@ -5,10 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Text;
-using Voron.Impl;
 using Voron.Impl.Backup;
 using Voron.Impl.Paging;
 using Xunit;
@@ -361,11 +358,75 @@ namespace Voron.Tests.Backups
 				tx.Commit();
 			}
 
-
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				var tree = Env.CreateTree(tx, "test");
 				tree.Delete("items/1");
+				tree.Delete("items/2");
+
+				tree.Add("items/3", overflowValue);
+
+				tx.Commit();
+			}
+
+			BackupMethods.Incremental.ToFile(Env, _incrementalBackupFile(0));
+
+			var options = StorageEnvironmentOptions.ForPath(_restoredStoragePath);
+			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
+
+			BackupMethods.Incremental.Restore(options, new[]
+            {
+                _incrementalBackupFile(0)
+            });
+
+			using (var env = new StorageEnvironment(options))
+			{
+				using (var tx = env.NewTransaction(TransactionFlags.Read))
+				{
+					var tree = tx.ReadTree("test");
+
+					var readResult = tree.Read("items/3");
+
+					var readBytes = new byte[testedOverflowSize];
+
+					readResult.Reader.Read(readBytes, 0, testedOverflowSize);
+
+					Assert.Equal(overflowValue, readBytes);
+				}
+			}
+		}
+
+		[Fact]
+		public void IncorrectWriteOfOverflowPagesFromJournalsInBackupToDataFile_RavenDB_2891()
+		{
+			RequireFileBasedPager();
+
+			const int testedOverflowSize = 50000;
+
+			var overflowValue = new byte[testedOverflowSize];
+			new Random(1).NextBytes(overflowValue);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "test");
+
+				var itemBytes = new byte[30000];
+
+				new Random(2).NextBytes(itemBytes);
+				tree.Add("items/1", itemBytes);
+
+				new Random(3).NextBytes(itemBytes);
+				tree.Add("items/2", itemBytes);
+
+				tree.Delete("items/1");
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = tx.ReadTree("test");
+
 				tree.Delete("items/2");
 
 				tree.Add("items/3", overflowValue);
