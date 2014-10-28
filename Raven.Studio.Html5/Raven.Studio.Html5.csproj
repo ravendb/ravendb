@@ -332,6 +332,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\monitorRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCollectionsCountCommand.ts" />
     <TypeScriptCompile Include="App\commands\ioTestCommand.ts" />
+    <TypeScriptCompile Include="App\commands\dismissAlertCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />

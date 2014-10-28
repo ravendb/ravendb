@@ -279,31 +279,30 @@ html, body {
 }
 
 
-
+  @media(max-device-height:1024px) {
+      .query-stats {
+        width: 80vw!important;}    }
+    @media(min-device-height:1025px) {
+        .query-stats {
+        width: 50vw!important;
+        }
+    }
 
 .query-stats {
-    width: 600px;
-    margin: -250px 0 0 -450px;
+  
+   
+    
+    //margin: -250px 0 0 -450px;
+    .row {       
+            padding-left: 10px;
+            padding-right: 10px;
+       
 
-    ul {
-        li {
-            padding: 0 10px 0 10px;
-
-            strong {
-                padding: 0 10px 0 10px;
-                display: inline-block;
-            }
-
-            span {
-                padding: 0 10px 0 10px;
-                display: inline-block;
-            }
-
-            border-bottom: 0 !important;
-            border-top: 0 !important;
-            border-left: 0 !important;
-            border-right: 0 !important;
+        span {
+            -ms-word-break: break-all;
+            word-break: break-all;
         }
+       
     }
 }
 
@@ -1092,12 +1091,19 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
     .breadcrumb {
         width: 100%;
-
-        li {
-            overflow: visible !important;
-            max-width: none !important;
+        .dropdown-menu{
+            li{
+                overflow-x:visible!important;
+                max-width:none!important;
+            }
         }
     }
+
+    .breadcrumb > li {            
+            overflow: visible !important;
+            
+        }
+
 
     .editor {
         height: 60px;
@@ -2047,8 +2053,4 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 
 .topBorder td {
     border-top: solid 1px #ddd !important;
-}
-
-.no-outline {
-    outline: none;
 }

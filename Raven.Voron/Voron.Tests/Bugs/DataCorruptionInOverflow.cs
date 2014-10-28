@@ -213,5 +213,57 @@ namespace Voron.Tests.Bugs
 				Assert.Equal(overflowValue, readBytes);
 			}
 		}
+
+		[Fact]
+		public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_RavenDB_2891()
+		{
+			const int testedOverflowSize = 50000;
+
+			var overflowValue = new byte[testedOverflowSize];
+			new Random(1).NextBytes(overflowValue);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "test");
+
+				var itemBytes = new byte[30000];
+
+				new Random(2).NextBytes(itemBytes);
+				tree.Add("items/1", itemBytes);
+
+				new Random(3).NextBytes(itemBytes);
+				tree.Add("items/2", itemBytes);
+
+				tree.Delete("items/1");
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = tx.ReadTree("test");
+
+				tree.Delete("items/2");
+
+				tree.Add("items/3", overflowValue);
+
+				tx.Commit();
+			}
+
+			Env.FlushLogToDataFile();
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var tree = tx.ReadTree("test");
+
+				var readResult = tree.Read("items/3");
+
+				var readBytes = new byte[testedOverflowSize];
+
+				readResult.Reader.Read(readBytes, 0, testedOverflowSize);
+
+				Assert.Equal(overflowValue, readBytes);
+			}
+		}
 	}
 }

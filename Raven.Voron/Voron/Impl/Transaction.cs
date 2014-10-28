@@ -436,6 +436,9 @@ namespace Voron.Impl
 
 		public void Dispose()
 		{
+			if (Environment.IsDebugRecording)
+				RecordTransactionState(this, DebugActionType.TransactionDisposing);
+
 			if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
 				Rollback();
 
@@ -444,10 +447,6 @@ namespace Voron.Impl
 			{
 				pagerState.Release();
 			}
-            if (Environment.IsDebugRecording)
-            {
-                RecordTransactionState(this, DebugActionType.TransactionDisposed);
-            }
 		}
 
 		internal void FreePage(long pageNumber)

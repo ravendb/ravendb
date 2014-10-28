@@ -12,9 +12,11 @@
         </li>
     </ul>
     
-    <!-- ko if: operationAlerts().length > 0 -->
-        <!-- ko foreach: operationAlerts -->
-        <div class="alert alert-warning" role="alert" data-bind="text: $data">
+    <!-- ko if: alerts().length > 0 -->
+        <!-- ko foreach: alerts -->
+        <div class="alert alert-warning alert-dismissable" role="alert">
+            <button data-bind="click: $root.dismissAlert.bind($root, uniqueKey)" type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            <a data-bind="attr: { href: $root.urlForAlert($data) }"><span data-bind="    text: title"></span></a>
         </div>
         <!-- /ko -->
     <!-- /ko -->

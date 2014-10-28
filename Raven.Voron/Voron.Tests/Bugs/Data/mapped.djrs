@@ -1,7 +1,7 @@
 TransactionStart,2,ReadWrite,False
 CreateTree,2,mapped_results_by_view_and_reduce_key,,
 TransactionCommit,2,ReadWrite,False
-TransactionDisposed,2,ReadWrite,False
+TransactionDisposing,2,ReadWrite,False
 TransactionStart,3,ReadWrite,False
 MultiAdd,3,mapped_results_by_view_and_reduce_key,2/companies/85/ybl3gdpwpnzjsebfjljziw==,MDQwMDAwMDAtMDAwMC0wMDAxLTAwMDAtMDAwMDAwMDAwMDAy
 MultiAdd,3,mapped_results_by_view_and_reduce_key,2/companies/79/4t2uk7vukkm2ywxmywy9ea==,MDQwMDAwMDAtMDAwMC0wMDAxLTAwMDAtMDAwMDAwMDAwMDA1
@@ -106,4 +106,4 @@ MultiAdd,3,mapped_results_by_view_and_reduce_key,2/companies/21/yiz7q3xp6xolfzrl
 MultiAdd,3,mapped_results_by_view_and_reduce_key,2/companies/86/aredhncrrzq974jrl05xyq==,MDQwMDAwMDAtMDAwMC0wMDAxLTAwMDAtMDAwMDAwMDAwMEU2
 MultiAdd,3,mapped_results_by_view_and_reduce_key,2/companies/75/ampe8p08wzczzvhxzsbxyw==,MDQwMDAwMDAtMDAwMC0wMDAxLTAwMDAtMDAwMDAwMDAwMEU4
 TransactionCommit,3,ReadWrite,False
-TransactionDisposed,3,ReadWrite,False
+TransactionDisposing,3,ReadWrite,False

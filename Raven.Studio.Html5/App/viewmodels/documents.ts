@@ -9,6 +9,7 @@ import deleteCollection = require("viewmodels/deleteCollection");
 import collection = require("models/collection");
 import database = require("models/database");
 import document = require("models/document");
+import alert = require("models/alert");
 import changeSubscription = require('models/changeSubscription');
 import customFunctions = require("models/customFunctions");
 import customColumns = require('models/customColumns');
@@ -18,9 +19,12 @@ import getCollectionsCommand = require("commands/getCollectionsCommand");
 import getCustomColumnsCommand = require('commands/getCustomColumnsCommand');
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 import getOperationStatusCommand = require('commands/getOperationStatusCommand');
+import getOperationAlertsCommand = require("commands/getOperationAlertsCommand");
+import dismissAlertCommand = require("commands/dismissAlertCommand");
 
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
+import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 
 class documents extends viewModelBase {
 
@@ -46,6 +50,8 @@ class documents extends viewModelBase {
     isAnyDocumentsAutoSelected = ko.observable<boolean>(false);
     isAllDocumentsAutoSelected = ko.observable<boolean>(false);
     canCopyAllSelected: KnockoutComputed<boolean>;
+
+    alerts = ko.observable<alert[]>([]);
 
     static gridSelector = "#documentsGrid";
 
@@ -106,8 +112,10 @@ class documents extends viewModelBase {
         this.collectionToSelectName = args ? args.collection : null;
 
         var db = this.activeDatabase();
+        this.fetchAlerts();
         this.fetchCollections(db).done(results => this.collectionsLoaded(results, db));
     }
+
 
     attached() {
         super.createKeyboardShortcut("F2", () => this.editSelectedDoc(), "#documentsGrid");
@@ -118,6 +126,19 @@ class documents extends viewModelBase {
         this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C,D", () => this.copySelectedDocs(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C,I", () => this.copySelectedDocIds(), docsPageSelector);
+    }
+
+    private fetchAlerts() {
+        new getOperationAlertsCommand(this.activeDatabase())
+            .execute()
+            .then((result: alert[]) => {
+                this.alerts(result);
+            });
+    }
+
+    dismissAlert(uniqueKey: string) {
+        new dismissAlertCommand(this.activeDatabase(), uniqueKey).execute();
+        setTimeout(() => dynamicHeightBindingHandler.stickToTarget($(".ko-grid-viewport-container")[0], 'footer', 0), 25);
     }
 
     private fetchCollections(db: database): JQueryPromise<Array<collection>> {
@@ -403,6 +424,11 @@ class documents extends viewModelBase {
         }
 
         return null;
+    }
+
+    urlForAlert(alert: alert) {
+        var index = this.alerts().indexOf(alert);
+        return appUrl.forAlerts(this.activeDatabase()) + "&item=" + index;
     }
 }
 
