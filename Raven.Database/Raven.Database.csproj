@@ -222,6 +222,7 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="DiskIO\DiskPerformanceTester.cs" />
     <Compile Include="DiskIO\PerformanceTestRequest.cs" />
+    <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
     <Compile Include="Plugins\Builtins\PurgeOutdatedTombstones.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Bundles\Replication\Data\ReplicationTopologyNode.cs" />

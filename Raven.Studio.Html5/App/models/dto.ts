@@ -223,6 +223,7 @@ interface alertDto {
     Title: string;
     CreatedAt: string;
     Observed: boolean;
+    LastDismissedAt: string;
     Message: string;
     AlertLevel: string;
     Exception: string;
