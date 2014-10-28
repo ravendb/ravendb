@@ -101,7 +101,7 @@ namespace Raven.Abstractions.Smuggler
 				}
 			}
 #else
-			if(incremental)
+			if (incremental)
 				throw new NotSupportedException("Incremental exports are not supported in SL.");
 #endif
 			try
@@ -122,9 +122,9 @@ namespace Raven.Abstractions.Smuggler
 				stream = stream ?? File.Create(file);
 				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
 #if SILVERLIGHT
-                    CompressionLevel.BestCompression,
+ CompressionLevel.BestCompression,
 #endif
-				                                       leaveOpen: true))
+ leaveOpen: true))
 				using (var streamWriter = new StreamWriter(gZipStream))
 				{
 					var jsonWriter = new JsonTextWriter(streamWriter)
@@ -144,16 +144,16 @@ namespace Raven.Abstractions.Smuggler
 					jsonWriter.WriteStartArray();
 					if (options.OperateOnTypes.HasFlag(ItemType.Documents))
 					{
-					    try
-					    {
-					        options.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.LastDocsEtag);
-					    }
-					    catch (SmugglerExportException e)
-					    {
-					        options.LastDocsEtag = e.LastEtag;
-					        e.File = file;
-					        lastException = e;
-					    }
+						try
+						{
+							options.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.LastDocsEtag);
+						}
+						catch (SmugglerExportException e)
+						{
+							options.LastDocsEtag = e.LastEtag;
+							e.File = file;
+							lastException = e;
+						}
 					}
 					jsonWriter.WriteEndArray();
 
@@ -161,16 +161,16 @@ namespace Raven.Abstractions.Smuggler
 					jsonWriter.WriteStartArray();
 					if (options.OperateOnTypes.HasFlag(ItemType.Attachments) && lastException == null)
 					{
-					    try
-					    {
-					        options.LastAttachmentEtag = await ExportAttachments(jsonWriter, options.LastAttachmentEtag);
-					    }
-					    catch (SmugglerExportException e)
-					    {
-					        options.LastAttachmentEtag = e.LastEtag;
-					        e.File = file;
-					        lastException = e;
-					    }
+						try
+						{
+							options.LastAttachmentEtag = await ExportAttachments(jsonWriter, options.LastAttachmentEtag);
+						}
+						catch (SmugglerExportException e)
+						{
+							options.LastAttachmentEtag = e.LastEtag;
+							e.File = file;
+							lastException = e;
+						}
 					}
 					jsonWriter.WriteEndArray();
 
@@ -191,8 +191,8 @@ namespace Raven.Abstractions.Smuggler
 					WriteLastEtagsFromFile(options);
 #endif
 
-			    if (lastException != null)
-			        throw lastException;
+				if (lastException != null)
+					throw lastException;
 				return file;
 			}
 			finally
@@ -271,80 +271,86 @@ namespace Raven.Abstractions.Smuggler
 
 		private async Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag)
 		{
-		    var now = SystemTime.UtcNow;
+			var now = SystemTime.UtcNow;
 			var totalCount = 0;
 			var lastReport = SystemTime.UtcNow;
 			var reportInterval = TimeSpan.FromSeconds(2);
 			var errorcount = 0;
 			ShowProgress("Exporting Documents");
-			
+
 			while (true)
 			{
 				bool hasDocs = false;
 
-                try {
-                    var maxRecords = options.Limit - totalCount;
-                    if (maxRecords > 0)
-			        {
-			            using (var documents = await GetDocuments(lastEtag,Math.Min(maxRecords, options.BatchSize)))
-			            {
-			                var watch = Stopwatch.StartNew();
+				try
+				{
+					var maxRecords = options.Limit - totalCount;
+					var amountToTakeFromServer = Math.Min(maxRecords, options.BatchSize);
+					if (maxRecords > 0)
+					{
+						using (var documents = await GetDocuments(lastEtag, amountToTakeFromServer))
+						{
+							var watch = Stopwatch.StartNew();
 
-			                while (await documents.MoveNextAsync())
-			                {
-			                    hasDocs = true;
-			                    var document = documents.Current;
-			                    lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+							while (await documents.MoveNextAsync())
+							{
+								hasDocs = true;
+								var document = documents.Current;
+								lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 
-			                    if (!options.MatchFilters(document))
-			                        continue;
+								if (!options.MatchFilters(document))
+									continue;
 
-                                if (options.ShouldExcludeExpired && options.ExcludeExpired(document, now))
-			                        continue;
+								if (options.ShouldExcludeExpired && options.ExcludeExpired(document, now))
+									continue;
 
-			                    document.WriteTo(jsonWriter);
-			                    totalCount++;
+								document.WriteTo(jsonWriter);
+								totalCount++;
 
-			                    if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-			                    {
-			                        ShowProgress("Exported {0} documents", totalCount);
-			                        lastReport = SystemTime.UtcNow;
-			                    }
+								if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+								{
+									ShowProgress("Exported {0} documents", totalCount);
+									lastReport = SystemTime.UtcNow;
+								}
 
-			                    if (watch.ElapsedMilliseconds > 100)
-			                        errorcount++;
-			                    watch.Start();
-			                }
-			            }
-			        
-			            if (hasDocs)
-			                continue;
+								if (watch.ElapsedMilliseconds > 100)
+									errorcount++;
+								watch.Start();
+							}
+						}
 
-			            // The server can filter all the results. In this case, we need to try to go over with the next batch.
-			            // Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
-                        // (This code provides support for legacy RavenDB version: 1.0)
-			            var databaseStatistics = await GetStats();
-			            var lastEtagComparable = new ComparableByteArray(lastEtag);
-			            if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
-			            {
-                            lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
-			                ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
+						if (hasDocs)
+							continue;
 
-			                continue;
-			            }
-                    }
-			    }
-                catch (Exception e)
-                {
-                    ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
-                    ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
-                    throw new SmugglerExportException(e.Message, e)
-                    {
-                        LastEtag = lastEtag,
-                    };
-                }
+						// The server can filter all the results. In this case, we need to try to go over with the next batch.
+						// Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
+						// (This code provides support for legacy RavenDB version: 1.0)
+						var databaseStatistics = await GetStats();
+						var lastEtagComparable = new ComparableByteArray(lastEtag);
+						if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
+						{
+							lastEtag = EtagUtil.Increment(lastEtag, amountToTakeFromServer);
+							if (lastEtag.CompareTo(databaseStatistics.LastDocEtag) >= 0)
+							{
+								lastEtag = databaseStatistics.LastDocEtag;
+							}
+							ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
 
-			    ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+							continue;
+						}
+					}
+				}
+				catch (Exception e)
+				{
+					ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
+					ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+					throw new SmugglerExportException(e.Message, e)
+					{
+						LastEtag = lastEtag,
+					};
+				}
+
+				ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 				return lastEtag;
 			}
 		}
@@ -447,16 +453,16 @@ namespace Raven.Abstractions.Smuggler
 			}
 			catch (Exception e)
 			{
-			    if (e is InvalidDataException == false 
+				if (e is InvalidDataException == false
 #if SILVERLIGHT
-                    && e is ZlibException == false
+ && e is ZlibException == false
 #endif
-                    )
-			        throw;
+)
+					throw;
 
 				stream.Seek(0, SeekOrigin.Begin);
 
-                sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
+				sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
 
 				var streamReader = new StreamReader(stream);
 
@@ -563,53 +569,53 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
-        private long GetRoughSize(RavenJToken token)
-        {
-            long sum; 
-            switch (token.Type)
-            {
-                case JTokenType.None:
-                    return 0;
-                case JTokenType.Object:
-                    sum = 2;// {}
-                    foreach (var prop in (RavenJObject)token)
-                    {
-                        sum += prop.Key.Length + 1; // name:
-                        sum += GetRoughSize(prop.Value);
-                    }
-                    return sum;
-                case JTokenType.Array:
-                    // the 1 is for ,
-                    return 2 + ((RavenJArray) token).Sum(prop => 1 + GetRoughSize(prop));
-                case JTokenType.Constructor:
-                case JTokenType.Property:
-                case JTokenType.Comment:
-                case JTokenType.Raw:
-                    return 0;
-                case JTokenType.Boolean:
-                    return token.Value<bool>() ? 4 : 5;
-                case JTokenType.Null:
-                    return 4;
-                case JTokenType.Undefined:
-                    return 9;
-                case JTokenType.Date:
-                    return 21;
-                case JTokenType.Bytes:
-                case JTokenType.Integer:
-                case JTokenType.Float:
-                case JTokenType.String:
-                case JTokenType.Guid:
-                case JTokenType.TimeSpan:
-                case JTokenType.Uri:
-                    return token.Value<string>().Length;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
+		private long GetRoughSize(RavenJToken token)
+		{
+			long sum;
+			switch (token.Type)
+			{
+				case JTokenType.None:
+					return 0;
+				case JTokenType.Object:
+					sum = 2;// {}
+					foreach (var prop in (RavenJObject)token)
+					{
+						sum += prop.Key.Length + 1; // name:
+						sum += GetRoughSize(prop.Value);
+					}
+					return sum;
+				case JTokenType.Array:
+					// the 1 is for ,
+					return 2 + ((RavenJArray)token).Sum(prop => 1 + GetRoughSize(prop));
+				case JTokenType.Constructor:
+				case JTokenType.Property:
+				case JTokenType.Comment:
+				case JTokenType.Raw:
+					return 0;
+				case JTokenType.Boolean:
+					return token.Value<bool>() ? 4 : 5;
+				case JTokenType.Null:
+					return 4;
+				case JTokenType.Undefined:
+					return 9;
+				case JTokenType.Date:
+					return 21;
+				case JTokenType.Bytes:
+				case JTokenType.Integer:
+				case JTokenType.Float:
+				case JTokenType.String:
+				case JTokenType.Guid:
+				case JTokenType.TimeSpan:
+				case JTokenType.Uri:
+					return token.Value<string>().Length;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
 
 		private async Task<int> ImportDocuments(JsonTextReader jsonReader, SmugglerOptions options)
 		{
-		    var now = SystemTime.UtcNow;
+			var now = SystemTime.UtcNow;
 			var count = 0;
 
 			if (jsonReader.Read() == false)
@@ -626,7 +632,7 @@ namespace Raven.Abstractions.Smuggler
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
 				var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
-			    var size = GetRoughSize(document);
+				var size = GetRoughSize(document);
 				if (size > 1024 * 1024)
 				{
 					Console.WriteLine("Large document warning: {0:#,#.##;;0} kb - {1}",
@@ -638,8 +644,8 @@ namespace Raven.Abstractions.Smuggler
 				if (options.MatchFilters(document) == false)
 					continue;
 
-                if (options.ShouldExcludeExpired && options.ExcludeExpired(document, now))
-                    continue;
+				if (options.ShouldExcludeExpired && options.ExcludeExpired(document, now))
+					continue;
 
 				if (!string.IsNullOrEmpty(options.TransformScript))
 					document = await TransformDocument(document, options.TransformScript);
@@ -689,10 +695,10 @@ namespace Raven.Abstractions.Smuggler
 				if (index.Value<RavenJObject>("definition").Value<bool>("IsCompiled"))
 					continue; // can't import compiled indexes
 
-			    if ((options.OperateOnTypes & ItemType.RemoveAnalyzers) == ItemType.RemoveAnalyzers)
-			    {
-			        index.Value<RavenJObject>("definition").Remove("Analyzers");
-			    }
+				if ((options.OperateOnTypes & ItemType.RemoveAnalyzers) == ItemType.RemoveAnalyzers)
+				{
+					index.Value<RavenJObject>("definition").Remove("Analyzers");
+				}
 
 				await PutIndex(indexName, index);
 

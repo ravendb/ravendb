@@ -3,24 +3,22 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
+using Raven.Bundles.Replication.Data;
+using Raven.Bundles.Replication.Plugins;
+using Raven.Bundles.Replication.Tasks;
+using Raven.Database.Extensions;
+using Raven.Database.Server;
+using Raven.Database.Server.Abstractions;
+using Raven.Database.Storage;
+using Raven.Json.Linq;
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using Raven.Abstractions.Logging;
-using Raven.Bundles.Replication.Tasks;
-using Raven.Database.Server;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Bundles.Replication.Data;
-using Raven.Bundles.Replication.Plugins;
-using Raven.Database.Extensions;
-using Raven.Database.Server.Abstractions;
-using Raven.Database.Storage;
-using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Responders
 {
@@ -41,6 +39,8 @@ namespace Raven.Bundles.Replication.Responders
 
 		public override void Respond(IHttpContext context)
 		{
+			const int PulseThreshold = 512;
+
 			var src = context.Request.QueryString["from"];
 			if (string.IsNullOrEmpty(src))
 			{
@@ -55,51 +55,83 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 			var array = context.ReadJsonArray();
-			if (ReplicationTask != null) 
+			if (ReplicationTask != null)
 				ReplicationTask.HandleHeartbeat(src);
+
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				Database.TransactionalStorage.Batch(actions =>
-				{
-					string lastEtag = Etag.Empty.ToString();
-					foreach (RavenJObject document in array)
-					{
-						var metadata = document.Value<RavenJObject>("@metadata");
-						if (metadata[Constants.RavenReplicationSource] == null)
-						{
-							// not sure why, old document from when the user didn't have replication
-							// that we suddenly decided to replicate, choose the source for that
-							metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
-						}
-						lastEtag = metadata.Value<string>("@etag");
-						var id = metadata.Value<string>("@id");
-						document.Remove("@metadata");
-						ReplicateDocument(actions, id, metadata, document, src);
-					}
+				IDisposable documentLock = null;
 
-					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
-					var replicationDocument = Database.Get(replicationDocKey, null);
-					var lastAttachmentId = Etag.Empty;
-					if (replicationDocument != null)
+				try
+				{
+					Database.TransactionalStorage.Batch(actions =>
 					{
-						lastAttachmentId =
-							replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().
-								LastAttachmentEtag;
-					}
-					Guid serverInstanceId;
-					if (Guid.TryParse(context.Request.QueryString["dbid"], out serverInstanceId) == false)
-						serverInstanceId = Database.TransactionalStorage.Id;
-					Database.Put(replicationDocKey, null,
-								 RavenJObject.FromObject(new SourceReplicationInformation
-								 {
-									 Source = src,
-									 LastDocumentEtag = Etag.Parse(lastEtag),
-									 LastAttachmentEtag = lastAttachmentId,
-									 ServerInstanceId = serverInstanceId
-								 }),
-								 new RavenJObject(), null);
-				});
+						string lastEtag = Etag.Empty.ToString();
+						for (var i = 0; i < array.Length; i++)
+						{
+							if (documentLock == null)
+								documentLock = Database.DocumentLock.Lock();
+
+							var document = (RavenJObject)array[i];
+							var metadata = document.Value<RavenJObject>("@metadata");
+							if (metadata[Constants.RavenReplicationSource] == null)
+							{
+								// not sure why, old document from when the user didn't have replication
+								// that we suddenly decided to replicate, choose the source for that
+								metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
+							}
+							lastEtag = metadata.Value<string>("@etag");
+							var id = metadata.Value<string>("@id");
+							document.Remove("@metadata");
+
+							ReplicateDocument(actions, id, metadata, document, src);
+
+							if (i <= 0 || i % PulseThreshold != 0)
+								continue;
+
+							SaveReplicationSource(context, src, lastEtag);
+							actions.General.PulseTransaction();
+
+							documentLock.Dispose();
+							documentLock = null;
+						}
+
+						SaveReplicationSource(context, src, lastEtag);
+					});
+				}
+				finally
+				{
+					if (documentLock != null)
+						documentLock.Dispose();
+				}
 			}
+		}
+
+		private void SaveReplicationSource(IHttpContext context, string src, string lastEtag)
+		{
+			var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
+			var replicationDocument = Database.Get(replicationDocKey, null);
+			var lastAttachmentId = Etag.Empty;
+			if (replicationDocument != null)
+				lastAttachmentId = replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().LastAttachmentEtag;
+
+			Guid serverInstanceId;
+			if (Guid.TryParse(context.Request.QueryString["dbid"], out serverInstanceId) == false)
+				serverInstanceId = Database.TransactionalStorage.Id;
+
+			Database.Put(
+				replicationDocKey,
+				null,
+				RavenJObject.FromObject(
+					new SourceReplicationInformation
+					{
+						Source = src,
+						LastDocumentEtag = Etag.Parse(lastEtag),
+						LastAttachmentEtag = lastAttachmentId,
+						ServerInstanceId = serverInstanceId
+					}),
+				new RavenJObject(),
+				null);
 		}
 
 		private void ReplicateDocument(IStorageActionsAccessor actions, string id, RavenJObject metadata, RavenJObject document, string src)
@@ -120,42 +152,6 @@ namespace Raven.Bundles.Replication.Responders
 					string.Format("Exception occurred during the replication of the document {0} from the server {1}", id, src), ex);
 				throw;
 			}
-		}
-
-		private static string HashReplicationIdentifier(RavenJObject metadata)
-		{
-			using (var md5 = MD5.Create())
-			{
-				var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" + metadata.Value<string>("@etag"));
-				return new Guid(md5.ComputeHash(bytes)).ToString();
-			}
-		}
-
-		private string HashReplicationIdentifier(Guid existingEtag)
-		{
-			using (var md5 = MD5.Create())
-			{
-				var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
-				return new Guid(md5.ComputeHash(bytes)).ToString();
-			}
-		}
-
-		private static bool IsDirectChildOfCurrentDocument(JsonDocument existingDoc, RavenJObject metadata)
-		{
-			var version = new RavenJObject
-			{
-				{Constants.RavenReplicationSource, existingDoc.Metadata[Constants.RavenReplicationSource]},
-				{Constants.RavenReplicationVersion, existingDoc.Metadata[Constants.RavenReplicationVersion]},
-			};
-
-			var history = metadata[Constants.RavenReplicationHistory];
-			if (history == null || history.Type == JTokenType.Null) // no history, not a parent
-				return false;
-
-			if (history.Type != JTokenType.Array)
-				return false;
-
-			return history.Values().Contains(version, new RavenJTokenEqualityComparer());
 		}
 
 		public override string UrlPattern

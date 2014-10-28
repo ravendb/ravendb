@@ -57,6 +57,9 @@ namespace Raven.Abstractions.Data
 		    HighlightedFields = query.HighlightedFields;
 	        QueryInputs = query.QueryInputs;
 		    ResultsTransformer = query.ResultsTransformer;
+		    DefaultOperator = query.DefaultOperator;
+		    AllowMultipleIndexEntriesForSameDocumentToResultTransformer =
+			    query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
 		}
 
 		/// <summary>

@@ -643,15 +643,6 @@ namespace Raven.Client.Document
 			};
 #endif
 
-#if SILVERLIGHT
-			// required to ensure just a single auth dialog
-			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, (Url + "/docs?pageSize=0").NoCache(), "GET", new OperationCredentials(ApiKey, Credentials), Conventions))
-				.ExecuteRequestAsync();
-			jsonRequestFactory.ConfigureRequest += (sender, args) =>
-			{
-				args.JsonRequest.WaitForTask = task;
-			};
-#endif
 			asyncDatabaseCommandsGenerator = () =>
 			{
 				var asyncServerClient = new AsyncServerClient(Url, Conventions, ApiKey, Credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
@@ -660,6 +651,23 @@ namespace Raven.Client.Document
 					return asyncServerClient;
 				return asyncServerClient.ForDatabase(DefaultDatabase);
 			};
+
+
+#if SILVERLIGHT
+			// required to ensure just a single auth dialog
+			var task = asyncDatabaseCommandsGenerator().GetDocumentsAsync(0, 0, metadataOnly: true)
+				.ContinueWith(t=>
+				{
+					// we don't actually _care_ if we succeed or not here, we just care that we 
+					// issued this command and now will only have a single auth dialog
+					return t.Exception != null;
+				});
+			jsonRequestFactory.ConfigureRequest += (sender, args) =>
+			{
+				args.JsonRequest.WaitForTask = task;
+			};
+#endif
+
 		}
 
 

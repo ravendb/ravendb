@@ -226,17 +226,20 @@
     <Compile Include="Bugs\DynamicId.cs" />
     <Compile Include="Bugs\EtagIssue.cs" />
     <Compile Include="Bugs\LazilyLoadWithTransformerWhileUsingSharding.cs" />
+    <Compile Include="Bugs\LazyBug.cs" />
     <Compile Include="Bugs\LoadDocumentWithSelectMany.cs" />
     <Compile Include="Bugs\PatchingWithDefault.cs" />
     <Compile Include="Bugs\RavenDB_1532.cs" />
     <Compile Include="Bugs\ConcurrencyTests.cs" />
     <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
     <Compile Include="Bugs\RawQueryShouldGoThroughAnalysis.cs" />
+    <Compile Include="Bugs\SortingAsMaxInt.cs" />
     <Compile Include="Bugs\SyncAsync.cs" />
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
     <Compile Include="Bundles\Encryption\Crud.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
     <Compile Include="Issues\GermanUmlauts.cs" />
+    <Compile Include="Issues\IndexationTests.cs" />
     <Compile Include="Issues\RavenDB2537.cs" />
     <Compile Include="Issues\RavenDB_2486.cs" />
     <Compile Include="Issues\RavenDB2408.cs" />
@@ -244,6 +247,9 @@
     <Compile Include="Issues\RavenDB_2314.cs" />
     <Compile Include="Issues\RavenDB_2387.cs" />
     <Compile Include="Issues\RavenDB_2502.cs" />
+    <Compile Include="Issues\RavenDB_2571.cs" />
+    <Compile Include="Issues\RavenDB_2793.cs" />
+    <Compile Include="Issues\RavenDB_2794.cs" />
     <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
     <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDb-1934.cs" />
@@ -824,6 +830,7 @@
     <Compile Include="MailingList\FormOpensByDateAndMediaSourceAndVersionTest.cs" />
     <Compile Include="MailingList\Gal.cs" />
     <Compile Include="MailingList\Garrett.cs" />
+    <Compile Include="MailingList\gaz.cs" />
     <Compile Include="MailingList\Georgiosd.cs" />
     <Compile Include="MailingList\gjerster.cs" />
     <Compile Include="MailingList\Hancock.cs" />
@@ -866,6 +873,7 @@
     <Compile Include="MailingList\MultiLoadInTransaction.cs" />
     <Compile Include="MailingList\nberardi.cs" />
     <Compile Include="MailingList\Nemitoff.cs" />
+    <Compile Include="MailingList\NoTracking.cs" />
     <Compile Include="MailingList\NullableGuidIndexTest.cs" />
     <Compile Include="MailingList\NullableInIndex.cs" />
     <Compile Include="MailingList\Nullables.cs" />
@@ -930,6 +938,7 @@
     <Compile Include="MailingList\TransformerDictionaryOrderTests.cs" />
     <Compile Include="MailingList\TransformerQueryInputTests.cs" />
     <Compile Include="MailingList\TransformersAndEtags.cs" />
+    <Compile Include="MailingList\TransformResultsWithProjection.cs" />
     <Compile Include="MailingList\TransformWithConversionListener.cs" />
     <Compile Include="MailingList\TransformWithLoad.cs" />
     <Compile Include="MailingList\TriggerCanAccessFullMetadataInQueryProjection.cs" />

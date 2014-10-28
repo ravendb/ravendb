@@ -1,19 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database;
+using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Storage;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Responders
 {
-	using Raven.Database.Bundles.Replication.Impl;
-
 	public abstract class SingleItemReplicationBehavior<TInternal, TExternal>
 	{
 		protected class CreatedConflict
@@ -100,7 +93,7 @@ namespace Raven.Bundles.Replication.Responders
 
 				// we have a new conflict
 				// move the existing doc to a conflict and create a conflict document
-				var existingDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(existingEtag);
+				var existingDocumentConflictId = id + "/conflicts/" + GetReplicationIdentifierForCurrentDatabase();
 
 				createdConflict = CreateConflict(id, newDocumentConflictId, existingDocumentConflictId, existingItem,
 												  existingMetadata);
@@ -122,7 +115,7 @@ namespace Raven.Bundles.Replication.Responders
 		private string SaveConflictedItem(string id, RavenJObject metadata, TExternal incoming, Etag existingEtag)
 		{
 			metadata[Constants.RavenReplicationConflictDocument] = true;
-			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata);
+			var newDocumentConflictId = id + "/conflicts/" + GetReplicationIdentifier(metadata);
 			metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
 			AddWithoutConflict(
 				newDocumentConflictId,
@@ -210,7 +203,7 @@ namespace Raven.Bundles.Replication.Responders
 				log.Debug("Existing item {0} is in conflict with replicated delete from {1}, marking item as conflicted", id, Src);
 
 				// we have a new conflict  move the existing doc to a conflict and create a conflict document
-				var existingDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(existingEtag);
+				var existingDocumentConflictId = id + "/conflicts/" + GetReplicationIdentifierForCurrentDatabase();
 				createdConflict = CreateConflict(id, newConflictId, existingDocumentConflictId, existingItem, existingMetadata);
 			}
 
@@ -242,22 +235,14 @@ namespace Raven.Bundles.Replication.Responders
 												  TInternal existing);
 
 
-		private static string HashReplicationIdentifier(RavenJObject metadata)
+		private static string GetReplicationIdentifier(RavenJObject metadata)
 		{
-			using (var md5 = MD5.Create())
-			{
-				var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" + metadata.Value<string>("@etag"));
-				return new Guid(md5.ComputeHash(bytes)).ToString();
-			}
+			return metadata.Value<string>(Constants.RavenReplicationSource);
 		}
 
-		private string HashReplicationIdentifier(Etag existingEtag)
+		private string GetReplicationIdentifierForCurrentDatabase()
 		{
-			using (var md5 = MD5.Create())
-			{
-				var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
-				return new Guid(md5.ComputeHash(bytes)).ToString();
-			}
+			return Database.TransactionalStorage.Id.ToString();
 		}
 	}
 }

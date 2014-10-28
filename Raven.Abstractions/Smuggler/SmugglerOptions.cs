@@ -30,9 +30,9 @@ namespace Raven.Abstractions.Smuggler
 			Filters = new List<FilterSetting>();
 			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
 			Timeout = 30 * 1000; // 30 seconds
-			BatchSize = 1024;
+			BatchSize = 16*1024;
 			ShouldExcludeExpired = false;
-			Limit = 64*1024;
+			Limit = int.MaxValue;
 			LastAttachmentEtag = LastDocsEtag = Etag.Empty;
 		    MaxStepsForTransformScript = 10*1000;
 		}

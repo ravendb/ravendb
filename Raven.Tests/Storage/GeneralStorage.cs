@@ -184,7 +184,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var documents = actions.Documents.GetDocumentsAfter(Etag.Empty, 5).ToArray();
+				var documents = actions.Documents.GetDocumentsAfter(Etag.Empty, 5, CancellationToken.None).ToArray();
 				Assert.Equal(1, documents.Length);
 			});
 		}
@@ -202,7 +202,7 @@ namespace Raven.Tests.Storage
 			db.TransactionalStorage.Batch(actions =>
 			{
 				var doc = actions.Documents.DocumentByKey("a", null);
-				var documents = actions.Documents.GetDocumentsAfter(doc.Etag, 5).Select(x => x.Key).ToArray();
+				var documents = actions.Documents.GetDocumentsAfter(doc.Etag, 5, CancellationToken.None).Select(x => x.Key).ToArray();
 				Assert.Equal(2, documents.Length);
 				Assert.Equal("b", documents[0]);
 				Assert.Equal("c", documents[1]);
@@ -229,7 +229,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var documents = actions.Documents.GetDocumentsAfter(etag, 5).Select(x => x.Key).ToArray();
+				var documents = actions.Documents.GetDocumentsAfter(etag, 5, CancellationToken.None).Select(x => x.Key).ToArray();
 				Assert.Equal(3, documents.Length);
 				Assert.Equal("b", documents[0]);
 				Assert.Equal("c", documents[1]);

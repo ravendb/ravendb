@@ -10,10 +10,12 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
 {
+	using System.Threading;
+
 	public interface IDocumentStorageActions 
 	{
 		IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take);
-		IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null);
+		IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null);
 		IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take);
 
 		long GetDocumentsCount();

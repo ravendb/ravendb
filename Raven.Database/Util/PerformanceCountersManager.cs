@@ -25,7 +25,7 @@ namespace Raven.Database.Util
         public const string CategoryName = "RavenDB 2.0";
 
        // REVIEW: Is this long enough to determine if it *would* hang forever?
-        private static readonly TimeSpan PerformanceCounterWaitTimeout = TimeSpan.FromSeconds(3);
+        private static readonly TimeSpan PerformanceCounterWaitTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(3);
         private static bool corruptedCounters;
 
         public PerformanceCountersManager()
@@ -246,7 +246,8 @@ namespace Raven.Database.Util
                 return false;
             foreach (var counter in CounterProperties)
             {
-                if (PerformanceCounterCategory.CounterExists(counter.Name, CategoryName) == false)
+				var customAttribute = (PerformanceCounterAttribute)counter.GetCustomAttributes(typeof(PerformanceCounterAttribute), false)[0];
+				if (PerformanceCounterCategory.CounterExists(customAttribute.Name, CategoryName) == false)
                 {
                     PerformanceCounterCategory.Delete(CategoryName);
                     return false;
@@ -254,7 +255,7 @@ namespace Raven.Database.Util
 
                 try
                 {
-                    new PerformanceCounter(CategoryName, counter.Name, instanceName, readOnly: true).Close();
+					new PerformanceCounter(CategoryName, customAttribute.Name, instanceName, readOnly: true).Close();
                 }
                 catch (InvalidOperationException)
                 {

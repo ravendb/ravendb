@@ -97,7 +97,7 @@ namespace Raven.StressTests.Storage.MultiThreaded
 			{
 				DocumentDatabase.TransactionalStorage.Batch(accessor =>
 				{
-					var documents = accessor.Documents.GetDocumentsAfter(lastEtagSeen, 128)
+					var documents = accessor.Documents.GetDocumentsAfter(lastEtagSeen, 128,CancellationToken.None)
 						.Where(x => x != null)
 						.Select(doc =>
 						{

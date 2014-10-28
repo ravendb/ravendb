@@ -455,6 +455,7 @@ namespace Raven.Database
         public IndexStorage IndexStorage { get; private set; }
 
         public event EventHandler Disposing;
+        public event EventHandler DisposingEnded;
 
         public void Dispose()
         {
@@ -564,10 +565,29 @@ namespace Raven.Database
             if (workContext != null)
                 exceptionAggregator.Execute(workContext.Dispose);
 
-            exceptionAggregator.ThrowIfNeeded();
+            try
+            {
+                exceptionAggregator.ThrowIfNeeded();
+            }
+            finally
+            {
+                var onDisposingEnded = DisposingEnded;
+                if (onDisposingEnded != null)
+                {
+                    try
+                    {
+                        onDisposingEnded(this, EventArgs.Empty);
+                    }
+                    catch (Exception e)
+                    {
+                        log.WarnException("Error when notifying about db disposal ending, ignoring error and continuing with disposal", e);
+                    }
+                }                
+            }
 
             log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
-        }
+        } 
+
 
         public void StopBackgroundWorkers()
         {
@@ -794,7 +814,13 @@ namespace Raven.Database
                             Etag = newEtag,
                             LastModified = addDocumentResult.SavedAt,
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
-                        }, documents => prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents));
+                        }, documents =>
+                        {
+	                        if(IndexDefinitionStorage.IndexesCount == 0 || WorkContext.RunIndexing == false)
+								return;
+
+	                        prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
+                        });
 
                         if (addDocumentResult.Updated)
                             prefetcher.AfterUpdate(key, addDocumentResult.PrevEtag);
@@ -1823,7 +1849,7 @@ namespace Raven.Database
                 {
                     var documents = etag == null
                                         ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                                        : actions.Documents.GetDocumentsAfter(etag, pageSize);
+                                        : actions.Documents.GetDocumentsAfter(etag, pageSize, WorkContext.CancellationToken);
                     var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
                     int docCount = 0;
                     foreach (var doc in documents)

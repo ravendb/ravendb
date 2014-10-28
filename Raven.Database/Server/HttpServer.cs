@@ -511,11 +511,7 @@ namespace Raven.Database.Server
 				{
 					return;
 				}
-				if (databaseTask.Status == TaskStatus.Faulted || databaseTask.Status == TaskStatus.Canceled)
-				{
-					ResourcesStoresCache.TryRemove(db, out databaseTask);
-					return;
-				}
+				
 				if (databaseTask.Status != TaskStatus.RanToCompletion)
 				{
 					return; // still starting up
@@ -553,8 +549,6 @@ namespace Raven.Database.Server
 					return;
 				}
 				
-				ResourcesStoresCache.TryRemove(db, out databaseTask);
-
 				var onDatabaseCleanupOccured = DatabaseCleanupOccured;
 				if (onDatabaseCleanupOccured != null)
 					onDatabaseCleanupOccured(db);
@@ -1055,16 +1049,8 @@ namespace Raven.Database.Server
 		protected bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
 		{
 			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
-			{
-				if (database.IsFaulted || database.IsCanceled)
-				{
-					ResourcesStoresCache.TryRemove(tenantId, out database);
-					// and now we will try creating it again
-				}
-				else
-				{
-					return true;
-				}
+			{				
+                return true;				
 			}
 
 			if (LockedDatabases.Contains(tenantId))
@@ -1078,13 +1064,22 @@ namespace Raven.Database.Server
 			{
 			    var transportState = databaseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 			    var documentDatabase = new DocumentDatabase(config, transportState);
+				try
+				{
+					AssertLicenseParameters(config);
+					documentDatabase.SpinBackgroundWorkers();
+					InitializeRequestResponders(documentDatabase);
 
-			    AssertLicenseParameters(config);
-				documentDatabase.SpinBackgroundWorkers();
-				InitializeRequestResponders(documentDatabase);
-
-				// if we have a very long init process, make sure that we reset the last idle time for this db.
-				documentDatabase.WorkContext.UpdateFoundWork();
+					// if we have a very long init process, make sure that we reset the last idle time for this db.
+					documentDatabase.WorkContext.UpdateFoundWork();
+				}
+				catch (Exception)
+				{
+					documentDatabase.Dispose();
+					throw;
+				}
+                documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
+                documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
 				return documentDatabase;
 			}).ContinueWith(task =>
 			{
@@ -1096,6 +1091,44 @@ namespace Raven.Database.Server
 			}).Unwrap());
 			return true;
 		}
+
+        private void DocumentDatabaseDisposingStarted(object documentDatabase, EventArgs args)
+        {
+            try{
+                DocumentDatabase database = documentDatabase as DocumentDatabase;
+                if (database == null){
+                    return;
+                }
+
+                ResourcesStoresCache.Set(database.Name, (dbName) =>
+                {
+	                var tcs = new TaskCompletionSource<DocumentDatabase>();
+					tcs.SetException(new ObjectDisposedException(dbName ,"Database named " + dbName + " is being disposed right now and cannot be accessed.\r\n" +
+					                                             "Access will be available when the dispose process will end"));
+	                return tcs.Task;
+                });
+            }
+            catch(Exception ex){
+                logger.WarnException("Failed to substitute database task with temporary place holder. This should not happen", ex);
+            }
+            
+        }
+
+        private void DocumentDatabaseDisposingEnded(object documentDatabase, EventArgs args)
+        {
+            try{
+                DocumentDatabase database = documentDatabase as DocumentDatabase;
+                if (database == null){
+                    return;
+                }
+
+                ResourcesStoresCache.Remove(database.Name);
+            }
+            catch(Exception ex){
+                logger.ErrorException("Failed to remove database at the end of the disposal. This should not happen", ex);
+            }
+           
+        }
 
 		private void AssertLicenseParameters(InMemoryRavenConfiguration config)
 		{
@@ -1119,6 +1152,11 @@ namespace Raven.Database.Server
 			{
 				var bundlesList = bundles.Split(';').ToList();
 
+				// We explicitly don't want to fail here for missing bundle if the user
+				// has an valid license that expired, for example. We only perform the check
+				// if the user has a _valid_ license that doesn't have the specified bundle
+				if (ValidateLicense.CurrentLicense.Error) 
+					return;
 				foreach (var bundle in bundlesList.Where(s => string.IsNullOrWhiteSpace(s) == false && s != "PeriodicBackup"))
 				{
 					string value;

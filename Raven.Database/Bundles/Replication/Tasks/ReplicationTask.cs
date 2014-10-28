@@ -34,6 +34,8 @@ using Raven.Database.Extensions;
 
 namespace Raven.Bundles.Replication.Tasks
 {
+	using Database.Indexing;
+
 	[ExportMetadata("Bundle", "Replication")]
 	[InheritedExport(typeof(IStartupTask))]
 	public class ReplicationTask : IStartupTask, IDisposable
@@ -71,7 +73,8 @@ namespace Raven.Bundles.Replication.Tasks
 		private int workCounter;
 		private HttpRavenRequestFactory httpRavenRequestFactory;
 
-		private ConcurrentDictionary<string, PrefetchingBehavior> prefetchingBehaviors = new ConcurrentDictionary<string, PrefetchingBehavior>();
+		private IndependentBatchSizeAutoTuner autoTuner;
+		private readonly ConcurrentDictionary<string, PrefetchingBehavior> prefetchingBehaviors = new ConcurrentDictionary<string, PrefetchingBehavior>();
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -79,7 +82,8 @@ namespace Raven.Bundles.Replication.Tasks
 			var replicationRequestTimeoutInMs =
 				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ??
 				60 * 1000;
-
+			
+			autoTuner = new IndependentBatchSizeAutoTuner(docDb.WorkContext);
 			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
 
             var task = new Task(Execute, TaskCreationOptions.LongRunning);
@@ -87,8 +91,6 @@ namespace Raven.Bundles.Replication.Tasks
 			// make sure that the doc db waits for the replication task shutdown
 			docDb.ExtensionsState.GetOrAdd(Guid.NewGuid().ToString(), s => disposableAction);
 			task.Start();
-            
-
 		}
 
 		private void Execute()
@@ -124,7 +126,10 @@ namespace Raven.Bundles.Replication.Tasks
 										if (copyOfrunningBecauseOfDataModifications == false)
 											return true;
 										return IsNotFailing(dest, currentReplicationAttempts);
-									});
+									}).ToList();
+
+								CleanupPrefetchingBehaviors(destinations.Select(x => x.ConnectionStringOptions.Url),
+									destinations.Except(destinationForReplication).Select(x => x.ConnectionStringOptions.Url));
 
 								var startedTasks = new List<Task>();
 
@@ -199,6 +204,37 @@ namespace Raven.Bundles.Replication.Tasks
 					timeToWaitInMinutes = runningBecauseOfDataModifications
 											? TimeSpan.FromSeconds(30)
 											: TimeSpan.FromMinutes(5);
+				}
+			}
+		}
+
+		private void CleanupPrefetchingBehaviors(IEnumerable<string> allDestinations, IEnumerable<string> failingDestinations)
+		{
+			PrefetchingBehavior prefetchingBehaviorToDispose;
+
+			// remove prefetching behaviors for non-existing destinations
+			foreach (var removedDestination in prefetchingBehaviors.Keys.Except(allDestinations))
+			{
+				if (prefetchingBehaviors.TryRemove(removedDestination, out prefetchingBehaviorToDispose))
+				{
+					prefetchingBehaviorToDispose.Dispose();
+				}
+			}
+
+			// also remove prefetchers if the destination is failing for a long time
+			foreach (var failingDestination in failingDestinations)
+			{
+				var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(failingDestination), null);
+				if (jsonDocument == null)
+					continue;
+
+				var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
+				if (failureInformation.FailureCount > 1000)
+				{
+					if (prefetchingBehaviors.TryRemove(failingDestination, out prefetchingBehaviorToDispose))
+					{
+						prefetchingBehaviorToDispose.Dispose();
+					}
 				}
 			}
 		}
@@ -446,7 +482,7 @@ namespace Raven.Bundles.Replication.Tasks
             Stopwatch sp = Stopwatch.StartNew();
 
 			var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(destination.ConnectionStringOptions.Url,
-				x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, null));
+				x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, autoTuner));
 
 		    try
 		    {
@@ -612,10 +648,8 @@ namespace Raven.Bundles.Replication.Tasks
 				var sp = Stopwatch.StartNew();
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 
-				request.WebRequest.Headers.Add("Attachment-Ids", string.Join(", ", jsonAttachments.Select(x => x.Value<string>("@id"))));
-
 				request.WriteBson(jsonAttachments);
-				request.ExecuteRequest();
+				request.ExecuteRequest(docDb.WorkContext.CancellationToken);
 				log.Info("Replicated {0} attachments to {1} in {2:#,#;;0} ms", jsonAttachments.Length, destination, sp.ElapsedMilliseconds);
 				errorMessage = "";
 				return true;
@@ -671,7 +705,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 				request.Write(jsonDocuments);
-				request.ExecuteRequest();
+				request.ExecuteRequest(docDb.WorkContext.CancellationToken);
+
 				log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);
 				lastError = "";
 				return true;

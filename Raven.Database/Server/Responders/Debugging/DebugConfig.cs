@@ -9,7 +9,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders.Debugging
 {
-	public class DebugConfig : AbstractRequestResponder
+	public class fiDebugConfig : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

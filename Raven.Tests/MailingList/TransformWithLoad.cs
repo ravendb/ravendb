@@ -114,7 +114,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var session = store.OpenSession())
 			{
-				var result = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>("contacts/1", "contacts/2").Value;
+				var result = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>(new List<string> {"contacts/1", "contacts/2"}).Value;
 				Assert.Equal(2, result.Length);
 				Assert.NotNull(result[0]);
 				Assert.Null(result[1]);

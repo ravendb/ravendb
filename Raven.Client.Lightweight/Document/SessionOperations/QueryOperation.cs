@@ -144,7 +144,8 @@ namespace Raven.Client.Document.SessionOperations
 				.Select(Deserialize<T>)
 				.ToList();
 
-			sessionOperations.RegisterMissingIncludes(queryResult.Results, includes);
+			if (disableEntitiesTracking == false)
+				sessionOperations.RegisterMissingIncludes(queryResult.Results, includes);
 
 			if (transformResults == null)
 				return list;
