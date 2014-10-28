@@ -467,6 +467,9 @@ namespace Voron.Impl.Journal
 							if (oldestActiveTransaction != 0 &&
 								pagePosition.Value.TransactionId >= oldestActiveTransaction)
 							{
+								if(pagePosition.Value.IsFreedPageMarker)
+									continue;
+
 								// we cannot write this yet, there is a read transaction that might be looking at this
 								// however, we _aren't_ going to be writing this to the data file, since that would be a 
 								// waste, we would just overwrite that value in the next flush anyway
@@ -481,6 +484,14 @@ namespace Voron.Impl.Journal
 									pagesToWrite.Remove(pagePosition.Key);
 								}
 
+								continue;
+							}
+
+							if (pagePosition.Value.IsFreedPageMarker)
+							{
+								// to ensure that we won't overwrite data by a page from the older journal where it wasn't marked as free 
+								// while now it not being considered to be applied to the data file
+								pagesToWrite.Remove(pagePosition.Key); 
 								continue;
 							}
 
