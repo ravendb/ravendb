@@ -164,7 +164,8 @@ namespace Raven.Tests.Helpers
 			var license = GetLicenseByReflection(database);
 			license.Error = false;
 			license.Status = "Commercial";
-
+		    license.Attributes["ravenfs"] = "true";
+            license.Attributes["counters"] = "true";
 			// rerun this startup task
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
@@ -325,9 +326,9 @@ namespace Raven.Tests.Helpers
 			ravenConfiguration.Storage.Voron.TempPath = tempDir;
 
 			if (storageType == "voron")
-				newTransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(ravenConfiguration, () => { });
+				newTransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(ravenConfiguration, () => { }, () => { });
 			else
-				newTransactionalStorage = new Raven.Storage.Esent.TransactionalStorage(ravenConfiguration, () => { });
+				newTransactionalStorage = new Raven.Storage.Esent.TransactionalStorage(ravenConfiguration, () => { }, () => { });
 
 			newTransactionalStorage.Initialize(new SequentialUuidGenerator { EtagBase = 0 }, documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
 			return newTransactionalStorage;

@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Debugging;
@@ -495,6 +498,7 @@ namespace Voron
 			};
 		}
 
+		[HandleProcessCorruptedStateExceptions]
         private Task FlushWritesToDataFileAsync()
         {
 	        return Task.Factory.StartNew(() =>
@@ -524,14 +528,25 @@ namespace Voron
 					        // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
 					        // while there isn't any other activity going on.
 
-				            try
-				            {
-                                _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token);
-				            }
-				            catch (TimeoutException)
-				            {
-                                // we can ignore this, we'll try next time
-				            }
+					        if (IsDebugRecording)
+						        _debugJournal.RecordFlushAction(DebugActionType.FlushStart, null);
+
+					        try
+					        {
+						        _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token);
+					        }
+					        catch (TimeoutException)
+					        {
+						        // we can ignore this, we'll try next time
+					        }
+					        catch (SEHException sehException)
+					        {
+						        throw new VoronUnrecoverableErrorException("Error occurred during flushing journals to the data file",
+									new Win32Exception(sehException.HResult));
+					        }
+
+					        if (IsDebugRecording)
+						        _debugJournal.RecordFlushAction(DebugActionType.FlushEnd, null);
 				        }
 			        }
 		        }, TaskCreationOptions.LongRunning);

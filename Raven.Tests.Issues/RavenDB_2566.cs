@@ -22,12 +22,12 @@ namespace Raven.Tests.Issues
 			{
 				store.Conventions.FindClrTypeName = type => "custom";
 
-				var changed = false;
+				var mre = new ManualResetEventSlim();
 
 				store
-					.Changes()
-					.ForDocumentsOfType<Person>()
-					.Subscribe(change => changed = true);
+					.Changes().Task.Result
+					.ForDocumentsOfType<Person>().Task.Result
+					.Subscribe(change => mre.Set());
 
 				using (var session = store.OpenSession())
 				{
@@ -35,9 +35,7 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				SpinWait.SpinUntil(() => changed, TimeSpan.FromSeconds(5));
-
-				Assert.True(changed);
+				Assert.True(mre.Wait(5000));
 			}
 		}
 	}

@@ -406,10 +406,12 @@ namespace Raven.Client.FileSystem
 
             try
             {                
-                var response = await request.ReadResponseJsonAsync();
-
-                var metadata = request.ResponseHeaders.HeadersToObject();
-                metadata["etag"] = new RavenJValue(Guid.Parse(request.ResponseHeaders[Constants.MetadataEtagField].Trim('\"')));
+                await request.ExecuteRequestAsync();
+                
+                var response = request.Response;
+                
+                var metadata = response.HeadersToObject();
+                metadata[Constants.MetadataEtagField] = metadata[Constants.MetadataEtagField].Value<string>().Trim('\"');
                 return metadata;
             }
             catch (Exception e)

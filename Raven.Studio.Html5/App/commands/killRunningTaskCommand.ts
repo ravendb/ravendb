@@ -1,19 +1,19 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 
-class getRunningTasksCommand extends commandBase {
+class killRunningTaskCommand extends commandBase {
 
-    constructor(private db: database, private task: runningTaskDto) {
+    constructor(private db: database, private taskId: number) {
         super();
     }
 
     execute(): JQueryPromise<any> {
         var url = "/operation/kill";
         var args = {
-            id: this.task.Id
+            id: this.taskId
         }
         return this.query<runningTaskDto[]>(url, args, this.db);
     }
 }
 
-export = getRunningTasksCommand;
+export = killRunningTaskCommand;

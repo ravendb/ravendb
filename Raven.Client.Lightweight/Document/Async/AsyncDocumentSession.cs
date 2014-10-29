@@ -714,7 +714,7 @@ namespace Raven.Client.Document.Async
 			if (configure != null)
 				configure(configuration);
 
-			var result = await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer.TransformerName, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer.TransformerName, configuration.TransformerParameters).ConfigureAwait(false);
 			return result;
 		}
 
@@ -724,7 +724,7 @@ namespace Raven.Client.Document.Async
 			if (configure != null)
 				configure(configuration);
 
-			var result = await LoadAsyncInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
@@ -734,7 +734,7 @@ namespace Raven.Client.Document.Async
 			if (configure != null)
 				configure(configuration);
 
-			return await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			return await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 		}
 
 		public async Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
@@ -745,7 +745,7 @@ namespace Raven.Client.Document.Async
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			var result = await LoadAsyncInternal<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
@@ -757,73 +757,22 @@ namespace Raven.Client.Document.Async
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			return await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			return await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 		}
 
-		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+		public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
 		{
-			if (ids.Length == 0)
+		    if (transformer == null) 
+                throw new ArgumentNullException("transformer");
+		    if (ids.Length == 0)
 				return new T[0];
 
 			IncrementRequestCount();
 
-			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-
-			if (typeof(T).IsArray)
-			{
-				// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
-				// With a single Id
-                var arrayOfArrays = (await AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, transformerParameters).ConfigureAwait(false))
-											.Results
-											.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
-											.Select(values =>
-											{
-												var array = values.Select(y =>
-												{
-													HandleInternalMetadata(y);
-													return ConvertToEntity(typeof(T),null, y, new RavenJObject());
-												}).ToArray();
-												var newArray = Array.CreateInstance(typeof(T).GetElementType(), array.Length);
-												Array.Copy(array, newArray, array.Length);
-												return newArray;
-											})
-											.Cast<T>()
-											.ToArray();
-
-				return arrayOfArrays;
-			}
-
-            var getResponse = (await AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, transformerParameters).ConfigureAwait(false));
-		    var items = new List<T>();
-		    foreach (var result in getResponse.Results)
-		    {
-                if (result == null)
-                {
-                    items.Add(default(T));
-                    continue;
-                }
-		        var transformedResults = result.Value<RavenJArray>("$values").ToArray()
-		              .Select(JsonExtensions.ToJObject)
-		              .Select(x =>
-		              {
-						  HandleInternalMetadata(x);
-						  return ConvertToEntity(typeof(T),null, x, new RavenJObject());
-		              })
-		              .Cast<T>();
-
-
-                items.AddRange(transformedResults);
-
-		    }
-				
-			if (items.Count > ids.Length)
-			{
-				throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
-					transformer,
-					typeof(T).Name));
-			}
-
-			return items.ToArray();
+		    string[] includeNames = includes != null ? includes.Select(x=>x.Key).ToArray() : new string[0];
+		    var multiLoadResult = await AsyncDatabaseCommands.GetAsync(ids, includeNames, transformer, transformerParameters);
+            return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
+      
 		}
 
 	    public Lazy<Task<T[]>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)

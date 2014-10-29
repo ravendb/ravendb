@@ -22,7 +22,7 @@ using Raven.Database.Actions;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using System.Net.Http;
-
+using Raven.Database.DiskIO;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Plugins.Builtins;
@@ -627,6 +627,9 @@ namespace Raven.Database.Server.Controllers.Admin
 
                         process.WaitForExit();
 
+						if (process.ExitCode != 0)
+							throw new InvalidOperationException("Raven.Debug exit code is: " + process.ExitCode);
+
                         using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
                         {
                             stackDumpOutputStream.CopyTo(stacktraceStream);
@@ -752,5 +755,103 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			return GetMessageWithObject(new { RolledBackTransactionsAmount = transactions.Count });
 		}
+
+        [HttpPost]
+        [Route("admin/ioTest")]
+        public async Task<HttpResponseMessage> IoTest()
+        {
+            if (EnsureSystemDatabase() == false)
+            {
+                return GetMessageWithString("IO Test is only possible from the system database", HttpStatusCode.BadRequest);
+            }
+            var ioTestRequest = await ReadJsonObjectAsync<PerformanceTestRequest>();
+
+            if (Directory.Exists(ioTestRequest.Path) == false)
+            {
+                return GetMessageWithString(string.Format("Directory {0} doesn't exist.", ioTestRequest.Path), HttpStatusCode.BadRequest);
+            }
+            ioTestRequest.Path = Path.Combine(ioTestRequest.Path, DiskPerformanceTester.TemporaryFileName);
+
+            Database.Documents.Delete(DiskPerformanceTester.PerformanceResultDocumentKey, null, null);
+
+            var killTaskCts = new CancellationTokenSource();
+
+            var task = Task.Factory.StartNew(() =>
+            {
+                var debugInfo = new List<string>();
+
+                var diskIo = new DiskPerformanceTester(ioTestRequest, debugInfo.Add, killTaskCts.Token);
+                diskIo.TestDiskIO();
+
+                var diskIoRequestAndResponse = new
+                {
+                    Request = ioTestRequest,
+                    Result = diskIo.Result,
+                    DebugMsgs = debugInfo
+                };
+
+                Database.Documents.Put(DiskPerformanceTester.PerformanceResultDocumentKey, null, RavenJObject.FromObject(diskIoRequestAndResponse), new RavenJObject(), null);
+            });
+
+            long id;
+            Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.IoTest,
+                Payload = "Disk performance test"
+            }, out id, killTaskCts);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            });
+            /*
+
+           
+
+            var task = Task.Factory.StartNew(() =>
+            {
+                MaintenanceActions.Restore(ravenConfiguration,restoreRequest,
+                    msg =>
+                    {
+                        restoreStatus.Messages.Add(msg);
+                        DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+                            RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+                    });
+
+                if (databaseDocument == null)
+                    return;
+
+                databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
+                if (restoreRequest.IndexesLocation != null)
+                    databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
+                if (restoreRequest.JournalsLocation != null)
+                    databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+                databaseDocument.Id = databaseName;
+                DatabasesLandlord.Protect(databaseDocument);
+                DatabasesLandlord.SystemDatabase.Documents.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
+                    new RavenJObject(), null);
+
+                restoreStatus.Messages.Add("The new database was created");
+                DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+                    RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+
+                Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
+            }, TaskCreationOptions.LongRunning);
+
+			long id;
+			Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+			{
+				StartTime = SystemTime.UtcNow,
+				TaskType = TaskActions.PendingTaskType.RestoreDatabase,
+				Payload = "Restoring database " + databaseName + " from " + restoreRequest.BackupLocation
+			}, out id);
+
+
+			return GetMessageWithObject(new
+			{
+				OperationId = id
+			});*/
+        }
 	}
 }

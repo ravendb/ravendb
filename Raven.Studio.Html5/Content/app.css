@@ -2,7 +2,7 @@
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
-  src: url(http://fonts.gstatic.com/s/roboto/v13/CWB0XYA8bzo0kSThX0UTuA.woff2) format('woff');
+  src: url(https://fonts.gstatic.com/s/roboto/v13/CWB0XYA8bzo0kSThX0UTuA.woff2) format('woff');
 }
 /*!
  * Bootswatch v3.2.0
@@ -6812,24 +6812,23 @@ body {
   padding-top: 0.5%;
   padding-bottom: 0.5%;
 }
-.query-stats {
-  width: 600px;
-  margin: -250px 0 0 -450px;
+@media (max-device-height: 1024px) {
+  .query-stats {
+    width: 80vw!important;
+  }
 }
-.query-stats ul li {
-  padding: 0 10px 0 10px;
-  border-bottom: 0 !important;
-  border-top: 0 !important;
-  border-left: 0 !important;
-  border-right: 0 !important;
+@media (min-device-height: 1025px) {
+  .query-stats {
+    width: 50vw!important;
+  }
 }
-.query-stats ul li strong {
-  padding: 0 10px 0 10px;
-  display: inline-block;
+.query-stats .row {
+  padding-left: 10px;
+  padding-right: 10px;
 }
-.query-stats ul li span {
-  padding: 0 10px 0 10px;
-  display: inline-block;
+.query-stats .row span {
+  -ms-word-break: break-all;
+  word-break: break-all;
 }
 .side-panel li {
   max-width: 20%;
@@ -7448,9 +7447,15 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 #reportingContainer .breadcrumb {
   width: 100%;
 }
-#queryContainer .breadcrumb li,
-#reportingContainer .breadcrumb li {
+#queryContainer .breadcrumb .dropdown-menu li,
+#reportingContainer .breadcrumb .dropdown-menu li {
+  overflow-x: visible!important;
+  max-width: none!important;
+}
+#queryContainer .breadcrumb > li,
+#reportingContainer .breadcrumb > li {
   overflow: visible !important;
+  max-width: none !important;
 }
 #queryContainer .editor,
 #reportingContainer .editor {
@@ -7814,6 +7819,20 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   padding: 10px;
   overflow-y: auto;
   overflow-x: hidden;
+}
+#logsContainer .log-details .exceptionText,
+#alertsContainer .log-details .exceptionText,
+#indexErrorsContainer .log-details .exceptionText,
+#requestTracingContainer .log-details .exceptionText,
+#logsContainer .alerts-details .exceptionText,
+#alertsContainer .alerts-details .exceptionText,
+#indexErrorsContainer .alerts-details .exceptionText,
+#requestTracingContainer .alerts-details .exceptionText,
+#logsContainer .index-errors-details .exceptionText,
+#alertsContainer .index-errors-details .exceptionText,
+#indexErrorsContainer .index-errors-details .exceptionText,
+#requestTracingContainer .index-errors-details .exceptionText {
+  white-space: pre-wrap;
 }
 #logsContainer .unread td,
 #alertsContainer .unread td,
@@ -8243,3 +8262,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .topBorder td {
   border-top: solid 1px #ddd !important;
 }
+.no-outline {
+  outline: none;
+}
+/*# sourceMappingURL=app.css.map */

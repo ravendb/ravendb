@@ -14,6 +14,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using System.Net.Http;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -136,7 +137,7 @@ namespace Raven.Abstractions.Extensions
             if (self == null)
                 return null;
 
-            var metadata = new RavenJObject();
+            var metadata = new RavenJObject(self.Comparer);
             foreach (var header in self)
             {
                 if (prefixesInHeadersToIgnore.Any(prefix => header.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
@@ -192,9 +193,9 @@ namespace Raven.Abstractions.Extensions
                     var values = new HashSet<string>(valuesNonDistinct);
                     var headerName = CaptureHeaderName(header);
                     if (values.Count == 1)
-                        metadata[headerName] = GetValue(values.First());
+                        metadata[headerName] = GetValueWithDates(values.First());
                     else
-                        metadata[headerName] = new RavenJArray(values.Select(GetValue).Take(15));
+                        metadata[headerName] = new RavenJArray(values.Select(GetValueWithDates));
                 }
                 catch (Exception exc)
                 {
@@ -241,9 +242,9 @@ namespace Raven.Abstractions.Extensions
                     var values = new HashSet<string>(valuesNonDistinct);
                     var headerName = CaptureHeaderName(header);
                     if (values.Count == 1)
-                        metadata[headerName] = GetValue(values.First());
+                        metadata[headerName] = GetValueWithDates(values.First());
                     else
-                        metadata[headerName] = new RavenJArray(values.Select(GetValue).Take(15));
+                        metadata[headerName] = new RavenJArray(values.Select(GetValueWithDates));
                 }
                 catch (Exception exc)
                 {
@@ -257,61 +258,45 @@ namespace Raven.Abstractions.Extensions
         /// Filters the headers from unwanted headers
         /// </summary>
         /// <param name="self">The self.</param>
-        /// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+        /// <returns></returns>
         public static RavenJObject FilterHeadersToObject(this HttpHeaders self)
         {
             return FilterHeadersToObject(self, HeadersToIgnoreClient, PrefixesInHeadersToIgnoreClient);
         }
 
-
-        public static RavenJObject HeadersToObject(this NameValueCollection self)
+        public static RavenJObject HeadersToObject(this HttpResponseMessage self)
         {
             var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
-            foreach (string header in self)
-            {
-                try
-                {
-                    var valuesNonDistinct = self.GetValues(header);
-                    if (valuesNonDistinct == null)
-                        continue;
-                    var values = new HashSet<string>(valuesNonDistinct);
-                    var headerName = CaptureHeaderName(header);
-                    if (values.Count == 1)
-                        metadata[headerName] = GetValue(values.First());
-                    else
-                        metadata[headerName] = new RavenJArray(values.Select(GetValue).Take(15));
-                }
-                catch (Exception exc)
-                {
-                    throw new JsonReaderException(string.Concat("Unable to build header: ", header), exc);
-                }
-            }
-            return metadata;
-        }
 
-        public static RavenJObject HeadersToObject(this HttpHeaders self)
-        {
-            var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
-            foreach (var a in self)
+            var headers = self.Headers.Concat(self.Content.Headers);
+            foreach (var a in headers)
             {
                 var header = a.Key;
+
                 try
                 {
+                    var headerName = CaptureHeaderName(header);
+
                     var valuesNonDistinct = a.Value;
                     if (valuesNonDistinct == null)
                         continue;
+
                     var values = new HashSet<string>(valuesNonDistinct);
-                    var headerName = CaptureHeaderName(header);
                     if (values.Count == 1)
-                        metadata[headerName] = GetValue(values.First());
+                    {
+                        metadata[headerName] = GetValue(values.FirstOrDefault());
+                    }
                     else
-                        metadata[headerName] = new RavenJArray(values.Select(GetValue).Take(15));
+                    {
+                        metadata[headerName] = new RavenJArray(values.Select(x => GetValue(x)));
+                    }
                 }
                 catch (Exception exc)
                 {
                     throw new JsonReaderException(string.Concat("Unable to build header: ", header), exc);
                 }
             }
+
             return metadata;
         }
 
@@ -330,7 +315,24 @@ namespace Raven.Abstractions.Extensions
 			return sb.ToString();
 		}
 
-		private static RavenJToken GetValue(string val)
+        private static RavenJToken GetValue(string val)
+        {
+            try
+            {
+                if (val.StartsWith("{"))
+                    return RavenJObject.Parse(val);
+                if (val.StartsWith("["))
+                    return RavenJArray.Parse(val);
+
+                return new RavenJValue(Uri.UnescapeDataString(val));
+            }
+            catch (Exception exc)
+            {
+                throw new JsonReaderException(string.Concat("Unable to get value: ", val), exc);
+            }
+        }
+
+		private static RavenJToken GetValueWithDates(string val)
 		{
 			try
 			{
@@ -339,26 +341,24 @@ namespace Raven.Abstractions.Extensions
 				if (val.StartsWith("["))
 					return RavenJArray.Parse(val);
 
-				DateTime dateTime;
-				if (DateTime.TryParseExact(val, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
-				{
-					if (val.EndsWith("Z"))
-						return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
-					return new RavenJValue(dateTime);
-				} 
-					
-				DateTimeOffset dateTimeOffset;
-				if (DateTimeOffset.TryParseExact(val, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
-					return new RavenJValue(dateTimeOffset);
+                DateTime dateTime;
+                if (DateTime.TryParseExact(val, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
+                {
+                    if (val.EndsWith("Z"))
+                        return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+                    return new RavenJValue(dateTime);
+                }
+
+                DateTimeOffset dateTimeOffset;
+                if (DateTimeOffset.TryParseExact(val, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
+                    return new RavenJValue(dateTimeOffset);
 
 				return new RavenJValue(Uri.UnescapeDataString(val));
-
 			}
 			catch (Exception exc)
 			{
 				throw new JsonReaderException(string.Concat("Unable to get value: ", val), exc);
 			}
-
 		}
 	}
 }

@@ -84,7 +84,7 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
+		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible)
         {
             configuration.Container.SatisfyImportsOnce(this);
             documentCacher = new DocumentCacher(configuration);

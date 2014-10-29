@@ -225,7 +225,7 @@ namespace Raven.Database.Actions
 
 	        if (name.Contains("//"))
 	        {
-		        throw new ArgumentException("Canot use an index with // in the name, but got: " + name, "name");
+		        throw new ArgumentException("Cannot use an index with // in the name, but got: " + name, "name");
 	        }
 
             AssertAnalyzersValid(definition);

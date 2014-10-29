@@ -127,6 +127,7 @@ namespace Raven.Database.Server.Tenancy
 				documentDatabase.SpinBackgroundWorkers();
 				documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
 				documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
+	            documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
@@ -258,6 +259,33 @@ namespace Raven.Database.Server.Tenancy
 			{
 				Logger.ErrorException("Failed to remove database at the end of the disposal. This should not happen", ex);
 			}
+		}
+
+		private void UnloadDatabaseOnStorageInaccessible(object documentDatabase, EventArgs eventArgs)
+		{
+			try
+			{
+				var database = documentDatabase as DocumentDatabase;
+				if (database == null)
+				{
+					return;
+				}
+
+				Task.Run(() =>
+				{
+					Thread.Sleep(2000); // let the exception thrown by the storage to be propagated into the client
+
+					Logger.Warn("Shutting down database {0} because its storage has become inaccessible", database.Name);
+
+					Cleanup(database.Name, skipIfActive: false, shouldSkip: x => false);
+				});
+
+			}
+			catch (Exception ex)
+			{
+				Logger.ErrorException("Failed to cleanup database that storage is inaccessible. This should not happen", ex);
+			}
+
 		}
     }
 }

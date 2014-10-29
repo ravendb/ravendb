@@ -370,7 +370,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		public static string EscapeDestinationName(string url)
 		{
-			return Uri.EscapeDataString(url.Replace("http://", "").Replace("/", "").Replace(":", ""));
+			return Uri.EscapeDataString(url.Replace("https://", "").Replace("http://", "").Replace("/", "").Replace(":", ""));
 		}
 
 		private void WarnIfNoReplicationTargetsWereFound()

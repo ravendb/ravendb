@@ -120,8 +120,12 @@ class indexes extends viewModelBase {
         if (!i.forEntityName || i.forEntityName.length === 0) {
             this.putIndexIntoGroupNamed(i, "Other");
         } else {
-            i.forEntityName.forEach(e => this.putIndexIntoGroupNamed(i, e));
+            this.putIndexIntoGroupNamed(i, this.getGroupName(i));
         }
+    }
+
+    getGroupName(i: index) {
+        return i.forEntityName.sort((l, r) => l.toLowerCase() > r.toLowerCase() ? 1 : -1).join(", ");
     }
 
     putIndexIntoGroupNamed(i: index, groupName: string) {

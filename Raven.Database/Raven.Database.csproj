@@ -220,6 +220,9 @@
     <Compile Include="Actions\PatchActions.cs" />
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="DiskIO\DiskPerformanceTester.cs" />
+    <Compile Include="DiskIO\PerformanceTestRequest.cs" />
+    <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
     <Compile Include="Plugins\Builtins\PurgeOutdatedTombstones.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Bundles\Replication\Data\ReplicationTopologyNode.cs" />
@@ -252,6 +255,7 @@
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\RemoteFileSynchronizationConflictResolver.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LocalFileSynchronizationConflictResolver.cs" />
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationConfig.cs" />
+    <Compile Include="Server\IgnoreSslCertificateErrorsMode.cs" />
     <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
     <Compile Include="Smuggler\EmbeddedSmugglerOperations.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />

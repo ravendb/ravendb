@@ -83,12 +83,18 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			MessageWithStatusCode fileSystemNameFormat = CheckNameFormat(id, Database.Configuration.FileSystem.DataDirectory);
 			if (fileSystemNameFormat.Message != null)
 			{
-				return GetMessageWithString(fileSystemNameFormat.Message, fileSystemNameFormat.ErrorCode);
+				return GetMessageWithObject(new
+				{
+                    Error = fileSystemNameFormat.Message
+				}, fileSystemNameFormat.ErrorCode);
 			}
 
 			if (FileSystemsLandlord.IsNotLicensed())
 	        {
-				return GetMessageWithString("Your license does not allow the use of RavenFS!", HttpStatusCode.BadRequest);
+				return GetMessageWithObject(new
+				{
+                    Error = "Your license does not allow the use of RavenFS!"
+				}, HttpStatusCode.BadRequest);
 	        }
 
             var docKey = "Raven/FileSystems/" + id;

@@ -121,7 +121,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[Route("databases/{databaseName}/replication/replicateDocs")]
 		public async Task<HttpResponseMessage> DocReplicatePost()
 		{
-			const int PulseThreshold = 512;
+			const int BatchSize = 512;
 
 			var src = GetQueryStringValue("from");
 			if (string.IsNullOrEmpty(src))
@@ -139,51 +139,37 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				IDisposable documentLock = null;
+				string lastEtag = Etag.Empty.ToString();
 
-				try
+				var docIndex = 0;
+
+				while (docIndex < array.Length)
 				{
-					Database.TransactionalStorage.Batch(actions =>
+					using (Database.DocumentLock.Lock())
 					{
-						string lastEtag = Etag.Empty.ToString();
-
-						for (var i = 0; i < array.Length; i++)
+						Database.TransactionalStorage.Batch(actions =>
 						{
-							if (documentLock == null)
-								documentLock = Database.DocumentLock.Lock();
-
-							var document = (RavenJObject)array[i];
-							var metadata = document.Value<RavenJObject>("@metadata");
-							if (metadata[Constants.RavenReplicationSource] == null)
+							for (var j = 0; j < BatchSize && docIndex < array.Length; j++, docIndex++)
 							{
-								// not sure why, old document from when the user didn't have replication
-								// that we suddenly decided to replicate, choose the source for that
-								metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
+								var document = (RavenJObject) array[docIndex];
+								var metadata = document.Value<RavenJObject>("@metadata");
+								if (metadata[Constants.RavenReplicationSource] == null)
+								{
+									// not sure why, old document from when the user didn't have replication
+									// that we suddenly decided to replicate, choose the source for that
+									metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
+								}
+
+								lastEtag = metadata.Value<string>("@etag");
+								var id = metadata.Value<string>("@id");
+								document.Remove("@metadata");
+
+								ReplicateDocument(actions, id, metadata, document, src);
 							}
 
-							lastEtag = metadata.Value<string>("@etag");
-							var id = metadata.Value<string>("@id");
-							document.Remove("@metadata");
-
-							ReplicateDocument(actions, id, metadata, document, src);
-
-							if (i <= 0 || i % PulseThreshold != 0)
-								continue;
-
 							SaveReplicationSource(src, lastEtag);
-							actions.General.PulseTransaction();
-
-							documentLock.Dispose();
-							documentLock = null;
-						}
-
-						SaveReplicationSource(src, lastEtag);
-					});
-				}
-				finally
-				{
-					if (documentLock != null)
-						documentLock.Dispose();
+						});
+					}
 				}
 			}
 

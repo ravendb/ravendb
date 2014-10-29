@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Exceptions;
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Listeners;
@@ -481,6 +482,29 @@ namespace RavenFS.Tests.ClientApi
                 // deleting file, then uploading it again and doing metadata change
                 session.RegisterFileDeletion("test1.file");
 	            Assert.Throws<InvalidOperationException>(() => session.RegisterUpload("test1.file", CreateUniformFileStream(128)));
+            }
+        }
+
+        [Fact]
+        public async Task MetadataDatesArePreserved()
+        {
+            FileHeader originalFile;
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                await session.SaveChangesAsync();
+
+                // content update after a metadata change
+                originalFile = await session.LoadFileAsync("test1.file");
+                originalFile.Metadata["Test"] = new RavenJValue("Value");
+
+                DateTimeOffset originalCreationDate = originalFile.CreationDate;
+                var metadataCreationDate = originalFile.Metadata[Constants.RavenCreationDate];
+
+                await session.SaveChangesAsync();
+
+                Assert.Equal(originalCreationDate, originalFile.CreationDate);
+                Assert.Equal(metadataCreationDate, originalFile.Metadata[Constants.RavenCreationDate]);
             }
         }
     }

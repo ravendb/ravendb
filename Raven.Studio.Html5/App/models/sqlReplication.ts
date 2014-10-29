@@ -198,8 +198,8 @@ class sqlReplication extends document {
     }
 
 
-    isSqlServerKindOfDB(): boolean {
-        if (this.factoryName() == 'System.Data.SqlClient' || this.factoryName() == 'System.Data.SqlServerCe.4.0' || this.factoryName() == 'System.Data.SqlServerCe.3.5') {
+    isSqlServerKindOfFactory(factoryName:string): boolean {
+        if (factoryName == 'System.Data.SqlClient' || factoryName == 'System.Data.SqlServerCe.4.0' || factoryName == 'System.Data.SqlServerCe.3.5') {
             return true;
         }
         return false;

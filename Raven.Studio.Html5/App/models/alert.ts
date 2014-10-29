@@ -6,6 +6,7 @@ class alert {
     title: string;
     uniqueKey: string;
     observed = ko.observable(false);
+    lastDismissedAt:string;
 
     isVisible: KnockoutComputed<boolean>;
     createdAtHumanized: KnockoutComputed<string>;
@@ -16,6 +17,7 @@ class alert {
         this.exception = dto.Exception;
         this.message = dto.Message;
         this.observed(dto.Observed);
+        this.lastDismissedAt = dto.LastDismissedAt;
         this.title = dto.Title;
         this.uniqueKey = dto.UniqueKey;
     }
@@ -27,6 +29,7 @@ class alert {
             Exception: this.exception,
             Message: this.message,
             Observed: this.observed(),
+            LastDismissedAt: this.lastDismissedAt,
             Title: this.title,
             UniqueKey: this.uniqueKey
         };

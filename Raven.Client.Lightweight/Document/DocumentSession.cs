@@ -348,9 +348,11 @@ namespace Raven.Client.Document
         }
 
 
-		private T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+		private T[] LoadUsingTransfomerInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
         {
-            if (ids.Length == 0)
+		    if (transformer == null) 
+                throw new ArgumentNullException("transformer");
+		    if (ids.Length == 0)
                 return new T[0];
 
             IncrementRequestCount();
@@ -521,7 +523,7 @@ namespace Raven.Client.Document
 			if (configure != null)
 				configure(configuration);
 
-			return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
+			return LoadUsingTransfomerInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
         }
 
 		public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
@@ -531,7 +533,7 @@ namespace Raven.Client.Document
 			if (configure != null)
             configure(configuration);
 
-			return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
+			return LoadUsingTransfomerInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
         }
 
 		public TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
@@ -540,7 +542,7 @@ namespace Raven.Client.Document
 			if (configure != null)
 				configure(configuration);
 
-			return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
+			return LoadUsingTransfomerInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
         }
 
 		public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
@@ -549,7 +551,7 @@ namespace Raven.Client.Document
 			if (configure != null)
             configure(configuration);
 
-			return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
+			return LoadUsingTransfomerInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
         }
 
 		public TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
@@ -560,7 +562,7 @@ namespace Raven.Client.Document
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
+			return LoadUsingTransfomerInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
 		}
 
 		public TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
@@ -571,7 +573,7 @@ namespace Raven.Client.Document
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
+			return LoadUsingTransfomerInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
 		}
 
         /// <summary>

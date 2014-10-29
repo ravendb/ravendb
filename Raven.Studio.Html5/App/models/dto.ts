@@ -223,6 +223,7 @@ interface alertDto {
     Title: string;
     CreatedAt: string;
     Observed: boolean;
+    LastDismissedAt: string;
     Message: string;
     AlertLevel: string;
     Exception: string;
@@ -1046,4 +1047,33 @@ interface fileSystemSettingsDto {
     path: string;
     logsPath: string;
     storageEngine: string;
+}
+
+interface performanceTestRequestDto {
+    Path: string;
+    FileSize: number;
+    OperationType: string;
+    BufferingType: string;
+    Sequential: boolean;
+    ThreadCount: number;
+    TimeToRunInSeconds: number;
+    RandomSeed?: number;
+    ChunkSize: number;
+}
+
+interface diskPerformanceResultDto {
+    ReadPerSecondHistory: number[];
+    WritePerSecondHistory: number[];
+    AverageReadLatencyPerSecondHistory: number[];
+    AverageWriteLatencyPerSecondHistory: number[];
+    ReadLatency: histogramDataDto;
+    WriteLatency: histogramDataDto;
+    TotalRead: number;
+    TotalWrite: number;
+}
+
+interface diskPerformanceResultWrappedDto {
+    Result: diskPerformanceResultDto;
+    Request: performanceTestRequestDto;
+    DebugMsgs: string[];
 }

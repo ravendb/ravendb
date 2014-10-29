@@ -86,7 +86,7 @@ class patch extends viewModelBase {
             html: true,
             trigger: 'hover',
             container: '.form-horizontal',
-            content: 'Patch Scripts are written in JScript. Examples:<pre><span class="code-keyword">this</span>.NewProperty = <span class="code-keyword">this</span>.OldProperty + myParameter;<br/><span class="code-keyword">delete this</span>.UnwantedProperty;<br/><span class="code-keyword">this</span>.Comments.RemoveWhere(<span class="code-keyword">function</span>(comment){<br/>  <span class="code-keyword">return</span> comment.Spam;<br/>});</pre>',
+            content: 'Patch Scripts are written in JavaScript. Examples:<pre><span class="code-keyword">this</span>.NewProperty = <span class="code-keyword">this</span>.OldProperty + myParameter;<br/><span class="code-keyword">delete this</span>.UnwantedProperty;<br/><span class="code-keyword">this</span>.Comments.RemoveWhere(<span class="code-keyword">function</span>(comment){<br/>  <span class="code-keyword">return</span> comment.Spam;<br/>});</pre>',
         });
 
         var rowCreatedEvent = app.on(patch.gridSelector + 'RowsCreated').then(() => {
@@ -130,6 +130,7 @@ class patch extends viewModelBase {
     fetchAllCollections(): JQueryPromise<any> {
         return new getCollectionsCommand(this.activeDatabase())
             .execute()
+            .always(() => NProgress.done())
             .done((colls: collection[]) => {
                 this.collections(colls);
                 if (this.collections().length > 0) {

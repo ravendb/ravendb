@@ -124,7 +124,7 @@ namespace RavenFS.Tests.ClientApi
                 sessionDestination2.RegisterUpload("test1.file", CreateUniformFileStream(130));
                 await sessionDestination2.SaveChangesAsync();
 
-                var notificationTask = WaitForConflictResolved(anotherStore, 1, 10);
+                var notificationTask = await WaitForConflictResolved(anotherStore, 1, 10);
 
                 var syncDestinations = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinations);
@@ -172,7 +172,7 @@ namespace RavenFS.Tests.ClientApi
                 Assert.Equal(secondStreamSize, file.TotalSize);
                 Assert.Equal(firstStreamSize, file2.TotalSize);
 
-                var notificationTask = WaitForConflictResolved(anotherStore, 1, 10);
+                var notificationTask = await WaitForConflictResolved(anotherStore, 1, 10);
 
                 var syncDestinations = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinations);
@@ -214,7 +214,7 @@ namespace RavenFS.Tests.ClientApi
                 sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await sessionDestination1.SaveChangesAsync();
 
-                var notificationTask = WaitForConflictResolved(anotherStore, 1, 5);
+                var notificationTask = await WaitForConflictResolved(anotherStore, 1, 5);
 
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
@@ -251,7 +251,7 @@ namespace RavenFS.Tests.ClientApi
                 sessionDestination1.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await sessionDestination1.SaveChangesAsync();
 
-                var notificationTask = WaitForConflictResolved(anotherStore, 1, 5);
+                var notificationTask = await WaitForConflictResolved(anotherStore, 1, 5);
 
                 var syncDestinatios = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinatios);
@@ -480,15 +480,18 @@ namespace RavenFS.Tests.ClientApi
             }
         }
 
-        private Task<ConflictNotification> WaitForConflictResolved(IFilesStore store, int notificationsNumber, int time)
+        private async Task<Task<ConflictNotification>> WaitForConflictResolved(IFilesStore store, int notificationsNumber, int time)
         {
-            return store.Changes()
-                            .ForConflicts()
-                            .OfType<ConflictNotification>()
-                            .Where(x => x.Status == ConflictStatus.Resolved)
-                            .Timeout(TimeSpan.FromSeconds(time))
-                            .Take(notificationsNumber)
-                            .ToTask();
+	        var changes = store.Changes();
+	        await changes.Task;
+	        var conflicts = changes.ForConflicts();
+	        await conflicts.Task;
+	        return conflicts
+		        .OfType<ConflictNotification>()
+		        .Where(x => x.Status == ConflictStatus.Resolved)
+		        .Timeout(TimeSpan.FromSeconds(time))
+		        .Take(notificationsNumber)
+		        .ToTask();
         }
 
         private Task<ConflictNotification> WaitForConflictDetected(IFilesStore store, int notificationsNumber, int time)
