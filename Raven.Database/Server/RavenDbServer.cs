@@ -144,8 +144,11 @@ namespace Raven.Server
         ///</summary>
         public bool UseEmbeddedHttpServer { get; set; }
 
+		public bool Disposed { get; private set; }
+
 	    public void Dispose()
 	    {
+		    Disposed = true;
 		    if (documentStore != null)
 			    documentStore.Dispose();
 
