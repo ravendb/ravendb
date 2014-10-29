@@ -418,9 +418,11 @@ namespace Raven.Bundles.Replication.Tasks
 
 					bool? replicated = null;
 
+				    int replicatedDocuments;
+
 					using (var scope = stats.StartRecording("Documents"))
 					{
-						switch (ReplicateDocuments(destination, destinationsReplicationInformationForSource, scope))
+						switch (ReplicateDocuments(destination, destinationsReplicationInformationForSource, scope, out replicatedDocuments))
 						{
 							case true:
 								replicated = true;
@@ -444,6 +446,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 				    var elapsedMicroseconds = (long) (stats.ElapsedTime.Ticks*SystemTime.MicroSecPerTick);
                     docDb.WorkContext.MetricsCounters.GetReplicationDurationHistogram(destination).Update(elapsedMicroseconds);
+                    UpdateReplicationPerformance(destination, stats.Started, stats.ElapsedTime, replicatedDocuments);
+
 					return replicated ?? false;
 				}
 			}
@@ -453,6 +457,27 @@ namespace Raven.Bundles.Replication.Tasks
 			    holder.Release();
 			}
 		}
+
+        private void UpdateReplicationPerformance(ReplicationStrategy destination, DateTime startTime, TimeSpan elapsed, int batchSize)
+        {
+            if (batchSize > 0)
+            {
+                var queue = docDb.WorkContext.MetricsCounters.GetReplicationPerformanceStats(destination);
+                queue.Enqueue(new ReplicationPerformanceStats
+                {
+                    Duration = elapsed,
+                    Started = startTime,
+                    BatchSize = batchSize
+                });
+
+                while (queue.Count() > 25)
+                {
+                    ReplicationPerformanceStats _;
+                    queue.TryDequeue(out _);
+                }
+            }
+        }
+
 
         [Obsolete("Use RavenFS instead.")]
 		private bool? ReplicateAttachments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder)
@@ -502,8 +527,9 @@ namespace Raven.Bundles.Replication.Tasks
 			return true;
 		}
 
-		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder)
+		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, out int replicatedDocuments)
 		{
+		    replicatedDocuments = 0;
 		    JsonDocumentsToReplicate documentsToReplicate = null;
             Stopwatch sp = Stopwatch.StartNew();
 			IDisposable removeBatch = null;
@@ -574,9 +600,12 @@ namespace Raven.Bundles.Replication.Tasks
 		    finally
 		    {
 		        if (documentsToReplicate != null && documentsToReplicate.LoadedDocs != null)
+		        {
 		            prefetchingBehavior.UpdateAutoThrottler(documentsToReplicate.LoadedDocs, sp.Elapsed);
+                    replicatedDocuments = documentsToReplicate.LoadedDocs.Count;
+		        }
 
-				if(removeBatch != null)
+		        if(removeBatch != null)
 					removeBatch.Dispose();
 		    }
 
@@ -1290,6 +1319,7 @@ namespace Raven.Bundles.Replication.Tasks
 			this.destination = destination;
 			this.destinationStats = destinationStats;
 			watch = Stopwatch.StartNew();
+		    Started = SystemTime.UtcNow;
 			records = new RavenJArray();
 			record = new RavenJObject
 			         {
@@ -1298,6 +1328,9 @@ namespace Raven.Bundles.Replication.Tasks
 						 { "Records", records }
 			         };
 		}
+
+        public DateTime Started { get; private set; }
+
 
 	    public TimeSpan ElapsedTime
 	    {

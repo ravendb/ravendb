@@ -67,7 +67,13 @@ namespace Raven.Database.Server.Controllers
         [Route("databases/{databaseName}/operation/alerts")]
         public HttpResponseMessage Alerts()
         {
-            var alerts = Database.Documents.Get("Raven/Alerts", null).DataAsJson.JsonDeserialization<AlertsDocument>();
+            var jsonDocument = Database.Documents.Get("Raven/Alerts", null);
+            if (jsonDocument == null)
+            {
+                return GetMessageWithObject(new Alert[0]);
+            }
+
+            var alerts = jsonDocument.DataAsJson.JsonDeserialization<AlertsDocument>();
             if (alerts == null)
             {
                 return GetMessageWithObject(new Alert[0]);

@@ -106,6 +106,41 @@ namespace Raven.Database.Server.Controllers
             return GetMessageWithObject(stats);
         }
 
+        /// <remarks>
+        /// as we sum data we have to guarantee that we don't sum the same record twice on client side.
+        /// to prevent such situation we don't send data from current second
+        /// </remarks>
+        /// <returns></returns>
+        [HttpGet]
+        [Route("debug/replication-perf-stats")]
+        [Route("databases/{databaseName}/debug/replication-perf-stats")]
+        public HttpResponseMessage ReplicationPerfStats()
+        {
+            var now = SystemTime.UtcNow;
+            var nowTruncToSeconds = new DateTime(now.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, now.Kind);
+
+            var stats = from nameAndStatsManager in Database.WorkContext.MetricsCounters.ReplicationPerformanceStats
+                        from perf in nameAndStatsManager.Value
+                        where perf.Started < nowTruncToSeconds
+                        let k = new { Name = nameAndStatsManager.Key, perf }
+                        group k by k.perf.Started.Ticks / TimeSpan.TicksPerSecond
+                            into g
+                            orderby g.Key
+                            select new
+                            {
+                                Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
+                                Stats = from k in g
+                                        group k by k.Name into gg
+                                        select new
+                                        {
+                                            Destination = gg.Key,
+                                            DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
+                                            BatchSize = gg.Sum(x => x.perf.BatchSize)
+                                        }
+                            };
+            return GetMessageWithObject(stats);
+        }
+
         /// <summary>
         /// 
         /// </summary>
