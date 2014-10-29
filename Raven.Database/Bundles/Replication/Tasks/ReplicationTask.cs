@@ -224,12 +224,12 @@ namespace Raven.Bundles.Replication.Tasks
 			// also remove prefetchers if the destination is failing for a long time
 			foreach (var failingDestination in failingDestinations)
 			{
-				var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(failingDestination), null);
-				if (jsonDocument == null)
+				DestinationStats stats;
+				if (prefetchingBehaviors.ContainsKey(failingDestination) == false || destinationStats.TryGetValue(failingDestination, out stats) == false)
 					continue;
 
-				var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
-				if (failureInformation.FailureCount > 1000)
+				if (stats.FirstFailureInCycleTimestamp != null && stats.LastFailureTimestamp != null && 
+					stats.LastFailureTimestamp - stats.FirstFailureInCycleTimestamp >= TimeSpan.FromMinutes(3))
 				{
 					if (prefetchingBehaviors.TryRemove(failingDestination, out prefetchingBehaviorToDispose))
 					{
@@ -586,6 +586,10 @@ namespace Raven.Bundles.Replication.Tasks
 			var stats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
 			Interlocked.Increment(ref stats.FailureCountInternal);
 			stats.LastFailureTimestamp = SystemTime.UtcNow;
+
+			if (stats.FirstFailureInCycleTimestamp == null)
+				stats.FirstFailureInCycleTimestamp = SystemTime.UtcNow;
+
 			if (string.IsNullOrWhiteSpace(lastError) == false)
 				stats.LastError = lastError;
 
@@ -613,6 +617,7 @@ namespace Raven.Bundles.Replication.Tasks
 			var stats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
 			Interlocked.Exchange(ref stats.FailureCountInternal, 0);
 			stats.LastSuccessTimestamp = SystemTime.UtcNow;
+			stats.FirstFailureInCycleTimestamp = null;
 
 			if (lastReplicatedEtag != null)
 			{
