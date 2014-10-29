@@ -147,12 +147,6 @@ namespace RavenFS.Tests.Smuggler
 		}
 
 		[Fact, Trait("Category", "Smuggler")]
-		public void MaxChunkSizeInMbShouldBeRespectedByDataDumper()
-		{
-			throw new NotImplementedException();
-		}
-
-		[Fact, Trait("Category", "Smuggler")]
 		public async Task CanDumpEmptyFileSystem()
 		{
 			using (var store = NewStore())
@@ -330,36 +324,6 @@ namespace RavenFS.Tests.Smuggler
                             var stream = session.DownloadAsync(file).Result;
 
                             Assert.Equal(fileContent.GetMD5Hash(), stream.GetMD5Hash());
-
-                            //var memoryStream = new MemoryStream();
-                            //stream.CopyTo(memoryStream);
-                            //memoryStream.Position = 0;
-
-                            //Console.Write("Original: ");
-                            //int d = -1;
-                            //do
-                            //{
-                            //    d = fileContent.ReadByte();
-                            //    if (d != -1)
-                            //        Console.Write(d + ",");
-                            //}
-                            //while (d != -1);
-
-                            //Console.WriteLine();
-                            //Console.Write("Downloaded: ");
-
-                            //do
-                            //{
-                            //    d = memoryStream.ReadByte();
-                            //    if (d != -1)
-                            //        Console.Write(d + ",");
-                            //}
-                            //while (d != -1);
-
-                            //fileContent.Position = 0;
-                            //memoryStream.Position = 0;
-
-                            //Assert.Equal(fileContent.GetMD5Hash(), memoryStream.GetMD5Hash());
                         }
                     });
 
@@ -393,7 +357,7 @@ namespace RavenFS.Tests.Smuggler
                             session.RegisterUpload("test" + i + ".file", files[i]);
                         }
 
-                        await session.SaveChangesAsync();                        
+                        await session.SaveChangesAsync();
                     }
 
                     ExportFilesResult result;
@@ -413,8 +377,8 @@ namespace RavenFS.Tests.Smuggler
 
                     await VerifyDump(store, result.FilePath, s =>
                     {
-                        for (int i = 0; i < files.Length; i++ )
-                        {                            
+                        for (int i = 0; i < files.Length; i++)
+                        {
                             using (var session = s.OpenAsyncSession())
                             {
                                 var file = session.LoadFileAsync("test" + i + ".file").Result;
@@ -423,7 +387,69 @@ namespace RavenFS.Tests.Smuggler
                                 files[i].Position = 0;
                                 Assert.Equal(files[i].GetMD5Hash(), stream.GetMD5Hash());
                             }
-                        }                            
+                        }
+                    });
+                }
+                finally
+                {
+                    IOExtensions.DeleteDirectory(outputDirectory);
+                }
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task ContentIsPreserved_MultipleDirectories()
+        {
+            using (var store = NewStore())
+            {
+                ReseedRandom(100); // Force a random distribution.
+
+                var server = GetServer();
+                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+                try
+                {
+                    var dumper = new SmugglerFilesApi { Options = { Incremental = false } };
+
+                    var files = new Stream[10];
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < files.Length; i++)
+                        {
+                            files[i] = CreateRandomFileStream(100 * i + 12);
+                            session.RegisterUpload(i + "/test.file", files[i]);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    ExportFilesResult result;
+                    using (new FilesStore { Url = server.Url }.Initialize())
+                    {
+                        // now perform full backup                    
+                        result = await dumper.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions>
+                        {
+                            ToFile = outputDirectory,
+                            From = new FilesConnectionStringOptions
+                            {
+                                Url = server.Url,
+                                DefaultFileSystem = store.DefaultFileSystem,
+                            }
+                        });
+                    }
+
+                    await VerifyDump(store, result.FilePath, s =>
+                    {
+                        for (int i = 0; i < files.Length; i++)
+                        {
+                            using (var session = s.OpenAsyncSession())
+                            {
+                                var file = session.LoadFileAsync(i + "/test.file").Result;
+                                var stream = session.DownloadAsync(file).Result;
+
+                                files[i].Position = 0;
+                                Assert.Equal(files[i].GetMD5Hash(), stream.GetMD5Hash());
+                            }
+                        }
                     });
                 }
                 finally
