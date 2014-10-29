@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Xml;
 using Raven.Abstractions.Data;
@@ -37,8 +36,10 @@ namespace Raven.Database.Commercial
 		{
 			{"periodicBackup", "false"},
 			{"encryption", "false"},
+			{"fips", "false"},
 			{"compression", "false"},
 			{"quotas","false"},
+			{"ravenfs", "false"},
 
 			{"authorization","true"},
 			{"documentExpiration","true"},
@@ -53,7 +54,7 @@ namespace Raven.Database.Commercial
 				Status = "AGPL - Open Source",
 				Error = false,
 				Message = "No license file was found.\r\n" +
-						  "The AGPL license restrictions apply, only Open Source / Development work is permitted.",
+				          "The AGPL license restrictions apply, only Open Source / Development work is permitted.",
 				Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
 			};
 		}
@@ -69,19 +70,23 @@ namespace Raven.Database.Commercial
 		{
 			var licensePath = GetLicensePath(config);
 			var licenseText = GetLicenseText(config);
-
+			
 			if (TryLoadLicense(config) == false)
 				return;
 
+            string errorMessage = string.Empty;
 			try
 			{
+
+		        try
+		        {
 				licenseValidator.AssertValidLicense(() =>
 				{
 					string value;
 
-					AssertForV2(licenseValidator.LicenseAttributes);
+		                errorMessage = AssertLicenseAttributes(licenseValidator.LicenseAttributes, licenseValidator.LicenseType);
 					if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&
-						"true".Equals(value, StringComparison.OrdinalIgnoreCase))
+					    "true".Equals(value, StringComparison.OrdinalIgnoreCase))
 					{
 						licenseValidator.MultipleLicenseUsageBehavior = AbstractLicenseValidator.MultipleLicenseUsage.AllowSameLicense;
 					}
@@ -96,6 +101,11 @@ namespace Raven.Database.Commercial
 						}
 					}
 				});
+		        }
+		        catch (LicenseExpiredException ex)
+		        {
+		            errorMessage = ex.Message;
+		        }
 
 				var attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase);
 				foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
@@ -117,8 +127,8 @@ namespace Raven.Database.Commercial
 				CurrentLicense = new LicensingStatus
 				{
 					Status = status,
-					Error = false,
-					Message = message,
+		            Error = !String.IsNullOrEmpty(errorMessage),
+		            Message = String.IsNullOrEmpty(errorMessage) ? message : errorMessage,
 					Attributes = attributes
 				};
 			}
@@ -148,7 +158,8 @@ namespace Raven.Database.Commercial
 				{
 					Status = "AGPL - Open Source",
 					Error = true,
-					Message = "Could not validate license: " + licensePath + ", " + licenseText + Environment.NewLine + e,
+                    Details = "License Path: " + licensePath + Environment.NewLine + ", License Text: " + licenseText + Environment.NewLine + ", Exception: " + e,
+					Message = "Could not validate license: " + e.Message,
 					Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
 				};
 			}
@@ -189,10 +200,11 @@ namespace Raven.Database.Commercial
 					Status = "AGPL - Open Source",
 					Error = false,
 					Message = "No license file was found at " + fullPath +
-							  "\r\nThe AGPL license restrictions apply, only Open Source / Development work is permitted."
+					          "\r\nThe AGPL license restrictions apply, only Open Source / Development work is permitted."
 				};
 				return false;
 			}
+
 			licenseValidator.DisableFloatingLicenses = true;
 			licenseValidator.SubscriptionEndpoint = "http://uberprof.com/Subscriptions.svc";
 			licenseValidator.LicenseInvalidated += OnLicenseInvalidated;
@@ -201,49 +213,20 @@ namespace Raven.Database.Commercial
 			return true;
 		}
 
-		private void AssertForV2(IDictionary<string, string> licenseAttributes)
+		private string AssertLicenseAttributes(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
 		{
 			string version;
+		    var errorMessage = string.Empty;
+            
 			if (licenseAttributes.TryGetValue("version", out version) == false)
-			{
-				if (licenseValidator.LicenseType != LicenseType.Subscription)
-					throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
+                throw new LicenseExpiredException("This is not a license for RavenDB 3.0");
 
-				// Add backward compatibility for the subscription licenses of v1
-				licenseAttributes["version"] = "2.5";
-				licenseAttributes["implicit20StandardLicenseBy10Subscription"] = "true";
-				licenseAttributes["allowWindowsClustering"] = "false";
-				licenseAttributes["numberOfDatabases"] = "unlimited";
-				licenseAttributes["periodicBackup"] = "true";
-				licenseAttributes["encryption"] = "false";
-				licenseAttributes["compression"] = "false";
-				licenseAttributes["quotas"] = "false";
-				licenseAttributes["authorization"] = "true";
-				licenseAttributes["documentExpiration"] = "true";
-				licenseAttributes["replication"] = "true";
-				licenseAttributes["versioning"] = "true";
-				licenseAttributes["maxSizeInMb"] = "unlimited";
-
-				string oem;
-				if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out oem) &&
-					"true".Equals(oem, StringComparison.OrdinalIgnoreCase))
+            if (version != "3.0")
 				{
-					licenseAttributes["OEM"] = "true";
-					licenseAttributes["maxRamUtilization"] = "6442450944";
-					licenseAttributes["maxParallelism"] = "3";
-
-				}
-				else
+                if (licenseType != LicenseType.Subscription || (version != "2.0" && version != "2.5"))
 				{
-					licenseAttributes["OEM"] = "false";
-					licenseAttributes["maxRamUtilization"] = "12884901888";
-					licenseAttributes["maxParallelism"] = "6";
-				}
-			}
-			else
-			{
-				if (version != "1.2" && version != "2.0" && version != "2.5")
-					throw new LicenseExpiredException("This is not a license for RavenDB 2.x");
+                    throw new LicenseExpiredException("This is not a license for RavenDB 3.0");
+				}                     
 			}
 
 			string maxRam;
@@ -254,16 +237,15 @@ namespace Raven.Database.Commercial
 					MemoryStatistics.MemoryLimit = (int)(long.Parse(maxRam) / 1024 / 1024);
 				}
 			}
-
+			
 			string maxParallel;
 			if (licenseAttributes.TryGetValue("maxParallelism", out maxParallel))
 			{
 				if (string.Equals(maxParallel, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
 				{
-					MemoryStatistics.MaxParallelism = int.Parse(maxParallel);
+					MemoryStatistics.MaxParallelism = Math.Min(2, (int.Parse(maxParallel) * 2));
 				}
 			}
-
 			var clasterInspector = new ClusterInspecter();
 
 			string claster;
@@ -272,14 +254,16 @@ namespace Raven.Database.Commercial
 				if (bool.Parse(claster) == false)
 				{
 					if (clasterInspector.IsRavenRunningAsClusterGenericService())
-						throw new InvalidOperationException("Your license does not allow clustering, but RavenDB is running in clustered mode");
+                        throw new LicenseExpiredException("Your license does not allow clustering, but RavenDB is running in clustered mode");
 				}
 			}
 			else
 			{
 				if (clasterInspector.IsRavenRunningAsClusterGenericService())
-					throw new InvalidOperationException("Your license does not allow clustering, but RavenDB is running in clustered mode");
+                    throw new LicenseExpiredException("Your license does not allow clustering, but RavenDB is running in clustered mode");
 			}
+
+		    return errorMessage;
 		}
 
 		[Import(AllowDefault = true)]
@@ -313,9 +297,9 @@ namespace Raven.Database.Commercial
 
 		private void OnMultipleLicensesWereDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
 		{
-			logger.Error("A duplicate license was found at {0} for user {1}. User Id: {2}. Both licenses were disabled!",
-				clientDiscoveredEventArgs.MachineName,
-				clientDiscoveredEventArgs.UserName,
+			logger.Error("A duplicate license was found at {0} for user {1}. User Id: {2}. Both licenses were disabled!", 
+				clientDiscoveredEventArgs.MachineName, 
+				clientDiscoveredEventArgs.UserName, 
 				clientDiscoveredEventArgs.UserId);
 
 			CurrentLicense = new LicensingStatus
@@ -324,8 +308,8 @@ namespace Raven.Database.Commercial
 				Error = true,
 				Message =
 					string.Format("A duplicate license was found at {0} for user {1}. User Id: {2}.", clientDiscoveredEventArgs.MachineName,
-								  clientDiscoveredEventArgs.UserName,
-								  clientDiscoveredEventArgs.UserId)
+					              clientDiscoveredEventArgs.UserName,
+					              clientDiscoveredEventArgs.UserId)
 			};
 		}
 

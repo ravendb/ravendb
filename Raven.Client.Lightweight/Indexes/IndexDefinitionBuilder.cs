@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 
 namespace Raven.Client.Indexes
@@ -28,13 +29,6 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		/// <value>The reduce.</value>
 		public Expression<Func<IEnumerable<TReduceResult>, IEnumerable>> Reduce { get; set; }
-
-		/// <summary>
-		/// Gets or sets the reduce function
-		/// </summary>
-		/// <value>The reduce.</value>
-		[Obsolete("Use Result Transformers instead.")]
-		public Expression<Func<IClientSideDatabase, IEnumerable<TReduceResult>, IEnumerable>> TransformResults { get; set; }
 
 		/// <summary>
 		/// Gets or sets the stores options
@@ -66,11 +60,11 @@ namespace Raven.Client.Indexes
 		/// <value>The sort options.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions { get; set; }
 
-        /// <summary>
-        /// Gets or sets the sort options.
-        /// </summary>
-        /// <value>The sort options.</value>
-        public Dictionary<string, SortOptions> SortOptionsStrings { get; set; }
+		/// <summary>
+		/// Gets or sets the sort options.
+		/// </summary>
+		/// <value>The sort options.</value>
+		public Dictionary<string, SortOptions> SortOptionsStrings { get; set; }
 
 		/// <summary>
 		/// Get os set the analyzers
@@ -117,7 +111,12 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		public bool DisableInMemoryIndexing { get; set; }
 
-	    /// <summary>
+		/// <summary>
+		/// Max number of allowed indexing outputs per one source document
+		/// </summary>
+		public int? MaxIndexOutputsPerDocument { get; set; }
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
 		public IndexDefinitionBuilder()
@@ -127,8 +126,8 @@ namespace Raven.Client.Indexes
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
 			IndexesStrings = new Dictionary<string, FieldIndexing>();
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
-            SortOptionsStrings = new Dictionary<string, SortOptions>();
-            Suggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
+			SortOptionsStrings = new Dictionary<string, SortOptions>();
+			Suggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 			AnalyzersStrings = new Dictionary<string, string>();
 			TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
@@ -153,18 +152,19 @@ namespace Raven.Client.Indexes
 			var indexDefinition = new IndexDefinition
 			{
 				Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
-#pragma warning disable 612,618
-				TransformResults = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(TransformResults, convention, "results", translateIdentityProperty: Reduce == null),
-#pragma warning restore 612,618
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions),
 				Analyzers = ConvertToStringDictionary(Analyzers),
 				Suggestions = ConvertToStringDictionary(Suggestions),
-				TermVectors =  ConvertToStringDictionary(TermVectors),
+				TermVectors = ConvertToStringDictionary(TermVectors),
 				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes),
 				DisableInMemoryIndexing = DisableInMemoryIndexing,
+				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			};
+
+			if (convention.PrettifyGeneratedLinqExpressions)
+				indexDefinition.Reduce = IndexPrettyPrinter.Format(indexDefinition.Reduce);
 
 			foreach (var indexesString in IndexesStrings)
 			{
@@ -201,25 +201,27 @@ namespace Raven.Client.Indexes
 				indexDefinition.SpatialIndexes.Add(spatialString);
 			}
 
-            foreach (var sortOption in SortOptionsStrings)
-            {
-                if (indexDefinition.SortOptions.ContainsKey(sortOption.Key))
-                    throw new InvalidOperationException("There is a duplicate key in sort options: " + sortOption.Key);
-                indexDefinition.SortOptions.Add(sortOption);
-            }
+			foreach (var sortOption in SortOptionsStrings)
+			{
+				if (indexDefinition.SortOptions.ContainsKey(sortOption.Key))
+					throw new InvalidOperationException("There is a duplicate key in sort options: " + sortOption.Key);
+				indexDefinition.SortOptions.Add(sortOption);
+			}
 
 			if (Map != null)
-				indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Map, convention,
-																													 querySource,
-																													 translateIdentityProperty
-																														: true);
+			{
+				indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
+					Map, convention, querySource, translateIdentityProperty: true);
 
+				if (convention.PrettifyGeneratedLinqExpressions)
+					indexDefinition.Map = IndexPrettyPrinter.Format(indexDefinition.Map);
+			}
 			return indexDefinition;
 		}
 
 		private bool ContainsWhereEntityIs()
 		{
-		    if (Map == null) return false;
+			if (Map == null) return false;
 			var whereEntityIsVisitor = new WhereEntityIsVisitor();
 			whereEntityIsVisitor.Visit(Map.Body);
 			return whereEntityIsVisitor.HasWhereEntityIs;
@@ -252,5 +254,7 @@ namespace Raven.Client.Indexes
 	/// <summary>
 	/// This class provides a way to define a strongly typed index on the client.
 	/// </summary>
-	public class IndexDefinitionBuilder<TDocument> : IndexDefinitionBuilder<TDocument, TDocument> { }
+	public class IndexDefinitionBuilder<TDocument> : IndexDefinitionBuilder<TDocument, TDocument>
+	{
+	}
 }

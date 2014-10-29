@@ -9,6 +9,8 @@ using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -20,7 +22,7 @@ namespace Raven.Tests.Bugs
 		{
 			using(var store = NewDocumentStore())
 			{
-				store.DocumentDatabase.Put("ayende", null,
+				store.SystemDatabase.Documents.Put("ayende", null,
 										   RavenJObject.Parse(
 											   @"{
 	'name': 'ayende',

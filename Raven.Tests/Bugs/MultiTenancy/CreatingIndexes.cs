@@ -12,27 +12,34 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Extensions;
 
 namespace Raven.Tests.Bugs.MultiTenancy
 {
-	public class CreatingIndexes : RemoteClientTest, IDisposable
+	public class CreatingIndexes : RavenTest, IDisposable
 	{
 		protected RavenDbServer GetNewServer(int port)
 		{
-			return
-				new RavenDbServer(new RavenConfiguration
-				{
-					Port = port,
-					RunInMemory = true,
-					DataDirectory = "Data",
-					AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-				});
+		    RavenDbServer ravenDbServer = new RavenDbServer(new RavenConfiguration
+		    {
+		        Port = port,
+		        RunInMemory = true,
+		        DataDirectory = "Data",
+		        AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+		    })
+		    {
+		        UseEmbeddedHttpServer = true
+		    };
+		    ravenDbServer.Initialize();
+		    return
+				ravenDbServer;
 		}
 
 
-		[Fact]
+	    [Fact]
 		public void Multitenancy_Test()
 		{
 			using (GetNewServer(8079))
@@ -42,7 +49,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				DefaultDatabase = "Test"
 			}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("Test");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Test");
 				store.DatabaseCommands.PutIndex("TestIndex",
 												new IndexDefinitionBuilder<Test, Test>
 												{

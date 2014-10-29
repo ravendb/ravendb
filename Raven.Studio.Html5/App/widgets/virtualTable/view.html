@@ -1,0 +1,71 @@
+﻿<div class="ko-grid" data-target="#gridContextMenu" data-bind="attr: { 'data-toggle': settings.useContextMenu ? 'context': '' }" tabindex="-1">
+    <div data-bind="visible: noResults, text: settings.noResultsMessage" style="
+        position: absolute;
+        right: 40px;
+        left: 40px;
+        top: 70px;
+        bottom: 0;
+        height: 30px;
+        font-size: 25px;
+        text-align: center; "></div>
+    <div class="ko-grid-column-container" data-bind="visible: noResults() === false, foreach: columns">
+        <!-- ko if: binding === '__IsChecked' -->
+        <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }">
+
+        </div>
+        <!-- /ko -->
+        <!-- ko if: binding !== '__IsChecked' -->
+        <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }, attr: { title: header }">
+            <span class="ko-grid-column-handle" data-bind="attr: { 'column': $index }"></span>
+            <span data-bind="text: header"></span>
+        </div>
+        <!-- /ko -->
+    </div>
+    <div class="ko-grid-viewport-container" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: settings.dynamicHeightTargetSelector, bottomMargin: settings.dynamicHeightBottomMargin }, style: { 'max-height': settings.maxHeight }">
+        <div class="ko-grid-viewport" data-bind="foreach: recycleRows, style: { height: virtualHeight() + 'px' }">
+            <div class="ko-grid-row" data-bind="foreach: $parent.columns, visible: isInUse, style: { height: $parent.rowHeight + 'px', top: top() + 'px' }, css: { even: rowIndex() % 2 === 0, checked: isChecked}">
+                <div class="ko-grid-cell" data-bind="template: { name: $parent.getCellTemplate(binding) }, style: { width: width() + 'px' }, attr: { title: ($parent.getCellTemplate(binding) !== 'customTemplate') ? $parent.getCellData(binding) : '' }">
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="gridContextMenu">
+    <ul class="dropdown-menu" role="menu" data-bind="visible: settings.contextMenuOptions.length > 0 ">
+        <li data-bind="visible: settings.contextMenuOptions.contains('EditItem') && settings.selectedIndices().length == 1"><a tabindex="-1" href="#" data-bind="click: editItem, text: 'Edit Item'"></a></li>
+        <li data-bind="visible: settings.contextMenuOptions.contains('CopyItems')"><a tabindex="-1" href="#" data-bind="disable: isIndexMapReduce, click: copySelectedDocs, text: settings.selectedIndices().length === 1 ? 'Copy Item' : 'Copy Items'"></a></li>
+        <li data-bind="visible: settings.contextMenuOptions.contains('CopyIDs')"><a tabindex="-1" href="#" data-bind="disable: isIndexMapReduce, click: copySelectedDocIds, text: settings.selectedIndices().length === 1 ? 'Copy ID' : 'Copy IDs'"></a></li>
+        <li data-bind="visible: settings.contextMenuOptions.contains('CopyItems')" class="divider"></li>
+        <li data-bind="visible: settings.contextMenuOptions.contains('Delete')"><a tabindex="-1" href="#" data-bind="disable: isIndexMapReduce, click: deleteSelectedItems">Delete</a></li>
+    </ul>
+</div>
+
+<script id="defaultTemplate" type="text/template">
+    <span data-bind="text: $parent.cellMap[binding].data"></span>
+</script>
+
+<script id="nullTemplate" type="text/template">
+    <span>&nbsp;</span>
+</script>
+
+<script id="checkboxTemplate" type="text/template">
+    <img data-bind="visible: $parents[1].settings.selectionEnabled, click: function(sender, e) { $parents[1].toggleRowChecked($parent, e.shiftKey) }, attr: { src: $parent.isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
+</script>
+
+<script id="idTemplate" type="text/template">
+    <span class="collection-color-strip" data-bind="css: $parent.collectionClass"></span>
+    <a href="#" data-bind="attr: { href: $parent.editUrl }"><span data-bind="text: $parent.cellMap[binding].data"></span></a>
+</script>
+
+<script id="externalIdTemplate" type="text/template">
+    <span class="collection-color-strip" data-bind="css: $parent.calculateExternalIdCellColor($parent.cellMap[binding].data())"></span>
+    <a href="#" data-bind="attr: { href: $parents[1].getDocumentHref($parent.cellMap[binding].data()) }">
+        <span data-bind="text: $parent.cellMap[binding].data"></span>
+    </a>
+</script>
+
+<script id="customTemplate" type="text/template">
+    <span data-bind="template: { name: $parents[1].getTemplateFor(binding), data: $parent.cellMap[binding].data }"></span>
+</script>

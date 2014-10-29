@@ -5,12 +5,13 @@ using Raven.Client;
 using Raven.Client.Linq;
 using Raven.Client.Document;
 using Raven.Server;
+using Raven.Tests.Common;
 using Raven.Tests.Linq;
 using Xunit;
 
 namespace Raven.Tests.MultiGet
 {
-	public class MultiGetCaching : RemoteClientTest
+	public class MultiGetCaching : RavenTest
 	{
 		[Fact]
 		public void CanAggressivelyCacheLoads()
@@ -271,7 +272,7 @@ namespace Raven.Tests.MultiGet
 
 				using (var session = store.OpenSession())
 				{
-					var items = session.Advanced.Lazily.Load<User>("users/2", "users/4");
+					var items = session.Advanced.Lazily.Load<User>(new [] { "users/2", "users/4" });
 					var result1 = session.Query<User>().Where(x => x.Name == "oren").Lazily();
 					var result2 = session.Query<User>().Where(x => x.Name == "ayende").Lazily();
 					Assert.NotEmpty(result2.Value);
@@ -284,7 +285,7 @@ namespace Raven.Tests.MultiGet
 
 				using (var session = store.OpenSession())
 				{
-					var items = session.Advanced.Lazily.Load<User>("users/2", "users/4"); 
+					var items = session.Advanced.Lazily.Load<User>(new [] { "users/2", "users/4" }); 
 					var result1 = session.Query<User>().Where(x => x.Name == "oren").Lazily();
 					var result2 = session.Query<User>().Where(x => x.Name == "ayende").Lazily();
 					Assert.NotEmpty(result2.Value);

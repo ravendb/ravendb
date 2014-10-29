@@ -6,6 +6,8 @@
 using System;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Spatial
@@ -17,9 +19,9 @@ namespace Raven.Tests.Spatial
 		{
 			using(var store = NewDocumentStore())
 			{
-				Assert.Throws<TransformCompilationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				Assert.Throws<TransformCompilationException>(() => store.DatabaseCommands.PutTransformer("test", new TransformerDefinition()
 				{
-					Map = "from doc in docs select new {}",
+					Name = "test",
 					TransformResults = "from result in results select new { _= SpatialIndex.Generate(result.x, result.Y)}"
 				}));
 			}
@@ -30,9 +32,9 @@ namespace Raven.Tests.Spatial
 		{
 			using (var store = NewDocumentStore())
 			{
-				Assert.Throws<TransformCompilationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				Assert.Throws<TransformCompilationException>(() => store.DatabaseCommands.PutTransformer("test", new TransformerDefinition()
 				{
-					Map = "from doc in docs select new {}",
+					Name = "test",
 					TransformResults = "from result in results select new { _= CreateField(result.x, result.Y)}"
 				}));
 			}

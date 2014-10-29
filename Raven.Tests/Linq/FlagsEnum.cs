@@ -8,6 +8,8 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Linq
@@ -81,7 +83,7 @@ namespace Raven.Tests.Linq
                                          .As<Entity>()
                                          .ToList();
 
-                    Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+                    Assert.Empty(store.SystemDatabase.Statistics.Errors);
                     Assert.NotEmpty(results);
                 }
             }

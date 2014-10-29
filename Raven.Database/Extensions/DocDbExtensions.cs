@@ -3,7 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -14,7 +13,7 @@ namespace Raven.Database.Extensions
 {
 	public static class DocDbExtensions
 	{
-		public static void AddAlert(this DocumentDatabase self,Alert alert)
+		public static void AddAlert(this DocumentDatabase self, Alert alert)
 		{
 			while (true)
 			{
@@ -24,7 +23,7 @@ namespace Raven.Database.Extensions
                         continue;
 
                     AlertsDocument alertsDocument;
-                    var alertsDoc = self.Get(Constants.RavenAlerts, null);
+                    var alertsDoc = self.Documents.Get(Constants.RavenAlerts, null);
                     RavenJObject metadata;
                     Etag etag;
                     if (alertsDoc == null)
@@ -41,15 +40,19 @@ namespace Raven.Database.Extensions
                     }
 
                     var withSameUniqe = alertsDocument.Alerts.FirstOrDefault(alert1 => alert1.UniqueKey == alert.UniqueKey);
-                    if (withSameUniqe != null)
-                        alertsDocument.Alerts.Remove(withSameUniqe);
+			        if (withSameUniqe != null)
+			        {
+                        // copy information about observed
+			            alert.LastDismissedAt = withSameUniqe.LastDismissedAt;
+			            alertsDocument.Alerts.Remove(withSameUniqe);
+			        }
 
-                    alertsDocument.Alerts.Add(alert);
+			        alertsDocument.Alerts.Add(alert);
                     var document = RavenJObject.FromObject(alertsDocument);
                     document.Remove("Id");
                     try
                     {
-                        self.Put(Constants.RavenAlerts, etag, document, metadata, null);
+                        self.Documents.Put(Constants.RavenAlerts, etag, document, metadata, null);
                         return;
                     }
                     catch (ConcurrencyException)

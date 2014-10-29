@@ -20,6 +20,8 @@ namespace Raven.Database.Bundles.SqlReplication
 		private int WriteErrorCount { get; set; }
 		private int SuccessCount { get; set; }
 
+		public Alert LastAlert { get; set; }
+
 		public void Success(int countOfItems)
 		{
 			LastErrorTime = DateTime.MinValue;
@@ -29,6 +31,17 @@ namespace Raven.Database.Bundles.SqlReplication
 		public void RecordWriteError(Exception e, DocumentDatabase database, int count = 1, DateTime? newErrorTime = null)
 		{
 			WriteErrorCount += count;
+
+
+            LastAlert = new Alert
+			{
+				AlertLevel = AlertLevel.Error,
+				CreatedAt = SystemTime.UtcNow,
+				Message = "Last SQL eplication operation for " + name + " was failed",
+				Title = "SQL replication error",
+				Exception = e.ToString(),
+				UniqueKey = "Sql Replication Error: " + name
+			};
 
 			if (WriteErrorCount < 100)
 				return;
@@ -41,7 +54,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				return;
 			}
 
-			database.AddAlert(new Alert
+			database.AddAlert(LastAlert = new Alert
 			{
 				AlertLevel = AlertLevel.Error,
 				CreatedAt = SystemTime.UtcNow,
@@ -71,7 +84,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		{
 			ScriptErrorCount = int.MaxValue;
 			LastErrorTime = DateTime.MaxValue;
-			database.AddAlert(new Alert
+			database.AddAlert(LastAlert = new Alert
 			{
 				AlertLevel = AlertLevel.Error,
 				CreatedAt = SystemTime.UtcNow,
@@ -91,7 +104,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			if (ScriptErrorCount <= ScriptSuccessCount)
 				return;
 
-			database.AddAlert(new Alert
+			database.AddAlert(LastAlert = new Alert
 			{
 				AlertLevel = AlertLevel.Error,
 				CreatedAt = SystemTime.UtcNow,

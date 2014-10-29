@@ -7,11 +7,13 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Tests.Bugs.TransformResults;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class Includes : RemoteClientTest
+	public class Includes : RavenTest
 	{
 		private readonly IDocumentStore store;
 
@@ -76,7 +78,7 @@ namespace Raven.Tests.Bugs
 		{
 			using (var session = store.OpenSession())
 			{
-				var orders = session.Advanced.LuceneQuery<Order>()
+                var orders = session.Advanced.DocumentQuery<Order>()
 					.Include(x => x.Customer.Id)
 					.WaitForNonStaleResults()
 					.WhereEquals("Name", "3")
@@ -172,7 +174,7 @@ namespace Raven.Tests.Bugs
 			using (var session = store.OpenSession())
 			{
 				var orders = session
-					.Advanced.LuceneQuery<Order>("Orders/ByName")
+                    .Advanced.DocumentQuery<Order>("Orders/ByName")
 					.WaitForNonStaleResults()
 					.Include("Customer.Id")
 					.Take(2)
@@ -198,7 +200,7 @@ namespace Raven.Tests.Bugs
 			using (var session = store.OpenSession())
 			{
 				var orders = session.Advanced
-					.LuceneQuery<Order>("Orders/ByName")
+                    .DocumentQuery<Order>("Orders/ByName")
 					.WaitForNonStaleResults()
 					.Include(o => o.Customer.Id)
 					.Take(2)

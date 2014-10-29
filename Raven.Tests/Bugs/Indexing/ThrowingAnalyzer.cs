@@ -8,6 +8,8 @@ using System.IO;
 using Lucene.Net.Analysis;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -40,7 +42,7 @@ namespace Raven.Tests.Bugs.Indexing
 						.ToList();
 
 				}
-				Assert.NotEmpty(store.DocumentDatabase.Statistics.Errors);
+				Assert.NotEmpty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 

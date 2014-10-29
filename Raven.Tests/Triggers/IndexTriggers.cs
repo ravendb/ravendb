@@ -5,12 +5,14 @@
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
 using System.Threading;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 using System.Linq;
@@ -35,20 +37,20 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanReplicateValuesFromIndexToDataTable()
 		{
-			store.DocumentDatabase.PutIndex("test", new IndexDefinition
+			store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
 			{
 				Map = "from doc in docs from prj in doc.Projects select new{Project = prj}",
 				Stores = { { "Project", FieldStorage.Yes } }
 			});
-			store.DocumentDatabase.Put("t", null, RavenJObject.Parse("{'Projects': ['RavenDB', 'NHibernate']}"), new RavenJObject(), null);
+			store.SystemDatabase.Documents.Put("t", null, RavenJObject.Parse("{'Projects': ['RavenDB', 'NHibernate']}"), new RavenJObject(), null);
 
 			QueryResult queryResult;
 			do
 			{
-				queryResult = store.DocumentDatabase.Query("test", new IndexQuery { Start = 0, PageSize = 2, Query = "Project:RavenDB" }, CancellationToken.None);
+				queryResult = store.SystemDatabase.Queries.Query("test", new IndexQuery { Start = 0, PageSize = 2, Query = "Project:RavenDB" }, CancellationToken.None);
 			} while (queryResult.IsStale);
 
-			var indexToDataTable = store.DocumentDatabase.IndexUpdateTriggers.OfType<IndexToDataTable>().Single();
+			var indexToDataTable = store.SystemDatabase.IndexUpdateTriggers.OfType<IndexToDataTable>().Single();
 			Assert.Equal(2, indexToDataTable.DataTable.Rows.Count);
 		}
 	}

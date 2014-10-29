@@ -4,12 +4,14 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class NullableValuesRemote : RemoteClientTest
+	public class NullableValuesRemote : RavenTest
 	{
 		[Fact]
 		public void CanGetNullableDoubleAndInt()

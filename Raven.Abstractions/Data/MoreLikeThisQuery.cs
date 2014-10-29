@@ -1,11 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
-#if NETFX_CORE || SILVERLIGHT
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
 using System.Collections.Specialized;
 
-#endif
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
@@ -102,6 +101,18 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public NameValueCollection MapGroupFields { get; set; }
 
+		/// <summary>
+		/// Gets or sets the results transformer
+		/// </summary>
+		public string ResultsTransformer { get; set; }
+
+		public string[] Includes { get; set; }
+
+		/// <summary>
+		/// Additional query inputs
+		/// </summary>
+		public Dictionary<string, RavenJToken> TransformerParameters { get; set; }
+
 		public string GetRequestUri()
 		{
 			if (string.IsNullOrEmpty(IndexName))
@@ -158,6 +169,20 @@ namespace Raven.Abstractions.Data
 				uri.AppendFormat("minWordLen={0}&", MinimumWordLength);
 			if (StopWordsDocumentId != null)
 				uri.AppendFormat("stopWords={0}&", StopWordsDocumentId);
+			if (string.IsNullOrEmpty(ResultsTransformer) == false)
+				uri.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
+
+			if (TransformerParameters != null)
+			{
+				foreach (var input in TransformerParameters)
+				{
+					uri.AppendFormat("&tp-{0}={1}", input.Key, input.Value);
+				}
+			}
+
+			if (Includes != null && Includes.Length > 0)
+				uri.Append(string.Join("&", Includes.Select(x => "include=" + x).ToArray()));
+
 			return uri.ToString();
 		}
 	}

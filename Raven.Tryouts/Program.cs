@@ -1,28 +1,38 @@
 ﻿using System;
-using System.Transactions;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Document.DTC;
-using Raven.Tests.Indexes;
-using Raven.Tests.Issues;
-using Xunit;
+using System.Threading;
+using Raven.Database.DiskIO;
+using Raven.Json.Linq;
+using System.Linq;
+using Raven.Database.Extensions;
 
 namespace Raven.Tryouts
 {
-    class Program
-    {
-        private static void Main(string[] args)
-        {
-			var store = new DocumentStore
-			{
-				ConnectionStringName = "RavenDB"
-			}.Initialize();
+    public class Program
+	{
+		private static void Main(string[] args)
+		{
+            var performanceRequest = new PerformanceTestRequest
+            {
+                FileSize = (long) 1024 * 1024 * 1024,
+                OperationType = OperationType.Read,
+                BufferingType = BufferingType.ReadAndWrite,
+                Path = "c:\\temp\\data.ravendb-io-test",
+                Sequential = true,
+                ThreadCount = 4,
+                TimeToRunInSeconds = 100,
+                ChunkSize = 4 * 1024
+            };
 
-			IDocumentSession documentSession = store.OpenSession();
-	        var load = documentSession.Advanced.Lazily.Load<dynamic>("users/1");
-			var load2 = documentSession.Advanced.Lazily.Load<dynamic>("users/2");
+            var tester = new DiskPerformanceTester(performanceRequest, Console.WriteLine, CancellationToken.None);
+            tester.TestDiskIO();
 
-			documentSession.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
-        }
-    }
+		    var r = tester.Result;
+
+            Console.WriteLine(RavenJObject.FromObject(r));
+		    Console.ReadKey();
+		}
+	}
+
+
+	
 }

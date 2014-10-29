@@ -1,4 +1,3 @@
-#if !SILVERLIGHT
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -90,7 +89,6 @@ namespace Raven.Abstractions.MEF
 			remove { inner.CollectionChanged -= value; }
 		}
 
-		[Obsolete("Use Result Transformers instead.")]
 		public IEnumerable<TResult> OfType<TResult>()
 		{
 			return this.Select(x => x.Value).OfType<TResult>();			
@@ -116,4 +114,3 @@ namespace Raven.Abstractions.MEF
 
 	}
 }
-#endif

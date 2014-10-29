@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -18,62 +20,110 @@ namespace Raven.Abstractions.Smuggler
 
     public class SmugglerOptions
 	{
-		public string TransformScript { get; set; }
-
-        /// <summary>
-        /// Maximum number of steps that transform script can have
-        /// </summary>
-        public int MaxStepsForTransformScript { get; set; }
+        public const int DefaultDocumentSizeInChunkLimitInBytes = 32 * 1024 * 1024;
+	    private int chunkSize;
+        private int batchSize;
+	    private TimeSpan timeout;
+	    private long? totalDocumentSizeInChunkLimitInBytes;
 
 		public SmugglerOptions()
 		{
 			Filters = new List<FilterSetting>();
-			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
-			Timeout = 30 * 1000; // 30 seconds
-			BatchSize = 16*1024;
+            BatchSize = 16 * 1024;
+		    ChunkSize = int.MaxValue;
+            OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
+            Timeout = TimeSpan.FromSeconds(30);
 			ShouldExcludeExpired = false;
 			Limit = int.MaxValue;
-			LastAttachmentEtag = LastDocsEtag = Etag.Empty;
+	        StartDocsDeletionEtag = StartAttachmentsDeletionEtag = StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
 		    MaxStepsForTransformScript = 10*1000;
+	        ExportDeletions = false;
+		    TotalDocumentSizeInChunkLimitInBytes = DefaultDocumentSizeInChunkLimitInBytes;
+			CancelToken = new CancellationTokenSource();
+		}
+
+		public CancellationTokenSource CancelToken;
+
+		/// <summary>
+		/// Limit total size of documents in each chunk
+		/// </summary>
+		public long? TotalDocumentSizeInChunkLimitInBytes
+		{
+			get { return totalDocumentSizeInChunkLimitInBytes; }
+			set
+			{
+				if (value < 1024)
+					throw new InvalidOperationException("Total document size in a chunk cannot be less than 1kb");
+
+				totalDocumentSizeInChunkLimitInBytes = value;
+			}
 		}
 
 		/// <summary>
-		/// The path to write to when doing an export, or where to read from when doing an import.
+		/// The number of documents to import before new connection will be opened.
 		/// </summary>
-		public string BackupPath { get; set; }
+		public int ChunkSize
+		{
+			get { return chunkSize; }
+			set
+			{
+				if (value < 1)
+					throw new InvalidOperationException("Chunk size cannot be zero or a negative number");
+				chunkSize = value;
+			}
+		}
 
-		public List<FilterSetting> Filters { get; set; }
+	    public bool ExportDeletions { get; set; }
 
-		public Etag LastDocsEtag { get; set; }
-		public Etag LastAttachmentEtag { get; set; }
+		/// <summary>
+        /// Start exporting from the specified documents etag
+		/// </summary>
+        public Etag StartDocsEtag { get; set; }
+
+        /// <summary>
+        /// Start exporting from the specified attachments etag
+        /// </summary>
+        [Obsolete("Use RavenFS instead.")]
+        public Etag StartAttachmentsEtag { get; set; }
+
+        /// <summary>
+        /// Start exporting from the specified document deletion etag
+        /// </summary>
+        public Etag StartDocsDeletionEtag { get; set; }
+
+        /// <summary>
+        /// Start exporting from the specified attachment deletion etag
+        /// </summary>
+        [Obsolete("Use RavenFS instead.")]
+        public Etag StartAttachmentsDeletionEtag { get; set; }
+
+        /// <summary>
+        /// The number of document or attachments or indexes or transformers to load in each call to the RavenDB database.
+        /// </summary>
+        public int BatchSize
+		{
+            get { return batchSize; }
+            set
+			{
+                if (value < 1)
+                    throw new InvalidOperationException("Batch size cannot be zero or a negative number");
+                batchSize = value;
+			}
+		}
+
+		/// <summary>
+        /// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.
+        /// Default is all items.
+        /// Usage example: OperateOnTypes = ItemType.Indexes | ItemType.Transformers | ItemType.Documents | ItemType.Attachments.
+		/// </summary>
+        public ItemType OperateOnTypes { get; set; }
 
         public int Limit { get; set; }
 
 		/// <summary>
-		/// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.
-		/// Default is all items.
-		/// Usage example: OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments.
+        /// Filters to use to filter the documents that we will export/import.
 		/// </summary>
-		public ItemType OperateOnTypes { get; set; }
-
-		public ItemType ItemTypeParser(string items)
-		{
-			if (String.IsNullOrWhiteSpace(items))
-			{
-				return ItemType.Documents | ItemType.Indexes | ItemType.Attachments;
-			}
-			return (ItemType)Enum.Parse(typeof(ItemType), items, ignoreCase: true);
-		}
-
-		/// <summary>
-		/// The timeout for requests
-		/// </summary>
-		public int Timeout { get; set; }
-
-		/// <summary>
-		/// The batch size for loading to ravendb
-		/// </summary>
-		public int BatchSize { get; set; }
+        public List<FilterSetting> Filters { get; set; }
 
 		public virtual bool MatchFilters(RavenJToken item)
 		{
@@ -136,17 +186,88 @@ namespace Raven.Abstractions.Smuggler
 
             return dateTime < now;
 		}
+
+	    /// <summary>
+	    /// The timeout for requests
+	    /// </summary>
+	    public TimeSpan Timeout
+	    {
+		    get
+		    {
+				return timeout;
 	}
+		    set
+		    {
+			    if (value < TimeSpan.FromSeconds(5))
+			    {
+				    throw new InvalidOperationException("Timout value cannot be less then 5 seconds.");
+			    }
+				timeout = value;
+		    }
+	    }
+
+        public bool Incremental { get; set; }
+
+        public string TransformScript { get; set; }
+
+        /// <summary>
+        /// Maximum number of steps that transform script can have
+        /// </summary>
+        public int MaxStepsForTransformScript { get; set; }
+    }
+
+    public class SmugglerBetweenOptions
+    {
+        public RavenConnectionStringOptions From { get; set; }
+
+        public RavenConnectionStringOptions To { get; set; }
+
+		/// <summary>
+		/// You can give a key to the incremental last etag, in order to make incremental imports from a few export sources.
+		/// </summary>
+		public string IncrementalKey { get; set; }
+    }
+
+    public class SmugglerExportOptions
+    {
+        public RavenConnectionStringOptions From { get; set; }
+
+        /// <summary>
+        /// The path to write the export.
+        /// </summary>
+        public string ToFile { get; set; }
+
+        /// <summary>
+        /// The stream to write the export.
+        /// </summary>
+        public Stream ToStream { get; set; }
+    }
+
+    public class SmugglerImportOptions
+    {
+        public RavenConnectionStringOptions To { get; set; }
+
+        /// <summary>
+        /// The path to read from of the import data.
+        /// </summary>
+        public string FromFile { get; set; }
+
+        /// <summary>
+        /// The stream to read from of the import data.
+        /// </summary>
+        public Stream FromStream { get; set; }
+    }
 
 	[Flags]
 	public enum ItemType
 	{
 		Documents = 0x1,
 		Indexes = 0x2,
+        [Obsolete("Use RavenFS instead.")]
 		Attachments = 0x4,
 		Transformers = 0x8,
 
-        RemoveAnalyzers = 0x8000
+        RemoveAnalyzers = 0x8000,
 	}
 
 	public class FilterSetting

@@ -7,11 +7,13 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Spatial
 {
-	public class SpatialQueries
+	public class SpatialQueries : RavenTest
 	{
 		public class SpatialQueriesInMemoryTestIdx : AbstractIndexCreationTask<Listing>
 		{
@@ -31,7 +33,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void CanRunSpatialQueriesInMemory()
 		{
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+			using (var documentStore = NewDocumentStore(runInMemory: true))
 			{
 				new SpatialQueriesInMemoryTestIdx().Execute(documentStore);
 			}
@@ -59,7 +61,7 @@ namespace Raven.Tests.Spatial
 			// This item is about 3900 miles from areaOne
 			var newYork = new DummyGeoDoc(40.7137578228, -74.0126901936);
 
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+			using (var documentStore = NewDocumentStore(runInMemory: true))
 			using (var session = documentStore.OpenSession())
 			{
 
@@ -78,7 +80,7 @@ namespace Raven.Tests.Spatial
 				documentStore.DatabaseCommands.PutIndex("FindByLatLng", indexDefinition);
 
 				// Wait until the index is built
-				session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -86,7 +88,7 @@ namespace Raven.Tests.Spatial
 				const double radius = 5.0;
 
 				// Expected is that 5.0 will return 3 results
-				var nearbyDocs = session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                var nearbyDocs = session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
                     .WithinRadiusOf(radius, lat, lng)
 					.WaitForNonStaleResults()
 					.ToArray();
@@ -110,7 +112,7 @@ namespace Raven.Tests.Spatial
             // The gym is about 7.32 miles (11.79 kilometers) from my house.
             var gym = new DummyGeoDoc(44.682861, -93.25);
 
-            using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+            using (var documentStore = NewDocumentStore(runInMemory: true))
             using (var session = documentStore.OpenSession())
             {
                 session.Store(myHouse);
@@ -125,7 +127,7 @@ namespace Raven.Tests.Spatial
                 documentStore.DatabaseCommands.PutIndex("FindByLatLng", indexDefinition);
 
                 // Wait until the index is built
-                session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
                     .WaitForNonStaleResults()
                     .ToArray();
 
@@ -133,7 +135,7 @@ namespace Raven.Tests.Spatial
 
                 // Find within 8 miles.
                 // We should find both my house and the gym.
-                var matchesWithinMiles = session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                var matchesWithinMiles = session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
                     .WithinRadiusOf(radius, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Miles)
                     .WaitForNonStaleResults()
                     .ToArray();
@@ -142,7 +144,7 @@ namespace Raven.Tests.Spatial
 
                 // Find within 8 kilometers.
                 // We should find only my house, since the gym is ~11 kilometers out.
-                var matchesWithinKilometers = session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                var matchesWithinKilometers = session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
                     .WithinRadiusOf(radius, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Kilometers)
                     .WaitForNonStaleResults()
                     .ToArray();

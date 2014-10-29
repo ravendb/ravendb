@@ -3,40 +3,27 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Embedded;
-using Xunit;
-using Raven.Database;
-using Raven.Database.Indexing;
 using Raven.Client.Indexes;
-using Raven.Json.Linq;
 using Raven.Client.Linq;
-using System.Threading;
+using Raven.Tests.Common;
+
+using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryResultCountsWithProjections : IDisposable
+	public class QueryResultCountsWithProjections : RavenTest
 	{
-		EmbeddableDocumentStore store = null;
+		private readonly EmbeddableDocumentStore store;
 
 		public QueryResultCountsWithProjections()
 		{
-			store = new EmbeddableDocumentStore()
-			{
-				RunInMemory = true
-			};
-			store.Initialize();
+			store = NewDocumentStore();
 			PopulateDatastore();
-		}
-
-		public void Dispose()
-		{
-			store.Dispose();
 		}
 
 		[Fact]
@@ -85,7 +72,7 @@ namespace Raven.Tests.Bugs
 			using (var session = store.OpenSession())
 			{
 				var results = session.Query<Blog>("SelectManyIndexWithTransformer")
-					.As<BlogProjection>()
+					.TransformWith<BlogProjection>("sampleTransformer")
 					.ToArray();
 				Assert.Equal(1, results.Length);
 			}
@@ -132,13 +119,19 @@ namespace Raven.Tests.Bugs
 									 doc.Title,
 									 tag.Name
 								 },
-				   TransformResults = (database, results) => from result in results
-												 select new
+			   }.ToIndexDefinition(store.Conventions));
+
+			var transformer = "sampleTransformer";
+
+			store.DatabaseCommands.PutTransformer(transformer, new TransformerDefinition()
+			{
+				Name = transformer,
+				TransformResults = @"from result in results select new
 												 {
 													 result.Title,
 													 result.Tags
-												 }
-			   }.ToIndexDefinition(store.Conventions));
+												 };"
+			});
 
 			 using (var session = store.OpenSession())
 			 {
@@ -153,7 +146,7 @@ namespace Raven.Tests.Bugs
 				 session.SaveChanges();
 			 }
 
-			 while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
+			 while (store.SystemDatabase.Statistics.StaleIndexes.Length > 0)
 			 {
 				 Thread.Sleep(10);
 			 }
@@ -177,7 +170,5 @@ namespace Raven.Tests.Bugs
 		{ 
 			public string Name { get; set; }
 		}
-
-
 	}
 }

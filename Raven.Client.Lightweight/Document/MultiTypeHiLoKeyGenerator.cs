@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
 using System.Collections.Generic;
 using Raven.Client.Connection;
 
@@ -37,7 +36,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public string GenerateDocumentKey(IDatabaseCommands databaseCommands, DocumentConvention conventions, object entity)
 		{
-		    var typeTagName = conventions.GetTypeTagName(entity.GetType());
+         var typeTagName = conventions.GetDynamicTagName(entity);
 			if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
 				return null;
 			var tag = conventions.TransformTypeTagNameToDocumentKeyPrefix(typeTagName);
@@ -62,4 +61,3 @@ namespace Raven.Client.Document
 		}
 	}
 }
-#endif

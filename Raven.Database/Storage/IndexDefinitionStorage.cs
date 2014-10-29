@@ -13,7 +13,13 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Documents;
+using Microsoft.Isam.Esent.Interop;
+using Mono.CSharp;
+using Mono.CSharp.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Indexing.IndexMerging;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
@@ -23,45 +29,60 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Database.Indexing;
 
 namespace Raven.Database.Storage
 {
-    public class IndexDefinitionStorage
+	public class IndexDefinitionStorage
     {
         private const string IndexDefDir = "IndexDefinitions";
 
         private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim();
-		public long currentlyIndexing;
+        public long currentlyIndexing;
 
-        private readonly ConcurrentDictionary<string, AbstractViewGenerator> indexCache =
-            new ConcurrentDictionary<string, AbstractViewGenerator>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<int, AbstractViewGenerator> indexCache =
+            new ConcurrentDictionary<int, AbstractViewGenerator>();
 
-        private readonly ConcurrentDictionary<string, AbstractTransformer> transformCache =
-            new ConcurrentDictionary<string, AbstractTransformer>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentDictionary<int, AbstractTransformer> transformCache =
+            new ConcurrentDictionary<int, AbstractTransformer>();
 
-        private readonly ConcurrentDictionary<string, TransformerDefinition> transformDefinitions =
-            new ConcurrentDictionary<string, TransformerDefinition>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentDictionary<string, int> indexNameToId =
+            new ConcurrentDictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
+        private readonly ConcurrentDictionary<string, int> transformNameToId =
+            new ConcurrentDictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentDictionary<string, IndexDefinition> indexDefinitions =
-            new ConcurrentDictionary<string, IndexDefinition>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<int, TransformerDefinition> transformDefinitions =
+            new ConcurrentDictionary<int, TransformerDefinition>();
 
-        private readonly ConcurrentDictionary<string, IndexDefinition> newDefinitionsThisSession = new ConcurrentDictionary<string, IndexDefinition>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentDictionary<int, IndexDefinition> indexDefinitions =
+            new ConcurrentDictionary<int, IndexDefinition>();
+
+        private readonly ConcurrentDictionary<int, IndexDefinition> newDefinitionsThisSession =
+            new ConcurrentDictionary<int, IndexDefinition>();
 
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
         private readonly string path;
         private readonly InMemoryRavenConfiguration configuration;
-        private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 
-        public IndexDefinitionStorage(
+	    private readonly ITransactionalStorage transactionalStorage;
+
+	    private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
+
+        private List<IndexMergeSuggestion> IndexMergeSuggestions { get; set; }
+
+		[CLSCompliant(false)]
+		public IndexDefinitionStorage(
             InMemoryRavenConfiguration configuration,
             ITransactionalStorage transactionalStorage,
             string path,
             IEnumerable<AbstractViewGenerator> compiledGenerators,
             OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
         {
+            IndexMergeSuggestions = new List<IndexMergeSuggestion>();
             this.configuration = configuration;
-            this.extensions = extensions; // this is used later in the ctor, so it must appears first
+	        this.transactionalStorage = transactionalStorage;
+	        this.extensions = extensions; // this is used later in the ctor, so it must appears first
             this.path = Path.Combine(path, IndexDefDir);
 
             if (Directory.Exists(this.path) == false && configuration.RunInMemory == false)
@@ -70,98 +91,122 @@ namespace Raven.Database.Storage
             if (configuration.RunInMemory == false)
                 ReadFromDisk();
 
-            //compiled view generators always overwrite dynamic views
-            ReadIndexesFromCatalog(compiledGenerators, transactionalStorage);
-
             newDefinitionsThisSession.Clear();
         }
 
         public bool IsNewThisSession(IndexDefinition definition)
         {
-	        var fixedName = FixupIndexName(definition.Name);
-			return newDefinitionsThisSession.ContainsKey(fixedName);
-        }
-
-        private void ReadIndexesFromCatalog(IEnumerable<AbstractViewGenerator> compiledGenerators, ITransactionalStorage transactionalStorage)
-        {
-            foreach (var generator in compiledGenerators)
-            {
-                var copy = generator;
-                var displayNameAtt = TypeDescriptor.GetAttributes(copy)
-                    .OfType<DisplayNameAttribute>()
-                    .FirstOrDefault();
-
-                var name = displayNameAtt != null ? displayNameAtt.DisplayName : copy.GetType().Name;
-
-	            name = FixupIndexName(name);
-
-                transactionalStorage.Batch(actions =>
-                {
-                    if (actions.Indexing.GetIndexesStats().Any(x => x.Name == name))
-                        return;
-
-                    actions.Indexing.AddIndex(name, copy.ReduceDefinition != null);
-                });
-
-                var indexDefinition = new IndexDefinition
-                {
-                    Name = name,
-                    Map = "Compiled map function: " + generator.GetType().AssemblyQualifiedName,
-                    // need to supply this so the index storage will create map/reduce index
-                    Reduce = generator.ReduceDefinition == null ? null : "Compiled reduce function: " + generator.GetType().AssemblyQualifiedName,
-                    Indexes = generator.Indexes,
-                    Stores = generator.Stores,
-                    TermVectors = generator.TermVectors,
-                    SpatialIndexes = generator.SpatialIndexes,
-                    IsCompiled = true
-                };
-                indexCache.AddOrUpdate(name, copy, (s, viewGenerator) => copy);
-                indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) => indexDefinition);
-            }
+            return newDefinitionsThisSession.ContainsKey(definition.IndexId);
         }
 
         private void ReadFromDisk()
         {
-            foreach (var index in Directory.GetFiles(path, "*.index"))
+            foreach (var indexDefinition in ReadIndexDefinitionsFromDisk())
             {
                 try
                 {
-                    var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), Default.Converters);
-                    if (indexDefinition.Name == null)
-                        indexDefinition.Name = MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index));
+					if (Contains(indexDefinition.Name)) // checking if there are no older indexes with the same name
+						RemoveIndexAndCleanup(indexDefinition.Name);
+
                     ResolveAnalyzers(indexDefinition);
                     AddAndCompileIndex(indexDefinition);
-                    AddIndex(indexDefinition.Name, indexDefinition);
+                    AddIndex(indexDefinition.IndexId, indexDefinition);
                 }
                 catch (Exception e)
                 {
-                    logger.WarnException("Could not compile index " + index + ", skipping bad index", e);
+					logger.WarnException(string.Format("Could not compile index '{0} ({1})', skipping bad index", indexDefinition.IndexId, indexDefinition.Name), e);
                 }
             }
 
-            foreach (var transformer in Directory.GetFiles(path, "*.transform"))
+			foreach (var transformerDefinition in ReadTransformerDefinitionsFromDisk())
             {
                 try
                 {
-					var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(File.ReadAllText(transformer), Default.Converters);
-                    if (transformerDefinition.Name == null)
-						transformerDefinition.Name = MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(transformer));
-                    AddAndCompileTransform(transformerDefinition);
-                    AddTransform(transformerDefinition.Name, transformerDefinition);
+					RemoveTransformer(transformerDefinition.Name);
+
+                    var generator = CompileTransform(transformerDefinition);
+					transformCache[transformerDefinition.TransfomerId] = generator;
+                    AddTransform(transformerDefinition.TransfomerId, transformerDefinition);
                 }
                 catch (Exception e)
                 {
-					logger.WarnException("Could not compile transformer " + transformer + ", skipping bad transformer", e);
+					logger.WarnException(string.Format("Could not compile transformer '{0} ({1})', skipping bad transformer", transformerDefinition.TransfomerId, transformerDefinition.Name), e);
                 }
             }
         }
 
-        public int IndexesCount
+	    private IEnumerable<IndexDefinition> ReadIndexDefinitionsFromDisk()
+	    {
+		    var result = new SortedList<int, IndexDefinition>();
+
+			foreach (var index in Directory.GetFiles(path, "*.index"))
+			{
+				try
+				{
+					var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), Default.Converters);
+					result.Add(indexDefinition.IndexId, indexDefinition);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not compile index " + index + ", skipping bad index", e);
+				}
+			}
+
+		    return result.Values;
+	    }
+
+		private IEnumerable<TransformerDefinition> ReadTransformerDefinitionsFromDisk()
+		{
+			var result = new SortedList<int, TransformerDefinition>();
+
+			foreach (var transformer in Directory.GetFiles(path, "*.transform"))
+			{
+				try
+				{
+					var transformerDefinition = JsonConvert.DeserializeObject<TransformerDefinition>(File.ReadAllText(transformer), Default.Converters);
+
+					result.Add(transformerDefinition.TransfomerId, transformerDefinition);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not compile transformer " + transformer + ", skipping bad transformer", e);
+				}
+			}
+
+			return result.Values;
+		}
+
+		private void RemoveIndexAndCleanup(string name)
+		{
+			var index = GetIndexDefinition(name);
+			if (index == null) 
+				return;
+
+			transactionalStorage.Batch(accessor =>
+			{
+				accessor.Indexing.PrepareIndexForDeletion(index.IndexId);
+				accessor.Indexing.DeleteIndex(index.IndexId, CancellationToken.None);
+			});
+
+			RemoveIndex(index.IndexId);
+		}
+
+	    public int IndexesCount
         {
             get { return indexCache.Count; }
         }
 
+	    public int ResultTransformersCount
+	    {
+			get { return transformCache.Count; }
+	    }
+
         public string[] IndexNames
+        {
+            get { return IndexDefinitions.Values.OrderBy(x => x.Name).Select(x => x.Name).ToArray(); }
+        }
+
+        public int[] Indexes
         {
             get { return indexCache.Keys.OrderBy(name => name).ToArray(); }
         }
@@ -173,8 +218,19 @@ namespace Raven.Database.Storage
 
         public string[] TransformerNames
         {
-            get { return transformDefinitions.Keys.OrderBy(name => name).ToArray(); }
+            get
+            {
+                return transformDefinitions.Values
+                                           .OrderBy(x => x.Name)
+                                           .Select(x => x.Name)
+                                           .ToArray();
+            }
         }
+        public ConcurrentDictionary<int, IndexDefinition> IndexDefinitions
+        {
+            get { return indexDefinitions; }
+        }
+
 
         public string CreateAndPersistIndex(IndexDefinition indexDefinition)
         {
@@ -188,136 +244,175 @@ namespace Raven.Database.Storage
 
         private void WriteIndexDefinition(IndexDefinition indexDefinition)
         {
-	        if (configuration.RunInMemory)
-		        return;
-			var fixedName = FixupIndexName(indexDefinition.Name);
-			var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(fixedName) + ".index");
-            // Hash the name if it's too long (as a path)
-            File.WriteAllText(indexName, JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, Default.Converters));
+            if (configuration.RunInMemory)
+                return;
+            var indexName = Path.Combine(path, indexDefinition.IndexId + ".index");
+            File.WriteAllText(indexName,
+                              JsonConvert.SerializeObject(indexDefinition, Formatting.Indented, Default.Converters));
         }
 
-		private void WriteTransformerDefinition(TransformerDefinition transformerDefinition)
-		{
-			if (configuration.RunInMemory)
-				return;
-			var fixedName = FixupIndexName(transformerDefinition.Name);
-			var indexName = Path.Combine(path, MonoHttpUtility.UrlEncode(fixedName) + ".transform");
-			// Hash the name if it's too long (as a path)
-			File.WriteAllText(indexName, JsonConvert.SerializeObject(transformerDefinition, Formatting.Indented, Default.Converters));
-		}
-
-        public string CreateAndPersistTransform(TransformerDefinition transformerDefinition)
+        private void WriteTransformerDefinition(TransformerDefinition transformerDefinition)
         {
-            var transformer = AddAndCompileTransform(transformerDefinition);
-			if (configuration.RunInMemory == false)
-			{
-				WriteTransformerDefinition(transformerDefinition);
-			}
+            if (configuration.RunInMemory)
+                return;
+
+            string transformerFileName = Path.Combine(path, transformerDefinition.TransfomerId + ".transform");
+
+            File.WriteAllText(transformerFileName,
+                              JsonConvert.SerializeObject(transformerDefinition, Formatting.Indented, Default.Converters));
+        }
+
+		[CLSCompliant(false)]
+        public string CreateAndPersistTransform(TransformerDefinition transformerDefinition, AbstractTransformer transformer)
+        {
+			transformCache.AddOrUpdate(transformerDefinition.TransfomerId, transformer, (s, viewGenerator) => transformer);
+            if (configuration.RunInMemory == false)
+            {
+                WriteTransformerDefinition(transformerDefinition);
+            }
             return transformer.Name;
         }
 
         public void UpdateIndexDefinitionWithoutUpdatingCompiledIndex(IndexDefinition definition)
         {
-			var fixedName = FixupIndexName(definition.Name);
-
-			indexDefinitions.AddOrUpdate(fixedName, s => 
+            IndexDefinitions.AddOrUpdate(definition.IndexId, s =>
             {
-                throw new InvalidOperationException("Cannot find index named: " + definition.Name);
+                throw new InvalidOperationException(
+                    "Cannot find index named: " +
+                    definition.IndexId);
             }, (s, indexDefinition) => definition);
             WriteIndexDefinition(definition);
         }
 
         private DynamicViewCompiler AddAndCompileIndex(IndexDefinition indexDefinition)
         {
-			var fixedName = FixupIndexName(indexDefinition.Name);
-			var transformer = new DynamicViewCompiler(fixedName, indexDefinition, extensions, path, configuration);
+            var transformer = new DynamicViewCompiler(indexDefinition.Name, indexDefinition, extensions, path,
+                                                      configuration);
             var generator = transformer.GenerateInstance();
-			indexCache.AddOrUpdate(fixedName, generator, (s, viewGenerator) => generator);
+            indexCache.AddOrUpdate(indexDefinition.IndexId, generator, (s, viewGenerator) => generator);
 
             logger.Info("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
-                              transformer.CompiledQueryText);
+                        transformer.CompiledQueryText);
             return transformer;
         }
 
-        private DynamicTransformerCompiler AddAndCompileTransform(TransformerDefinition transformerDefinition)
+		[CLSCompliant(false)]
+	    public AbstractTransformer CompileTransform(TransformerDefinition transformerDefinition)
         {
-			var fixedName = FixupIndexName(transformerDefinition.Name);
-			var transformer = new DynamicTransformerCompiler(transformerDefinition, configuration, extensions, fixedName, path);
+            var transformer = new DynamicTransformerCompiler(transformerDefinition, configuration, extensions,
+                                                             transformerDefinition.Name, path);
             var generator = transformer.GenerateInstance();
-			transformCache.AddOrUpdate(fixedName, generator, (s, viewGenerator) => generator);
 
-            logger.Info("New transformer {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
-                              transformer.CompiledQueryText);
-            return transformer;
+            logger.Info("New transformer {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name,
+                        transformer.CompiledQueryText,
+                        transformer.CompiledQueryText);
+			return generator;
         }
 
-		public void RegisterNewIndexInThisSession(string name, IndexDefinition definition)
-		{
-			var fixedName = FixupIndexName(name);
-			newDefinitionsThisSession.TryAdd(fixedName, definition);
-		}
-
-        public void AddIndex(string name, IndexDefinition definition)
+        public void RegisterNewIndexInThisSession(string name, IndexDefinition definition)
         {
-			var fixedName = FixupIndexName(name);
-			indexDefinitions.AddOrUpdate(fixedName, definition, (s1, def) =>
+            newDefinitionsThisSession.TryAdd(definition.IndexId, definition);
+        }
+
+        public void AddIndex(int id, IndexDefinition definition)
+        {
+            IndexDefinitions.AddOrUpdate(id, definition, (s1, def) =>
             {
                 if (def.IsCompiled)
-                    throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
+                    throw new InvalidOperationException("Index " + id + " is a compiled index, and cannot be replaced");
                 return definition;
             });
+            indexNameToId[definition.Name] = id;
+
+            UpdateIndexMappingFile();
         }
 
-        public void AddTransform(string name, TransformerDefinition definition)
+        public void AddTransform(int id, TransformerDefinition definition)
         {
-			var fixedName = FixupIndexName(name);
-			transformDefinitions.AddOrUpdate(fixedName, definition, (s1, def) => definition);
+            transformDefinitions.AddOrUpdate(id, definition, (s1, def) => definition);
+            transformNameToId[definition.Name] = id;
+
+            UpdateTransformerMappingFile();
         }
 
-        public void RemoveIndex(string name)
+        public void RemoveIndex(int id)
         {
-			var fixedName = FixupIndexName(name);
             AbstractViewGenerator ignoredViewGenerator;
-			indexCache.TryRemove(fixedName, out ignoredViewGenerator);
+            int ignoredId;
+            if (indexCache.TryRemove(id, out ignoredViewGenerator))
+                indexNameToId.TryRemove(ignoredViewGenerator.Name, out ignoredId);
             IndexDefinition ignoredIndexDefinition;
-			indexDefinitions.TryRemove(fixedName, out ignoredIndexDefinition);
-			newDefinitionsThisSession.TryRemove(fixedName, out ignoredIndexDefinition);
+            IndexDefinitions.TryRemove(id, out ignoredIndexDefinition);
+            newDefinitionsThisSession.TryRemove(id, out ignoredIndexDefinition);
             if (configuration.RunInMemory)
                 return;
-			File.Delete(GetIndexSourcePath(fixedName) + ".index");
+            File.Delete(GetIndexSourcePath(id) + ".index");
+            UpdateIndexMappingFile();
         }
 
-        private string GetIndexSourcePath(string name)
+        private string GetIndexSourcePath(int id)
         {
-			var fixedName = FixupIndexName(name);
-			return Path.Combine(path, MonoHttpUtility.UrlEncode(fixedName));
+            return Path.Combine(path, id.ToString());
         }
 
         public IndexDefinition GetIndexDefinition(string name)
         {
-			var fixedName = FixupIndexName(name);
+            int id = 0;
+            if (indexNameToId.TryGetValue(name, out id))
+            {
+                IndexDefinition indexDefinition = IndexDefinitions[id];
+                if (indexDefinition.Fields.Count == 0)
+                {
+                    AbstractViewGenerator abstractViewGenerator = GetViewGenerator(id);
+                    indexDefinition.Fields = abstractViewGenerator.Fields;
+                }
+                return indexDefinition;
+            }
+            return null;
+        }
+
+        public IndexDefinition GetIndexDefinition(int id)
+        {
             IndexDefinition value;
-			indexDefinitions.TryGetValue(fixedName, out value);
-            if (value != null && value.Name == null) // backward compact, mostly
-                value.Name = name;
+            IndexDefinitions.TryGetValue(id, out value);
             return value;
         }
 
         public TransformerDefinition GetTransformerDefinition(string name)
         {
-			var fixedName = FixupIndexName(name);
+            int id;
+            if (transformNameToId.TryGetValue(name, out id))
+                return transformDefinitions[id];
+            return null;
+        }
+
+        public IndexMergeResults ProposeIndexMergeSuggestions()
+        {
+            var indexMerger = new IndexMerger(IndexDefinitions.ToDictionary(x=>x.Key,x=>x.Value));
+            return indexMerger.ProposeIndexMergeSuggestions();
+        }
+
+        public TransformerDefinition GetTransformerDefinition(int id)
+        {
             TransformerDefinition value;
-			transformDefinitions.TryGetValue(fixedName, out value);
-            if (value != null && value.Name == null) // backward compact, mostly
-                value.Name = name;
+            transformDefinitions.TryGetValue(id, out value);
             return value;
         }
 
+		[CLSCompliant(false)]
         public AbstractViewGenerator GetViewGenerator(string name)
         {
-			var fixedName = FixupIndexName(name);
+            int id = 0;
+            if (indexNameToId.TryGetValue(name, out id))
+                return indexCache[id];
+            return null;
+        }
+
+		[CLSCompliant(false)]
+        public AbstractViewGenerator GetViewGenerator(int id)
+        {
             AbstractViewGenerator value;
-			if (indexCache.TryGetValue(fixedName, out value) == false)
+            if (indexCache.TryGetValue(id, out value) == false)
                 return null;
             return value;
         }
@@ -327,49 +422,18 @@ namespace Raven.Database.Storage
             var indexDefinition = GetIndexDefinition(indexDef.Name);
             if (indexDefinition != null)
             {
-                return indexDefinition.Equals(indexDef)
-                    ? IndexCreationOptions.Noop
-                    : IndexCreationOptions.Update;
+                indexDef.IndexId = indexDefinition.IndexId;
+                bool result = indexDefinition.Equals(indexDef);
+                return result
+                           ? IndexCreationOptions.Noop
+                           : IndexCreationOptions.Update;
             }
             return IndexCreationOptions.Create;
         }
 
         public bool Contains(string indexName)
         {
-			var fixedName = FixupIndexName(indexName);
-			return indexDefinitions.ContainsKey(fixedName);
-        }
-
-        public string FixupIndexName(string index)
-        {
-            return FixupIndexName(index, path);
-        }
-
-        public static string FixupIndexName(string index, string path)
-        {
-	        if (index.EndsWith("=")) //allready encoded
-		        return index;
-            index = index.Trim();
-            string prefix = null;
-            if (index.StartsWith("Temp/") || index.StartsWith("Auto/"))
-            {
-                prefix = index.Substring(0, 5);
-            }
-            if (path.Length + index.Length > 230 ||
-                Encoding.Unicode.GetByteCount(index) >= 255)
-            {
-                using (var md5 = MD5.Create())
-                {
-                    var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(index));
-                    var result = prefix + Convert.ToBase64String(bytes);
-
-					if(path.Length + result.Length > 230)
-						throw new InvalidDataException("index name with the given path is too long even after encoding: " + index);
-
-	                return result;
-                }
-            }
-            return index;
+            return indexNameToId.ContainsKey(indexName);
         }
 
         public static void ResolveAnalyzers(IndexDefinition indexDefinition)
@@ -380,7 +444,10 @@ namespace Raven.Database.Storage
                                  select analyzer).ToArray();
 
             // Only do this for analyzer that actually exist; we do this here to be able to throw a correct error later on
-            foreach (var a in analyzerNames.Where(a => typeof(StandardAnalyzer).Assembly.GetType("Lucene.Net.Analysis." + a.Value) != null))
+            foreach (
+                var a in
+                    analyzerNames.Where(
+                        a => typeof(StandardAnalyzer).Assembly.GetType("Lucene.Net.Analysis." + a.Value) != null))
             {
                 indexDefinition.Analyzers[a.Key] = "Lucene.Net.Analysis." + a.Value;
             }
@@ -389,46 +456,104 @@ namespace Raven.Database.Storage
         public IDisposable TryRemoveIndexContext()
         {
             if (currentlyIndexingLock.TryEnterWriteLock(TimeSpan.FromSeconds(60)) == false)
-                throw new InvalidOperationException("Cannot modify indexes while indexing is in progress (already waited full minute). Try again later");
+                throw new InvalidOperationException(
+                    "Cannot modify indexes while indexing is in progress (already waited full minute). Try again later");
             return new DisposableAction(currentlyIndexingLock.ExitWriteLock);
         }
 
 
-	    public bool IsCurrentlyIndexing()
-	    {
-		    return Interlocked.Read(ref currentlyIndexing) != 0;
-	    }
+        public bool IsCurrentlyIndexing()
+        {
+            return Interlocked.Read(ref currentlyIndexing) != 0;
+        }
 
+		[CLSCompliant(false)]
         public IDisposable CurrentlyIndexing()
         {
             currentlyIndexingLock.EnterReadLock();
-	        Interlocked.Increment(ref currentlyIndexing);
+            Interlocked.Increment(ref currentlyIndexing);
             return new DisposableAction(() =>
             {
-	            currentlyIndexingLock.ExitReadLock();
-	            Interlocked.Decrement(ref currentlyIndexing);
+                currentlyIndexingLock.ExitReadLock();
+                Interlocked.Decrement(ref currentlyIndexing);
             });
         }
 
         public void RemoveTransformer(string name)
         {
-			var fixedName = FixupIndexName(name);
-            AbstractTransformer ignoredViewGenerator;
-			transformCache.TryRemove(fixedName, out ignoredViewGenerator);
-            TransformerDefinition ignoredIndexDefinition;
-			transformDefinitions.TryRemove(fixedName, out ignoredIndexDefinition);
-            if (configuration.RunInMemory)
-                return;
-			File.Delete(GetIndexSourcePath(fixedName) + ".transform");
+            var transformer = GetTransformerDefinition(name);
+            if (transformer == null) return;
+            RemoveTransformer(transformer.TransfomerId);
         }
 
-        public AbstractTransformer GetTransformer(string name)
+        public void RemoveIndex(string name)
         {
-			var fixedName = FixupIndexName(name);
+            var index = GetIndexDefinition(name);
+            if (index == null) return;
+            RemoveIndex(index.IndexId);
+        }
+
+        public void RemoveTransformer(int id)
+        {
+            AbstractTransformer ignoredViewGenerator;
+            int ignoredId;
+            if (transformCache.TryRemove(id, out ignoredViewGenerator))
+                transformNameToId.TryRemove(ignoredViewGenerator.Name, out ignoredId);
+            TransformerDefinition ignoredIndexDefinition;
+            transformDefinitions.TryRemove(id, out ignoredIndexDefinition);
+            if (configuration.RunInMemory)
+                return;
+            File.Delete(GetIndexSourcePath(id) + ".transform");
+            UpdateTransformerMappingFile();
+        }
+
+		[CLSCompliant(false)]
+        public AbstractTransformer GetTransformer(int id)
+        {
             AbstractTransformer value;
-			if (transformCache.TryGetValue(fixedName, out value) == false)
+            if (transformCache.TryGetValue(id, out value) == false)
                 return null;
             return value;
         }
+
+		[CLSCompliant(false)]
+        public AbstractTransformer GetTransformer(string name)
+        {
+            int id = 0;
+            if (transformNameToId.TryGetValue(name, out id))
+                return transformCache[id];
+            return null;
+        }
+
+        private void UpdateIndexMappingFile()
+        {
+            if (configuration.RunInMemory)
+                return;
+
+            var sb = new StringBuilder();
+
+            foreach (var index in indexNameToId)
+            {
+                sb.Append(string.Format("{0} - {1}{2}", index.Value, index.Key, Environment.NewLine));
+            }
+
+            File.WriteAllText(Path.Combine(path, "indexes.txt"), sb.ToString());
+        }
+
+        private void UpdateTransformerMappingFile()
+        {
+            if (configuration.RunInMemory)
+                return;
+
+            var sb = new StringBuilder();
+
+            foreach (var transform in transformNameToId)
+            {
+                sb.Append(string.Format("{0} - {1}{2}", transform.Value, transform.Key, Environment.NewLine));
+            }
+
+            File.WriteAllText(Path.Combine(path, "transformers.txt"), sb.ToString());
+        }
     }
+
 }

@@ -2,6 +2,8 @@
 using Raven.Abstractions.Spatial;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Spatial

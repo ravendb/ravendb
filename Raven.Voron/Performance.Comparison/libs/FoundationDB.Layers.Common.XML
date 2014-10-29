@@ -1,0 +1,606 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>FoundationDB.Layers.Common</name>
+    </assembly>
+    <members>
+        <member name="T:FoundationDB.Layers.Blobs.FdbBlobTransactionals">
+            <summary>
+            Transactional methods for the FdbBlob class
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlobTransactionals.DeleteAsync(FoundationDB.Layers.Blobs.FdbBlob,FoundationDB.Client.IFdbTransactional,System.Threading.CancellationToken)">
+            <summary>
+            Delete all key-value pairs associated with the blob.
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlobTransactionals.GetSizeAsync(FoundationDB.Layers.Blobs.FdbBlob,FoundationDB.Client.IFdbReadOnlyTransactional,System.Threading.CancellationToken)">
+            <summary>
+            Get the size (in bytes) of the blob.
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlobTransactionals.ReadAsync(FoundationDB.Layers.Blobs.FdbBlob,FoundationDB.Client.IFdbReadOnlyTransactional,System.Int64,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Read from the blob, starting at <paramref name="offset"/>, retrieving up to <paramref name="n"/> bytes (fewer then n bytes are returned when the end of the blob is reached).
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlobTransactionals.WriteAsync(FoundationDB.Layers.Blobs.FdbBlob,FoundationDB.Client.IFdbTransactional,System.Int64,FoundationDB.Client.Slice,System.Threading.CancellationToken)">
+            <summary>
+            Write <paramref name="data"/> to the blob, starting at <param name="offset"/> and overwriting any existing data at that location. The length of the blob is increased if necessary.
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlobTransactionals.AppendAsync(FoundationDB.Layers.Blobs.FdbBlob,FoundationDB.Client.IFdbTransactional,FoundationDB.Client.Slice,System.Threading.CancellationToken)">
+            <summary>
+            Append the contents of <paramref name="data"/> onto the end of the blob.
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlobTransactionals.TruncateAsync(FoundationDB.Layers.Blobs.FdbBlob,FoundationDB.Client.IFdbTransactional,System.Int64,System.Threading.CancellationToken)">
+            <summary>
+            Change the blob length to <paramref name="newLength"/>, erasing any data when shrinking, and filling new bytes with 0 when growing.
+            </summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbArray`1.Array">
+            <summary>Internal array used for storage</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbArray`1.Subspace">
+            <summary>Subspace used as a prefix for all items in this array</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbArray`1.Serializer">
+            <summary>Serializer for the elements of the array</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbArray.Subspace">
+            <summary>Subspace used as a prefix for all items in this array</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.EmptyAsync(FoundationDB.Layers.Collections.FdbVector,FoundationDB.Client.IFdbReadOnlyTransactional,System.Threading.CancellationToken)">
+            <summary>Remove all items from the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.EmptyAsync``1(FoundationDB.Layers.Collections.FdbVector{``0},FoundationDB.Client.IFdbReadOnlyTransactional,System.Threading.CancellationToken)">
+            <summary>Remove all items from the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.SizeAsync(FoundationDB.Layers.Collections.FdbVector,FoundationDB.Client.IFdbReadOnlyTransactional,System.Threading.CancellationToken)">
+            <summary>Get the number of items in the Vector. This number includes the sparsely represented items.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.SizeAsync``1(FoundationDB.Layers.Collections.FdbVector{``0},FoundationDB.Client.IFdbReadOnlyTransactional,System.Threading.CancellationToken)">
+            <summary>Get the number of items in the Vector. This number includes the sparsely represented items.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.ClearAsync(FoundationDB.Layers.Collections.FdbVector,FoundationDB.Client.IFdbTransactional,System.Threading.CancellationToken)">
+            <summary>Remove all items from the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.ClearAsync``1(FoundationDB.Layers.Collections.FdbVector{``0},FoundationDB.Client.IFdbTransactional,System.Threading.CancellationToken)">
+            <summary>Remove all items from the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.ResizeAsync(FoundationDB.Layers.Collections.FdbVector,FoundationDB.Client.IFdbTransactional,System.Int64,System.Threading.CancellationToken)">
+            <summary>Grow or shrink the size of the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.ResizeAsync``1(FoundationDB.Layers.Collections.FdbVector{``0},FoundationDB.Client.IFdbTransactional,System.Int64,System.Threading.CancellationToken)">
+            <summary>Grow or shrink the size of the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.PopAsync(FoundationDB.Layers.Collections.FdbVector,FoundationDB.Client.IFdbTransactional,System.Threading.CancellationToken)">
+            <summary>Get and pops the last item off the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.PopAsync``1(FoundationDB.Layers.Collections.FdbVector{``0},FoundationDB.Client.IFdbTransactional,System.Threading.CancellationToken)">
+            <summary>Get and pops the last item off the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.PushAsync(FoundationDB.Layers.Collections.FdbVector,FoundationDB.Client.IFdbTransactional,FoundationDB.Client.Slice,System.Threading.CancellationToken)">
+            <summary>Push a single item onto the end of the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.PushAsync``1(FoundationDB.Layers.Collections.FdbVector{``0},FoundationDB.Client.IFdbTransactional,``0,System.Threading.CancellationToken)">
+            <summary>Push a single item onto the end of the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.GetAsync(FoundationDB.Layers.Collections.FdbVector,FoundationDB.Client.IFdbReadOnlyTransactional,System.Int64,System.Threading.CancellationToken)">
+            <summary>Get the item at the specified index.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.GetAsync``1(FoundationDB.Layers.Collections.FdbVector{``0},FoundationDB.Client.IFdbReadOnlyTransactional,System.Int64,System.Threading.CancellationToken)">
+            <summary>Get the item at the specified index.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.SetAsync(FoundationDB.Layers.Collections.FdbVector,FoundationDB.Client.IFdbTransactional,System.Int64,FoundationDB.Client.Slice,System.Threading.CancellationToken)">
+            <summary>Set the value at a particular index in the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVectorTransactionals.SetAsync``1(FoundationDB.Layers.Collections.FdbVector{``0},FoundationDB.Client.IFdbTransactional,System.Int64,``0,System.Threading.CancellationToken)">
+            <summary>Set the value at a particular index in the Vector.</summary>
+        </member>
+        <member name="T:FoundationDB.Layers.Collections.FdbVector`1">
+            <summary>Represents a potentially sparse typed array in FoundationDB.</summary>
+            <typeparam name="T">Type of the items stored in the vector</typeparam>
+            <remarks>The default implementation uses the Tuple layer to encode the values.</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector`1.#ctor(FoundationDB.Client.FdbSubspace)">
+            <summary>Create a new sparse Vector</summary>
+            <param name="subspace">Subspace where the vector will be stored</param>
+            <remarks>Sparse entries will be assigned the default value for type <typeparamref name="T"/></remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector`1.#ctor(FoundationDB.Client.FdbSubspace,`0)">
+            <summary>Create a new sparse Vector</summary>
+            <param name="subspace">Subspace where the vector will be stored</param>
+            <param name="defaultValue">Default value for sparse entries</param>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector`1.#ctor(FoundationDB.Client.FdbSubspace,`0,FoundationDB.Client.IFdbValueEncoder{`0})">
+            <summary>Create a new sparse Vector</summary>
+            <param name="subspace">Subspace where the vector will be stored</param>
+            <param name="defaultValue">Default value for sparse entries</param>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector`1.SizeAsync(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>Get the number of items in the Vector. This number includes the sparsely represented items.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector`1.EmptyAsync(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>Test whether the Vector is empty.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector`1.Clear(FoundationDB.Client.IFdbTransaction)">
+            <summary>Remove all items from the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector`1.PushAsync(FoundationDB.Client.IFdbTransaction,`0)">
+            <summary>Push a single item onto the end of the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector`1.PopAsync(FoundationDB.Client.IFdbTransaction)">
+            <summary>Get and pops the last item off the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector`1.Set(FoundationDB.Client.IFdbTransaction,System.Int64,`0)">
+            <summary>Set the value at a particular index in the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector`1.GetAsync(FoundationDB.Client.IFdbReadOnlyTransaction,System.Int64)">
+            <summary>Get the item at the specified index.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector`1.ResizeAsync(FoundationDB.Client.IFdbTransaction,System.Int64)">
+            <summary>Grow or shrink the size of the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector`1.SwapAsync(FoundationDB.Client.IFdbTransaction,System.Int32,System.Int32)">
+            <summary>Swap the items at positions index1 and index2.</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbVector`1.Vector">
+            <summary>Vector that is used for storage</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbVector`1.Subspace">
+            <summary>Subspace used as a prefix for all items in this vector</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbVector`1.Serializer">
+            <summary>Serializer for the elements of the vector</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbVector`1.DefaultValue">
+            <summary>Default value for sparse entries</summary>
+        </member>
+        <member name="T:FoundationDB.Layers.Collections.FdbVector">
+            <summary>Represents a potentially sparse array in FoundationDB.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.#ctor(FoundationDB.Client.FdbSubspace,FoundationDB.Client.Slice)">
+            <summary>Create a new sparse Vector</summary>
+            <param name="subspace">Subspace where the vector will be stored</param>
+            <param name="defaultValue">Default value for sparse entries</param>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.#ctor(FoundationDB.Client.FdbSubspace)">
+            <summary>Create a new sparse Vector</summary>
+            <param name="subspace">Subspace where the vector will be stored</param>
+            <remarks>Sparse entries will be assigned the value Slice.Empty</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.SizeAsync(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>Get the number of items in the Vector. This number includes the sparsely represented items.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.PushAsync(FoundationDB.Client.IFdbTransaction,FoundationDB.Client.Slice)">
+            <summary>Push a single item onto the end of the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.BackAsync(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>Get the value of the last item in the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.FrontAsync(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>Get the value of the first item in the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.PopAsync(FoundationDB.Client.IFdbTransaction)">
+            <summary>Get and pops the last item off the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.SwapAsync(FoundationDB.Client.IFdbTransaction,System.Int64,System.Int64)">
+            <summary>Swap the items at positions i1 and i2.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.GetAsync(FoundationDB.Client.IFdbReadOnlyTransaction,System.Int64)">
+            <summary>Get the item at the specified index.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.GetRangeAsync(FoundationDB.Client.IFdbReadOnlyTransaction,System.Int64,System.Int64,System.Int64)">
+            <summary>[NOT YET IMPLEMENTED] Get a range of items in the Vector, returned as an async sequence.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.Set(FoundationDB.Client.IFdbTransaction,System.Int64,FoundationDB.Client.Slice)">
+            <summary>Set the value at a particular index in the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.EmptyAsync(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>Test whether the Vector is empty.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.ResizeAsync(FoundationDB.Client.IFdbTransaction,System.Int64)">
+            <summary>Grow or shrink the size of the Vector.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbVector.Clear(FoundationDB.Client.IFdbTransaction)">
+            <summary>Remove all items from the Vector.</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbVector.Subspace">
+            <summary>Subspace used as a prefix for all items in this vector</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbVector.DefaultValue">
+            <summary>Default value for sparse entries</summary>
+        </member>
+        <member name="T:FoundationDB.Layers.Counters.FdbCounterMap`1">
+            <summary>Container for multiple 64-bit signed counters, indexed by a key of type <typeparamref name="T"/></summary>
+            <typeparam name="T">Type of the key for each counter</typeparam>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterMap`1.EncodeKey(`0)">
+            <summary>Encode a <typeparamref name="T"/> into a Slice</summary>
+            <param name="value">Key that will be stored in the counter list</param>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterMap`1.DecodeKey(FoundationDB.Client.Slice)">
+            <summary>Decode a Slice back into a <typeparamref name="T"/></summary>
+            <param name="packed">Packed version that was generated via a previous call to <see cref="M:FoundationDB.Layers.Counters.FdbCounterMap`1.EncodeKey(`0)"/></param>
+            <returns>Decoded key</returns>
+        </member>
+        <member name="P:FoundationDB.Layers.Counters.FdbCounterMap`1.Map">
+            <summary>Queue that is used for storage</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Counters.FdbCounterMap`1.Subspace">
+            <summary>Subspace used as a prefix for all items in this counter list</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterMap.Add(FoundationDB.Client.IFdbTransaction,FoundationDB.Client.Slice,System.Int64)">
+            <summary>Add a value to a counter in one atomic operation</summary>
+            <param name="transaction"></param>
+            <param name="counterKey">Key of the counter, relative to the list's subspace</param>
+            <param name="value">Value that will be added</param>
+            <remarks>This operation will not cause the current transaction to conflict. It may create conflicts for transactions that would read the value of the counter.</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterMap.Subtract(FoundationDB.Client.IFdbTransaction,FoundationDB.Client.Slice,System.Int64)">
+            <summary>Subtract a value from a counter in one atomic operation</summary>
+            <param name="transaction">Transaction to use for the operation</param>
+            <param name="counterKey">Key of the counter, relative to the list's subspace</param>
+            <param name="value">Value that will be substracted. If the value is zero</param>
+            <remarks>This operation will not cause the current transaction to conflict. It may create conflicts for transactions that would read the value of the counter.</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterMap.Increment(FoundationDB.Client.IFdbTransaction,FoundationDB.Client.Slice)">
+            <summary>Increment the value of a counter in one atomic operation</summary>
+            <param name="transaction">Transaction to use for the operation</param>
+            <param name="counterKey">Key of the counter, relative to the list's subspace</param>
+            <remarks>This operation will not cause the current transaction to conflict. It may create conflicts for transactions that would read the value of the counter.</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterMap.Decrement(FoundationDB.Client.IFdbTransaction,FoundationDB.Client.Slice)">
+            <summary>Decrement the value of a counter in one atomic operation</summary>
+            <param name="transaction">Transaction to use for the operation</param>
+            <param name="counterKey">Key of the counter, relative to the list's subspace</param>
+            <remarks>This operation will not cause the current transaction to conflict. It may create conflicts for transactions that would read the value of the counter.</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterMap.ReadAsync(FoundationDB.Client.IFdbReadOnlyTransaction,FoundationDB.Client.Slice)">
+            <summary>Read the value of a counter</summary>
+            <param name="transaction">Transaction to use for the operation</param>
+            <param name="counterKey">Key of the counter, relative to the list's subspace</param>
+            <returns></returns>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterMap.AddThenReadAsync(FoundationDB.Client.IFdbTransaction,FoundationDB.Client.Slice,System.Int64)">
+            <summary>Adds a value to a counter, and return its new value.</summary>
+            <param name="transaction">Transaction to use for the operation</param>
+            <param name="counterKey">Key of the counter, relative to the list's subspace</param>
+            <returns>New value of the counter. Returns <paramref name="value"/> if the counter did not exist previously.</returns>
+            <remarks>This method WILL conflict with other transactions!</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterMap.ReadThenAddAsync(FoundationDB.Client.IFdbTransaction,FoundationDB.Client.Slice,System.Int64)">
+            <summary>Adds a value to a counter, but return its previous value.</summary>
+            <param name="transaction">Transaction to use for the operation</param>
+            <param name="counterKey">Key of the counter, relative to the list's subspace</param>
+            <returns>Previous value of the counter. Returns 0 if the counter did not exist previously.</returns>
+            <remarks>This method WILL conflict with other transactions!</remarks>
+        </member>
+        <member name="P:FoundationDB.Layers.Counters.FdbCounterMap.Subspace">
+            <summary>Subspace used as a prefix for all items in this counter list</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterTransactionals.GetTransactionalAsync(FoundationDB.Layers.Counters.FdbCounter,System.Threading.CancellationToken)">
+            <summary>
+            Get the value of the counter.
+            Not recommended for use with read/write transactions when the counter is being frequently updated (conflicts will be very likely).
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterTransactionals.GetSnapshotAsync(FoundationDB.Layers.Counters.FdbCounter,System.Threading.CancellationToken)">
+            <summary>
+            Get the value of the counter with snapshot isolation (no transaction conflicts).
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterTransactionals.AddAsync(FoundationDB.Layers.Counters.FdbCounter,System.Int64,System.Threading.CancellationToken)">
+            <summary>
+            Add the value x to the counter.
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounterTransactionals.SetTotalAsync(FoundationDB.Layers.Counters.FdbCounter,System.Int64,System.Threading.CancellationToken)">
+            <summary>
+            Set the counter to value x.
+            </summary>
+        </member>
+        <member name="T:FoundationDB.Layers.Counters.FdbCounter">
+            <summary>
+            Represents an integer value which can be incremented without conflict.
+            Uses a sharded representation (which scales with contention) along with background coalescing..
+            </summary>
+        </member>
+        <member name="F:FoundationDB.Layers.Counters.FdbCounter.m_coalesceRunning">
+            <summary>Flag use to know if a background coalescing is already running</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounter.#ctor(FoundationDB.Client.IFdbDatabase,FoundationDB.Client.FdbSubspace)">
+            <summary>
+            Create a new object representing a binary large object (blob).
+            Only keys within the subspace will be used by the object. 
+            Other clients of the database should refrain from modifying the subspace.</summary>
+            <param name="subspace">Subspace to be used for storing the blob data and metadata</param>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounter.GetTransactional(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>
+            Get the value of the counter.
+            Not recommended for use with read/write transactions when the counter is being frequently updated (conflicts will be very likely).
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounter.GetSnapshot(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>
+            Get the value of the counter with snapshot isolation (no transaction conflicts).
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounter.Add(FoundationDB.Client.IFdbTransaction,System.Int64)">
+            <summary>
+            Add the value x to the counter.
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Counters.FdbCounter.SetTotal(FoundationDB.Client.IFdbTransaction,System.Int64)">
+            <summary>
+            Set the counter to value x.
+            </summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Counters.FdbCounter.Subspace">
+            <summary>Subspace used as a prefix for all items in this table</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Counters.FdbCounter.Database">
+            <summary>Database instance that is used to perform background coalescing of the counter</summary>
+        </member>
+        <member name="T:FoundationDB.Layers.Indexing.FdbIndex`2">
+            <summary>Simple index that maps values of type <typeparamref name="TValue"/> into lists of ids of type <typeparamref name="TId"/></summary>
+            <typeparam name="TId">Type of the unique id of each document or entity</typeparam>
+            <typeparam name="TValue">Type of the value being indexed</typeparam>
+        </member>
+        <member name="M:FoundationDB.Layers.Indexing.FdbIndex`2.Add(FoundationDB.Client.IFdbTransaction,`0,`1)">
+            <summary>Insert a newly created entity to the index</summary>
+            <param name="trans">Transaction to use</param>
+            <param name="id">Id of the new entity (that was never indexed before)</param>
+            <param name="value">Value of this entity in the index</param>
+            <returns>True if a value was inserted into the index; otherwise false (if value is null and <see cref="!:IndexNullValue"/> is false)</returns>
+        </member>
+        <member name="M:FoundationDB.Layers.Indexing.FdbIndex`2.Update(FoundationDB.Client.IFdbTransaction,`0,`1,`1)">
+            <summary>Update the indexed values of an entity</summary>
+            <param name="trans">Transaction to use</param>
+            <param name="id">Id of the entity that has changed</param>
+            <param name="newValue">Previous value of this entity in the index</param>
+            <param name="previousValue">New value of this entity in the index</param>
+            <returns>True if a change was performed in the index; otherwise false (if <paramref name="previousValue"/> and <paramref name="newValue"/>)</returns>
+            <remarks>If <paramref name="newValue"/> and <paramref name="previousValue"/> are identical, then nothing will be done. Otherwise, the old index value will be deleted and the new value will be added</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Indexing.FdbIndex`2.Remove(FoundationDB.Client.IFdbTransaction,`0,`1)">
+            <summary>Remove an entity from the index</summary>
+            <param name="trans">Transaction to use</param>
+            <param name="id">Id of the entity that has been deleted</param>
+            <param name="value">Previous value of the entity in the index</param>
+        </member>
+        <member name="M:FoundationDB.Layers.Indexing.FdbIndex`2.LookupAsync(FoundationDB.Client.IFdbReadOnlyTransaction,`1,System.Boolean)">
+            <summary>Returns a list of ids matching a specific value</summary>
+            <param name="trans"></param>
+            <param name="value">Value to lookup</param>
+            <param name="reverse"></param>
+            <returns>List of document ids matching this value for this particular index (can be empty if no document matches)</returns>
+        </member>
+        <member name="M:FoundationDB.Layers.Indexing.FdbIndex`2.Lookup(FoundationDB.Client.IFdbReadOnlyTransaction,`1,System.Boolean)">
+            <summary>Returns a query that will return all id of the entities that have the specified value in this index</summary>
+            <param name="trans">Transaction to use</param>
+            <param name="value">Value to lookup</param>
+            <param name="reverse">If true, returns the results in reverse identifier order</param>
+            <returns>Range query that returns all the ids of entities that match the value</returns>
+        </member>
+        <member name="P:FoundationDB.Layers.Indexing.FdbIndex`2.IndexNullValues">
+            <summary>If true, null values are inserted in the index. If false (default), they are ignored</summary>
+            <remarks>This has no effect if <typeparam name="TValue" /> is not a reference type</remarks>
+        </member>
+        <member name="P:FoundationDB.Layers.Indexing.FdbIndex`2.KeySerializer">
+            <summary>Serializer for the keys of the indexed documents</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Indexing.FdbIndex`2.ValueSerializer">
+            <summary>Serializer for the values of the indexed documents</summary>
+        </member>
+        <member name="T:FoundationDB.Layers.Collections.FdbQueue`1">
+            <summary>Provides a high-contention Queue class with typed values</summary>
+            <typeparam name="T">Type of the items stored in the queue</typeparam>
+            <remarks>The default implementation uses the Tuple layer to encode the values.</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue`1.#ctor(FoundationDB.Client.FdbSubspace)">
+            <summary>Create a new High Contention Queue</summary>
+            <param name="subspace">Subspace where the queue will be stored</param>
+            <remarks>Uses the default Tuple serializer</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue`1.#ctor(FoundationDB.Client.FdbSubspace,System.Boolean)">
+            <summary>Create a new queue using either High Contention mode or Simple mode</summary>
+            <param name="subspace">Subspace where the queue will be stored</param>
+            <param name="highContention">If true, uses High Contention Mode (lots of popping clients). If true, uses the Simple Mode (a few popping clients).</param>
+            <remarks>Uses the default Tuple serializer</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue`1.#ctor(FoundationDB.Client.FdbSubspace,System.Boolean,FoundationDB.Client.IFdbValueEncoder{`0})">
+            <summary>Create a new queue using either High Contention mode or Simple mode</summary>
+            <param name="subspace">Subspace where the queue will be stored</param>
+            <param name="highContention">If true, uses High Contention Mode (lots of popping clients). If true, uses the Simple Mode (a few popping clients).</param>
+            <param name="serializer">Serializer used to pack and unpack the elements of the queue</param>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue`1.ClearAsync(FoundationDB.Client.IFdbTransaction)">
+            <summary>Remove all items from the queue.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue`1.PushAsync(FoundationDB.Client.IFdbTransaction,`0)">
+            <summary>Push a single item onto the queue.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue`1.PopAsync(FoundationDB.Client.IFdbDatabase,System.Threading.CancellationToken)">
+            <summary>Pop the next item from the queue. Cannot be composed with other functions in a single transaction.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue`1.EmptyAsync(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>Test whether the queue is empty.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue`1.PeekAsync(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>Get the value of the next item in the queue without popping it.</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbQueue`1.Queue">
+            <summary>Queue that is used for storage</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbQueue`1.Subspace">
+            <summary>Subspace used as a prefix for all items in this queue</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbQueue`1.Serializer">
+            <summary>Serializer for the elements of the queue</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueueTransactionals.ClearAsync(FoundationDB.Layers.Collections.FdbQueue,FoundationDB.Client.IFdbTransactional,System.Threading.CancellationToken)">
+            <summary>Remove all items from the queue.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueueTransactionals.ClearAsync``1(FoundationDB.Layers.Collections.FdbQueue{``0},FoundationDB.Client.IFdbTransactional,System.Threading.CancellationToken)">
+            <summary>Remove all items from the queue.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueueTransactionals.EmptyAsync(FoundationDB.Layers.Collections.FdbQueue,FoundationDB.Client.IFdbReadOnlyTransactional,System.Threading.CancellationToken)">
+            <summary>Test whether the queue is empty.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueueTransactionals.EmptyAsync``1(FoundationDB.Layers.Collections.FdbQueue{``0},FoundationDB.Client.IFdbReadOnlyTransactional,System.Threading.CancellationToken)">
+            <summary>Test whether the queue is empty.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueueTransactionals.PushAsync(FoundationDB.Layers.Collections.FdbQueue,FoundationDB.Client.IFdbTransactional,FoundationDB.Client.Slice,System.Threading.CancellationToken)">
+            <summary>Push a single item onto the queue.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueueTransactionals.PushAsync``1(FoundationDB.Layers.Collections.FdbQueue{``0},FoundationDB.Client.IFdbTransactional,``0,System.Threading.CancellationToken)">
+            <summary>Push a single item onto the queue.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueueTransactionals.PeekAsync(FoundationDB.Layers.Collections.FdbQueue,FoundationDB.Client.IFdbReadOnlyTransactional,System.Threading.CancellationToken)">
+            <summary>Get the value of the next item in the queue without popping it.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueueTransactionals.PeekAsync``1(FoundationDB.Layers.Collections.FdbQueue{``0},FoundationDB.Client.IFdbTransactional,System.Threading.CancellationToken)">
+            <summary>Get the value of the next item in the queue without popping it.</summary>
+        </member>
+        <member name="T:FoundationDB.Layers.Collections.FdbQueue">
+            <summary>
+            Provides a high-contention Queue class
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue.#ctor(FoundationDB.Client.FdbSubspace,System.Boolean)">
+            <summary>Create a new queue using either High Contention mode or Simple mode</summary>
+            <param name="subspace">Subspace where the queue will be stored</param>
+            <param name="highContention">If true, uses High Contention Mode (lots of popping clients). If true, uses the Simple Mode (a few popping clients).</param>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue.#ctor(FoundationDB.Client.FdbSubspace)">
+            <summary>Create a new High Contention Queue</summary>
+            <param name="subspace">Subspace where the queue will be stored</param>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue.ClearAsync(FoundationDB.Client.IFdbTransaction)">
+            <summary>Remove all items from the queue.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue.PushAsync(FoundationDB.Client.IFdbTransaction,FoundationDB.Client.Slice)">
+            <summary>Push a single item onto the queue.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue.PopAsync(FoundationDB.Client.IFdbDatabase,System.Threading.CancellationToken)">
+            <summary>Pop the next item from the queue. Cannot be composed with other functions in a single transaction.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue.EmptyAsync(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>Test whether the queue is empty.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Collections.FdbQueue.PeekAsync(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>Get the value of the next item in the queue without popping it.</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbQueue.Subspace">
+            <summary>Subspace used as a prefix for all items in this table</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Collections.FdbQueue.HighContention">
+            <summary>If true, the queue is operating in High Contention mode that will scale better with a lot of popping clients.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Interning.FdbStringInternTransactionals.InternAsync(FoundationDB.Layers.Interning.FdbStringIntern,FoundationDB.Client.IFdbTransactional,System.String,System.Threading.CancellationToken)">
+            <summary>Look up string <paramref name="value"/> in the intern database and return its normalized representation. If value already exists, intern returns the existing representation.</summary>
+            <param name="trans">Fdb database</param>
+            <param name="value">String to intern</param>
+            <returns>Normalized representation of the string</returns>
+            <remarks>The length of the string <paramref name="value"/> must not exceed the maximum FoundationDB value size</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Interning.FdbStringInternTransactionals.LookupAsync(FoundationDB.Layers.Interning.FdbStringIntern,FoundationDB.Client.IFdbReadOnlyTransactional,FoundationDB.Client.Slice,System.Threading.CancellationToken)">
+            <summary>Return the long string associated with the normalized representation <paramref name="uid"/></summary>
+            <param name="db">Fdb database</param>
+            <param name="uid">Interned uid of the string</param>
+            <returns>Original value of the interned string, or an exception if it does it does not exist</returns>
+        </member>
+        <member name="T:FoundationDB.Layers.Interning.FdbStringIntern">
+            <summary>Provides a class for interning (aka normalizing, aliasing) commonly-used long strings into shorter representations.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Interning.FdbStringIntern.EvictCache">
+            <summary>Evict a random value from the cache</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Interning.FdbStringIntern.AddToCache(System.String,FoundationDB.Client.Slice)">
+            <summary>Add a value in the cache</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Interning.FdbStringIntern.FindUidAsync(FoundationDB.Client.IFdbTransaction)">
+            <summary>Finds a new free uid that can be used to store a new string in the table</summary>
+            <param name="trans">Transaction used to look for and create a new uid</param>
+            <returns>Newly created UID that is guaranteed to be globally unique</returns>
+        </member>
+        <member name="M:FoundationDB.Layers.Interning.FdbStringIntern.InternAsync(FoundationDB.Client.IFdbTransaction,System.String)">
+            <summary>Look up string <paramref name="value"/> in the intern database and return its normalized representation. If value already exists, intern returns the existing representation.</summary>
+            <param name="trans">Fdb transaction</param>
+            <param name="value">String to intern</param>
+            <returns>Normalized representation of the string</returns>
+            <remarks>The length of the string <paramref name="value"/> must not exceed the maximum FoundationDB value size</remarks>
+        </member>
+        <member name="M:FoundationDB.Layers.Interning.FdbStringIntern.LookupAsync(FoundationDB.Client.IFdbReadOnlyTransaction,FoundationDB.Client.Slice)">
+            <summary>Return the long string associated with the normalized representation <paramref name="uid"/></summary>
+        </member>
+        <member name="T:FoundationDB.Layers.Blobs.FdbBlob">
+            <summary>Represents a potentially large binary value in FoundationDB.</summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlob.#ctor(FoundationDB.Client.FdbSubspace)">
+            <summary>
+            Create a new object representing a binary large object (blob).
+            Only keys within the subspace will be used by the object. 
+            Other clients of the database should refrain from modifying the subspace.</summary>
+            <param name="subspace">Subspace to be used for storing the blob data and metadata</param>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlob.DataKey(System.Int64)">
+            <summary>Returns the key for data chunk at the specified offset</summary>
+            <param name="offset"></param>
+            <returns>123 => (subspace, 'D', "             123")</returns>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlob.Delete(FoundationDB.Client.IFdbTransaction)">
+            <summary>
+            Delete all key-value pairs associated with the blob.
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlob.GetSizeAsync(FoundationDB.Client.IFdbReadOnlyTransaction)">
+            <summary>
+            Get the size (in bytes) of the blob.
+            </summary>
+            <returns>Return null if the blob does not exists, 0 if is empty, or the size in bytes</returns>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlob.ReadAsync(FoundationDB.Client.IFdbReadOnlyTransaction,System.Int64,System.Int32)">
+            <summary>
+            Read from the blob, starting at <paramref name="offset"/>, retrieving up to <paramref name="n"/> bytes (fewer then n bytes are returned when the end of the blob is reached).
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlob.WriteAsync(FoundationDB.Client.IFdbTransaction,System.Int64,FoundationDB.Client.Slice)">
+            <summary>
+            Write <paramref name="data"/> to the blob, starting at <param name="offset"/> and overwriting any existing data at that location. The length of the blob is increased if necessary.
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlob.AppendAsync(FoundationDB.Client.IFdbTransaction,FoundationDB.Client.Slice)">
+            <summary>
+            Append the contents of <paramref name="data"/> onto the end of the blob.
+            </summary>
+        </member>
+        <member name="M:FoundationDB.Layers.Blobs.FdbBlob.TruncateAsync(FoundationDB.Client.IFdbTransaction,System.Int64)">
+            <summary>
+            Change the blob length to <paramref name="newLength"/>, erasing any data when shrinking, and filling new bytes with 0 when growing.
+            </summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Blobs.FdbBlob.Subspace">
+            <summary>Subspace used as a prefix for all items in this table</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Tables.FdbTable.Name">
+            <summary>Name of the table</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Tables.FdbTable.Subspace">
+            <summary>Subspace used as a prefix for all items in this table</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Tables.FdbTable`2.Subspace">
+            <summary>Subspace used as a prefix for all items in this table</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Tables.FdbTable`2.KeySerializer">
+            <summary>Class that can pack/unpack keys into/from slices</summary>
+        </member>
+        <member name="P:FoundationDB.Layers.Tables.FdbTable`2.ValueSerializer">
+            <summary>Class that can serialize/deserialize values into/from slices</summary>
+        </member>
+    </members>
+</doc>

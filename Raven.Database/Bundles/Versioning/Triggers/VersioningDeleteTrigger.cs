@@ -7,7 +7,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.Threading;
+using Microsoft.VisualBasic.Logging;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Versioning.Data;
 using Raven.Database.Plugins;
@@ -26,7 +28,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
 		public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
 		{
-			var document = Database.Get(key, transactionInformation);
+			var document = Database.Documents.Get(key, transactionInformation);
 			if (document == null)
 				return VetoResult.Allowed;
 
@@ -41,7 +43,7 @@ namespace Raven.Bundles.Versioning.Triggers
 				if (revisionPos != -1)
 				{
 					var parentKey = key.Remove(revisionPos);
-					var parentDoc = Database.Get(parentKey, transactionInformation);
+					var parentDoc = Database.Documents.Get(parentKey, transactionInformation);
 					if (parentDoc == null)
 						return VetoResult.Allowed;
 				}
@@ -56,23 +58,29 @@ namespace Raven.Bundles.Versioning.Triggers
 		{
 			var versioningConfig = Database.GetDocumentVersioningConfiguration(versionInformer.Value[key]);
 	
-			if (versioningConfig == null || !versioningConfig.PurgeOnDelete)
-				return;
+			
+		    using (Database.DisableAllTriggersForCurrentThread())
+		    {
+                Database.TransactionalStorage.Batch(accessor =>
+                {
+                    foreach (var jsonDocument in  accessor.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", 0, int.MaxValue, null))
+                    {
+                        if(jsonDocument == null)
+                            continue;
+                        if (versioningConfig != null && versioningConfig.PurgeOnDelete)
+                        {
+                            Database.Documents.Delete(jsonDocument.Key, null, transactionInformation);
+                        }
+                        else
+                        {
+                            jsonDocument.Metadata.Remove(Constants.RavenReadOnly);
+                            accessor.Documents.AddDocument(jsonDocument.Key, jsonDocument.Etag, jsonDocument.DataAsJson, jsonDocument.Metadata);
+                        }
+                    }
 
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				while (true)
-				{
-					var revisionChildren = accessor.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", 0, 100).ToList();
-					if (revisionChildren.Count == 0)
-						break;
-
-					foreach (var revisionChild in revisionChildren)
-					{
-						Database.Delete(revisionChild.Key, null, transactionInformation);
-					}
-				}
-			});
+                
+                });
+		    }
 		}
 	}
 }

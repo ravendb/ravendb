@@ -23,19 +23,17 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 			var config = new LoggingConfiguration();
 
 			simpleLayoutTarget = new MemoryTarget
-			                     {
-				                     Layout = "${level:uppercase=true}|${message}|${exception}"
-			                     };
+			{
+				Layout = "${level:uppercase=true}|${message}|${exception}"
+			};
 			ndcLayoutTarget = new MemoryTarget
-			                  {
-				                  Layout =
-					                  "${level:uppercase=true}|${ndc:bottomFrames=10:topFrames=10:separator=;}|${message}|${exception}"
-			                  };
+			{
+				Layout = "${level:uppercase=true}|${ndc:bottomFrames=10:topFrames=10:separator=;}|${message}|${exception}"
+			};
 			mdcLayoutTarget = new MemoryTarget
-			                  {
-				                  Layout =
-									  "${level:uppercase=true}|${mdc:item=Key}|${message}|${exception}"
-			                  };
+			{
+				Layout = "${level:uppercase=true}|${mdc:item=Key}|${message}|${exception}"
+			};
 			config.AddTarget("simpleLayoutMemory", simpleLayoutTarget);
 			config.AddTarget("mdcLayoutTarget", mdcLayoutTarget);
 			config.AddTarget("ndcLayoutMemory", ndcLayoutTarget);

@@ -6,7 +6,10 @@
 
 using System;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Storage
@@ -23,7 +26,7 @@ namespace Raven.Tests.Storage
 				RavenJObject document = null;
 				tx.Batch(viewer =>
 				{
-					document = viewer.Documents.DocumentByKey("Ayende", null).DataAsJson;
+					document = viewer.Documents.DocumentByKey("Ayende").DataAsJson;
 				});
 
 				Assert.Equal("Rahien", document.Value<string>("Name"));
@@ -44,13 +47,30 @@ namespace Raven.Tests.Storage
 				RavenJObject document = null;
 				tx.Batch(viewer =>
 				{
-					document = viewer.Documents.DocumentByKey("Ayende", null).DataAsJson;
+					document = viewer.Documents.DocumentByKey("Ayende").DataAsJson;
 				});
 
 				Assert.Equal("Oren", document.Value<string>("Name"));
 			}
 		}
 
+
+		[Fact]
+		public void AddDocumentInNestedBatchShouldThrowConcurrencyException()
+		{
+			using (var tx = NewTransactionalStorage(requestedStorage:"voron"))
+			{
+				Assert.Throws<ConcurrencyException>(() =>
+				tx.Batch(mutator =>
+				{
+					mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new {Name = "Bar"}), new RavenJObject());
+
+					using(tx.DisableBatchNesting())
+						tx.Batch(mutator2 =>mutator2.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new {Name = "Bar"}), new RavenJObject()));
+
+				}));
+			}
+		}
 
 		[Fact]
 		public void CanUpdateDocumentThenReadItWhenThereAreManyDocs()
@@ -70,7 +90,7 @@ namespace Raven.Tests.Storage
 				RavenJObject document = null;
 				tx.Batch(viewer =>
 				{
-					document = viewer.Documents.DocumentByKey("docs/0", null).DataAsJson;
+					document = viewer.Documents.DocumentByKey("docs/0").DataAsJson;
 				});
 
 				Assert.Equal("Oren", document.Value<string>("Name"));
@@ -82,17 +102,17 @@ namespace Raven.Tests.Storage
 		{
 			var dataDir = NewDataPath();
 
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 			}
 
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				RavenJObject document = null;
 				tx.Batch(viewer =>
 				{
-					document = viewer.Documents.DocumentByKey("Ayende", null).DataAsJson;
+					document = viewer.Documents.DocumentByKey("Ayende").DataAsJson;
 				});
 
 				Assert.Equal("Rahien", document.Value<string>("Name"));
@@ -114,7 +134,7 @@ namespace Raven.Tests.Storage
 
 			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
-				tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Ayende", null)));
+				tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Ayende")));
 
 			}
 		}
@@ -138,7 +158,7 @@ namespace Raven.Tests.Storage
 
 			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
-				tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Ayende", null)));
+				tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Ayende")));
 				tx.Batch(accessor => Assert.Equal(0, accessor.Documents.GetDocumentsCount()));
 			}
 		}

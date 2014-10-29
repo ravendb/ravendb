@@ -49,13 +49,14 @@ namespace Raven.Abstractions.Data
 			Query = query.Query;
 			Start = query.Start;
 			Cutoff = query.Cutoff;
+	        WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow;
 			PageSize = query.PageSize;
 			FieldsToFetch = query.FieldsToFetch;
 			SortedFields = query.SortedFields;
 		    HighlighterPreTags = query.HighlighterPreTags;
 		    HighlighterPostTags = query.HighlighterPostTags;
 		    HighlightedFields = query.HighlightedFields;
-	        QueryInputs = query.QueryInputs;
+	        TransformerParameters = query.TransformerParameters;
 		    ResultsTransformer = query.ResultsTransformer;
 		    DefaultOperator = query.DefaultOperator;
 		    AllowMultipleIndexEntriesForSameDocumentToResultTransformer =

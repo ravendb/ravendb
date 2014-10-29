@@ -3,13 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
 using System;
 using System.Linq;
 using System.Threading;
-#if !NETFX_CORE
 using System.Transactions;
-#endif
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Connection;
@@ -70,12 +67,10 @@ namespace Raven.Client.Document
 
 		private RangeValue GetNextRange(IDatabaseCommands databaseCommands)
 		{
-#if !NETFX_CORE
 			using (new TransactionScope(TransactionScopeOption.Suppress))
 			using (RavenTransactionAccessor.SupressExplicitRavenTransaction())
 			using (databaseCommands.ForceReadFromMaster())
 			{
-#endif
 				ModifyCapacityIfRequired();
 				while (true)
 				{
@@ -137,9 +132,7 @@ namespace Raven.Client.Document
 						// expected, we need to retry
 					}
 				}
-#if !NETFX_CORE
 			}
-#endif
 		}
 
 		private void PutDocument(IDatabaseCommands databaseCommands, JsonDocument document)
@@ -156,4 +149,3 @@ namespace Raven.Client.Document
 		}
 	}
 }
-#endif

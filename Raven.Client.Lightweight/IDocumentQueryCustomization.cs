@@ -165,7 +165,6 @@ namespace Raven.Client
 		/// <summary>
 		/// Execute the transformation function on the results of this query.
 		/// </summary>
-		[Obsolete("Use Result Transformers instead.")]
 		IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer);
 
 		/// <summary>
@@ -225,5 +224,10 @@ namespace Raven.Client
 		/// Disables caching for query results.
 		/// </summary>
 		IDocumentQueryCustomization NoCaching();
+
+		/// <summary>
+		/// Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming results). Default: false
+		/// </summary>
+		IDocumentQueryCustomization ShowTimings();
 	}
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
@@ -71,9 +72,7 @@ namespace Raven.Client.Document.SessionOperations
 		}
 
 		private static readonly Regex idOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $",
-#if !SILVERLIGHT && !NETFX_CORE
 			RegexOptions.Compiled|
-#endif
  RegexOptions.IgnorePatternWhitespace);
 
 		private void AssertNotQueryById()
@@ -132,19 +131,17 @@ namespace Raven.Client.Document.SessionOperations
 		public IList<T> Complete<T>()
 		{
 			var queryResult = currentQueryResults.CreateSnapshot();
-			foreach (var include in queryResult.Includes)
+			foreach (var include in SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Includes))
 			{
-				var metadata = include.Value<RavenJObject>("@metadata");
-
-				sessionOperations.TrackEntity<object>(metadata.Value<string>("@id"),
-											   include,
-											   metadata, disableEntitiesTracking);
+				sessionOperations.TrackIncludedDocument(include);
 			}
+
 			var list = queryResult.Results
-				.Select(Deserialize<T>)
+				.Select(x => x != null ? Deserialize<T>(x) : default(T))
 				.ToList();
 
-			sessionOperations.RegisterMissingIncludes(queryResult.Results, includes);
+			if(disableEntitiesTracking == false)
+				sessionOperations.RegisterMissingIncludes(queryResult.Results.Where(x => x != null), includes);
 
 			if (transformResults == null)
 				return list;

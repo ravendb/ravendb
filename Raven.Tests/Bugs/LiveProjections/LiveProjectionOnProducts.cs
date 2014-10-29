@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Common;
 
 namespace Raven.Tests.Bugs.LiveProjections
 {
@@ -22,6 +23,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 			using (var documentStore = NewDocumentStore())
 			{
 				new ProductSkuListViewModelReport_ByArticleNumberAndName().Execute(((IDocumentStore) documentStore).DatabaseCommands, ((IDocumentStore) documentStore).Conventions);
+				new ProductSkuListViewModelReport_ByArticleNumberAndNameTransformer().Execute(documentStore);
 
 				using (var session = documentStore.OpenSession())
 				{
@@ -50,12 +52,12 @@ namespace Raven.Tests.Bugs.LiveProjections
 							x.WaitForNonStaleResultsAsOfNow();
 							((IDocumentQuery<ProductSkuListViewModelReport>)x).OrderBy("__document_id");
 						})
-						.As<ProductSkuListViewModelReport>()
+						.TransformWith<ProductSkuListViewModelReport_ByArticleNumberAndNameTransformer, ProductSkuListViewModelReport>()
 						.ToList();
 
 					var first = rep.FirstOrDefault();
 
-					Assert.Equal(first.Id, "ProductSkus/1");
+					Assert.Equal(first.Id, "productskus/1");
 					Assert.Equal(first.Name, "variant 1");
 				}
 			}
@@ -67,6 +69,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 			using (var documentStore = NewDocumentStore())
 			{
 				new ProductDetailsReport_ByProductId().Execute(((IDocumentStore) documentStore).DatabaseCommands, ((IDocumentStore) documentStore).Conventions);
+				new ProductDetailsReport_Transformer().Execute(documentStore);
 
 				using (var session = documentStore.OpenSession())
 				{
@@ -98,7 +101,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 				{
 					var rep = session.Query<dynamic, ProductDetailsReport_ByProductId>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
-						.As<ProductDetailsReport>()
+						.TransformWith<ProductDetailsReport_Transformer, ProductDetailsReport>()
 						.ToList();
 
 					var first = rep.FirstOrDefault();

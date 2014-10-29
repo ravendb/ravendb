@@ -1,0 +1,42 @@
+﻿<div class="messageBox" tabindex="-1" style="width:60%">
+    <form data-bind="submit: nextOrCreate">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"></button>
+            <h4 class="modal-title" data-bind="text:(isNewCounter == true? 'Create ' : 'Update ' ) + 'Counter'"></h4>
+        </div>
+        <div class="modal-body">
+            <div class="row">
+                <div class="col-md-12" data-bind="with: editedCounter()">
+                    <div class="col-md-12">
+                        <label class="col-md-6" for="counterId">Counter Name:</label>
+                        <div class="col-md-6">
+                            <input required type="text" class="form-control" id="counterId" placeholder="Counter Name" data-bind="enable: $root.isNewCounter, value: id, valueUpdate: 'afterkeydown'">
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="col-md-6" for="counterGroup">Group Name:</label>
+                        <div class="col-md-6">
+                            <input required type="text" class="form-control" id="counterGroup" placeholder="Group Name" data-bind="enable: $root.isNewCounter, value: group, valueUpdate: 'afterkeydown'">
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="col-md-6" for="counterOverall">Overall Total:</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="counterOverall" data-bind="enable:false, value: overallTotal()"></input>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="col-md-6" for="counterDelta">Delta</label>
+                        <div class="col-md-6" style="display:inline-block">
+                            <input class="form-control" required type="number" id="counterDelta" placeholder="Counter Delta" data-bind="value: $root.counterDelta, valueUpdate: 'afterkeydown'">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary" data-bind="text:(isNewCounter == true? 'Create ' : 'Update ' )"></button>
+        </div>
+    </form>
+</div>

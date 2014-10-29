@@ -6,11 +6,13 @@
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Querying
 {
-	public class UsingDynamicQueryWithRemoteServer : RemoteClientTest
+	public class UsingDynamicQueryWithRemoteServer : RavenTest
 	{
 		private readonly IDocumentStore documentStore;
 
@@ -53,7 +55,7 @@ namespace Raven.Tests.Querying
 					.Where(x => x.Category == "Rhinos" && x.Title.Length == 3)
 					.ToArray();
 
-				var blogs = s.Advanced.LuceneQuery<Blog>()
+                var blogs = s.Advanced.DocumentQuery<Blog>()
 					.Where("Category:Rhinos AND Title.Length:3")
 					.ToArray();
 
@@ -92,7 +94,7 @@ namespace Raven.Tests.Querying
 
 			using (var s = documentStore.OpenSession())
 			{
-				var results = s.Advanced.LuceneQuery<Blog>()
+                var results = s.Advanced.DocumentQuery<Blog>()
 					.Where("Title.Length:3 AND Category:Rhinos")
 					.WaitForNonStaleResultsAsOfNow().ToArray();
 
@@ -286,7 +288,7 @@ namespace Raven.Tests.Querying
 				FieldHighlightings titleHighlightings;
 				FieldHighlightings categoryHighlightings;
 
-				var results = s.Advanced.LuceneQuery<Blog>()
+                var results = s.Advanced.DocumentQuery<Blog>()
 							   .Highlight("Title", 18, 2, out titleHighlightings)
 							   .Highlight("Category", 18, 2, out categoryHighlightings)
 							   .SetHighlighterTags("*", "*")

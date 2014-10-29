@@ -10,6 +10,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Responders
 {
+    [Obsolete("Use RavenFS instead.")]
 	public class AttachmentReplicationBehavior : SingleItemReplicationBehavior<Attachment, byte[]>
 	{
 		public IEnumerable<AbstractAttachmentReplicationConflictResolver> ReplicationConflictResolvers { get; set; }
@@ -21,7 +22,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void DeleteItem(string id, Etag etag)
 		{
-			Database.DeleteStatic(id, etag);
+			Database.Attachments.DeleteStatic(id, etag);
 		}
 
 		protected override void MarkAsDeleted(string id, RavenJObject metadata)
@@ -31,7 +32,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, byte[] incoming)
 		{
-			Database.PutStatic(id, etag, new MemoryStream(incoming), metadata);
+			Database.Attachments.PutStatic(id, etag, new MemoryStream(incoming), metadata);
 			Actions.Lists.Remove(Constants.RavenReplicationAttachmentsTombstones, id);
 		}
 
@@ -124,10 +125,20 @@ namespace Raven.Bundles.Replication.Responders
 
 		}
 
-		protected override bool TryResolveConflict(string id, RavenJObject metadata, byte[] data, Attachment existing)
+		protected override bool TryResolveConflict(string id, RavenJObject metadata, byte[] data, Attachment existing, out RavenJObject metadataToSave,
+										out byte[] dataToSave)
 		{
-			return ReplicationConflictResolvers.Any(replicationConflictResolver =>
-			                                        replicationConflictResolver.TryResolve(id, metadata, data, existing, Actions.Attachments.GetAttachment));
+			foreach (var replicationConflictResolver in ReplicationConflictResolvers)
+			{
+				if (replicationConflictResolver.TryResolve(id, metadata, data, existing, Actions.Attachments.GetAttachment,
+				                                           out metadataToSave, out dataToSave))
+					return true;
+			}
+
+			metadataToSave = null;
+			dataToSave = null;
+
+			return false;
 		}
 	}
 }

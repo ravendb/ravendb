@@ -9,6 +9,8 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 using Raven.Client.Linq;

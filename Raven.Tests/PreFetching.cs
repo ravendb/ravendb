@@ -5,6 +5,8 @@ using Raven.Abstractions.Util;
 using Raven.Client.Embedded;
 using Raven.Database.Indexing;
 using Raven.Database.Prefetching;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests
@@ -17,7 +19,7 @@ namespace Raven.Tests
 		public PreFetching()
 		{
 			store = NewDocumentStore();
-			var workContext = store.DocumentDatabase.WorkContext;
+			var workContext = store.SystemDatabase.WorkContext;
 			prefetchingBehavior = new PrefetchingBehavior(PrefetchingUser.Indexer, workContext, new IndexBatchSizeAutoTuner(workContext));
 		}
 

@@ -3,6 +3,8 @@ using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests
@@ -30,12 +32,13 @@ namespace Raven.Tests
 			{
 				// We have to get the license status via reflection since it is not exposed otherwise.
 
-				var database = documentStore.DocumentDatabase;
+				var database = documentStore.SystemDatabase;
 
-				var field = database.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+				var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
 				Assert.NotNull(field);
-				if (field == null) return;
-				var validateLicense = field.GetValue(database);
+				var licField = field.FieldType.GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+				Assert.NotNull(licField);
+				var validateLicense = licField.GetValue(field.GetValue(database));
 
 				var prop = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
 				Assert.NotNull(prop);

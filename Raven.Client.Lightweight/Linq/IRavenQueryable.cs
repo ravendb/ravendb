@@ -37,10 +37,23 @@ namespace Raven.Client.Linq
         /// <returns></returns>
 	    IRavenQueryable<TResult> TransformWith<TTransformer, TResult>() where TTransformer : AbstractTransformerCreationTask, new();
 
+	    /// <summary>
+	    /// Specifies a result transformer name to use on the results
+	    /// </summary>
+	    /// <typeparam name="TResult"></typeparam>
+	    /// <returns></returns>
+	    IRavenQueryable<TResult> TransformWith<TResult>(string transformerName);
+
+		/// <summary>
+		/// Inputs a key and value to the query (accessible by the transformer)
+		/// </summary>
+		[Obsolete("Use AddTransformerParameter instead.")]
+		IRavenQueryable<T> AddQueryInput(string name, RavenJToken value);
+
         /// <summary>
         /// Inputs a key and value to the query (accessible by the transformer)
         /// </summary>
-	    IRavenQueryable<T> AddQueryInput(string name, RavenJToken value);
+	    IRavenQueryable<T> AddTransformerParameter(string name, RavenJToken value);
 
 		IRavenQueryable<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 	}

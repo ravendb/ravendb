@@ -10,7 +10,10 @@ namespace Raven.Abstractions.Replication
 	{
 		public string Self { get; set; }
 		public Etag MostRecentDocumentEtag { get; set; }
+
+        [Obsolete("Use RavenFS instead.")]
 		public Etag MostRecentAttachmentEtag { get; set; }
+
 		public List<DestinationStats> Stats { get; set; }
 
 		public ReplicationStatistics()

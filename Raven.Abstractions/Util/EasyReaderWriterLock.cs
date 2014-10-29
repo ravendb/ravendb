@@ -6,7 +6,6 @@ namespace Raven.Abstractions.Util
 {
 	public class EasyReaderWriterLock
 	{
-#if !SILVERLIGHT 
 		readonly ReaderWriterLockSlim inner = new ReaderWriterLockSlim();
 
 		public IDisposable EnterReadLock()
@@ -36,22 +35,7 @@ namespace Raven.Abstractions.Util
                 return null;
             return new DisposableAction(inner.ExitWriteLock);
         }
-#else
-		readonly object inner = new object();
-		public IDisposable EnterReadLock()
-		{
-			var release = new DisposableAction(() => Monitor.Exit(inner));
-			Monitor.Enter(inner);
-			return release;
-		}
 
-		public IDisposable EnterWriteLock()
-		{
-			var release = new DisposableAction(() => Monitor.Exit(inner));
-			Monitor.Enter(inner);
-			return release;
-		}
-#endif
 
 	}
 }

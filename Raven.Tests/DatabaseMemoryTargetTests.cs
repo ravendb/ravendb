@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using Lucene.Net.Util;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server;
 using Raven.Database.Util;

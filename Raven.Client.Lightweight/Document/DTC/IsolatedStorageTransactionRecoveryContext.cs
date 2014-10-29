@@ -1,5 +1,4 @@
-﻿#if !SILVERLIGHT && !NETFX_CORE
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.IsolatedStorage;
@@ -68,10 +67,9 @@ namespace Raven.Client.Document.DTC
 	        return preparingEnlistment.RecoveryInformation();
 	    }
 
-	    public void Dispose()
+		public void Dispose()
 		{
 			machineStoreForApplication.Dispose();
 		}
 	}
 }
-#endif

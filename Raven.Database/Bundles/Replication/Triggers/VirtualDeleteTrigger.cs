@@ -28,22 +28,11 @@ namespace Raven.Bundles.Replication.Triggers
 	{
 		readonly ThreadLocal<RavenJArray> deletedHistory = new ThreadLocal<RavenJArray>();
 
-		internal ReplicationHiLo HiLo
-		{
-			get
-			{
-				return (ReplicationHiLo)Database.ExtensionsState.GetOrAdd(typeof(ReplicationHiLo).AssemblyQualifiedName, o => new ReplicationHiLo
-				{
-					Database = Database
-				});
-			}
-		}
-
 		public override void OnDelete(string key, TransactionInformation transactionInformation)
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Database.Get(key, transactionInformation);
+				var document = Database.Documents.Get(key, transactionInformation);
 
 				if (document == null)
 					return;
@@ -65,7 +54,7 @@ namespace Raven.Bundles.Replication.Triggers
 				{Constants.RavenDeleteMarker, true},
 				{Constants.RavenReplicationHistory, deletedHistory.Value},
 				{Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
-				{Constants.RavenReplicationVersion, HiLo.NextId()}
+				{Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database)}
 			};
 			deletedHistory.Value = null;
 
@@ -80,7 +69,7 @@ namespace Raven.Bundles.Replication.Triggers
 
 			foreach (var c in conflicts)
 			{
-				var conflict = Database.Get(c.Value<string>(), transactionInformation);
+				var conflict = Database.Documents.Get(c.Value<string>(), transactionInformation);
 				var conflictSource = conflict.Metadata.Value<RavenJValue>(Constants.RavenReplicationSource).Value<string>();
 
 				if (conflictSource != currentSource)

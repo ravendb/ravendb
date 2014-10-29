@@ -25,6 +25,8 @@ namespace Raven.Storage.Esent
 			get { return inner; }
 		}
 
+		public event Action OnDispose;
+
 		private readonly DateTime createdAt = SystemTime.UtcNow;
 		[CLSCompliant(false)]
 		public StorageActionsAccessor(DocumentStorageActions inner)
@@ -57,6 +59,7 @@ namespace Raven.Storage.Esent
 			get { return inner;  }
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		public IAttachmentsStorageActions Attachments
 		{
 			get { return inner; }
@@ -101,9 +104,9 @@ namespace Raven.Storage.Esent
 					return false;
 			}
 		}
-		private readonly List<Task> tasks = new List<Task>();
+		private readonly List<DatabaseTask> tasks = new List<DatabaseTask>();
 
-		public T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Task
+		public T GetTask<T>(Func<T, bool> predicate, T newTask) where T : DatabaseTask
 		{
 			T task = tasks.OfType<T>().FirstOrDefault(predicate);
 			if (task == null)
@@ -138,7 +141,9 @@ namespace Raven.Storage.Esent
 
 		public void Dispose()
 	    {
-			// nothing to do here
+			var onDispose = OnDispose;
+			if (onDispose != null)
+				onDispose();
 	    }
 	}
 }

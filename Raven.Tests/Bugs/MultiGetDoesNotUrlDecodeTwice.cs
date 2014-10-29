@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

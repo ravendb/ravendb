@@ -10,6 +10,7 @@ namespace Raven.Client.Listeners
 	/// <summary>
 	/// Hook for users to provide additional logic on store operations
 	/// </summary>
+	/// 
 	public interface IDocumentStoreListener
 	{
 		/// <summary>

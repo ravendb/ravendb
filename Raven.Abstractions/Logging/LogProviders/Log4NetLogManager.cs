@@ -1,9 +1,6 @@
 using System;
 using System.Linq;
 using System.Reflection;
-#if NETFX_CORE
-using Raven.Client.WinRT.MissingFromWinRT;
-#endif
 
 namespace Raven.Abstractions.Logging.LogProviders
 {
@@ -39,42 +36,35 @@ namespace Raven.Abstractions.Logging.LogProviders
 
 		protected static Type GetLogManagerTypeStatic()
 		{
-#if !SL_4 && !NETFX_CORE
 			Assembly log4NetAssembly = GetLog4NetAssembly();
 			return log4NetAssembly != null
 				       ? log4NetAssembly.GetType("log4net.LogManager")
 				       : Type.GetType("log4net.LogManager, log4net");
-#else
-			return Type.GetType("log4net.LogManager, log4net");
-#endif
 		}
 
 		protected override Type GetNdcType()
 		{
-#if !SL_4 && !NETFX_CORE
 			Assembly log4NetAssembly = GetLog4NetAssembly();
 			return log4NetAssembly != null ? log4NetAssembly.GetType("log4net.NDC") : Type.GetType("log4net.NDC, log4net");
-#else
-			return Type.GetType("log4net.NDC, log4net");
-#endif
 		}
 
 		protected override Type GetMdcType()
 		{
-#if !SL_4 && !NETFX_CORE
 			Assembly log4NetAssembly = GetLog4NetAssembly();
 			return log4NetAssembly != null ? log4NetAssembly.GetType("log4net.MDC") : Type.GetType("log4net.MDC, log4net");
-#else
-			return Type.GetType("log4net.MDC, log4net");
-#endif
 		}
 
-#if !SL_4 && !NETFX_CORE
 		private static Assembly GetLog4NetAssembly()
 		{
-			return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly => assembly.FullName.StartsWith("log4net,"));
+            try
+            {
+                return Assembly.Load("log4net");
+            }
+            catch (Exception)
+            {
+                return null;
+            }
 		}
-#endif
 
 		public class Log4NetLogger : ILog
 		{

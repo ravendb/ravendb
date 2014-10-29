@@ -2,6 +2,8 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -21,7 +23,7 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				store.DocumentDatabase.PutIndex("test", new IndexDefinition
+				store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
 					Stores = { { "Name", FieldStorage.Yes } }
@@ -29,11 +31,11 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var objects = s.Advanced.LuceneQuery<dynamic>("test")
+                    var objects = s.Advanced.DocumentQuery<dynamic>("test")
 						.WaitForNonStaleResults()
 						.SelectFields<dynamic>("Name")
 						.OrderBy("Name")
-						.GroupBy(AggregationOperation.Distinct)
+						.Distinct()
 						.OrderBy("Name")
 						.ToList();
 
@@ -57,7 +59,7 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				store.DocumentDatabase.PutIndex("test", new IndexDefinition
+				store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
 					Stores = { { "Name", FieldStorage.Yes } }
@@ -91,7 +93,7 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				store.DocumentDatabase.PutIndex("test", new IndexDefinition
+				store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
 					Stores = { { "Name", FieldStorage.Yes } }
@@ -126,7 +128,7 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				store.DocumentDatabase.PutIndex("test", new IndexDefinition
+				store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
 					Stores = { { "Name", FieldStorage.Yes } }
@@ -134,13 +136,13 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var objects = s.Advanced.LuceneQuery<dynamic>("test")
+                    var objects = s.Advanced.DocumentQuery<dynamic>("test")
 						.WaitForNonStaleResults()
 						.OrderBy("Name")
 						.Skip(1)
 						.OrderBy("Name")
 						.SelectFields<dynamic>("Name")
-						.GroupBy(AggregationOperation.Distinct)
+						.Distinct()
 						.ToList();
 
 					Assert.Equal(1, objects.Count);

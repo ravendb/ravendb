@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq.Expressions;
@@ -90,18 +91,30 @@ namespace Raven.Abstractions.Extensions
 
 		public static string ToPropertyPath(this Expression expression, char propertySeparator = '.', char collectionSeparator = ',')
 		{
-#if NETFX_CORE
-			var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(propertySeparator.ToString(), collectionSeparator.ToString());
-#else
 			var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(propertySeparator.ToString(CultureInfo.InvariantCulture), collectionSeparator.ToString(CultureInfo.InvariantCulture));
-#endif
 			propertyPathExpressionVisitor.Visit(expression);
 
 			var builder = new StringBuilder();
-			foreach (var result in propertyPathExpressionVisitor.Results)
-			{
-				builder.Append(result);
-			}
+
+		    var stackLength = propertyPathExpressionVisitor.Results.Count;
+
+		    for (var i = 0; i < stackLength; i++)
+		    {
+		        var curValue = propertyPathExpressionVisitor.Results.Pop();
+
+		        if (curValue.Length == 1 && curValue[0] == propertySeparator && i != stackLength - 1)
+		        {
+		            var nextVal = propertyPathExpressionVisitor.Results.Peek();
+
+                    if (nextVal.Length == 1 && nextVal[0] == collectionSeparator)
+		            {
+		                continue;
+		            }
+		        }
+
+		        builder.Append(curValue);
+		        
+		    }
 			return builder.ToString().Trim(propertySeparator, collectionSeparator);
 		}
 
@@ -119,15 +132,39 @@ namespace Raven.Abstractions.Extensions
 
 			protected override Expression VisitMember(MemberExpression node)
 			{
+				if (IsDictionaryProperty(node))
+				{
+					return base.VisitMember(node);
+				}
 				Results.Push(propertySeparator);
 				Results.Push(node.Member.Name);
 				return base.VisitMember(node);
 			}
 
+			private static bool IsDictionaryProperty(MemberExpression node)
+			{
+				if (node.Member.DeclaringType == null)
+					return false;
+				if (node.Member.DeclaringType.IsGenericType == false)
+					return false;
+				var genericTypeDefinition = node.Member.DeclaringType.GetGenericTypeDefinition();
+				if (node.Member.Name == "Value")
+				{
+					return genericTypeDefinition == typeof (KeyValuePair<,>);
+				}
+				if (node.Member.Name == "Values")
+				{
+					return genericTypeDefinition == typeof (Dictionary<,>) ||
+					       genericTypeDefinition == typeof (IDictionary<,>);
+
+				}
+				return false;
+			}
+
 			protected override Expression VisitMethodCall(MethodCallExpression node)
 			{
 				if (node.Method.Name != "Select" && node.Arguments.Count != 2)
-					throw new InvalidOperationException("Not idea how to deal with convert " + node + " to a member expression");
+					throw new InvalidOperationException("No idea how to deal with convert " + node + " to a member expression");
 
 
 				Visit(node.Arguments[1]);

@@ -9,6 +9,8 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 using Xunit.Extensions;
 
@@ -83,7 +85,7 @@ namespace Raven.Tests.Querying
 				using (var session = store.OpenSession())
 				{
 					FieldHighlightings titleHighlighting, slugHighlighting, contentHighlighting;
-					var results = session.Advanced.LuceneQuery<ISearchable>("ContentSearchIndex")
+					var results = session.Advanced.DocumentQuery<ISearchable>("ContentSearchIndex")
 						.WaitForNonStaleResultsAsOfNow()
 						.Highlight("Title", 128, 2, out titleHighlighting)
 						.Highlight("Slug", 128, 2, out slugHighlighting)

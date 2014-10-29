@@ -6,13 +6,15 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 using Raven.Abstractions;
 
 namespace Raven.Tests.MultiGet
 {
-	public class MultiGetBasic : RemoteClientTest
+	public class MultiGetBasic : RavenTest
 	{
 		[Fact]
 		public void CanUseMultiGetToBatchGetDocumentRequests()

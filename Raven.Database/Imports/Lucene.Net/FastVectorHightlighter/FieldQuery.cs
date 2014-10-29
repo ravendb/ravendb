@@ -443,6 +443,7 @@ namespace Lucene.Net.Search.Vectorhighlight
                 get { return slop; }
             }
 
+			[CLSCompliant(false)]
             public float Boost
             {
                 get { return boost; }

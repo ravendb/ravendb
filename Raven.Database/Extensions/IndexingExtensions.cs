@@ -6,16 +6,16 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
+
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Database.Indexing;
 using Raven.Database.Indexing.Sorting;
 using Raven.Database.Linq;
-using Raven.Database.Server;
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Extensions
@@ -24,30 +24,45 @@ namespace Raven.Database.Extensions
 	{
 		public static Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
 		{
-			var analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzerTypeAsString) ??
-				Type.GetType(analyzerTypeAsString);
-			if (analyzerType == null)
-				throw new InvalidOperationException("Cannot find analyzer type '" + analyzerTypeAsString + "' for field: " + name);
+			var analyzerType = GetAnalyzerType(name, analyzerTypeAsString);
+
 			try
 			{
+				var assembly = analyzerType.Assembly;
+
 				// try to get parameterless ctor
 				var ctors = analyzerType.GetConstructor(Type.EmptyTypes);
 				if (ctors != null)
-					return (Analyzer)Activator.CreateInstance(analyzerType);
+					return (Analyzer)Activator.CreateInstance(assembly.FullName, analyzerType.FullName).Unwrap();
 
-				ctors = analyzerType.GetConstructor(new[] { typeof(Lucene.Net.Util.Version) });
-				if (ctors != null)
-					return (Analyzer)Activator.CreateInstance(analyzerType, Lucene.Net.Util.Version.LUCENE_30);
+				var type = analyzerType.Assembly.GetType(typeof(Lucene.Net.Util.Version).FullName);
+				ctors = analyzerType.GetConstructor(new[] { type });
+				if (ctors != null) 
+					return (Analyzer)Activator
+						.CreateInstance(assembly.FullName, analyzerType.FullName, false, BindingFlags.CreateInstance | BindingFlags.Public | BindingFlags.Instance, null, new object[] { Lucene.Net.Util.Version.LUCENE_30 }, CultureInfo.InvariantCulture, null)
+						.Unwrap();
 			}
 			catch (Exception e)
 			{
 				throw new InvalidOperationException(
-					"Could not create new analyzer instance '" + name + "' for field: " +
+					"Could not create new analyzer instance '" + analyzerTypeAsString + "' for field: " +
 						name, e);
 			}
 
 			throw new InvalidOperationException(
-				"Could not create new analyzer instance '" + name + "' for field: " + name + ". No recognizable constructor found.");
+				"Could not create new analyzer instance '" + analyzerTypeAsString + "' for field: " + name + ". No recognizable constructor found.");
+		}
+
+		public static Type GetAnalyzerType(string name, string analyzerTypeAsString)
+		{
+			var luceneAssembly = typeof (StandardAnalyzer).Assembly;
+			var analyzerType = luceneAssembly.GetType(analyzerTypeAsString) ??
+			                   Type.GetType(analyzerTypeAsString) ??
+			                   luceneAssembly.GetType("Lucene.Net.Analysis." + analyzerTypeAsString) ??
+			                   luceneAssembly.GetType("Lucene.Net.Analysis.Standard." + analyzerTypeAsString);
+			if (analyzerType == null)
+				throw new InvalidOperationException("Cannot find analyzer type '" + analyzerTypeAsString + "' for field: " + name);
+			return analyzerType;
 		}
 
 		public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index? defaultIndex)
@@ -136,6 +151,7 @@ namespace Raven.Database.Extensions
 			}
 		}
 
+		[CLSCompliant(false)]
 		public static Sort GetSort(this IndexQuery self, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
 		{
 			var spatialQuery = self as SpatialIndexQuery;
@@ -168,7 +184,7 @@ namespace Raven.Database.Extensions
 									var dsort = new SpatialDistanceFieldComparatorSource(spatialField, shape.GetCenter());
 									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
 								}
-								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);
+								var sortOptions = GetSortOption(indexDefinition, sortedField.Field, self);
                                 
 								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
@@ -182,15 +198,9 @@ namespace Raven.Database.Extensions
 		}
 
 
-		public static SortOptions? GetSortOption(this IndexDefinition self, string name)
+		public static SortOptions? GetSortOption(this IndexDefinition self, string name, IndexQuery query)
 		{
 			SortOptions value;
-			if (self.SortOptions.TryGetValue(name, out value))
-			{
-				return value;
-			}
-			if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
-				return value;
 
 			if (name.EndsWith("_Range"))
 			{
@@ -200,15 +210,25 @@ namespace Raven.Database.Extensions
 
 				if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
 					return value;
+
+				if (query != null && query.SortHints != null && query.SortHints.ContainsKey("SortHint-" + nameWithoutRange))
+					return query.SortHints["SortHint-" + nameWithoutRange];
 			}
-			if (CurrentOperationContext.Headers.Value == null)
+
+			if (self.SortOptions.TryGetValue(name, out value))
+			{
+				return value;
+			}
+			if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
 				return value;
 
-			var hint = CurrentOperationContext.Headers.Value["SortHint-" + name];
-			if (string.IsNullOrEmpty(hint))
+			if (query == null || query.SortHints == null)
 				return value;
-			Enum.TryParse(hint, true, out value);
-			return value;
+
+			if (query.SortHints.ContainsKey("SortHint-" + name) == false)
+				return value;
+
+			return query.SortHints["SortHint-" + name];
 		}
 	}
 }

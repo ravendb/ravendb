@@ -8,6 +8,8 @@ using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -20,7 +22,7 @@ namespace Raven.Tests.Bugs
 			using (var documentStore = NewDocumentStore())
 			{
 				documentStore.Initialize();
-				documentStore.DocumentDatabase.PutTriggers.Add(new PutTrigger {Database = documentStore.DocumentDatabase});
+				documentStore.SystemDatabase.PutTriggers.Add(new PutTrigger {Database = documentStore.SystemDatabase});
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
 					session.Store(new Doc {Id = "DocId1", Name = "Name1"});
@@ -45,7 +47,7 @@ namespace Raven.Tests.Bugs
 				using (Database.DisableAllTriggersForCurrentThread())
 				{
 					var revisionCopy = new RavenJObject(document);
-					Database.Put("CopyOfDoc", null, revisionCopy, new RavenJObject(metadata), transactionInformation);
+					Database.Documents.Put("CopyOfDoc", null, revisionCopy, new RavenJObject(metadata), transactionInformation);
 				}
 			}
 		}

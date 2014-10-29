@@ -2,6 +2,7 @@
 using System.Reflection;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Client.Document;
+using Raven.Tests.Common;
 
 namespace Raven.Tests.Json
 {

@@ -4,9 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Abstractions.Extensions;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#endif
 
 namespace Raven.Abstractions.Util
 {
@@ -71,7 +68,7 @@ namespace Raven.Abstractions.Util
                 key = key ?? NullValue;
                 lock (locks.GetOrAdd(key, new object()))
                 {
-	                var addValue = valueGenerator(null);
+	                var addValue = valueGenerator(key);
 	                items.AddOrUpdate(key, addValue, (s, val) => addValue);
                 }
             }
@@ -136,11 +133,9 @@ namespace Raven.Abstractions.Util
 			return globalLocker.EnterWriteLock();
 		}
 
-#if !SILVERLIGHT
         public IDisposable TryWithAllLocks()
         {
             return globalLocker.TryEnterWriteLock(TimeSpan.FromSeconds(3));
         }
-#endif
 	}
 }

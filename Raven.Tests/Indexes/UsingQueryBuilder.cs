@@ -10,12 +10,14 @@ using System.Globalization;
 
 using Lucene.Net.Search;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Tests.Indexes
 {
-	public class UsingQueryBuilder
+	public class UsingQueryBuilder : NoDisposalNeeded
 	{
 		[Fact]
 		public void Can_parse_Analyzed_simple_single_term()

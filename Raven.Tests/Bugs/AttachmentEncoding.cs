@@ -6,11 +6,13 @@
 using System.IO;
 using System.Net;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class AttachmentEncoding : RemoteClientTest
+	public class AttachmentEncoding : RavenTest
 	{
 		[Fact]
 		public void Can_get_proper_attachment_names()
@@ -22,7 +24,7 @@ namespace Raven.Tests.Bugs
 
 				using (var wc = new WebClient())
 				{
-					var staticJson = wc.DownloadString("http://localhost:8079/static");
+                    var staticJson = wc.DownloadString("http://localhost:8079/databases/Can_get_proper_attachment_names/static");
 					var value = RavenJArray.Parse(staticJson)[0].Value<string>("Key");
 					Assert.Equal("test/hello/world", value);
 				}

@@ -10,6 +10,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 using Raven.Client.Embedded;
@@ -40,8 +41,8 @@ select new {
 		public MapReduce_IndependentSteps()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
-			db.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.NotAnalyzed}}});
+			db = store.SystemDatabase;
+			db.Indexes.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.NotAnalyzed}}});
 		}
 
 		public override void Dispose()
@@ -69,7 +70,7 @@ select new {
 			};
 			for (int i = 0; i < values.Length; i++)
 			{
-				db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
+				db.Documents.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
 			}
 
 			QueryResult q = null;
@@ -77,7 +78,7 @@ select new {
 			{
 				do
 				{
-					q = db.Query("CommentsCountPerBlog", new IndexQuery
+					q = db.Queries.Query("CommentsCountPerBlog", new IndexQuery
 					{
 						Query = "blog_id:3",
 						Start = 0,

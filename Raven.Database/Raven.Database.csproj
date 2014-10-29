@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Database</RootNamespace>
     <AssemblyName>Raven.Database</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -34,24 +34,28 @@
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <NuGetPackageImportStamp>7003453f</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\build\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;NET_4_0</DefineConstants>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;NET_4_0 NET45</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>1607, 1591</NoWarn>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <DocumentationFile>
     </DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\build\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE;NET_4_0</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -60,6 +64,7 @@
     <DocumentationFile>
     </DocumentationFile>
     <NoWarn>1607, 1591</NoWarn>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -68,13 +73,6 @@
     <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AWS.Extensions">
-      <HintPath>..\SharedLibs\AWS.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="AWSSDK, Version=1.5.1.0, Culture=neutral, PublicKeyToken=cd2d24cd2bace800, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\AWSSDK.dll</HintPath>
-    </Reference>
     <Reference Include="Esent.Interop">
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
@@ -82,56 +80,74 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\GeoAPI.dll</HintPath>
     </Reference>
+    <Reference Include="HtmlAgilityPack">
+      <HintPath>..\packages\HtmlAgilityPack.1.4.6\lib\Net45\HtmlAgilityPack.dll</HintPath>
+    </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\ICSharpCode.NRefactory.5.2.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.NRefactory.CSharp, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\ICSharpCode.NRefactory.5.2.0\lib\Net40\ICSharpCode.NRefactory.CSharp.dll</HintPath>
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.CSharp.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.NRefactory.Xml, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\ICSharpCode.NRefactory.5.2.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
+      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
     </Reference>
-    <Reference Include="Jint.Raven">
-      <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
+    <Reference Include="Jint">
+      <HintPath>..\SharedLibs\Jint.dll</HintPath>
     </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
-    <Reference Include="Lucene.Net.Contrib.FastVectorHighlighter">
-      <HintPath>..\SharedLibs\Lucene.Net.Contrib.FastVectorHighlighter.dll</HintPath>
-    </Reference>
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Net4">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4.dll</HintPath>
+    <Reference Include="metrics">
+      <HintPath>..\SharedLibs\metrics.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Microsoft.Data.Edm, Version=5.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+    <Reference Include="Microsoft.Owin, Version=2.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Data.Edm.5.2.0\lib\net40\Microsoft.Data.Edm.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Owin.2.1.0\lib\net45\Microsoft.Owin.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Data.OData, Version=5.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+    <Reference Include="Microsoft.Owin.Host.HttpListener">
+      <HintPath>..\packages\Microsoft.Owin.Host.HttpListener.2.1.0\lib\net45\Microsoft.Owin.Host.HttpListener.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Owin.Hosting, Version=2.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Data.OData.5.2.0\lib\net40\Microsoft.Data.OData.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Owin.Hosting.2.1.0\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualBasic" />
-    <Reference Include="Microsoft.WindowsAzure.Configuration, Version=1.8.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.WindowsAzure.ConfigurationManager.1.8.0.0\lib\net35-full\Microsoft.WindowsAzure.Configuration.dll</HintPath>
+    <Reference Include="Mono.Cecil, Version=0.9.5.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.WindowsAzure.Storage, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\WindowsAzure.Storage.2.0.5.1\lib\net40\Microsoft.WindowsAzure.Storage.dll</HintPath>
+    <Reference Include="Mono.Cecil.Mdb, Version=0.9.5.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Mdb.dll</HintPath>
     </Reference>
-    <Reference Include="Mono.Cecil">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.3\lib\net40\Mono.Cecil.dll</HintPath>
+    <Reference Include="Mono.Cecil.Pdb, Version=0.9.5.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Pdb.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil.Rocks, Version=0.9.5.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
     </Reference>
     <Reference Include="NetTopologySuite">
       <HintPath>..\SharedLibs\NetTopologySuite.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.5.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="NLog">
+      <HintPath>..\packages\NLog.2.1.0\lib\net45\NLog.dll</HintPath>
+    </Reference>
+    <Reference Include="Owin">
+      <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
     </Reference>
     <Reference Include="Spatial4n.Core.NTS">
       <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
@@ -145,18 +161,48 @@
     <Reference Include="System.Data.Services.Client" />
     <Reference Include="System.DirectoryServices" />
     <Reference Include="System.DirectoryServices.AccountManagement" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Management" />
     <Reference Include="System.Net" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Net.Http.Formatting, Version=5.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.1.2\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http.WebRequest" />
+    <Reference Include="System.Reactive.Core, Version=2.2.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Core.2.2.4\lib\net45\System.Reactive.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Interfaces, Version=2.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Interfaces.2.2.4\lib\net45\System.Reactive.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Linq, Version=2.2.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Linq.2.2.4\lib\net45\System.Reactive.Linq.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.PlatformServices, Version=2.2.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-PlatformServices.2.2.4\lib\net45\System.Reactive.PlatformServices.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
-    <Reference Include="System.Spatial, Version=5.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\System.Spatial.5.2.0\lib\net40\System.Spatial.dll</HintPath>
-    </Reference>
     <Reference Include="System.Transactions" />
-    <Reference Include="System.Web" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Web">
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="System.Web.Http, Version=5.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.1.2\lib\net45\System.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http.Owin">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Owin.5.1.2\lib\net45\System.Web.Http.Owin.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
@@ -164,8 +210,116 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Actions\ActionsBase.cs" />
+    <Compile Include="Actions\AttachmentActions.cs" />
+    <Compile Include="Actions\LastCollectionEtags.cs" />
+    <Compile Include="Actions\MaintenanceActions.cs" />
+    <Compile Include="Actions\DocumentActions.cs" />
+    <Compile Include="Actions\IndexActions.cs" />
+    <Compile Include="Actions\NotificationActions.cs" />
+    <Compile Include="Actions\PatchActions.cs" />
+    <Compile Include="Actions\QueryActions.cs" />
+    <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="DiskIO\DiskPerformanceTester.cs" />
+    <Compile Include="DiskIO\PerformanceTestRequest.cs" />
+    <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
+    <Compile Include="Plugins\Builtins\PurgeOutdatedTombstones.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Bundles\Replication\Data\ReplicationTopologyNode.cs" />
+    <Compile Include="Bundles\Replication\Data\ReplicationTopology.cs" />
+    <Compile Include="Bundles\Replication\Data\ReplicatonNodeState.cs" />
+    <Compile Include="Bundles\Replication\Impl\ReplicationTopologyDiscoverer.cs" />
+    <Compile Include="Bundles\Replication\Utils\ReplicationUtils.cs" />
+    <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriterSimulator.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationMetricsCountersManager.cs" />
+    <Compile Include="Indexing\GenerateIndexDefinitionCode.cs" />
+    <Compile Include="Plugins\Builtins\HighestEtagsPerCollection.cs" />
+    <Compile Include="Plugins\IServerStartupTask.cs" />
+    <Compile Include="Server\Abstractions\IResourceStore.cs" />
+    <Compile Include="Server\Connections\HttpTracePushContent.cs" />
+    <Compile Include="Server\Controllers\HttpTraceController.cs" />
+    <Compile Include="Server\Connections\ILogsTransport.cs" />
+    <Compile Include="Server\Connections\LogPushContent.cs" />
+    <Compile Include="Server\Connections\AdminLogsConnectionState.cs" />
+    <Compile Include="Server\Connections\AdminLogsTarget.cs" />
+    <Compile Include="Server\RavenFS\Controllers\HttpTraceFsController.cs" />
+    <Compile Include="Server\RavenFS\Storage\BaseBackupOperation.cs" />
+    <Compile Include="Server\RavenFS\Storage\BaseRestoreOperation.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\Backup\BackupOperation.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\Backup\RestoreOperation.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Backup\BackupOperation.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Backup\RestoreOperation.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\ConflictResolvedInFavourOfCurrentVersion.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\AbstractFileSynchronizationConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LatestFileSynchronizationConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\RemoteFileSynchronizationConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\Resolvers\LocalFileSynchronizationConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationConfig.cs" />
+    <Compile Include="Server\IgnoreSslCertificateErrorsMode.cs" />
+    <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
+    <Compile Include="Smuggler\EmbeddedSmugglerOperations.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
+    <Compile Include="Storage\Esent\StorageConfigurator.cs" />
+    <Compile Include="Storage\IncrementalBackupState.cs" />
+    <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
+    <Compile Include="Util\DebugInfoProvider.cs" />
+    <Compile Include="Util\TimedEnumerable.cs" />
+    <Compile Include="Actions\TransformerActions.cs" />
+    <Compile Include="Backup\ProgressNotifier.cs" />
+    <Compile Include="Bundles\PeriodicExports\Triggers\AttachmentAncestryPutTrigger.cs" />
+    <Compile Include="Bundles\PeriodicExports\Triggers\VirtualAttachmentDeleteTrigger.cs" />
+    <Compile Include="Bundles\Replication\Plugins\LatestDocumentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\Replication\Plugins\LocalAttachmentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\Replication\Plugins\RemoteAttachmentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\Replication\Plugins\RemoteDocumentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\Replication\Plugins\LocalDocumentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\PeriodicExports\Controllers\AdminPeriodicBackupController.cs" />
+    <Compile Include="Bundles\PeriodicExports\Triggers\AncestryPutTrigger.cs" />
+    <Compile Include="Bundles\PeriodicExports\Triggers\VirtualDeleteTrigger.cs" />
+    <Compile Include="Client\Aws\RavenAwsClient.cs" />
+    <Compile Include="Client\Aws\RavenAwsHelper.cs" />
+    <Compile Include="Client\EmbeddableDocumentStore.cs" />
+    <Compile Include="Client\EmbeddedDocumentStore.cs" />
+    <Compile Include="Client\Aws\RavenAwsGlacierClient.cs" />
+    <Compile Include="Client\Aws\RavenAwsS3Client.cs" />
+    <Compile Include="Client\Azure\RavenAzureClient.cs" />
+    <Compile Include="Client\RavenStorageClient.cs" />
+    <Compile Include="Counters\Controllers\AdminCounterStorageController.cs" />
+    <Compile Include="Counters\Controllers\CounterReplicationController.cs" />
+    <Compile Include="Counters\Controllers\CounterStorageController.cs" />
+    <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />
+    <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
+    <Compile Include="Counters\CountersMetricsManager.cs" />
+    <Compile Include="Counters\ReplicationMessage.cs" />
+    <Compile Include="Counters\Counter.cs" />
+    <Compile Include="Counters\CounterStorage.cs" />
+    <Compile Include="Config\Settings\NullableIntegerSetting.cs" />
+    <Compile Include="Embedded\ResponseStream.cs" />
+    <Compile Include="Extensions\HttpExtensions.cs" />
+    <Compile Include="Extensions\MetricExtension.cs" />
+    <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
+    <Compile Include="Indexing\IndexMerging\ChangeRootReferenceVisitor.cs" />
+    <Compile Include="Indexing\IndexMerging\IndexData.cs" />
+    <Compile Include="Indexing\IndexMerging\IndexMerger.cs" />
+    <Compile Include="Indexing\IndexMerging\IndexVisitor.cs" />
+    <Compile Include="Indexing\IndexMerging\MergeProposal.cs" />
+    <Compile Include="Indexing\PrecomputedIndexing.cs" />
+    <Compile Include="Embedded\OwinEmbeddedHost.cs" />
+    <Compile Include="Embedded\OwinClientHandler.cs" />
+    <Compile Include="Bundles\ScriptedIndexResults\ScriptedIndexResultsJsonPatcherScope.cs" />
+    <Compile Include="Json\JintOperationScope.cs" />
+    <Compile Include="Json\ScriptedJsonPatcherOperationScope.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcherOperationScope.cs" />
+    <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
+    <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
+    <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />
+    <Compile Include="Counters\Controllers\CountersController.cs" />
+    <Compile Include="Server\Connections\WebSocketsTransport.cs" />
+    <EmbeddedResource Include="Server\Assets\EmbeddedData\NorthwindHelpData.cs" />
+    <Compile Include="Server\RavenDbServer.cs" />
+    <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
-    <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />
+    <Compile Include="Bundles\PeriodicExports\PeriodicBackupTask.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Bundles\Compression\Plugin\DocumentCompression.cs" />
     <Compile Include="Bundles\Compression\Streams\CompressStream.cs" />
@@ -185,16 +339,15 @@
     <Compile Include="Bundles\Expiration\ExpirationReadTrigger.cs" />
     <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
+    <Compile Include="Bundles\Replication\Controllers\AdminReplicationController.cs" />
+    <Compile Include="Bundles\Replication\Controllers\ReplicationController.cs" />
     <Compile Include="Bundles\Replication\Impl\Historian.cs" />
     <Compile Include="Bundles\Replication\Impl\ReplicationData.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultDocumentReplicationConflictResolver.cs" />
-    <Compile Include="Bundles\Replication\Responders\AdminPurgeTombstones.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\AttachmentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\DocumentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\SingleItemReplicationBehavior.cs" />
-    <Compile Include="Bundles\Replication\Responders\ReplicationHeartbeat.cs" />
-    <Compile Include="Bundles\Replication\Responders\ReplicationInformationResponder.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
@@ -204,39 +357,201 @@
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriter.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcher.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
-    <Compile Include="Extensions\CancellationTokenSource.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
+    <Compile Include="Extensions\CancellationTokenSource.cs" />
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
-    <Compile Include="Impl\DTC\MuninInFlightTransactionalState.cs" />
     <Compile Include="Impl\PutSerialLock.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
     <Compile Include="Linq\AttachmentForIndexing.cs" />
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
+    <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />
+    <Compile Include="Linq\Ast\TransformFromClauses.cs" />
+    <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
+    <Compile Include="Prefetching\Prefetcher.cs" />
+    <Compile Include="Server\AssemblyExtractor.cs" />
+    <Compile Include="Server\Controllers\AdminBundlesApiController.cs" />
+    <Compile Include="Server\Controllers\Admin\AdminController.cs" />
+    <Compile Include="Server\Controllers\BundlesApiController.cs" />
+    <Compile Include="Server\Controllers\StudioTasksController.cs" />
+    <Compile Include="Server\Controllers\RavenBaseApiController.cs" />
+    <Compile Include="Server\Contents\StaticHeadContent.cs" />
+    <Compile Include="Server\Controllers\StudioController.cs" />
+    <Compile Include="Server\RavenDBOptions.cs" />
+    <Compile Include="Server\Connections\IEventsTransport.cs" />
+    <Compile Include="Server\Connections\ChangesPushContent.cs" />
+    <Compile Include="Server\Controllers\Admin\AdminDatabasesController.cs" />
+    <Compile Include="Server\Controllers\Admin\BaseAdminController.cs" />
+    <Compile Include="Server\Controllers\BuildController.cs" />
+    <Compile Include="Server\Controllers\BulkInsertController.cs" />
+    <Compile Include="Server\Controllers\ChangesController.cs" />
+    <Compile Include="Server\Controllers\DatabasesController.cs" />
+    <Compile Include="Server\Controllers\DebugController.cs" />
+    <Compile Include="Server\Controllers\DocumentsBatchController.cs" />
+    <Compile Include="Server\Controllers\DocumentsController.cs" />
+    <Compile Include="Server\Controllers\FacetsController.cs" />
+    <Compile Include="Server\Controllers\HardRouteController.cs" />
+    <Compile Include="Server\Controllers\IdentityController.cs" />
+    <Compile Include="Server\Controllers\IndexController.cs" />
+    <Compile Include="Server\Controllers\LicensingController.cs" />
+    <Compile Include="Server\Controllers\LogsController.cs" />
+    <Compile Include="Server\Controllers\MoreLikeThisController.cs" />
+    <Compile Include="Server\Controllers\MultiGetController.cs" />
+    <Compile Include="Server\Controllers\OAuthController.cs" />
+    <Compile Include="Server\Controllers\OperationsController.cs" />
+    <Compile Include="Server\Controllers\PluginController.cs" />
+    <Compile Include="Server\Controllers\QueriesController.cs" />
+    <Compile Include="Server\Controllers\RavenDbApiController.cs" />
+    <Compile Include="Server\Controllers\SilverlightController.cs" />
+    <Compile Include="Server\Controllers\SingleAuthTokenController.cs" />
+    <Compile Include="Server\Controllers\StaticController.cs" />
+    <Compile Include="Server\Controllers\StatisticsController.cs" />
+    <Compile Include="Server\Controllers\StreamsController.cs" />
+    <Compile Include="Server\Controllers\SuggestionController.cs" />
+    <Compile Include="Server\Controllers\TermsController.cs" />
+    <Compile Include="Server\Controllers\TransactionController.cs" />
+    <Compile Include="Server\Controllers\TransformersController.cs" />
+    <Compile Include="Server\OwinHttpServer.cs" />
+    <Compile Include="Server\RavenFS\Controllers\AdminFileSystemController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\FilesChangesController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\ConfigController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\FilesController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\FoldersController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\RavenFsApiController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\RdcController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\SearchController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\StaticFSController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\StatsController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\StorageController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\SynchronizationController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\FileSystemsController.cs" />
+    <Compile Include="Server\RavenFS\Extensions\ConfigurationExtension.cs" />
+    <Compile Include="Server\RavenFS\Extensions\EnumExtensions.cs" />
+    <Compile Include="Server\RavenFS\Extensions\HttpExtensions.cs" />
+    <Compile Include="Server\RavenFS\Extensions\IOExtensions.cs" />
+    <Compile Include="Server\RavenFS\Extensions\MetadataExtensions.cs" />
+    <Compile Include="Server\RavenFS\Extensions\StreamExtensions.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\Historian.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\LimitedStream.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\NoBufferPolicySelector.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\SequenceActions.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\StorageOperationsTask.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\TempDirectoryTools.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\UuidGenerator.cs" />
+    <Compile Include="Server\RavenFS\Notifications\INotificationPublisher.cs" />
+    <Compile Include="Server\RavenFS\Notifications\NotificationPublisher.cs" />
+    <Compile Include="Server\RavenFS\Notifications\TypeHidingJsonSerializer.cs" />
+    <Compile Include="Server\RavenFS\RavenFileSystem.cs" />
+    <Compile Include="Server\RavenFS\Search\IndexSearcherHolder.cs" />
+    <Compile Include="Server\RavenFS\Search\IndexStorage.cs" />
+    <Compile Include="Server\RavenFS\Search\RavenQueryParser.cs" />
+    <Compile Include="Server\RavenFS\Storage\DeleteFileOperation.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\EsentExtension.cs" />
+    <Compile Include="Server\RavenFS\Storage\Exceptions\FileExistsException.cs" />
+    <Compile Include="Server\RavenFS\Storage\IStorageActionsAccessor.cs" />
+    <Compile Include="Server\RavenFS\Storage\ITransactionalStorage.cs" />
+    <Compile Include="Server\RavenFS\Storage\FileAndPagesInformation.cs" />
+    <Compile Include="Server\RavenFS\Storage\PageInformation.cs" />
+    <Compile Include="Server\RavenFS\Storage\RenameFileOperation.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\SchemaCreator.cs" />
+    <Compile Include="Server\RavenFS\Storage\SignatureReadOnlyStream.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\StorageActionsAccessor.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\TransactionalStorageConfigurator.cs" />
+    <Compile Include="Server\RavenFS\Storage\StorageConstants.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\TableColumnsCache.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\TransactionalStorage.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\IdGenerator.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\Index.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\Table.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\TableBase.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\Tables.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\TableStorage.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Schema\SchemaCreator.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Schema\ISchemaUpdate.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Schema\Updates\SchemaUpdateBase.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\StorageActionsAccessor.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\StorageActionsBase.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\TransactionalStorage.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictArtifactManager.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictDetector.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictResolution.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\ContentUpdateWorkItem.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\DataInfo.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\DeleteWorkItem.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\FileHeaderNameEqualityComparer.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\FileLockManager.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\MetadataUpdateWorkItem.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Multipart\MultipartSyncStreamProvider.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Multipart\SeedFilePart.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Multipart\SourceFilePart.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Multipart\SynchronizationMultipartRequest.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\NoSyncReason.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\IPartialDataAccess.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\LocalRdcManager.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\NeedListParser.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\RemoteRdcManager.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\RemoteSignaturePartialAccess.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\SignatureLevels.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\SignaturePartialAccess.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\ISignatureRepository.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\NeedListGenerator.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\RdcException.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\RdcFileReader.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\RdcNeed.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\RdcNeedType.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\RdcVersion.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\RdcVersionChecker.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\SigGenerator.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\SignatureInfo.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\StorageSignatureRepository.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\GeneratorParametersType.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcComparator.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcFileReader.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcGenerator.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcGeneratorFilterMaxParameters.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcGeneratorParameters.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcLibrary.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcSignatureReader.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcSimilarityGenerator.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\Msrdc.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcBufferPointer.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcBufferTools.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcError.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcLibrary.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcNeedPointer.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcSignature.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcSignaturePointer.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\SimilarityData.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\VolatileSignatureRepository.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\RenameWorkItem.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationHiLo.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationLock.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationQueue.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationStrategy.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationTask.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationWorkItem.cs" />
+    <Compile Include="Server\RavenFS\Util\AwaitableQueue.cs" />
+    <Compile Include="Server\RavenFS\Util\CombinedStream.cs" />
+    <Compile Include="Server\RavenFS\Util\ConcurrencyAwareExecutor.cs" />
+    <Compile Include="Server\RavenFS\Util\FilePathTools.cs" />
+    <Compile Include="Server\RavenFS\Util\HashKey.cs" />
+    <Compile Include="Server\RavenFS\Util\NarrowedStream.cs" />
+    <Compile Include="Server\RavenFS\Util\NaveValueCollectionJsonConverterOnlyForConfigFormatters.cs" />
+    <Compile Include="Server\RavenFS\Util\RabinKarpHasher.cs" />
+    <Compile Include="Server\RavenFS\Util\RavenFileNameHelper.cs" />
+    <Compile Include="Server\RavenFS\Util\StorageStream.cs" />
+    <Compile Include="Server\RavenFS\Util\StorageStreamAccess.cs" />
+    <Compile Include="Server\RavenFS\Util\SynchronizingFileStream.cs" />
+    <Compile Include="Data\AddIncludesCommand.cs" />
+    <Compile Include="Data\ExecutingQueryInfo.cs" />
     <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
     <Compile Include="Plugins\Builtins\RecoverPendingTransactions.cs" />
     <Compile Include="Plugins\Builtins\RecoveryEnlistment.cs" />
-    <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
-    <Compile Include="Prefetching\Prefetcher.cs" />
-    <Compile Include="Prefetching\PrefetchingUser.cs" />
-    <Compile Include="Server\Responders\Admin\AdminDetailedSizeBreakdown.cs" />
-    <Compile Include="Server\Responders\TransactionsList.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugDocumentsCount.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugIndexFields.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugLists.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugQueries.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugTasks.cs" />
-    <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugPrefetchStatus.cs" />
-    <Compile Include="Server\Responders\SingleAuthToken.cs" />
-    <Compile Include="Server\Responders\TransactionPrepare.cs" />
-    <Compile Include="Server\Responders\TransactionsRollbackAll.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
-    <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />
-    <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="Impl\DTC\InFlightTransactionalState.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
@@ -281,7 +596,6 @@
     <Compile Include="Config\Settings\StringSetting.cs" />
     <Compile Include="Config\Settings\TimeSpanSetting.cs" />
     <Compile Include="Data\TouchedDocumentInfo.cs" />
-    <Compile Include="Data\RestoreRequest.cs" />
     <Compile Include="Extensions\RoleFinder.cs" />
     <Compile Include="Extensions\WhoIsLocking.cs" />
     <Compile Include="Indexing\CurrentIndexingScope.cs" />
@@ -308,17 +622,13 @@
     <Compile Include="Indexing\Spatial\ShapeStringConverter.cs" />
     <Compile Include="Json\ScriptsCache.cs" />
     <Compile Include="Linq\AbstractTransformer.cs" />
-    <Compile Include="Linq\Ast\TransformGroupByExtensionMethodTransformer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
     <Compile Include="Linq\Ast\TransformObsoleteMethods.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />
     <Compile Include="Linq\DynamicCompilerBase.cs" />
     <Compile Include="Linq\DynamicTransofrmerCompiler.cs" />
-    <Compile Include="Linq\Mono.Reflection\BackingFieldResolver.cs" />
     <Compile Include="Linq\Mono.Reflection\ByteBuffer.cs" />
     <Compile Include="Linq\Mono.Reflection\Disassembler.cs" />
-    <Compile Include="Linq\Mono.Reflection\ILPattern.cs" />
-    <Compile Include="Linq\Mono.Reflection\Image.cs" />
     <Compile Include="Linq\Mono.Reflection\Instruction.cs" />
     <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
     <Compile Include="Linq\PrivateExtensions\DynamicEnumerable.cs" />
@@ -331,27 +641,6 @@
     <Compile Include="Server\Abstractions\PrincipalWithDatabaseAccess.cs" />
     <Compile Include="Server\BeforeRequestEventArgs.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />
-    <Compile Include="Server\Connections\EventsTransport.cs" />
-    <Compile Include="Server\LogContext.cs" />
-    <Compile Include="Server\Responders\Admin\AdminChangeDbId.cs" />
-    <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
-    <Compile Include="Server\Responders\Admin\AdminGc.cs" />
-    <Compile Include="Server\Responders\Admin\AdminIndexingStatus.cs" />
-    <Compile Include="Server\Responders\Admin\AdminOptimize.cs" />
-    <Compile Include="Bundles\Replication\Responders\AdminReplicationInfo.cs" />
-    <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
-    <Compile Include="Server\Responders\Admin\AdminRestore.cs" />
-    <Compile Include="Server\Responders\BulkInsert.cs" />
-    <Compile Include="Server\Responders\ChangesConfig.cs" />
-    <Compile Include="Server\Responders\DatabaseStorageSizes.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugChanges.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugConfig.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugDocReferences.cs" />
-    <Compile Include="Server\Responders\Debugging\DebugUser.cs" />
-    <Compile Include="Server\Responders\DocsStreams.cs" />
-    <Compile Include="Server\Responders\Identity.cs" />
-    <Compile Include="Server\Responders\IndexPriorityResponder.cs" />
-    <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
     <Compile Include="Bundles\Quotas\Documents\Triggers\DatabaseCountDocumentDeleteTrigger.cs" />
@@ -366,9 +655,6 @@
     <Compile Include="Bundles\Replication\Impl\ReplicationHiLo.cs" />
     <Compile Include="Bundles\Replication\Plugins\AbstractAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\AbstractDocumentReplicationConflictResolver.cs" />
-    <Compile Include="Bundles\Replication\Responders\AttachmentReplicationResponder.cs" />
-    <Compile Include="Bundles\Replication\Responders\DocumentReplicationResponder.cs" />
-    <Compile Include="Bundles\Replication\Responders\ReplicationLastEtagResponder.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationTask.cs" />
     <Compile Include="Bundles\Replication\Triggers\AncestryPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\AttachmentAncestryPutTrigger.cs" />
@@ -383,7 +669,6 @@
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Config\MemoryStatistics.cs" />
-    <Compile Include="Extensions\DateTimeExtensions.cs" />
     <Compile Include="Data\QueryResultWithIncludes.cs" />
     <Compile Include="Impl\Clustering\ClusterInspecter.cs" />
     <Compile Include="Impl\Clustering\ClusterResourceState.cs" />
@@ -397,9 +682,9 @@
     <Compile Include="Indexing\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\BackgroundTaskExecuter.cs" />
-    <Compile Include="Indexing\IIndexingScheduler.cs" />
+    <Compile Include="Indexing\IIndexingClassifier.cs" />
     <Compile Include="Indexing\IndexBatchSizeAutoTuner.cs" />
-    <Compile Include="Indexing\FairIndexingSchedulerWithOlderIndexesBias.cs" />
+    <Compile Include="Indexing\DefaultIndexingClassifier.cs" />
     <Compile Include="Indexing\IndexingWorkStats.cs" />
     <Compile Include="Indexing\IndexToWorkOn.cs" />
     <Compile Include="Indexing\IntersectionCollector.cs" />
@@ -414,8 +699,6 @@
     <Compile Include="Linq\Ast\TransformDynamicLambdaExpressions.cs" />
     <Compile Include="Linq\RecursiveFunction.cs" />
     <Compile Include="Plugins\Builtins\InvalidDocumentNames.cs" />
-    <Compile Include="Plugins\Builtins\Tenants\ModifiedTenantDatabase.cs" />
-    <Compile Include="Plugins\Builtins\Tenants\TenantDatabaseModified.cs" />
     <Compile Include="Plugins\Catalogs\BuiltinFilteringCatalog.cs" />
     <Compile Include="Plugins\AbstractIndexCodec.cs" />
     <Compile Include="Plugins\Catalogs\BundlesFilteredCatalog.cs" />
@@ -441,49 +724,18 @@
     <Compile Include="Linq\Ast\DynamicExtensionMethodsTranslator.cs" />
     <Compile Include="Linq\PrivateExtensions\DynamicExtensionMethods.cs" />
     <Compile Include="Plugins\AbstractIndexQueryTrigger.cs" />
-    <Compile Include="Server\Abstractions\HttpContextAdapter.cs" />
-    <Compile Include="Server\Abstractions\HttpListenerContextAdpater.cs" />
-    <Compile Include="Server\Abstractions\HttpListenerRequestAdapter.cs" />
-    <Compile Include="Server\Abstractions\HttpListenerResponseAdapter.cs" />
-    <Compile Include="Server\Abstractions\HttpRequestAdapter.cs" />
-    <Compile Include="Server\Abstractions\HttpResponseAdapter.cs" />
-    <Compile Include="Server\Abstractions\IHttpContext.cs" />
-    <Compile Include="Server\Abstractions\IHttpRequest.cs" />
-    <Compile Include="Server\Abstractions\IHttpResponse.cs" />
     <Compile Include="Server\Abstractions\UrlExtension.cs" />
-    <Compile Include="Server\AbstractRequestResponder.cs" />
     <Compile Include="Server\AnonymousUserAccessMode.cs" />
     <Compile Include="Server\CurrentOperationContext.cs" />
-    <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="Server\HttpEndpointRegistration.cs" />
-    <Compile Include="Server\HttpServer.cs" />
-    <Compile Include="Server\IConfigureHttpListener.cs" />
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
-    <Compile Include="Server\Responders\Admin\AdminCompact.cs" />
-    <Compile Include="Server\Responders\Admin\AdminStats.cs" />
-    <Compile Include="Server\Responders\DatabaseSize.cs" />
-    <Compile Include="Server\Responders\Favicon.cs" />
-    <Compile Include="Server\Responders\Licensing.cs" />
-    <Compile Include="Server\Responders\Logs.cs" />
-    <Compile Include="Server\Responders\OperationStatus.cs" />
-    <Compile Include="Server\Responders\Plugins.cs" />
-    <Compile Include="Server\Responders\RavenRoot.cs" />
-    <Compile Include="Server\Responders\RavenUI.cs" />
-    <Compile Include="Server\Responders\IdentitySeed.cs" />
-    <Compile Include="Server\Responders\SilverlightUI.cs" />
-    <Compile Include="Server\Responders\QueryStreams.cs" />
-    <Compile Include="Server\Responders\Transformers.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
     <Compile Include="Server\Security\IgnoreDb.cs" />
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
-    <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
-    <Compile Include="Server\Security\OAuth\OAuthApiKeyResponder.cs" />
-    <Compile Include="Server\Security\OAuth\OAuthClientCredentialsTokenResponder.cs" />
-    <Compile Include="Server\Security\OAuth\OAuthCookie.cs" />
     <Compile Include="Server\Security\OAuth\OAuthRequestAuthorizer.cs" />
     <Compile Include="Server\Security\OAuth\OAuthServerHelper.cs" />
     <Compile Include="Server\Security\Triggers\OAuthPutTrigger.cs" />
@@ -494,8 +746,6 @@
     <Compile Include="Server\Security\Windows\WindowsRequestAuthorizer.cs" />
     <Compile Include="Impl\CachedDocument.cs" />
     <Compile Include="Impl\DatabaseBulkOperations.cs" />
-    <Compile Include="Data\AttachmentInformation.cs" />
-    <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DynamicQueryMapping.cs" />
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Impl\DocumentCacher.cs" />
@@ -512,7 +762,6 @@
     <Compile Include="Linq\Ast\TransformNullCoalescingOperatorTransformer.cs" />
     <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
     <Compile Include="Plugins\Builtins\CreateSilverlightIndexes.cs" />
-    <Compile Include="Plugins\Builtins\Tenants\RemoveTenantDatabase.cs" />
     <Compile Include="Plugins\IAlterConfiguration.cs" />
     <Compile Include="Queries\FacetedQueryRunner.cs" />
     <Compile Include="Queries\FacetedQueryRunnerExtensions.cs" />
@@ -521,7 +770,6 @@
     <Compile Include="Queries\DynamicQueryRunner.cs" />
     <Compile Include="Extensions\CommandExtensions.cs" />
     <Compile Include="Extensions\GuidExtensions.cs" />
-    <Compile Include="Extensions\HttpContextExtensions.cs" />
     <Compile Include="Extensions\IndexingExtensions.cs" />
     <Compile Include="Extensions\MonoHttpEncoder.cs">
       <SubType>Code</SubType>
@@ -670,7 +918,6 @@
     <Compile Include="Plugins\AbstractAttachmentPutTrigger.cs" />
     <Compile Include="Plugins\AbstractAttachmentReadTrigger.cs" />
     <Compile Include="Plugins\IStartupTask.cs" />
-    <Compile Include="Data\LinearQuery.cs" />
     <Compile Include="Linq\GroupByKeyFunc.cs" />
     <Compile Include="Linq\ITranslatorDatabaseAccessor.cs" />
     <Compile Include="Linq\PrivateExtensions\MetadataExtensions.cs" />
@@ -687,7 +934,6 @@
     <Compile Include="Plugins\AbstractIndexUpdateTriggerBatcher.cs" />
     <Compile Include="Plugins\ReadOperation.cs" />
     <Compile Include="Plugins\ReadVetoResult.cs" />
-    <Compile Include="Data\QueryResults.cs" />
     <Compile Include="Data\CommandDataFactory.cs" />
     <Compile Include="Data\IndexQueryResult.cs" />
     <Compile Include="Extensions\EnumerableExtensions.cs" />
@@ -717,33 +963,23 @@
     <Compile Include="Queries\SuggestionQueryIndexExtension.cs" />
     <Compile Include="Queries\TermsQueryRunner.cs" />
     <Compile Include="Queries\TermsQueryRunnerExtensions.cs" />
-    <Compile Include="Server\Responders\AddIncludesCommand.cs" />
-    <Compile Include="Server\Responders\Admin\AdminBackup.cs" />
-    <Compile Include="Server\Responders\Admin\AdminStartIndexing.cs" />
-    <Compile Include="Server\Responders\Admin\AdminStopIndexing.cs" />
-    <Compile Include="Server\Responders\BuildVersion.cs" />
-    <Compile Include="Server\Responders\ClientAccessPolicy.cs" />
-    <Compile Include="Server\Responders\Databases.cs" />
-    <Compile Include="Server\Responders\Docs.cs" />
-    <Compile Include="Server\Responders\Document.cs" />
-    <Compile Include="Server\Responders\DocumentBatch.cs" />
-    <Compile Include="Server\Responders\Facets.cs" />
-    <Compile Include="Server\Responders\Index.cs" />
-    <Compile Include="Server\Responders\Indexes.cs" />
-    <Compile Include="Server\Responders\MultiGet.cs" />
-    <Compile Include="Server\Responders\Queries.cs" />
-    <Compile Include="Server\Responders\SilverlightEnsuresStartup.cs" />
-    <Compile Include="Server\Responders\Static.cs" />
-    <Compile Include="Server\Responders\Statics.cs" />
-    <Compile Include="Server\Responders\Statistics.cs" />
-    <Compile Include="Server\Responders\SuggestionResponder.cs" />
-    <Compile Include="Server\Responders\Terms.cs" />
-    <Compile Include="Server\Responders\TransactionCommit.cs" />
-    <Compile Include="Server\Responders\TransactionRollback.cs" />
-    <Compile Include="Server\Responders\TransactionStatus.cs" />
     <Compile Include="Server\Connections\TransportState.cs" />
     <Compile Include="Server\Connections\TimeSensitiveStore.cs" />
+    <Compile Include="Server\Startup.cs" />
+    <Compile Include="Server\Tenancy\AbstractLandlord.cs" />
+    <Compile Include="Server\Tenancy\CountersLandlord.cs" />
+    <Compile Include="Server\Tenancy\DatabaseLandlord.cs" />
+    <Compile Include="Server\Tenancy\FileSystemsLandlord.cs" />
+    <Compile Include="Server\WebApi\Attributes\HttpEvalAttribute.cs" />
+    <Compile Include="Server\WebApi\Attributes\HttpResetAttribute.cs" />
+    <Compile Include="Server\WebApi\Filters\RavenExceptionFilterAttribute.cs" />
+    <Compile Include="Server\WebApi\IRavenServer.cs" />
+    <Compile Include="Server\WebApi\Handlers\GZipToJsonAndCompressHandler.cs" />
+    <Compile Include="Server\WebApi\RequestManager.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
+    <Compile Include="Storage\BaseBackupOperation.cs" />
+    <Compile Include="Storage\BaseRestoreOperation.cs" />
+    <Compile Include="Storage\DatabaseSizeInformation.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />
     <Compile Include="Storage\Esent\Backup\EsentBackup.cs" />
@@ -752,7 +988,6 @@
     <Compile Include="Storage\Esent\EsentExtension.cs" />
     <Compile Include="Storage\Esent\SchemaCreator.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\ISchemaUpdate.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\SchemaUpdaterHelper.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From42To43.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From41To42.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From39To40.cs" />
@@ -765,9 +1000,12 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From45To46.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From46To47.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From47To48.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From48To50.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
-    <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
+    <Compile Include="Storage\Esent\StorageActions\Attachments.cs" />
     <Compile Include="Storage\Esent\Debug\EsentUtil.cs" />
     <Compile Include="Storage\Esent\StorageActions\General.cs" />
     <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
@@ -797,65 +1035,49 @@
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
     <Compile Include="Queries\SuggestionQueryRunner.cs" />
-    <Compile Include="Storage\Managed\AttachmentsStorageActions.cs" />
-    <Compile Include="Storage\Managed\Backup\BackupOperation.cs" />
-    <Compile Include="Storage\Managed\Backup\RestoreOperation.cs" />
-    <Compile Include="Storage\Managed\DocumentsStorageActions.cs" />
-    <Compile Include="Storage\Managed\GeneralStorageActions.cs" />
-    <Compile Include="Storage\Managed\Impl\TableStorage.cs" />
-    <Compile Include="Storage\Managed\IndexingStorageActions.cs" />
-    <Compile Include="Storage\Managed\ListsStorageActions.cs" />
-    <Compile Include="Storage\Managed\MappedResultsStorageAction.cs" />
-    <Compile Include="Storage\Managed\Munin\AbstractPersistentSource.cs" />
-    <Compile Include="Storage\Managed\Munin\Command.cs" />
-    <Compile Include="Storage\Managed\Munin\CommandType.cs" />
-    <Compile Include="Storage\Managed\Munin\Database.cs" />
-    <Compile Include="Storage\Managed\Munin\FileBasedPersistentSource.cs" />
-    <Compile Include="Storage\Managed\Munin\IComparerAndEquality.cs" />
-    <Compile Include="Storage\Managed\Munin\IPersistentSource.cs" />
-    <Compile Include="Storage\Managed\Munin\MemoryPersistentSource.cs" />
-    <Compile Include="Storage\Managed\Munin\ModifiedJTokenComparer.cs" />
-    <Compile Include="Storage\Managed\Munin\PersistentDictionaryState.cs" />
-    <Compile Include="Storage\Managed\Munin\PositionInFile.cs" />
-    <Compile Include="Storage\Managed\Munin\RavenJTokenComparer.cs" />
-    <Compile Include="Storage\Managed\Munin\ReadOnlyFileBasedPersistentSource.cs" />
-    <Compile Include="Storage\Managed\Munin\RecordingComparer.cs" />
-    <Compile Include="Storage\Managed\Munin\RemoteManagedStorageState.cs" />
-    <Compile Include="Storage\Managed\Munin\ReverseComparableByteArrayWhichIgnoresNull.cs" />
-    <Compile Include="Storage\Managed\Munin\SecondaryIndex.cs" />
-    <Compile Include="Storage\Managed\Munin\Table.cs" />
-    <Compile Include="Storage\Managed\Munin\Tree\AVLTree.cs" />
-    <Compile Include="Storage\Managed\Munin\Tree\EmptyAVLTree.cs" />
-    <Compile Include="Storage\Managed\Munin\Tree\EmptyStack.cs" />
-    <Compile Include="Storage\Managed\Munin\Tree\IBinarySearchTree.cs" />
-    <Compile Include="Storage\Managed\Munin\Tree\IStack.cs" />
-    <Compile Include="Storage\Managed\Munin\Tree\Stack.cs" />
-    <Compile Include="Storage\Managed\QueueStorageActions.cs" />
-    <Compile Include="Storage\Managed\StalenessStorageActions.cs" />
-    <Compile Include="Storage\Managed\StorageActionsAccessor.cs" />
-    <Compile Include="Storage\Managed\TasksStorageActions.cs" />
-    <Compile Include="Storage\Managed\TransactionalStorage.cs" />
+    <Compile Include="Storage\Voron\Backup\BackupOperation.cs" />
+    <Compile Include="Storage\Voron\Backup\RestoreOperation.cs" />
+    <Compile Include="Storage\Voron\Schema\SchemaCreator.cs" />
+    <Compile Include="Storage\Voron\Schema\ISchemaUpdate.cs" />
+    <Compile Include="Storage\Voron\Schema\Updates\SchemaUpdateBase.cs" />
+    <Compile Include="Storage\Voron\StorageActions\DocumentsStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActions\AttachmentsStorageActions.cs" />
+    <Compile Include="Storage\Voron\Impl\Index.cs" />
+    <Compile Include="Storage\Voron\StorageActions\GeneralStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActions\IndexingStorageActions.cs" />
+    <Compile Include="Storage\Voron\Impl\Table.cs" />
+    <Compile Include="Storage\Voron\StorageActions\ListsStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActions\MappedResultsStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActions\QueueStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StalenessStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActionsAccessor.cs" />
+    <Compile Include="Storage\Voron\Impl\TableBase.cs" />
+    <Compile Include="Storage\Voron\Impl\Tables.cs" />
+    <Compile Include="Storage\Voron\Impl\TableStorage.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StorageActionsBase.cs" />
+    <Compile Include="Storage\Voron\StorageActions\TasksStorageActions.cs" />
+    <Compile Include="Storage\Voron\TransactionalStorage.cs" />
+    <Compile Include="Storage\Voron\UndisposableStream.cs" />
     <Compile Include="Storage\TransactionContextData.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
-    <Compile Include="Tasks\Task.cs" />
+    <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Tasks\TaskMetadata.cs" />
     <Compile Include="Tasks\TouchReferenceDocumentIfChangedTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
+    <Compile Include="Util\BundlesHelper.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
-    <Compile Include="Util\IPerformanceCounter.cs" />
-    <Compile Include="Util\NoOpPerformanceCounter.cs" />
+    <Compile Include="Util\MetricsCountersManager.cs" />
     <Compile Include="Util\OutputTicker.cs" />
-    <Compile Include="Util\PerformanceCounterAttribute.cs" />
-    <Compile Include="Util\PerformanceCountersManager.cs" />
     <Compile Include="Util\PerformanceCountersUtils.cs" />
-    <Compile Include="Util\PerformanceCounterWrapper.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\SequentialUuidGenerator.cs" />
+    <Compile Include="Util\SizeHelper.cs" />
     <Compile Include="Util\SortedKeyList.cs" />
-    <Compile Include="Util\Streams\BufferPool.cs" />
     <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
+    <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
+    <Compile Include="Util\Streams\BlockingStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -876,125 +1098,47 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Util\Raven.Debug\x86\Raven.Debug.exe" />
+    <EmbeddedResource Include="Util\Raven.Debug\x64\Raven.Debug.exe" />
+    <EmbeddedResource Include="Server\WebUI\raven-data.ico" />
+    <EmbeddedResource Include="Server\WebUI\studio.html" />
+    <EmbeddedResource Include="Server\WebUI\studio_not_found.html" />
+    <EmbeddedResource Include="Server\WebUI\Raven.Studio.xap" />
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
     <EmbeddedResource Include="Json\lodash.js" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-anim_basic_16x16.gif" />
-    <Content Include="Server\WebUI\studio_not_found.html" />
-    <Content Include="Server\WebUI\studio.html" />
-    <Content Include="Server\WebUI\raven-data.ico" />
-    <Content Include="Server\WebUI\css\Pager.css" />
-    <Content Include="Server\WebUI\css\rdb.css" />
-    <Content Include="Server\WebUI\css\rdb.jsonEditor.css" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_flat_0_aaaaaa_40x100.png" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_flat_75_ffffff_40x100.png" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_55_fbf9ee_1x400.png" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_65_ffffff_1x400.png" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_75_dadada_1x400.png" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_75_e6e6e6_1x400.png" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_glass_95_fef1ec_1x400.png" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-bg_highlight-soft_75_cccccc_1x100.png" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_222222_256x240.png" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_2e83ff_256x240.png" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_454545_256x240.png" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_888888_256x240.png" />
-    <Content Include="Server\WebUI\css\smoothness\images\ui-icons_cd0a0a_256x240.png" />
-    <Content Include="Server\WebUI\css\smoothness\jquery-ui-1.8rc2.custom.css" />
-    <Content Include="Server\WebUI\documents.html" />
-    <Content Include="Server\WebUI\favicon.ico" />
-    <Content Include="Server\WebUI\images\ajax-loader.gif" />
-    <Content Include="Server\WebUI\images\bgR.png" />
-    <Content Include="Server\WebUI\images\c1_i1.png" />
-    <Content Include="Server\WebUI\images\c2_i2.png" />
-    <Content Include="Server\WebUI\images\c2_i3.png" />
-    <Content Include="Server\WebUI\images\c2_i4.png" />
-    <Content Include="Server\WebUI\images\c2_i5.png" />
-    <Content Include="Server\WebUI\images\c2_i6.png" />
-    <Content Include="Server\WebUI\images\c3_i7.png" />
-    <Content Include="Server\WebUI\images\footerContainerBgR.png" />
-    <Content Include="Server\WebUI\images\footer_bg.png" />
-    <Content Include="Server\WebUI\images\header_bg.png" />
-    <Content Include="Server\WebUI\images\jsonEditor\doc.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\docNode.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\docNodeLast.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\docNodeLastFirst.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\folder.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\folderNode.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\folderNodeFirst.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\folderNodeLast.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\folderNodeLastFirst.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpen.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpenFirst.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpenLast.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\folderNodeOpenLastFirst.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\folderOpen.gif" />
-    <Content Include="Server\WebUI\images\jsonEditor\vertLine.gif" />
-    <Content Include="Server\WebUI\images\logo.png" />
-    <Content Include="Server\WebUI\images\midBox1.png" />
-    <Content Include="Server\WebUI\images\midBox2Arrow.png" />
-    <Content Include="Server\WebUI\images\sideBarArrow.png" />
-    <Content Include="Server\WebUI\images\sideBarListBoxBottom.png" />
-    <Content Include="Server\WebUI\images\sideBarListBoxTop.png" />
-    <Content Include="Server\WebUI\images\submit.png" />
-    <Content Include="Server\WebUI\images\topNavSep.png" />
-    <Content Include="Server\WebUI\index.html" />
-    <Content Include="Server\WebUI\indexes.html" />
-    <Content Include="Server\WebUI\JSONTemplates\errorsMsgs.html" />
-    <Content Include="Server\WebUI\JSONTemplates\warningMsgs.html" />
-    <Content Include="Server\WebUI\JSONTemplates\documentation.html" />
-    <Content Include="Server\WebUI\JSONTemplates\globalStats.html" />
-    <Content Include="Server\WebUI\JSONTemplates\indexPage.html" />
-    <Content Include="Server\WebUI\JSONTemplates\quickStats.html" />
-    <Content Include="Server\WebUI\js\jquery-1.4.2.min.js" />
-    <Content Include="Server\WebUI\js\jquery-jtemplates.js" />
-    <Content Include="Server\WebUI\js\jquery-ui.js" />
-    <Content Include="Server\WebUI\js\jquery.pager.js" />
-    <Content Include="Server\WebUI\js\jquery.query-2.1.7.js" />
-    <Content Include="Server\WebUI\js\jquery.RavenDB.js" />
-    <Content Include="Server\WebUI\js\json2.js" />
-    <Content Include="Server\WebUI\js\jstree\jquery.tree.js" />
-    <Content Include="Server\WebUI\js\jstree\themes\default\dot_for_ie.gif" />
-    <Content Include="Server\WebUI\js\jstree\themes\default\icons.png" />
-    <Content Include="Server\WebUI\js\jstree\themes\default\style.css" />
-    <Content Include="Server\WebUI\js\jstree\themes\default\throbber.gif" />
-    <Content Include="Server\WebUI\js\jstree\themes\icons\txt.png" />
-    <Content Include="Server\WebUI\js\raven-ui.documents.js" />
-    <Content Include="Server\WebUI\js\raven-ui.js" />
-    <Content Include="Server\WebUI\js\rdb.jsonEditor\editor.html" />
-    <Content Include="Server\WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
-    <Content Include="Server\WebUI\statistics.html" />
-    <Content Include="Server\WebUI\view.html" />
+    <EmbeddedResource Include="Client\Aws\Amazon.AWS.endpoints.xml" />
+    <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Commercial\RavenDB.public" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config" />
     <None Include="RavenDB.snk" />
+    <EmbeddedResource Include="Server\Assets\EmbeddedData\Northwind.dump" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Studio\Raven.Studio.csproj">
-      <Project>{6828A6A5-B925-4716-8D08-2B26353C54C2}</Project>
-      <Name>Raven.Studio</Name>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
+      <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
+      <Name>Raven.Client.Lightweight</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
+      <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
+      <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="BeforeBuild">
   </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-  <Target Name="BeforeBuild">
-    <CreateItem Include="Server\WebUI\**\*.*">
-      <Output ItemName="EmbeddedResource" TaskParameter="Include" />
-    </CreateItem>
-  </Target>
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
+  <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

@@ -33,7 +33,7 @@ namespace Raven.Client.Indexes
                     expression = ((UnaryExpression)expression).Operand;
                     break;
                 case ExpressionType.Call:
-                    var methodCallExpression = ((MethodCallExpression)expression);
+                    var methodCallExpression = GetFirstMethodCallExpression(expression);
                     switch (methodCallExpression.Method.Name)
                     {
                         case "Select":
@@ -59,13 +59,21 @@ namespace Raven.Client.Indexes
 
             linqQuery = ReplaceAnonymousTypeBraces(linqQuery);
             linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transparent identifiers
-            linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transparent identifiers
-            linqQuery = Regex.Replace(linqQuery, @"__h__TransparentIdentifier(\d)+", "this$1");
+            linqQuery = Regex.Replace(linqQuery, @"__h__TransparentIdentifier(\w)+", "this$1");
             linqQuery = JSBeautify.Apply(linqQuery);
             return linqQuery;
         }
 
-        private static string TryCaptureQueryRoot(Expression expression)
+	    private static MethodCallExpression GetFirstMethodCallExpression(Expression expression)
+	    {
+		    var firstMethodCallExpression = ((MethodCallExpression)expression);
+			if(firstMethodCallExpression.Arguments.Count > 0)
+				if (firstMethodCallExpression.Arguments[0] is MethodCallExpression)
+					return GetFirstMethodCallExpression(firstMethodCallExpression.Arguments[0]);
+		    return firstMethodCallExpression;
+	    }
+
+	    private static string TryCaptureQueryRoot(Expression expression)
         {
             if (expression.NodeType != ExpressionType.Lambda)
                 return null;

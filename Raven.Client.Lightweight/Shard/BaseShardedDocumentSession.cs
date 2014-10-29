@@ -1,5 +1,4 @@
-﻿#if !SILVERLIGHT
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Commands;
@@ -17,8 +16,8 @@ namespace Raven.Client.Shard
 	public abstract class BaseShardedDocumentSession<TDatabaseCommands> : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ITransactionalDocumentSession
 		where TDatabaseCommands : class
 	{
-		protected readonly List<Tuple<ILazyOperation, IList<TDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<TDatabaseCommands>>>();
-		protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
+		protected new readonly List<Tuple<ILazyOperation, IList<TDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<TDatabaseCommands>>>();
+		protected new readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 		protected readonly IDictionary<string, List<ICommandData>> deferredCommandsByShard = new Dictionary<string, List<ICommandData>>();
 		protected readonly ShardStrategy shardStrategy;
 		protected readonly IDictionary<string, TDatabaseCommands> shardDbCommands;
@@ -93,11 +92,8 @@ namespace Raven.Client.Shard
 
 		protected string GetDynamicIndexName<T>()
 		{
-			string indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
+            string indexName = CreateDynamicIndexName<T>();
+			
 			return indexName;
 		}
 
@@ -218,13 +214,11 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
-#if !NETFX_CORE && !SILVERLIGHT
 		protected override void TryEnlistInAmbientTransaction()
 		{
 			// we DON'T support enlisting at the sharded document store level, only at the managed document stores, which 
 			// turns out to be pretty much the same thing
 		}
-#endif
 
 		#endregion
 
@@ -240,11 +234,7 @@ namespace Raven.Client.Shard
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var highlightings = new RavenQueryHighlightings();
-#if !SILVERLIGHT
 			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, null, isMapReduce);
-#else
-			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, isMapReduce);
-#endif
 			return CreateRavenQueryInspector(indexName, isMapReduce, provider, ravenQueryStatistics, highlightings);
 		}
 
@@ -260,15 +250,10 @@ namespace Raven.Client.Shard
 		/// <typeparam name="T">The result of the query</typeparam>
 		public IRavenQueryable<T> Query<T>()
 		{
-			var indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
+            var indexName = CreateDynamicIndexName<T>();
+			
 			return Query<T>(indexName)
-#pragma warning disable 612,618
 				.Customize(x => x.TransformResults((query, results) => results.Take(query.PageSize)));
-#pragma warning restore 612,618
 		}
 
 		/// <summary>
@@ -284,29 +269,27 @@ namespace Raven.Client.Shard
 				Conventions = Conventions
 			};
 			return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce)
-#pragma warning disable 612,618
 				.Customize(x => x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
-#pragma warning restore 612,618
 		}
 
 		/// <summary>
 		/// Implements IDocumentQueryGenerator.Query
 		/// </summary>
-		protected abstract IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce);
+		protected abstract IDocumentQuery<T> DocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce);
 
 		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
 		{
-			return IDocumentQueryGeneratorQuery<T>(indexName, isMapReduce);
+			return DocumentQueryGeneratorQuery<T>(indexName, isMapReduce);
 		}
 
 		/// <summary>
 		/// Implements IDocumentQueryGenerator.AsyncQuery
 		/// </summary>
-		protected abstract IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce);
+		protected abstract IAsyncDocumentQuery<T> DocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce);
 
 		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName, bool isMapReduce)
 		{
-			return IDocumentQueryGeneratorAsyncQuery<T>(indexName, isMapReduce);
+			return DocumentQueryGeneratorAsyncQuery<T>(indexName, isMapReduce);
 		}
 
 		#endregion
@@ -340,4 +323,3 @@ namespace Raven.Client.Shard
 		}
 	}
 }
-#endif

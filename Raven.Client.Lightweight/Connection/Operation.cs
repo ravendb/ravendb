@@ -3,26 +3,17 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
+using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
 	public class Operation
 	{
-		private readonly AsyncServerClient asyncServerClient;
+	    private readonly Func<long, Task<RavenJToken>> statusFetcher;
 		private readonly long id;
 		private readonly RavenJToken state;
 		private readonly bool done;
-
-#if !SILVERLIGHT && !NETFX_CORE
-		private readonly ServerClient client;
-
-		public Operation(ServerClient serverClient, long id)
-		{
-			client = serverClient;
-			this.id = id;
-		}
-#endif
 
 		public Operation(long id, RavenJToken state)
 		{
@@ -31,10 +22,15 @@ namespace Raven.Client.Connection
 			this.done = true;
 		}
 
+        public Operation(Func<long, Task<RavenJToken>> statusFetcher, long id)
+        {
+            this.statusFetcher = statusFetcher;
+            this.id = id;
+        }
+
 		public Operation(AsyncServerClient asyncServerClient, long id)
+		    : this(asyncServerClient.GetOperationStatusAsync, id)
 		{
-			this.asyncServerClient = asyncServerClient;
-			this.id = id;
 		}
 
 
@@ -42,45 +38,36 @@ namespace Raven.Client.Connection
 		{
 			if (done)
 				return state;
-			if (asyncServerClient == null)
+			if (statusFetcher == null)
 				throw new InvalidOperationException("Cannot use WaitForCompletionAsync() when the operation was executed syncronously");
 
 			while (true)
 			{
-                var status = await asyncServerClient.GetOperationStatusAsync(id).ConfigureAwait(false);
+                var status = await statusFetcher(id).ConfigureAwait(false);
 				if (status == null)
 					return null;
+
 				if (status.Value<bool>("Completed"))
+				{
+					var faulted = status.Value<bool>("Faulted");
+					if (faulted)
+					{
+						var error = status.Value<RavenJObject>("State");
+						var errorMessage = error.Value<string>("Error");
+						throw new InvalidOperationException("Operation failed: " + errorMessage);
+					}
+
 					return status.Value<RavenJToken>("State");
+				}
+					
 
-#if NET45
 				await Task.Delay(500).ConfigureAwait(false);
-#else
-                await TaskEx.Delay(500).ConfigureAwait(false);
-#endif
-
 			}
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
 		public RavenJToken WaitForCompletion()
 		{
-			if (done)
-				return state;
-			if (client == null)
-				throw new InvalidOperationException("Cannot use WaitForCompletion() when the operation was executed asyncronously");
-
-			while (true)
-			{
-				var status = client.GetOperationStatus(id);
-				if (status == null)
-					return null;
-				if (status.Value<bool>("Completed"))
-					return status.Value<RavenJToken>("State");
-				Thread.Sleep(500);
-			}
+			return WaitForCompletionAsync().ResultUnwrap();
 		}
-#endif
-
 	}
 }

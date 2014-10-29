@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.MultiMap
@@ -12,6 +14,7 @@ namespace Raven.Tests.Bugs.MultiMap
 		{
 			using(var store = NewDocumentStore())
 			{
+				store.Conventions.PrettifyGeneratedLinqExpressions = false;
 				new CatsAndDogs().Execute(store);
 
 				var indexDefinition = store.DatabaseCommands.GetIndex("CatsAndDogs");

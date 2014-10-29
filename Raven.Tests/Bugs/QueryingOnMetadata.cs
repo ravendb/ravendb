@@ -1,4 +1,7 @@
 using System.Linq;
+
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -35,7 +38,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var users = session.Advanced.LuceneQuery<User>()
+                    var users = session.Advanced.DocumentQuery<User>()
 							.WaitForNonStaleResultsAsOfNow()
 							.WhereEquals("@metadata.JobId", "12cd80f2-34b0-4dd9-8464-d1cefad07256")
 							.AndAlso()

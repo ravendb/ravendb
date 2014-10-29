@@ -4,8 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Linq;
+using System.Threading;
+
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Storage
@@ -24,7 +28,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void EtagsAreAlwaysIncreasing()
 		{
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory:false))
 			{
 				tx.Batch(mutator =>
 				{
@@ -33,12 +37,12 @@ namespace Raven.Tests.Storage
 				});
 			}
 
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				tx.Batch(viewer =>
 				{
-					var doc1 = viewer.Documents.DocumentByKey("Ayende", null);
-					var doc2 = viewer.Documents.DocumentByKey("Oren", null);
+					var doc1 = viewer.Documents.DocumentByKey("Ayende");
+					var doc2 = viewer.Documents.DocumentByKey("Oren");
 					Assert.Equal(1, doc2.Etag.CompareTo(doc1.Etag));
 
 				});
@@ -48,7 +52,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanGetDocumentByEtag()
 		{
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				tx.Batch(mutator =>
 				{
@@ -57,14 +61,14 @@ namespace Raven.Tests.Storage
 				});
 			}
 
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				tx.Batch(viewer =>
 				{
 					Assert.Equal(2, viewer.Documents.GetDocumentsAfter(Etag.Empty, 5, CancellationToken.None).Count());
-					var doc1 = viewer.Documents.DocumentByKey("Ayende", null);
+					var doc1 = viewer.Documents.DocumentByKey("Ayende");
 					Assert.Equal(1, viewer.Documents.GetDocumentsAfter(doc1.Etag, 5, CancellationToken.None).Count());
-					var doc2 = viewer.Documents.DocumentByKey("Oren", null);
+					var doc2 = viewer.Documents.DocumentByKey("Oren");
 					Assert.Equal(0, viewer.Documents.GetDocumentsAfter(doc2.Etag, 5, CancellationToken.None).Count());
 				});
 			}
@@ -73,7 +77,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanGetDocumentByUpdateOrder()
 		{
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				tx.Batch(mutator =>
 				{
@@ -82,7 +86,7 @@ namespace Raven.Tests.Storage
 				});
 			}
 
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				tx.Batch(viewer =>
 				{

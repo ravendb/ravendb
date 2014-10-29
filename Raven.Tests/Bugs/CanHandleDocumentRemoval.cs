@@ -4,6 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

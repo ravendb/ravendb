@@ -1,0 +1,11 @@
+dotless is using:
+	* Peg (http://www.codeproject.com/KB/recipes/grammar_support_1.aspx) by Martin Holzherr
+	* NUnit (http://www.nunit.org/)
+	* ILMerge (http://research.microsoft.com/en-us/people/mbarnett/ilmerge.aspx)
+	* 7zip (www.7-zip.org/)
+	* MSpec (http://github.com/machine/machine.specifications)
+	* YUI Compressor for .NET (http://www.codeplex.com/YUICompressor)
+
+The build script was inspired by Rhino.Mocks and is using psake by James Covacs
+
+Thanks to all these great projects for their high quality tools that made creating dotless possible!

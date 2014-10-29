@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Linq
@@ -33,7 +35,7 @@ namespace Raven.Tests.Linq
 
 				using (var session = store.OpenSession())
 				{
-					var results = session.Advanced.LuceneQuery<Project, ProjectsIndex>()
+                    var results = session.Advanced.DocumentQuery<Project, ProjectsIndex>()
 						.OrderBy("PortfolioIndex")
 						.ToList();
 

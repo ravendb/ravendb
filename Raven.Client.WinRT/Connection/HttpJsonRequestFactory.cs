@@ -1,8 +1,8 @@
 using System;
+using System.Collections.Specialized;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Json.Linq;
 
 namespace Raven.Client.WinRT.Connection

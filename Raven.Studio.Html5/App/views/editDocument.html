@@ -1,0 +1,109 @@
+﻿<div id="editDocumentContainer" tabindex="-1">
+    <!-- We use a container with a tab index so that we can capture keyboard events, such as CTRL+S. -->
+    <ul class="breadcrumb" style="display: inline-block">
+        <li style="display: inline-block">
+            <h3 style="display: inline-block">
+                <i class="fa fa-file-text-o" style="display: inline-block"></i>
+                <a href="#documents" data-bind="click: navigateToDocuments, text:isInDocMode() === true?'Documents':'Indexes'" style="display: inline-block">
+                </a>
+            </h3>
+        </li>
+        <!-- ko ifnot: isCreatingNewDocument -->
+        <li data-bind="with: metadata" style="display: inline-block">
+            <a style="display: inline-block" href="#" data-bind="text: $root.isInDocMode() === true?ravenEntityName:$root.queryIndex, attr: {title:ravenEntityName, href: '#documents?collection=' + ravenEntityName }, click: $root.navigateToCollection.bind($root, ravenEntityName)"></a>
+        </li>
+        <!-- /ko -->
+        <li class="active" data-bind="text: docTitle, attr:{ title: docTitle }" style="display: inline-block">
+        </li>
+    </ul>
+    <form data-bind="submit: saveDocument">
+        <div class="btn-toolbar">
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save (Alt+S)"><i class="fa fa-save"></i></button>
+                <a class="btn btn-default" data-bind="click: refreshDocument, visible: lodaedDocumentName" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></a>
+                <button type="button" class="btn btn-default" data-bind="enable:isNewLineFriendlyMode()===false || $root.isEditingMetadata()===true ,click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
+                <button class="btn btn-default" title="Toggle newline mode (Alt+N)" data-toggle="button" accesskey="N" data-bind="enable: $root.isEditingMetadata() === false, click: toggleNewlineMode">
+                    <span class="text-lowercase" data-bind="text: newLineToggle"></span>
+                </button>
+                <button class="btn btn-default" title="Toggle auto-collapse" data-toggle="button" data-bind="enable: $root.isEditingMetadata() === false, click: toggleAutoCollapse">
+                    <span class="fa fa-plus-square-o"></span>
+                </button>
+                <button type="button" class="btn btn-danger" data-bind="click: deleteDocument, visible: lodaedDocumentName" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
+
+            </div>
+
+            <div class="btn-group" data-bind="with: docsList">
+                <button type="button" class="btn btn-default" data-bind="click: $root.firstDocument.bind($root), attr:{ disabled: $root.isFirstDocumenNavtDisabled }" title="Go to first document (Alt+Home)"><i class="fa fa-step-backward"></i></button>
+                <button type="button" class="btn btn-default" data-bind="click: $root.previousDocumentOrLast.bind($root)" title="Go to previous document (Alt+PageUp)"><i class="fa fa-caret-left"></i></button>
+                <button type="button" class="btn btn-default" data-bind="text: 'Doc ' + (currentItemIndex() + 1) + ' of ' + totalResultCount()"></button>
+                <button type="button" class="btn btn-default" data-bind="click: $root.nextDocumentOrFirst.bind($root)" title="Go to next document (Alt+PageDown)"><i class="fa fa-caret-right"></i></button>
+                <button type="button" class="btn btn-default" data-bind="click: $root.lastDocument.bind($root), attr:{ disabled: $root.isLastDocumentNavDisabled }" title="Go to last document (Alt+End)"><i class="fa fa-step-forward"></i></button>
+
+            </div>
+        </div>
+        <br />
+        <div class="row">
+            <div class="col-md-7">
+                <div class="row" data-bind="with: metadata">
+                    <div class="col-md-12">
+                        <input id="documentName" type="text" class="form-control" data-placement="top" accesskey="i" placeholder="document id" data-bind="value: $root.userSpecifiedId, valueUpdate: 'afterkeyup', attr: { disabled: $root.isBusy }" />
+                    </div>
+                </div>
+                <br />
+                <div class="row">
+                    <div class="col-md-12">
+                        <ul class="nav nav-tabs">
+                            <li accesskey="d" data-bind="click: activateDoc, css: { active: isEditingMetadata() === false }" title="Edit document data (Alt+Shift+D)"><a style="cursor: pointer;">Data</a></li>
+                            <li accesskey="m" data-bind="click: activateMeta, css: { active: isEditingMetadata }" title="Edit document metadata (Alt+Shift+M)"><a style="cursor: pointer;">Metadata</a></li>
+                        </ul>
+                        <pre id="docEditor" class="form-control" data-bind="aceEditor: { code: text, fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group panel panel-default col-md-5 document-addition-data side-panel">
+                <div class="col-md-12" data-bind="with: metadata">
+                    <h4><strong>Metadata</strong></h4>
+                    <hr />
+
+                    <div class="row">
+                        <label class="col-md-5">Raven-Entity-Name</label>
+                        <span class="col-md-7" data-bind="text: ravenEntityName, attr: {title:ravenEntityName}"></span>
+                    </div>
+                    <div class="row">
+                        <label class="col-md-5">Etag</label>
+                        <span class="col-md-7" data-bind="text: etag, attr: {title:etag}"></span>
+                    </div>
+                    <div class="row">
+                        <label class="col-md-5">Last-Modified</label>
+                        <span class="col-md-7" data-bind="text: lastModifiedFullDate, attr: {title:lastModifiedFullDate}"></span>
+                    </div>
+                    <div class="row">
+                        <label class="col-md-5">Size in KB</label>
+                        <span class="col-md-7" data-bind="text: $root.documentSize() , attr: {title:$root.documentSize() }"></span>
+
+                    </div>
+                </div>
+                <div class="col-md-12 query-metadata" data-bind="visible:topRecentDocuments().length > 0">
+                    <h4><strong>Recent Documents</strong></h4>
+                    <hr />
+                    <div class="documents-links-container" data-bind="foreach: topRecentDocuments">
+                        <a class="document-link" data-bind="attr: { href: docUrl }">
+                            <span class="collection-color-strip" data-bind="css: $root.getColorClass($data.docId)">&nbsp;</span>
+                            <span data-bind="text: docId"></span>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-12 query-metadata" data-bind="visible: relatedDocumentHrefs().length >0">
+                    <h4><strong>Related Documents</strong></h4>
+                    <hr />
+                    <div class="documents-links-container" data-bind="foreach: relatedDocumentHrefs">
+                        <a class="document-link" data-bind="attr: { href:href }">
+                            <span class="collection-color-strip" data-bind="css: $root.getColorClass($data.id)">&nbsp;</span>
+                            <span data-bind="text: id"></span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

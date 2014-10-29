@@ -7,13 +7,14 @@ using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Indexing
 {
-    public class CurrentIndexingScope : IDisposable
-    {
-        private ILog log = LogManager.GetCurrentClassLogger();
+	public class CurrentIndexingScope : IDisposable
+	{
+		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private readonly DocumentDatabase database;
-        private readonly string index;
-        [ThreadStatic]
+		private readonly string index;
+
+		[ThreadStatic]
 		private static CurrentIndexingScope current;
 
 		public static CurrentIndexingScope Current
@@ -63,27 +64,28 @@ namespace Raven.Database.Indexing
 				return source;
 
 			HashSet<string> set;
-			if(referencedDocuments.TryGetValue(id, out set) == false)
-				referencedDocuments.Add(id, set = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+			if(ReferencedDocuments.TryGetValue(id, out set) == false)
+				ReferencedDocuments.Add(id, set = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 			set.Add(key);
 
 			dynamic value;
 			if (docsCache.TryGetValue(key, out value))
 				return value;
 
-			var doc = database.Get(key, null);
-            
+			var doc = database.Documents.Get(key, null);
+
 			if (doc == null)
-			{
+            {
 			    log.Debug("Loaded document {0} by document {1} for index {2} could not be found", key, id, index);
 
-				referencesEtags.Add(key, Etag.Empty);
+				ReferencesEtags.Add(key, Etag.Empty);
 				value = new DynamicNullObject();
-			}
+            }
 			else
 			{
-			    log.Debug("Loaded document {0} with etag {3} by document {1} for index {2}\r\n{4}", key, id, index, doc.Etag, doc.ToJson());
-				referencesEtags.Add(key, doc.Etag);
+				log.Debug("Loaded document {0} with etag {3} by document {1} for index {2}\r\n{4}", key, id, index, doc.Etag, doc.ToJson());
+
+				ReferencesEtags.Add(key, doc.Etag);
 				value = new DynamicJsonObject(doc.ToJson());
 			}
 

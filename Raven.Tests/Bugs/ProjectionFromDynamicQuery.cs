@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -24,7 +26,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = documentStore.OpenSession())
 				{
-					var result = s.Advanced.LuceneQuery<User>()
+                    var result = s.Advanced.DocumentQuery<User>()
 						.WhereEquals("Name", "Ayende", isAnalyzed: true)
 						.SelectFields<RavenJObject>("Email")
 						.First();
@@ -76,7 +78,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = documentStore.OpenSession())
 				{
-					var result = s.Advanced.LuceneQuery<Person>()
+                    var result = s.Advanced.DocumentQuery<Person>()
 						.WhereEquals("Name", "Ayende", isAnalyzed: true)
 						.SelectFields<RavenJObject>("BillingAddress")
 						.First();
@@ -106,7 +108,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = documentStore.OpenSession())
 				{
-					var result = s.Advanced.LuceneQuery<Person>()
+                    var result = s.Advanced.DocumentQuery<Person>()
 						.WhereEquals("Name", "Ayende", isAnalyzed: true)
 						.SelectFields<RavenJObject>("BillingAddress.City")
 						.First();
@@ -141,7 +143,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = documentStore.OpenSession())
 				{
-					var result = s.Advanced.LuceneQuery<Person>()
+                    var result = s.Advanced.DocumentQuery<Person>()
 						.WhereEquals("Name", "Ayende", isAnalyzed: true)
 						.SelectFields<RavenJObject>("Addresses[0].City")
 						.First();

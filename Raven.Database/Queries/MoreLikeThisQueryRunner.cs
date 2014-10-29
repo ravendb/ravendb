@@ -4,19 +4,24 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using Lucene.Net.Analysis;
+using System.Threading;
+
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Linq;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Bundles.MoreLikeThis;
+using Raven.Database.Data;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
-using Raven.Database.Server.Responders;
+using Raven.Database.Linq;
+using Raven.Json.Linq;
+
 using Index = Raven.Database.Indexing.Index;
 
 namespace Raven.Database.Queries
@@ -25,12 +30,16 @@ namespace Raven.Database.Queries
 	{
 		private readonly DocumentDatabase database;
 
+		private HashSet<string> idsToLoad;
+
+		private DocumentRetriever documentRetriever;
+
 		public MoreLikeThisQueryRunner(DocumentDatabase database)
 		{
 			this.database = database;
 		}
 
-		public MoreLikeThisQueryResult ExecuteMoreLikeThisQuery(MoreLikeThisQuery query, TransactionInformation transactionInformation, int pageSize = 25, string[] include = null)
+		public MoreLikeThisQueryResult ExecuteMoreLikeThisQuery(MoreLikeThisQuery query, TransactionInformation transactionInformation, int pageSize = 25)
 		{
 			if (query == null) throw new ArgumentNullException("query");
 
@@ -42,7 +51,7 @@ namespace Raven.Database.Queries
 				throw new InvalidOperationException("The document id or map group fields are mandatory");
 
 			IndexSearcher searcher;
-			using (database.IndexStorage.GetCurrentIndexSearcher(query.IndexName, out searcher))
+			using (database.IndexStorage.GetCurrentIndexSearcher(index.indexId, out searcher))
 			{
 				var documentQuery = new BooleanQuery();
 
@@ -69,7 +78,7 @@ namespace Raven.Database.Queries
 
 				if (string.IsNullOrWhiteSpace(query.StopWordsDocumentId) == false)
 				{
-					var stopWordsDoc = database.Get(query.StopWordsDocumentId, null);
+					var stopWordsDoc = database.Documents.Get(query.StopWordsDocumentId, null);
 					if (stopWordsDoc == null)
 						throw new InvalidOperationException("Stop words document " + query.StopWordsDocumentId + " could not be found");
 
@@ -105,26 +114,34 @@ namespace Raven.Database.Queries
 					var result = new MultiLoadResult();
 
 					var includedEtags = new List<byte>(jsonDocuments.SelectMany(x => x.Etag.ToByteArray()));
-					includedEtags.AddRange(database.GetIndexEtag(query.IndexName, null).ToByteArray());
+					includedEtags.AddRange(database.Indexes.GetIndexEtag(query.IndexName, null).ToByteArray());
 					var loadedIds = new HashSet<string>(jsonDocuments.Select(x => x.Key));
 					var addIncludesCommand = new AddIncludesCommand(database, transactionInformation, (etag, includedDoc) =>
 					{
 						includedEtags.AddRange(etag.ToByteArray());
 						result.Includes.Add(includedDoc);
-					}, include ?? new string[0], loadedIds);
+					}, query.Includes ?? new string[0], loadedIds);
 
-					foreach (var jsonDocument in jsonDocuments)
-					{
-						result.Results.Add(jsonDocument.ToJson());
-						addIncludesCommand.Execute(jsonDocument.DataAsJson);
-					}
+					idsToLoad = new HashSet<string>();
 
-					Etag computedEtag;
-					using (var md5 = MD5.Create())
+					database.TransactionalStorage.Batch(actions =>
 					{
-						var computeHash = md5.ComputeHash(includedEtags.ToArray());
-						computedEtag = Etag.Parse(computeHash);
-					}
+						documentRetriever = new DocumentRetriever(actions, database.ReadTriggers, database.InFlightTransactionalState, query.TransformerParameters, idsToLoad);
+
+						using (new CurrentTransformationScope(database, documentRetriever))
+						{
+							foreach (var document in ProcessResults(query, jsonDocuments, database.WorkContext.CancellationToken))
+							{
+								result.Results.Add(document);
+								addIncludesCommand.Execute(document);
+							}
+						}
+					});
+
+					addIncludesCommand.AlsoInclude(idsToLoad);
+
+				    var computeHash = Encryptor.Current.Hash.Compute16(includedEtags.ToArray());
+                    Etag computedEtag = Etag.Parse(computeHash);
 
 					return new MoreLikeThisQueryResult
 					{
@@ -144,6 +161,43 @@ namespace Raven.Database.Queries
 			}
 		}
 
+		private IEnumerable<RavenJObject> ProcessResults(MoreLikeThisQuery query, IEnumerable<JsonDocument> documents, CancellationToken token)
+		{
+			IndexingFunc transformFunc = null;
+
+			if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
+			{
+				var transformGenerator = database.IndexDefinitionStorage.GetTransformer(query.ResultsTransformer);
+
+				if (transformGenerator != null && transformGenerator.TransformResultsDefinition != null)
+					transformFunc = transformGenerator.TransformResultsDefinition;
+				else
+					throw new InvalidOperationException("The transformer " + query.ResultsTransformer + " was not found");
+			}
+
+			IEnumerable<RavenJObject> results;
+			var transformerErrors = new List<string>();
+
+			if (transformFunc == null)
+				results = documents.Select(x => x.ToJson());
+			else
+			{
+				var robustEnumerator = new RobustEnumerator(token, 100)
+				{
+					OnError =
+						(exception, o) =>
+						transformerErrors.Add(string.Format("Doc '{0}', Error: {1}", Index.TryGetDocKey(o),
+															exception.Message))
+				};
+
+				results = robustEnumerator
+					.RobustEnumeration(documents.Select(x => new DynamicJsonObject(x.ToJson())).GetEnumerator(), transformFunc)
+					.Select(JsonExtensions.ToJObject);
+			}
+
+			return results;
+		}
+
 		private JsonDocument[] GetJsonDocuments(MoreLikeThisQuery parameters, IndexSearcher searcher, Index index, string indexName, IEnumerable<ScoreDoc> hits, int baseDocId)
 		{
 			if (string.IsNullOrEmpty(parameters.DocumentId) == false)
@@ -155,19 +209,19 @@ namespace Raven.Database.Queries
 					.Distinct();
 
 				return documentIds
-					.Select(docId => database.Get(docId, null))
+					.Select(docId => database.Documents.Get(docId, null))
 					.Where(it => it != null)
 					.ToArray();
 			}
 
 			var fields = searcher.Doc(baseDocId).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct().ToArray();
-			var etag = database.GetIndexEtag(indexName, null);
+			var etag = database.Indexes.GetIndexEtag(indexName, null);
 			return hits
 				.Where(hit => hit.Doc != baseDocId)
 				.Select(hit => new JsonDocument
 				{
 					DataAsJson = Index.CreateDocumentFromFields(searcher.Doc(hit.Doc),
-					                                            new FieldsToFetch(fields, AggregationOperation.None, index.IsMapReduce ? Constants.ReduceKeyFieldName : Constants.DocumentIdFieldName)),
+					                                            new FieldsToFetch(fields, false, index.IsMapReduce ? Constants.ReduceKeyFieldName : Constants.DocumentIdFieldName)),
 					Etag = etag
 				})
 				.ToArray();

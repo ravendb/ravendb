@@ -7,6 +7,8 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Linq
@@ -30,7 +32,7 @@ namespace Raven.Tests.Linq
 				{
 					var item = session.Query<Index.Result, Index>()
 						.Customize(c => c.WaitForNonStaleResults())
-						.AsProjection<Index.Result>()
+						.ProjectFromIndexFieldsInto<Index.Result>()
 						.Single();
 
 					Assert.NotNull(item.Bars);

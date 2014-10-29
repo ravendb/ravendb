@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Querying
@@ -39,12 +41,12 @@ namespace Raven.Tests.Querying
 					session.SaveChanges();
 
 					// search for the keyword software
-					var results = session.Advanced.LuceneQuery<Something>("FTSIndex").Search("MyProp", "software")
+                    var results = session.Advanced.DocumentQuery<Something>("FTSIndex").Search("MyProp", "software")
 						.WaitForNonStaleResultsAsOfLastWrite()
 						.ToList();
 					Assert.Equal(1, results.Count);
 
-					results = session.Advanced.LuceneQuery<Something>("FTSIndex").Search("MyProp", "software~")
+                    results = session.Advanced.DocumentQuery<Something>("FTSIndex").Search("MyProp", "software~")
 						.WaitForNonStaleResultsAsOfLastWrite().ToList();
 					Assert.Equal(2, results.Count);
 				}

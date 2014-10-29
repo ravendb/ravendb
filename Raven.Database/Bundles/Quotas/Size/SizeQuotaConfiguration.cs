@@ -71,7 +71,7 @@ namespace Raven.Bundles.Quotas.Size
 			var totalSizeOnDisk = database.GetTotalSizeOnDisk();
 			if (totalSizeOnDisk <= softLimit)
 			{
-				database.Delete("Raven/Quotas/Size", null, null);
+				database.Documents.Delete("Raven/Quotas/Size", null, null);
 				skipCheck = VetoResult.Allowed;
 				recheckOnDelete = false;
 				return;
@@ -85,7 +85,7 @@ namespace Raven.Bundles.Quotas.Size
 				msg = string.Format("Database size is {0:#,#} KB, which is over the allowed quota of {1:#,#} KB. No more documents are allowed in.",
 					totalSizeOnDisk / 1024, hardLimit / 1024);
 
-				database.Put("Raven/Quotas/Size", null, new RavenJObject
+				database.Documents.Put("Raven/Quotas/Size", null, new RavenJObject
 				{
 					{"Message", msg}
 				}, new RavenJObject(), null);
@@ -97,7 +97,7 @@ namespace Raven.Bundles.Quotas.Size
 				msg = string.Format("Database size is {0:#,#} KB, which is close to the allowed quota of {1:#,#} KB",
 					totalSizeOnDisk / 1024, softLimit / 1024);
 
-				database.Put("Raven/Quotas/Size", null, new RavenJObject
+				database.Documents.Put("Raven/Quotas/Size", null, new RavenJObject
 				{
 					{"Message", msg}
 				}, new RavenJObject(), null);

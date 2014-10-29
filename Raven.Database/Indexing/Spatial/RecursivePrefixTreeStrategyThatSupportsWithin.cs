@@ -6,7 +6,7 @@ using Spatial4n.Core.Shapes;
 
 namespace Raven.Database.Indexing.Spatial
 {
-	public class RecursivePrefixTreeStrategyThatSupportsWithin : PrefixTreeStrategy
+	internal class RecursivePrefixTreeStrategyThatSupportsWithin : PrefixTreeStrategy
 	{
 		private int prefixGridScanLevel;
 

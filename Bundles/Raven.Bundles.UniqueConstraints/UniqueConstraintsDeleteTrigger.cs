@@ -17,7 +17,7 @@ namespace Raven.Bundles.UniqueConstraints
 			if (key.StartsWith("Raven"))
 				return;
 
-			var doc = Database.Get(key, transactionInformation);
+			var doc = Database.Documents.Get(key, transactionInformation);
 
 			if (doc == null)
 				return;
@@ -43,9 +43,56 @@ namespace Raven.Bundles.UniqueConstraints
 
 				foreach (var uniqueValue in uniqueValues)
 				{
-					Database.Delete(prefix + Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive), null, transactionInformation);
+                    var escapedUniqueValue = Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive);
+                    var uniqueConstraintsDocumentKey = prefix + escapedUniqueValue;
+                    var uniqueConstraintsDocument = Database.Documents.Get(uniqueConstraintsDocumentKey, transactionInformation);
+
+                    if (uniqueConstraintsDocument == null)
+                        continue;
+
+				    var removed = RemoveConstraintFromUniqueConstraintDocument(uniqueConstraintsDocument, escapedUniqueValue);
+
+                    if (ShouldRemoveUniqueConstraintDocument(uniqueConstraintsDocument))
+                    {
+                        Database.Documents.Delete(uniqueConstraintsDocumentKey, null, transactionInformation);
+                    }
+                    else if (removed)
+                    {
+                        Database.Documents.Put(
+                            uniqueConstraintsDocumentKey,
+                            null,
+                            uniqueConstraintsDocument.DataAsJson,
+                            uniqueConstraintsDocument.Metadata,
+                            transactionInformation);
+                    }
 				}
 			}
 		}
+
+	    private static bool ShouldRemoveUniqueConstraintDocument(JsonDocument uniqueConstraintsDocument)
+	    {
+            if (!uniqueConstraintsDocument.DataAsJson.ContainsKey("Constraints"))
+                return true;
+
+            if (uniqueConstraintsDocument.DataAsJson.Keys.Count == 0)
+                return true;
+
+            var constraints = (RavenJObject)uniqueConstraintsDocument.DataAsJson["Constraints"];
+
+            if (constraints.Keys.Count == 0)
+                return true;
+
+	        return false;
+	    }
+
+	    private static bool RemoveConstraintFromUniqueConstraintDocument(JsonDocument uniqueConstraintsDocument, string escapedUniqueValue)
+        {
+            if (!uniqueConstraintsDocument.DataAsJson.ContainsKey("Constraints"))
+                return false;
+
+            var constraints = (RavenJObject)uniqueConstraintsDocument.DataAsJson["Constraints"];
+
+            return constraints.Remove(escapedUniqueValue);
+        }
 	}
 }

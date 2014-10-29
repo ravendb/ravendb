@@ -9,11 +9,13 @@ using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanDeserializeWhenWeHaveLastModifiedTwiceInMetadata
+    public class CanDeserializeWhenWeHaveLastModifiedTwiceInMetadata : NoDisposalNeeded
 	{
 		[Fact]
 		public void LegacyRavenLastModifiedMetadata()

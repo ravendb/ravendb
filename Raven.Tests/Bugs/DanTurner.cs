@@ -4,27 +4,28 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class DanTurner : RavenTest, IDisposable
+	public class DanTurner : RavenTest
 	{
-		private IDocumentStore _store;
+		private readonly IDocumentStore _store;
 
-		private Person _john;
-		private Car _patrol;
-		private Car _focus;
+		private readonly Person _john;
+		private readonly Car _patrol;
+		private readonly Car _focus;
 
-		private Person _mary;
-		private Car _falcon;
-		private Car _astra;
+		private readonly Person _mary;
+		private readonly Car _falcon;
+		private readonly Car _astra;
 
 		public DanTurner()
 		{
 			_store = NewDocumentStore();
-
 
 			new DriversIndex().Execute(_store);
 
@@ -50,12 +51,6 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		public override void Dispose()
-		{
-			_store.Dispose();
-			base.Dispose();
-		}
-
 		[Fact]
 		public void CanEnumerateQueryOnDriversIndex()
 		{
@@ -64,7 +59,7 @@ namespace Raven.Tests.Bugs
 				var results = session
 					.Query<Person, DriversIndex>()
 					.Customize(c => c.WaitForNonStaleResults())
-					.AsProjection<Driver>()
+					.ProjectFromIndexFieldsInto<Driver>()
 					.ToList();
 
 				Assert.Equal(4, results.Count);
@@ -120,7 +115,7 @@ namespace Raven.Tests.Bugs
 				var results = session
 					.Query<Driver, DriversIndex>()
 					.Customize(c => c.WaitForNonStaleResults())
-					.Select(x=>new{x.PersonId, x.PersonName, x.CarRegistration, x.CarMake});
+					.Select(x => new {x.PersonId, x.PersonName, x.CarRegistration, x.CarMake});
 
 				Assert.Equal(4, results.Count());
 			}
@@ -141,7 +136,7 @@ namespace Raven.Tests.Bugs
 									 CarMake = car.Make
 								 };
 
-				Sort(p => p.CarMake, Raven.Abstractions.Indexing.SortOptions.String);
+				Sort(p => p.CarMake, SortOptions.String);
 				Store(p => p.PersonId, FieldStorage.Yes);
 				Store(p => p.PersonName, FieldStorage.Yes);
 				Store(p => p.CarRegistration, FieldStorage.Yes);
@@ -160,6 +155,7 @@ namespace Raven.Tests.Bugs
 
 			public string CarMake { get; set; }
 		}
+
 		public class Car
 		{
 			public Car(string registration, string make, string model)

@@ -11,6 +11,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Abstractions.Exceptions;
 using Raven.Database.Plugins;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -24,7 +25,7 @@ namespace Raven.Tests.Triggers
 		public AttachmentDeleteTrigger()
 		{
 			store = NewDocumentStore(catalog:(new TypeCatalog(typeof (RefuseAttachmentDeleteTrigger))));
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()
@@ -36,8 +37,8 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanVetoDeletes()
 		{
-			db.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
-			var operationVetoedException = Assert.Throws<OperationVetoedException>(()=>db.DeleteStatic("ayende", null));
+			db.Attachments.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+			var operationVetoedException = Assert.Throws<OperationVetoedException>(()=>db.Attachments.DeleteStatic("ayende", null));
 			Assert.Equal("DELETE vetoed on attachment ayende by Raven.Tests.Triggers.AttachmentDeleteTrigger+RefuseAttachmentDeleteTrigger because: Can't delete attachments", operationVetoedException.Message);
 		}
 

@@ -4,11 +4,14 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Extensions;
 
@@ -16,7 +19,7 @@ namespace Raven.Tests.Security.OAuth
 {
 	using Raven.Abstractions.Connection;
 
-	public class ApiKey : RemoteClientTest
+	public class ApiKey : RavenTest
 	{
 		private const string apiKey = "test/ThisIsMySecret";
 
@@ -30,15 +33,15 @@ namespace Raven.Tests.Security.OAuth
 
 		protected override void ModifyServer(Server.RavenDbServer ravenDbServer)
 		{
-			ravenDbServer.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+			ravenDbServer.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 			{
 				Name = "test",
 				Secret = "ThisIsMySecret",
 				Enabled = true,
-				Databases = new List<DatabaseAccess>
+				Databases = new List<ResourceAccess>
 				{
-					new DatabaseAccess{TenantId = "*"}, 
-					new DatabaseAccess{TenantId = Constants.SystemDatabase}, 
+					new ResourceAccess{TenantId = "*"}, 
+					new ResourceAccess{TenantId = Constants.SystemDatabase}, 
 				}
 			}), new RavenJObject(), null);
 		}
@@ -77,42 +80,43 @@ namespace Raven.Tests.Security.OAuth
 			using (var server = GetNewServer(enableAuthentication: true))
 			{
 
-				server.Database.Put("Raven/ApiKeys/sysadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/sysadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "sysadmin",
 					Secret = "ThisIsMySecret",
 					Enabled = true,
-					Databases = new List<DatabaseAccess>
+					Databases = new List<ResourceAccess>
 				{
-					new DatabaseAccess{TenantId = Constants.SystemDatabase, Admin = true}, 
+					new ResourceAccess{TenantId = Constants.SystemDatabase, Admin = true}, 
 				}
 				}), new RavenJObject(), null);
 
-				server.Database.Put("Raven/ApiKeys/dbadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/dbadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "dbadmin",
 					Secret = "ThisIsMySecret",
 					Enabled = true,
-					Databases = new List<DatabaseAccess>
+					Databases = new List<ResourceAccess>
 				{
-					new DatabaseAccess{TenantId = "*", Admin = true}, 
-					new DatabaseAccess{TenantId = Constants.SystemDatabase, Admin = false}, 
+					new ResourceAccess{TenantId = "*", Admin = true}, 
+					new ResourceAccess{TenantId = Constants.SystemDatabase, Admin = false}, 
 				}
 				}), new RavenJObject(), null);
 
+				var serverUrl = server.SystemDatabase.ServerUrl;
 				using (var store = new DocumentStore
 				{
-					Url = server.Database.ServerUrl,
+					Url = serverUrl,
 					ApiKey = "sysadmin/ThisIsMySecret",
 					Conventions = {FailoverBehavior = FailoverBehavior.FailImmediately}
 				}.Initialize())
 				{
-					store.DatabaseCommands.EnsureDatabaseExists("test");
+					store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("test");
 				}
 
 				using (var store = new DocumentStore
 				{
-					Url = server.Database.ServerUrl,
+					Url = serverUrl,
 					ApiKey = "dbadmin/ThisIsMySecret"
 				}.Initialize())
 				{
@@ -124,6 +128,61 @@ namespace Raven.Tests.Security.OAuth
 					var json = (RavenJObject)httpJsonRequest.ReadResponseJson();
 
 					Assert.True(json.Value<bool>("IsAdminCurrentDb"));
+				}
+			}
+		}
+
+		[Fact]
+		public void CanAuthAsAdminAgainstTenantDbUsingLazyOperations()
+		{
+			using (var server = GetNewServer(enableAuthentication: true))
+			{
+
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/sysadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
+				{
+					Name = "sysadmin",
+					Secret = "ThisIsMySecret",
+					Enabled = true,
+					Databases = new List<ResourceAccess>
+				{
+					new ResourceAccess{TenantId = Constants.SystemDatabase, Admin = true}, 
+				}
+				}), new RavenJObject(), null);
+
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/dbadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
+				{
+					Name = "dbadmin",
+					Secret = "ThisIsMySecret",
+					Enabled = true,
+					Databases = new List<ResourceAccess>
+				{
+					new ResourceAccess{TenantId = "test", Admin = true}, 
+				}
+				}), new RavenJObject(), null);
+
+				var serverUrl = server.SystemDatabase.ServerUrl;
+				using (var store = new DocumentStore
+				{
+					Url = serverUrl,
+					ApiKey = "sysadmin/ThisIsMySecret",
+					Conventions = { FailoverBehavior = FailoverBehavior.FailImmediately }
+				}.Initialize())
+				{
+					store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("test");
+				}
+
+				using (var store = new DocumentStore
+				{
+					Url = serverUrl,
+					ApiKey = "dbadmin/ThisIsMySecret"
+				}.Initialize())
+				{
+					using (var x = store.OpenSession("test"))
+					{
+						x.Advanced.Lazily.Load<dynamic>("users/1");
+						x.Advanced.Lazily.Load<dynamic>("users/2");
+						x.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
+					}
 				}
 			}
 		}

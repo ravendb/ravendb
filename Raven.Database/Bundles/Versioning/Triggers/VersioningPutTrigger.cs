@@ -4,11 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Bundles.Versioning.Data;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -21,7 +21,7 @@ namespace Raven.Bundles.Versioning.Triggers
 	{
 		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			var jsonDocument = Database.Get(key, transactionInformation);
+			var jsonDocument = Database.Documents.Get(key, transactionInformation);
 			if (jsonDocument == null)
 				return VetoResult.Allowed;
 
@@ -79,27 +79,26 @@ namespace Raven.Bundles.Versioning.Triggers
 				if (parentRevision != null)
 				{
 					copyMetadata[VersioningUtil.RavenDocumentParentRevision] = key + "/revisions/" + parentRevision;
-					copyMetadata[VersioningUtil.RavenDocumentParentRevision] = key + "/revisions/" + parentRevision;
 				}
 
 				object value;
 				metadata.__ExternalState.TryGetValue("Next-Revision", out value);
-				Database.Put(key + "/revisions/" + value, null, (RavenJObject)document.CreateSnapshot(), copyMetadata,
+				Database.Documents.Put(key + "/revisions/" + value, null, (RavenJObject)document.CreateSnapshot(), copyMetadata,
 							 transactionInformation);
 			}
 		}
 
-		private int GetNextRevisionNumber(string key)
+		private long GetNextRevisionNumber(string key)
 		{
-			var revision = 0;
+			long revision = 0;
 
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				revision = (int)accessor.General.GetNextIdentityValue(key + "/revisions/");
+				revision = Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key + "/revisions/", accessor);
 
 				if (revision == 1)
 				{
-					var existingDoc = Database.Get(key, null);
+					var existingDoc = Database.Documents.Get(key, null);
 					if (existingDoc != null)
 					{
 						RavenJToken existingRevisionToken;
@@ -140,7 +139,8 @@ namespace Raven.Bundles.Versioning.Triggers
 
 			while (true)
 			{
-				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize, CancellationToken.None);
+				int nextPageStart = start; // will trigger rapid pagination
+				var docs = Database.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize, CancellationToken.None, ref nextPageStart);
 				if (!docs.Any())
 					break;
 
@@ -172,13 +172,27 @@ namespace Raven.Bundles.Versioning.Triggers
 			return true;
 		}
 
-		private void RemoveOldRevisions(string key, int revision, VersioningConfiguration versioningConfiguration, TransactionInformation transactionInformation)
+		private void RemoveOldRevisions(string key, long revision, VersioningConfiguration versioningConfiguration, TransactionInformation transactionInformation)
 		{
-			int latestValidRevision = revision - versioningConfiguration.MaxRevisions;
+			long latestValidRevision = revision - versioningConfiguration.MaxRevisions;
 			if (latestValidRevision <= 0)
 				return;
 
-			Database.Delete(string.Format("{0}/revisions/{1}", key, latestValidRevision), null, transactionInformation);
+			Database.Documents.Delete(string.Format("{0}/revisions/{1}", key, latestValidRevision), null, transactionInformation);
+		}
+
+		public override IEnumerable<string> GeneratedMetadataNames
+		{
+			get
+			{
+				return new[]
+				{
+					VersioningUtil.RavenDocumentRevisionStatus,
+					VersioningUtil.RavenDocumentRevision,
+					VersioningUtil.RavenDocumentParentRevision,
+					Constants.RavenCreateVersion
+				};
+			}
 		}
 	}
 }

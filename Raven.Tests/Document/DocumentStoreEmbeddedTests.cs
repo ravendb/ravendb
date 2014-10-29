@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Transactions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -16,19 +17,20 @@ using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
 using Raven.Tests.Indexes;
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Document
 {
-	public class DocumentStoreEmbeddedTests : RemoteClientTest
+	public class DocumentStoreEmbeddedTests : RavenTest
 	{
 		private readonly EmbeddableDocumentStore documentStore;
 
 		public DocumentStoreEmbeddedTests()
 		{
-			documentStore = NewDocumentStore();
+            documentStore = NewDocumentStore(requestedStorage: "esent");
 		}
 
 		public override void Dispose()
@@ -36,32 +38,7 @@ namespace Raven.Tests.Document
 			documentStore.Dispose();
 			base.Dispose();
 		}
-
-		[Fact]
-		public void CanUseTransactionsToIsolateSaves()
-		{
-			var company = new Company { Name = "Company Name" };
-			using (var session = documentStore.OpenSession())
-			{
-				using (var tx = new TransactionScope())
-				{
-					session.Store(company);
-
-					session.SaveChanges();
-
-					using (new TransactionScope(TransactionScopeOption.Suppress))
-					{
-						using (var session2 = documentStore.OpenSession())
-							Assert.Null(session2.Load<Company>(company.Id));
-
-						tx.Complete();
-					}
-				}
-				Assert.NotNull(session.Load<Company>(company.Id));
-			}
-		}
-
-		[Fact]
+	[Fact]
 		public void CanGetIndexNames()
 		{
 			Assert.Contains("Raven/DocumentsByEntityName", documentStore.DatabaseCommands.GetIndexNames(0, 25));
@@ -70,7 +47,7 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void CanResetBuiltinIndex()
 		{
-			documentStore.DocumentDatabase.ResetIndex("Raven/DocumentsByEntityName");
+			documentStore.SystemDatabase.Indexes.ResetIndex("Raven/DocumentsByEntityName");
 		}
 
 		[Fact]
@@ -123,31 +100,7 @@ namespace Raven.Tests.Document
 			}
 		}
 
-		[Fact]
-		public void WillProcessAllDifferentDocumentsEnlistedInATransaction()
-		{
-			using (var tx = new TransactionScope())
-			{
-				using (var session = documentStore.OpenSession())
-				{
-					// Remark: Don't change the order of the stored classes!
-					// This test will only fail if the classes are not
-					// stored in their alphabetical order!
-					session.Store(new Contact { FirstName = "Contact" });
-					session.Store(new Company { Name = "Company" });
-					session.SaveChanges();
-				}
-				tx.Complete();
-			}
-			Thread.Sleep(500);
-			using (var session = documentStore.OpenSession())
-			{
-				Assert.NotNull(session.Load<Contact>("contacts/1"));
-				Assert.NotNull(session.Load<Company>("companies/1"));
-				session.SaveChanges();
-			}
-		}
-
+		
 		[Fact]
 		public void CanRefreshEntityFromDatabase()
 		{
@@ -174,6 +127,31 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
+		public async Task CanRefreshEntityFromDatabaseAsync()
+		{
+			var company = new Company { Name = "Company Name" };
+			using (var session = documentStore.OpenAsyncSession())
+			{
+				await session.StoreAsync(company);
+				await session.SaveChangesAsync();
+
+				using (var session2 = documentStore.OpenSession())
+				{
+					var company2 = session2.Load<Company>(company.Id);
+					company2.Name = "Hibernating Rhinos";
+					session2.Store(company2);
+					session2.SaveChanges();
+				}
+
+				var old = session.Advanced.GetEtagFor(company);
+				await session.Advanced.RefreshAsync(company);
+				Assert.NotEqual(old, session.Advanced.GetEtagFor(company));
+				Assert.NotEqual(Etag.Empty, session.Advanced.GetEtagFor(company));
+				Assert.Equal("Hibernating Rhinos", company.Name);
+			}
+		}
+
+		[Fact]
 		public void WillSetIdFromQuery()
 		{
 			var company = new Company { Name = "Company Name" };
@@ -185,7 +163,7 @@ namespace Raven.Tests.Document
 
 			using (var session2 = documentStore.OpenSession())
 			{
-				var companyFromRaven = session2.Advanced.LuceneQuery<Company>()
+                var companyFromRaven = session2.Advanced.DocumentQuery<Company>()
 					.WaitForNonStaleResults()
 					.First();
 				Assert.Equal(companyFromRaven.Id, company.Id);
@@ -222,6 +200,7 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void CanGetIndexDef()
 		{
+			documentStore.Conventions.PrettifyGeneratedLinqExpressions = false;
 			documentStore.DatabaseCommands.PutIndex("Companies/Name", new IndexDefinitionBuilder<Company, Company>
 																		{
 																			Map = companies => from c in companies
@@ -260,7 +239,7 @@ namespace Raven.Tests.Document
 
 			using (var session2 = documentStore.OpenSession())
 			{
-				var companyFromRaven = session2.Advanced.LuceneQuery<Company>()
+                var companyFromRaven = session2.Advanced.DocumentQuery<Company>()
 					.WaitForNonStaleResults()
 					.First();
 
@@ -273,41 +252,6 @@ namespace Raven.Tests.Document
 				Assert.Equal("Hibernating Rhinos", load.Name);
 			}
 		}
-
-		[Fact]
-		public void CanUseTransactionsToIsolateDelete()
-		{
-			var company = new Company { Name = "Company Name" };
-			using (var session = documentStore.OpenSession())
-			{
-				session.Store(company);
-				session.SaveChanges();
-
-				using (var tx = new TransactionScope())
-				{
-					session.Delete(company);
-					session.SaveChanges();
-
-					using (new TransactionScope(TransactionScopeOption.Suppress))
-					{
-						using (var session2 = documentStore.OpenSession())
-							Assert.NotNull(session2.Load<Company>(company.Id));
-					}
-
-					tx.Complete();
-				}
-				for (int i = 0; i < 15; i++) // wait for commit
-				{
-					using (var session2 = documentStore.OpenSession())
-						if (session2.Load<Company>(company.Id) == null)
-							break;
-					Thread.Sleep(100);
-				}
-				using (var session2 = documentStore.OpenSession())
-					Assert.Null(session2.Load<Company>(company.Id));
-			}
-		}
-
 
 		[Fact]
 		public void WillUseIdentityForDocumentKey()
@@ -543,7 +487,7 @@ namespace Raven.Tests.Document
 														});
 
 				var q = session
-					.Advanced.LuceneQuery<Company>("company_by_name")
+                    .Advanced.DocumentQuery<Company>("company_by_name")
 					.SelectFields<Company>("Name", "Phone")
 					.WaitForNonStaleResults();
 				var single = q.Single();
@@ -568,11 +512,11 @@ namespace Raven.Tests.Document
 														});
 
 				// Wait until the index is built
-				session.Advanced.LuceneQuery<Company>("company_by_name")
+                session.Advanced.DocumentQuery<Company>("company_by_name")
 					.WaitForNonStaleResults()
 					.ToArray();
 
-				var companies = session.Advanced.LuceneQuery<Company>("company_by_name")
+                var companies = session.Advanced.DocumentQuery<Company>("company_by_name")
 					.OrderBy("Phone")
 					.WaitForNonStaleResults()
 					.ToArray();
@@ -657,7 +601,7 @@ namespace Raven.Tests.Document
 
 			using (var session2 = documentStore.OpenSession())
 			{
-				var companyFound = session2.Advanced.LuceneQuery<Company>()
+                var companyFound = session2.Advanced.DocumentQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -685,7 +629,7 @@ namespace Raven.Tests.Document
 
 				session.SaveChanges();
 
-				LinqIndexesFromClient.User single = session.Advanced.LuceneQuery<LinqIndexesFromClient.User>("UsersByLocation")
+                LinqIndexesFromClient.User single = session.Advanced.DocumentQuery<LinqIndexesFromClient.User>("UsersByLocation")
 					.Where("Name:Yael")
 					.WaitForNonStaleResults()
 					.Single();
@@ -703,17 +647,18 @@ namespace Raven.Tests.Document
 				session.Store(entity);
 				session.SaveChanges();
 
-				session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+                session.Advanced.DocumentQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 			}
 
-			documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
-			{
-				Query = "Tag:[[Companies]]"
-			}, allowStale: false);
+		    var deleteByIndex = documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
+		    {
+		        Query = "Tag:[[Companies]]"
+		    }, allowStale: false);
+		    deleteByIndex.WaitForCompletion();
 
 			using (var session = documentStore.OpenSession())
 			{
-				Assert.Empty(session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
+                Assert.Empty(session.Advanced.DocumentQuery<Company>().WaitForNonStaleResults().ToArray());
 			}
 		}
 
@@ -726,7 +671,7 @@ namespace Raven.Tests.Document
 				session.Store(entity);
 				session.SaveChanges();
 
-				session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+                session.Advanced.DocumentQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 			}
 
 			documentStore.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery
@@ -740,7 +685,7 @@ namespace Raven.Tests.Document
 					Name = "Name",
 					Value = RavenJToken.FromObject("Another Company")
 				},
-			}, allowStale: false);
+			}, allowStale: false).WaitForCompletion();
 
 			using (var session = documentStore.OpenSession())
 			{

@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,8 +17,6 @@ using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;
 using Raven.Client.Connection;
 using Raven.Client.Shard;
-using Raven.Client.Extensions;
-using Raven.Client.WinRT.MissingFromWinRT;
 
 namespace Raven.Client.Document
 {
@@ -57,11 +54,7 @@ namespace Raven.Client.Document
 		/// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
 		/// </summary>
 		public AsyncShardedDocumentQuery(InMemoryDocumentSessionOperations session, Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn, ShardStrategy shardStrategy, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
-			: base(session
-#if !SILVERLIGHT
-, null
-#endif
-, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
+			: base(session, null, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 			this.getShardsToOperateOn = getShardsToOperateOn;
 			this.shardStrategy = shardStrategy;
@@ -105,30 +98,28 @@ namespace Raven.Client.Document
 				cutoff = cutoff,
 				queryStats = queryStats,
 				theWaitForNonStaleResults = theWaitForNonStaleResults,
+                theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
-				groupByFields = groupByFields,
-				aggregationOp = aggregationOp,
+				isDistinct = isDistinct,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
 				highlightedFields = new List<HighlightedField>(highlightedFields),
 				highlighterPreTags = highlighterPreTags,
 				highlighterPostTags = highlighterPostTags,
 				disableEntitiesTracking = disableEntitiesTracking,
-				disableCaching = disableCaching
+				disableCaching = disableCaching,
+				showQueryTimings = showQueryTimings,
+				shouldExplainScores = shouldExplainScores
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
-
 		protected override void ExecuteActualQuery()
 		{
 			throw new NotSupportedException("Async queries don't support synchronous execution");
 		}
-
-#endif
 
 		protected override Task<QueryOperation> ExecuteActualQueryAsync()
 		{
@@ -170,8 +161,7 @@ namespace Raven.Client.Document
 					if (lastResults.All(acceptable => acceptable))
 						return new CompletedTask().Task;
 
-
-					ThreadSleep.Sleep(100);
+					Thread.Sleep(100);
 
 					return loop();
 				}).Unwrap();
@@ -181,9 +171,7 @@ namespace Raven.Client.Document
 			{
 				task.AssertNotFailed();
 
-#if !NETFX_CORE && !SILVERLIGHT
 				ShardedDocumentQuery<T>.AssertNoDuplicateIdsInResults(shardQueryOperations);
-#endif
 
 				var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
 
@@ -194,12 +182,15 @@ namespace Raven.Client.Document
 			});
 		}
 
-#if !NETFX_CORE
 		public override Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
 		{
 			throw new NotSupportedException("Lazy in not supported with the async API");
 		}
-#endif
+
+		public override Lazy<int> CountLazily()
+		{
+			throw new NotSupportedException("Lazy in not supported with the async API");
+		}
 
 		public override IDatabaseCommands DatabaseCommands
 		{
@@ -212,4 +203,3 @@ namespace Raven.Client.Document
 		}
 	}
 }
-#endif

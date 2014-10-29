@@ -2,8 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using Jint;
+using Jint.Runtime;
+
 using Raven.Abstractions.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Document;
 using Raven.Client;
@@ -38,15 +42,18 @@ namespace Raven.Tests.Patching
 		public void CanApplyBasicScriptAsPatch()
 		{
 			var doc = RavenJObject.FromObject(test);
-			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = sampleScript });
-			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+			{
+				var resultJson = new ScriptedJsonPatcher().Apply(scope, doc, new ScriptedPatchRequest { Script = sampleScript });
+				var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
-			Assert.Equal("Something new", result.Id);
-			Assert.Equal(2, result.Comments.Count);
-			Assert.Equal("one test", result.Comments[0]);
-			Assert.Equal("two", result.Comments[1]);
-			Assert.Equal(12144, result.Value);
-			Assert.Equal("err!!", resultJson["newValue"]);
+				Assert.Equal("Something new", result.Id);
+				Assert.Equal(2, result.Comments.Count);
+				Assert.Equal("one test", result.Comments[0]);
+				Assert.Equal("two", result.Comments[1]);
+				Assert.Equal(12144, result.Value);
+				Assert.Equal("err!!", resultJson["newValue"]);
+			}
 		}
 
 		[Fact]
@@ -60,8 +67,11 @@ namespace Raven.Tests.Patching
 				Script = script,
 				Values = { { "data", new { Email = email } } }
 			};
-			var result = new ScriptedJsonPatcher().Apply(doc, patch);
-			Assert.Equal(result["Email"].Value<string>(),email);
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+			{
+				var result = new ScriptedJsonPatcher().Apply(scope, doc, patch);
+				Assert.Equal(result["Email"].Value<string>(), email);
+			}
 		}
 
 		[Fact]
@@ -73,8 +83,11 @@ namespace Raven.Tests.Patching
 			{
 				Script = script,
 			};
-			var result = new ScriptedJsonPatcher().Apply(doc, patch);
-			Assert.Equal(result["Email"].Value<string>(), "somebody@somewhere.com");
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+			{
+				var result = new ScriptedJsonPatcher().Apply(scope, doc, patch);
+				Assert.Equal(result["Email"].Value<string>(), "somebody@somewhere.com");
+			}
 		}
 
 		[Fact]
@@ -86,8 +99,11 @@ namespace Raven.Tests.Patching
 			{
 				Script = script,
 			};
-			var result = new ScriptedJsonPatcher().Apply(doc, patch);
-			Assert.Equal(result["Age"].Value<int>(), 1);
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+			{
+				var result = new ScriptedJsonPatcher().Apply(scope, doc, patch);
+				Assert.Equal(result["Age"].Value<int>(), 1);
+			}
 		}
 
 		[Fact]
@@ -100,10 +116,13 @@ this.Parts = this.Email.split('@');";
 			{
 				Script = script,
 			};
-			var scriptedJsonPatcher = new ScriptedJsonPatcher();
-			var result = scriptedJsonPatcher.Apply(doc, patch);
-			Assert.Equal(result["Parts"].Value<RavenJArray>()[0], "somebody");
-			Assert.Equal(result["Parts"].Value<RavenJArray>()[1], "somewhere.com");
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+			{
+				var scriptedJsonPatcher = new ScriptedJsonPatcher();
+				var result = scriptedJsonPatcher.Apply(scope, doc, patch);
+				Assert.Equal(result["Parts"].Value<RavenJArray>()[0], "somebody");
+				Assert.Equal(result["Parts"].Value<RavenJArray>()[1], "somewhere.com");
+			}
 		}
 
 		[Fact]
@@ -117,8 +136,11 @@ this.Parts = this.Email.split('@');";
 				Script = script,
 				Values = { { "contact", new { Email = email } } }
 			};
-			var result = new ScriptedJsonPatcher().Apply(doc, patch);
-			Assert.NotNull(result["Contact"]);
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+			{
+				var result = new ScriptedJsonPatcher().Apply(scope, doc, patch);
+				Assert.NotNull(result["Contact"]);
+			}
 		}
 
 		[Fact]
@@ -132,8 +154,11 @@ this.Parts = this.Email.split('@');";
 				Script = script,
 				Values = { { "contact", new { Email = email } } }
 			};
-			var result = new ScriptedJsonPatcher().Apply(doc, patch);
-			Assert.Equal(new [] { "somebody@somewhere.com0", "somebody@somewhere.com1", "somebody@somewhere.com2" }, result.Value<RavenJArray>("Emails").Select(x => x.Value<string>()));
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+			{
+				var result = new ScriptedJsonPatcher().Apply(scope, doc, patch);
+				Assert.Equal(new[] { "somebody@somewhere.com0", "somebody@somewhere.com1", "somebody@somewhere.com2" }, result.Value<RavenJArray>("Emails").Select(x => x.Value<string>()));
+			}
 		}
 
 		[Fact]
@@ -149,70 +174,91 @@ this.Parts = this.Email.split('@');";
 				Values = { { "variable", variable } }
 			};
 
-			var resultJson = new ScriptedJsonPatcher().Apply(doc, patch);
-			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+			{
+				var resultJson = new ScriptedJsonPatcher().Apply(scope, doc, patch);
+				var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
-			Assert.Equal(variableSource.NewComment, result.Comments[0]);
+				Assert.Equal(variableSource.NewComment, result.Comments[0]);
+			}
 		}
 
 		[Fact]
 		public void CanRemoveFromCollectionByValue()
 		{
 			var doc = RavenJObject.FromObject(test);
-			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
-			{
-				Script = @"
-this.Comments.Remove('two');
-"
-			});
-			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+	        {
+				var resultJson = new ScriptedJsonPatcher().Apply(scope, doc, new ScriptedPatchRequest
+				{
+					Script = @"
+	this.Comments.Remove('two');
+	"
+				});
+				var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
-			Assert.Equal(new[] { "one", "seven" }.ToList(), result.Comments);
+				Assert.Equal(new[] { "one", "seven" }.ToList(), result.Comments);
+			}
 		}
 
 		[Fact]
 		public void CanRemoveFromCollectionByCondition()
 		{
 			var doc = RavenJObject.FromObject(test);
-			var advancedJsonPatcher = new ScriptedJsonPatcher();
-			var resultJson = advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
-			{
-				Script = @"
-this.Comments.RemoveWhere(function(el) {return el == 'seven';});
-"
-			});
-			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+	        {
+				var advancedJsonPatcher = new ScriptedJsonPatcher();
+				var resultJson = advancedJsonPatcher.Apply(scope, doc, new ScriptedPatchRequest
+				{
+					Script = @"
+	this.Comments.RemoveWhere(function(el) {return el == 'seven';});
+	"
+				});
+				var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
-			Assert.Equal(new[] { "one", "two" }.ToList(), result.Comments);
+				Assert.Equal(new[] { "one", "two" }.ToList(), result.Comments);
+			}
 		}
 
 		[Fact]
 		public void CanPatchUsingVars()
 		{
 			var doc = RavenJObject.FromObject(test);
-			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
-			{
-				Script = "this.TheName = Name",
-				Values = { { "Name", "ayende" } }
-			});
-			Assert.Equal("ayende", resultJson.Value<string>("TheName"));
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+	        {
+				var resultJson = new ScriptedJsonPatcher().Apply(scope, doc, new ScriptedPatchRequest
+				{
+					Script = "this.TheName = Name",
+					Values = { { "Name", "ayende" } }
+				});
+				Assert.Equal("ayende", resultJson.Value<string>("TheName"));
+			}
 		}
 
 		[Fact]
 		public void CanHandleNonsensePatching()
 		{
 			var doc = RavenJObject.FromObject(test);
-			Assert.Throws<ParseException>(
-				() =>
-				new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = "this.Id = 'Something" }));
+			Assert.Throws<ParseException>(() =>
+			{
+				using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+				{
+					new ScriptedJsonPatcher().Apply(scope, doc, new ScriptedPatchRequest { Script = "this.Id = 'Something" });
+				}
+			});
 		}
 
 		[Fact]
 		public void CanThrowIfValueIsWrong()
 		{
 			var doc = RavenJObject.FromObject(test);
-			var invalidOperationException = Assert.Throws<InvalidOperationException>(
-				() => new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = "throw 'problem'" }));
+			var invalidOperationException = Assert.Throws<InvalidOperationException>(() =>
+			{
+				using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+				{
+					new ScriptedJsonPatcher().Apply(scope, doc, new ScriptedPatchRequest { Script = "throw 'problem'" });
+				}
+			});
 
 			Assert.Contains("problem", invalidOperationException.Message);
 		}
@@ -221,13 +267,16 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		public void CanOutputDebugInformation()
 		{
 			var doc = RavenJObject.FromObject(test);
-			var advancedJsonPatcher = new ScriptedJsonPatcher();
-			advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
-			{
-				Script = "output(this.Id)"
-			});
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+	        {
+				var advancedJsonPatcher = new ScriptedJsonPatcher();
+				advancedJsonPatcher.Apply(scope, doc, new ScriptedPatchRequest
+				{
+					Script = "output(this.Id)"
+				});
 
-			Assert.Equal("someId", advancedJsonPatcher.Debug[0]);
+				Assert.Equal("someId", advancedJsonPatcher.Debug[0]);
+			}
 		}
 
 		[Fact]
@@ -235,13 +284,50 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		{
 			var doc = RavenJObject.FromObject(test);
 			var advancedJsonPatcher = new ScriptedJsonPatcher();
-			var x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
-																						{
-																							Script = "while(true) {}"
-																						}));
+			var x = Assert.Throws<InvalidOperationException>(() =>
+			{
+				using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+				{
+					advancedJsonPatcher.Apply(scope, doc, new ScriptedPatchRequest { Script = "while(true) {}" });
+				}
+			});
 
-			Assert.Contains("Too many steps in script", x.Message);
+			Assert.Contains("Unable to execute JavaScript", x.Message);
+
+			var inner = x.InnerException as StatementsCountOverflowException;
+
+			Assert.NotNull(inner);
+			Assert.Equal("The maximum number of statements executed have been reached.", inner.Message);
 		}
+
+        [Fact]
+        public void CanUseToISOString()
+        {
+            var date = DateTime.UtcNow;
+            var dateOffset = DateTime.Now.AddMilliseconds(100);
+            var testObject = new CustomType { Date = date, DateOffset = dateOffset };
+            var doc = RavenJObject.FromObject(testObject);
+            var patch = new ScriptedPatchRequest()
+            {
+                Script = @"
+this.DateOutput = new Date(this.Date).toISOString();
+this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
+"
+            };
+
+	        using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+	        {
+		        var scriptedJsonPatcher = new ScriptedJsonPatcher();
+		        var result = scriptedJsonPatcher.Apply(scope, doc, patch);
+
+				var dateOutput = result.Value<string>("DateOutput");
+				var dateOffsetOutput = result.Value<string>("DateOffsetOutput");
+
+				// With the custom fixes to Jint, these tests now pass (RavenDB-1536)
+				Assert.Equal(date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), dateOutput);
+				Assert.Equal(dateOffset.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), dateOffsetOutput);
+			}
+        }
 
 		[Fact]
 		public void CanPerformAdvancedPatching_Remotely()
@@ -505,10 +591,13 @@ PutDocument(
 		{
 			var doc = RavenJObject.FromObject(test);
 			var advancedJsonPatcher = new ScriptedJsonPatcher();
-			var x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
+			var x = Assert.Throws<InvalidOperationException>(() =>
 			{
-                Script = @"PutDocument('Items/1', { Property: 1}, {'@etag': 'invalid-etag' });"
-			}));
+				using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+				{
+					advancedJsonPatcher.Apply(scope, doc, new ScriptedPatchRequest { Script = @"PutDocument('Items/1', { Property: 1}, {'@etag': 'invalid-etag' });" });
+				}
+			});
 
 			Assert.Contains("Invalid ETag value 'invalid-etag' for document 'Items/1'", x.InnerException.Message);
 		}
@@ -549,7 +638,7 @@ PutDocument(
 
 				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
 				{
-                    Script = @"PutDocument('NewTypes/1', { });",
+                    Script = @"PutDocument('NewTypes/1', { }, { });",
 				});
 
 				var resultDoc = store.DatabaseCommands.Get("NewTypes/1");
@@ -563,19 +652,22 @@ PutDocument(
 		{
 			var doc = RavenJObject.FromObject(test);
 			var advancedJsonPatcher = new ScriptedJsonPatcher();
-			var x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
 			{
-                Script = @"PutDocument('Items/1', null);"
-			}));
+				var x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(scope, doc, new ScriptedPatchRequest
+				{
+					Script = @"PutDocument('Items/1', null);"
+				}));
 
-			Assert.Contains("Created document cannot be null or empty. Document key: 'Items/1'", x.InnerException.Message);
+				Assert.Contains("Created document cannot be null or empty. Document key: 'Items/1'", x.InnerException.Message);
 
-			x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
-			{
-                Script = @"PutDocument('Items/1', null, null);"
-			}));
+				x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(scope, doc, new ScriptedPatchRequest
+				{
+					Script = @"PutDocument('Items/1', null, null);"
+				}));
 
-			Assert.Contains("Created document cannot be null or empty. Document key: 'Items/1'", x.InnerException.Message);
+				Assert.Contains("Created document cannot be null or empty. Document key: 'Items/1'", x.InnerException.Message);
+			}
 		}
 
 		[Fact]
@@ -608,7 +700,7 @@ PutDocument(
 									select new { doc.Value }"
 												});
 
-				store.OpenSession().Advanced.LuceneQuery<CustomType>("TestIndex")
+                store.OpenSession().Advanced.DocumentQuery<CustomType>("TestIndex")
 				     .WaitForNonStaleResults().ToList();
 
 				store.DatabaseCommands.UpdateByIndex("TestIndex",
@@ -679,7 +771,9 @@ PutDocument(
 									select new { doc.Owner }"
 					});
 
-			store.OpenSession().Advanced.LuceneQuery<CustomType>("TestIndex")
+			WaitForUserToContinueTheTest(store);
+
+            store.OpenSession().Advanced.DocumentQuery<CustomType>("TestIndex")
 					.WaitForNonStaleResults().ToList();
 
 			store.DatabaseCommands.UpdateByIndex("TestIndex",
@@ -710,6 +804,8 @@ PutDocument(
 			public string Owner { get; set; }
 			public int Value { get; set; }
 			public List<string> Comments { get; set; }
-		}        
+			public DateTime Date { get; set; }
+			public DateTimeOffset DateOffset { get; set; }
+		}
     }
 }

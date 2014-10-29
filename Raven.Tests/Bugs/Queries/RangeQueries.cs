@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Collections.Generic;
 using Raven.Database.Indexing;
@@ -211,7 +213,7 @@ namespace Raven.Tests.Bugs.Queries
 
 				using (var s = store.OpenSession())
 				{
-					var users = s.Advanced.LuceneQuery<UserWithIDictionary>("SimpleIndex")
+                    var users = s.Advanced.DocumentQuery<UserWithIDictionary>("SimpleIndex")
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(5))
 						.WhereEquals("Key", "Color")
 						.AndAlso()

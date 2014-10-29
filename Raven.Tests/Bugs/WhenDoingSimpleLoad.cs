@@ -1,4 +1,8 @@
-﻿using Raven.Client.Document;
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
+using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -12,7 +16,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void WillMakeJustOneRequest()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(databaseName: Constants.SystemDatabase))
 			using (var documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079",

@@ -4,12 +4,14 @@ using System.Runtime.InteropServices;
 using GeoAPI.Geometries;
 using Lucene.Net.Util;
 using NetTopologySuite.Geometries;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
 using Raven.Tests.Spatial.JsonConverters.GeoJson;
 using Xunit;
 using System;
@@ -406,7 +408,7 @@ namespace Raven.Tests.Spatial
 
         }
         public class ZoneShape
-        {
+		{
             public int Mrgid { get; set; }
             public IGeometry Shape { get; set; }
         }

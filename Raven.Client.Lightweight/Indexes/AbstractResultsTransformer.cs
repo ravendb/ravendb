@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -22,7 +23,7 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
-#if !MONO && !NETFX_CORE
+#if !MONO
 	[System.ComponentModel.Composition.InheritedExport]
 #endif
 	public abstract class AbstractTransformerCreationTask : AbstractCommonApiForIndexesAndTransformers
@@ -33,47 +34,64 @@ namespace Raven.Client.Indexes
 		/// <value>The name of the index.</value>
 		public virtual string TransformerName { get { return GetType().Name.Replace("_", "/"); } }
 
-        protected RavenJToken Query(string key)
+		[Obsolete("Use Parameter instead.")]
+		protected RavenJToken Query(string key)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		[Obsolete("Use ParameterOrDefault instead.")]
+		protected RavenJToken QueryOrDefault(string key, object defaultVal)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+        protected RavenJToken Parameter(string key)
         {
             throw new NotSupportedException("This can only be run on the server side");
         }
 
-		protected IEnumerable<object> TransfromWith<T>(string transformer, IEnumerable<T> items)
+        protected RavenJToken ParameterOrDefault(string key, object defaultVal)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+		protected IEnumerable<object> TransformWith<T>(string transformer, IEnumerable<T> items)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-		protected IEnumerable<TResult> TransfromWith<T, TResult>(string transformer, IEnumerable<T> items)
+		protected IEnumerable<TResult> TransformWith<T, TResult>(string transformer, IEnumerable<T> items)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-		protected IEnumerable<object> TransfromWith<T>(string transformer, T item)
+		protected IEnumerable<object> TransformWith<T>(string transformer, T item)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-		protected IEnumerable<TResult> TransfromWith<T, TResult>(string transformer, T item)
+		protected IEnumerable<TResult> TransformWith<T, TResult>(string transformer, T item)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-		protected IEnumerable<object> TransfromWith<T>(IEnumerable<string> transformers, IEnumerable<T> items)
+		protected IEnumerable<object> TransformWith<T>(IEnumerable<string> transformers, IEnumerable<T> items)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-		protected IEnumerable<TResult> TransfromWith<T, TResult>(IEnumerable<string> transformers, IEnumerable<T> items)
+		protected IEnumerable<TResult> TransformWith<T, TResult>(IEnumerable<string> transformers, IEnumerable<T> items)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-		protected IEnumerable<object> TransfromWith<T>(IEnumerable<string> transformers, T item)
+		protected IEnumerable<object> TransformWith<T>(IEnumerable<string> transformers, T item)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-		protected IEnumerable<TResult> TransfromWith<T, TResult>(IEnumerable<string> transformers, T item)
+		protected IEnumerable<TResult> TransformWith<T, TResult>(IEnumerable<string> transformers, T item)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		} 
@@ -88,14 +106,17 @@ namespace Raven.Client.Indexes
 		/// Creates the Transformer definition.
 		/// </summary>
 		/// <returns></returns>
-		public abstract TransformerDefinition CreateTransformerDefinition();
-
-#if !SILVERLIGHT && !NETFX_CORE
+		public abstract TransformerDefinition CreateTransformerDefinition(bool prettify = true);
 
 		public void Execute(IDocumentStore store)
 		{
 			store.ExecuteTransformer(this);
 		}
+
+        public Task ExecuteAsync(IDocumentStore store)
+        {
+            return store.ExecuteTransformerAsync(this);
+        }
 
 		/// <summary>
 		/// Executes the index creation against the specified document database using the specified conventions
@@ -103,16 +124,15 @@ namespace Raven.Client.Indexes
 		public virtual void Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
 		{
 			Conventions = documentConvention;
-			var transformerDefinition = CreateTransformerDefinition();
+			var transformerDefinition = CreateTransformerDefinition(documentConvention.PrettifyGeneratedLinqExpressions);
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
 			databaseCommands.PutTransformer(TransformerName, transformerDefinition);
 
 			UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
-				commands.DirectPutTransformer(TransformerName, url, transformerDefinition));
+				commands.PutTransformer(TransformerName, transformerDefinition));
 		}
-#endif
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.
@@ -120,7 +140,7 @@ namespace Raven.Client.Indexes
 		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
 		{
 			Conventions = documentConvention;
-			var transformerDefinition = CreateTransformerDefinition();
+			var transformerDefinition = CreateTransformerDefinition(documentConvention.PrettifyGeneratedLinqExpressions);
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
@@ -140,19 +160,35 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
+        public T Include<T>(string key)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        public IEnumerable<T> Include<T>(IEnumerable<string> key)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+      
+
 		public object Include(IEnumerable<string> key)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
-      
-	    public override TransformerDefinition CreateTransformerDefinition()
-	    {
-		    return new TransformerDefinition
+
+		public override TransformerDefinition CreateTransformerDefinition(bool prettify = true)
+		{
+			var transformerDefinition = new TransformerDefinition
 			{
 				Name = TransformerName,
 				TransformResults = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TFrom, object>(
 					TransformResults, Conventions, "results", translateIdentityProperty: false),
 			};
-	    }
+
+			if (prettify)
+				transformerDefinition.TransformResults = IndexPrettyPrinter.Format(transformerDefinition.TransformResults);
+
+			return transformerDefinition;
+		}
     }
 }

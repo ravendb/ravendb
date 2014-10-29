@@ -26,7 +26,7 @@ namespace Raven.Bundles.Replication.Triggers
 			JsonDocument documentByKey = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				documentByKey = accessor.Documents.DocumentByKey(key, transactionInformation);		
+				documentByKey = accessor.Documents.DocumentByKey(key);		
 			});
 			if (documentByKey == null)
 				return VetoResult.Allowed;

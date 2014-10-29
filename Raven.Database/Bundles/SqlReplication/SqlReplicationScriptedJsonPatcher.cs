@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using Jint;
 using Jint.Native;
 using Raven.Abstractions.Extensions;
@@ -7,7 +8,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
-	public class SqlReplicationScriptedJsonPatcher : ScriptedJsonPatcher
+	internal class SqlReplicationScriptedJsonPatcher : ScriptedJsonPatcher
 	{
 		private readonly ConversionScriptResult scriptResult;
 		private readonly SqlReplicationConfig config;
@@ -24,49 +25,80 @@ namespace Raven.Database.Bundles.SqlReplication
 			this.docId = docId;
 		}
 
-		protected override void RemoveEngineCustomizations(JintEngine jintEngine)
+		protected override void RemoveEngineCustomizations(Engine engine, ScriptedJsonPatcherOperationScope scope)
 		{
-			jintEngine.RemoveParameter("documentId");
-			jintEngine.RemoveParameter("replicateTo");
+			base.RemoveEngineCustomizations(engine, scope);
+
+			engine.Global.Delete("documentId", true);
+			engine.Global.Delete("replicateTo", true);
+            engine.Global.Delete("toVarchar", true);
+            engine.Global.Delete("toNVarchar", true);
 			foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
-				jintEngine.RemoveParameter("replicateTo" + sqlReplicationTable.TableName);
+				engine.Global.Delete("replicateTo" + sqlReplicationTable.TableName, true);
 			}
 		}
 
-		protected override void CustomizeEngine(JintEngine jintEngine)
+		protected override void CustomizeEngine(Engine engine, ScriptedJsonPatcherOperationScope scope)
 		{
-			jintEngine.SetParameter("documentId", docId);
-			jintEngine.SetFunction("replicateTo", new Action<string,JsObject>(ReplicateToFunction));
+			base.CustomizeEngine(engine, scope);
+
+			engine.SetValue("documentId", docId);
+			engine.SetValue("replicateTo", new Action<string,object>(ReplicateToFunction));
 			foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
 				var current = sqlReplicationTable;
-				jintEngine.SetFunction("replicateTo" + sqlReplicationTable.TableName, (Action<JsObject>)(cols =>
+				engine.SetValue("replicateTo" + sqlReplicationTable.TableName, (Action<object>)(cols =>
 				{
 					var tableName = current.TableName;
 					ReplicateToFunction(tableName, cols);
 				}));
 			}
+
+            engine.SetValue("toVarchar", (Func<string, int,ValueTypLengthTriple>)(ToVarchar));
+            engine.SetValue("toNVarchar", (Func<string, int, ValueTypLengthTriple>)(ToNVarchar));
 		}
 
-		private void ReplicateToFunction(string tableName, JsObject cols)
+		private void ReplicateToFunction(string tableName, object colsAsObject)
 		{
 			if (tableName == null)
 				throw new ArgumentException("tableName parameter is mandatory");
-			if (cols == null)
+			if (colsAsObject == null)
 				throw new ArgumentException("cols parameter is mandatory");
 
 			var itemToReplicates = scriptResult.Data.GetOrAdd(tableName);
 			itemToReplicates.Add(new ItemToReplicate
 			{
 				DocumentId = docId,
-				Columns = ToRavenJObject(cols)
+				Columns = RavenJObject.FromObject(colsAsObject)
 			});
 		}
 
-		protected override RavenJObject ConvertReturnValue(JsObject jsObject)
-		{
-			return null;// we don't use / need the return value
-		}
+        private ValueTypLengthTriple ToVarchar(string value, int size)
+        {
+            return new ValueTypLengthTriple()
+            {
+                Type = DbType.AnsiString,
+                Value = value,
+                Size = size
+            };
+        }
+
+        private ValueTypLengthTriple ToNVarchar(string value, int size)
+	    {
+            return new ValueTypLengthTriple()
+            {
+                Type = DbType.String,
+                Value = value,
+                Size = size
+            };
+	    }
+
+	    public class ValueTypLengthTriple
+	    {
+            public DbType Type { get; set; }
+            public object Value { get; set; }
+            public int Size { get; set; }
+	    }
 	}
 }

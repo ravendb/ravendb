@@ -1,10 +1,9 @@
-﻿using System;
-#if !SILVERLIGHT
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="ConcurrentOrderedList.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -90,9 +89,9 @@ namespace Raven.Database.Prefetching
 			{
 				slim.EnterWriteLock();
 				result = innerList.FirstOrDefault();
-			    if (result != null)
+				if (result != null)
 			    {
-			        innerList.RemoveAt(0);
+					innerList.RemoveAt(0);
 			        loadedSize -= result.SerializedSizeOnDisk;
 			    }
 
@@ -123,34 +122,69 @@ namespace Raven.Database.Prefetching
 			return i;
 		}
 
-	    public int LoadedSize
-	    {
-	        get
-	        {
-                slim.EnterReadLock();
-	            try
-	            {
-                    return loadedSize;
-	            }
-	            finally
-	            {
-	                slim.ExitReadLock();
-	            }
-	        }
-	    }
+		public int LoadedSize
+		{
+			get
+			{
+				slim.EnterReadLock();
+				try
+				{
+					return loadedSize;
+				}
+				finally
+				{
+					slim.ExitReadLock();
+				}
+			}
+		}
 
-	    public T Aggregate<T>(T seed, Func<T, JsonDocument, T> aggregate)
-	    {
-            slim.EnterReadLock();
-	        try
-	        {
-	            return innerList.Aggregate(seed, aggregate);
-	        }
-	        finally
-	        {
-	            slim.ExitReadLock();
-	        }
-	    }
+		public T Aggregate<T>(T seed, Func<T, JsonDocument, T> aggregate)
+		{
+			slim.EnterReadLock();
+			try
+			{
+				return innerList.Aggregate(seed, aggregate);
+			}
+			finally
+			{
+				slim.ExitReadLock();
+			}
+		}
+
+		public void RemoveAfter(Etag etag)
+		{
+			slim.EnterWriteLock();
+			try
+			{
+				for (var i = innerList.Count - 1; i >= 0; i--)
+				{
+					var doc = innerList[i];
+
+					if (doc.Etag.CompareTo(etag) < 0)
+						break;
+
+					innerList.RemoveAt(i);
+					loadedSize -= doc.SerializedSizeOnDisk;
+				}
+			}
+			finally
+			{
+				slim.ExitWriteLock();
+			}
+		}
+
+		public void Clear()
+		{
+			slim.EnterWriteLock();
+			try
+			{
+				innerList.Clear();
+				loadedSize = 0;
+			}
+			finally
+			{
+				slim.ExitWriteLock();
+			}
+		}
 	}
 }
-#endif

@@ -7,7 +7,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Notifications

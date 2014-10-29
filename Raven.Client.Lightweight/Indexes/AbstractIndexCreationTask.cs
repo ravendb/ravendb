@@ -30,7 +30,7 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
-#if !MONO && !NETFX_CORE
+#if !MONO
 	[System.ComponentModel.Composition.InheritedExport]
 #endif
 	public abstract class AbstractIndexCreationTask : AbstractCommonApiForIndexesAndTransformers
@@ -117,6 +117,7 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
+		[Obsolete]
 		protected class SpatialIndex
 		{
 			/// <summary>
@@ -125,6 +126,7 @@ namespace Raven.Client.Indexes
 			/// <param name="fieldName">The field name, will be used for querying</param>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
+			[Obsolete("Use SpatialGenerate instead.")]
 			public static object Generate(string fieldName, double? lat, double? lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
@@ -135,6 +137,7 @@ namespace Raven.Client.Indexes
 			/// </summary>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
+			[Obsolete("Use SpatialGenerate instead.")]
 			public static object Generate(double? lat, double? lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
@@ -177,7 +180,14 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+		/// <summary>
+		/// Loads the specifed document during the indexing process
+		/// </summary>
+        [Obsolete("Use RavenFS instead.")]
+        public object LoadAttachmentForIndexing(string key)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.
@@ -194,6 +204,21 @@ namespace Raven.Client.Indexes
 		{
 			Conventions = documentConvention;
 			var indexDefinition = CreateIndexDefinition();
+			if (documentConvention.PrettifyGeneratedLinqExpressions)
+			{
+				var serverDef = databaseCommands.GetIndex(IndexName);
+				if (serverDef != null)
+				{
+					if (serverDef.Equals(indexDefinition))
+						return;
+
+					// now we need to check if this is a legacy index...
+					var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
+					if (serverDef.Equals(legacyIndexDefinition))
+						return; // if it matches the legacy definition, do not change that (to avoid re-indexing)
+				}
+			}
+
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
@@ -203,22 +228,48 @@ namespace Raven.Client.Indexes
 				commands.DirectPutIndex(IndexName, url, true, indexDefinition));
 		}
 
-#endif
+		private IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
+		{
+			IndexDefinition legacyIndexDefinition;
+			documentConvention.PrettifyGeneratedLinqExpressions = false;
+			try
+			{
+				legacyIndexDefinition = CreateIndexDefinition();
+			}
+			finally
+			{
+				documentConvention.PrettifyGeneratedLinqExpressions = true;
+			}
+			return legacyIndexDefinition;
+		}
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
-		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
+		public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
 		{
 			Conventions = documentConvention;
 			var indexDefinition = CreateIndexDefinition();
+			if (documentConvention.PrettifyGeneratedLinqExpressions)
+			{
+				var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName);
+				if (serverDef != null)
+				{
+					if (serverDef.Equals(indexDefinition))
+						return;
+
+					// now we need to check if this is a legacy index...
+					var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
+					if (serverDef.Equals(legacyIndexDefinition))
+						return; // if it matches the legacy definition, do not change that (to avoid re-indexing)
+				}
+			}
+
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
-			return asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true)
-				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, url) =>
-					client.DirectPutIndexAsync(IndexName, indexDefinition, true, url)))
-				.Unwrap();
+			await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true);
+			await UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, operationMetadata) => client.DirectPutIndexAsync(IndexName, indexDefinition, true, operationMetadata));				
 		}
 	}
 
@@ -258,7 +309,7 @@ namespace Raven.Client.Indexes
 				Conventions = new DocumentConvention();
 
 
-			return new IndexDefinitionBuilder<TDocument, TReduceResult>
+			return new IndexDefinitionBuilder<TDocument, TReduceResult>()
 			{
 				Indexes = Indexes,
 				IndexesStrings = IndexesStrings,
@@ -268,9 +319,6 @@ namespace Raven.Client.Indexes
 				AnalyzersStrings = AnalyzersStrings,
 				Map = Map,
 				Reduce = Reduce,
-#pragma warning disable 612,618
-				TransformResults = TransformResults,
-#pragma warning restore 612,618
 				Stores = Stores,
 				StoresStrings = StoresStrings,
 				Suggestions = IndexSuggestions,
@@ -278,11 +326,17 @@ namespace Raven.Client.Indexes
 				TermVectorsStrings = TermVectorsStrings,
 				SpatialIndexes = SpatialIndexes,
 				SpatialIndexesStrings = SpatialIndexesStrings,
-				DisableInMemoryIndexing = DisableInMemoryIndexing
+                DisableInMemoryIndexing = DisableInMemoryIndexing,
+				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			}.ToIndexDefinition(Conventions);
 		}
 
-	    public override bool IsMapReduce
+		/// <summary>
+		/// Max number of allowed indexing outputs per one source document
+		/// </summary>
+		public int? MaxIndexOutputsPerDocument { get; set; }
+
+		public override bool IsMapReduce
 		{
 			get { return Reduce != null; }
 		}
@@ -338,20 +392,10 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-#if !SILVERLIGHT
 		/// <summary>
 		/// Allows to use lambdas recursively
 		/// </summary>
 		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, SortedSet<TResult>> func)
-		{
-			throw new NotSupportedException("This can only be run on the server side");
-		}
-#endif
-
-		/// <summary>
-		/// Loads the specifed document during the indexing process
-		/// </summary>
-		public object LoadAttachmentForIndexing(string key)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
@@ -405,7 +449,7 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
-		/// Allow to get to the metadata of the document
+		/// Allow to access an entity as a document
 		/// </summary>
 		protected RavenJObject AsDocument(object doc)
 		{
@@ -419,11 +463,9 @@ namespace Raven.Client.Indexes
 		    var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
 		    if (asyncServerClient == null)
 		        return;
-		    var doc = await asyncServerClient.GetAsync("Raven/Replication/Destinations");
-		    if (doc == null)
+            var replicationDocument = await asyncServerClient.ExecuteWithReplication("GET", asyncServerClient.DirectGetReplicationDestinationsAsync);
+            if (replicationDocument == null)
 		        return;
-		    var replicationDocument =
-		        documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.DataAsJson));
             if (replicationDocument == null || replicationDocument.Destinations == null || replicationDocument.Destinations.Count == 0)
 		        return;
 		    var tasks = (
@@ -454,19 +496,14 @@ namespace Raven.Client.Indexes
 			return new OperationMetadata(url, replicationDestination.Username, replicationDestination.Password, replicationDestination.Domain, replicationDestination.ApiKey);
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
 		internal void UpdateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention,
 			Action<ServerClient, OperationMetadata> action)
 		{
 			var serverClient = databaseCommands as ServerClient;
 			if (serverClient == null)
 				return;
-			var doc = serverClient.Get("Raven/Replication/Destinations");
-			if (doc == null)
-				return;
-			var replicationDocument =
-				documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.DataAsJson));
-			if (replicationDocument == null)
+            var replicationDocument = serverClient.ExecuteWithReplication("GET", serverClient.DirectGetReplicationDestinations);
+            if (replicationDocument == null)
 				return;
 
 			foreach (var replicationDestination in replicationDocument.Destinations)
@@ -483,6 +520,5 @@ namespace Raven.Client.Indexes
 				}
 			}
 		}
-#endif
 	}
 }

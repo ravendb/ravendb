@@ -1,5 +1,7 @@
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -12,7 +14,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DocumentDatabase.Configuration.MaxNumberOfItemsToIndexInSingleBatch = 3;
+				store.SystemDatabase.Configuration.MaxNumberOfItemsToProcessInSingleBatch = 3;
 
 				using (var session = store.OpenSession())
 				{
@@ -43,7 +45,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DocumentDatabase.Configuration.MaxNumberOfItemsToIndexInSingleBatch = 3;
+				store.SystemDatabase.Configuration.MaxNumberOfItemsToProcessInSingleBatch = 3;
 
 			
 				store.DatabaseCommands.PutIndex("test",

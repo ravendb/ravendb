@@ -6,19 +6,22 @@
 using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Server;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Shard
 {
-	public class SimpleSharding : RavenTest, IDisposable
+	public class SimpleSharding : RavenTest
 	{
-		private RavenDbServer[] servers;
-		private ShardedDocumentStore documentStore;
+		private new readonly RavenDbServer[] servers;
+		private readonly ShardedDocumentStore documentStore;
 
 		public SimpleSharding()
 		{

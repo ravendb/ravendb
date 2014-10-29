@@ -1,0 +1,48 @@
+﻿<section id="requestTracingContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <div style="height: 65%; position: relative;">
+        <button type="button" class="btn btn-default" data-bind="click: fetchRequestTracing"><i class="fa fa-refresh"></i></button>
+        <div class="btn-group" data-toggle="buttons">
+            <label class="btn btn-default active" data-bind="click: setStatusAll">
+                <input type="radio" name="options" id="option1"> All requests <span class="badge" data-bind="text: allEntries().length"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setStatusSuccess">
+                <input type="radio" name="options" id="option1"> Success <span class="badge" data-bind="text: successCount()"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setStatusFailed">
+                <input type="radio" name="options" id="option2"> Failure <span class="badge" data-bind="text: failedCount()"></span>
+            </label>
+        </div>
+        <div id="requestTracingTableContainer" style="overflow-y: auto; position: absolute; bottom: 10px; top: 50px; width: 100%; ">
+            <table class="single-line-row-table table table-condensed" data-bind="event: { keydown: tableKeyDown }" tabindex="1">
+                <thead>
+                    <tr>
+                        <th class="col-md-2">Method</th>
+                        <th class="col-md-2">Status code</th>
+                        <th class="col-md-6">Uri</th>
+                        <th class="col-md-2">Execution time</th>
+                    </tr>
+                </thead>
+                <tbody data-bind="foreach: allEntries, delegatedHandler: 'click'">
+                    <tr class="logRecord" data-click="selectEntry" data-bind="visible: IsVisible, css: { warning: StatusCode >= 400, 'selected': $data === $parent.selectedEntry() }">
+                        <td data-bind="text: Method"></td>
+                        <td data-bind="text: StatusCode"></td>
+                        <td data-bind="text: Uri, attr: { title: Uri }"></td>
+                        <td data-bind="text: ExecutionTime"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="panel panel-default" style="height: 30%; overflow-y: auto" data-bind="with: selectedEntry">
+        <div class="panel-heading">Headers</div>
+        <div class="panel-body" data-bind="foreach: RequestHeaders">
+            <div class="row">
+                <label class="col-md-3 text-right control-label" data-bind="text: Name">Message</label>
+                <div class="col-md-9">
+                    <p class="form-control-static" data-bind="text: Values.join(', ')"></p>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</section>

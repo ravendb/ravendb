@@ -27,7 +27,19 @@ namespace Raven.Client
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null);
+		T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+
+		/// <summary>
+		///  Loads documents with the specified key prefix and applies the specified results transformer against the results
+		/// </summary>
+		/// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
+		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
+		                                                  int pageSize = 25, string exclude = null,
+		                                                  RavenPagingInformation pagingInformation = null,
+														  Action<ILoadConfiguration> configure = null,
+														  string skipAfter = null)
+			where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		/// Access the lazy operations
@@ -45,19 +57,42 @@ namespace Raven.Client
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
 		/// <returns></returns>
+        [Obsolete("Use DocumentQuery instead")]
 		IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 
-		/// <summary>
+        /// <summary>
+        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <returns></returns>
+        IDocumentQuery<T> DocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
+
+	    /// <summary>
+	    /// Query the specified index using Lucene syntax
+	    /// </summary>
+	    /// <param name="indexName">Name of the index.</param>
+	    /// <param name="isMapReduce">Control how we treat identifier properties in map/reduce indexes</param>
+        [Obsolete("Use DocumentQuery instead")]
+	    IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false);
+
+        /// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="isMapReduce">Control how we treat identifier properties in map/reduce indexes</param>
-		IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false);
+		IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false);
 
 		/// <summary>
 		/// Dynamically query RavenDB using Lucene syntax
 		/// </summary>
+        [Obsolete("Use DocumentQuery instead")]
 		IDocumentQuery<T> LuceneQuery<T>();
+
+        /// <summary>
+        /// Dynamically query RavenDB using Lucene syntax
+        /// </summary>
+        IDocumentQuery<T> DocumentQuery<T>();
 
 		/// <summary>
 		/// Gets the document URL for the specified entity.
@@ -97,12 +132,14 @@ namespace Raven.Client
 		/// Stream the results of documents searhcto the client, converting them to CLR types along the way.
 		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
 		/// </summary>
-		IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = int.MaxValue);
+		IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null);
 
 		/// <summary>
 		/// Stream the results of documents searhcto the client, converting them to CLR types along the way.
 		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
 		/// </summary>
-		IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue);
+		IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+
+		FacetResults[] MultiFacetedSearch(params FacetQuery[] queries);
 	}
 }

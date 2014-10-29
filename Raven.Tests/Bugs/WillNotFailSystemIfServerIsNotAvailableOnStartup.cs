@@ -5,13 +5,17 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
+using System.Web.Http;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class WillNotFailSystemIfServerIsNotAvailableOnStartup : RemoteClientTest
+	public class WillNotFailSystemIfServerIsNotAvailableOnStartup : RavenTest
 	{
 		[Fact]
 		public void CanStartWithoutServer()
@@ -20,7 +24,7 @@ namespace Raven.Tests.Bugs
 			{
 				using (var session = store.OpenSession())
 				{
-					Assert.Throws<WebException>(() => session.Load<User>("user/1"));
+					Assert.Throws<HttpRequestException>(() => session.Load<User>("user/1"));
 				}
 
 				using (GetNewServer())
@@ -40,7 +44,7 @@ namespace Raven.Tests.Bugs
 			{
 				using (var session = store.OpenAsyncSession())
 				{
-					await AssertAsync.Throws<WebException>(async () => await session.LoadAsync<User>("user/1"));
+                    await AssertAsync.Throws<HttpRequestException>(async () => await session.LoadAsync<User>("user/1"));
 				}
 
 				using (GetNewServer())

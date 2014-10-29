@@ -7,14 +7,14 @@ using Raven.Database.Util;
 
 namespace Raven.Client.Changes
 {
-	public class TaskedObservable<T> : IObservableWithTask<T>
+    public class TaskedObservable<T, TConnectionState> : IObservableWithTask<T> where TConnectionState : IChangesConnectionState
 	{
-		private readonly LocalConnectionState localConnectionState;
+        private readonly TConnectionState localConnectionState;
 		private readonly Func<T, bool> filter;
 		private readonly ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<IObserver<T>>();
 
 		internal TaskedObservable(
-			LocalConnectionState localConnectionState, 
+            TConnectionState localConnectionState, 
 			Func<T, bool> filter)
 		{
 			this.localConnectionState = localConnectionState;
@@ -26,7 +26,7 @@ namespace Raven.Client.Changes
 			});
 		}
 
-		public Task<IObservable<T>>  Task { get; private set; }
+		public Task<IObservable<T>> Task { get; private set; }
 
 		public IDisposable Subscribe(IObserver<T> observer)
 		{

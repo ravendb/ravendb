@@ -1,0 +1,148 @@
+﻿<style>
+.column {
+    display: inline-block;
+    cursor: pointer;
+
+    overflow: hidden;
+    white-space: nowrap;
+    word-wrap: break-word;
+    text-overflow: ellipsis;
+
+    border-bottom: 1px solid #ddd;
+    margin: 0px;
+    padding: 5px;
+
+    height: 30px;
+}
+
+.selected .column {
+    background-color: #ffffcc;
+}
+
+</style>
+<section id="logsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <div style="position: relative; height: 65%">
+        <button type="button" class="btn btn-default" data-bind="click: fetchLogs"><i class="fa fa-refresh"></i></button>
+        <div class="btn-group" data-toggle="buttons">
+            <label class="btn btn-default active" data-bind="click: setFilterAll">
+                <input type="radio" name="options" id="option1"> <span data-bind="text: 'All logs (' + allLogs().length + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterDebug">
+                <input type="radio" name="options" id="option1"> <span data-bind="text: 'Debug (' + debugLogCount() + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterInfo">
+                <input type="radio" name="options" id="option2"> <span data-bind="text: 'Info (' + infoLogCount() + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterWarning">
+                <input type="radio" name="options" id="option3"> <span data-bind="text: 'Warnings (' + warningLogCount() + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterError">
+                <input type="radio" name="options" id="option3"> <span data-bind="text: 'Errors (' + errorLogCount() + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterFatal">
+                <input type="radio" name="options" id="option3"> <span data-bind="text: 'Fatal (' + fatalLogCount() + ')'"></span>
+            </label>
+        </div>
+        <form class="form-inline" style="display: inline-block; vertical-align: middle;">
+            <input type="text" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
+        </form>
+        <div id="logTableContainer" style="overflow-y: auto; overflow-x: auto; position: absolute; top: 40px; bottom: 10px; width: 100%;">
+            <div style="padding-top: 10px;" data-bind="foreach: filteredLoggers">
+                <button class="btn btn-default" data-bind="click: $root.unHidelogType.bind($root)">
+                    <span data-bind="text: $data"></span>
+                    <span class="fa fa-times"></span>
+                </button>
+            </div>
+            <span style="white-space: nowrap">
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + '%' }">
+                    <span class="column-handle" column="0"></span>
+                    <span data-bind="click: $root.sortBy.bind($root, 'Level')">Level</span>
+                    <span data-bind="visible: $root.sortColumn() === 'Level'">
+                        <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
+                        <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
+                    </span>
+                </div>
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[1]() + '%' }">
+                    <span class="column-handle" column="1"></span>
+                    <span data-bind="click: $root.sortBy.bind($root, 'TimeStamp')">Logged</span>
+                    <span data-bind="visible: $root.sortColumn() === 'TimeStamp'">
+                        <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
+                        <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
+                    </span>
+                </div>
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + '%' }">
+                    <span class="column-handle" column="2"></span>
+                    <span data-bind="click: $root.sortBy.bind($root, 'Message')">Message</span>
+                    <span data-bind="visible: $root.sortColumn() === 'Message'">
+                        <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
+                        <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
+                    </span>
+                </div>
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[3]() + '%' }">
+                    <span class="column-handle" column="3"></span>
+                    <span data-bind="click: $root.sortBy.bind($root, 'Exception')">Exception</span>
+                    <span data-bind="visible: $root.sortColumn() === 'Exception'">
+                        <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
+                        <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
+                    </span>
+                </div>
+                <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + '%' }">
+                    <span class="column-handle" column="4"></span>
+                    <span data-bind="click: $root.sortBy.bind($root, 'LoggerName')">Log name</span>
+                    <span data-bind="visible: $root.sortColumn() === 'LoggerName'">
+                        <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
+                        <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
+                    </span>
+                </div>
+            </span>
+            <div style="white-space: nowrap" data-bind="foreach: filteredAndSortedLogs, delegatedHandler: 'click'">
+                <div id="logRecordsContainer" style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="visible: IsVisible, css: { warning: Level === 'Warn', danger: Level === 'Error' || Level === 'Fatal', 'selected': $data === $parent.selectedLog() }">
+                    <div class="column" data-bind="style: { width: $root.columnWidths[0]() + '%' }, text: Level"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[1]() + '%' }, text: HumanizedTimestamp, attr: { title: TimeStampText }"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[2]() + '%' }, text: Message, attr: { title: Message }"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[3]() + '%' }, text: Exception, attr: { title: Exception }"></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[4]() + '%' }, text: LoggerName"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="log-details panel panel-default" style="height: 30%">
+        <div class="col-md-11">
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Message</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: Message"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Exception</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static exceptionText" data-bind="text: Exception"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Logged</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: TimeStampText"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Level</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: Level, css: { 'text-warning': Level === 'Warn', 'text-danger': Level === 'Error' || Level === 'Fatal' }"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Logger</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: LoggerName"></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-1" data-bind="with: selectedLog">
+            <button class="btn btn-default pull-right" data-bind="click: $root.hideLogType.bind($root), attr:{title: 'Filter out all ' + LoggerName.split('.').slice(2).join('.') + ' logs'}">
+                <i class="fa fa-filter"></i>
+            </button>
+        </div>
+    </div>
+</section>

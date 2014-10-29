@@ -5,12 +5,11 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
-using Raven.Client.Linq;
 
 namespace Raven.Client
 {
 	/// <summary>
-	///   A query against a Raven index
+	/// A query against a Raven index
 	/// </summary>
 	public interface IDocumentQueryBase<T, out TSelf>
 		where TSelf : IDocumentQueryBase<T, TSelf>
@@ -36,19 +35,18 @@ namespace Raven.Client
 		/// <param name = "path">The path.</param>
 		TSelf Include(string path);
 
-
 		/// <summary>
 		///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
 		///   that is nearly always a mistake.
 		/// </summary>
 		[Obsolete(
-			@"
+            @"
 You cannot issue an in memory filter - such as Where(x=>x.Name == ""Ayende"") - on IDocumentQuery. 
 This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
-Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.LuceneQuery<T>() is intended for lower level API access.
-If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Where(x=>x.Name == ""Ayende"")
+Consider using session.Query<T>() instead of session.DocumentQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.DocumentQuery<T>() is intended for lower level API access.
+If you really want to do in memory filtering on the data returned from the query, you can use: session.DocumentQuery<T>().ToList().Where(x=>x.Name == ""Ayende"")
 "
-			, true)]
+            , true)]
 		IEnumerable<T> Where(Func<T, bool> predicate);
 
 		/// <summary>
@@ -56,13 +54,13 @@ If you really want to do in memory filtering on the data returned from the query
 		///   that is nearly always a mistake.
 		/// </summary>
 		[Obsolete(
-			@"
+            @"
 You cannot issue an in memory filter - such as Count(x=>x.Name == ""Ayende"") - on IDocumentQuery. 
 This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
-Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.LuceneQuery<T>() is intended for lower level API access.
-If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Count(x=>x.Name == ""Ayende"")
+Consider using session.Query<T>() instead of session.DocumentQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.DocumentQuery<T>() is intended for lower level API access.
+If you really want to do in memory filtering on the data returned from the query, you can use: session.DocumentQuery<T>().ToList().Count(x=>x.Name == ""Ayende"")
 "
-			, true)]
+            , true)]
 		int Count(Func<T, bool> predicate);
 
 		/// <summary>
@@ -73,8 +71,8 @@ If you really want to do in memory filtering on the data returned from the query
 			@"
 You cannot issue an in memory filter - such as Count() - on IDocumentQuery. 
 This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
-Consider using session.Query<T>() instead of session.LuceneQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.LuceneQuery<T>() is intended for lower level API access.
-If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery<T>().ToList().Count()
+Consider using session.Query<T>() instead of session.DocumentQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.DocumentQuery<T>() is intended for lower level API access.
+If you really want to do in memory filtering on the data returned from the query, you can use: session.DocumentQuery<T>().ToList().Count()
 "
 			, true)]
 		int Count();
@@ -98,6 +96,30 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name = "count">The count.</param>
 		/// <returns></returns>
 		TSelf Skip(int count);
+
+        /// <summary>
+        ///   Returns first element or default value for type if sequence is empty.
+        /// </summary>
+        /// <returns></returns>
+        T FirstOrDefault();
+
+        /// <summary>
+        ///   Returns first element or throws if sequence is empty.
+        /// </summary>
+        /// <returns></returns>
+        T First();
+
+        /// <summary>
+        ///   Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than one element.
+        /// </summary>
+        /// <returns></returns>
+        T SingleOrDefault();
+
+        /// <summary>
+        ///   Returns first element or throws if sequence is empty or contains more than one element.
+        /// </summary>
+        /// <returns></returns>
+        T Single();
 
 		/// <summary>
 		///   Filter the results from the index using the specified where clause.
@@ -138,9 +160,9 @@ If you really want to do in memory filtering on the data returned from the query
 		TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool isAnalyzed);
 
 		/// <summary>
-		///   Matches exact value
+		/// Matches exact value
 		/// </summary>
-		TSelf WhereEquals (WhereParams whereParams);
+		TSelf WhereEquals(WhereParams whereParams);
 
 		/// <summary>
 		/// Check that the field has one of the specified value
@@ -535,7 +557,6 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		TSelf RandomOrdering(string seed);
 
-
 		/// <summary>
 		///   Adds an ordering for a specific field to the query
 		/// </summary>
@@ -574,35 +595,39 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		TSelf Search(string fieldName, string searchTerms);
+		TSelf Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery);
 
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms);
-
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		TSelf GroupBy (AggregationOperation aggregationOperation, params string[] fieldsToGroupBy);
-
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		TSelf GroupBy<TValue>(AggregationOperation aggregationOperation, params Expression<Func<T, TValue>>[] groupPropertySelectors);
+		TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery);
 
 		/// <summary>
 		/// Partition the query so we can intersect different parts of the query
 		/// across different index entries.
 		/// </summary>
 		TSelf Intersect();
+
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+		TSelf ContainsAny(string fieldName, IEnumerable<object> values);
+
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+		TSelf ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		TSelf ContainsAll(string fieldName, IEnumerable<object> values);
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		TSelf ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
 
 		/// <summary>
 		/// Callback to get the results of the query
@@ -648,6 +673,16 @@ If you really want to do in memory filtering on the data returned from the query
 	    TSelf SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
 
 		/// <summary>
+        /// Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming results). Default: false
+		/// </summary>
+		TSelf ShowTimings();
+
+		/// <summary>
+		/// Apply distinct operation to this query
+		/// </summary>
+		TSelf Distinct();
+		
+		/// <summary>
 		/// Sets a transformer to use after executing a query
 		/// </summary>
 		/// <param name="resultsTransformer"></param>
@@ -662,5 +697,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Adds an ordering by score for a specific field to the query
 		/// </summary>
 		TSelf OrderByScoreDescending();
+
+		/// <summary>
+		/// Adds explanations of scores calculated for queried documents to the query result
+		/// </summary>
+		TSelf ExplainScores();
 	}
 }

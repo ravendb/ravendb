@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -143,4 +142,3 @@ namespace Raven.Client.Document.DTC
 		}
 	}
 }
-#endif

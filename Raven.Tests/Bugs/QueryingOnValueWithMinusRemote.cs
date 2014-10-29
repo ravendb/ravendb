@@ -1,10 +1,12 @@
 ﻿using System.Linq;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryingOnValueWithMinusRemote : RemoteClientTest
+	public class QueryingOnValueWithMinusRemote : RavenTest
 	{
 		[Fact]
 		public void CanQueryOnValuesContainingMinus()
@@ -20,7 +22,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var list = session.Advanced.LuceneQuery<object>()
+                    var list = session.Advanced.DocumentQuery<object>()
 						.WhereEquals("Name", "Bruce-Lee")
 						.ToList<object>();
 

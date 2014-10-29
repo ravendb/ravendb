@@ -1,32 +1,34 @@
-﻿
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+
+using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.Tests.Bugs
 {
     public class LazilyLoadWithTransformerWhileUsingSharding : RavenTest
     {
-        private readonly Dictionary<string, RavenDbServer> servers;
+        private new readonly Dictionary<string, RavenDbServer> servers;
         private readonly ShardedDocumentStore store;
-        private Dictionary<string, IDocumentStore> documentStores;
 
-        public LazilyLoadWithTransformerWhileUsingSharding()
+	    public LazilyLoadWithTransformerWhileUsingSharding()
         {
-            servers = new Dictionary<string, RavenDbServer>
+	        servers = new Dictionary<string, RavenDbServer>
 			{
 				{"shard", GetNewServer(8078)}
 			};
 
-            documentStores = new Dictionary<string, IDocumentStore>
-			{
-				{"shard", new DocumentStore{Url = "http://localhost:8078"}}
-			};
+            var documentStores = new Dictionary<string, IDocumentStore>
+                                        {
+	                                        {"shard", new DocumentStore{Url = "http://localhost:8078"}}
+                                        };
 
             foreach (var documentStore in documentStores)
             {

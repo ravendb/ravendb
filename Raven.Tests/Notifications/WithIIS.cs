@@ -5,14 +5,12 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
-using System.IO;
-using System.Net;
-using System.Reactive.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Changes;
 using Raven.Tests.Bugs.Identifiers;
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Util;
+
 using Xunit;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Tests.Notifications
 {

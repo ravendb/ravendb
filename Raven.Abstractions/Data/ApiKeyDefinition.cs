@@ -71,11 +71,11 @@ namespace Raven.Abstractions.Data
 
 		public bool Enabled { get; set; }
 
-		public List<DatabaseAccess> Databases { get; set; }
+		public List<ResourceAccess> Databases { get; set; }
 
 	    public ApiKeyDefinition()
 	    {
-	        Databases = new List<DatabaseAccess>();
+	        Databases = new List<ResourceAccess>();
 	    }
 
 		public event PropertyChangedEventHandler PropertyChanged;
@@ -125,13 +125,13 @@ namespace Raven.Abstractions.Data
 		}
 	}
 
-	public class DatabaseAccess
+	public class ResourceAccess
 	{
 		public bool Admin { get; set; }
 		public string TenantId { get; set; }
 		public bool ReadOnly { get; set; }
 
-		protected bool Equals(DatabaseAccess other)
+		protected bool Equals(ResourceAccess other)
 		{
 			return Admin.Equals(other.Admin) && string.Equals(TenantId, other.TenantId) && ReadOnly.Equals(other.ReadOnly);
 		}
@@ -141,7 +141,7 @@ namespace Raven.Abstractions.Data
 			if (ReferenceEquals(null, obj)) return false;
 			if (ReferenceEquals(this, obj)) return true;
 			if (obj.GetType() != this.GetType()) return false;
-			return Equals((DatabaseAccess) obj);
+			return Equals((ResourceAccess) obj);
 		}
 
 		public override int GetHashCode()

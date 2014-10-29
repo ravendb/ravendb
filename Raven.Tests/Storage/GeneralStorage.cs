@@ -12,8 +12,8 @@ using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Tasks;
-using Raven.Munin;
-using Raven.Storage.Managed.Impl;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -27,7 +27,7 @@ namespace Raven.Tests.Storage
 		public GeneralStorage()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()
@@ -39,14 +39,15 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void Can_query_by_id_prefix()
 		{
-			db.Put("abc", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
-			db.Put("Raven/Databases/Hello", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
-			db.Put("Raven/Databases/Northwind", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
-			db.Put("Raven/Databases/Sys", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
-			db.Put("Raven/Databases/Db", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
-			db.Put("Raven/Database", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put("abc", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put("Raven/Databases/Hello", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put("Raven/Databases/Northwind", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put("Raven/Databases/Sys", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put("Raven/Databases/Db", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put("Raven/Database", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 
-			var dbs = db.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, 10, CancellationToken.None);
+			int nextPageStart = 0;
+            var dbs = db.Documents.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, 10, CancellationToken.None, ref nextPageStart);
 
 			Assert.Equal(4, dbs.Length);
 		}
@@ -54,79 +55,14 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void WhenPutAnIdWithASpace_IdWillBeAGuid()
 		{
-			db.Put(" ", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put(" ", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 
-			var doc = db.GetDocuments(0, 10, null, CancellationToken.None)
+			var doc = db.Documents.GetDocuments(0, 10, null, CancellationToken.None)
 				.OfType<RavenJObject>()
 				.Single();
 			var id = doc["@metadata"].Value<string>("@id");
 			Assert.False(string.IsNullOrWhiteSpace(id));
 			Assert.DoesNotThrow(() => new Guid(id));
-		}
-
-		[Fact]
-		public void CanProperlyHandleDeletingThreeItemsBothFromPK_And_SecondaryIndexes()
-		{
-			var cmds = new[]
-			{
-				@"{""Cmd"":""Put"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABQ=="",""time"":""\/Date(1290420997504)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergeable"":true},""TableId"":9,""TxId"":""NiAAMOT72EC/We7rnZS/Fw==""}"
-				,
-				@"{""Cmd"":""Put"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABg=="",""time"":""\/Date(1290420997509)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergeable"":true},""TableId"":9,""TxId"":""NiAAMOT72EC/We7rnZS/Fw==""}"
-				,
-				@"{""Cmd"":""Put"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABw=="",""time"":""\/Date(1290420997509)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergeable"":true},""TableId"":9,""TxId"":""NiAAMOT72EC/We7rnZS/Fw==""}"
-				,
-				@"{""Cmd"":""Commit"",""TableId"":9,""TxId"":""NiAAMOT72EC/We7rnZS/Fw==""}",
-				@"{""Cmd"":""Del"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABg=="",""time"":""\/Date(1290420997509)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergeable"":true},""TableId"":9,""TxId"":""wM3q3VA0XkWecl5WBr9Cfw==""}"
-				,
-				@"{""Cmd"":""Del"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABw=="",""time"":""\/Date(1290420997509)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergeable"":true},""TableId"":9,""TxId"":""wM3q3VA0XkWecl5WBr9Cfw==""}"
-				,
-				@"{""Cmd"":""Del"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABQ=="",""time"":""\/Date(1290420997504)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergeable"":true},""TableId"":9,""TxId"":""wM3q3VA0XkWecl5WBr9Cfw==""}"
-				,
-				@"{""Cmd"":""Commit"",""TableId"":9,""TxId"":""wM3q3VA0XkWecl5WBr9Cfw==""}",
-			};
-
-			var tableStorage = new TableStorage(new MemoryPersistentSource());
-
-			foreach (var cmdText in cmds)
-			{
-				var command = RavenJObject.Parse(cmdText);
-				var tblId = command.Value<int>("TableId");
-
-				var table = tableStorage.Tables[tblId];
-
-				var txId = new Guid(Convert.FromBase64String(command.Value<string>("TxId")));
-
-				var key = command["Key"] as RavenJObject;
-				if (key != null)
-				{
-					foreach (var property in key.ToArray())// nothing in .NET supports iterating & modifying at the same time, no news here
-					{
-						if (property.Value.Type != JTokenType.String)
-							continue;
-						var value = property.Value.Value<string>();
-						if (value.EndsWith("==") == false)
-							continue;
-
-						key[property.Key] = Convert.FromBase64String(value);
-					}
-				}
-
-				switch (command.Value<string>("Cmd"))
-				{
-					case "Put":
-						table.Put(command["Key"], new byte[] { 1, 2, 3 }, txId);
-						break;
-					case "Del":
-						table.Remove(command["Key"], txId);
-						break;
-					case "Commit":
-						table.CompleteCommit(txId);
-						break;
-				}
-			}
-
-			Assert.Empty(tableStorage.Tasks);
-			Assert.Null(tableStorage.Tasks["ByIndexAndTime"].LastOrDefault());
 		}
 
 		[Fact]
@@ -138,7 +74,7 @@ namespace Raven.Tests.Storage
 				{
 					actions.Tasks.AddTask(new RemoveFromIndexTask
 					{
-						Index = "foo",
+						Index = 100,
 						Keys = { "tasks/" + i },
 					}, SystemTime.UtcNow);
 				}
@@ -149,7 +85,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var isIndexStale = actions.Staleness.IsIndexStale("foo", null, null);
+				var isIndexStale = actions.Staleness.IsIndexStale(100, null, null);
 				Assert.False(isIndexStale);
 			});
 		}
@@ -201,7 +137,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var doc = actions.Documents.DocumentByKey("a", null);
+				var doc = actions.Documents.DocumentByKey("a");
 				var documents = actions.Documents.GetDocumentsAfter(doc.Etag, 5, CancellationToken.None).Select(x => x.Key).ToArray();
 				Assert.Equal(2, documents.Length);
 				Assert.Equal("b", documents[0]);
@@ -222,7 +158,7 @@ namespace Raven.Tests.Storage
 			Etag etag = null;
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var doc = actions.Documents.DocumentByKey("a", null);
+				var doc = actions.Documents.DocumentByKey("a");
 				etag = doc.Etag;
 				actions.Documents.AddDocument("a", null, new RavenJObject(), new RavenJObject());
 			});

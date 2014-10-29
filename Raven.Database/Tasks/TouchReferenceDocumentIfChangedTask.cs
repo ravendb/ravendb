@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Mono.CSharp;
@@ -10,7 +10,7 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Tasks
 {
-	public class TouchReferenceDocumentIfChangedTask : Task
+	public class TouchReferenceDocumentIfChangedTask : DatabaseTask
 	{
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		public IDictionary<string, Etag> ReferencesToCheck { get; set; }
@@ -26,7 +26,7 @@ namespace Raven.Database.Tasks
 			get { return false; }
 		}
 
-		public override void Merge(Task task)
+		public override void Merge(DatabaseTask task)
 		{
 			var t = (TouchReferenceDocumentIfChangedTask)task;
 
@@ -55,25 +55,38 @@ namespace Raven.Database.Tasks
 			using (context.Database.TransactionalStorage.DisableBatchNesting())
 			{
 				var docsToTouch = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+				var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
+
 				context.TransactionalStorage.Batch(accessor =>
 				{
 					foreach (var kvp in ReferencesToCheck)
 					{
-						var doc = accessor.Documents.DocumentMetadataByKey(kvp.Key, null);
+						var doc = accessor.Documents.DocumentMetadataByKey(kvp.Key);
 
-					    if (doc == null)
-					    {
-                            logger.Debug("Cannot touch {0}, non existant document", kvp.Key);
-					        continue;
-					    }
-					    if (doc.Etag == kvp.Value)
-					    {
-					        logger.Debug("Don't need to touch {0}, etag {1} is the same as when we last saw it", kvp.Key, doc.Etag);
-                            continue;
-					    }
-
+						if (doc == null)
+						{
+							logger.Debug("Cannot touch {0}, non existant document", kvp.Key);
+							continue;
+						}
+						if (doc.Etag == kvp.Value)
+						{
+							logger.Debug("Don't need to touch {0}, etag {1} is the same as when we last saw it", kvp.Key, doc.Etag);
+							continue;
+						}
 
 						docsToTouch.Add(kvp.Key);
+
+						var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
+
+						if(string.IsNullOrEmpty(entityName))
+							continue;
+
+						Etag highestEtagInCollection;
+
+						if (collectionsAndEtags.TryGetValue(entityName, out highestEtagInCollection) == false || doc.Etag.CompareTo(highestEtagInCollection) > 0)
+						{
+							collectionsAndEtags[entityName] = doc.Etag;
+						}
 					}
 				});
 
@@ -88,13 +101,17 @@ namespace Raven.Database.Tasks
 								Etag preTouchEtag;
 								Etag afterTouchEtag;
 								accessor.Documents.TouchDocument(doc, out preTouchEtag, out afterTouchEtag);
-								logger.Debug("Touching document: {0}, etag before touch: {1}, after touch {2}", doc, preTouchEtag, afterTouchEtag);
 							}
 							catch (ConcurrencyException)
 							{
-                                logger.Info("Concurrency exception when touching {0}", doc);
+								logger.Info("Concurrency exception when touching {0}", doc);
 							}
-							context.Database.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
+							context.Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
+						}
+
+						foreach (var collectionEtagPair in collectionsAndEtags)
+						{
+							context.Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
 						}
 					});
 				}
@@ -102,7 +119,7 @@ namespace Raven.Database.Tasks
 			}
 		}
 
-		public override Task Clone()
+		public override DatabaseTask Clone()
 		{
 			return new TouchReferenceDocumentIfChangedTask
 			{

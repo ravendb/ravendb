@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 namespace Raven.Database.Config.Settings
 {
-	public class MultipliedIntegerSetting
+	internal class MultipliedIntegerSetting
 	{
 		private readonly Setting<int> setting;
 		private readonly int factor;

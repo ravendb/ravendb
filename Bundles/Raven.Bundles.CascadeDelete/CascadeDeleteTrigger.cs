@@ -25,7 +25,7 @@ namespace Raven.Bundles.CascadeDelete
 
 		private void RecursiveDelete(string key, TransactionInformation transactionInformation)
 		{
-			var document = Database.Get(key, transactionInformation);
+			var document = Database.Documents.Get(key, transactionInformation);
 			if (document == null)
 				return;
 
@@ -39,7 +39,7 @@ namespace Raven.Bundles.CascadeDelete
 					{
 						CascadeDeleteContext.AddDeletedDocument(documentId);
 						RecursiveDelete(documentId, transactionInformation);
-						Database.Delete(documentId, null, transactionInformation);
+						Database.Documents.Delete(documentId, null, transactionInformation);
 					}
 				}
 			}
@@ -47,7 +47,7 @@ namespace Raven.Bundles.CascadeDelete
 
 			if (attachmentsToDelete != null)
 				foreach (var attachmentToDelete in attachmentsToDelete)
-					Database.DeleteStatic(attachmentToDelete.Value<string>(), null);
+					Database.Attachments.DeleteStatic(attachmentToDelete.Value<string>(), null);
 			return;
 		}
 	}

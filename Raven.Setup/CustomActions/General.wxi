@@ -9,4 +9,13 @@
   <AdminUISequence>
     <Custom Action='SetLogFileLocation' After='CostFinalize'>1</Custom>
   </AdminUISequence>
+
+	<Property Id="WEBBROWSER">
+		<RegistrySearch Id='DefaultBrowser' Type='raw' Root='HKCR' Key='http\shell\open\command' />
+	</Property>
+
+	<Property Id="FirstRunUrl" Value="http://ravendb.net/first-run?type=installer&amp;ver=$(var.PRODUCTVERSION)" />
+
+	<CustomAction Id='LaunchFirstRunPage' Directory="TARGETDIR" ExeCommand='[WEBBROWSER] [FirstRunUrl]' Return='asyncNoWait' Impersonate="no" Execute="immediate" />
+
 </Include>

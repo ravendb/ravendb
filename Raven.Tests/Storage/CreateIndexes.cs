@@ -7,6 +7,8 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -20,7 +22,7 @@ namespace Raven.Tests.Storage
 		public CreateIndexes()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()
@@ -32,7 +34,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void Index_with_same_name_can_be_added_twice()
 		{
-			db.PutIndex("pagesByTitle",
+			db.Indexes.PutIndex("pagesByTitle",
 						new IndexDefinition
 						{
 							Map = @"
@@ -42,7 +44,7 @@ namespace Raven.Tests.Storage
 "
 						});
 
-			db.PutIndex("pagesByTitle",
+			db.Indexes.PutIndex("pagesByTitle",
 						new IndexDefinition
 						{
 							Map = @"
@@ -56,7 +58,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void Can_add_index()
 		{
-			db.PutIndex("pagesByTitle",
+			db.Indexes.PutIndex("pagesByTitle",
 			            new IndexDefinition
 			            {
 							Map = @"
@@ -74,9 +76,9 @@ namespace Raven.Tests.Storage
 		public void Index_names_should_be_sorted_alphabetically()
 		{
 			const string unimportantIndexMap = @"from doc in docs select new { doc };";
-			db.PutIndex("zebra", new IndexDefinition { Map = unimportantIndexMap });
-			db.PutIndex("alligator", new IndexDefinition { Map = unimportantIndexMap });
-			db.PutIndex("monkey", new IndexDefinition { Map = unimportantIndexMap });
+			db.Indexes.PutIndex("zebra", new IndexDefinition { Map = unimportantIndexMap });
+			db.Indexes.PutIndex("alligator", new IndexDefinition { Map = unimportantIndexMap });
+			db.Indexes.PutIndex("monkey", new IndexDefinition { Map = unimportantIndexMap });
 
 			var indexNames = db.IndexDefinitionStorage.IndexNames
 				.Where(x => x.StartsWith("Raven") == false)
@@ -96,7 +98,7 @@ namespace Raven.Tests.Storage
 	where doc.type == ""page""
 	select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ";
-			db.PutIndex("pagesByTitle", new IndexDefinition{Map = definition});
+			db.Indexes.PutIndex("pagesByTitle", new IndexDefinition{Map = definition});
 			var actualDefinition = db.IndexDefinitionStorage.GetIndexDefinition("pagesByTitle");
 			Assert.Equal(definition, actualDefinition.Map);
 		}

@@ -5,10 +5,15 @@
 		public BulkInsertOptions()
 		{
 			BatchSize = 512;
+		    WriteTimeoutMilliseconds = 15*1000;
 		}
 
-		public bool CheckForUpdates { get; set; }
+		public bool OverwriteExisting { get; set; }
 		public bool CheckReferencesInIndexes { get; set; }
+		public bool SkipOverwriteIfUnchanged { get; set; }
+		
 		public int BatchSize { get; set; }
+
+		public int WriteTimeoutMilliseconds { get; set; }
 	}
 }

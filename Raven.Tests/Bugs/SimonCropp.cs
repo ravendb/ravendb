@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -50,9 +52,15 @@ namespace Raven.Tests.Bugs
 											lastTaskStatus.Id,
 											lastTaskStatus.InResponseToId,
 										};
+			}
+		}
 
-				TransformResults = (database, items) => from item in items
-														let startTask = database.Load<WorkflowItem>(item.InResponseToId ?? item.Id)
+		public class WorkflowSubTasksTransformer : AbstractTransformerCreationTask<WorkflowItem>
+		{
+			public WorkflowSubTasksTransformer()
+			{
+				TransformResults = items => from item in items
+														let startTask = LoadDocument<WorkflowItem>(item.InResponseToId ?? item.Id)
 														select new
 														{
 															item.DisplayOrder,
@@ -70,11 +78,13 @@ namespace Raven.Tests.Bugs
 			using (var documentStore = NewDocumentStore())
 			{
 				new WorkflowSubTasksIndex().Execute(documentStore);
+				new WorkflowSubTasksTransformer().Execute(documentStore);
 				Setup(documentStore);
 
 				using (var storeSession = documentStore.OpenSession())
 				{
 					var workflowItems = storeSession.Query<WorkflowItem, WorkflowSubTasksIndex>()
+						.TransformWith<WorkflowSubTasksTransformer, WorkflowItem>()
 						.Customize(customization => customization.WaitForNonStaleResults())
 						.Where(item => item.WorkflowId == "rootDocumentId")
 						.ToList();
@@ -97,11 +107,13 @@ namespace Raven.Tests.Bugs
 			using (var documentStore = NewDocumentStore())
 			{
 				new WorkflowSubTasksIndex().Execute(documentStore);
+				new WorkflowSubTasksTransformer().Execute(documentStore);
 				Setup(documentStore);
 
 				using (var storeSession = documentStore.OpenSession())
 				{
 					var workflowItems = storeSession.Query<WorkflowItem, WorkflowSubTasksIndex>()
+						.TransformWith<WorkflowSubTasksTransformer, WorkflowItem>()
 						.Customize(customization => customization.WaitForNonStaleResults())
 						.Where(item =>
 						       item.WorkflowId == "rootDocumentId" &&

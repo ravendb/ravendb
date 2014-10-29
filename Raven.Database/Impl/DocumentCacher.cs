@@ -9,10 +9,10 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Impl
 {
-	public class DocumentCacher : IDocumentCacher
+	public class DocumentCacher : IDocumentCacher, ILowMemoryHandler
 	{
 		private readonly InMemoryRavenConfiguration configuration;
-		private readonly MemoryCache cachedSerializedDocuments;
+		private MemoryCache cachedSerializedDocuments;
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		
 		[ThreadStatic]
@@ -21,7 +21,14 @@ namespace Raven.Database.Impl
 		public DocumentCacher(InMemoryRavenConfiguration configuration)
 		{
 			this.configuration = configuration;
-			cachedSerializedDocuments = new MemoryCache(typeof(DocumentCacher).FullName + ".Cache", new NameValueCollection
+			cachedSerializedDocuments = CreateCache();
+
+			MemoryStatistics.RegisterLowMemoryHandler(this);
+		}
+
+		private MemoryCache CreateCache()
+		{
+			var result = new MemoryCache(typeof(DocumentCacher).FullName + ".Cache", new NameValueCollection
 			{
 				{"physicalMemoryLimitPercentage", configuration.MemoryCacheLimitPercentage.ToString()},
 				{"pollingInterval",  configuration.MemoryCacheLimitCheckInterval.ToString(@"hh\:mm\:ss")},
@@ -30,8 +37,18 @@ namespace Raven.Database.Impl
 			log.Info(@"MemoryCache Settings:
   PhysicalMemoryLimit = {0}
   CacheMemoryLimit    = {1}
-  PollingInterval     = {2}", cachedSerializedDocuments.PhysicalMemoryLimit, cachedSerializedDocuments.CacheMemoryLimit,
-			  cachedSerializedDocuments.PollingInterval);
+  PollingInterval     = {2}", result.PhysicalMemoryLimit, result.CacheMemoryLimit, result.PollingInterval);
+
+			return result;
+		}
+
+		public void HandleLowMemory()
+		{
+			var oldCache = cachedSerializedDocuments;
+
+			cachedSerializedDocuments = CreateCache();
+
+			oldCache.Dispose();
 		}
 
 		public static IDisposable SkipSettingDocumentsInDocumentCache()

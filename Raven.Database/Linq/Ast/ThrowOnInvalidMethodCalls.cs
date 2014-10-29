@@ -64,23 +64,26 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 		public override object VisitInvocationExpression(InvocationExpression invocationExpression, object data)
 		{
 			if (!string.IsNullOrEmpty(groupByIdentifier))
-			{
-				var memberReferenceExpression = invocationExpression.Target as MemberReferenceExpression;
-				if (memberReferenceExpression != null)
-				{
-					var identifier = memberReferenceExpression.Target as IdentifierExpression;
-					if (identifier != null && identifier.Identifier == groupByIdentifier)
-					{
-						if (memberReferenceExpression.MemberName == "Count")
-							throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
-
-						if (memberReferenceExpression.MemberName == "Average")
-							throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
-					}
-				}
-			}
+				AssertInvocationExpression(invocationExpression);
 
 			return base.VisitInvocationExpression(invocationExpression, data);
+		}
+
+		protected virtual void AssertInvocationExpression(InvocationExpression invocation)
+		{
+			var memberReferenceExpression = invocation.Target as MemberReferenceExpression;
+			if (memberReferenceExpression != null)
+			{
+				var identifier = memberReferenceExpression.Target as IdentifierExpression;
+				if (identifier != null && identifier.Identifier == groupByIdentifier)
+				{
+					if (memberReferenceExpression.MemberName == "Count")
+						throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+
+					if (memberReferenceExpression.MemberName == "Average")
+						throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
+				}
+			}
 		}
 
 		private Expression SimplifyLetExpression(Expression expression)
@@ -130,13 +133,48 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 			return base.VisitSimpleType(simpleType, data);
 		}
 
+		public override object VisitQueryContinuationClause(QueryContinuationClause queryContinuationClause, object data)
+		{
+			var result = base.VisitQueryContinuationClause(queryContinuationClause, data);
+			if (groupByIdentifier == null)
+				return result;
+
+			var queryGroupClause = queryContinuationClause.PrecedingQuery.Clauses.LastOrNullObject() as QueryGroupClause;
+			if(queryGroupClause == null)
+				return result;
+
+			var queryExpression = queryContinuationClause.Parent as QueryExpression;
+			if(queryExpression == null)
+				return result;
+
+			bool foundIt = false;
+			foreach (var queryClause in queryExpression.Clauses)
+			{
+				if (foundIt == false)
+				{
+					foundIt = queryClause == queryContinuationClause;
+					continue;
+				}
+				foreach (var invocationExpression in queryClause.Descendants.OfType<InvocationExpression>())
+				{
+					AssertInvocationExpression(invocationExpression, queryContinuationClause.Identifier);
+				}
+			}
+
+			return result;
+		}
+
 		private void HandleGroupBy(SimpleType simpleType)
 		{
 			if (string.IsNullOrEmpty(groupByIdentifier))
 				return;
 
 			var initializer = simpleType.Ancestors.OfType<VariableInitializer>().Single();
-			var rootExpression = (InvocationExpression) initializer.Initializer;
+			var rootExpression = initializer.Initializer as InvocationExpression;
+			if (rootExpression == null)
+			{
+				return;
+			}
 
 			var nodes = rootExpression.Children.Where(x => x.NodeType != NodeType.Token).ToList();
 			if (nodes.Count < 2)
@@ -177,22 +215,27 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 
 			foreach (var invocation in lambda.Descendants.OfType<InvocationExpression>())
 			{
-				var identifiers = invocation.Descendants.OfType<IdentifierExpression>().Where(x => x.Identifier == parameter.Name);
+				AssertInvocationExpression(invocation, parameter.Name);
+			}
+		}
 
-				foreach (var identifier in identifiers)
-				{
-					var parent = identifier.Parent as InvocationExpression;
-					if (parent == null)
-						continue;
+		protected virtual void AssertInvocationExpression(InvocationExpression invocation, string name)
+		{
+			var identifiers = invocation.Descendants.OfType<IdentifierExpression>().Where(x => x.Identifier == name);
 
-					var member = (MemberReferenceExpression) parent.Target;
+			foreach (var identifier in identifiers)
+			{
+				var parent = identifier.Parent as InvocationExpression;
+				if (parent == null)
+					continue;
 
-					if (member.MemberName == "Count")
-						throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+				var member = (MemberReferenceExpression)parent.Target;
 
-					if (member.MemberName == "Average")
-						throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
-				}
+				if (member.MemberName == "Count")
+					throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+
+				if (member.MemberName == "Average")
+					throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
 			}
 		}
 

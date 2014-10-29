@@ -14,6 +14,7 @@ using Raven.Json.Linq;
 namespace Raven.Database.Plugins
 {
 	[InheritedExport]
+    [Obsolete("Use RavenFS instead.")]
 	public abstract class AbstractAttachmentReadTrigger : IRequiresDocumentDatabaseInitialization
 	{
 		/// <summary>

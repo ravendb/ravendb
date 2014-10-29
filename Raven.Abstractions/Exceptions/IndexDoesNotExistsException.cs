@@ -11,10 +11,7 @@ namespace Raven.Abstractions.Exceptions
 	/// <summary>
 	/// This exception is raised when a query is made against a non existing index
     /// </summary>
-#if !SILVERLIGHT && !NETFX_CORE
     [Serializable]
-#endif
-
 	public class IndexDoesNotExistsException : Exception
 	{
 		/// <summary>
@@ -41,8 +38,6 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
-
         /// <summary>
 	/// Initializes a new instance of the <see cref="IndexDoesNotExistsException"/> class.
 	/// </summary>
@@ -55,7 +50,5 @@ namespace Raven.Abstractions.Exceptions
 			StreamingContext context) : base(info, context)
 		{
 		}
-#endif
-
 	}
 }

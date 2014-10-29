@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Indexing
 {
@@ -21,18 +22,26 @@ namespace Raven.Abstractions.Indexing
 		public IndexDefinition()
 		{
 			Maps = new HashSet<string>();
+           
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
 			SortOptions = new Dictionary<string, SortOptions>();
-			Fields = new List<string>();
 			Suggestions = new Dictionary<string, SuggestionOptions>();
 			TermVectors = new Dictionary<string, FieldTermVector>();
 			SpatialIndexes = new Dictionary<string, SpatialOptions>();
-		}
+
+
+            Fields = new List<string>();
+        }
 
 		/// <summary>
-		/// Get or set the name of the index
+		/// Get or set the id of this index
+		/// </summary>
+		public int IndexId { get; set; }
+
+        /// <summary>
+        /// This is the means by which the outside world refers to this index defiintion
 		/// </summary>
 		public string Name { get; set; }
 
@@ -70,12 +79,6 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		/// <value>The reduce.</value>
 		public string Reduce { get; set; }
-
-		/// <summary>
-		/// Gets or sets the translator function
-		/// </summary>
-		[Obsolete("Use Result Transformers instead.")]
-		public string TransformResults { get; set; }
 
 		/// <summary>
 		/// Gets a value indicating whether this instance is map reduce index definition
@@ -137,11 +140,18 @@ namespace Raven.Abstractions.Indexing
 		/// <value>The spatial options.</value>
 		public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
 
-        /// <summary>
+		/// <summary>
         /// Internal map of field names to expressions generating them
         /// Only relevant for auto indexes and only used internally
         /// </summary>
         public IDictionary<string, string> InternalFieldsMapping { get; set; }
+
+		/// <summary>
+		/// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
+		/// the one document produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+		/// Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.
+		/// </summary>
+		public int? MaxIndexOutputsPerDocument { get; set; }
 
 		/// <summary>
 		/// Equals the specified other.
@@ -155,9 +165,9 @@ namespace Raven.Abstractions.Indexing
 			if (ReferenceEquals(this, other))
 				return true;
 			return Maps.SequenceEqual(other.Maps) &&
-					Equals(other.Name, Name) &&
+					Equals(other.IndexId, IndexId) &&
 					Equals(other.Reduce, Reduce) &&
-					Equals(other.TransformResults, TransformResults) &&
+                    Equals(other.MaxIndexOutputsPerDocument, MaxIndexOutputsPerDocument) &&
 					DictionaryEquals(other.Stores, Stores) &&
 					DictionaryEquals(other.Indexes, Indexes) &&
 					DictionaryEquals(other.Analyzers, Analyzers) &&
@@ -240,7 +250,6 @@ namespace Raven.Abstractions.Indexing
 				int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc * 397 ^ val.GetHashCode());
 				result = (result * 397) ^ Maps.Count;
 				result = (result * 397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
-				result = (result * 397) ^ (TransformResults != null ? TransformResults.GetHashCode() : 0);
 				result = (result * 397) ^ DictionaryHashCode(Stores);
 				result = (result * 397) ^ DictionaryHashCode(Indexes);
 				result = (result * 397) ^ DictionaryHashCode(Analyzers);
@@ -313,9 +322,10 @@ namespace Raven.Abstractions.Indexing
 		{
 			var indexDefinition = new IndexDefinition
 			{
+				IndexId = IndexId,
 				Name = Name,
 				Reduce = Reduce,
-				TransformResults = TransformResults,
+                MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
 				cachedHashCodeAsBytes = cachedHashCodeAsBytes
 			};
 
@@ -338,50 +348,6 @@ namespace Raven.Abstractions.Indexing
 			if (SpatialIndexes != null)
 				indexDefinition.SpatialIndexes = new Dictionary<string, SpatialOptions>(SpatialIndexes);
 			return indexDefinition;
-		}
-	}
-
-	public enum IndexLockMode
-	{
-		Unlock,
-		LockedIgnore,
-		LockedError
-	}
-
-	public class TransformerDefinition
-	{
-		/// <summary>
-		/// Gets or sets the translator function
-		/// </summary>
-		public string TransformResults { get; set; }
-		public string Name { get; set; }
-
-		public bool Equals(TransformerDefinition other)
-		{
-			return string.Equals(TransformResults, other.TransformResults);
-		}
-
-		public override bool Equals(object obj)
-		{
-			if (ReferenceEquals(null, obj)) return false;
-			if (ReferenceEquals(this, obj)) return true;
-			if (obj.GetType() != GetType()) return false;
-			return Equals((TransformerDefinition) obj);
-		}
-
-		public override int GetHashCode()
-		{
-			return (TransformResults != null ? TransformResults.GetHashCode() : 0);
-		}
-
-		public TransformerDefinition Clone()
-		{
-			return (TransformerDefinition) MemberwiseClone();
-		}
-
-		public override string ToString()
-		{
-			return Name ?? TransformResults;
 		}
 	}
 }

@@ -23,7 +23,7 @@ namespace Raven.Tests.Shard.BlogModel
 
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
-				var users = session.Load<User>(id, "does not exists");
+				var users = session.Load<User>(new [] { id, "does not exists" });
 				Assert.NotNull(users);
 				Assert.Equal(2, users.Length);
 				Assert.Equal("Fitzchak Yitzchaki", users[0].Name);

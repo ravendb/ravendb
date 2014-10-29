@@ -14,7 +14,7 @@ namespace Raven.Database.Config.Settings
 		FromParse = 2,
 	}
 
-	public class TimeSpanSetting : Setting<TimeSpan>
+	internal class TimeSpanSetting : Setting<TimeSpan>
 	{
 		private readonly TimeSpanArgumentType argumentType;
 

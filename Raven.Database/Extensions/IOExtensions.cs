@@ -11,9 +11,27 @@ using System.Threading;
 
 namespace Raven.Database.Extensions
 {
+	using Raven.Abstractions.Util;
+
 	public static class IOExtensions
 	{
 		const int retries = 10;
+
+        public static void DeleteFile(string file)
+        {
+            try
+            {
+                File.Delete(file);
+            }
+            catch (IOException)
+            {
+
+            }
+            catch (UnauthorizedAccessException)
+            {
+                
+            }
+        }
 
 		public static void DeleteDirectory(string directory)
 		{
@@ -84,15 +102,7 @@ namespace Raven.Database.Extensions
 					}
 					catch (UnauthorizedAccessException)
 					{
-						var processesUsingFiles = WhoIsLocking.GetProcessesUsingFile(path);
-						var stringBuilder = new StringBuilder();
-						stringBuilder.Append("The following processing are locking ").Append(path).AppendLine();
-						foreach (var processesUsingFile in processesUsingFiles)
-						{
-							stringBuilder.Append("\t").Append(processesUsingFile.ProcessName).Append(' ').Append(processesUsingFile.Id).
-								AppendLine();
-						}
-						throw new IOException(stringBuilder.ToString());
+						throw new IOException(WhoIsLocking.ThisFile(path));
 					}
 					catch(IOException)
 					{
@@ -110,18 +120,24 @@ namespace Raven.Database.Extensions
 				throw new IOException("Could not delete " + Path.GetFullPath(directory), e);
 			}
 
-			GC.Collect();
-			GC.WaitForPendingFinalizers();
+			RavenGC.CollectGarbage(true);
 			Thread.Sleep(100);
 		}
 
-		public static string ToFullPath(this string path)
+		public static string ToFullPath(this string path, string basePath = null)
 		{
+			if (String.IsNullOrWhiteSpace(path))
+				return String.Empty;
 			path = Environment.ExpandEnvironmentVariables(path);
 			if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
-				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path.Substring(2));
+			{
+				if (!string.IsNullOrEmpty(basePath))
+					basePath = Path.GetDirectoryName(basePath.EndsWith("\\") ? basePath.Substring(0, basePath.Length - 2) : basePath);
 
-			return Path.IsPathRooted(path) ? path : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
+				path = Path.Combine(basePath ?? AppDomain.CurrentDomain.BaseDirectory, path.Substring(2));
+		}
+
+			return Path.IsPathRooted(path) ? path : Path.Combine(basePath ?? AppDomain.CurrentDomain.BaseDirectory, path);
 		}
 
 		public static void CopyDirectory(string from, string to)
@@ -139,9 +155,7 @@ namespace Raven.Database.Extensions
 		static void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
 		{
 			if (!target.Exists)
-			{
 				Directory.CreateDirectory(target.FullName);
-			}
 
 			// copy all files in the immediate directly
 			foreach (FileInfo fi in source.GetFiles())
@@ -163,9 +177,9 @@ namespace Raven.Database.Extensions
 			for (var i = 0; i < input.Length; i++)
 			{
 				sb.Append(input[i].ToString("x2"));
-			}
+	}
 
 			return sb.ToString();
-		}
+}
 	}
 }

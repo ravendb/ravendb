@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using System;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

@@ -5,12 +5,12 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
-using System.Reactive.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Notifications

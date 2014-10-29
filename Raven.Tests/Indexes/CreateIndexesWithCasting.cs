@@ -2,18 +2,20 @@ using System.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Tests.Bugs.LiveProjections;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class CreateIndexesWithCasting
+	public class CreateIndexesWithCasting : NoDisposalNeeded
 	{
 		[Fact]
 		public void WillPreserverTheCasts()
 		{
 			var indexDefinition = new WithCasting
 			{
-				Conventions = new DocumentConvention()	
+				Conventions = new DocumentConvention { PrettifyGeneratedLinqExpressions = false}	
 			}.CreateIndexDefinition();
 
 			Assert.Contains("docs.People.Select(person => new {", indexDefinition.Map);

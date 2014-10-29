@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="Class1.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="GroupByAndDocumentId.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Linq
@@ -161,7 +163,7 @@ namespace Raven.Tests.Linq
 				using (var session = documentStore.OpenSession())
 				{
 					var results = session.Query<ImportSummary, TIndex>()
-						.OrderBy(x => x.Date)
+						.OrderBy(summary => summary.Date)
 						.ToArray();
 
 					Assert.Equal(2, results.Length);

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Linq;
 
@@ -14,6 +16,7 @@ namespace Raven.Tests.Bugs
 			using(var store = NewDocumentStore())
 			{
 				new CategoryWithParentsAndChildren().Execute(store);
+				new CategoryWithParentsAndChildrenTransformer().Execute(store);
 
 				using(var session = store.OpenSession())
 				{
@@ -39,6 +42,7 @@ namespace Raven.Tests.Bugs
 				using(var session = store.OpenSession())
 				{
 					List<CategoryHeaderWithParents> categoryHeaderWithParentses = session.Query<CategoryHeaderWithParents, CategoryWithParentsAndChildren>()
+						.TransformWith<CategoryWithParentsAndChildrenTransformer, CategoryHeaderWithParents>()
 						.Customize(x=>x.WaitForNonStaleResults())
 						.Where(x=>x.Name == "Grandchild")
 						.ToList();
@@ -57,9 +61,16 @@ namespace Raven.Tests.Bugs
 			{
 				Map = categories => from category in categories
 				                    select new {category.Id, category.Name, category.ParentId};
-				TransformResults = (database, categories) =>
+			}
+		}
+
+		public class CategoryWithParentsAndChildrenTransformer : AbstractTransformerCreationTask<Category>
+		{
+			public CategoryWithParentsAndChildrenTransformer()
+			{
+				TransformResults = categories =>
 								   from category in categories
-								   let parentCategories = Recurse(category, c => database.Load<Category>(c.ParentId))
+								   let parentCategories = Recurse(category, c => LoadDocument<Category>(c.ParentId))
 								   select new
 								   {
 									   category.Id,

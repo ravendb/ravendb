@@ -3,26 +3,32 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
+
 using Microsoft.Isam.Esent.Interop;
+
+using Raven.Database.Config;
 using Raven.Database.Impl;
+using Raven.Storage.Esent;
+using Raven.Storage.Esent.SchemaUpdates;
 
-namespace Raven.Storage.Esent.SchemaUpdates.Updates
+namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
 {
-    public class From47To48 : ISchemaUpdate
-    {
-        public string FromSchemaVersion { get { return "4.7"; } }
+	public class From47To48 : ISchemaUpdate
+	{
+		public string FromSchemaVersion { get { return "4.7"; } }
 
-        public void Init(IUuidGenerator generator)
-        {
-        }
+		public void Init(IUuidGenerator generator, InMemoryRavenConfiguration configuration)
+		{
+		}
 
-        public void Update(Session session, JET_DBID dbid, Action<string> output)
-        {
-            using (var tbl = new Table(session, dbid, "documents", OpenTableGrbit.None))
-            {
-                Api.JetDeleteIndex(session, tbl, "by_key");
-                Api.JetCreateIndex2(session, tbl, new[]
+		public void Update(Session session, JET_DBID dbid, Action<string> output)
+		{
+			using (var tbl = new Table(session, dbid, "documents", OpenTableGrbit.None))
+			{
+				Api.JetDeleteIndex(session, tbl, "by_key");
+				Api.JetCreateIndex2(session, tbl, new[]
                 {
                     new JET_INDEXCREATE
                     {
@@ -34,8 +40,8 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
                         grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
                     }
                 }, 1);
-            }
-            SchemaCreator.UpdateVersion(session, dbid, "4.8");
-        }
-    }
+			}
+			SchemaCreator.UpdateVersion(session, dbid, "4.8");
+		}
+	}
 }

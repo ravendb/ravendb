@@ -166,7 +166,7 @@ namespace Raven.Database.Json
 				                                    "' because both a position and a value are set");
 			if (position != null && (position.Value < 0 || position.Value >= array.Length))
 				throw new IndexOutOfRangeException("Cannot remove value from  '" + propName +
-				                                   "' because position element is out of bound bounds");
+				                                   "' because position element is out of bounds");
 
 			if (value != null && value.Type != JTokenType.Null)
 			{
@@ -187,19 +187,21 @@ namespace Raven.Database.Json
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
 			if (!(property is RavenJArray))
 			{
-				property = new RavenJArray();
-				document[propName] = property;
+			    property = new RavenJArray();
+			    document[propName] = property;
+			}
+			else if (property.IsSnapshot)
+			{
+			    document[propName] = property = property.CreateSnapshot();
 			}
 			var array = property as RavenJArray;
 			if (array == null)
-				throw new InvalidOperationException("Cannot remove value from '" + propName + "' because it is not an array");
-			var position = patchCmd.Position;
-			if (position == null)
-				throw new InvalidOperationException("Cannot remove value from '" + propName + "' because position element does not exists or not an integer");
-			if (position < 0 || position >= array.Length)
-				throw new IndexOutOfRangeException("Cannot remove value from '" + propName +
-												   "' because position element is out of bound bounds");
-			array.Insert(position.Value, patchCmd.Value);
+				throw new InvalidOperationException("Cannot insert value to '" + propName + "' because it is not an array");
+			var position = patchCmd.Position ?? array.Length;
+		    if (position < 0 || position > array.Length)
+				throw new IndexOutOfRangeException("Cannot insert value to '" + propName +
+												   "' because position element is out of bounds");
+			array.Insert(position, patchCmd.Value);
 		}
 
 		private void AddValue(PatchRequest patchCmd, string propName, RavenJToken token)
@@ -280,7 +282,7 @@ namespace Raven.Database.Json
 		private static void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, RavenJToken property)
 		{
 			var prevVal = patchCmd.PrevVal;
-			if (prevVal == null)
+            if (prevVal == null || prevVal.Type == JTokenType.Null)
 				return;
 			switch (prevVal.Type)
 			{

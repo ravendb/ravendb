@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Impl;
@@ -18,17 +19,6 @@ namespace Raven.Bundles.Replication.Triggers
 	[InheritedExport(typeof(AbstractPutTrigger))]
 	public class AncestryPutTrigger : AbstractPutTrigger
 	{
-		internal ReplicationHiLo HiLo
-		{
-			get
-			{
-				return (ReplicationHiLo)Database.ExtensionsState.GetOrAdd(typeof (ReplicationHiLo).AssemblyQualifiedName, o => new ReplicationHiLo
-				{
-					Database = Database
-				});
-			}
-		}
-
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && // we don't deal with system documents
@@ -39,7 +29,7 @@ namespace Raven.Bundles.Replication.Triggers
 				var documentMetadata = GetDocumentMetadata(key);
 				if (documentMetadata != null)
 				{
-					RavenJArray history = new RavenJArray(ReplicationData.GetHistory(documentMetadata));
+					var history = new RavenJArray(ReplicationData.GetHistory(documentMetadata));
 					metadata[Constants.RavenReplicationHistory] = history;
 
 					if (documentMetadata.ContainsKey(Constants.RavenReplicationVersion) && 
@@ -51,6 +41,14 @@ namespace Raven.Bundles.Replication.Triggers
 							{Constants.RavenReplicationSource, documentMetadata[Constants.RavenReplicationSource]}
 						});
 					}
+					else 
+					{
+						history.Add(new RavenJObject
+						{
+							{Constants.RavenReplicationVersion, 0},
+							{Constants.RavenReplicationSource, RavenJToken.FromObject(Database.TransactionalStorage.Id)}
+						});
+					}
 
 					while (history.Length > Constants.ChangeHistoryLength)
 					{
@@ -58,14 +56,14 @@ namespace Raven.Bundles.Replication.Triggers
 					}
 				}
 
-				metadata[Constants.RavenReplicationVersion] = RavenJToken.FromObject(HiLo.NextId());
+				metadata[Constants.RavenReplicationVersion] = RavenJToken.FromObject(ReplicationHiLo.NextId(Database));
 				metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
 			}
 		}
 
 		private RavenJObject GetDocumentMetadata(string key)
 		{
-			var doc = Database.GetDocumentMetadata(key, null);
+			var doc = Database.Documents.GetDocumentMetadata(key, null);
             if (doc != null)
             {
                 var doesNotExist = doc.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists); // occurs when in transaction
@@ -84,6 +82,18 @@ namespace Raven.Bundles.Replication.Triggers
 				accessor.Lists.Remove(Constants.RavenReplicationDocsTombstones, key);
 			});
 			return result;
+		}
+
+		public override IEnumerable<string> GeneratedMetadataNames
+		{
+			get
+			{
+				return new[]
+				{
+					Constants.RavenReplicationVersion,
+					Constants.RavenReplicationSource
+				};
+			}
 		}
 	}
 }

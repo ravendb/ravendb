@@ -1,6 +1,8 @@
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -33,7 +35,7 @@ namespace Raven.Tests.Bugs.Queries
 
 				using (var s = store.OpenSession())
 				{
-					var objects = s.Advanced.LuceneQuery<dynamic>()
+                    var objects = s.Advanced.DocumentQuery<dynamic>()
 						.WaitForNonStaleResults()
 						.SelectFields<RavenJObject>("Tags,Id", "Tags,Id3")
 						.OrderBy("Id")

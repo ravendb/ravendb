@@ -16,7 +16,7 @@ namespace Raven.Database.Linq
 	/// 	Along the way we apply some minimal transformations, the end result is an instance
 	/// 	of AbstractTransformer, representing the map/reduce functions
 	/// </summary>
-	public class DynamicTransformerCompiler : DynamicCompilerBase
+	internal class DynamicTransformerCompiler : DynamicCompilerBase
 	{
 		private readonly TransformerDefinition transformerDefinition;
 
@@ -45,7 +45,7 @@ namespace Raven.Database.Linq
 
 		    try
 		    {
-		        CSharpSafeName = "Transformer_" + Regex.Replace(Name, @"[^\w\d]", "_");
+                CSharpSafeName = "Transformer_" + Regex.Replace(Name, @"[^\w\d]", "_");  
 		        var type = new TypeDeclaration
 		        {
 		            Modifiers = Modifiers.Public,

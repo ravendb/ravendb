@@ -19,11 +19,12 @@ namespace Raven.Database.Server.Security.Windows
 	{
 		public string Name { get; set; }
 		public bool Enabled { get; set; }
-		public List<DatabaseAccess> Databases { get; set; }
+		public List<ResourceAccess> Databases { get; set; }
 
 		protected bool Equals(WindowsAuthData other)
 		{
-			var baseEqual =  string.Equals(Name, other.Name) && Enabled.Equals(other.Enabled) && Equals(Databases.Count, other.Databases.Count);
+		    var baseEqual = string.Equals(Name, other.Name) && Enabled.Equals(other.Enabled) &&
+                Equals(Databases.Count, other.Databases.Count);
 
 			if(baseEqual == false)
 				return false;
@@ -58,7 +59,7 @@ namespace Raven.Database.Server.Security.Windows
 
 		public WindowsAuthData()
 		{
-			Databases = new List<DatabaseAccess>();
+			Databases = new List<ResourceAccess>();
 		}
 	}
 }

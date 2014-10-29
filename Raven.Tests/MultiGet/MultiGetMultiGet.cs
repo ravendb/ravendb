@@ -1,11 +1,12 @@
 ﻿using Raven.Client.Document;
+using Raven.Tests.Common;
 using Raven.Tests.Linq;
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.MultiGet
 {
-	public class MultiGetMultiGet : RemoteClientTest
+	public class MultiGetMultiGet : RavenTest
 	{
 		[Fact]
 		public void MultiGetShouldBehaveTheSameForLazyAndNotLazy()
@@ -15,8 +16,8 @@ namespace Raven.Tests.MultiGet
 			{
 				using (var session = store.OpenSession())
 				{
-					var result1 = session.Load<User>("users/1", "users/2");
-					var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
+					var result1 = session.Load<User>(new[] { "users/1", "users/2" });
+					var result2 = session.Advanced.Lazily.Load<User>(new [] { "users/3", "users/4" });
 
 					Assert.Equal(new User[2], result1);
 					Assert.Equal(new User[2], result2.Value);
@@ -32,8 +33,8 @@ namespace Raven.Tests.MultiGet
 			{
 				using(var session = store.OpenSession())
 				{
-					var result1 = session.Advanced.Lazily.Load<User>("users/1", "users/2");
-					var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
+					var result1 = session.Advanced.Lazily.Load<User>(new[] { "users/1", "users/2" });
+					var result2 = session.Advanced.Lazily.Load<User>(new[] { "users/3", "users/4" });
 					Assert.Equal(0, session.Advanced.NumberOfRequests);
 				}
 			}
@@ -47,8 +48,8 @@ namespace Raven.Tests.MultiGet
 			{
 				using (var session = store.OpenSession())
 				{
-					var result1 = session.Advanced.Lazily.Load<User>("users/1", "users/2");
-					var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
+					var result1 = session.Advanced.Lazily.Load<User>(new[] { "users/1", "users/2" });
+					var result2 = session.Advanced.Lazily.Load<User>(new[] { "users/3", "users/4" });
 
 					Assert.Equal(new User[2], result2.Value);
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
@@ -74,10 +75,11 @@ namespace Raven.Tests.MultiGet
 					session.Store(new User());
 					session.SaveChanges();
 				}
+
 				using (var session = store.OpenSession())
 				{
-					var result1 = session.Advanced.Lazily.Load<User>("users/1", "users/2");
-					var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
+					var result1 = session.Advanced.Lazily.Load<User>(new[] { "users/1", "users/2" });
+					var result2 = session.Advanced.Lazily.Load<User>(new[] { "users/3", "users/4" });
 					var a = result2.Value;
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
 					var b = result1.Value;
@@ -88,7 +90,6 @@ namespace Raven.Tests.MultiGet
 						Assert.NotNull(session.Advanced.GetMetadataFor(user));
 					}
 				}
-
 			}
 		}
 

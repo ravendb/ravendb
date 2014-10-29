@@ -11,9 +11,7 @@ namespace Raven.Abstractions.Exceptions
 	/// <summary>
 	/// This exception is raised when a concurrency conflict is encountered
 	/// </summary>
-#if !SILVERLIGHT && !NETFX_CORE
 	[Serializable]
-#endif
 	public class ConcurrencyException : Exception
 	{
 		/// <summary>
@@ -40,7 +38,6 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConcurrencyException"/> class.
 		/// </summary>
@@ -54,7 +51,6 @@ namespace Raven.Abstractions.Exceptions
 			: base(info, context)
 		{
 		}
-#endif
 
 		/// <summary>
 		/// Gets or sets the expected E tag.

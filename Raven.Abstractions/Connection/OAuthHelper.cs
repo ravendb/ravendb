@@ -1,19 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-#if NETFX_CORE
-using Windows.Security.Cryptography.Core;
-using Windows.Security.Cryptography;
-using Windows.Storage.Streams;
-#else
-using System.Security.Cryptography;
-#endif
 using System.Text;
-using System.Threading;
 using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Connection
 {
+	using Raven.Abstractions.Util.Encryptors;
+
 	public static class OAuthHelper
 	{
 		public static class Keys
@@ -34,31 +28,19 @@ namespace Raven.Abstractions.Connection
 			public const string WWWAuthenticateHeaderKey = "Raven ";
 		}
 
-#if NETFX_CORE
 		[ThreadStatic]
-		private static KeyDerivationAlgorithmProvider sha1;
-#else
-		[ThreadStatic]
-		private static SHA1 sha1;
-#endif
-		
-
+		private static IHashEncryptor sha1;
 
 		/**** Cryptography *****/
 
 		public static string Hash(string data)
 		{
 			var bytes = Encoding.UTF8.GetBytes(data);
-#if NETFX_CORE
-			/*if (sha1 == null)
-				sha1 = KeyDerivationAlgorithmProvider.OpenAlgorithm(KeyDerivationAlgorithmNames.Pbkdf2Sha1);*/
-			throw new NotImplementedException("WinRT...");
-#else
+
 			if (sha1 == null)
-				sha1 = new SHA1Managed();
-			var hash = sha1.ComputeHash(bytes);
+				sha1 = Encryptor.Current.CreateHash();
+			var hash = sha1.Compute20(bytes);
 			return BytesToString(hash);
-#endif
 		}
 
 		public static string EncryptAsymmetric(byte[] exponent, byte[] modulus, string data)
@@ -66,18 +48,12 @@ namespace Raven.Abstractions.Connection
 			var bytes = Encoding.UTF8.GetBytes(data);
 			var results = new List<byte>();
 
-#if NETFX_CORE
-			throw new NotImplementedException("WinRT...");
-#else
-			using (var aesKeyGen = new AesManaged
-			{
-				KeySize = 256,
-			})
+			using (var aesKeyGen = Encryptor.Current.CreateSymmetrical(keySize: 256))
 			{
 				aesKeyGen.GenerateKey();
 				aesKeyGen.GenerateIV();
 
-				results.AddRange(AddEncryptedKeyAndIv(exponent, modulus, aesKeyGen));
+				results.AddRange(AddEncryptedKeyAndIv(exponent, modulus, aesKeyGen.Key, aesKeyGen.IV));
 
 				using (var encryptor = aesKeyGen.CreateEncryptor())
 				{
@@ -86,36 +62,15 @@ namespace Raven.Abstractions.Connection
 				}
 			}
 			return BytesToString(results.ToArray());
-#endif
 		}
 
-#if SILVERLIGHT
-		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, AesManaged aesKeyGen)
+		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, byte[] key, byte[] iv)
 		{
-			var rsa = new RSA.RSACrypto();
-			rsa.ImportParameters(new RSA.RSAParameters
+			using (var rsa = Encryptor.Current.CreateAsymmetrical(exponent, modulus))
 			{
-				E = exponent,
-				N = modulus
-			});
-			return rsa.Encrypt(aesKeyGen.Key.Concat(aesKeyGen.IV).ToArray());
-		}
-#elif NETFX_CORE
-		
-#else
-		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, AesManaged aesKeyGen)
-		{
-			using (var rsa = new RSACryptoServiceProvider())
-			{
-				rsa.ImportParameters(new RSAParameters
-				{
-					Exponent = exponent,
-					Modulus = modulus
-				});
-				return rsa.Encrypt(aesKeyGen.Key.Concat(aesKeyGen.IV).ToArray(), true);
+				return rsa.Encrypt(key.Concat(iv).ToArray(), true);
 			}
 		}
-#endif
 
 		/**** On the wire *****/
 

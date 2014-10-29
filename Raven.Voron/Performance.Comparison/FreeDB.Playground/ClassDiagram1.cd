@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="NameAndType">
+  <Class Name="XmcdParser.Disk">
+    <Position X="5.25" Y="0.75" Width="3.75" />
+    <Members>
+      <Method Name="Disk" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>AAAAAABABEAAAEAAAAIAAAAQAIAAAAAAAIAEAAAAAAA=</HashCode>
+      <FileName>Disk.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="XmcdParser.Parser" Collapsed="true">
+    <Position X="2.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAIgAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Parser.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FreeDB.Playground.Program" Collapsed="true">
+    <Position X="0.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAA=</HashCode>
+      <FileName>Program.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FreeDB.Playground.XmcdFileParser" Collapsed="true">
+    <Position X="2.25" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAACACQAEAgAAEAAAAAAAAAGAIAAAAAAAAIAA=</HashCode>
+      <FileName>XmcdFileParser.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FreeDB.Playground.FreeDbQueries">
+    <Position X="2.25" Y="3.75" Width="4" />
+    <Members>
+      <Field Name="_serializer" Hidden="true" />
+      <Field Name="_storageEnvironment" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAACEAAAAAAAAAAAAAAAAACAAEAAAAAAAABAA=</HashCode>
+      <FileName>FreeDbQueries.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

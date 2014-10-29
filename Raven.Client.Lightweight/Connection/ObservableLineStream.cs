@@ -3,14 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using Raven.Abstractions.Extensions;
+using Raven.Database.Util;
 using System;
 using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
-using Raven.Database.Util;
 
 namespace Raven.Client.Connection
 {
@@ -121,20 +121,6 @@ namespace Raven.Client.Connection
 								});
 		}
 
-
-#if SILVERLIGHT || NETFX_CORE
-		private Task<int> ReadAsync()
-		{
-			try
-			{
-				return stream.ReadAsync(buffer, posInBuffer, buffer.Length - posInBuffer);
-			}
-			catch (Exception e)
-			{
-				return new CompletedTask<int>(e);
-			}
-		}
-#else
 		private async Task<int> ReadAsync()
 		{
 		    return await Task.Factory.FromAsync<int>(
@@ -142,7 +128,6 @@ namespace Raven.Client.Connection
 		        stream.EndRead,
                 null).ConfigureAwait(false);
 		}
-#endif
 
 		public IDisposable Subscribe(IObserver<string> observer)
 		{

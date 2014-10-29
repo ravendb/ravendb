@@ -5,6 +5,10 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Util;
+
 using Xunit;
 using Xunit.Extensions;
 
@@ -45,7 +49,7 @@ namespace Raven.Tests.Spatial
 				using (var session = store.OpenSession())
 				{
 					RavenQueryStatistics stats;
-					var events = session.Advanced.LuceneQuery<Event>("SpatialIdx")
+                    var events = session.Advanced.DocumentQuery<Event>("SpatialIdx")
 						.Statistics(out stats)
 						.WhereLessThanOrEqual("Date", DateTimeOffset.Now.AddYears(1))
 						.WithinRadiusOf(6.0, 38.96939, -77.386398)
@@ -121,7 +125,7 @@ namespace Raven.Tests.Spatial
 				using (var session = store.OpenSession())
 				{
 					RavenQueryStatistics stats;
-					var events = session.Advanced.LuceneQuery<Event>("SpatialIdx")
+                    var events = session.Advanced.DocumentQuery<Event>("SpatialIdx")
 						.Statistics(out stats)
 						.WhereBetweenOrEqual("Capacity", 0, 2000)
 						.WithinRadiusOf(6.0, 38.96939, -77.386398)
@@ -140,7 +144,7 @@ namespace Raven.Tests.Spatial
 				using (var session = store.OpenSession())
 				{
 					RavenQueryStatistics stats;
-					var events = session.Advanced.LuceneQuery<Event>("SpatialIdx")
+                    var events = session.Advanced.DocumentQuery<Event>("SpatialIdx")
 						.Statistics(out stats)
 						.WhereBetweenOrEqual("Capacity", 0, 2000)
 						.WithinRadiusOf(6.0, 38.96939, -77.386398)
@@ -184,7 +188,7 @@ namespace Raven.Tests.Spatial
 
 				using (var session = store.OpenSession())
 				{
-					var events = session.Advanced.LuceneQuery<Event>("SpatialIdx")
+                    var events = session.Advanced.DocumentQuery<Event>("SpatialIdx")
 						.WithinRadiusOf(6.0, 38.96939, -77.386398)
 						.SortByDistance()
 						.AddOrder("Venue", false)
@@ -202,7 +206,7 @@ namespace Raven.Tests.Spatial
 
 				using (var session = store.OpenSession())
 				{
-					var events = session.Advanced.LuceneQuery<Event>("SpatialIdx")
+                    var events = session.Advanced.DocumentQuery<Event>("SpatialIdx")
 						.WithinRadiusOf(6.0, 38.96939, -77.386398)
 						.AddOrder("Venue", false)
 						.SortByDistance()

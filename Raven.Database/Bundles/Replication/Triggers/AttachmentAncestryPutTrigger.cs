@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.ComponentModel.Composition;
 using System.IO;
 using Raven.Abstractions.Data;
@@ -16,18 +17,9 @@ namespace Raven.Bundles.Replication.Triggers
 	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10000)]
 	[InheritedExport(typeof(AbstractAttachmentPutTrigger))]
+    [Obsolete("Use RavenFS instead.")]
 	public class AttachmentAncestryPutTrigger : AbstractAttachmentPutTrigger
 	{
-		internal ReplicationHiLo HiLo
-		{
-			get
-			{
-				return (ReplicationHiLo)Database.ExtensionsState.GetOrAdd(typeof(ReplicationHiLo).AssemblyQualifiedName, o => new ReplicationHiLo
-				{
-					Database = Database
-				});
-			}
-		}
 
 		public override void OnPut(string key, Stream data, RavenJObject metadata)
 		{
@@ -50,6 +42,14 @@ namespace Raven.Bundles.Replication.Triggers
 							{Constants.RavenReplicationSource, attachmentMetadata[Constants.RavenReplicationSource]}
 						});
 					}
+					else
+					{
+						history.Add(new RavenJObject
+						{
+							{Constants.RavenReplicationVersion, 0},
+							{Constants.RavenReplicationSource, RavenJToken.FromObject(Database.TransactionalStorage.Id)}
+						});
+					}
 
 					while (history.Length > Constants.ChangeHistoryLength)
 					{
@@ -57,14 +57,14 @@ namespace Raven.Bundles.Replication.Triggers
 					}
 				}
 
-				metadata[Constants.RavenReplicationVersion] = RavenJToken.FromObject(HiLo.NextId());
+				metadata[Constants.RavenReplicationVersion] = RavenJToken.FromObject(ReplicationHiLo.NextId(Database));
 				metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
 			}
 		}
 
 		private RavenJObject GetAttachmentMetadata(string key)
 		{
-			var attachment = Database.GetStatic(key);
+			var attachment = Database.Attachments.GetStatic(key);
 			if(attachment != null)
 				return attachment.Metadata;
 

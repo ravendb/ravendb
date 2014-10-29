@@ -21,14 +21,14 @@ namespace Raven.Database.Impl
 	{
 		private readonly DocumentDatabase database;
 		private readonly TransactionInformation transactionInformation;
-		private readonly CancellationToken token;
-		private readonly CancellationTokenSourceExtensions.CancellationTimeout timeout;
+		private readonly CancellationTokenSource tokenSource;
+		private readonly CancellationTimeout timeout;
 
-		public DatabaseBulkOperations(DocumentDatabase database, TransactionInformation transactionInformation, CancellationToken token, CancellationTokenSourceExtensions.CancellationTimeout timeout)
+		public DatabaseBulkOperations(DocumentDatabase database, TransactionInformation transactionInformation, CancellationTokenSource tokenSource, CancellationTimeout timeout)
 		{
 			this.database = database;
 			this.transactionInformation = transactionInformation;
-			this.token = token;
+			this.tokenSource = tokenSource;
 			this.timeout = timeout;
 		}
 
@@ -36,7 +36,7 @@ namespace Raven.Database.Impl
 		{
 			return PerformBulkOperation(indexName, queryToDelete, allowStale, (docId, tx) =>
 			{
-				database.Delete(docId, null, tx);
+				database.Documents.Delete(docId, null, tx);
 				return new { Document = docId, Deleted = true };
 			});
 		}
@@ -45,7 +45,7 @@ namespace Raven.Database.Impl
 		{
 			return PerformBulkOperation(indexName, queryToUpdate, allowStale, (docId, tx) =>
 			{
-				var patchResult = database.ApplyPatch(docId, null, patchRequests, tx);
+				var patchResult = database.Patches.ApplyPatch(docId, null, patchRequests, tx);
 				return new { Document = docId, Result = patchResult };
 			});
 		}
@@ -54,7 +54,7 @@ namespace Raven.Database.Impl
 		{
 			return PerformBulkOperation(indexName, queryToUpdate, allowStale, (docId, tx) =>
 			{
-				var patchResult = database.ApplyPatch(docId, null, patch, tx);
+				var patchResult = database.Patches.ApplyPatch(docId, null, patch, tx);
 				return new { Document = docId, Result = patchResult.Item1, Debug = patchResult.Item2 };
 			});
 		}
@@ -67,22 +67,26 @@ namespace Raven.Database.Impl
 				Query = indexQuery.Query,
 				Start = indexQuery.Start,
 				Cutoff = indexQuery.Cutoff,
+                WaitForNonStaleResultsAsOfNow = indexQuery.WaitForNonStaleResultsAsOfNow,
 				PageSize = int.MaxValue,
 				FieldsToFetch = new[] { Constants.DocumentIdFieldName },
 				SortedFields = indexQuery.SortedFields,
 				HighlighterPreTags = indexQuery.HighlighterPreTags,
 				HighlighterPostTags = indexQuery.HighlighterPostTags,
-				HighlightedFields = indexQuery.HighlightedFields
+				HighlightedFields = indexQuery.HighlightedFields,
+				SortHints = indexQuery.SortHints
 			};
 
 			bool stale;
-			var queryResults = database.QueryDocumentIds(index, bulkIndexQuery, token, out stale);
+            var queryResults = database.Queries.QueryDocumentIds(index, bulkIndexQuery, tokenSource, out stale);
 
 			if (stale && allowStale == false)
 			{
 				throw new InvalidOperationException(
 						"Bulk operation cancelled because the index is stale and allowStale is false");
 			}
+
+		    var token = tokenSource.Token;
 
 			const int batchSize = 1024;
 			using (var enumerator = queryResults.GetEnumerator())
@@ -92,15 +96,19 @@ namespace Raven.Database.Impl
 					if (timeout != null)
 						timeout.Delay();
 					var batchCount = 0;
-					database.TransactionalStorage.Batch(actions =>
+                    token.ThrowIfCancellationRequested();
+					using (database.DocumentLock.Lock())
 					{
-						while (batchCount < batchSize && enumerator.MoveNext())
+						database.TransactionalStorage.Batch(actions =>
 						{
-							batchCount++;
-							var result = batchOperation(enumerator.Current, transactionInformation);
-							array.Add(RavenJObject.FromObject(result));
-						}
-					});
+							while (batchCount < batchSize && enumerator.MoveNext())
+							{
+								batchCount++;
+								var result = batchOperation(enumerator.Current, transactionInformation);
+								array.Add(RavenJObject.FromObject(result));
+							}
+						});
+					}
 					if (batchCount < batchSize) break;
 				}
 			}

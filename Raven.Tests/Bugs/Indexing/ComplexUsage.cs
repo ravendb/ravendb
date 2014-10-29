@@ -1,8 +1,11 @@
 using System.Linq;
+using FizzWare.NBuilder.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
@@ -49,11 +52,12 @@ namespace Raven.Tests.Bugs.Indexing
 
 				new Accounts_Search().Execute(store);
 				WaitForIndexing(store);
+				
 				using (var session = store.OpenSession())
 				{
 					var objects = session.Query<object, Accounts_Search>()
 						.Customize(x => x.WaitForNonStaleResults())
-						.AsProjection<AccountIndex>()
+						.ProjectFromIndexFieldsInto<AccountIndex>()
 						.OrderBy(x => x.AccountId) //this is just to make sure the second result is last for the test
 						.ToArray();
 
@@ -132,6 +136,12 @@ namespace Raven.Tests.Bugs.Indexing
 				index.Indexes["AccountName"] = FieldIndexing.Analyzed;
 				index.Indexes["DesignName"] = FieldIndexing.Analyzed;
 				index.Indexes["UserName"] = FieldIndexing.Analyzed;
+
+				index.Stores.Add("AccountId", FieldStorage.Yes);
+				index.Stores.Add("AccountName", FieldStorage.Yes);
+				index.Stores.Add("DesignName", FieldStorage.Yes);
+				index.Stores.Add("UserName", FieldStorage.Yes);
+
 				return index;
 			}
 		}

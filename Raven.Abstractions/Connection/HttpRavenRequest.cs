@@ -1,4 +1,3 @@
-#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -17,7 +16,7 @@ namespace Raven.Abstractions.Connection
 	{
 		private readonly string url;
 		private readonly string method;
-		private readonly Action<RavenConnectionStringOptions, WebRequest> configureRequest;
+		private readonly Action<RavenConnectionStringOptions, HttpWebRequest> configureRequest;
 		private readonly Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse;
 		private readonly RavenConnectionStringOptions connectionStringOptions;
 
@@ -37,7 +36,7 @@ namespace Raven.Abstractions.Connection
 			set { webRequest = value; }
 		}
 
-		public HttpRavenRequest(string url, string method, Action<RavenConnectionStringOptions, WebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions)
+		public HttpRavenRequest(string url, string method, Action<RavenConnectionStringOptions, HttpWebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions)
 		{
 			this.url = url;
 			this.method = method;
@@ -279,4 +278,3 @@ namespace Raven.Abstractions.Connection
 
 	}
 }
-#endif

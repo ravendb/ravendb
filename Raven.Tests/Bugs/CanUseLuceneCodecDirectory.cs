@@ -1,11 +1,9 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Lucene.Net.Store;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
@@ -49,6 +47,5 @@ namespace Raven.Tests.Bugs
 			}
 
 		}
-		
 	}
 }

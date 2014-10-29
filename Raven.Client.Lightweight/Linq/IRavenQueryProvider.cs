@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -59,18 +60,41 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Convert the Linq query to a Lucene query
 		/// </summary>
+		[Obsolete("Use ToAsyncDocumentQuery instead.")]
 		IAsyncDocumentQuery<T> ToAsyncLuceneQuery<T>(Expression expression);
+
+        /// <summary>
+        /// Convert the Linq query to a Lucene query
+        /// </summary>
+        IAsyncDocumentQuery<T> ToAsyncDocumentQuery<T>(Expression expression);
+
+	    /// <summary>
+	    /// Convert the linq query to a Lucene query
+	    /// </summary>
+        [Obsolete("Use ToDocumentQuery instead.")]
+	    IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression);
 
         /// <summary>
         /// Convert the linq query to a Lucene query
         /// </summary>
-	    IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression);
+	    IDocumentQuery<TResult> ToDocumentQuery<TResult>(Expression expression);
 
 		/// <summary>
-		/// Convert the Linq query to a lazy Lucene query and provide a function to execute when it is being evaluate
+		/// Convert the Linq query to a lazy Lucene query and provide a function to execute when it is being evaluated
 		/// </summary>
 		Lazy<IEnumerable<T>> Lazily<T>(Expression expression, Action<IEnumerable<T>> onEval);
+        
+        Lazy<Task<IEnumerable<T>>> LazilyAsync<T>(Expression expression, Action<IEnumerable<T>> onEval);
 
+		/// <summary>
+		/// Convert the Linq query to a lazy-count Lucene query and provide a function to execute when it is being evaluated
+		/// </summary>
+		Lazy<int> CountLazily<T>(Expression expression);
+
+		/// <summary>
+		/// Convert the Linq query to a lazy-count Lucene query and provide a function to execute when it is being evaluated
+		/// </summary>
+		Lazy<Task<int>> CountLazilyAsync<T>(Expression expression);
 
 		/// <summary>
 		/// Move the registered after query actions
@@ -86,18 +110,26 @@ namespace Raven.Client.Linq
         /// The result transformer to use
         /// </summary>
 	    string ResultTransformer { get; }
-        
 
         /// <summary>
         /// Gets the query inputs being supplied to
         /// </summary>
-        Dictionary<string, RavenJToken> QueryInputs { get; } 
-	    
+        Dictionary<string, RavenJToken> TransformerParameters { get; }
+
+		/// <summary>
+		/// Adds input to transformer via a key/value pair
+		/// </summary>
+		/// <param name="input"></param>
+		/// <param name="value"></param>
+		[Obsolete("Use AddTransformerParameter instead.")]
+		void AddQueryInput(string input, RavenJToken value);
+
         /// <summary>
-        /// Adds input to this query via a key/value pair
+        /// Adds input to transformer via a key/value pair
         /// </summary>
         /// <param name="input"></param>
-        /// <param name="foo"></param>
-        void AddQueryInput(string input, RavenJToken foo);
+        /// <param name="value"></param>
+        void AddTransformerParameter(string input, RavenJToken value);
+
 	}
 }

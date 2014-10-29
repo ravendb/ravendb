@@ -2,6 +2,8 @@
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -78,8 +80,19 @@ namespace Raven.Tests.Bugs
 							.Customize(customization => customization.WaitForNonStaleResults())
 							.ToList();
 					});
-					Assert.Equal("The query results type is 'Spell' but you expected to get results of type 'Result'. If you want to return a projection, you should use .AsProjection<Result>() before calling to .ToList().", exception.Message);
+                    Assert.Equal("The query results type is 'Spell' but you expected to get results of type 'Result'. If you want to return a projection, you should use .ProjectFromIndexFieldsInto<Result>() (for Query) or .SelectFields<Result>() (for DocumentQuery) before calling to .ToList().", exception.Message);
 				}
+
+                using (var session = store.OpenSession())
+                {
+                    var exception = Assert.Throws<InvalidOperationException>(() =>
+                    {
+                        var results = session.Advanced.DocumentQuery<SpellByName.Result, SpellByName>()
+                            .WaitForNonStaleResults()
+                            .ToList();
+                    });
+                    Assert.Equal("The query results type is 'Spell' but you expected to get results of type 'Result'. If you want to return a projection, you should use .ProjectFromIndexFieldsInto<Result>() (for Query) or .SelectFields<Result>() (for DocumentQuery) before calling to .ToList().", exception.Message);
+                }
 			}
 		}
 
@@ -111,7 +124,7 @@ namespace Raven.Tests.Bugs
 				{
 					var results = session.Query<SpellByName.Result, SpellByName>()
 						.Customize(customization => customization.WaitForNonStaleResults())
-						.AsProjection<SpellViewModel>()
+						.ProjectFromIndexFieldsInto<SpellViewModel>()
 						.ToList();
 
 					Assert.Equal(results[0].Cost, 100);

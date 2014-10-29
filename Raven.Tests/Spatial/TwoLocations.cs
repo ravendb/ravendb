@@ -7,6 +7,8 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Spatial
@@ -64,7 +66,7 @@ namespace Raven.Tests.Spatial
 						.Customize(x => x.WithinRadiusOf(1, 32.0590291, 34.7707401))
 						.ToList();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.NotEmpty(list);
 				}
@@ -76,7 +78,7 @@ namespace Raven.Tests.Spatial
 						.Customize(x => x.WithinRadiusOf(1, 32.1104641, 34.8417456))
 						.ToList();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.NotEmpty(list);
 				}
@@ -98,7 +100,7 @@ namespace Raven.Tests.Spatial
 						.Customize(x => x.WithinRadiusOf("someField", 1, 32.0590291, 34.7707401))
 						.ToList();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.NotEmpty(list);
 				}
@@ -110,7 +112,7 @@ namespace Raven.Tests.Spatial
 						.Customize(x => x.WithinRadiusOf("someField", 1, 32.1104641, 34.8417456))
 						.ToList();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.NotEmpty(list);
 				}
@@ -192,7 +194,7 @@ namespace Raven.Tests.Spatial
 						.Customize(x => x.RelatesToShape("someField", "Circle(34.770740 32.059029 d=1.000000)", SpatialRelation.Within))
 						.ToList();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.NotEmpty(list);
 				}
@@ -204,7 +206,7 @@ namespace Raven.Tests.Spatial
 						.Customize(x => x.RelatesToShape("someField", "Circle(34.770740 32.059029 d=1.000000)", SpatialRelation.Within))
 						.ToList();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.NotEmpty(list);
 				}

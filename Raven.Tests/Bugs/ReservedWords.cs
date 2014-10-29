@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
 using Raven.Tests.Spatial;
 using Xunit;
 
@@ -24,7 +25,7 @@ namespace Raven.Tests.Bugs
 		{
 			var indexDefinition = new Events_ByDate_Count
 			{
-				Conventions = new DocumentConvention()
+				Conventions = new DocumentConvention { PrettifyGeneratedLinqExpressions = false}
 			}.CreateIndexDefinition();
 
 			Assert.Equal(@"docs.Events.Select(@event => new {

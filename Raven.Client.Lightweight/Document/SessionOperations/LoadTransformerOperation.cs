@@ -1,9 +1,9 @@
-﻿#if !SILVERLIGHT
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.SessionOperations
@@ -23,6 +23,11 @@ namespace Raven.Client.Document.SessionOperations
 
 		public T[] Complete<T>(MultiLoadResult multiLoadResult)
 		{
+            foreach (var include in SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Includes))
+		    {
+		        documentSession.TrackIncludedDocument(include);
+		    }
+
 			if (typeof (T).IsArray)
 			{
 			    var arrayOfArrays = multiLoadResult.Results
@@ -94,4 +99,3 @@ namespace Raven.Client.Document.SessionOperations
 	    }
 	}
 }
-#endif

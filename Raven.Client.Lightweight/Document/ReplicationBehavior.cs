@@ -4,8 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -14,7 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
-using Raven.Client.Util;
+using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Document
 {
@@ -40,21 +38,17 @@ namespace Raven.Client.Document
 		public async Task<int> WaitAsync(Etag etag = null, TimeSpan? timeout = null, string database = null, int replicas = 2)
 		{
 			etag = etag ?? documentStore.LastEtagHolder.GetLastWrittenEtag();
-			if (etag == Etag.Empty)
+			if (etag == Etag.Empty || etag == null)
 				return replicas; // if the etag is empty, nothing to do
 
-			var asyncDatabaseCommands = documentStore.AsyncDatabaseCommands;
+			var asyncDatabaseCommands = (AsyncServerClient)documentStore.AsyncDatabaseCommands;
 			if (database != null)
-				asyncDatabaseCommands = asyncDatabaseCommands.ForDatabase(database);
+				asyncDatabaseCommands = (AsyncServerClient)asyncDatabaseCommands.ForDatabase(database);
 
 			asyncDatabaseCommands.ForceReadFromMaster();
 
-			var doc = await asyncDatabaseCommands.GetAsync("Raven/Replication/Destinations");
-			if (doc == null)
-				return -1;
-
-			var replicationDocument = doc.DataAsJson.JsonDeserialization<ReplicationDocument>();
-			if (replicationDocument == null)
+            var replicationDocument = await asyncDatabaseCommands.ExecuteWithReplication("GET", operationMetadata => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata));
+            if (replicationDocument == null)
 				return -1;
 
 			var destinationsToCheck = replicationDocument.Destinations
@@ -71,18 +65,13 @@ namespace Raven.Client.Document
 		    var cts = new CancellationTokenSource();
             cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(30));
 
-		    var sp = Stopwatch.StartNew();
+            var sp = Stopwatch.StartNew();
 
 			var tasks = destinationsToCheck.Select(url => WaitForReplicationFromServerAsync(url, database, etag, cts.Token)).ToArray();
 
-		
 		    try
 		    {
-#if NET45
                 await Task.WhenAll(tasks);
-#else
-		        await TaskEx.WhenAll(tasks);
-#endif
 		        return tasks.Length;
 		    }
 		    catch (Exception e)
@@ -122,11 +111,8 @@ namespace Raven.Client.Document
 
 		        if (replicated)
 		            return;
-#if NET45
-			    await Task.Delay(100, cancellationToken);
-#else
-		        await TaskEx.Delay(100, cancellationToken);
-#endif
+
+                await Task.Delay(100, cancellationToken);
 		    }
 		}
 

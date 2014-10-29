@@ -1,4 +1,9 @@
-﻿#if !NETFX_CORE
+﻿using System.Diagnostics;
+using System.Net;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Json;
+using Raven.Client.Connection.Async;
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -6,82 +11,80 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-#if NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#else
+
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
-using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
-#endif
+
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
-#if !SILVERLIGHT
 using System.IO.Compression;
-#else
-using Raven.Client.Connection.Async;
-using Raven.Client.Silverlight.Connection;
-using Ionic.Zlib;
-#endif
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Document
 {
+
     public interface ILowLevelBulkInsertOperation : IDisposable
     {
         Guid OperationId { get; }
 
-        void Write(string id, RavenJObject metadata, RavenJObject data);
+        bool IsAborted { get; }
 
-        Task DisposeAsync();
+        void Write(string id, RavenJObject metadata, RavenJObject data, int? dataSize = null);
+
+        Task<int> DisposeAsync();
 
         /// <summary>
         ///     Report on the progress of the operation
         /// </summary>
         event Action<string> Report;
+        void Abort();
     }
 
     public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification>
     {
-        private CancellationTokenSource cancellationTokenSource;
-
-#if !SILVERLIGHT
-        private readonly ServerClient operationClient;
-#else
-		private readonly AsyncServerClient operationClient;
-#endif
-        private readonly IDatabaseChanges operationChanges;
+        private readonly BulkInsertOptions options;
+	    private readonly Task<int> previousTask;
+	    private CancellationTokenSource cancellationTokenSource;
+        private readonly AsyncServerClient operationClient;
         private readonly MemoryStream bufferedStream = new MemoryStream();
         private readonly BlockingCollection<RavenJObject> queue;
-
+        private static readonly RavenJObject AbortMarker = new RavenJObject();
+        private static readonly RavenJObject SkipMarker = new RavenJObject();
         private HttpJsonRequest operationRequest;
         private readonly Task operationTask;
-        private int total;
+	    private bool aborted;
+	    private bool waitedForPreviousTask;
+	    private readonly Stopwatch _timing = Stopwatch.StartNew();
+        private const int BigDocumentSize = 64 * 1024;
 
-#if !SILVERLIGHT
-        public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes)
-#else
-		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
-#endif
+        public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes, 
+			Task<int> previousTask = null)
         {
-            using (NoSynchronizationContext.Scope())
+            this.options = options;
+	        this.previousTask = previousTask;
+	        using (NoSynchronizationContext.Scope())
             {
                 OperationId = Guid.NewGuid();
                 operationClient = client;
-                operationChanges = changes;
-                queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize*3)/2));
+                queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize * 3) / 2));
 
                 operationTask = StartBulkInsertAsync(options);
+
 #if !MONO
                 SubscribeToBulkInsertNotifications(changes);
 #endif
             }
         }
 
-#if !MONO
+	    public int Total { get;set; }
+	    public int localCount;
+	    public long size;
 
+#if !MONO
         private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
         {
             subscription = changes
@@ -92,39 +95,50 @@ namespace Raven.Client.Document
 
         private async Task StartBulkInsertAsync(BulkInsertOptions options)
         {
-#if !SILVERLIGHT
-            var expect100Continue = operationClient.Expect100Continue();
-#endif
-            var operationUrl = CreateOperationUrl(options);
-            var token = await GetToken();
-            try
+            using (ConnectionOptions.Expect100Continue(operationClient.Url))
             {
-                token = await ValidateThatWeCanUseAuthenticateTokens(token);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException(
-                    "Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
-                    e);
-            }
+                var operationUrl = CreateOperationUrl(options);
+                var token = await GetToken().ConfigureAwait(false);
+                try
+                {
+                    token = await ValidateThatWeCanUseAuthenticateTokens(token).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
+                }
 
-            operationRequest = CreateOperationRequest(operationUrl, token);
+                operationRequest = CreateOperationRequest(operationUrl, token);
 
-            var stream = await operationRequest.GetRawRequestStream();
+                var cancellationToken = CreateCancellationToken();
+                var response = await operationRequest.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
+                {
+                    try
+                    {
+                        WriteQueueToServer(stream, options, cancellationToken);
+                        var x = source.TrySetResult(null);
+                    }
+                    catch (Exception e)
+                    {
+                        source.TrySetException(e);
+                    }
+                }, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
-#if !SILVERLIGHT
-            try
-            {
-                if (expect100Continue != null)
-                    expect100Continue.Dispose();
+                await response.AssertNotFailingResponse();
+
+                long operationId;
+
+                using (response)
+                using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                using (var streamReader = new StreamReader(stream))
+                {
+                    var result = RavenJObject.Load(new JsonTextReader(streamReader));
+                    operationId = result.Value<long>("OperationId");
+                }
+
+                if (await IsOperationCompleted(operationId).ConfigureAwait(false))
+                    responseOperationId = operationId;
             }
-            catch
-            {
-
-            }
-#endif
-            var cancellationToken = CreateCancellationToken();
-            await Task.Factory.StartNew(() => WriteQueueToServer(stream, options, cancellationToken), TaskCreationOptions.LongRunning);
         }
 
         private CancellationToken CreateCancellationToken()
@@ -136,36 +150,25 @@ namespace Raven.Client.Document
         private async Task<string> GetToken()
         {
             // this will force the HTTP layer to authenticate, meaning that our next request won't have to
-            var jsonToken = await GetAuthToken();
+            var jsonToken = await GetAuthToken().ConfigureAwait(false);
 
             return jsonToken.Value<string>("Token");
         }
 
         private Task<RavenJToken> GetAuthToken()
         {
-#if !SILVERLIGHT
-			var request = operationClient.CreateRequest("GET", "/singleAuthToken",
+
+            var request = operationClient.CreateRequest("/singleAuthToken", "GET",
                                                         disableRequestCompression: true);
 
-            return new CompletedTask<RavenJToken>(request.ReadResponseJson());
-#else
-			var request = operationClient.CreateRequest("/singleAuthToken", "GET",
-														disableRequestCompression: true);
-			request.webRequest.ContentLength = 0;
-
-			return request.ReadResponseJsonAsync();
-#endif
-		}
+            return request.ReadResponseJsonAsync();
+        }
 
         private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
         {
-#if !SILVERLIGHT
-			var request = operationClient.CreateRequest("GET", "/singleAuthToken", disableRequestCompression: true);
-#else
-			var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
-#endif
-			request.DisableAuthentication();
-            request.webRequest.ContentLength = 0;
+            var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+
+            request.DisableAuthentication();
             request.AddOperationHeader("Single-Use-Auth-Token", token);
             var result = await request.ReadResponseJsonAsync();
             return result.Value<string>("Token");
@@ -173,11 +176,8 @@ namespace Raven.Client.Document
 
         private HttpJsonRequest CreateOperationRequest(string operationUrl, string token)
         {
-#if !SILVERLIGHT
-            var request = operationClient.CreateRequest("POST", operationUrl, disableRequestCompression: true);
-#else
-			var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
-#endif
+            var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
+
             request.DisableAuthentication();
             // the request may take a long time to process, so we need to set a large timeout value
             request.PrepareForLongRequest();
@@ -189,10 +189,12 @@ namespace Raven.Client.Document
         private string CreateOperationUrl(BulkInsertOptions options)
         {
             string requestUrl = "/bulkInsert?";
-            if (options.CheckForUpdates)
-                requestUrl += "checkForUpdates=true";
+            if (options.OverwriteExisting)
+                requestUrl += "overwriteExisting=true";
             if (options.CheckReferencesInIndexes)
                 requestUrl += "&checkReferencesInIndexes=true";
+			if(options.SkipOverwriteIfUnchanged)
+				requestUrl += "&skipOverwriteIfUnchanged=true";
 
             requestUrl += "&operationId=" + OperationId;
 
@@ -207,13 +209,21 @@ namespace Raven.Client.Document
 
                 var batch = new List<RavenJObject>();
                 RavenJObject document;
-                while (queue.TryTake(out document, 200))
+                while (queue.TryTake(out document, millisecondsTimeout: 200))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
                     if (document == null) // marker
                     {
                         FlushBatch(stream, batch);
+                        return;
+                    }
+                    if (ReferenceEquals(SkipMarker, document)) // ignore this, just filling the queue
+                    {
+                        continue;
+                    }
+                    if (ReferenceEquals(AbortMarker, document)) // abort immediately
+                    {
                         return;
                     }
 
@@ -231,85 +241,132 @@ namespace Raven.Client.Document
 
         public Guid OperationId { get; private set; }
 
-        public void Write(string id, RavenJObject metadata, RavenJObject data)
+        public virtual void Write(string id, RavenJObject metadata, RavenJObject data, int? dataSize = null)
         {
             if (id == null) throw new ArgumentNullException("id");
             if (metadata == null) throw new ArgumentNullException("metadata");
             if (data == null) throw new ArgumentNullException("data");
+            if (aborted) throw new InvalidOperationException("Operation has been aborted");
 
-            if (operationTask.IsCanceled || operationTask.IsFaulted)
-                operationTask.Wait(); // error early if we have  any error
 
             metadata["@id"] = id;
             data[Constants.Metadata] = metadata;
 
-            queue.Add(data);
+            for (int i = 0; i < 2; i++)
+            {
+                if (operationTask.IsCanceled || operationTask.IsFaulted)
+                    operationTask.Wait(); // error early if we have  any error
+
+                if (queue.TryAdd(data, options.WriteTimeoutMilliseconds / 2))
+                {
+                    if (dataSize != null && dataSize >= BigDocumentSize)
+                    {
+                        //essentially for a BatchSize == 1024 and stream of 1MB documents - the actual batch size will be 128
+                        // --> BatchSize = 1024 / (dataSize = 1024/BigDocumentSize = 250) * 2 == 128
+                        for (int skipDocIndex = 0; skipDocIndex < (dataSize / BigDocumentSize) * 2; skipDocIndex++)
+                        {
+                            if (!queue.TryAdd(SkipMarker)) //if queue is full just stop adding dummy docs
+                                break;
+                        }
+                    }
+                    return;
+                }
+            }
+
+            if (operationTask.IsCanceled || operationTask.IsFaulted)
+                operationTask.Wait(); // error early if we have  any error
+
+            throw new TimeoutException("Could not flush in the specified timeout, server probably not responding or responding too slowly.\r\nAre you writing very big documents?");
         }
 
         private async Task<bool> IsOperationCompleted(long operationId)
         {
-            var status = await GetOperationStatus(operationId);
+            ErrorResponseException errorResponse;
 
-            if (status == null)
-                return true;
+            try
+            {
+                var status = await GetOperationStatus(operationId);
 
-            if (status.Value<bool>("Completed"))
-                return true;
+                if (status == null) return true;
 
-            return false;
+                if (status.Value<bool>("Completed"))
+                    return true;
+
+                return false;
+            }
+            catch (ErrorResponseException e)
+            {
+                if (e.StatusCode != HttpStatusCode.Conflict)
+                    throw;
+
+                errorResponse = e;
+            }
+
+            var conflictsDocument = RavenJObject.Load(new RavenJsonTextReader(new StringReader(errorResponse.ResponseString)));
+
+            throw new ConcurrencyException(conflictsDocument.Value<string>("Error"));
         }
 
         private Task<RavenJToken> GetOperationStatus(long operationId)
         {
-#if !SILVERLIGHT
-            return new CompletedTask<RavenJToken>(operationClient.GetOperationStatus(operationId));
-#else
-			return operationClient.GetOperationStatusAsync(operationId);
-#endif
+            return operationClient.GetOperationStatusAsync(operationId);
         }
 
         private volatile bool disposed;
         private IDisposable subscription;
 
-        public async Task DisposeAsync()
+        private long responseOperationId;
+
+        public async Task<int> DisposeAsync()
         {
-            if (disposed)
-                return;
+	        if (disposed)
+		        return -1;
             disposed = true;
             queue.Add(null);
             if (subscription != null)
             {
                 subscription.Dispose();
-               
+
             }
-           
+
             // The first await call in this method MUST call ConfigureAwait(false) in order to avoid DEADLOCK when this code is called by synchronize code, like Dispose().
-            await operationTask.ConfigureAwait(false);
-
-            operationTask.AssertNotFailed();
-
-            ReportInternal("Finished writing all results to server");
-
-            long operationId;
-
-            using (var response = await operationRequest.RawExecuteRequestAsync())
-            using (var stream = response.GetResponseStream())
-            using (var streamReader = new StreamReader(stream))
+            try
             {
-                var result = RavenJObject.Load(new JsonTextReader(streamReader));
-                operationId = result.Value<long>("OperationId");
-            }
+                await operationTask.ConfigureAwait(false);
+                operationTask.AssertNotFailed();
 
-            while (true)
+	            if (previousTask == null)
+		            ReportInternal("Finished writing all results to server");
+
+                while (true)
+                {
+                    if (await IsOperationCompleted(responseOperationId))
+                        break;
+
+	                await Task.Delay(100);
+                }
+				if (previousTask == null)
+	            {
+		            ReportInternal("Done writing to server");
+	            }
+	            else
+	            {
+					ReportInternal("Wrote {0:#,#} [{3:#,#;;0} kb] (total {2:#,#;;0}) documents to server gzipped to {1:#,#;;0} kb in {4:#,#.#;;0} sec.",
+					   localCount,
+					   bufferedStream.Position / 1024d,
+					   Total,
+					   size / 1024d,
+					   _timing.Elapsed.TotalSeconds);   
+	            }
+            }
+            catch (Exception e)
             {
-                if (await IsOperationCompleted(operationId))
-                    break;
-
-                Thread.Sleep(500);
+                ReportInternal("Failed to write all results to a server, probably something happened to the server. Exception : {0}", e);
+                if (e.Message.Contains("Raven.Abstractions.Exceptions.ConcurrencyException"))
+                    throw new ConcurrencyException("ConcurrencyException while writing bulk insert items in the server. Did you run bulk insert operation with OverwriteExisting == false?. Exception returned from server: " + e.Message, e);
+                throw;
             }
-
-            ReportInternal("Done writing to server");
-
+	        return Total;
         }
 
         public void Dispose()
@@ -326,34 +383,52 @@ namespace Raven.Client.Document
 
         private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)
         {
-            if (localBatch.Count == 0)
-                return;
-            bufferedStream.SetLength(0);
-            WriteToBuffer(localBatch);
+	        if (localBatch.Count == 0)
+		        return;
+	        if (aborted) throw new InvalidOperationException("Operation was timed out or has been aborted");
 
-            var requestBinaryWriter = new BinaryWriter(requestStream);
-            requestBinaryWriter.Write((int)bufferedStream.Position);
-            bufferedStream.WriteTo(requestStream);
-            requestStream.Flush();
+			if (previousTask != null && waitedForPreviousTask == false)
+	        {
+		        Total += previousTask.Result;
+		        waitedForPreviousTask = true;
+	        }
 
-            total += localBatch.Count;
-            Action<string> report = Report;
-            if (report != null)
-            {
-                report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb",
-                                     localBatch.Count,
-                                     bufferedStream.Position / 1024,
-                                     total));
-            }
+	        bufferedStream.SetLength(0);
+	        long bytesWrittenToServer;
+	        WriteToBuffer(localBatch, out bytesWrittenToServer);
+
+	        var requestBinaryWriter = new BinaryWriter(requestStream);
+	        requestBinaryWriter.Write((int) bufferedStream.Position);
+	        var sp = Stopwatch.StartNew();
+	        bufferedStream.WriteTo(requestStream);
+	        requestStream.Flush();
+
+	        Total += localBatch.Count;
+	        localCount += localBatch.Count;
+	        size += bytesWrittenToServer;
+			if (previousTask == null)
+	        {
+		        ReportInternal("Wrote {0:#,#} [{3:#,#;;0} kb] (total {2:#,#;;0}) documents to server gzipped to {1:#,#;;0} kb in {4:#,#.#;;0} sec.",
+			        localBatch.Count,
+			        bufferedStream.Position/1024d,
+			        Total,
+			        bytesWrittenToServer/1024d,
+			        sp.Elapsed.TotalSeconds);
+	        }
         }
 
-        private void WriteToBuffer(ICollection<RavenJObject> localBatch)
+	    private void WriteToBuffer(ICollection<RavenJObject> localBatch, out long bytesWritten)
         {
-            using (var gzip = new GZipStream(bufferedStream, CompressionMode.Compress, leaveOpen: true))
+			using (var gzip = new GZipStream(bufferedStream, CompressionMode.Compress, leaveOpen: true))
+			using (var stream = new CountingStream(gzip))
             {
-                var binaryWriter = new BinaryWriter(gzip);
+                var binaryWriter = new BinaryWriter(stream);
                 binaryWriter.Write(localBatch.Count);
-                var bsonWriter = new BsonWriter(binaryWriter);
+                var bsonWriter = new BsonWriter(binaryWriter)
+                                 {
+                                     DateTimeKindHandling = DateTimeKind.Unspecified
+                                 };
+
                 foreach (var doc in localBatch)
                 {
                     doc.WriteTo(bsonWriter);
@@ -361,7 +436,8 @@ namespace Raven.Client.Document
 
                 bsonWriter.Flush();
                 binaryWriter.Flush();
-                gzip.Flush();
+                stream.Flush();
+	            bytesWritten = stream.NumberOfWrittenBytes;
             }
         }
 
@@ -387,6 +463,17 @@ namespace Raven.Client.Document
         public void OnCompleted()
         {
         }
+
+        public void Abort()
+        {
+            aborted = true;
+            queue.Add(AbortMarker);
+        }
+
+
+        public bool IsAborted
+        {
+            get { return aborted; }
+        }
     }
 }
-#endif

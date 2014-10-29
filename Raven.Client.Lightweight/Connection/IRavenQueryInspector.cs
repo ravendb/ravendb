@@ -26,12 +26,10 @@ namespace Raven.Client.Connection
 		/// </summary>
 		string AsyncIndexQueried { get; }
 
-#if !SILVERLIGHT
 		/// <summary>
 		/// Grant access to the database commands
 		/// </summary>
 		IDatabaseCommands DatabaseCommands { get; }
-#endif
 
 		/// <summary>
 		/// Grant access to the async database commands
@@ -52,7 +50,6 @@ namespace Raven.Client.Connection
 		/// Get the index query for this query
 		/// </summary>
 		IndexQuery GetIndexQuery(bool isAsync);
-#if !SILVERLIGHT
 		/// <summary>
 		/// Get the facets as per the specified facet document with the given start and pageSize
 		/// </summary>
@@ -62,7 +59,6 @@ namespace Raven.Client.Connection
 		/// Get the facet results as per the specified facets with the given start and pageSize
 		/// </summary>
 		FacetResults GetFacets(List<Facet> facets, int start, int? pageSize);
-#endif
 		/// <summary>
 		/// Get the facets as per the specified facet document with the given start and pageSize
 		/// </summary>

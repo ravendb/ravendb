@@ -1,11 +1,13 @@
 ﻿using System;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanStoreAndGetDateTimeOffset : RemoteClientTest
+	public class CanStoreAndGetDateTimeOffset : RavenTest
 	{
 		[Fact]
 		public void WithEmbedded()

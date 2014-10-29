@@ -85,6 +85,7 @@ namespace Raven.Abstractions.Spatial
 			return obj is double
 			       || obj is float
 			       || obj is int
+                   || obj is decimal
 			       || obj is long
 			       || obj is short
 			       || rValue != null && (rValue.Type == JTokenType.Float || rValue.Type == JTokenType.Integer);
@@ -92,7 +93,7 @@ namespace Raven.Abstractions.Spatial
 
 		private double GetDouble(object obj)
 		{
-			if (obj is double || obj is float || obj is int || obj is long || obj is short)
+			if (obj is double || obj is float || obj is int || obj is long || obj is short || obj is decimal)
 				return Convert.ToDouble(obj);
 
 			var rValue = obj as RavenJValue;

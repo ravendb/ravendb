@@ -8,11 +8,15 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
+
+using Raven.Abstractions.Json;
+using Raven.Abstractions.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Serialization;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
+using System.Collections.Generic;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -28,18 +32,23 @@ namespace Raven.Abstractions.Extensions
 				return dynamicJsonObject.Inner;
 			if (result is string || result is ValueType)
 				return new RavenJObject { { "Value", new RavenJValue(result) } };
+			if (result is DynamicNullObject)
+				return null;
 			return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
 		}
+
+        public static RavenJArray ToJArray<T>(IEnumerable<T> result)
+        {
+            return (RavenJArray) RavenJArray.FromObject(result, CreateDefaultJsonSerializer());
+        }
 
 		/// <summary>
 		/// Convert a byte array to a RavenJObject
 		/// </summary>
-		public static RavenJObject ToJObject(this byte [] self)
+        public static RavenJObject ToJObject(this byte[] self)
 		{
-			return RavenJObject.Load(new BsonReader(new MemoryStream(self))
-			{
-				DateTimeKindHandling = DateTimeKind.Utc,
-			});
+            using (var stream = new MemoryStream(self))
+                return ToJObject(stream);
 		}
 
 		/// <summary>
@@ -47,8 +56,18 @@ namespace Raven.Abstractions.Extensions
 		/// </summary>
 		public static RavenJObject ToJObject(this Stream self)
 		{
-			return RavenJObject.Load(new BsonReader(self)
+            var streamWithCachedHeader = new StreamWithCachedHeader(self, 5);
+            if (IsJson(streamWithCachedHeader))
 			{
+                using (var streamReader = new StreamReader(streamWithCachedHeader, Encoding.UTF8, false, 1024, true))
+                using (var jsonReader = new RavenJsonTextReader(streamReader))
+                {
+                    return RavenJObject.Load(jsonReader);
+                }
+            }
+
+            return RavenJObject.Load(new BsonReader(streamWithCachedHeader)
+            {
 				DateTimeKindHandling = DateTimeKind.Utc,
 			});
 		}
@@ -58,17 +77,21 @@ namespace Raven.Abstractions.Extensions
 		/// </summary>
 		public static void WriteTo(this RavenJToken self, Stream stream)
 		{
-			self.WriteTo(new BsonWriter(stream)
+            using (var streamWriter = new StreamWriter(stream, Encoding.UTF8, 1024, true))
+            using (var jsonWriter = new JsonTextWriter(streamWriter))
 			{
-				DateTimeKindHandling = DateTimeKind.Unspecified
-			}, Default.Converters);
+                jsonWriter.Formatting = Formatting.None;
+                jsonWriter.DateFormatHandling = DateFormatHandling.IsoDateFormat;
+                jsonWriter.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
+                jsonWriter.DateFormatString = Default.DateTimeFormatsToWrite;
+                self.WriteTo(jsonWriter, Default.Converters);
 		}
-
+        }
 
 	    /// <summary>
 		/// Deserialize a <param name="self"/> to an instance of <typeparam name="T"/>
 		/// </summary>
-		public static T JsonDeserialization<T>(this byte [] self)
+        public static T JsonDeserialization<T>(this byte[] self)
 		{
 			return (T)CreateDefaultJsonSerializer().Deserialize(new BsonReader(new MemoryStream(self)), typeof(T));
 		}
@@ -82,6 +105,15 @@ namespace Raven.Abstractions.Extensions
 		}
 		
 		/// <summary>
+        /// Deserialize a <param name="self"/> to a list of instances of<typeparam name="T"/>
+        /// </summary>
+        public static T[] JsonDeserialization<T>(this RavenJArray self)
+        {
+            var serializer = CreateDefaultJsonSerializer();
+            return self.Select(x => (T) serializer.Deserialize(new RavenJTokenReader(x), typeof(T))).ToArray();
+        }
+
+        /// <summary>
 		/// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
 		/// </summary>
 		public static T JsonDeserialization<T>(this StreamReader self)
@@ -90,7 +122,7 @@ namespace Raven.Abstractions.Extensions
 		}
 		
 		/// <summary>
-		/// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
+        /// Deserialize a <param name="stream"/> to an instance of<typeparam name="T"/>
 		/// </summary>
 		public static T JsonDeserialization<T>(this Stream stream)
 		{
@@ -107,14 +139,13 @@ namespace Raven.Abstractions.Extensions
 
 		private static readonly IContractResolver contractResolver = new DefaultServerContractResolver(shareCache: true)
 		{
-#if !NETFX_CORE
 			DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
-#endif
 		};
 
 		private class DefaultServerContractResolver : DefaultContractResolver
 		{
-			public DefaultServerContractResolver(bool shareCache) : base(shareCache)
+            public DefaultServerContractResolver(bool shareCache)
+                : base(shareCache)
 			{
 			}
 
@@ -154,5 +185,139 @@ namespace Raven.Abstractions.Extensions
 			}
 			return jsonSerializer;
 		}
+
+	    private static bool IsJson(StreamWithCachedHeader stream)
+	    {
+            // in BSON first four bytes are int32 which represents content length
+            // as result we can't distigush between json and bson based on first 4 bytes
+            // in bson 5-th byte is value type
+	        var bsonType = stream.Header[4];
+	        return stream.ActualHeaderSize < 5 || bsonType > 0x12;
+	    }
 	}
+
+    internal class StreamWithCachedHeader : Stream
+    {
+        private readonly Stream inner;
+
+        public int ActualHeaderSize { get; private set; }
+
+        private int headerSizePosition;
+
+        public byte[] Header { get; private set; }
+
+        private bool passedHeader;
+
+        private int read;
+
+        public StreamWithCachedHeader(Stream stream, int headerSize)
+        {
+            inner = stream;
+            Header = new byte[headerSize];
+
+            CacheHeader(stream, Header, headerSize);
+        }
+
+        private void CacheHeader(Stream stream, byte[] buffer, int headerSize)
+        {
+            ActualHeaderSize = stream.Read(buffer, 0, headerSize);
+        }
+
+        public override void Flush()
+        {
+            inner.Flush();
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return inner.Seek(offset, origin);
+        }
+
+        public override void SetLength(long value)
+        {
+            inner.SetLength(value);
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (passedHeader)
+                return inner.Read(buffer, offset, count);
+
+            if (count <= ActualHeaderSize - headerSizePosition)
+            {
+                Buffer.BlockCopy(Header, headerSizePosition, buffer, 0, count);
+                headerSizePosition += count;
+                passedHeader = headerSizePosition >= ActualHeaderSize;
+                return count;
+            }
+            Buffer.BlockCopy(Header, headerSizePosition, buffer, 0, ActualHeaderSize - headerSizePosition);
+
+            var newCount = count - ActualHeaderSize + headerSizePosition;
+            var r = inner.Read(buffer, offset + ActualHeaderSize, newCount);
+
+            var currentRead = ActualHeaderSize - headerSizePosition + r;
+
+            read += currentRead;
+            headerSizePosition += currentRead;
+            passedHeader = read >= ActualHeaderSize;
+
+            return currentRead;
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            inner.Write(buffer, offset, count);
+        }
+
+        public override bool CanRead
+        {
+            get
+            {
+                return inner.CanRead;
+            }
+        }
+
+        public override bool CanSeek
+        {
+            get
+            {
+                return inner.CanSeek;
+            }
+        }
+
+        public override bool CanWrite
+        {
+            get
+            {
+                return inner.CanWrite;
+            }
+        }
+
+        public override long Length
+        {
+            get
+            {
+                return inner.Length;
+            }
+        }
+
+        public override long Position
+        {
+            get
+            {
+                return inner.Position;
+            }
+
+            set
+            {
+                inner.Position = value;
+            }
+        }
+
+        public override void Close()
+        {
+            if (inner != null)
+                inner.Close();
+        }
+    }
 }

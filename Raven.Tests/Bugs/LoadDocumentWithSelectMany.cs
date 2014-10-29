@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -72,7 +74,7 @@ namespace Raven.Tests.Bugs
 				var dic = new Dictionary<string, int>();
 				for (int i = 0; i < count; i++)
 				{
-					store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+					store.SystemDatabase.TransactionalStorage.Batch(accessor =>
 					{
 						dic["users/" + i] = accessor.Indexing.GetDocumentsReferencesFrom("users/" + i).Count();
 					});

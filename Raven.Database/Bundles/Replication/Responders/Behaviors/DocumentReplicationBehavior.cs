@@ -1,5 +1,8 @@
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
+using Raven.Bundles.Replication.Tasks;
+using Raven.Database.Impl;
+using Raven.Database.Storage;
 using Raven.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +20,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void DeleteItem(string id, Etag etag)
 		{
-			Database.Delete(id, etag, null);
+			Database.Documents.Delete(id, etag, null);
 		}
 
 		protected override void MarkAsDeleted(string id, RavenJObject metadata)
@@ -27,7 +30,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, RavenJObject incoming)
 		{
-			Database.Put(id, etag, incoming, metadata, null);
+			Database.Documents.Put(id, etag, incoming, metadata, null);
 			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
 		}
 
@@ -69,7 +72,7 @@ namespace Raven.Bundles.Replication.Responders
 			if (ravenJArray.Contains(newConflictId) == false)
 			{
 				ravenJArray.Add(newConflictId);
-				var addResult = Actions.Documents.AddDocument(id, existingItem.Etag, existingItem.DataAsJson, existingItem.Metadata);
+			var addResult = Actions.Documents.AddDocument(id, existingItem.Etag, existingItem.DataAsJson, existingItem.Metadata);
 				conflictEtag = addResult.Etag;
 			}
 
@@ -82,9 +85,11 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override RavenJObject TryGetExisting(string id, out JsonDocument existingItem, out Etag existingEtag, out bool deleted)
 		{
-			var existingDoc = Actions.Documents.DocumentByKey(id, null);
+			var existingDoc = Actions.Documents.DocumentByKey(id);
 			if(existingDoc != null)
 			{
+				ReplicationTask.EnsureReplicationInformationInMetadata(existingDoc.Metadata, Database);
+
 				existingItem = existingDoc;
 				existingEtag = existingDoc.Etag;
 				deleted = false;
@@ -94,6 +99,8 @@ namespace Raven.Bundles.Replication.Responders
 			var listItem = Actions.Lists.Read(Constants.RavenReplicationDocsTombstones, id);
 			if(listItem != null)
 			{
+				ReplicationTask.EnsureReplicationInformationInMetadata(listItem.Data, Database);
+
 				existingEtag = listItem.Etag;
 				deleted = true;
 				existingItem = new JsonDocument
@@ -112,10 +119,19 @@ namespace Raven.Bundles.Replication.Responders
 
 		}
 
-		protected override bool TryResolveConflict(string id, RavenJObject metadata, RavenJObject document, JsonDocument existing)
+		protected override bool TryResolveConflict(string id, RavenJObject metadata, RavenJObject document, JsonDocument existing, out RavenJObject metadataToSave,
+										out RavenJObject documentToSave)
 		{
-			return ReplicationConflictResolvers.Any(
-					replicationConflictResolver => replicationConflictResolver.TryResolve(id, metadata, document, existing, key => Actions.Documents.DocumentByKey(key, null)));
+			foreach (var replicationConflictResolver in ReplicationConflictResolvers)
+		{
+				if (replicationConflictResolver.TryResolve(id, metadata, document, existing, key => Actions.Documents.DocumentByKey(key),
+														   out metadataToSave, out documentToSave))
+					return true;
 		}
+
+			metadataToSave = null;
+			documentToSave = null;
+
+			return false;
 	}
-}
+}}
