@@ -105,7 +105,7 @@ namespace Raven.Tests.Issues
                 }
                 catch (InvalidOperationException e)
                 {
-                    Assert.Equal(e.Message, "Operation failed: Bulk operation cancelled because the index is stale and StaleTimout passed");
+                    Assert.Contains(e.Message, "Operation failed: Bulk operation cancelled because the index is stale");
                     exceptionThrown = true;
                 }
                 Assert.True(exceptionThrown);

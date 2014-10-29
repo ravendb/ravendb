@@ -37,7 +37,6 @@ namespace Raven.Database.Impl
 
         public RavenJArray DeleteByIndex(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null)
         {
-            var notNullOption = options ?? new BulkOperationOptions();
             return PerformBulkOperation(indexName, queryToDelete, options, (docId, tx) =>
 			{
 				database.Documents.Delete(docId, null, tx);
@@ -47,7 +46,6 @@ namespace Raven.Database.Impl
 
         public RavenJArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null)
 		{
-            var notNullOption = options ?? new BulkOperationOptions();
             return PerformBulkOperation(indexName, queryToUpdate, options, (docId, tx) =>
 			{
 				var patchResult = database.Patches.ApplyPatch(docId, null, patchRequests, tx);
@@ -66,7 +64,8 @@ namespace Raven.Database.Impl
 		}
 
         private RavenJArray PerformBulkOperation(string index, IndexQuery indexQuery, BulkOperationOptions options, Func<string, TransactionInformation, object> batchOperation)
-		{
+        {
+	        options = options ?? new BulkOperationOptions();
 			var array = new RavenJArray();
 			var bulkIndexQuery = new IndexQuery
 			{
@@ -100,11 +99,10 @@ namespace Raven.Database.Impl
 			    }
 			    if (stale)
 			    {
-                    if (options.StaleTimeout != null)
-                        throw new InvalidOperationException(
-                        "Bulk operation cancelled because the index is stale and StaleTimout passed");
-			        throw new InvalidOperationException(
-			            "Bulk operation cancelled because the index is stale and allowStale is false");
+				    if (options.StaleTimeout != null)
+					    throw new InvalidOperationException("Bulk operation cancelled because the index is stale and StaleTimout  of " + options.StaleTimeout + "passed");
+			        
+					throw new InvalidOperationException("Bulk operation cancelled because the index is stale and allowStale is false");
 			    }
 			}
 
