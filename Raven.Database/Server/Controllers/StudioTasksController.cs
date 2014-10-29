@@ -95,7 +95,7 @@ for(var customFunction in customFunctions) {{
 				Directory.CreateDirectory(fullTempPath);
 
 			var streamProvider = new MultipartFileStreamProvider(fullTempPath);
-			await Request.Content.ReadAsMultipartAsync(streamProvider);
+			await Request.Content.ReadAsMultipartAsync(streamProvider).ConfigureAwait(false);
 			var uploadedFilePath = streamProvider.FileData[0].LocalFileName;
 			
 			string fileName = null;
@@ -148,6 +148,19 @@ for(var customFunction in customFunctions) {{
                         status.State = RavenJObject.FromObject(new { Error = "Task was cancelled"  });
 						cts.Token.ThrowIfCancellationRequested(); //needed for displaying the task status as canceled and not faulted
 					}
+
+                    if (e is InvalidDataException)
+                    {
+                        status.ExceptionDetails = e.Message;
+                    }
+                    else if (e is Imports.Newtonsoft.Json.JsonReaderException)
+                    {
+                        status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted";
+                    }
+                    else
+                    {
+                        status.ExceptionDetails = e.ToString();
+                    }
 					throw;
 				}
 				finally

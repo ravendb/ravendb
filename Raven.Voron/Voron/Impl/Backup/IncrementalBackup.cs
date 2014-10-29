@@ -209,7 +209,7 @@ namespace Voron.Impl.Backup
                         try
                         {
                             TransactionHeader* lastTxHeader = null;
-                            var pagesToWrite = new Dictionary<long, Func<Page>>();
+                            var pagesToWrite = new Dictionary<long, Page>();
 
                             long journalNumber = -1;
                             foreach (var entry in package.Entries)
@@ -247,7 +247,18 @@ namespace Voron.Impl.Backup
                                         foreach (var translation in reader.TransactionPageTranslation)
                                         {
                                             var pageInJournal = translation.Value.JournalPos;
-                                            pagesToWrite[translation.Key] = () => recoveryPager.Read(pageInJournal);
+	                                        var page = recoveryPager.Read(pageInJournal);
+	                                        pagesToWrite[translation.Key] = page;
+
+											if (page.IsOverflow)
+											{
+												var numberOfOverflowPages = recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
+
+												for (int i = 1; i < numberOfOverflowPages; i++)
+												{
+													pagesToWrite.Remove(translation.Key + i);
+												}
+											}
                                         }
 
                                         break;
@@ -257,7 +268,7 @@ namespace Voron.Impl.Backup
                             }
 
                             var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-                                .Select(x => x.Value())
+                                .Select(x => x.Value)
                                 .ToList();
 
                             if (sortedPages.Count == 0)

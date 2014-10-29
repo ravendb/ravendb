@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -14,6 +15,8 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
+using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Smuggler
 {
@@ -239,11 +242,15 @@ namespace Raven.Smuggler
 			    }
 				else
 			    {
-				    if (exception is SmugglerException)
+				    if (exception is SmugglerException || exception is InvalidDataException)
 				    {
 						Console.WriteLine(exception.Message);
 				    }
-				    else
+                    else if (exception is JsonReaderException)
+                    {
+                        Console.WriteLine("Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted");
+                    }
+                    else
 				    {
 						Console.WriteLine(exception);
 				    }
