@@ -55,7 +55,6 @@ namespace Raven.Database.Impl
 
         public RavenJArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null)
 		{
-            var notNullOption = options ?? new BulkOperationOptions();
             return PerformBulkOperation(indexName, queryToUpdate, options, (docId, tx) =>
 			{
 				var patchResult = database.Patches.ApplyPatch(docId, null, patch, tx);
@@ -115,6 +114,7 @@ namespace Raven.Database.Impl
 			    var operations = 0;
 				while (true)
 				{
+					database.WorkContext.UpdateFoundWork();
 					if (timeout != null)
 						timeout.Delay();
 					var batchCount = 0;

@@ -533,7 +533,6 @@ namespace Raven.Database.Server.WebApi
             {
                 landlord.SystemDatabase.RunIdleOperations();
             }
-
             catch (Exception e)
             {
                 Logger.ErrorException("Error during idle operation run for system database", e);
