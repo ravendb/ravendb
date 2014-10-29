@@ -13,6 +13,7 @@ import changeSubscription = require("models/changeSubscription");
 import indexesShell = require("viewmodels/indexesShell");
 import recentQueriesStorage = require("common/recentQueriesStorage");
 import copyIndexDialog = require("viewmodels/copyIndexDialog");
+import indexesAndTransformersClipboardDialog = require("viewmodels/indexesAndTransformersClipboardDialog");
 
 class indexes extends viewModelBase {
 
@@ -182,6 +183,17 @@ class indexes extends viewModelBase {
         app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
     }
     
+    copyIndexesAndTransformers() {
+        app.showDialog(new indexesAndTransformersClipboardDialog(this.activeDatabase(), false));
+    }
+
+    pasteIndexesAndTransformers() {
+        var dialog = new indexesAndTransformersClipboardDialog(this.activeDatabase(), true);
+        app.showDialog(dialog);
+        dialog.pasteDeferred.done((summary: string) => {
+            this.confirmationMessage("Indexes And Transformers Paste Summary", summary, ['Ok']);
+        });
+    }
     toggleExpandAll() {
         if (this.btnState() === true) {
             $(".index-group-content").collapse('show');
