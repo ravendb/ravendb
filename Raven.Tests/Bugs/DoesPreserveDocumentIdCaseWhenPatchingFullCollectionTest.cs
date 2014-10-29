@@ -51,7 +51,7 @@ namespace Raven.Tests.Bugs
 						"Raven/DocumentsByEntityName",
 						new IndexQuery() { Query = "Tag:" + typeTag },
 						new ScriptedPatchRequest() { Script = script },
-						false)
+						null)
 					.WaitForCompletion();
 
 				using (var session = store.OpenSession())

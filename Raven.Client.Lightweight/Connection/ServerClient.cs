@@ -551,10 +551,10 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
-		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale = false)
+        /// <param name="options">Holds configuration options for base operation.</param>
+        public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null)
 		{
-			return asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, allowStale).ResultUnwrap();
+            return asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, options).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -563,11 +563,11 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
-		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
+        /// <param name="options">Holds configuration options for base operation.</param>
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests,
-			bool allowStale = false)
+            BulkOperationOptions options = null)
 		{
-			return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patchRequests, allowStale).ResultUnwrap();
+            return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patchRequests, options).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -576,11 +576,11 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
+        /// <param name="options">Holds configuration options for base operation.</param>
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch,
-			bool allowStale = false)
+            BulkOperationOptions options = null)
 		{
-			return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patch, allowStale).ResultUnwrap();
+            return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patch, options).ResultUnwrap();
 		}
 
 		/// <summary>

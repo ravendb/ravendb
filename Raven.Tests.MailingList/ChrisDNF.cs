@@ -76,7 +76,7 @@ namespace Raven.Tests.MailingList
 			var query = new IndexQuery {Query = "CategoryId" + ":" + entity.Id};
 
 			foreach (var index in indexes)
-				documentStore.DatabaseCommands.UpdateByIndex(index, query, new PatchRequest[] {pr_outer}, false).WaitForCompletion();
+				documentStore.DatabaseCommands.UpdateByIndex(index, query, new PatchRequest[] {pr_outer}, null).WaitForCompletion();
 		}
 
 		public class NoStaleQueriesAllowed : IDocumentQueryListener

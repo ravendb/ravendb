@@ -37,7 +37,7 @@ namespace Raven.Tests.Patching
 							}
 						}
 							
-					}, false);
+					}, null);
 
 				operation.WaitForCompletion();
 
