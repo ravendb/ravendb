@@ -333,6 +333,7 @@
     <TypeScriptCompile Include="App\commands\getCollectionsCountCommand.ts" />
     <TypeScriptCompile Include="App\commands\ioTestCommand.ts" />
     <TypeScriptCompile Include="App\commands\dismissAlertCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getSqlReplicationPerfStatsCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
@@ -399,6 +400,7 @@
     <TypeScriptCompile Include="App\viewmodels\indexStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\backupFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\ioTest.ts" />
+    <TypeScriptCompile Include="App\viewmodels\sqlReplicationPerfStats.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\restoreFilesystem.ts" />
@@ -408,6 +410,7 @@
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\compactDatabase.html" />
+    <Content Include="App\views\sqlReplicationPerfStats.html" />
     <Content Include="App\views\ioTest.html" />
     <Content Include="App\views\indexStats.html" />
     <Content Include="App\views\filesystem\backupFilesystem.html" />

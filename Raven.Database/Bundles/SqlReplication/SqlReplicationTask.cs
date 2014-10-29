@@ -260,6 +260,7 @@ namespace Raven.Database.Bundles.SqlReplication
 						{
 							try
 							{
+							    var startTime = SystemTime.UtcNow;
 								Stopwatch spRepTime = new Stopwatch();
 								spRepTime.Start();
 								var lastReplicatedEtag = GetLastEtagFor(localReplicationStatus, replicationConfig);
@@ -306,6 +307,8 @@ namespace Raven.Database.Bundles.SqlReplication
 								sqlReplicationMetricsCounters.SqlReplicationBatchSizeMeter.Mark(countOfReplicatedItems);
 								sqlReplicationMetricsCounters.SqlReplicationBatchSizeHistogram.Update(countOfReplicatedItems);
 								sqlReplicationMetricsCounters.SqlReplicationDurationHistogram.Update(elapsedMicroseconds);
+
+							    UpdateReplicationPerformance(replicationConfig, startTime, spRepTime.Elapsed, docsToReplicate.Count);
 
 							}
 							catch (Exception e)
@@ -358,11 +361,30 @@ namespace Raven.Database.Bundles.SqlReplication
 							prefetchingBehavior.UpdateAutoThrottler(documents, replicationDuration.Elapsed);
 						}
 					}
+
 				}
 			}
 		}
 
-		private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus, Etag latestEtag)
+	    private void UpdateReplicationPerformance(SqlReplicationConfig replicationConfig, DateTime startTime, TimeSpan elapsed, int batchSize)
+	    {
+	        var performance = new SqlReplicationPerformanceStats
+	        {
+                BatchSize = batchSize,
+	            Duration = elapsed,
+	            Started = startTime
+	        };
+
+            var sqlReplicationMetricsCounters = GetSqlReplicationMetricsManager(replicationConfig);
+            sqlReplicationMetricsCounters.ReplicationPerformanceStats.Enqueue(performance);
+            while (sqlReplicationMetricsCounters.ReplicationPerformanceStats.Count() > 25)
+            {
+                SqlReplicationPerformanceStats _;
+                sqlReplicationMetricsCounters.ReplicationPerformanceStats.TryDequeue(out _);
+            }
+	    }
+
+	    private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus, Etag latestEtag)
 		{
 			int retries = 5;
 			while (retries > 0)

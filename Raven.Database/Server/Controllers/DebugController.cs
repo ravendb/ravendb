@@ -65,6 +65,47 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(results);
 		}
 
+        /// <remarks>
+        /// as we sum data we have to guarantee that we don't sum the same record twice on client side.
+        /// to prevent such situation we don't send data from current second
+        /// </remarks>
+        /// <returns></returns>
+        [HttpGet]
+        [Route("debug/sql-replication-perf-stats")]
+        [Route("databases/{databaseName}/debug/sql-replication-perf-stats")]
+        public HttpResponseMessage SqlReplicationPerfStats()
+        {
+            var now = SystemTime.UtcNow;
+            var nowTruncToSeconds = new DateTime(now.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, now.Kind);
+
+            var sqlReplicationTask = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
+            if (sqlReplicationTask == null)
+            {
+                return GetMessageWithString("Unable to find sql replication task. Maybe it is not enabled?", HttpStatusCode.BadRequest);
+            }
+
+            var stats = from nameAndStatsManager in sqlReplicationTask.SqlReplicationMetricsCounters
+                        from perf in nameAndStatsManager.Value.ReplicationPerformanceStats
+                        where perf.Started < nowTruncToSeconds
+                        let k = new {Name = nameAndStatsManager.Key, perf}
+                        group k by k.perf.Started.Ticks/TimeSpan.TicksPerSecond
+                        into g
+                        orderby g.Key
+                        select new
+                        {
+                            Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
+                            Stats = from k in g 
+                                    group k by k.Name into gg 
+                                    select new
+                                    {
+                                        ReplicationName = gg.Key,
+                                        DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
+                                        BatchSize = gg.Sum(x => x.perf.BatchSize)
+                                    }
+                        };
+            return GetMessageWithObject(stats);
+        }
+
         /// <summary>
         /// 
         /// </summary>

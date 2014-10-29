@@ -19,6 +19,7 @@ interface computedAppUrls {
     tasks: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexStats: KnockoutComputed<string>;
+    sqlReplicationPerfStats: KnockoutComputed<string>;
     metrics: KnockoutComputed<string>;
     metricsIndexing: KnockoutComputed<string>;
     metricsRequests: KnockoutComputed<string>;
