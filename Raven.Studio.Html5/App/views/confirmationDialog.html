@@ -6,7 +6,7 @@
         <h3 class="modal-title" data-bind="text: title"></h3>
     </div>
     <div class="modal-body">
-        <p data-bind="text: confirmationMessage"></p>
+        <p class="confirmationMessage" data-bind="text: confirmationMessage"></p>
     </div>
     <div class="modal-footer" data-bind="foreach: options">
         <button type="button" class="btn" data-bind="text: $data, click: $root.onOptionClicked.bind($root), css: { 'btn-default': $index() !== $root.options.length - 1, 'btn-primary': $index() === $root.options.length - 1 }"></button>

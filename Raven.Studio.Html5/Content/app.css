@@ -1,4 +1,4 @@
-@font-face {
+﻿@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -7455,7 +7455,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 #queryContainer .breadcrumb > li,
 #reportingContainer .breadcrumb > li {
   overflow: visible !important;
-  max-width: none !important;
 }
 #queryContainer .editor,
 #reportingContainer .editor {
@@ -8262,7 +8261,9 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .topBorder td {
   border-top: solid 1px #ddd !important;
 }
-.no-outline {
-  outline: none;
+.confirmationMessage {
+  -ms-word-break: break-all;
+  word-break: break-all;
+  white-space: pre-line;
 }
 /*# sourceMappingURL=app.css.map */

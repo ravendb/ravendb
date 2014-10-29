@@ -408,6 +408,13 @@ interface transformerDto {
     }
 }
 
+
+
+interface indexDefinitionListItemDto {
+    name: string;
+    definition: indexDefinitionDto
+}
+
 interface saveTransformerDto {
     'Name': string;
     'TransformResults': string;
