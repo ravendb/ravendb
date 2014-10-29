@@ -116,6 +116,8 @@
     <Compile Include="BulkInsertClient.cs" />
     <Compile Include="BulkInsertDatabaseUrl.cs" />
     <Compile Include="BulkInsertTests.cs" />
+    <Compile Include="RavenDB-2716.cs" />
+    <Compile Include="RavenDB-2717.cs" />
     <Compile Include="RavenDB2854.cs" />
     <Compile Include="RavenDB_2699.cs" />
     <Compile Include="DatabaseConfiguration.cs" />

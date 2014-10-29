@@ -85,12 +85,12 @@ namespace Raven.Tests.Core.Commands
                         Value = "NewValue"
                     }
                 },
-                false).WaitForCompletion();
+                null).WaitForCompletion();
 
                 var document = await store.AsyncDatabaseCommands.GetAsync("items/1");
                 Assert.Equal("NewValue", document.DataAsJson.Value<string>("NewName"));
 
-                store.DatabaseCommands.DeleteByIndex("MyIndex", new IndexQuery { Query = "" }, false).WaitForCompletion();
+                store.DatabaseCommands.DeleteByIndex("MyIndex", new IndexQuery { Query = "" }, null).WaitForCompletion();
                 var documents = store.DatabaseCommands.GetDocuments(0, 25);
                 Assert.Equal(0, documents.Length);
             }
@@ -163,7 +163,7 @@ namespace Raven.Tests.Core.Commands
 						   }
 					   }
 				   },
-                   false
+                   null
                ).WaitForCompletion();
 
                 Assert.Equal("{\"Comment\":{\"Notes\":[\"item\",\"new\"]}}", store.DatabaseCommands.Get("items/1").DataAsJson.ToString(Formatting.None));

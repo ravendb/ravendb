@@ -150,7 +150,7 @@ namespace Raven.Tests.MailingList
 							}
 						}
 					},
-					allowStale: false).WaitForCompletion();
+                    options: null).WaitForCompletion();
 
 				//Here, I again list the name of the consultant in the Proficiencies collection and expect it to be "Subhashini".
 				using (var session = store.OpenSession())

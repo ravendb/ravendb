@@ -22,19 +22,19 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class DocumentsBatchController : RavenDbApiController
-	{
-		[HttpPost]
-		[Route("bulk_docs")]
-		[Route("databases/{databaseName}/bulk_docs")]
-		public async Task<HttpResponseMessage> BulkPost()
-		{
-		    using (var cts = new CancellationTokenSource())
+    public class DocumentsBatchController : RavenDbApiController
+    {
+        [HttpPost]
+        [Route("bulk_docs")]
+        [Route("databases/{databaseName}/bulk_docs")]
+        public async Task<HttpResponseMessage> BulkPost()
+        {
+            using (var cts = new CancellationTokenSource())
             using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
                 var jsonCommandArray = await ReadJsonArrayAsync();
 
-				cts.Token.ThrowIfCancellationRequested();
+                cts.Token.ThrowIfCancellationRequested();
 
                 var transactionInformation = GetRequestTransaction();
                 var commands =
@@ -61,103 +61,110 @@ namespace Raven.Database.Server.Controllers
                 var batchResult = Database.Batch(commands, cts.Token);
                 return GetMessageWithObject(batchResult);
             }
-		}
+        }
 
-		[HttpDelete]
-		[Route("bulk_docs/{*id}")]
-		[Route("databases/{databaseName}/bulk_docs/{*id}")]
-		public HttpResponseMessage BulkDelete(string id)
-		{
+        [HttpDelete]
+        [Route("bulk_docs/{*id}")]
+        [Route("databases/{databaseName}/bulk_docs/{*id}")]
+        public HttpResponseMessage BulkDelete(string id)
+        {
             // we don't use using because execution is async
-		    var cts = new CancellationTokenSource();
-		    var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            var cts = new CancellationTokenSource();
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
-	            var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(id);
-				if (indexDefinition == null)
-					throw new IndexDoesNotExistsException(string.Format("Index '{0}' does not exist.", id));
+            var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(id);
+            if (indexDefinition == null)
+                throw new IndexDoesNotExistsException(string.Format("Index '{0}' does not exist.", id));
 
-				if (indexDefinition.IsMapReduce)
-					throw new InvalidOperationException("Cannot execute DeleteByIndex operation on Map-Reduce indexes.");
+            if (indexDefinition.IsMapReduce)
+                throw new InvalidOperationException("Cannot execute DeleteByIndex operation on Map-Reduce indexes.");
 
 
-                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
-            return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id, cts, timeout);
-            }
+            var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
+            return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id, cts);
+        }
 
-		[HttpPatch]
-		[Route("bulk_docs/{*id}")]
-		[Route("databases/{databaseName}/bulk_docs/{*id}")]
-		public async Task<HttpResponseMessage> BulkPatch(string id)
-		{
+        [HttpPatch]
+        [Route("bulk_docs/{*id}")]
+        [Route("databases/{databaseName}/bulk_docs/{*id}")]
+        public async Task<HttpResponseMessage> BulkPatch(string id)
+        {
             // we don't use using because execution is async
-		    var cts = new CancellationTokenSource();
-		    var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
-            
-                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
-                var patchRequestJson = await ReadJsonArrayAsync();
-                var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
-            return OnBulkOperation((index, query, allowStale) => databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale), id, cts, timeout);
-            }
+            var cts = new CancellationTokenSource();
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
-		[HttpEval]
-		[Route("bulk_docs/{*id}")]
-		[Route("databases/{databaseName}/bulk_docs/{*id}")]
-		public async Task<HttpResponseMessage> BulkEval(string id)
-		{
+            var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
+            var patchRequestJson = await ReadJsonArrayAsync();
+            var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
+            return OnBulkOperation((index, query, options) => databaseBulkOperations.UpdateByIndex(index, query, patchRequests, options), id, cts);
+        }
+
+        [HttpEval]
+        [Route("bulk_docs/{*id}")]
+        [Route("databases/{databaseName}/bulk_docs/{*id}")]
+        public async Task<HttpResponseMessage> BulkEval(string id)
+        {
             // we don't use using because execution is async
-		    var cts = new CancellationTokenSource();
-		    var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            var cts = new CancellationTokenSource();
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
-                var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
-                var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
-                var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
-            return OnBulkOperation((index, query, allowStale) => databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale), id, cts, timeout);
-            }
+            var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
+            var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
+            var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
+            return OnBulkOperation((index, query, options) => databaseBulkOperations.UpdateByIndex(index, query, advPatch, options), id, cts);
+        }
 
-		private HttpResponseMessage OnBulkOperation(Func<string, IndexQuery, bool, RavenJArray> batchOperation, string index, CancellationTokenSource cts, CancellationTimeout timeout)
-		{
-			if (string.IsNullOrEmpty(index))
-				return GetEmptyMessage(HttpStatusCode.BadRequest);
+        private HttpResponseMessage OnBulkOperation(Func<string, IndexQuery, BulkOperationOptions, RavenJArray> batchOperation, string index, CancellationTokenSource cts)
+        {
+            if (string.IsNullOrEmpty(index))
+                return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-			var allowStale = GetAllowStale();
-			var indexQuery = GetIndexQuery(maxPageSize: int.MaxValue);
+            var option = new BulkOperationOptions
+            {
+                AllowStale = GetAllowStale(),
+                MaxOpsPerSec = GetMaxOpsPerSec(),
+                StaleTimeout = GetStaleTimeout()
+            };
+            var indexQuery = GetIndexQuery(maxPageSize: int.MaxValue);
 
-			var status = new BulkOperationStatus();
-			long id;
+            var status = new BulkOperationStatus();
+            long id;
 
-			var task = Task.Factory.StartNew(() =>
-			{
-				status.State = batchOperation(index, indexQuery, allowStale);
-			}).ContinueWith(t =>
-			{
-				if (t.IsFaulted == false)
-				{
-					status.Completed = true;
-					return;
-				}
+            var task = Task.Factory.StartNew(() =>
+            {
+                status.State = batchOperation(index, indexQuery, option);
+            }).ContinueWith(t =>
+            {
+                if (t.IsFaulted == false)
+                {
+                    status.Completed = true;
+                    return;
+                }
 
-				var exception = t.Exception.ExtractSingleInnerException();
+                var exception = t.Exception.ExtractSingleInnerException();
 
-				status.State = RavenJObject.FromObject(new { Error = exception.Message });
-				status.Faulted = true;
-				status.Completed = true;
-			});
+                status.State = RavenJObject.FromObject(new { Error = exception.Message });
+                status.Faulted = true;
+                status.Completed = true;
+            });
 
-			Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
-			                                     {
-			                                         StartTime = SystemTime.UtcNow,
+            Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
+                                                 {
+                                                     StartTime = SystemTime.UtcNow,
                                                      TaskType = TaskActions.PendingTaskType.IndexBulkOperation,
                                                      Payload = index
                                                  }, out id, cts);
 
-			return GetMessageWithObject(new { OperationId = id });
-		}
+            return GetMessageWithObject(new { OperationId = id });
+        }
 
-		public class BulkOperationStatus : IOperationState
-		{
-			public RavenJToken State { get; set; }
-			public bool Completed { get; set; }
-			public bool Faulted { get; set; }
-		}
-	}
+
+
+        public class BulkOperationStatus : IOperationState
+        {
+            public RavenJToken State { get; set; }
+            public bool Completed { get; set; }
+            public bool Faulted { get; set; }
+        }
+    }
 }
