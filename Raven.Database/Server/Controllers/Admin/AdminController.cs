@@ -354,7 +354,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (string.IsNullOrEmpty(concurrency) == false)
 				Database.Configuration.MaxNumberOfParallelProcessingTasks = Math.Max(1, int.Parse(concurrency));
 
-			Database.SpinIndexingWorkers();
+			Database.SpinBackgroundWorkers();
 		}
 
 		[HttpPost]

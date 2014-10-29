@@ -877,21 +877,6 @@ namespace Raven.Database
 			reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
-		public void SpinIndexingWorkers()
-		{
-			if (backgroundWorkersSpun)
-				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
-
-			backgroundWorkersSpun = true;
-
-			workContext.StartIndexing();
-			indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-
-			ReducingExecuter = new ReducingExecuter(workContext);
-
-			reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-		}
-
 		public void StopBackgroundWorkers()
 		{
 			workContext.StopWork();
