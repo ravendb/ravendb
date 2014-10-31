@@ -54,9 +54,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Raven.Database\Util\PerformanceCountersUtils.cs">
-      <Link>PerformanceCountersUtils.cs</Link>
-    </Compile>
     <Compile Include="Infrastructure\IIS\IIS6Manager.cs" />
     <Compile Include="Infrastructure\IIS\IIS7UpwardsManager.cs" />
     <Compile Include="Infrastructure\IIS\IISManager.cs" />

@@ -6,13 +6,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Principal;
-using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.Win32;
-using Raven.Database.Util;
 using Raven.Setup.CustomActions.Infrastructure.IIS;
 
 namespace Raven.Setup.CustomActions
