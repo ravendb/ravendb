@@ -28,11 +28,11 @@
       <RegistrySearch Id="ASPNETREG64" Root="HKLM" Key="Software\Microsoft\ASP.NET\4.0.30319.0" Name="Path" Type="raw" Win64="yes" />
     </Property>
 
-    <SetProperty Id="ASPNETREGISTERED" Sequence="execute" Before="ConfigureIIs" Value="1" Action="SetASPNETREGISTERED32">
+    <SetProperty Id="ASPNETREGISTERED" Sequence="ui" Before="CostFinalize" Value="1" Action="SetASPNETREGISTERED32">
       <![CDATA[NOT VersionNT64 AND ASPNETREGISTERED32]]>
     </SetProperty>
 
-    <SetProperty Id="ASPNETREGISTERED" Sequence="execute" Before="ConfigureIIs" Value="1" Action="SetASPNETREGISTERED64">
+		<SetProperty Id="ASPNETREGISTERED" Sequence="ui" Before="CostFinalize" Value="1" Action="SetASPNETREGISTERED64">
       <![CDATA[VersionNT64 AND ASPNETREGISTERED64]]>
     </SetProperty>
 
@@ -44,10 +44,10 @@
     </Property>
 
     <SetProperty Id="MISSING_IIS_COMPONENTS" Sequence="ui" Before="CostFinalize" Value="1" Action="SetMISSING_IIS_COMPONENTS32">
-      <![CDATA[NOT VersionNT64 AND (IISMAJORVERSION >= "#7" AND IIS_WIN_AUTH <> "#1")]]>
+      <![CDATA[NOT VersionNT64 AND ((IISMAJORVERSION >= "#7" AND IIS_WIN_AUTH <> "#1") OR (IISMAJORVERSION >= "#8" AND VersionNT >= 602 AND NOT ASPNETREGISTERED))]]>
     </SetProperty>
     <SetProperty Id="MISSING_IIS_COMPONENTS" Sequence="ui" Before="CostFinalize" Value="1" Action="SetMISSING_IIS_COMPONENTS64">
-      <![CDATA[VersionNT64 AND (IISMAJORVERSION >= "#7" AND IIS_WIN_AUTH_64 <> "#1")]]>
+      <![CDATA[VersionNT64 AND ((IISMAJORVERSION >= "#7" AND IIS_WIN_AUTH_64 <> "#1") OR (IISMAJORVERSION >= "#8" AND VersionNT >= 602 AND NOT ASPNETREGISTERED))]]>
     </SetProperty>
     
     <DirectoryRef Id="INSTALLFOLDER">
