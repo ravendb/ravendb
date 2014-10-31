@@ -49,12 +49,12 @@ class dynamicHeightBindingHandler {
             var lastWindowHeight: number = ko.utils.domData.get(element, lastWindowHeightKey);
             if (lastWindowHeight !== newWindowHeight) {
                 ko.utils.domData.set(element, lastWindowHeightKey, newWindowHeight);
-                this.stickToTarget(element, targetSelector, bottomMargin);
+                dynamicHeightBindingHandler.stickToTarget(element, targetSelector, bottomMargin);
             }
         }
     }
 
-    stickToTarget(element: HTMLElement, targetSelector: string, bottomMargin: number) {
+    static stickToTarget(element: HTMLElement, targetSelector: string, bottomMargin: number) {
         var targetElement = $(targetSelector);
         if (targetSelector.length === 0) {
             throw new Error("Couldn't configure dynamic height because the target element isn't on the page. Target element: " + targetSelector);

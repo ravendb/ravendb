@@ -25,19 +25,37 @@
         <button type="button" class="btn btn-default" data-bind="click: fetchTasks"><i class="fa fa-refresh"></i></button>
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" data-bind="click: setFilterTypeAll">
-                <input type="radio" name="options" id="option1"> <span data-bind="text: 'All tasks (' + allTasks().length + ')'"></span>
+                <input type="radio" name="options" id="option0"> <span data-bind="text: 'All tasks (' + allTasks().length + ')'"></span>
             </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeSuggestionQuery">
-                <input type="radio" name="options" id="Radio1"> <span data-bind="text: 'Suggestion Query (' + suggestionQueryCount() + ')'"></span>
+            <label class="btn btn-default" data-bind="click: setFilterTypeSuggestionQuery, visible: suggestionQueryCount() > 0">
+                <input type="radio" name="options" id="option1"> <span data-bind="text: 'Suggestion Query (' + suggestionQueryCount() + ')'"></span>
             </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeBulkInsert">
+            <label class="btn btn-default" data-bind="click: setFilterTypeBulkInsert, visible: bulkInsertCount() > 0">
                 <input type="radio" name="options" id="option2"> <span data-bind="text: 'Bulk insert (' + bulkInsertCount() + ')'"></span>
             </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeIndexBulkOperation">
+            <label class="btn btn-default" data-bind="click: setFilterTypeIndexBulkOperation, visible: indexBulkOperationCount() > 0">
                 <input type="radio" name="options" id="option3"> <span data-bind="text: 'Bulk operation (' + indexBulkOperationCount() + ')'"></span>
             </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeIndexDeleteOperation">
-                <input type="radio" name="options" id="Radio2"> <span data-bind="text: 'Index delete (' + indexDeleteOperationCount() + ')'"></span>
+            <label class="btn btn-default" data-bind="click: setFilterTypeIndexDeleteOperation, visible: indexDeleteOperationCount() > 0">
+                <input type="radio" name="options" id="option4"> <span data-bind="text: 'Index delete (' + indexDeleteOperationCount() + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterTypeImportDatabase, visible: importDatabaseCount() > 0">
+                <input type="radio" name="options" id="option5"> <span data-bind="text: 'Import database (' + importDatabaseCount() + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterTypeRestoreDatabase, visible: restoreDatabaseCount() > 0">
+                <input type="radio" name="options" id="option6"> <span data-bind="text: 'Restore database (' + restoreDatabaseCount() + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterTypeRestoreFilesystem, visible: restoreFilesystemCount() > 0">
+                <input type="radio" name="options" id="option7"> <span data-bind="text: 'Restore filesystem (' + restoreFilesystemCount() + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterTypeCompactDatabase, visible: compactDatabaseCount() > 0">
+                <input type="radio" name="options" id="option8"> <span data-bind="text: 'Compact database (' + compactDatabaseCount() + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterTypeCompactFilesystem, visible: compactFilesystemCount() > 0">
+                <input type="radio" name="options" id="option9"> <span data-bind="text: 'Compact filesystem (' + compactFilesystemCount() + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterTypeIoTest, visible: ioTestCount() > 0">
+                <input type="radio" name="options" id="option10"> <span data-bind="text: 'IO test (' + ioTestCount() + ')'"></span>
             </label>
         </div>
         <form class="form-inline" style="display: inline-block; vertical-align: middle;">

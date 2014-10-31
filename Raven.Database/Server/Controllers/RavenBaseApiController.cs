@@ -526,6 +526,12 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage WriteFile(string filePath)
 		{
 			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
+            if (etagValue != null)
+            {
+                // Bug fix: the etag header starts and ends with quotes, resulting in cache-busting; the Studio always receives new files, even if should be cached.
+                etagValue = etagValue.Trim(new[] { '\"' });
+            }
+
 			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
 			if (etagValue == fileEtag)
 				return GetEmptyMessage(HttpStatusCode.NotModified);

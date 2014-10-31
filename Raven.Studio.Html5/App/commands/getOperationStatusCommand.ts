@@ -16,7 +16,7 @@ class getOperationStatusCommand extends commandBase {
         }
     }
 
-    execute(): JQueryPromise<collection[]> {
+    execute(): JQueryPromise<any> {
         var url = "/operation/status";
 
         var args = {

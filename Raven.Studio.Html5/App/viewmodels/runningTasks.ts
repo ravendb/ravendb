@@ -14,7 +14,13 @@ class runningTasks extends viewModelBase {
     static TypeBulkInsert = "BulkInsert";
     static TypeIndexBulkOperation = "IndexBulkOperation";
     static TypeIndexDeleteOperation = "IndexDeleteOperation";
-
+    static TypeImportDatabase = "ImportDatabase";
+    static TypeRestoreDatabase = "RestoreDatabase";
+    static TypeRestoreFilesystem = "RestoreFilesystem";
+    static TypeCompactDatabase = "CompactDatabase";
+    static TypeCompactFilesystem = "CompactFilesystem";
+    static TypeIoTest = "IoTest";
+    
     allTasks = ko.observableArray<runningTaskDto>();
     filterType = ko.observable<string>(null);
     selectedTask = ko.observable<runningTaskDto>();
@@ -23,6 +29,12 @@ class runningTasks extends viewModelBase {
     bulkInsertCount: KnockoutComputed<number>;
     indexBulkOperationCount: KnockoutComputed<number>;
     indexDeleteOperationCount: KnockoutComputed<number>;
+    importDatabaseCount: KnockoutComputed<number>;
+    restoreDatabaseCount: KnockoutComputed<number>;
+    restoreFilesystemCount: KnockoutComputed<number>;
+    compactDatabaseCount: KnockoutComputed<number>;
+    compactFilesystemCount: KnockoutComputed<number>;
+    ioTestCount: KnockoutComputed<number>;
 
     searchText = ko.observable("");
     searchTextThrottled: KnockoutObservable<string>;
@@ -40,6 +52,13 @@ class runningTasks extends viewModelBase {
         this.bulkInsertCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeBulkInsert));
         this.indexBulkOperationCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeIndexBulkOperation));
         this.indexDeleteOperationCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeIndexDeleteOperation));
+        this.importDatabaseCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeImportDatabase));
+        this.restoreDatabaseCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeRestoreDatabase));
+        this.restoreFilesystemCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeRestoreFilesystem));
+        this.compactDatabaseCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeCompactDatabase));
+        this.compactFilesystemCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeCompactFilesystem));
+        this.ioTestCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeIoTest));
+
         this.searchTextThrottled = this.searchText.throttle(200);
         this.activeDatabase.subscribe(() => this.fetchTasks());
         this.updateCurrentNowTime();
@@ -105,7 +124,11 @@ class runningTasks extends viewModelBase {
             || task.TaskStatus === "WaitingToRun"
             || task.TaskStatus === "WaitingForActivation";
         var taskType = task.TaskType != runningTasks.TypeIndexDeleteOperation
-            && task.TaskType != runningTasks.TypeSuggestionQuery;
+            && task.TaskType != runningTasks.TypeSuggestionQuery
+            && task.TaskType != runningTasks.TypeRestoreDatabase
+            && task.TaskType != runningTasks.TypeRestoreFilesystem
+            && task.TaskType != runningTasks.TypeCompactDatabase
+            && task.TaskType != runningTasks.TypeCompactFilesystem;
         return status && taskType;
     }
 
@@ -137,7 +160,7 @@ class runningTasks extends viewModelBase {
     }
 
     taskKill(task: runningTaskDto) {
-        new killRunningTaskCommand(this.activeDatabase(), task).execute()
+        new killRunningTaskCommand(this.activeDatabase(), task.Id).execute()
             .always(() => setTimeout(() => {
                 this.selectedTask(null);
                 this.fetchTasks();
@@ -204,6 +227,30 @@ class runningTasks extends viewModelBase {
 
     setFilterTypeIndexDeleteOperation() {
         this.filterType(runningTasks.TypeIndexDeleteOperation);
+    }
+
+    setFilterTypeImportDatabase() {
+        this.filterType(runningTasks.TypeImportDatabase);
+    }
+
+    setFilterTypeRestoreDatabase() {
+        this.filterType(runningTasks.TypeRestoreDatabase);
+    }
+
+    setFilterTypeRestoreFilesystem() {
+        this.filterType(runningTasks.TypeRestoreFilesystem);
+    }
+
+    setFilterTypeCompactDatabase() {
+        this.filterType(runningTasks.TypeCompactDatabase);
+    }
+
+    setFilterTypeCompactFilesystem() {
+        this.filterType(runningTasks.TypeCompactFilesystem);
+    }
+
+    setFilterTypeIoTest() {
+        this.filterType(runningTasks.TypeIoTest);
     }
 
     updateCurrentNowTime() {

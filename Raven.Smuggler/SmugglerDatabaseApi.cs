@@ -91,7 +91,7 @@ namespace Raven.Smuggler
 			{
                 BatchSize = Options.BatchSize,
 				OverwriteExisting = true
-            }, store.Changes(), Options.ChunkSize, SmugglerDatabaseOptions.DefaultDocumentSizeInChunkLimitInBytes);
+            }, store.Changes(), Options.ChunkSize, Options.TotalDocumentSizeInChunkLimitInBytes);
 
 			operation.Report += text => Operations.ShowProgress(text);
 		}

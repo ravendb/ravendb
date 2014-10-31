@@ -105,7 +105,7 @@ namespace Raven.Tests.Issues
 
                 var deleteExistingDocsIndexQuery = new IndexQuery { Query = deleteExistingDocsQuery.ToString() };
 
-                var deleteByIndex = databaseCommands.DeleteByIndex(new DocsIndex().IndexName, deleteExistingDocsIndexQuery, false);
+                var deleteByIndex = databaseCommands.DeleteByIndex(new DocsIndex().IndexName, deleteExistingDocsIndexQuery, null);
                 var array = deleteByIndex.WaitForCompletion() as RavenJArray;
 
                 Assert.Equal(1, array.Length);

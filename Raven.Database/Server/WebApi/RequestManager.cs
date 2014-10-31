@@ -275,8 +275,6 @@ namespace Raven.Database.Server.WebApi
         }
 
 
-
-
         private static bool IsWriteRequest(HttpRequestMessage request)
         {
             return AbstractRequestAuthorizer.IsGetRequest(request.Method.Method, request.RequestUri.AbsoluteUri) == false;
@@ -535,7 +533,6 @@ namespace Raven.Database.Server.WebApi
             {
                 landlord.SystemDatabase.RunIdleOperations();
             }
-
             catch (Exception e)
             {
                 Logger.ErrorException("Error during idle operation run for system database", e);

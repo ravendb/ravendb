@@ -40,7 +40,7 @@ namespace Raven.Abstractions.Smuggler
         /// <summary>
 		/// Limit total size of documents in each chunk
 		/// </summary>
-		public long? TotalDocumentSizeInChunkLimitInBytes
+        public long? TotalDocumentSizeInChunkLimitInBytes
 		{
 			get { return totalDocumentSizeInChunkLimitInBytes; }
 			set

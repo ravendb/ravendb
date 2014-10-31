@@ -27,7 +27,7 @@ namespace Raven.Database.Storage.Esent.Debug
 				{
 					{"Raven/Esent/LogFileSize", "1"}
 				}
-			}, () => { }))
+			}, () => { }, () => { }))
 			{
 				transactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
 

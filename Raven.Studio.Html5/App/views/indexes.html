@@ -65,9 +65,15 @@
             </a>
         </div>
         <div class="btn-group">
-            <a class="btn btn-default" data-bind="click: pasteIndex" title="Paste index from JSON (Alt+V)" accesskey="v">
-                <i class="fa fa-paste"></i>
-            </a>
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <i class="fa fa-clipboard"></i><span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+                <li data-bind="click: pasteIndex"><a href="#" title="Paste index from JSON (Alt+V)" accesskey="v">Paste Single Index</a></li>
+                <li class="divider"></li>
+                <li data-bind="click: copyIndexesAndTransformers"><a href="#" title="Paste index from JSON (Alt+V)">Copy All Indexes And Transformers</a></li>
+                <li data-bind="click: pasteIndexesAndTransformers"><a href="#" title="Paste index from JSON (Alt+V)">Paste Indexes And Transformers</a></li>
+            </ul>
         </div>
         <div class="btn-group">
             <a class="btn btn-default" title="Index merge suggestions" data-bind="attr: { href: appUrls.megeSuggestions }">
@@ -90,11 +96,13 @@
 
     <div class="text-center" data-bind="visible: sortedGroups().length == 0">
         <h3 class="page-header text-info">
-            No indexes have been created for this database.
-            <small>
-                Go ahead and <a href="#" data-bind="attr: { href: newIndexUrl }">create an index</a>
-                or <a href="#" data-bind="click: pasteIndex">paste index definition from JSON</a>.
-            </small>
+            <div>No indexes have been created for this database.</div>
+            <div>
+                <small>
+                          Go ahead and <a href="#" data-bind="attr: { href: newIndexUrl }">create an index</a>
+                          , <a href="#" data-bind="click: pasteIndex">paste single index</a> or <a href="#" data-bind="click: pasteIndexesAndTransformers">paste a bulk</a> of indexes and transformers definitions from JSON.
+                      </small>
+            </div>
         </h3>
     </div>
 
@@ -103,7 +111,7 @@
             <div class="index-group panel panel-default index-panel">
                 <div class="panel-heading">
                     <div class="pull-right indexGroup-actions-container">
-                        <button class="btn btn-danger btn-sm" title="Delete all indexes in group" data-bind="click: $root.deleteIndexGroup.bind($root)">
+                        <button class="btn btn-danger btn-sm" data-bind="click: $root.deleteIndexGroup.bind($root), attr: { title: 'Delete all ' + entityName + ' indexes' }">
                             <i class="fa fa-trash-o"></i>
                         </button>
                     </div>

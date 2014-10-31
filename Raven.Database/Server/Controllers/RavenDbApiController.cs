@@ -470,7 +470,24 @@ namespace Raven.Database.Server.Controllers
 			bool.TryParse(GetQueryStringValue("skipOverwriteIfUnchanged"), out result);
 			return result;
 		}
-	
+
+        protected int? GetMaxOpsPerSec()
+        {
+            int? result = null;
+            int parseResult;
+            var success = int.TryParse(GetQueryStringValue("maxOpsPerSec"), out parseResult);
+            if (success) result = parseResult;
+            return result;
+        }
+
+        protected TimeSpan? GetStaleTimeout()
+        {
+            TimeSpan? result = null;
+            TimeSpan parseResult;
+            var success = TimeSpan.TryParse(GetQueryStringValue("staleTimeout"), out parseResult);
+            if (success) result = parseResult;
+            return result;
+        }
 
 		protected void HandleReplication(HttpResponseMessage msg)
 		{

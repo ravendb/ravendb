@@ -162,8 +162,8 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
-		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale = false);
+        /// <param name="options">Holds configuration options for base operation.</param>
+        Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null);
 
 		/// <summary>
 		/// Deletes the transformer definition for the specified name asynchronously
@@ -329,8 +329,8 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale = false);
+        /// <param name="options">Holds configuration options for base operation.</param>
+        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null);
 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
@@ -454,8 +454,8 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
-		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale = false);
+        /// <param name="options">Holds configuration options for base operation.</param>
+        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null);
 
 		/// <summary>
 		/// Return a list of documents that based on the MoreLikeThisQuery.

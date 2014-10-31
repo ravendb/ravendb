@@ -725,12 +725,12 @@ namespace Raven.Client.Connection
                 var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead)
                     .ConfigureAwait(false);
 
-                if (Response.IsSuccessStatusCode == false &&
-                    (Response.StatusCode == HttpStatusCode.PreconditionFailed ||
-                    Response.StatusCode == HttpStatusCode.Forbidden ||
-                    Response.StatusCode == HttpStatusCode.Unauthorized))
+                if (response.IsSuccessStatusCode == false &&
+                    (response.StatusCode == HttpStatusCode.PreconditionFailed ||
+                    response.StatusCode == HttpStatusCode.Forbidden ||
+                    response.StatusCode == HttpStatusCode.Unauthorized))
                 {
-                    throw new ErrorResponseException(Response, "Failed request");
+                    throw new ErrorResponseException(response, "Failed request");
                 }
                 return response;
             }).ConfigureAwait(false);

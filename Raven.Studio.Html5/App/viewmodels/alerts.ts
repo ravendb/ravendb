@@ -1,4 +1,5 @@
 import app = require("durandal/app");
+import router = require("plugins/router"); 
 import getAlertsCommand = require("commands/getAlertsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
@@ -7,6 +8,7 @@ import moment = require("moment");
 import copyDocuments = require("viewmodels/copyDocuments");
 import document = require("models/document");
 import alert = require("models/alert");
+import appUrl = require("common/appUrl");
 import saveAlertsCommand = require("commands/saveAlertsCommand");
 
 class alerts extends viewModelBase {
@@ -15,6 +17,7 @@ class alerts extends viewModelBase {
     allAlerts = ko.observableArray<alert>();
     filterLevel = ko.observable("All");
     selectedAlert = ko.observable<alert>();
+    selectedAlertIndex = ko.observable<number>();
     unreadAlertCount: KnockoutComputed<number>;
     readAlertCount: KnockoutComputed<number>;
     now = ko.observable<Moment>();
@@ -32,6 +35,8 @@ class alerts extends viewModelBase {
     activate(args) {
         super.activate(args);
         this.fetchAlerts();
+        var item = !!args.item && !isNaN(args.item) ? args.item : 0;
+        this.selectedAlertIndex(item);
     }
 
     deactivate() {
@@ -58,6 +63,9 @@ class alerts extends viewModelBase {
         });
         this.alertDoc(result);
         this.allAlerts(alerts);
+        if (alerts.length > 0) {
+            this.selectAlert(alerts[this.selectedAlertIndex()]);
+        }
     }
 
     matchesFilter(a: alert): boolean {
@@ -85,7 +93,12 @@ class alerts extends viewModelBase {
     }
 
     selectAlert(selection: alert) {
+        var index = this.allAlerts.indexOf(selection);
+        this.selectedAlertIndex(index);
         this.selectedAlert(selection);
+
+        var alertUrl = appUrl.forAlerts(this.activeDatabase()) + "&item=" + this.selectedAlertIndex();
+        router.navigate(alertUrl, false);
     }
 
     tableKeyDown(sender: any, e: KeyboardEvent) {
@@ -104,7 +117,7 @@ class alerts extends viewModelBase {
                     newSelectionIndex++;
                 }
 
-                this.selectedAlert(this.allAlerts()[newSelectionIndex]);
+                this.selectAlert(this.allAlerts()[newSelectionIndex]);
                 var newSelectedRow = $("#alertsContainer table tbody tr:nth-child(" + (newSelectionIndex + 1) + ")");
                 if (newSelectedRow) {
                     this.ensureRowVisible(newSelectedRow);
@@ -150,6 +163,9 @@ class alerts extends viewModelBase {
     toggleSelectedReadState() {
         var alert = this.selectedAlert();
         if (alert) {
+            if (!alert.observed()) {
+                alert.lastDismissedAt = this.now().toISOString();
+            }
             alert.observed(!alert.observed());
         }
     }

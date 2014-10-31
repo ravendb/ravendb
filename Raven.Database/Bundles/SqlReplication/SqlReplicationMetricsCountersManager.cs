@@ -21,6 +21,7 @@ namespace Raven.Database.Bundles.SqlReplication
         public HistogramMetric SqlReplicationBatchSizeHistogram { get; private set; }
         public HistogramMetric SqlReplicationDurationHistogram { get; private set; }
         public ConcurrentDictionary<string, SqlReplicationTableMetrics> TablesMetrics { get; set; }
+        public ConcurrentQueue<SqlReplicationPerformanceStats> ReplicationPerformanceStats { get; set; }
 
         public SqlReplicationMetricsCountersManager(Metrics dbMetrics, SqlReplicationConfig sqlReplicationConfig)
         {
@@ -30,6 +31,7 @@ namespace Raven.Database.Bundles.SqlReplication
             SqlReplicationBatchSizeHistogram = dbMetrics.Histogram("metrics", "SqlReplication Batch histogram for " + sqlReplicationConfig.Name);
             SqlReplicationDurationHistogram = dbMetrics.Histogram("metrics", "SQLReplication duration Histogram for " + sqlReplicationConfig.Name);
             TablesMetrics = new ConcurrentDictionary<string, SqlReplicationTableMetrics>();
+            ReplicationPerformanceStats = new ConcurrentQueue<SqlReplicationPerformanceStats>();
         }
 
         public SqlReplicationTableMetrics GetTableMetrics(string tableName)

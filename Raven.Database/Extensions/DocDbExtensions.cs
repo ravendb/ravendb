@@ -40,10 +40,14 @@ namespace Raven.Database.Extensions
                     }
 
                     var withSameUniqe = alertsDocument.Alerts.FirstOrDefault(alert1 => alert1.UniqueKey == alert.UniqueKey);
-                    if (withSameUniqe != null)
-                        alertsDocument.Alerts.Remove(withSameUniqe);
+			        if (withSameUniqe != null)
+			        {
+                        // copy information about observed
+			            alert.LastDismissedAt = withSameUniqe.LastDismissedAt;
+			            alertsDocument.Alerts.Remove(withSameUniqe);
+			        }
 
-                    alertsDocument.Alerts.Add(alert);
+			        alertsDocument.Alerts.Add(alert);
                     var document = RavenJObject.FromObject(alertsDocument);
                     document.Remove("Id");
                     try

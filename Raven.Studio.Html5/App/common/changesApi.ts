@@ -88,7 +88,8 @@ class changesApi {
     private connectWebSocket(connectionString: string) {
         var connectionOpened: boolean = false;
 
-        this.webSocket = new WebSocket('ws://' + window.location.host + this.resourcePath + '/changes/websocket?' + connectionString);
+        var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+        this.webSocket = new WebSocket(wsProtocol + window.location.host + this.resourcePath + '/changes/websocket?' + connectionString);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
@@ -350,20 +351,6 @@ class changesApi {
             this.allBulkInsertsHandlers.remove(callback);
             if (this.allDocsHandlers().length == 0) {
                 this.send('unwatch-bulk-operation');
-            }
-        });
-    }
-
-    watchDocPrefix(onChange: (e: documentChangeNotificationDto) => void, prefix?: string) {
-        var callback = new changesCallback<documentChangeNotificationDto>(onChange);
-        if (this.allDocsHandlers().length == 0) {
-            this.send('watch-prefix', prefix);
-        }
-        this.allDocsHandlers.push(callback);
-        return new changeSubscription(() => {
-            this.allDocsHandlers.remove(callback);
-            if (this.allDocsHandlers().length == 0) {
-                this.send('unwatch-prefix', prefix);
             }
         });
     }

@@ -32,6 +32,7 @@ namespace Raven.Tests.Common
         public RavenTest()
         {
             SystemTime.UtcDateTime = () => DateTime.UtcNow;
+            SystemTime.WaitCalled = null;
         }
 
 	    public override void Dispose()

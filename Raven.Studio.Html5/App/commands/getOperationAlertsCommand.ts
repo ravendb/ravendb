@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
+import alert = require("models/alert");
 
 class getOperationAlertsCommand extends commandBase {
 
@@ -7,9 +8,10 @@ class getOperationAlertsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<string[]> {
+    execute(): JQueryPromise<alert[]> {
         var url = "/operation/alerts";
-        return this.query<string[]>(url, null, this.db);
+        
+        return this.query<alert[]>(url, null, this.db, (result:alertDto[]) => result.map(a => new alert(a)));
     }
 }
 

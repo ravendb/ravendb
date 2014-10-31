@@ -63,7 +63,7 @@ namespace Raven.Database.Actions
                 configuration.DataDirectory = restoreRequest.DatabaseLocation;
             }
 
-            using (var transactionalStorage = configuration.CreateTransactionalStorage(storage, () => { }))
+            using (var transactionalStorage = configuration.CreateTransactionalStorage(storage, () => { }, () => { }))
             {
                 transactionalStorage.Restore(restoreRequest, output);
             }

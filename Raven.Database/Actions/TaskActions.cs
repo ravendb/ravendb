@@ -181,8 +181,9 @@ namespace Raven.Database.Actions
 
             CompactDatabase,
 
-            CompactFilesystem
+            CompactFilesystem,
 
+            IoTest
         }
 
       

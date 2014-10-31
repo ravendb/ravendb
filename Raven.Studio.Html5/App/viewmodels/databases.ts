@@ -5,8 +5,10 @@ import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import changesApi = require('common/changesApi');
 import shell = require('viewmodels/shell');
-import getOperationAlertsCommand = require("commands/getOperationAlertsCommand");
 import license = require("models/license");
+import alert = require("models/alert");
+import getOperationAlertsCommand = require("commands/getOperationAlertsCommand");
+import dismissAlertCommand = require("commands/dismissAlertCommand");
 
 class databases extends viewModelBase {
 
@@ -18,7 +20,7 @@ class databases extends viewModelBase {
     systemDb: database;
     optionsClicked = ko.observable<boolean>(false);
     appUrls: computedAppUrls;
-    operationAlerts = ko.observable<string[]>([]);
+    alerts = ko.observable<alert[]>([]);
 
     constructor() {
         super();
@@ -61,7 +63,15 @@ class databases extends viewModelBase {
 
             return disabledStatus;
         });
-        this.fetchOperationAlerts();
+        this.fetchAlerts();
+    }
+
+    private fetchAlerts() {
+        new getOperationAlertsCommand(appUrl.getSystemDatabase())
+            .execute()
+            .then((result: alert[]) => {
+                this.alerts(result);
+            });
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -72,10 +82,6 @@ class databases extends viewModelBase {
     attached() {
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
         this.databasesLoaded();
-    }
-
-    private fetchOperationAlerts() {
-        new getOperationAlertsCommand(this.activeDatabase()).execute().then(result => this.operationAlerts(result));
     }
 
     private databasesLoaded() {
@@ -327,6 +333,15 @@ class databases extends viewModelBase {
     navigateToAdminSettings() {
         this.navigate(this.appUrls.adminSettings());
         shell.disconnectFromResourceChangesApi();
+    }
+
+    dismissAlert(uniqueKey: string) {
+        new dismissAlertCommand(appUrl.getSystemDatabase(), uniqueKey).execute();
+    }
+
+    urlForAlert(alert: alert) {
+        var index = this.alerts().indexOf(alert);
+        return appUrl.forAlerts(appUrl.getSystemDatabase()) + "&item=" + index;
     }
 }
 

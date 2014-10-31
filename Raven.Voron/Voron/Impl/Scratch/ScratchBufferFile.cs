@@ -16,6 +16,7 @@ namespace Voron.Impl.Scratch
 		private class PendingPage
 		{
 			public long Page;
+			public long NumberOfPages;
 			public long ValidAfterTransactionId;
 		}
 
@@ -72,12 +73,26 @@ namespace Voron.Impl.Scratch
 			return result;
 		}
 
-		public bool HasDiscontinuousSpaceFor(Transaction tx, long size)
+		public bool HasDiscontinuousSpaceFor(Transaction tx, long size, int scratchFilesInUse)
 		{
+			long available = 0;
+
+			if (scratchFilesInUse == 1)
+			{
+				// we can consider the space from the end of a file as available only if we have the single scratch buffer file
+				// if a scratch limit is controller over multiple files then we can use only free pages to calculate available space
+
+				available += (_scratchPager.NumberOfAllocatedPages - _lastUsedPage);
+			}
+
+			available += _freePagesBySizeAvailableImmediately.Sum(x => x.Key * x.Value.Count);
+
+			if (available >= size)
+				return true;
+
 			var sizesFromLargest = _freePagesBySize.Keys.OrderByDescending(x => x).ToList();
 
 			var oldestTransaction = tx.Environment.OldestTransaction;
-			long available = _freePagesBySizeAvailableImmediately.Sum(x => x.Key*x.Value.Count);
 
 			foreach (var sizeKey in sizesFromLargest)
 			{
@@ -177,6 +192,7 @@ namespace Voron.Impl.Scratch
 				list.AddFirst(new PendingPage
 				{
 					Page = value.PositionInScratchBuffer,
+					NumberOfPages = value.NumberOfPages,
 					ValidAfterTransactionId = asOfTxId
 				});
 			}
@@ -205,7 +221,7 @@ namespace Voron.Impl.Scratch
 
 				while (item.Value.ValidAfterTransactionId >= oldestActiveTransaction)
 				{
-					result += free.Key;
+					result += item.Value.NumberOfPages;
 
 					if (item.Next == null)
 						break;

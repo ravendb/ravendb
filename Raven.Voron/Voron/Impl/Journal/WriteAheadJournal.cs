@@ -32,7 +32,6 @@ namespace Voron.Impl.Journal
 		private readonly LZ4 _lz4 = new LZ4();
 		private readonly JournalApplicator _journalApplicator;
         private readonly ShipppedTransactionsApplicator _shipppedTransactionsApplicator;
-        private readonly ReaderWriterLockSlim _journalLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 		private readonly ModifyHeaderAction _updateLogInfo;
 
 		private ImmutableAppendOnlyList<JournalFile> _files = ImmutableAppendOnlyList<JournalFile>.Empty;
@@ -61,7 +60,7 @@ namespace Voron.Impl.Journal
 			_shipppedTransactionsApplicator = new ShipppedTransactionsApplicator(_env, 0, _env.NextWriteTransactionId - 1);
 
 			_compressionPager = _env.Options.CreateScratchPager("compression.buffers");
-			_journalApplicator = new JournalApplicator(this, _journalLock);
+			_journalApplicator = new JournalApplicator(this);
 		}
 
 		public ImmutableAppendOnlyList<JournalFile> Files { get { return _files; } }
@@ -389,8 +388,8 @@ namespace Voron.Impl.Journal
 		{
 			private const long DelayedDataFileSynchronizationBytesLimit = 2L * 1024 * 1024 * 1024;
 			private readonly TimeSpan _delayedDataFileSynchronizationTimeLimit = TimeSpan.FromMinutes(1);
-			private readonly ReaderWriterLockSlim _flushingSemaphore;
 			private readonly Dictionary<long, JournalFile> _journalsToDelete = new Dictionary<long, JournalFile>();
+			private readonly object _flushingLock = new object();
 			private readonly WriteAheadJournal _waj;
 			private long _lastSyncedTransactionId;
 			private long _lastSyncedJournal;
@@ -399,11 +398,11 @@ namespace Voron.Impl.Journal
 			private JournalFile _lastFlushedJournal;
 			private long? forcedIterateJournalsAsOf = null;
 			private bool forcedFlushOfOldPages = false;
+			private volatile bool ignoreLockAlreadyTaken = false;
 
-			public JournalApplicator(WriteAheadJournal waj, ReaderWriterLockSlim flushingSemaphore)
+			public JournalApplicator(WriteAheadJournal waj)
 			{
 				_waj = waj;
-				_flushingSemaphore = flushingSemaphore;
 			}
 
 			private IDisposable ForceFlushingPagesOlderThan(long oldestActiveTransaction)
@@ -412,23 +411,32 @@ namespace Voron.Impl.Journal
 															long.MaxValue : // if there is no active transaction, let it read as of LastTransaction from a snapshot
 															oldestActiveTransaction - 1;
 				forcedFlushOfOldPages = true;
+				ignoreLockAlreadyTaken = true;
 
 				return new DisposableAction(() =>
 				{
 					forcedIterateJournalsAsOf = null;
 					forcedFlushOfOldPages = false;
+					ignoreLockAlreadyTaken = false;
 				});
 			}
 
 			public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, Transaction transaction = null, bool allowToFlushOverwrittenPages = false)
 			{
-				if (_flushingSemaphore.TryEnterWriteLock(Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30)) == false)
-					throw new TimeoutException("Could not acquire the write lock in 30 seconds");
+				if (token.IsCancellationRequested)
+					return;
+
+				if (Monitor.IsEntered(_flushingLock) && ignoreLockAlreadyTaken == false)
+					throw new InvalidJournalFlushRequest("Applying journals to the data file has been already requested on the same thread");
+
+				bool lockTaken = false;
 
 				try
 				{
-					if (token.IsCancellationRequested)
-						return;
+					Monitor.TryEnter(_flushingLock, Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30), ref lockTaken);
+
+					if (lockTaken == false)
+						throw new TimeoutException("Could not acquire the write lock in 30 seconds");
 
 					var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
 
@@ -459,6 +467,9 @@ namespace Voron.Impl.Journal
 							if (oldestActiveTransaction != 0 &&
 								pagePosition.Value.TransactionId >= oldestActiveTransaction)
 							{
+								if(pagePosition.Value.IsFreedPageMarker)
+									continue;
+
 								// we cannot write this yet, there is a read transaction that might be looking at this
 								// however, we _aren't_ going to be writing this to the data file, since that would be a 
 								// waste, we would just overwrite that value in the next flush anyway
@@ -473,6 +484,14 @@ namespace Voron.Impl.Journal
 									pagesToWrite.Remove(pagePosition.Key);
 								}
 
+								continue;
+							}
+
+							if (pagePosition.Value.IsFreedPageMarker)
+							{
+								// to ensure that we won't overwrite data by a page from the older journal where it wasn't marked as free 
+								// while now it not being considered to be applied to the data file
+								pagesToWrite.Remove(pagePosition.Key); 
 								continue;
 							}
 
@@ -580,7 +599,8 @@ namespace Voron.Impl.Journal
 				}
 				finally
 				{
-					_flushingSemaphore.ExitWriteLock();
+					if(lockTaken)
+						Monitor.Exit(_flushingLock);
 				}
 			}
 
@@ -749,8 +769,16 @@ namespace Voron.Impl.Journal
 
 			public IDisposable TakeFlushingLock()
 			{
-				_flushingSemaphore.EnterWriteLock();
-				return new DisposableAction(() => _flushingSemaphore.ExitWriteLock());
+				bool lockTaken = false;
+				Monitor.TryEnter(_flushingLock, ref lockTaken);
+				ignoreLockAlreadyTaken = true;
+
+				return new DisposableAction(() =>
+				{
+					ignoreLockAlreadyTaken = false;
+					if (lockTaken)
+						Monitor.Exit(_flushingLock);
+				});
 			}
 		}
 

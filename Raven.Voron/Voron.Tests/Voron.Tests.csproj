@@ -82,6 +82,7 @@
     <Compile Include="Bugs\LargeValues.cs" />
     <Compile Include="Bugs\MultiAdds.cs" />
     <Compile Include="Bugs\PageTableIssue.cs" />
+    <Compile Include="Bugs\RavenDB_2850.cs" />
     <Compile Include="Bugs\RecoveryMultipleJournals.cs" />
     <Compile Include="Bugs\RecoveryWithManualFlush.cs" />
     <Compile Include="Bugs\Snapshots.cs" />

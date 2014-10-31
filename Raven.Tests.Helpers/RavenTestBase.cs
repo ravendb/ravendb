@@ -326,9 +326,9 @@ namespace Raven.Tests.Helpers
 			ravenConfiguration.Storage.Voron.TempPath = tempDir;
 
 			if (storageType == "voron")
-				newTransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(ravenConfiguration, () => { });
+				newTransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(ravenConfiguration, () => { }, () => { });
 			else
-				newTransactionalStorage = new Raven.Storage.Esent.TransactionalStorage(ravenConfiguration, () => { });
+				newTransactionalStorage = new Raven.Storage.Esent.TransactionalStorage(ravenConfiguration, () => { }, () => { });
 
 			newTransactionalStorage.Initialize(new SequentialUuidGenerator { EtagBase = 0 }, documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
 			return newTransactionalStorage;

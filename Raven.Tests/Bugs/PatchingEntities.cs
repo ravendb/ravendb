@@ -67,7 +67,7 @@ namespace Raven.Tests.Bugs
 						   }
 					   }
 				   },
-				   false
+				   null
 			   ).WaitForCompletion();
 
 				Assert.Equal("{\"Comment\":{\"Notes\":[\"item\",\"new\"]}}", store.DatabaseCommands.Get("items/1").DataAsJson.ToString(Formatting.None));

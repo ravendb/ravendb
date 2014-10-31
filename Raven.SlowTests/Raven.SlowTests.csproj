@@ -31,6 +31,12 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Owin, Version=2.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -70,6 +76,7 @@
     <Compile Include="Bundles\Replication\Async\ReadStriping.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
     <Compile Include="Bundles\Replication\ReadStriping.cs" />
+    <Compile Include="DiskIO\DiskIOTest.cs" />
     <Compile Include="Faceted\FacetPaging.cs" />
     <Compile Include="IncrementalBackupTest.cs" />
     <Compile Include="IndexationTests.cs" />
@@ -103,6 +110,9 @@
     <Compile Include="Voron\Class1.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Raven.Database\RavenDB.snk">
+      <Link>RavenDB.snk</Link>
+    </None>
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
@@ -141,6 +151,10 @@
     <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267ac60c-751e-42e9-aa18-66035deff63a}</Project>
       <Name>Raven.Tests</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
+      <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
+      <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

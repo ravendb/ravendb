@@ -15,8 +15,6 @@ using Raven.Database.Client.Aws;
 using Raven.Database.Client.Azure;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
-using Raven.Database.Server;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
@@ -138,8 +136,14 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 		private void TimerCallback(bool fullBackup)
 		{
-			if (currentTask != null)
+		    if (currentTask != null)
 				return;
+
+            if (Database.Disposed)
+            {
+                Dispose();
+                return;
+            }
 
 			// we have shared lock for both incremental and full backup.
 			lock (this)

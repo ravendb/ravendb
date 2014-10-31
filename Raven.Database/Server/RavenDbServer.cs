@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Replication;
@@ -91,15 +91,20 @@ namespace Raven.Server
             set { configuration.RunInMemory = value; }
 	    }
 
-	    public RavenDbServer Initialize(Action<RavenDBOptions> configure = null)
-	    {
-            owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
-            options = owinHttpServer.Options;
-            serverThingsForTests = new ServerThingsForTests(options);
-	        documentStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke);
-	        documentStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
-	        documentStore.Initialize();
+		public RavenDbServer Initialize(Action<RavenDBOptions> configure = null)
+		{
+			if (configuration.IgnoreSslCertificateErros == IgnoreSslCertificateErrorsMode.All)
+			{
+				// we ignore either all or none at the moment
+				ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
+			}
 
+			owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
+			options = owinHttpServer.Options;
+			serverThingsForTests = new ServerThingsForTests(options);
+			documentStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke);
+			documentStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
+			documentStore.Initialize();
 
 			filesStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke);
 			filesStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
@@ -139,8 +144,11 @@ namespace Raven.Server
         ///</summary>
         public bool UseEmbeddedHttpServer { get; set; }
 
+		public bool Disposed { get; private set; }
+
 	    public void Dispose()
 	    {
+		    Disposed = true;
 		    if (documentStore != null)
 			    documentStore.Dispose();
 

@@ -30,7 +30,7 @@ namespace Raven.Tests.Patching
 	                    {
 	                        Script = @"this.Test = 'test';"
 	                    }
-	                    , true);
+	                    , new BulkOperationOptions {AllowStale = true, MaxOpsPerSec = null,StaleTimeout = null});
 	            }
 	        }
 	    }

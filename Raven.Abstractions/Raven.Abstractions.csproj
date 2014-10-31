@@ -138,6 +138,7 @@
     <Compile Include="Counters\CounterView.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\AbstractRestoreRequest.cs" />
+    <Compile Include="Data\BulkOperationOptions.cs" />
     <Compile Include="Data\FilesystemRestoreRequest.cs" />
     <Compile Include="Data\FilesystemBackupRequest.cs" />
     <Compile Include="Data\EsentStorageStats.cs" />

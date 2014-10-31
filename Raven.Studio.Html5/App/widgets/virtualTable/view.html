@@ -8,7 +8,7 @@
         height: 30px;
         font-size: 25px;
         text-align: center; "></div>
-    <div class="ko-grid-column-container" data-bind="foreach: columns">
+    <div class="ko-grid-column-container" data-bind="visible: noResults() === false, foreach: columns">
         <!-- ko if: binding === '__IsChecked' -->
         <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }">
 
