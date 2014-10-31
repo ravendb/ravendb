@@ -34,5 +34,10 @@ namespace Raven.Abstractions.Smuggler
         void Configure(SmugglerFilesOptions options);
 
         void ShowProgress(string format, params object[] args);
+
+        string CreateIncrementalKey();
+        Task<ExportFilesDestinations> GetIncrementalExportKey();
+        Task PutIncrementalExportKey(ExportFilesDestinations destinations);
+        
     }
 }

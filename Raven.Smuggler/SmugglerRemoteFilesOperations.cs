@@ -18,17 +18,17 @@ namespace Raven.Smuggler
 {
     public class SmugglerRemoteFilesOperations : ISmugglerFilesOperations
     {
-        private readonly Func<FilesStore> store;
+        private readonly Func<FilesStore> primaryStore;
         private readonly Func<DocumentStore> documentStore;
 
         const int RetriesCount = 5;
 
-        private FilesStore Store
+        protected FilesStore PrimaryStore
         {
-            get { return store(); }
+            get { return primaryStore(); }
         }
 
-        private DocumentStore DocumentStore
+        protected DocumentStore DocumentStore
         {
             get { return documentStore(); }
         }        
@@ -38,24 +38,30 @@ namespace Raven.Smuggler
 
         public bool LastRequestErrored { get; set; }
 
-        public SmugglerRemoteFilesOperations(Func<FilesStore> store, Func<DocumentStore> documentStore)
+        public SmugglerRemoteFilesOperations(Func<FilesStore> primaryStore, Func<DocumentStore> documentStore)
         {
-            this.store = store;
+            if (primaryStore == null)
+                throw new ArgumentNullException("primaryStore");
+
+            if (documentStore == null)
+                throw new ArgumentNullException("documentStore");
+
+            this.primaryStore = primaryStore;
             this.documentStore = documentStore;
         }
 
-        public async Task<FileSystemStats[]> GetStats()
+        public virtual async Task<FileSystemStats[]> GetStats()
         {
-            return await Store.AsyncFilesCommands.Admin.GetStatisticsAsync();
+            return await PrimaryStore.AsyncFilesCommands.Admin.GetStatisticsAsync();
         }
 
-        public async Task<string> GetVersion(FilesConnectionStringOptions server)
+        public virtual async Task<string> GetVersion(FilesConnectionStringOptions server)
         {
             var buildNumber = await DocumentStore.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
             return buildNumber.ProductVersion;
         }
 
-        public LastFilesEtagsInfo FetchCurrentMaxEtags()
+        public virtual LastFilesEtagsInfo FetchCurrentMaxEtags()
         {
             return new LastFilesEtagsInfo
             { 
@@ -64,34 +70,32 @@ namespace Raven.Smuggler
             };
         }
 
-        public async Task<IAsyncEnumerator<FileHeader>> GetFiles(FilesConnectionStringOptions src, Etag lastEtag, int take)
+        public virtual async Task<IAsyncEnumerator<FileHeader>> GetFiles(FilesConnectionStringOptions src, Etag lastEtag, int take)
         {
             ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
-            return await Store.AsyncFilesCommands.StreamFilesAsync(lastEtag, pageSize: take);
+            return await PrimaryStore.AsyncFilesCommands.StreamFilesAsync(lastEtag, pageSize: take);
         }
 
-        public Task<Stream> DownloadFile(FileHeader file)
+        public virtual Task<Stream> DownloadFile(FileHeader file)
         {
-            return Store.AsyncFilesCommands.DownloadAsync(file.FullPath);
+            return PrimaryStore.AsyncFilesCommands.DownloadAsync(file.FullPath);
         }
 
-        public Task PutFiles(FileHeader file, Stream data, long size)
+        public virtual Task PutFiles(FileHeader file, Stream data, long size)
         {
-            return Store.AsyncFilesCommands.UploadRawAsync(file.FullPath, data, file.Metadata, size);
+            return PrimaryStore.AsyncFilesCommands.UploadRawAsync(file.FullPath, data, file.Metadata, size);
         }
 
-        public void Initialize(SmugglerFilesOptions options)
+        public virtual void Initialize(SmugglerFilesOptions options)
         {
             this.Options = options;
         }
 
-        public void Configure(SmugglerFilesOptions options)
+        public virtual void Configure(SmugglerFilesOptions options)
         {
-            if (Store.HasJsonRequestFactory == false)
-                return;
         }
 
-        public void ShowProgress(string format, params object[] args)
+        public virtual void ShowProgress(string format, params object[] args)
         {
             try
             {
@@ -101,6 +105,62 @@ namespace Raven.Smuggler
             {
                 throw new FormatException("Input string is invalid: " + format + Environment.NewLine + string.Join(", ", args), e);
             }
+        }
+
+
+        public virtual string CreateIncrementalKey()
+        {
+            throw new NotSupportedException();
+        }
+
+        public virtual Task<ExportFilesDestinations> GetIncrementalExportKey()
+        {
+            throw new NotSupportedException();
+        }
+
+        public virtual Task PutIncrementalExportKey(ExportFilesDestinations destinations)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+
+    public class SmugglerBetweenRemoteFilesOperations : SmugglerRemoteFilesOperations
+    {
+        private readonly Func<FilesStore> secondaryStore;
+
+        protected FilesStore SecondaryStore
+        {
+            get { return secondaryStore(); }
+        }
+
+        public SmugglerBetweenRemoteFilesOperations(Func<FilesStore> primaryStore, Func<FilesStore> secondaryStore, Func<DocumentStore> documentStore) 
+            : base ( primaryStore, documentStore )
+        {
+            if (secondaryStore == null)
+                throw new ArgumentNullException("primaryStore");
+
+            this.secondaryStore = secondaryStore;
+        }
+
+        public override Task PutFiles(FileHeader file, Stream data, long size)
+        {
+            return SecondaryStore.AsyncFilesCommands.UploadRawAsync(file.FullPath, data, file.Metadata, size);
+        }
+
+        public override string CreateIncrementalKey()
+        {
+            return this.PrimaryStore.AsyncFilesCommands.UrlFor();            
+        }
+
+        public override Task<ExportFilesDestinations> GetIncrementalExportKey()
+        {
+            return this.SecondaryStore.AsyncFilesCommands.Configuration.GetKeyAsync<ExportFilesDestinations>(ExportFilesDestinations.RavenDocumentKey);
+        }
+
+        public override Task PutIncrementalExportKey(ExportFilesDestinations destinations)
+        {
+            return this.SecondaryStore.AsyncFilesCommands.Configuration.SetKeyAsync<ExportFilesDestinations>(ExportFilesDestinations.RavenDocumentKey, destinations);
         }
     }
 }

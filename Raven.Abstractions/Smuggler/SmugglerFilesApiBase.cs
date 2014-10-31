@@ -1,25 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
+﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
-using Raven.Abstractions.Util.Streams;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace Raven.Abstractions.Smuggler
 {
@@ -84,7 +80,6 @@ namespace Raven.Abstractions.Smuggler
                     var counter = 1;
                     while (true)
                     {
-                        // ReSharper disable once AssignNullToNotNullAttribute
                         result.FilePath = Path.Combine(Path.GetDirectoryName(result.FilePath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravenfs-incremental-dump");
 
                         if (File.Exists(result.FilePath) == false)
@@ -252,6 +247,7 @@ namespace Raven.Abstractions.Smuggler
         private static void ReadLastEtagsFromFile(ExportFilesResult result)
         {
             var log = LogManager.GetCurrentClassLogger();
+
             var etagFileLocation = Path.Combine(result.FilePath, IncrementalExportStateFile);
             if (!File.Exists(etagFileLocation))
                 return;
@@ -276,7 +272,6 @@ namespace Raven.Abstractions.Smuggler
 
         public static void WriteLastEtagsToFile(ExportFilesResult result, string backupPath)
         {
-            // ReSharper disable once AssignNullToNotNullAttribute
             var etagFileLocation = Path.Combine(backupPath, IncrementalExportStateFile);
             using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
             {
@@ -353,10 +348,113 @@ namespace Raven.Abstractions.Smuggler
             sw.Stop();
         }
 
-
-        public virtual Task Between(SmugglerBetweenOptions<FilesConnectionStringOptions> betweenOptions)
+        public virtual async Task Between(SmugglerBetweenOptions<FilesConnectionStringOptions> betweenOptions)
         {
-            throw new NotImplementedException();
+            Operations.Configure(Options);
+            Operations.Initialize(Options);
+
+            try
+            {
+                await DetectServerSupportedFeatures(betweenOptions.From);
+                await DetectServerSupportedFeatures(betweenOptions.To);
+            }
+            catch (WebException e)
+            {
+                throw new SmugglerExportException("Failed to query server for supported features. Reason : " + e.Message)
+                {
+                    LastEtag = Etag.Empty,
+                };
+            }
+
+            if (string.IsNullOrWhiteSpace(betweenOptions.IncrementalKey))
+            {
+                betweenOptions.IncrementalKey = Operations.CreateIncrementalKey();
+            }
+
+            var incremental = new ExportFilesDestinationKey();
+            if (this.Options.Incremental)
+            {
+                var smugglerExportIncremental = await Operations.GetIncrementalExportKey(); // importStore.AsyncFilesCommands.Configuration.GetKeyAsync<SmugglerExportIncremental>(SmugglerExportIncremental.RavenDocumentKey);
+
+                ExportFilesDestinationKey value;
+                if (smugglerExportIncremental.Destinations.TryGetValue(betweenOptions.IncrementalKey, out value))
+                {
+                    incremental = value;
+                }
+
+                this.Options.StartFilesEtag = incremental.LastEtag ?? Etag.Empty;
+            }
+
+            var result = new ExportFilesResult
+            {
+                LastFileEtag = Options.StartFilesEtag,
+            };
+
+            // used to synchronize max returned values for put/delete operations
+            var maxEtags = Operations.FetchCurrentMaxEtags();
+
+            incremental.LastEtag = await CopyBetweenStores(betweenOptions, result.LastFileEtag, maxEtags.LastFileEtag);
+
+            if (this.Options.Incremental)
+            {
+                var smugglerExportIncremental = await Operations.GetIncrementalExportKey();
+                smugglerExportIncremental.Destinations[betweenOptions.IncrementalKey] = incremental;
+
+                await Operations.PutIncrementalExportKey(smugglerExportIncremental); // importStore.AsyncFilesCommands.Configuration.SetKeyAsync<SmugglerExportIncremental>(SmugglerExportIncremental.RavenDocumentKey, smugglerExportIncremental);
+            }   
+        }
+
+        private async Task<Etag> CopyBetweenStores(SmugglerBetweenOptions<FilesConnectionStringOptions> options, Etag lastEtag, Etag maxEtag)
+        {
+            var totalCount = 0;
+            var lastReport = SystemTime.UtcNow;
+            var reportInterval = TimeSpan.FromSeconds(10);
+            Operations.ShowProgress("Exporting Files");
+
+            Exception exceptionHappened = null;
+            try
+            {
+                using (var files = await Operations.GetFiles(options.From, lastEtag, Math.Min(Options.BatchSize, int.MaxValue)))
+                {
+                    while (await files.MoveNextAsync())
+                    {
+                        var file = files.Current;
+
+                        var tempLastEtag = file.Etag;
+                        if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
+                            break;
+
+                        var downloadedFile = await Operations.DownloadFile(file);
+                        await Operations.PutFiles( file, downloadedFile, file.TotalSize.Value );
+
+                        lastEtag = tempLastEtag;
+
+                        totalCount++;
+                        if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                        {
+                            //TODO: Show also the MB/sec and total GB exported.
+                            Operations.ShowProgress("Exported {0} files. ", totalCount);
+                            lastReport = SystemTime.UtcNow;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
+                Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+
+                exceptionHappened = new SmugglerExportException(e.Message, e)
+                {
+                    LastEtag = lastEtag,
+                };
+            }
+
+            if (exceptionHappened != null)
+                throw exceptionHappened;
+
+            Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+            return lastEtag;
         }
     }
 }

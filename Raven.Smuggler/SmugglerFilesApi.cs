@@ -13,21 +13,36 @@ using Raven.Abstractions.Smuggler.Data;
 using Raven.Client.Document;
 using Raven.Client.FileSystem;
 
+
+
 namespace Raven.Smuggler
 {
     public class SmugglerFilesApi : SmugglerFilesApiBase
     {
-        private FilesStore store;
+        private FilesStore primaryStore;
+        private FilesStore secondaryStore;
+
         private DocumentStore documentStore;
 
         public SmugglerFilesApi(SmugglerFilesOptions options = null) : base(options ?? new SmugglerFilesOptions())
-        {
-            Operations = new SmugglerRemoteFilesOperations(() => store, () => documentStore);
-        }
+        {}
 
-        public override Task Between(SmugglerBetweenOptions<FilesConnectionStringOptions> betweenOptions)
+        public override async Task Between(SmugglerBetweenOptions<FilesConnectionStringOptions> betweenOptions)
         {
-            return SmugglerFilesBetweenOperation.Between(betweenOptions, Options);
+            if (betweenOptions.From == null)
+                throw new ArgumentNullException("betweenOptions.From");
+
+            if (betweenOptions.To == null)
+                throw new ArgumentNullException("betweenOptions.To");            
+
+            using (primaryStore = await CreateStore(betweenOptions.From))
+            using (secondaryStore = await CreateStore(betweenOptions.To))
+            using (documentStore = CreateDocumentStore(betweenOptions.To))
+            {
+                Operations = new SmugglerBetweenRemoteFilesOperations(() => primaryStore, () => secondaryStore, () => documentStore);
+
+                await base.Between(betweenOptions);
+            }              
         }
 
         public override async Task<ExportFilesResult> ExportData(SmugglerExportOptions<FilesConnectionStringOptions> exportOptions)
@@ -35,9 +50,11 @@ namespace Raven.Smuggler
             if (exportOptions.From == null)
                 throw new ArgumentNullException("exportOptions");
 
-            using (store = await CreateStore(exportOptions.From))
+            using (primaryStore = await CreateStore(exportOptions.From))
             using (documentStore = CreateDocumentStore(exportOptions.From))
 			{
+                Operations = new SmugglerRemoteFilesOperations(() => primaryStore, () => documentStore);
+
 				return await base.ExportData(exportOptions);
 			}
         }
@@ -47,14 +64,16 @@ namespace Raven.Smuggler
             if (importOptions.To == null)
                 throw new ArgumentNullException("importOptions");
 
-            using (store = await CreateStore(importOptions.To))
+            using (primaryStore = await CreateStore(importOptions.To))
             using (documentStore = CreateDocumentStore(importOptions.To))
             {
+                Operations = new SmugglerRemoteFilesOperations(() => primaryStore, () => documentStore);
+
                 await base.ImportData(importOptions);
             }
         }
 
-        private async Task<FilesStore> CreateStore(FilesConnectionStringOptions options)
+        internal static async Task<FilesStore> CreateStore(FilesConnectionStringOptions options)
         {
             var credentials = options.Credentials as NetworkCredential;
             if (credentials == null)
@@ -122,9 +141,7 @@ namespace Raven.Smuggler
             }
         }
 
-
-
-        private DocumentStore CreateDocumentStore(FilesConnectionStringOptions options)
+        internal static DocumentStore CreateDocumentStore(FilesConnectionStringOptions options)
         {
             var credentials = options.Credentials as NetworkCredential;
             if (credentials == null)
@@ -148,6 +165,4 @@ namespace Raven.Smuggler
             return store;
         }
     }
-
-
 }

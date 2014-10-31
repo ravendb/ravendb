@@ -22,7 +22,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Smuggler
 {
-	public class SmugglerExecutionTests : RavenFilesTestWithLogs
+    public partial class SmugglerExecutionTests : RavenFilesTestWithLogs
 	{
 		[Fact, Trait("Category", "Smuggler")]
 		public async Task ShouldThrowIfFileSystemDoesNotExist()
@@ -123,17 +123,17 @@ namespace RavenFS.Tests.Smuggler
 		{
 			using (var store = NewStore())
 			{
-				var server = GetServer();
-				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
-				try
-				{
+                var server = GetServer();
+                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+                try
+                {
 
-					var options = new FilesConnectionStringOptions {Url = "http://localhost:8078/", DefaultFileSystem = store.DefaultFileSystem};
+                    var options = new FilesConnectionStringOptions { Url = "http://localhost:8078/", DefaultFileSystem = store.DefaultFileSystem };
 
 					var smugglerApi = new SmugglerFilesApi();
 
-					var e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = outputDirectory.ToFullPath(), To = options }));
-					Assert.Contains("Smuggler encountered a connection problem:", e.Message);
+                    var e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = outputDirectory.ToFullPath(), To = options }));
+                    Assert.Contains("Smuggler encountered a connection problem:", e.Message);
 
 					e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { ToFile = outputDirectory.ToFullPath(), From = options }));
 					Assert.Contains("Smuggler encountered a connection problem:", e.Message);
@@ -141,7 +141,7 @@ namespace RavenFS.Tests.Smuggler
 				}
 				finally
 				{
-					IOExtensions.DeleteDirectory(outputDirectory);
+                    IOExtensions.DeleteDirectory(outputDirectory);
 				}
 			}
 		}
@@ -260,8 +260,8 @@ namespace RavenFS.Tests.Smuggler
 					{
 						using (var session = s.OpenAsyncSession())
 						{
-							var files = s.AsyncFilesCommands.BrowseAsync().Result;
-							Assert.Equal(20, files.Count());
+                            var files = s.AsyncFilesCommands.BrowseAsync().Result;
+                            Assert.Equal(20, files.Count());
 						}
 
 					});
@@ -470,7 +470,7 @@ namespace RavenFS.Tests.Smuggler
 				{
 					var dumper = new SmugglerFilesApi { Options = { Incremental = true } };
 
-					FileHeader originalFile;
+                    FileHeader originalFile;
 					using (var session = store.OpenAsyncSession())
 					{
 						session.RegisterUpload("test1.file", CreateRandomFileStream(12800));

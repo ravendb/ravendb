@@ -356,6 +356,7 @@
     <Compile Include="Replication\ReplicationStatistics.cs" />
     <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
     <Compile Include="Smuggler\Data\ExportDataResult.cs" />
+    <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />
     <Compile Include="Smuggler\Data\ExportFilesResult.cs" />
     <Compile Include="Smuggler\Data\Tombstone.cs" />
     <Compile Include="Smuggler\ISmugglerApi.cs" />
