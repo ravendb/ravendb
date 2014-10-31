@@ -296,11 +296,15 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 name = FileHeader.Canonize(name);
 
                 var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
-
                 if (preserveTimestamps)
                 {
                     if (!headers.ContainsKey(Constants.RavenCreationDate))
-                        throw new InvalidOperationException("Preserve Timestamps requires that the client includes the Raven-Creation-Date header.");
+                    {
+                        if (headers.ContainsKey(Constants.CreationDate))
+                            headers[Constants.RavenCreationDate] = headers[Constants.CreationDate];                            
+                        else
+                            throw new InvalidOperationException("Preserve Timestamps requires that the client includes the Raven-Creation-Date header.");
+                    }
 
                     if ( InnerHeaders.Contains(Constants.RavenLastModified))
                     {

@@ -73,7 +73,7 @@ namespace Raven.Abstractions.Smuggler
 					while (true)
 					{
 						// ReSharper disable once AssignNullToNotNullAttribute
-						result.FilePath = Path.Combine(Path.GetDirectoryName(result.FilePath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-incremental-dump");
+                        result.FilePath = Path.Combine(Path.GetDirectoryName(result.FilePath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-incremental-dump");
 
 						if (File.Exists(result.FilePath) == false)
 							break;

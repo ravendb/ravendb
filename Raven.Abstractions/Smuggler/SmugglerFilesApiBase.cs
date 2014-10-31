@@ -57,18 +57,18 @@ namespace Raven.Abstractions.Smuggler
                 LastDeletedFileEtag = Options.StartFilesDeletionEtag,
             };
 
-            var directory = result.FilePath;
-            if (!Directory.Exists(result.FilePath))
-            {
-                if (!File.Exists(result.FilePath))
-                {
-                    Directory.CreateDirectory(result.FilePath);
-                }
-                else directory = Path.GetDirectoryName(result.FilePath);                    
-            }
+            result.FilePath = Path.GetFullPath(result.FilePath);
 
             if (Options.Incremental)
             {
+                if (Directory.Exists(result.FilePath) == false)
+                {
+                    if (File.Exists(result.FilePath))
+                        result.FilePath = Path.GetDirectoryName(result.FilePath) ?? result.FilePath;
+                    else
+                        Directory.CreateDirectory(result.FilePath);
+                }
+
                 if (Options.StartFilesEtag == Etag.Empty)
                 {
                     ReadLastEtagsFromFile(result);
@@ -84,13 +84,10 @@ namespace Raven.Abstractions.Smuggler
 
                         if (File.Exists(result.FilePath) == false)
                             break;
+
                         counter++;
                     }
                 }
-            }
-            else
-            {
-                result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravenfs-dump"); 
             }
 
             SmugglerExportException lastException = null;
@@ -134,7 +131,7 @@ namespace Raven.Abstractions.Smuggler
 
                 if (Options.Incremental)
                 {
-                    WriteLastEtagsToFile(result, directory);
+                    WriteLastEtagsToFile(result, Path.GetDirectoryName(result.FilePath));
                 }
 
                 if (lastException != null)

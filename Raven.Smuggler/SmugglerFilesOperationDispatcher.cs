@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Data;
 
 namespace Raven.Smuggler
 {
@@ -18,19 +19,20 @@ namespace Raven.Smuggler
         }
 
 
-        protected override Task PerformImportAsync(SmugglerFilesOptions parameters)
+        protected override async Task PerformImportAsync(SmugglerFilesOptions parameters)
         {
-            throw new NotImplementedException();
+            await api.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = parameters.BackupPath, To = parameters.Source });            
         }
 
-        protected override Task PerformExportAsync(SmugglerFilesOptions parameters)
+        protected override async Task PerformExportAsync(SmugglerFilesOptions parameters)
         {
-            throw new NotImplementedException();
+            await api.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { From = parameters.Source, ToFile = parameters.BackupPath });
         }
 
-        protected override Task PerformBetweenAsync(SmugglerFilesOptions parameters)
+        protected override async Task PerformBetweenAsync(SmugglerFilesOptions parameters)
         {
-            throw new NotImplementedException();
+            parameters.Destination.Url = parameters.BackupPath;
+            await api.Between(new SmugglerBetweenOptions<FilesConnectionStringOptions> { From = parameters.Source, To = parameters.Destination });
         }
     }
 }
