@@ -14,6 +14,8 @@ using Raven.Setup.CustomActions.Infrastructure.IIS;
 
 namespace Raven.Setup.CustomActions
 {
+	using System.Diagnostics;
+
 	public class IISActions
 	{
 		private const string WebSiteProperty = "WEBSITE";
@@ -98,7 +100,9 @@ namespace Raven.Setup.CustomActions
 				{
 					session["WEBSITE_ID"] = AsteriskSiteId;
 					session["WEBSITE_DEFAULT_APPPOOL"] = "DefaultAppPool";
+					session.DoAction("SetNewWebSiteDirectory");
 				}
+
 				session.DoAction("SetIISInstallFolder");
 
                 return ActionResult.Success;
@@ -336,8 +340,6 @@ namespace Raven.Setup.CustomActions
 					{
 						session["WEBSITE_PATH"] = fileDialog.SelectedPath;
 					}
-
-					session.DoAction("SetNewWebSiteDirectory");
 				});
 				task.SetApartmentState(ApartmentState.STA);
 				task.Start();
