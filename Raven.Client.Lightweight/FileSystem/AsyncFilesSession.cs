@@ -135,6 +135,7 @@ namespace Raven.Client.FileSystem
 
             IncrementRequestCount();
 
+            // TODO: Check this.
             var directoryName = directory.StartsWith("/") ? directory : "/" + directory;
             var searchResults = await Commands.SearchOnDirectoryAsync(directory);
             return searchResults.Files.ToArray();

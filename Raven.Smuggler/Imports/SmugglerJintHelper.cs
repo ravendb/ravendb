@@ -18,21 +18,21 @@ namespace Raven.Smuggler.Imports
 	{
 		private Engine jint;
 
-		public void Initialize(SmugglerOptions options)
+		public void Initialize(SmugglerDatabaseOptions databaseOptions)
 		{
-			if (options == null || string.IsNullOrEmpty(options.TransformScript))
+			if (databaseOptions == null || string.IsNullOrEmpty(databaseOptions.TransformScript))
 				return;
 
 			jint = new Engine(cfg =>
 			{
 				cfg.AllowDebuggerStatement(false);
-				cfg.MaxStatements(options.MaxStepsForTransformScript);
+				cfg.MaxStatements(databaseOptions.MaxStepsForTransformScript);
 			});
 
 			jint.Execute(string.Format(@"
 					function Transform(docInner){{
 						return ({0}).apply(this, [docInner]);
-					}};", options.TransformScript));
+					}};", databaseOptions.TransformScript));
 		}
 
 		public RavenJObject Transform(string transformScript, RavenJObject input)

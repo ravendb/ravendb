@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Tests.Helpers;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Raven.Abstractions.FileSystem;
@@ -7,7 +8,7 @@ using Raven.Client.FileSystem.Connection;
 
 namespace RavenFS.Tests.Synchronization
 {
-	public class FailoverTests : RavenFsTestBase
+	public class FailoverTests : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async Task ShouldFailOver()

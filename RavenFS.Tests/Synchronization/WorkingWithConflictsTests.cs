@@ -1,29 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
+using Raven.Database.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Synchronization;
-using Raven.Database.Server.RavenFS.Synchronization.Multipart;
+using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using RavenFS.Tests.Synchronization.IO;
 using RavenFS.Tests.Tools;
 using Xunit;
-using Raven.Json.Linq;
-using Raven.Abstractions.FileSystem;
-using Raven.Client.FileSystem.Connection;
-using Raven.Database.Server.RavenFS.Infrastructure;
-using Raven.Abstractions.Data;
 
 namespace RavenFS.Tests.Synchronization
 {
-    public class WorkingWithConflictsTests : RavenFsTestBase
+    public class WorkingWithConflictsTests : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async void Files_should_be_reindexed_when_conflict_is_applied()

@@ -85,7 +85,40 @@ namespace Raven.Abstractions.Extensions
                 jsonWriter.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
                 jsonWriter.DateFormatString = Default.DateTimeFormatsToWrite;
                 self.WriteTo(jsonWriter, Default.Converters);
-		}
+		    }
+        }
+
+        public static IEnumerable<string> EnumerateJsonObjects(this StreamReader input, char openChar = '{', char closeChar = '}')
+        {
+            var accumulator = new StringBuilder();
+            int count = 0;
+            bool gotRecord = false;
+            while (!input.EndOfStream)
+            {
+                char c = (char)input.Read();
+                if (c == openChar)
+                {
+                    gotRecord = true;
+                    count++;
+                }
+                else if (c == closeChar)
+                {
+                    count--;
+                }
+
+                accumulator.Append(c);
+
+                if (count != 0 || !gotRecord)
+                    continue;
+
+                // now we are not within a block so 
+                string result = accumulator.ToString();
+                accumulator.Clear();
+
+                gotRecord = false;
+
+                yield return result;
+            }
         }
 
 	    /// <summary>

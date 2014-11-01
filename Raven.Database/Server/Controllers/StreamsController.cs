@@ -51,7 +51,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					Headers =
 					{
-						ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" }
+                        ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" }
 					}
 				}
 			};

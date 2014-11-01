@@ -195,7 +195,7 @@ namespace Raven.Server
 				{
 					actionToTake = () => PrintUsage(optionSet);
 				}},
-				{"config-help", "Help about configuration options", key=>
+				{"config-help", "Help about configuration databaseOptions", key=>
 				{
 					actionToTake = () => PrintConfig(ravenConfiguration.GetConfigOptionsDocs());
 				}},
@@ -701,7 +701,7 @@ Document Database for the .Net Platform
 ----------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
-Configuration options:
+Configuration databaseOptions:
 ",
 				SystemTime.UtcNow.Year);
 
@@ -817,7 +817,7 @@ Configuration options:
 				if (File.Exists(path))
 				{
 					Console.WriteLine("Loading data from: {0}", path);
-					//new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions {Url = ravenConfiguration.ServerUrl}).ImportData(new SmugglerOptions {BackupPath = path});
+					//new SmugglerApi(new SmugglerDatabaseOptions(), new RavenConnectionStringOptions {Url = ravenConfiguration.ServerUrl}).ImportData(new SmugglerDatabaseOptions {BackupPath = path});
 				}
 
 				Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
@@ -934,7 +934,7 @@ Document Database for the .Net Platform
 ----------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
-Command line options:",
+Command line databaseOptions:",
 				SystemTime.UtcNow.Year);
 
 			optionSet.WriteOptionDescriptions(Console.Out);

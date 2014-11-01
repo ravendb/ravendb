@@ -22,7 +22,7 @@ namespace Raven.Tests.MailingList.MapReduceIssue
 			{
 				using (var stream = typeof(CanPageThroughReduceResults).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.MapReduceIssue.MvcMusicStore_Dump.json"))
 				{
-					new SmugglerApi().ImportData(new SmugglerImportOptions { FromStream = stream, To = new RavenConnectionStringOptions { Url = store.Url } }).Wait(TimeSpan.FromSeconds(15));
+                    new SmugglerDatabaseApi().ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = stream, To = new RavenConnectionStringOptions { Url = store.Url } }).Wait(TimeSpan.FromSeconds(15));
 				}
 
 				using (var session = store.OpenSession())

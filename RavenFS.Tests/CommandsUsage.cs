@@ -1,23 +1,21 @@
 using System;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Json.Linq;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
-using Raven.Json.Linq;
-using Raven.Client.FileSystem;
-using Raven.Client.FileSystem.Connection;
-using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests
 {
-    public class CommandsUsage : RavenFsTestBase
+    public class CommandsUsage : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async Task Can_update_just_metadata()

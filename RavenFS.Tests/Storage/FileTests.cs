@@ -190,10 +190,7 @@ namespace RavenFS.Tests.Storage
 
                 storage.Batch(accessor => Assert.Equal(1, accessor.GetFileCount()));
 
-                storage.Batch(accessor =>
-                {
-                    accessor.Delete("file3");
-                });
+                storage.Batch(accessor => accessor.Delete("file3"));
 
                 storage.Batch(accessor => Assert.Equal(1, accessor.GetFileCount()));
 

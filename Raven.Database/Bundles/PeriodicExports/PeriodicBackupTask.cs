@@ -159,7 +159,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 					{
 						try
 						{
-							var dataDumper = new DataDumper(documentDatabase);
+							var dataDumper = new DatabaseDataDumper(documentDatabase);
 							var localBackupConfigs = exportConfigs;
 							var localBackupStatus = exportStatus;
 							if (localBackupConfigs == null)
@@ -198,7 +198,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								}
 							}
 
-							var smugglerOptions = dataDumper.SmugglerOptions;
+                            var smugglerOptions = dataDumper.Options;
 							if (fullBackup == false)
 							{
 								smugglerOptions.StartDocsEtag = localBackupStatus.LastDocsEtag;
@@ -208,7 +208,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								smugglerOptions.Incremental = true;
 								smugglerOptions.ExportDeletions = true;
 							}
-							var exportResult = await dataDumper.ExportData(new SmugglerExportOptions { ToFile = backupPath });
+                            var exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
 
 							if (fullBackup == false)
 							{

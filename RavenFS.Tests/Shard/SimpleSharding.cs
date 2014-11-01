@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Tests.Helpers;
 using Xunit;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem.Shard;
@@ -11,7 +12,7 @@ using Raven.Client.FileSystem;
 
 namespace RavenFS.Tests.Shard
 {
-    public class SimpleSharding : RavenFsTestBase
+    public class SimpleSharding : RavenFilesTestWithLogs
 	{
 	    readonly AsyncShardedFilesServerClient shardedClient;
 

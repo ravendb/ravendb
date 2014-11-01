@@ -77,6 +77,7 @@
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Net.Http.WebRequest" />
@@ -356,12 +357,19 @@
     <Compile Include="Replication\ReplicationStatistics.cs" />
     <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
     <Compile Include="Smuggler\Data\ExportDataResult.cs" />
+    <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />
+    <Compile Include="Smuggler\Data\ExportFilesResult.cs" />
     <Compile Include="Smuggler\Data\Tombstone.cs" />
     <Compile Include="Smuggler\ISmugglerApi.cs" />
-    <Compile Include="Smuggler\ISmugglerOperations.cs" />
+    <Compile Include="Smuggler\ISmugglerDatabaseOperations.cs" />
     <Compile Include="Smuggler\Data\LastEtagsInfo.cs" />
+    <Compile Include="Smuggler\ISmugglerFilesOperations.cs" />
     <Compile Include="Smuggler\SmugglerAction.cs" />
-    <Compile Include="Smuggler\SmugglerApiBase.cs" />
+    <Compile Include="Smuggler\SmugglerDatabaseApiBase.cs" />
+    <Compile Include="Smuggler\SmugglerDatabaseOptions.cs" />
+    <Compile Include="Smuggler\SmugglerFilesApiBase.cs" />
+    <Compile Include="Smuggler\SmugglerFilesOptions.cs" />
+    <Compile Include="Smuggler\SmugglerMode.cs" />
     <Compile Include="Smuggler\SmugglerOptions.cs" />
     <Compile Include="Spatial\ShapeConverter.cs" />
     <Compile Include="Spatial\GeoJsonWktConverter.cs" />
@@ -397,6 +405,7 @@
     <Compile Include="Util\Streams\BufferPool.cs" />
     <Compile Include="Util\Streams\IBufferPool.cs" />
     <Compile Include="Util\Streams\NoBufferPool.cs" />
+    <Compile Include="Util\Streams\Substream.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">

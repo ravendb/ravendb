@@ -1,8 +1,7 @@
 ﻿using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Extensions;
 using Raven.Json.Linq;
-using RavenFS.Tests.Synchronization.IO;
 using System;
 using System.IO;
 using System.Linq;
@@ -13,7 +12,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Synchronization
 {
-    public class FileChangesPropagationTests : RavenFsTestBase
+    public class FileChangesPropagationTests : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async Task File_rename_should_be_propagated()

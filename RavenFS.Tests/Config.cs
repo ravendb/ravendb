@@ -1,11 +1,12 @@
 using Raven.Json.Linq;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace RavenFS.Tests
 {
-	public class Config : RavenFsTestBase
+	public class Config : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async Task CanGetConfig_NotThere()

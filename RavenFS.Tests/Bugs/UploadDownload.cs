@@ -1,9 +1,10 @@
 ﻿using System.IO;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-	public class UploadDownload : RavenFsTestBase
+	public class UploadDownload : RavenFilesTestWithLogs
 	{
 		[Fact] 
 		public async void ShouldWork()

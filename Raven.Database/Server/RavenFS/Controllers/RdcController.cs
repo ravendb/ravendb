@@ -84,8 +84,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                                                                 new DataInfo
 					                                            {
                                                                     Name = canonicalFilename,
-                                                                    LastModified = fileAndPages.Metadata.Value<DateTime>(Constants.LastModified)
-								                                                       .ToUniversalTime()
+                                                                    LastModified = fileAndPages.Metadata.Value<DateTime>(Constants.RavenLastModified).ToUniversalTime()
 					                                            });
 				signatureManifest.FileLength = fileLength ?? 0;
 

@@ -15,11 +15,12 @@ using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Json.Linq;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace RavenFS.Tests.Synchronization
 {
-	public class AutomaticConflictResolutions : RavenFsTestBase
+	public class AutomaticConflictResolutions : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async Task ShouldAutomaticallyResolveInFavourOfLocal_ContentUpdate()

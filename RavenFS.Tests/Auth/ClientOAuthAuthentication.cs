@@ -16,6 +16,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests.Helpers;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Raven.Client.FileSystem;
@@ -24,7 +25,7 @@ using Raven.Client.FileSystem.Connection;
 
 namespace RavenFS.Tests.Auth
 {
-    public class ClientOAuthAuthentication : RavenFsTestBase
+    public class ClientOAuthAuthentication : RavenFilesTestWithLogs
     {
         private const string apiKey = "test/ThisIsMySecret";
 

@@ -149,6 +149,15 @@ namespace Raven.Database.Server.Controllers
 			return Math.Max(0, start);
 		}
 
+        public int GetNextPageStart()
+        {
+            bool isNextPage;
+            if (bool.TryParse(GetQueryStringValue("next-page"), out isNextPage) && isNextPage)
+                return GetStart();
+
+            return 0;
+        }
+
 		public int GetPageSize(int maxPageSize)
 		{
 			int pageSize;
@@ -160,6 +169,8 @@ namespace Raven.Database.Server.Controllers
 				pageSize = maxPageSize;
 			return pageSize;
 		}
+
+
 
 		public bool MatchEtag(Etag etag)
 		{
@@ -244,11 +255,21 @@ namespace Raven.Database.Server.Controllers
 					default:
 						if (header.Value.Type == JTokenType.Date)
 						{
-							var rfc1123 = GetDateString(header.Value, "r");
-							var iso8601 = GetDateString(header.Value, "o");
-							msg.Content.Headers.Add(header.Key, rfc1123);
-							if (header.Key.StartsWith("Raven-") == false)
-								msg.Content.Headers.Add("Raven-" + header.Key, iso8601);
+                            if (header.Key.StartsWith("Raven-"))
+                            {
+                                var iso8601 = GetDateString(header.Value, "o");
+                                msg.Content.Headers.Add(header.Key, iso8601);
+                            }
+                            else
+                            {
+                                var rfc1123 = GetDateString(header.Value, "r");
+                                msg.Content.Headers.Add(header.Key, rfc1123);
+                                if (!headers.ContainsKey("Raven-" + header.Key))
+                                {
+                                    var iso8601 = GetDateString(header.Value, "o");
+                                    msg.Content.Headers.Add("Raven-" + header.Key, iso8601);
+                                }                                    
+                            }
 						}
                         else if (header.Value.Type == JTokenType.Boolean)
                         {

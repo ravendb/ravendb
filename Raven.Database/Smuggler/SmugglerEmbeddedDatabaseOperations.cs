@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="EmbeddedSmugglerOperations.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="SmugglerEmbeddedDatabaseOperations.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -22,13 +22,13 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Smuggler
 {
-	public class EmbeddedSmugglerOperations : ISmugglerOperations
+	public class SmugglerEmbeddedDatabaseOperations : ISmugglerDatabaseOperations
 	{
 		private readonly DocumentDatabase database;
 
 		private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
 
-		public EmbeddedSmugglerOperations(DocumentDatabase database)
+		public SmugglerEmbeddedDatabaseOperations(DocumentDatabase database)
 		{
 			this.database = database;
 		}
@@ -198,7 +198,7 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask();
 		}
 
-		public SmugglerOptions Options { get; private set; }
+		public SmugglerDatabaseOptions Options { get; private set; }
 
         [Obsolete("Use RavenFS instead.")]
 		public Task DeleteAttachment(string key)
@@ -232,17 +232,17 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask<RavenJObject>(document);
 		}
 
-		public void Initialize(SmugglerOptions options)
+		public void Initialize(SmugglerDatabaseOptions databaseOptions)
 		{
-			Options = options;
+			Options = databaseOptions;
 		}
 
-		public void Configure(SmugglerOptions options)
+		public void Configure(SmugglerDatabaseOptions databaseOptions)
 		{
-			var current = options.BatchSize;
+			var current = databaseOptions.BatchSize;
 			var maxNumberOfItemsToProcessInSingleBatch = database.Configuration.MaxNumberOfItemsToProcessInSingleBatch;
 
-			options.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
+			databaseOptions.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
 		}
 
 		public Task<List<KeyValuePair<string, long>>> GetIdentities()

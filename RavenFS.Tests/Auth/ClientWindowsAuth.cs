@@ -10,7 +10,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
 using Raven.Server;
@@ -26,7 +26,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Auth
 {
-    public class ClientWindowsAuth : RavenFsTestBase
+    public class ClientWindowsAuth : RavenFilesTestWithLogs
     {
 		private string username = "local_user_test";
 

@@ -119,7 +119,7 @@ namespace Raven.Abstractions.Extensions
 			"X-SITE-DEPLOYMENT-ID",
 		};
 
-		private static readonly HashSet<string> PrefixesInHeadersToIgnoreClient = new HashSet<string>
+        private static readonly HashSet<string> PrefixesInHeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		                                                                       {
 																				   "Temp",
 			                                                                       "X-NewRelic"

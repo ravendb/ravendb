@@ -68,7 +68,7 @@ namespace Raven.Client.FileSystem
             if (string.IsNullOrWhiteSpace(filesystem))
                 filesystem = this.DefaultFileSystem;
 
-            return fileSystemChanges.GetOrAdd(filesystem,  x => CreateFileSystemChanges (x) );
+            return fileSystemChanges.GetOrAdd(filesystem, CreateFileSystemChanges );
         }
         
 

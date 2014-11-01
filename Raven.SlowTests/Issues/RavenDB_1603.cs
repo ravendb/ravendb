@@ -35,6 +35,7 @@ using Xunit;
 namespace Raven.SlowTests.Issues
 {
 
+
     public class RavenDB_1603 : RavenTest
     {
         public class User
@@ -51,222 +52,256 @@ namespace Raven.SlowTests.Issues
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
             configuration.Container = new CompositionContainer(new TypeCatalog(
-                                                                   typeof(HiddenDocumentsTrigger)));
+                                                               typeof(HiddenDocumentsTrigger)));
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanPerformDump_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewDocumentStore())
+            try
             {
-                InsertUsers(store, 0, 2000);
-
-                var dumper = new DataDumper(store.SystemDatabase) {SmugglerOptions = {Incremental = true}};
-	            await dumper.ExportData(
-		            new SmugglerExportOptions
-		            {
-			            ToFile = backupPath,
-		            });
-            }
-
-            VerifyDump(backupPath, store =>
-            {
-                using (var session = store.OpenSession())
+                using (var store = NewDocumentStore())
                 {
-                    Assert.Equal(2000, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    InsertUsers(store, 0, 2000);
+
+                    var dumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = true } };
+                    await dumper.ExportData(
+                        new SmugglerExportOptions<RavenConnectionStringOptions>
+                        {
+                            ToFile = backupPath,
+                        });
                 }
-            });
-            IOExtensions.DeleteDirectory(backupPath);
+
+                VerifyDump(backupPath, store =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Equal(2000, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    }
+                });
+            }
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);
+            }            
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanPerformDump_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewRemoteDocumentStore())
+            try
             {
-                InsertUsers(store, 0, 2000);
-
-                var dumper = new SmugglerApi {SmugglerOptions = {Incremental = true}};
-	            await dumper.ExportData(
-		            new SmugglerExportOptions
-		            {
-			            ToFile = backupPath,
-			            From = new RavenConnectionStringOptions
-			            {
-				            Url = "http://localhost:8079",
-				            DefaultDatabase = store.DefaultDatabase,
-			            }
-		            });
-            }
-
-            VerifyDump(backupPath, store =>
-            {
-                using (var session = store.OpenSession())
+                using (var store = NewRemoteDocumentStore())
                 {
-                    Assert.Equal(2000, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    InsertUsers(store, 0, 2000);
+
+                    var dumper = new SmugglerDatabaseApi { Options = { Incremental = true } };
+                    await dumper.ExportData(
+                        new SmugglerExportOptions<RavenConnectionStringOptions>
+                        {
+                            ToFile = backupPath,
+                            From = new RavenConnectionStringOptions
+                            {
+                                Url = "http://localhost:8079",
+                                DefaultDatabase = store.DefaultDatabase,
+                            }
+                        });
                 }
-            });
-            IOExtensions.DeleteDirectory(backupPath);
+
+                VerifyDump(backupPath, store =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Equal(2000, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    }
+                });
+            }
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);
+            }            
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanPerformDumpWithLimit_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewDocumentStore())
+            try
             {
-                InsertUsers(store, 0, 2000);
-
-                var dumper = new DataDumper(store.SystemDatabase) {SmugglerOptions = {Limit = 1500, Incremental = true}};
-	            dumper.SmugglerOptions.Filters.Add(
-		            new FilterSetting
-		            {
-			            Path = "@metadata.Raven-Entity-Name",
-			            Values = {"Users"},
-			            ShouldMatch = true,
-		            });
-	            await dumper.ExportData(new SmugglerExportOptions {ToFile = backupPath});
-            }
-
-
-            VerifyDump(backupPath, store =>
-            {
-                using (var session = store.OpenSession())
+                using (var store = NewDocumentStore())
                 {
-                    Assert.Equal(1500, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    InsertUsers(store, 0, 2000);
+
+                    var dumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Limit = 1500, Incremental = true } };
+                    dumper.Options.Filters.Add(
+                        new FilterSetting
+                        {
+                            Path = "@metadata.Raven-Entity-Name",
+                            Values = {"Users"},
+                            ShouldMatch = true,
+                        });
+                    await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
                 }
-            });
-            IOExtensions.DeleteDirectory(backupPath);
+
+
+                VerifyDump(backupPath, store =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Equal(1500, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    }
+                });
+            }
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);
+            }            
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanPerformDumpWithLimit_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
-	        using (var store = NewRemoteDocumentStore())
+            try
             {
-	            List<User> generatedUsers;
-	            InsertUsers(store, 0, 2000, out generatedUsers);
-
-                var dumper = new SmugglerApi {SmugglerOptions = {Limit = 1500, Incremental = true}};
-	            dumper.SmugglerOptions.Filters.Add(
-					new FilterSetting
-					{
-						Path = "@metadata.Raven-Entity-Name",
-						Values = { "Users" },
-						ShouldMatch = true,
-					});
-
-	            await dumper.ExportData(
-		            new SmugglerExportOptions
-		            {
-			            From = new RavenConnectionStringOptions {DefaultDatabase = store.DefaultDatabase, Url = "http://localhost:8079"},
-			            ToFile = backupPath
-		            });
-            }
-
-            VerifyDump(backupPath, store =>
-            {
-                using (var session = store.OpenSession())
+                using (var store = NewRemoteDocumentStore())
                 {
-                    Assert.Equal(1500, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    List<User> generatedUsers;
+                    InsertUsers(store, 0, 2000, out generatedUsers);
+
+                    var dumper = new SmugglerDatabaseApi { Options = { Limit = 1500, Incremental = true } };
+                    dumper.Options.Filters.Add(
+                        new FilterSetting
+                        {
+                            Path = "@metadata.Raven-Entity-Name",
+                            Values = { "Users" },
+                            ShouldMatch = true,
+                        });
+
+                    await dumper.ExportData(
+                        new SmugglerExportOptions<RavenConnectionStringOptions>
+                        {
+                            From = new RavenConnectionStringOptions {DefaultDatabase = store.DefaultDatabase, Url = "http://localhost:8079"},
+                            ToFile = backupPath
+                        });
                 }
-            });
-            IOExtensions.DeleteDirectory(backupPath);
+
+                VerifyDump(backupPath, store =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Equal(1500, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    }
+                });
+            }
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);
+            }            
         }
 
         private void VerifyDump(string backupPath, Action<EmbeddableDocumentStore> action)
         {
             using (var store = NewDocumentStore())
             {
-                var dumper = new DataDumper(store.SystemDatabase) {SmugglerOptions = {Incremental = true}};
-	            dumper.ImportData(new SmugglerImportOptions { FromFile = backupPath }).Wait();
+                var dumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = true } };
+                dumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = backupPath }).Wait();
 
                 action(store);
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanPerformDumpWithLimitAndFilter_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewDocumentStore())
+            try
             {
-                var counter = 0;
-                counter = InsertUsers(store, counter, 1000);
-                counter = InsertDevelopers(store, counter, 2);
-                counter = InsertUsers(store, counter, 1000);
-                InsertDevelopers(store, counter, 2);
-
-                WaitForIndexing(store);
-
-                var dumper = new DataDumper(store.SystemDatabase) {SmugglerOptions = {Limit = 5, Incremental = true}};
-	            dumper.SmugglerOptions.Filters.Add(
-		            new FilterSetting
-		            {
-			            Path = "@metadata.Raven-Entity-Name",
-			            Values = {"Developers"},
-			            ShouldMatch = true,
-		            });
-	            await dumper.ExportData(new SmugglerExportOptions {ToFile = backupPath});
-            }
-
-            VerifyDump(backupPath, store =>
-            {
-                using (var session = store.OpenSession())
+                using (var store = NewDocumentStore())
                 {
-                    Assert.Equal(4, session.Query<Developer>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
-                }
-            });
+                    var counter = 0;
+                    counter = InsertUsers(store, counter, 1000);
+                    counter = InsertDevelopers(store, counter, 2);
+                    counter = InsertUsers(store, counter, 1000);
+                    InsertDevelopers(store, counter, 2);
 
-            IOExtensions.DeleteDirectory(backupPath);
+                    WaitForIndexing(store);
+
+                    var dumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Limit = 5, Incremental = true } };
+                    dumper.Options.Filters.Add(
+                        new FilterSetting
+                        {
+                            Path = "@metadata.Raven-Entity-Name",
+                            Values = {"Developers"},
+                            ShouldMatch = true,
+                        });
+                    await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
+                }
+
+                VerifyDump(backupPath, store =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Equal(4, session.Query<Developer>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    }
+                });
+            }
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);
+            }            
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanPerformDumpWithLimitAndFilter_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewRemoteDocumentStore())
+            try
             {
-                var counter = 0;
-                counter = InsertUsers(store, counter, 1000);
-                counter = InsertDevelopers(store, counter, 2);
-                counter = InsertUsers(store, counter, 1000);
-                InsertDevelopers(store, counter, 2);
-
-                WaitForIndexing(store);
-
-                var dumper = new SmugglerApi {SmugglerOptions = {Limit = 5, Incremental = true}};
-	            dumper.SmugglerOptions.Filters.Add(
-		            new FilterSetting
-		            {
-			            Path = "@metadata.Raven-Entity-Name",
-			            Values = {"Developers"},
-			            ShouldMatch = true,
-		            });
-	            await dumper.ExportData(
-		            new SmugglerExportOptions
-		            {
-			            ToFile = backupPath,
-			            From = new RavenConnectionStringOptions
-			            {
-				            Url = "http://localhost:8079",
-				            DefaultDatabase = store.DefaultDatabase,
-			            }
-		            });
-            }
-
-            VerifyDump(backupPath, store =>
-            {
-                using (var session = store.OpenSession())
+                using (var store = NewRemoteDocumentStore())
                 {
-                    Assert.Equal(4, session.Query<Developer>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
-                }
-            });
+                    var counter = 0;
+                    counter = InsertUsers(store, counter, 1000);
+                    counter = InsertDevelopers(store, counter, 2);
+                    counter = InsertUsers(store, counter, 1000);
+                    InsertDevelopers(store, counter, 2);
 
-            IOExtensions.DeleteDirectory(backupPath);
+                    WaitForIndexing(store);
+
+                    var dumper = new SmugglerDatabaseApi { Options = { Limit = 5, Incremental = true } };
+                    dumper.Options.Filters.Add(
+                        new FilterSetting
+                        {
+                            Path = "@metadata.Raven-Entity-Name",
+                            Values = {"Developers"},
+                            ShouldMatch = true,
+                        });
+                    await dumper.ExportData(
+                        new SmugglerExportOptions<RavenConnectionStringOptions>
+                        {
+                            ToFile = backupPath,
+                            From = new RavenConnectionStringOptions
+                            {
+                                Url = "http://localhost:8079",
+                                DefaultDatabase = store.DefaultDatabase,
+                            }
+                        });
+                }
+
+                VerifyDump(backupPath, store =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Equal(4, session.Query<Developer>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    }
+                });
+            }
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);
+            }            
         }
 
         private static int InsertDevelopers(IDocumentStore store, int counter, int amount)
@@ -322,127 +357,148 @@ namespace Raven.SlowTests.Issues
         }
 
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpWhenHiddenDocs_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var server = GetNewServer())
+            try
             {
-                using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+                using (var server = GetNewServer())
                 {
-                    InsertHidenUsers(store, 2000);
+                    using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+                    {
+                        InsertHidenUsers(store, 2000);
 
-                    var user1 = store.DatabaseCommands.Get("users/1");
-                    Assert.Null(user1);
+                        var user1 = store.DatabaseCommands.Get("users/1");
+                        Assert.Null(user1);
 
-                    InsertUsers(store, 1, 25);
+                        InsertUsers(store, 1, 25);
 
-                    // now perform full backup
-                    var dumper = new DataDumper(server.SystemDatabase) {SmugglerOptions = {Incremental = true}};
-	                await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath });
+                        // now perform full backup
+                        var dumper = new DatabaseDataDumper(server.SystemDatabase) { Options = { Incremental = true } };
+                        await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
+                    }
                 }
+
+                VerifyDump(backupPath, store =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Equal(25, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    }
+                });
             }
-
-            VerifyDump(backupPath, store =>
+            finally
             {
-                using (var session = store.OpenSession())
-                {
-                    Assert.Equal(25, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
-                }
-            });
-
-            IOExtensions.DeleteDirectory(backupPath);
+                IOExtensions.DeleteDirectory(backupPath);
+            }            
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpWhenHiddenDocs_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (NewRemoteDocumentStore())
+            try
             {
-	            using (var store = new DocumentStore {Url = "http://localhost:8079"})
-	            {
-		            store.Initialize();
-
-		            InsertHidenUsers(store, 2000);
-
-		            var user1 = store.DatabaseCommands.Get("users/1");
-		            Assert.Null(user1);
-
-		            InsertUsers(store, 1, 25);
-
-		            // now perform full backup
-		            var dumper = new SmugglerApi {SmugglerOptions = {Incremental = true}};
-		            await dumper.ExportData(
-			            new SmugglerExportOptions
-			            {
-				            ToFile = backupPath,
-				            From = new RavenConnectionStringOptions
-				            {
-					            Url = "http://localhost:8079",
-					            DefaultDatabase = store.DefaultDatabase,
-				            }
-			            });
-	            }
-            }
-
-            VerifyDump(backupPath, store =>
-            {
-                using (var session = store.OpenSession())
+                using (NewRemoteDocumentStore())
                 {
-                    Assert.Equal(25, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
-                }
-            });
+                    using (var store = new DocumentStore {Url = "http://localhost:8079"})
+                    {
+                        store.Initialize();
 
-            IOExtensions.DeleteDirectory(backupPath);
+                        InsertHidenUsers(store, 2000);
+
+                        var user1 = store.DatabaseCommands.Get("users/1");
+                        Assert.Null(user1);
+
+                        InsertUsers(store, 1, 25);
+
+                        // now perform full backup
+                        var dumper = new SmugglerDatabaseApi { Options = { Incremental = true } };
+                        await dumper.ExportData(
+                            new SmugglerExportOptions<RavenConnectionStringOptions>
+                            {
+                                ToFile = backupPath,
+                                From = new RavenConnectionStringOptions
+                                {
+                                    Url = "http://localhost:8079",
+                                    DefaultDatabase = store.DefaultDatabase,
+                                }
+                            });
+                    }
+                }
+
+                VerifyDump(backupPath, store =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Equal(25, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    }
+                });
+            }
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);
+            }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpEmptyDatabase_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var server = GetNewServer(databaseName: Constants.SystemDatabase))
+            try
             {
-                using (new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+                using (var server = GetNewServer(databaseName: Constants.SystemDatabase))
                 {
-                    // now perform full backup
-                    var dumper = new DataDumper(server.SystemDatabase) {SmugglerOptions = {Incremental = true}};
-	                await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath });
+                    using (new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+                    {
+                        // now perform full backup
+                        var dumper = new DatabaseDataDumper(server.SystemDatabase) { Options = { Incremental = true } };
+                        await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
+                    }
                 }
+
+                VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
             }
-
-            VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
-
-            IOExtensions.DeleteDirectory(backupPath);
+            finally 
+            {
+                IOExtensions.DeleteDirectory(backupPath);
+            }            
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpEmptyDatabase_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewRemoteDocumentStore())
+
+            try
             {
-                // now perform full backup
-                var dumper = new SmugglerApi();
-	            dumper.SmugglerOptions.Incremental = true;
-	            await dumper.ExportData(
-		            new SmugglerExportOptions
-		            {
-			            ToFile = backupPath,
-			            From = new RavenConnectionStringOptions
-			            {
-				            Url = "http://localhost:8079",
-				            DefaultDatabase = store.DefaultDatabase,
-			            }
-		            });
+                using (var store = NewRemoteDocumentStore())
+                {
+                    // now perform full backup
+                    var dumper = new SmugglerDatabaseApi { Options = {Incremental = true} };
+
+                    await dumper.ExportData(
+                        new SmugglerExportOptions<RavenConnectionStringOptions>
+                        {
+                            ToFile = backupPath,
+                            From = new RavenConnectionStringOptions
+                            {
+                                Url = "http://localhost:8079",
+                                DefaultDatabase = store.DefaultDatabase,
+                            }
+                        });
+                }
+
+                VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
             }
-
-            VerifyDump(backupPath, store => Assert.Equal(0, store.SystemDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
-
-            IOExtensions.DeleteDirectory(backupPath);
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);    
+            }            
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpWhenHiddenDocsWithLimit_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -458,8 +514,8 @@ namespace Raven.SlowTests.Issues
                     InsertUsers(store, 1, 25);
 
                     // now perform full backup
-                    var dumper = new DataDumper(server.SystemDatabase) {SmugglerOptions = {Incremental = true}};
-	                await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath });
+                    var dumper = new DatabaseDataDumper(server.SystemDatabase) { Options = { Incremental = true } };
+                    await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
                 }
             }
 
@@ -474,47 +530,52 @@ namespace Raven.SlowTests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpWhenHiddenDocsWithLimit_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (GetNewServer())
+            try
             {
-                using (var store = new DocumentStore { Url = "http://localhost:8079" })
+                using (GetNewServer())
                 {
-                    store.Initialize();
+                    using (var store = new DocumentStore { Url = "http://localhost:8079" })
+                    {
+                        store.Initialize();
 
-                    InsertHidenUsers(store, 2000);
+                        InsertHidenUsers(store, 2000);
 
-                    var user1 = store.DatabaseCommands.Get("users/1");
-                    Assert.Null(user1);
+                        var user1 = store.DatabaseCommands.Get("users/1");
+                        Assert.Null(user1);
 
-                    InsertUsers(store, 1, 25);
+                        InsertUsers(store, 1, 25);
 
-                    // now perform full backup
-                    var dumper = new SmugglerApi {SmugglerOptions = {Incremental = true}};
-	                await dumper.ExportData(
-		                new SmugglerExportOptions
-		                {
-			                ToFile = backupPath,
-			                From = new RavenConnectionStringOptions
-			                {
-				                Url = "http://localhost:8079",
-				                DefaultDatabase = store.DefaultDatabase,
-			                }
-		                });
+                        // now perform full backup
+                        var dumper = new SmugglerDatabaseApi { Options = { Incremental = true } };
+                        await dumper.ExportData(
+                            new SmugglerExportOptions<RavenConnectionStringOptions>
+                            {
+                                ToFile = backupPath,
+                                From = new RavenConnectionStringOptions
+                                {
+                                    Url = "http://localhost:8079",
+                                    DefaultDatabase = store.DefaultDatabase,
+                                }
+                            });
+                    }
                 }
+
+                VerifyDump(backupPath, store =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Equal(25, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+                    }
+                });
             }
-
-            VerifyDump(backupPath, store =>
+            finally
             {
-                using (var session = store.OpenSession())
-                {
-                    Assert.Equal(25, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
-                }
-            });
-
-            IOExtensions.DeleteDirectory(backupPath);
+                IOExtensions.DeleteDirectory(backupPath);
+            }            
         }
 
         private static void InsertHidenUsers(IDocumentStore store, int amount)
@@ -528,126 +589,159 @@ namespace Raven.SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpAttachments_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewDocumentStore())
+            try
             {
-                InsertAttachments(store, 328);
+                using (var store = NewDocumentStore())
+                {
+                    InsertAttachments(store, 328);
 
-                var dumper = new DataDumper(store.SystemDatabase) {SmugglerOptions = {Incremental = true, BatchSize = 100}};
-	            await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath });
+                    var dumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = true, BatchSize = 100 } };
+                    await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
+                }
+
+                VerifyDump(backupPath, store => Assert.Equal(328, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
             }
-
-            VerifyDump(backupPath, store => Assert.Equal(328, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
-            IOExtensions.DeleteDirectory(backupPath);
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);  
+            }            
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpAttachments_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewRemoteDocumentStore())
+            try
             {
-                InsertAttachments(store, 328);
+                using (var store = NewRemoteDocumentStore())
+                {
+                    InsertAttachments(store, 328);
 
-                var dumper = new SmugglerApi {SmugglerOptions = {Incremental = true, BatchSize = 100}};
-	            await dumper.ExportData(
-		            new SmugglerExportOptions
-		            {
-			            ToFile = backupPath,
-			            From = new RavenConnectionStringOptions
-			            {
-				            Url = "http://localhost:8079",
-				            DefaultDatabase = store.DefaultDatabase,
-			            }
-		            });
+                    var dumper = new SmugglerDatabaseApi { Options = { Incremental = true, BatchSize = 100 } };
+                    await dumper.ExportData(
+                        new SmugglerExportOptions<RavenConnectionStringOptions>
+                        {
+                            ToFile = backupPath,
+                            From = new RavenConnectionStringOptions
+                            {
+                                Url = "http://localhost:8079",
+                                DefaultDatabase = store.DefaultDatabase,
+                            }
+                        });
+                }
+
+                VerifyDump(backupPath, store => Assert.Equal(328, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
             }
-
-            VerifyDump(backupPath, store => Assert.Equal(328, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
-            IOExtensions.DeleteDirectory(backupPath);
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath); 
+            }            
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpAttachmentsWithLimit_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewDocumentStore())
+            try
             {
-                InsertAttachments(store, 328);
+                using (var store = NewDocumentStore())
+                {
+                    InsertAttachments(store, 328);
 
-                var dumper = new DataDumper(store.SystemDatabase) {SmugglerOptions = {Incremental = true, BatchSize = 100, Limit = 206}};
-	            await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath });
+                    var dumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = true, BatchSize = 100, Limit = 206 } };
+                    await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
+                }
+
+                VerifyDump(backupPath, store => Assert.Equal(206, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
             }
-
-            VerifyDump(backupPath, store => Assert.Equal(206, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
-            IOExtensions.DeleteDirectory(backupPath);
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);
+            }            
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpAttachmentsWithLimit_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewRemoteDocumentStore())
+            try
             {
-                InsertAttachments(store, 328);
+                using (var store = NewRemoteDocumentStore())
+                {
+                    InsertAttachments(store, 328);
 
-	            var dumper = new SmugglerApi {SmugglerOptions = {Incremental = true, BatchSize = 100, Limit = 206}};
-	            await dumper.ExportData(
-		            new SmugglerExportOptions
-		            {
-			            ToFile = backupPath,
-			            From = new RavenConnectionStringOptions
-			            {
-				            Url = "http://localhost:8079",
-				            DefaultDatabase = store.DefaultDatabase,
-			            }
-		            });
+                    var dumper = new SmugglerDatabaseApi { Options = { Incremental = true, BatchSize = 100, Limit = 206 } };
+                    await dumper.ExportData(
+                        new SmugglerExportOptions<RavenConnectionStringOptions>
+                        {
+                            ToFile = backupPath,
+                            From = new RavenConnectionStringOptions
+                            {
+                                Url = "http://localhost:8079",
+                                DefaultDatabase = store.DefaultDatabase,
+                            }
+                        });
+                }
+
+                VerifyDump(backupPath, store => Assert.Equal(206, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
             }
-
-            VerifyDump(backupPath, store => Assert.Equal(206, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
-            IOExtensions.DeleteDirectory(backupPath);
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);                
+            }            
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpAttachmentsEmpty_Dumper()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewDocumentStore())
+            try
             {
-	            var dumper = new DataDumper(store.SystemDatabase) {SmugglerOptions = {Incremental = true, BatchSize = 100, Limit = 206}};
-                await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath } );
-            }
+                using (var store = NewDocumentStore())
+                {
+                    var dumper = new DatabaseDataDumper(store.SystemDatabase) { Options = { Incremental = true, BatchSize = 100, Limit = 206 } };
+                    await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
+                }
 
-            VerifyDump(backupPath, store =>
+                VerifyDump(backupPath, store => Assert.Equal(0, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
+            }
+            finally
             {
-                Assert.Equal(0, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count());
-            });
-            IOExtensions.DeleteDirectory(backupPath);
+                IOExtensions.DeleteDirectory(backupPath);
+            }            
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanDumpAttachmentsEmpty_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewRemoteDocumentStore())
+            try
             {
-	            var dumper = new SmugglerApi {SmugglerOptions = {Incremental = true, BatchSize = 100, Limit = 206}};
-	            await dumper.ExportData(
-		            new SmugglerExportOptions
-		            {
-			            ToFile = backupPath,
-			            From = new RavenConnectionStringOptions
-			            {
-				            Url = "http://localhost:8079",
-				            DefaultDatabase = store.DefaultDatabase,
-			            }
-		            });
-            }
+                using (var store = NewRemoteDocumentStore())
+                {
+                    var dumper = new SmugglerDatabaseApi { Options = { Incremental = true, BatchSize = 100, Limit = 206 } };
+                    await dumper.ExportData(
+                        new SmugglerExportOptions<RavenConnectionStringOptions>
+                        {
+                            ToFile = backupPath,
+                            From = new RavenConnectionStringOptions
+                            {
+                                Url = "http://localhost:8079",
+                                DefaultDatabase = store.DefaultDatabase,
+                            }
+                        });
+                }
 
-            VerifyDump(backupPath, store => Assert.Equal(0, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
-            IOExtensions.DeleteDirectory(backupPath);
+                VerifyDump(backupPath, store => Assert.Equal(0, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
+            }
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupPath);
+            }            
         }
 
         private static void InsertAttachments(IDocumentStore store, int amount)
@@ -662,7 +756,7 @@ namespace Raven.SlowTests.Issues
         }
 
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanHandleDocumentExceptionsGracefully_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -696,7 +790,7 @@ namespace Raven.SlowTests.Issues
                     InsertUsers(store, 0, 2000);
                 }
 
-	            var dumper = new SmugglerApi {SmugglerOptions = {Limit = 1900, Incremental = true}};
+                var dumper = new SmugglerDatabaseApi { Options = { Limit = 1900, Incremental = true } };
 				
                 var allDocs = new List<RavenJObject>();
 
@@ -704,7 +798,7 @@ namespace Raven.SlowTests.Issues
 
                 try
                 {
-                    exportResult = await dumper.ExportData(new SmugglerExportOptions
+                    exportResult = await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
                     {
                         ToFile = backupPath,
 						From = new RavenConnectionStringOptions
@@ -731,7 +825,7 @@ namespace Raven.SlowTests.Issues
                     allDocs.AddRange(doc1.Values<RavenJObject>());
                 }
 
-                exportResult = await dumper.ExportData(new SmugglerExportOptions
+                exportResult = await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
                 {
 					ToFile = backupPath,
 					From = new RavenConnectionStringOptions
@@ -759,7 +853,7 @@ namespace Raven.SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanHandleAttachmentExceptionsGracefully_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
@@ -788,14 +882,14 @@ namespace Raven.SlowTests.Issues
                     InsertAttachments(store, 2000);
                 }
 
-                var dumper = new SmugglerApi {SmugglerOptions = {Limit = 1500, Incremental = true}};
+                var dumper = new SmugglerDatabaseApi { Options = { Limit = 1500, Incremental = true } };
 
 	            var allAttachments = new List<RavenJObject>();
 
                 ExportDataResult exportResult = null;
                 try
                 {
-                    exportResult = dumper.ExportData(new SmugglerExportOptions
+                    exportResult = dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
                     {
                         ToFile = backupPath,
 						From = new RavenConnectionStringOptions
@@ -824,7 +918,7 @@ namespace Raven.SlowTests.Issues
                     allAttachments.AddRange(att1.Values<RavenJObject>());
                 }
 
-                exportResult = await dumper.ExportData(new SmugglerExportOptions
+                exportResult = await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
                 {
 					ToFile = backupPath,
 					From = new RavenConnectionStringOptions

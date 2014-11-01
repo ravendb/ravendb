@@ -6,8 +6,10 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
+using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Database.Extensions
 {
@@ -152,8 +154,13 @@ namespace Raven.Database.Extensions
 			}
 		}
 
-		static void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
-		{
+	    static void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
+	    {
+	        CopyDirectory(source, target, new string[0]);
+	    }
+
+        static void CopyDirectory(DirectoryInfo source, DirectoryInfo target, string[] skip)
+        {
 			if (!target.Exists)
 				Directory.CreateDirectory(target.FullName);
 
@@ -166,20 +173,29 @@ namespace Raven.Database.Extensions
 			// and recurse
 			foreach (DirectoryInfo diSourceDir in source.GetDirectories())
 			{
-				DirectoryInfo nextTargetDir = target.CreateSubdirectory(diSourceDir.Name);
-				CopyDirectory(diSourceDir, nextTargetDir);
+                if (skip.Contains(diSourceDir.Name))
+                    continue;
+
+                DirectoryInfo nextTargetDir = target.CreateSubdirectory(diSourceDir.Name);
+                CopyDirectory(diSourceDir, nextTargetDir, skip);
 			}
 		}
 
 		public static string GetMD5Hex(byte[] input)
 		{
 			var sb = new StringBuilder();
-			for (var i = 0; i < input.Length; i++)
-			{
-				sb.Append(input[i].ToString("x2"));
-	}
+			foreach (byte t in input)
+			    sb.Append(t.ToString("x2"));
 
-			return sb.ToString();
-}
+		    return sb.ToString();
+        }
+
+        public static string GetMD5Hash(this Stream stream)
+        {
+            using (var md5 = Encryptor.Current.CreateHash())
+            {
+                return GetMD5Hex(md5.Compute16(stream));
+            }
+        }
 	}
 }

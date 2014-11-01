@@ -1,10 +1,11 @@
 using System.IO;
 using System.Threading.Tasks;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-    public class GettingListOfFilesAfterSynchronization : RavenFsTestBase
+    public class GettingListOfFilesAfterSynchronization : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async Task Should_work()
