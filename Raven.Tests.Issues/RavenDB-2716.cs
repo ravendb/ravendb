@@ -67,7 +67,7 @@ namespace Raven.Tests.Issues
             {
                 using (var bulkInsert = store.BulkInsert())
                 {
-                    for (int i = 0; i < 10000; i++)
+                    for (int i = 0; i < 100; i++)
                     {
                         bulkInsert.Store(new User
                         {
@@ -93,7 +93,7 @@ namespace Raven.Tests.Issues
                                                             Name = "Comments",
                                                             Value = "New automatic comment we added programmatically"
                                                         }
-                                                }, new BulkOperationOptions {AllowStale = false, MaxOpsPerSec = 1024,StaleTimeout = null});
+                                                }, new BulkOperationOptions {AllowStale = false, MaxOpsPerSec = 10,StaleTimeout = null});
 
                 op.WaitForCompletion();
 

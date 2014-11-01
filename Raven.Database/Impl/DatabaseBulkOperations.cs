@@ -143,6 +143,7 @@ namespace Raven.Database.Impl
                             SystemTime.Wait(500);
                             operations = 0;
                             duration.Restart();
+						    continue;
 					    }
 					}
 					if (batchCount < batchSize) break;
