@@ -143,8 +143,8 @@ namespace Owin
 			public ICollection<Assembly> GetAssemblies()
 			{
 				return AppDomain.CurrentDomain.GetAssemblies()
-                    .Where(a => !a.IsDynamic && a.ExportedTypes.Any(t => t.IsAssignableFrom(typeof(RavenBaseApiController))))
-                    .ToList();
+					.Where(a => !a.IsDynamic && a.ExportedTypes.Any(t => t.IsSubclassOf(typeof(RavenBaseApiController))))
+					.ToArray();
 			}
 		}
 
