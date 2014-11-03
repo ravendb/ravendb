@@ -1103,6 +1103,9 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
 				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Databases", tenantId);
+
+			if(string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
+				Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "Databases", tenantId);
 		}
 
 		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
