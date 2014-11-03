@@ -54,6 +54,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataPathActions.cs" />
     <Compile Include="Infrastructure\IIS\IIS6Manager.cs" />
     <Compile Include="Infrastructure\IIS\IIS7UpwardsManager.cs" />
     <Compile Include="Infrastructure\IIS\IISManager.cs" />

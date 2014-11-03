@@ -66,6 +66,34 @@
 											Value="[RAVEN_INDEX_DIR]"
 											SelectionLanguage="XSLPattern"
 											Sequence="8" />
+
+				<util:XmlFile Id="AddTransactionJournalsPathSetting"
+											Action="createElement"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings"
+											Name="add"
+											File="[#Raven.Server.exe.config]"
+											SelectionLanguage="XSLPattern"
+											Sequence="9" />
+				<util:XmlFile Id="AddTransactionJournalsPath"
+											Action="setValue"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings/add[\[]not(@key)[\]] "
+											Name="key"
+											Value="Raven/TransactionJournalsPath"
+											File="[#Raven.Server.exe.config]"
+											SelectionLanguage="XSLPattern"
+											Sequence="10" />
+				<util:XmlFile Id="SetTransactionJournalsPath"
+											Action="setValue"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings/add[\[]@key='Raven/TransactionJournalsPath'[\]]"
+											Name="value"
+											File="[#Raven.Server.exe.config]"
+											Value="[RAVEN_STORAGE_LOGS_DIR]"
+											SelectionLanguage="XSLPattern"
+											Sequence="11" />
+				
 			</Component>
 		</DirectoryRef>
 	</Fragment>
