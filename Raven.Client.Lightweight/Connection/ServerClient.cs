@@ -1417,7 +1417,7 @@ namespace Raven.Client.Connection
 
 			if (resolvingConflictRetries)
 				throw new InvalidOperationException(
-					"Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+					"Encountered another conflict after already resolving a conflict. Conflict resolution cannot recurse.");
 			resolvingConflictRetries = true;
 			try
 			{
@@ -1987,6 +1987,10 @@ namespace Raven.Client.Connection
 													RavenJToken.FromObject(null) :
 													RavenJObject.Parse(value);
 											  }
+
+											  multiGetOperation.TryResolveConflictOrCreateConcurrencyException(
+												  responses,
+												  TryResolveConflictOrCreateConcurrencyException);
 
 											  return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
 										  });

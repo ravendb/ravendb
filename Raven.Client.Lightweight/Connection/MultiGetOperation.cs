@@ -1,4 +1,7 @@
 using System;
+
+using Raven.Client.Exceptions;
+using Raven.Json.Linq;
 #if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
 #else
@@ -35,7 +38,7 @@ namespace Raven.Client.Connection
 
 		public MultiGetOperation(
 			IHoldProfilingInformation holdProfilingInformation,
-			DocumentConvention convention, 
+			DocumentConvention convention,
 			string url,
 			GetRequest[] requests)
 		{
@@ -126,7 +129,7 @@ namespace Raven.Client.Connection
 			}
 
 			if (hasCachedRequests == false || convention.DisableProfiling ||
-                holdProfilingInformation.ProfilingInformation.Requests.Count == 0)
+				holdProfilingInformation.ProfilingInformation.Requests.Count == 0)
 				return responses;
 
 			var lastRequest = holdProfilingInformation.ProfilingInformation.Requests.Last();
@@ -137,6 +140,77 @@ namespace Raven.Client.Connection
 			lastRequest.Result = JsonConvert.SerializeObject(responses);
 
 			return responses;
+		}
+
+		public void TryResolveConflictOrCreateConcurrencyException(GetResponse[] responses, Func<string, RavenJObject, Etag, ConflictException> tryResolveConflictOrCreateConcurrencyException)
+		{
+			foreach (var response in responses)
+			{
+				if (response.RequestHasErrors() && response.Status != 409)
+					continue;
+
+				var result = response.Result as RavenJObject;
+				if (result == null)
+					continue;
+
+				if (result.ContainsKey("Results"))
+				{
+					var results = (RavenJArray)result["Results"];
+					foreach (RavenJObject docResult in results)
+					{
+						if (docResult == null) 
+							return;
+
+						var metadata = docResult[Constants.Metadata];
+						if (metadata == null) 
+							return;
+
+						if (metadata.Value<int>("@Http-Status-Code") != 409) 
+							return;
+
+						var id = metadata.Value<string>("@id");
+						var etag = HttpExtensions.EtagHeaderToEtag(metadata.Value<string>("@etag"));
+
+						TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
+							tryResolveConflictOrCreateConcurrencyException,
+							id,
+							etag,
+							docResult,
+							response);
+					}
+
+					continue;
+				}
+
+				if (result.ContainsKey("Conflicts"))
+				{
+					var id = response.Headers[Constants.DocumentIdFieldName];
+					var etag = response.GetEtagHeader();
+
+					TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
+							tryResolveConflictOrCreateConcurrencyException,
+							id,
+							etag,
+							result,
+							response);
+				}
+			}
+		}
+
+		private static void TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
+			Func<string, RavenJObject, Etag, ConflictException> tryResolveConflictOrCreateConcurrencyException,
+			string id,
+			Etag etag,
+			RavenJObject docResult,
+			GetResponse response)
+		{
+			var concurrencyException = tryResolveConflictOrCreateConcurrencyException(id, docResult, etag);
+
+			if (concurrencyException != null)
+				throw concurrencyException;
+
+			response.Status = 200;
+			response.ForceRetry = true;
 		}
 	}
 }

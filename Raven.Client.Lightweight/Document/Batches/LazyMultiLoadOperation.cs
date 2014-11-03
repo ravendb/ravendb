@@ -90,6 +90,13 @@ namespace Raven.Client.Document.Batches
 
 		public void HandleResponse(GetResponse response)
 		{
+			if (response.ForceRetry)
+			{
+				Result = null;
+				RequiresRetry = true;
+				return;
+			}
+
 			var result = response.Result;
 
 			var multiLoadResult = new MultiLoadResult

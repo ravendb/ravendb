@@ -31,7 +31,7 @@ namespace Raven.Client.Document.Batches
 		{
 			string path = "/docs/" + Uri.EscapeDataString(key);
 
-			return new GetRequest {Url = path};
+			return new GetRequest { Url = path };
 		}
 
 		public object Result { get; set; }
@@ -48,7 +48,14 @@ namespace Raven.Client.Document.Batches
 
 		public void HandleResponse(GetResponse response)
 		{
-			if(response.Status == 404)
+			if (response.ForceRetry)
+			{
+				Result = null;
+				RequiresRetry = true;
+				return;
+			}
+
+			if (response.Status == 404)
 			{
 				Result = null;
 				RequiresRetry = false;
@@ -90,20 +97,20 @@ namespace Raven.Client.Document.Batches
 			{
 				var resultItem = multiLoadResult.Results.FirstOrDefault();
 				var ravenJObject = resultItem.Value<RavenJArray>("$values")
-				                             .Cast<RavenJObject>()
+											 .Cast<RavenJObject>()
 											 .Select(value =>
 											 {
 												 if (handleInternalMetadata != null)
 													 handleInternalMetadata(value);
 												 return value;
 											 })
-				                             .FirstOrDefault();
+											 .FirstOrDefault();
 				var jsonDocument = SerializationHelper.RavenJObjectToJsonDocument(ravenJObject);
 				HandleResponse(jsonDocument);
 				return;
 			}
 
-			HandleResponse((JsonDocument) result);
+			HandleResponse((JsonDocument)result);
 		}
 	}
 }
