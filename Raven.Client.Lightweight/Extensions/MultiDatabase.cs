@@ -21,7 +21,8 @@ namespace Raven.Client.Extensions
                 Id = "Raven/Databases/" + name,
                 Settings =
 				{
-					{"Raven/DataDir", Path.Combine("~", Path.Combine("Databases", name))}
+					{"Raven/DataDir", Path.Combine("~", Path.Combine("Databases", name))},
+                    {Constants.IndexingDisabled,"false"}
 				}
             };
         }

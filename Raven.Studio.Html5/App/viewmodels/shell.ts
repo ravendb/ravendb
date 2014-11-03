@@ -400,13 +400,27 @@ class shell extends viewModelBase {
                         }
                     }
 
-                    if (resourceType == logTenantType.Database) { //for databases, bundle change
+                    if (resourceType == logTenantType.Database) { //for databases, bundle change or indexing change
                         var bundles = !!dto.Settings["Raven/ActiveBundles"] ? dto.Settings["Raven/ActiveBundles"].split(";") : [];
                         existingResource.activeBundles(bundles);
+
+
+                        var indexingDisabled = this.getIndexingDisbaledValue(dto.Settings["Raven/IndexingDisabled"]);
+                        existingResource.indexingDisabled(indexingDisabled);
                     }
                 });
             }
         }
+    }
+
+    private getIndexingDisbaledValue(indexingDisabledString: string) {
+        if (indexingDisabledString === undefined || indexingDisabledString == null)
+            return false;
+
+        if (indexingDisabledString.toLowerCase() == 'true')
+            return true;
+
+        return false;
     }
 
     private createNewResource(resourceType: logTenantType, resourceName: string, dto: databaseDocumentDto) {

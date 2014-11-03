@@ -129,6 +129,8 @@ class databases extends viewModelBase {
                         settings["Raven/IndexStoragePath"] = databaseIndexes;
                     }
 
+                    settings["Raven/IndexingDisabled"] = false;
+
                     this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings);
                 });
             app.showDialog(createDatabaseViewModel);
@@ -260,6 +262,17 @@ class databases extends viewModelBase {
         }
     }
 
+    disableDatabaseIndexing(db: database) {
+        var action = db.indexingDisabled() ? "Enable" : "Disable"; 
+        var message = this.confirmationMessage(action + " indexing?", "Are you sure?");
+        
+        message.done(() => {
+            require(["commands/disableIndexingCommand"], disableIndexingCommand => {
+                var task = new disableIndexingCommand(db.name, !db.indexingDisabled()).execute();
+                task.done(() => db.indexingDisabled.toggle());
+            });
+        });
+    }
     deleteCheckedDatabases() {
         var checkedDatabases: database[] = this.databases().filter((db: database) => db.isChecked());
         this.deleteSelectedDatabases(checkedDatabases);

@@ -14,7 +14,9 @@ namespace Raven.Database.Server.Controllers
 {
 	public class DatabasesController : RavenDbApiController
 	{
-		[HttpGet]
+	    private string disabledStatusString;
+
+	    [HttpGet]
 		[Route("databases")]
 		public HttpResponseMessage Databases(bool getAdditionalData = false)
 		{
@@ -58,6 +60,7 @@ namespace Raven.Database.Server.Controllers
 					{
 						Name = database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty),
 						Disabled = database.Value<bool>("Disabled"),
+                        IndexingDisabled = GetIndexingDisabledStatus(database.Value<RavenJObject>("Settings")),
 						Bundles = bundles
 					};
 				}).ToList();
@@ -99,7 +102,21 @@ namespace Raven.Database.Server.Controllers
 			return responseMessage;
 		}
 
-		[HttpGet]
+        private bool GetIndexingDisabledStatus(RavenJObject settingsProperty)
+	    {
+	        if (settingsProperty == null)
+	            return false;
+
+            disabledStatusString = settingsProperty.Value<string>("Raven/IndexingDisabled");
+            if (disabledStatusString == null)
+                return false;
+
+            bool indexingDisabled;
+            bool.TryParse(disabledStatusString, out indexingDisabled);
+            return indexingDisabled;
+	    }
+
+	    [HttpGet]
 		[Route("database/size")]
 		[Route("databases/{databaseName}/database/size")]
 		public HttpResponseMessage DatabaseSize()

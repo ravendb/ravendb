@@ -32,6 +32,7 @@
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
+    <TypeScriptCompile Include="App\commands\disableIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableResourceToggleCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />

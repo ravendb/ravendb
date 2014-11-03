@@ -144,6 +144,19 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetEmptyMessage();
 		}
 
+        [HttpPost]
+        [Route("admin/databases/toggle-indexing/{*id}")]
+        public HttpResponseMessage DatabaseToggleIndexingDisable(string id, bool isSettingIndexingDisabled)
+        {
+            var message = ToggeleDatabaseIndexingDisabled(id, isSettingIndexingDisabled);
+            if (message.ErrorCode != HttpStatusCode.OK)
+            {
+                return GetMessageWithString(message.Message, message.ErrorCode);
+            }
+
+            return GetEmptyMessage();
+        }
+
 		[HttpPost]
 		[Route("admin/databases/batch-toggle-disable")]
 		public HttpResponseMessage DatabaseBatchToggleDisable(bool isSettingDisabled)
@@ -219,6 +232,32 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			return new MessageWithStatusCode();
 		}
+
+        private MessageWithStatusCode ToggeleDatabaseIndexingDisabled(string databaseId, bool isindexingDisabled)
+        {
+            if (IsSystemDatabase(databaseId))
+                return new MessageWithStatusCode { ErrorCode = HttpStatusCode.Forbidden, Message = "System Database document indexing cannot be disabled" };
+
+            var docKey = "Raven/Databases/" + databaseId;
+            var document = Database.Documents.Get(docKey, null);
+            if (document == null)
+                return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
+
+            var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
+            bool indexDisabled;
+            var success = bool.TryParse(dbDoc.Settings[Constants.IndexingDisabled],out indexDisabled);
+            if (success && indexDisabled == isindexingDisabled)
+            {
+                string state = isindexingDisabled ? "disabled" : "enabled";
+                return new MessageWithStatusCode { ErrorCode = HttpStatusCode.BadRequest, Message = "Database " + databaseId + "indexing is already " + state };
+            }
+
+            dbDoc.Settings[Constants.IndexingDisabled] = isindexingDisabled.ToString();
+            var json = RavenJObject.FromObject(dbDoc);
+            json.Remove("Id");
+            Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
+            return new MessageWithStatusCode();
+        }
 
 		private string CheckExistingDatbaseName(string id, Etag etag)
 		{
