@@ -37,7 +37,7 @@
 											ElementPath="/configuration/appSettings/add[\[]@key='Raven/DataDir'[\]]"
 											Name="value"
 											File="[#Raven.Server.exe.config]"
-											Value="[RAVEN_DATA_DIR]"
+											Value="[RAVEN_DATA_DIR]\System"
 											SelectionLanguage="XSLPattern"
 											Sequence="5" />
 				<util:XmlFile Id="AddEmptyIndexStoragePathSetting"

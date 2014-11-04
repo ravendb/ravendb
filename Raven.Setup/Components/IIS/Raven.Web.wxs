@@ -22,7 +22,7 @@
 						 ElementPath="/configuration/appSettings/add[\[]@key='Raven/DataDir'[\]]"
 						 Name="value"
 						 File="[#web.config]"
-						 Value="[RAVEN_DATA_DIR]"
+						 Value="[RAVEN_DATA_DIR]\System"
 						 SelectionLanguage="XSLPattern"
 						 Sequence="5" />
 
@@ -91,7 +91,7 @@
 						 ElementPath="/configuration/appSettings/add[\[]@key='Raven/DataDir'[\]]"
 						 Name="value"
 					 File="[#web_iis6.config]"
-						 Value="[RAVEN_DATA_DIR]"
+						 Value="[RAVEN_DATA_DIR]\System"
 						 SelectionLanguage="XSLPattern"
 						 Sequence="5" />
 				<util:XmlFile Id="AddEmptyIndexStoragePathSettingIIS6"
