@@ -355,20 +355,6 @@ class changesApi {
         });
     }
 
-    watchDocPrefix(onChange: (e: documentChangeNotificationDto) => void, prefix?: string) {
-        var callback = new changesCallback<documentChangeNotificationDto>(onChange);
-        if (this.allDocsHandlers().length == 0) {
-            this.send('watch-prefix', prefix);
-        }
-        this.allDocsHandlers.push(callback);
-        return new changeSubscription(() => {
-            this.allDocsHandlers.remove(callback);
-            if (this.allDocsHandlers().length == 0) {
-                this.send('unwatch-prefix', prefix);
-            }
-        });
-    }
-
     watchFsSync(onChange: (e: synchronizationUpdateNotification) => void): changeSubscription {
         var callback = new changesCallback<synchronizationUpdateNotification>(onChange);
         if (this.allFsSyncHandlers().length == 0) {

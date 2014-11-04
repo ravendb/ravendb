@@ -7,18 +7,19 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Tests.Helpers;
 using Xunit;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests.Auth
 {
-    public class ClientWithoutAuthenticationSetup : RavenFsTestBase
+    public class ClientWithoutAuthenticationSetup : RavenFilesTestWithLogs
     {
         [Fact]
         public async Task WillUseDefaultNetworkCredentialsWhenServerRequiresAuthentication()
         {
-            var server = CreateRavenDbServer(Ports[0], fileSystemName: "WillUseDefaultCredentials", enableAuthentication: true); // enable authentication
+            var server = CreateServer(Ports[0], fileSystemName: "WillUseDefaultCredentials", enableAuthentication: true); // enable authentication
 
             using (var client = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "WillUseDefaultCredentials"))
             {

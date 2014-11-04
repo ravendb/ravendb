@@ -1,16 +1,15 @@
 using System;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using Raven.Abstractions.FileSystem;
+using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Notifications;
 using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;
-using Xunit;
 using Raven.Json.Linq;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Abstractions.FileSystem;
+using Xunit;
 
 namespace RavenFS.Tests
 {

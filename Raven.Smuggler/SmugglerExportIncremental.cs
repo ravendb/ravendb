@@ -28,5 +28,7 @@ namespace Raven.Smuggler
 
         [Obsolete("Use RavenFS instead.")]
 		public Etag LastAttachmentsEtag { get; set; }
+
+        public Etag LastFilesEtag { get; set; }
 	}
 }

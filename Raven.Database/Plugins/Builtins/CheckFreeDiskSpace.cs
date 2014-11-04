@@ -30,6 +30,12 @@ namespace Raven.Database.Plugins.Builtins
 
         private void ExecuteCheck(object state)
         {
+	        if (server.Disposed)
+	        {
+				Dispose();
+		        return;
+	        }
+
             var pathsToCheck = new HashSet<string>();
 
             server.Options.DatabaseLandlord.ForAllDatabases(database =>
@@ -72,10 +78,8 @@ namespace Raven.Database.Plugins.Builtins
 
         public void Dispose()
         {
-            if (checkTimer != null)
-            {
-                checkTimer.Dispose();    
-            }
+	        if (checkTimer != null)
+		        checkTimer.Dispose();
         }
     }
 }

@@ -113,7 +113,7 @@ Backup utility for RavenDB
 ----------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
-Command line options:", SystemTime.UtcNow.Year);
+Command line databaseOptions:", SystemTime.UtcNow.Year);
 
             optionSet.WriteOptionDescriptions(Console.Out);
 

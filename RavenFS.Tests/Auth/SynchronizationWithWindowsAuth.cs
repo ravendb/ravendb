@@ -12,13 +12,14 @@ using Raven.Abstractions.Data;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests.Helpers;
 using RavenFS.Tests.Synchronization;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Raven.Abstractions.FileSystem;
 namespace RavenFS.Tests.Auth
 {
-    public class SynchronizationWithWindowsAuth : RavenFsTestBase
+    public class SynchronizationWithWindowsAuth : RavenFilesTestWithLogs
     {
         private string username = "local_user_test";
 

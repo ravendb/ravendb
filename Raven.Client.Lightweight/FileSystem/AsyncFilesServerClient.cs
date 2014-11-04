@@ -5,6 +5,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.OAuth;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
@@ -238,6 +239,10 @@ namespace Raven.Client.FileSystem
                     var response = (RavenJObject) await request.ReadResponseJsonAsync();
                     return response.JsonDeserialization<FileSystemStats>();
                 }
+                catch (ErrorResponseException)
+                {
+                    throw;
+                }
                 catch (Exception e)
                 {
                     throw e.SimplifyException();
@@ -373,9 +378,135 @@ namespace Raven.Client.FileSystem
         {
             return ExecuteWithReplication("GET", operation => GetAsyncImpl(filename, operation));
         }
+
+        public async Task<IAsyncEnumerator<FileHeader>> StreamFilesAsync(Etag fromEtag, int pageSize = int.MaxValue)
+        {
+            if (fromEtag == null)
+                throw new ArgumentException("fromEtag");
+
+            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+
+            var sb = new StringBuilder(operationMetadata.Url)
+                            .Append("/streams/files?etag=")
+                            .Append(fromEtag)
+                            .Append("&");
+
+            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", operationMetadata.Credentials, this.Conventions)
+                                        .AddOperationHeaders(OperationsHeaders));
+
+            var response = await request.ExecuteRawResponseAsync()
+                                        .ConfigureAwait(false);
+
+            await response.AssertNotFailingResponse();
+
+            return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+        }
+
+        internal class YieldStreamResults : IAsyncEnumerator<FileHeader>
+        {
+            private readonly Stream stream;
+            private readonly StreamReader streamReader;
+            private readonly JsonTextReaderAsync reader;
+            private bool complete;
+
+            private bool wasInitialized;
+
+            public YieldStreamResults(Stream stream)
+            {
+                this.stream = stream;
+                streamReader = new StreamReader(stream);
+                reader = new JsonTextReaderAsync(streamReader);
+            }
+
+            private async Task InitAsync()
+            {
+                if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.StartObject)
+                    throw new InvalidOperationException("Unexpected data at start of stream");
+
+                if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.PropertyName || Equals("Results", reader.Value) == false)
+                    throw new InvalidOperationException("Unexpected data at stream 'Results' property name");
+
+                if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.StartArray)
+                    throw new InvalidOperationException("Unexpected data at 'Results', could not find start results array");
+            }
+
+            public void Dispose()
+            {
+                reader.Close();
+                streamReader.Close();
+                stream.Close();
+            }
+
+            public async Task<bool> MoveNextAsync()
+            {
+                if (complete)
+                {
+                    // to parallel IEnumerable<T>, subsequent calls to MoveNextAsync after it has returned false should
+                    // also return false, rather than throwing
+                    return false;
+                }
+
+                if (wasInitialized == false)
+                {
+                    await InitAsync().ConfigureAwait(false);
+                    wasInitialized = true;
+                }
+
+                if (await reader.ReadAsync().ConfigureAwait(false) == false)
+                    throw new InvalidOperationException("Unexpected end of data");
+
+                if (reader.TokenType == JsonToken.EndArray)
+                {
+                    complete = true;
+
+                    await TryReadNextPageStart().ConfigureAwait(false);
+
+                    await EnsureValidEndOfResponse();
+
+                    return false;
+                }
+
+                var receivedObject = (RavenJObject)await RavenJToken.ReadFromAsync(reader).ConfigureAwait(false);
+                Current = receivedObject.JsonDeserialization<FileHeader>();
+                return true;
+            }
+
+            private async Task TryReadNextPageStart()
+            {
+                if (!(await reader.ReadAsync().ConfigureAwait(false)) || reader.TokenType != JsonToken.PropertyName)
+                    return;
+
+                switch ((string)reader.Value)
+                {
+                    case "Error":
+                        var err = await reader.ReadAsString().ConfigureAwait(false);
+                        throw new InvalidOperationException("Server error" + Environment.NewLine + err);
+                    default:
+                        throw new InvalidOperationException("Unexpected property name: " + reader.Value);
+                }
+
+            }
+
+            private async Task EnsureValidEndOfResponse()
+            {
+                if (reader.TokenType != JsonToken.EndObject && await reader.ReadAsync().ConfigureAwait(false) == false)
+                    throw new InvalidOperationException("Unexpected end of response - missing EndObject token");
+
+                if (reader.TokenType != JsonToken.EndObject)
+                    throw new InvalidOperationException(string.Format("Unexpected token type at the end of the response: {0}. Error: {1}", reader.TokenType, streamReader.ReadToEnd()));
+
+                var remainingContent = streamReader.ReadToEnd();
+
+                if (string.IsNullOrEmpty(remainingContent) == false)
+                    throw new InvalidOperationException("Server error: " + remainingContent);
+            }
+
+            public FileHeader Current { get; private set; }
+        }
+
         private async Task<FileHeader[]> GetAsyncImpl(string[] filenames, OperationMetadata operation)
         {
-            StringBuilder requestUriBuilder = new StringBuilder("/files/metadata?");
+            var requestUriBuilder = new StringBuilder("/files/metadata?");
             for( int i = 0; i < filenames.Length; i++ )
             {
                 requestUriBuilder.Append("fileNames=" + Uri.EscapeDataString(filenames[i]));
@@ -459,36 +590,8 @@ namespace Raven.Client.FileSystem
 
                 await response.AssertNotFailingResponse().ConfigureAwait(false);
 
-                if ( metadataRef != null )
-                {
-                    var metadata = new RavenJObject();
-                    foreach (var header in response.Headers)
-                    {
-                        var item = header.Value.SingleOrDefault();
-                        if (item != null)
-                        {
-                            metadata[header.Key] = item;
-                        }
-                        else
-                        {
-                            metadata[header.Key] = RavenJObject.FromObject(header.Value);
-                        }
-                    }
-                    foreach (var header in response.Content.Headers)
-                    {
-                        var item = header.Value.SingleOrDefault();
-                        if (item != null)
-                        {
-                            metadata[header.Key] = item;
-                        }
-                        else
-                        {
-                            metadata[header.Key] = RavenJObject.FromObject(header.Value);
-                        }
-                    }
-
-                    metadataRef.Value = metadata;
-                }
+                if (metadataRef != null)
+                    metadataRef.Value = response.HeadersToObject();
 
                 return await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false);
             }
@@ -532,38 +635,53 @@ namespace Raven.Client.FileSystem
 
             return ExecuteWithReplication("PUT", async operation =>
             {
-                if (source.CanRead == false)
-                    throw new Exception("Stream does not support reading");
-
-                var uploadIdentifier = Guid.NewGuid();
-                var request = RequestFactory.CreateHttpJsonRequest(
-                                new CreateHttpJsonRequestParams(this, operation.Url + "/files?name=" + Uri.EscapeDataString(filename) + "&uploadId=" + uploadIdentifier,
-                                                                "PUT", operation.Credentials, Conventions))
-                                            .AddOperationHeaders(OperationsHeaders);
-
-                metadata["RavenFS-Size"] = size.HasValue ? new RavenJValue(size.Value) : new RavenJValue(source.Length);
-                
-                AddHeaders(metadata, request);
-
-                var cts = new CancellationTokenSource();
-
-                RegisterUploadOperation(uploadIdentifier, cts);
-
-                try
-                {
-                    await request.WriteAsync(source);
-                    if (request.ResponseStatusCode == HttpStatusCode.BadRequest)
-                        throw new BadRequestException("There is a mismatch between the size reported in the RavenFS-Size header and the data read server side.");
-                }
-                catch (Exception e)
-                {
-                    throw e.SimplifyException();
-                }
-                finally
-                {
-                    UnregisterUploadOperation(uploadIdentifier);
-                }
+                await UploadAsyncImpl(operation, filename, source, metadata, false, size);
             });
+        }
+
+        public Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size)
+        {
+            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+            return UploadAsyncImpl(operationMetadata, filename, source, metadata, true, size);
+        }
+
+        private async Task UploadAsyncImpl(OperationMetadata operation, string filename, Stream source, RavenJObject metadata, bool preserveTimestamps, long? size)
+        {
+            if (source.CanRead == false)
+                throw new Exception("Stream does not support reading");
+
+            var uploadIdentifier = Guid.NewGuid();
+
+            var operationUrl = operation.Url + "/files?name=" + Uri.EscapeDataString(filename) + "&uploadId=" + uploadIdentifier;
+            if (preserveTimestamps)
+                operationUrl += "&preserveTimestamps=true";
+
+            var request = RequestFactory.CreateHttpJsonRequest(
+                                new CreateHttpJsonRequestParams(this, operationUrl, "PUT", operation.Credentials, Conventions))
+                                        .AddOperationHeaders(OperationsHeaders);
+
+            metadata["RavenFS-Size"] = size.HasValue ? new RavenJValue(size.Value) : new RavenJValue(source.Length);
+
+            AddHeaders(metadata, request);
+
+            var cts = new CancellationTokenSource();
+
+            RegisterUploadOperation(uploadIdentifier, cts);
+
+            try
+            {
+                await request.WriteAsync(source);
+                if (request.ResponseStatusCode == HttpStatusCode.BadRequest)
+                    throw new BadRequestException("There is a mismatch between the size reported in the RavenFS-Size header and the data read server side.");
+            }
+            catch (Exception e)
+            {
+                throw e.SimplifyException();
+            }
+            finally
+            {
+                UnregisterUploadOperation(uploadIdentifier);
+            }
         }
 
         internal async Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string filename, FileHeader remote, string sourceServerUri, Action beforeConflictResolution)
@@ -808,7 +926,7 @@ namespace Raven.Client.FileSystem
             if (options.HasFlag(FilesSortOptions.Desc))
             {
                 if (string.IsNullOrEmpty(sort))
-                    throw new ArgumentException("options");
+                    throw new ArgumentException("databaseOptions");
                 sort = "-" + sort;
             }
 
@@ -1601,6 +1719,23 @@ namespace Raven.Client.FileSystem
 					throw e.SimplifyException();
 				}
 			}
+
+            public async Task EnsureFileSystemExistsAsync(string fileSystem)
+            {
+                var filesystems = await GetNamesAsync();
+                if (filesystems.Contains(fileSystem))
+                    return;
+
+                await CreateOrUpdateFileSystemAsync(
+                    new FileSystemDocument
+                    {
+                        Id = "Raven/FileSystem/" + fileSystem,
+                        Settings =
+                        {
+                            {"Raven/FileSystem/DataDir", Path.Combine("~", Path.Combine("FileSystems", fileSystem))}
+                        }
+                    }, fileSystem);
+            }
 
             public async Task<long> StartRestore(FilesystemRestoreRequest restoreRequest)
             {

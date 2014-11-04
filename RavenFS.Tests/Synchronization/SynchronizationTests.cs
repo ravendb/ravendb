@@ -4,9 +4,8 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Extensions;
 using Raven.Database.Server.RavenFS.Util;
-using Raven.Imports.Newtonsoft.Json;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
@@ -18,7 +17,7 @@ using Raven.Abstractions.Data;
 
 namespace RavenFS.Tests.Synchronization
 {
-    public class SynchronizationTests : RavenFsTestBase
+    public class SynchronizationTests : RavenFilesTestWithLogs
 	{
 		[Theory]
 		[InlineData(1)]

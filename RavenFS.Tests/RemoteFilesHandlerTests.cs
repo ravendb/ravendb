@@ -3,7 +3,7 @@ using Xunit;
 
 namespace RavenFS.Tests
 {
-	public class RemoteFilesHandlerTests : RavenFsWebApiTest
+	public class RemoteFilesHandlerTests : RavenFilesWebApiTest
 	{
 		[Fact]
 		public void CanGetFilesList_Empty()

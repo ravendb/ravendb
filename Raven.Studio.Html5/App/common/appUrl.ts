@@ -45,6 +45,8 @@ class appUrl {
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
         indexStats: ko.computed(() => appUrl.forIndexStats(appUrl.currentDatabase())),
+        replicationPerfStats: ko.computed(() => appUrl.forReplicationPerfStats(appUrl.currentDatabase())),
+        sqlReplicationPerfStats: ko.computed(() => appUrl.forSqlReplicationPerfStats(appUrl.currentDatabase())),
         metrics: ko.computed(() => appUrl.forMetrics(appUrl.currentDatabase())),
         metricsIndexing: ko.computed(() => appUrl.forMetricsIndexing(appUrl.currentDatabase())),
         metricsRequests: ko.computed(() => appUrl.forMetricsRequests(appUrl.currentDatabase())),
@@ -256,6 +258,14 @@ class appUrl {
 
     static forIndexStats(db: database): string {
         return "#databases/status/indexStats?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forReplicationPerfStats(db: database): string {
+        return "#databases/status/replicationPerfStats?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forSqlReplicationPerfStats(db: database): string {
+        return "#databases/status/sqlReplicationPerfStats?" + appUrl.getEncodedDbPart(db);
     }
 
     static forMetrics(db: database): string {

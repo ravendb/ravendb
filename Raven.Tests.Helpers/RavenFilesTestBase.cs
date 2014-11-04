@@ -16,7 +16,7 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Encryptors;
-using Raven.Client.FileSystem.Extensions;
+using Raven.Client.FileSystem;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -24,17 +24,14 @@ using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Server;
-using Raven.Client.FileSystem;
-
-using RavenFS.Tests.Tools;
-
-using Xunit;
+using Raven.Tests.Helpers.Util;
 
 using Raven.Client.Extensions;
+using Xunit;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.Helpers
 {
-    public class RavenFsTestBase : WithNLog, IDisposable
+    public class RavenFilesTestBase : IDisposable
     {
         public static IEnumerable<object[]> Storages
         {
@@ -56,12 +53,12 @@ namespace RavenFS.Tests
 
         public TimeSpan SynchronizationInterval { get; protected set; }
 
-        protected RavenFsTestBase()
+        protected RavenFilesTestBase()
         {
             this.SynchronizationInterval = TimeSpan.FromMinutes(10);
         }
 
-        protected RavenDbServer CreateRavenDbServer(int port,
+        protected RavenDbServer CreateServer(int port,
                                                     string dataDirectory = null,
                                                     bool runInMemory = true,
                                                     string requestedStorage = null,
@@ -73,22 +70,17 @@ namespace RavenFS.Tests
             var storageType = GetDefaultStorageType(requestedStorage);
             var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
 
-            var ravenConfiguration = new RavenConfiguration()
+            var ravenConfiguration = new RavenConfiguration
             {
-				Port = port,
-				DataDirectory = directory,
-				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+                Port = port,
+                DataDirectory = directory,
+                RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 #if DEBUG
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
+                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif
-				DefaultStorageTypeName = storageType,
-				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,                
-			};
-
-	        ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
-            ravenConfiguration.FileSystem.MaximumSynchronizationInterval = this.SynchronizationInterval;
-	        ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
-	        ravenConfiguration.FileSystem.DefaultStorageTypeName = storageType;
+                DefaultStorageTypeName = storageType,
+                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, Encryption = {UseFips = SettingsHelper.UseFipsEncryptionAlgorithms}, FileSystem = {MaximumSynchronizationInterval = this.SynchronizationInterval, DataDirectory = Path.Combine(directory, "FileSystem"), DefaultStorageTypeName = storageType},
+            };
 
             if (customConfig != null)
             {
@@ -102,7 +94,7 @@ namespace RavenFS.Tests
 
             var ravenDbServer = new RavenDbServer(ravenConfiguration)
             {
-	            UseEmbeddedHttpServer = true
+	            UseEmbeddedHttpServer = true,                
             };
 	        ravenDbServer.Initialize();
 
@@ -118,22 +110,24 @@ namespace RavenFS.Tests
             return ravenDbServer;
         }
 
-        protected virtual IFilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
+        protected virtual FilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
                                                 ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null, 
                                                 bool runInMemory = true, Action<RavenConfiguration> customConfig = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            var server = CreateRavenDbServer(Ports[index], 
+            var server = CreateServer(Ports[index], 
                 fileSystemName: fileSystemName,
                 enableAuthentication: enableAuthentication, 
                 customConfig: customConfig,
                 requestedStorage: requestedStorage, 
                 runInMemory:runInMemory);
 
-            var store = new FilesStore()
+            server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
+
+            var store = new FilesStore
             {
-                Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl),
+                Url = server.Url,
                 DefaultFileSystem = fileSystemName,
                 Credentials = credentials,
                 ApiKey = apiKey,                 
@@ -151,11 +145,12 @@ namespace RavenFS.Tests
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            var server = CreateRavenDbServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage);
+            var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage);
+            server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
             var store = new FilesStore()
             {
-                Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl),
+                Url = server.Url,
                 DefaultFileSystem = fileSystemName,
                 Credentials = credentials,
                 ApiKey = apiKey,
@@ -171,7 +166,7 @@ namespace RavenFS.Tests
             return client;       
         }
 
-        protected RavenFileSystem GetRavenFileSystem(int index = 0, [CallerMemberName] string fileSystemName = null)
+        protected RavenFileSystem GetFileSystem(int index = 0, [CallerMemberName] string fileSystemName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
@@ -368,6 +363,39 @@ namespace RavenFS.Tests
             return ms;
         }
 
+        private Random generator = new Random();
+
+        protected void ReseedRandom ( int seed )
+        {
+            generator = new Random(seed);
+        }
+
+        protected Stream CreateRandomFileStream(int size)
+        {
+            var ms = new MemoryStream();
+
+            // Write in blocks
+            byte[] buffer = new byte[4096];
+            for ( int i = 0 ; i < size / buffer.Length; i++ )
+            {
+                generator.NextBytes(buffer);
+                ms.Write(buffer, 0, buffer.Length);
+            }
+            
+            // Write last block
+            buffer = new byte[size % buffer.Length];
+            if (buffer.Length != 0)
+            {
+                generator.NextBytes(buffer);
+                ms.Write(buffer, 0, buffer.Length);
+            }                
+
+            ms.Flush();
+            ms.Position = 0;
+
+            return ms;
+        }
+
         protected void WaitForBackup(IAsyncFilesCommands filesCommands, bool checkError)
         {
             var done = SpinWait.SpinUntil(() =>
@@ -390,6 +418,7 @@ namespace RavenFS.Tests
                 }
                 return false;
             }, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
+            
             Assert.True(done);
         }
     }

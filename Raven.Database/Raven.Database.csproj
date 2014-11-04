@@ -242,6 +242,7 @@
     <Compile Include="Server\Connections\LogPushContent.cs" />
     <Compile Include="Server\Connections\AdminLogsConnectionState.cs" />
     <Compile Include="Server\Connections\AdminLogsTarget.cs" />
+    <Compile Include="Server\RavenFS\Controllers\FilesStreamsController.cs" />
     <Compile Include="Server\RavenFS\Controllers\HttpTraceFsController.cs" />
     <Compile Include="Server\RavenFS\Storage\BaseBackupOperation.cs" />
     <Compile Include="Server\RavenFS\Storage\BaseRestoreOperation.cs" />
@@ -257,7 +258,7 @@
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationConfig.cs" />
     <Compile Include="Server\IgnoreSslCertificateErrorsMode.cs" />
     <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
-    <Compile Include="Smuggler\EmbeddedSmugglerOperations.cs" />
+    <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
@@ -429,7 +430,6 @@
     <Compile Include="Server\RavenFS\Extensions\ConfigurationExtension.cs" />
     <Compile Include="Server\RavenFS\Extensions\EnumExtensions.cs" />
     <Compile Include="Server\RavenFS\Extensions\HttpExtensions.cs" />
-    <Compile Include="Server\RavenFS\Extensions\IOExtensions.cs" />
     <Compile Include="Server\RavenFS\Extensions\MetadataExtensions.cs" />
     <Compile Include="Server\RavenFS\Extensions\StreamExtensions.cs" />
     <Compile Include="Server\RavenFS\Infrastructure\Historian.cs" />
@@ -976,7 +976,7 @@
     <Compile Include="Server\WebApi\IRavenServer.cs" />
     <Compile Include="Server\WebApi\Handlers\GZipToJsonAndCompressHandler.cs" />
     <Compile Include="Server\WebApi\RequestManager.cs" />
-    <Compile Include="Smuggler\DataDumper.cs" />
+    <Compile Include="Smuggler\DatabaseDataDumper.cs" />
     <Compile Include="Storage\BaseBackupOperation.cs" />
     <Compile Include="Storage\BaseRestoreOperation.cs" />
     <Compile Include="Storage\DatabaseSizeInformation.cs" />

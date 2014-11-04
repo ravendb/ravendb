@@ -1,21 +1,18 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem;
-using Raven.Client.FileSystem.Listeners;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Xunit;
-using Raven.Abstractions.Extensions;
 
 namespace RavenFS.Tests.ClientApi
 {
-    public class FileSessionTests : RavenFsTestBase
+    public class FileSessionTests : RavenFilesTestWithLogs
     {
 
         private readonly IFilesStore filesStore;
@@ -49,15 +46,15 @@ namespace RavenFS.Tests.ClientApi
         }
 
         [Fact]
-        public void EnsureMaxNumberOfRequestsPerSessionIsHonored()
+        public async void EnsureMaxNumberOfRequestsPerSessionIsHonored()
         {
             var store = (FilesStore)filesStore;
             store.Conventions.MaxNumberOfRequestsPerSession = 0;
 
             using (var session = filesStore.OpenAsyncSession())
             {
-                TaskAssert.Throws<InvalidOperationException>(() => session.LoadFileAsync("test1.file"));
-                TaskAssert.Throws<InvalidOperationException>(() => session.DownloadAsync("test1.file"));
+                await AssertAsync.Throws<InvalidOperationException>(() => session.LoadFileAsync("test1.file"));
+                await AssertAsync.Throws<InvalidOperationException>(() => session.DownloadAsync("test1.file"));
                 Assert.Throws<InvalidOperationException>(() => session.RegisterFileDeletion("test1.file"));
                 Assert.Throws<InvalidOperationException>(() => session.RegisterRename("test1.file", "test2.file"));
                 Assert.Throws<InvalidOperationException>(() => session.RegisterUpload("test1.file", CreateUniformFileStream(128)));
@@ -98,7 +95,7 @@ namespace RavenFS.Tests.ClientApi
         }
 
         [Fact]
-        public void UploadActionWritesIncompleteStream()
+        public async void UploadActionWritesIncompleteStream()
         {
             var store = (FilesStore)filesStore;
 
@@ -110,12 +107,12 @@ namespace RavenFS.Tests.ClientApi
                         x.WriteByte(i);
                 });
 
-                TaskAssert.Throws<BadRequestException>(() => session.SaveChangesAsync());
+                await AssertAsync.Throws<BadRequestException>(() => session.SaveChangesAsync());
             }
         }
 
         [Fact]
-        public void UploadActionWritesIncompleteWithErrorStream()
+        public async void UploadActionWritesIncompleteWithErrorStream()
         {
             var store = (FilesStore)filesStore;
 
@@ -130,7 +127,7 @@ namespace RavenFS.Tests.ClientApi
                     throw new Exception();
                 });
 
-                TaskAssert.Throws<BadRequestException>(() => session.SaveChangesAsync());
+                await AssertAsync.Throws<BadRequestException>(() => session.SaveChangesAsync());
             }
         }
 
@@ -293,7 +290,7 @@ namespace RavenFS.Tests.ClientApi
                 });
                 session.RegisterRename("test2.file", "test3.file");
 
-                TaskAssert.Throws<BadRequestException>(() => session.SaveChangesAsync());
+                await AssertAsync.Throws<BadRequestException>(() => session.SaveChangesAsync());
 
                 var shouldExist = await session.LoadFileAsync("test2.file");
                 Assert.NotNull(shouldExist);

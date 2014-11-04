@@ -7,11 +7,12 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.FileSystem;
 using Raven.Json.Linq;
+using Raven.Tests.Helpers;
 using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-	public class SearchingCollections : RavenFsTestBase
+	public class SearchingCollections : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async Task CanSearch()

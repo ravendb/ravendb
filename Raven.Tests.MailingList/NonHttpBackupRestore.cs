@@ -6,6 +6,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Embedded;
@@ -20,20 +21,20 @@ namespace Raven.Tests.MailingList
 {
 	public class NonHttpBackupRestore : RavenTest
 	{
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task CanImportFromDumpFile()
 		{
 		    var file = Path.GetTempFileName();
 			using (var store = NewDocumentStoreWithData())
 			{
-				var dumper = new DataDumper(store.SystemDatabase);
-				await dumper.ExportData(new SmugglerExportOptions{ToFile = file});
+                var dumper = new DatabaseDataDumper(store.SystemDatabase);
+                await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = file });
 			}
 
 			using (var store = NewDocumentStore())
 			{
-				var dumper = new DataDumper(store.SystemDatabase);
-				await dumper.ImportData(new SmugglerImportOptions { FromFile = file });
+                var dumper = new DatabaseDataDumper(store.SystemDatabase);
+                await dumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = file });
 
 				using (var session = store.OpenSession())
 				{
@@ -48,15 +49,15 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task ImportReplacesAnExistingDatabase()
 		{
 		    var file = Path.GetTempFileName();
 
 			using (var store = NewDocumentStoreWithData())
 			{
-				var dumper = new DataDumper(store.SystemDatabase);
-				await dumper.ExportData(new SmugglerExportOptions {ToFile = file});
+                var dumper = new DatabaseDataDumper(store.SystemDatabase);
+                await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = file });
 
 				using (var session = store.OpenSession())
 				{
@@ -76,7 +77,7 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 				}
 
-				new DataDumper(store.SystemDatabase).ImportData(new SmugglerImportOptions{FromFile = file}).Wait();
+                new DatabaseDataDumper(store.SystemDatabase).ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = file }).Wait();
 				using (var session = store.OpenSession())
 				{
 					// Original attachment has been restored.

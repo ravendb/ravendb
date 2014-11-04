@@ -6,10 +6,10 @@ using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
+using Raven.Database.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -18,8 +18,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -120,7 +118,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 							}
                         }.WithDeleteMarker();
 
-						Historian.UpdateLastModified(tombstoneMetadata);
+                        Historian.UpdateLastModified(tombstoneMetadata);
 
                         accessor.PutFile(name, 0, tombstoneMetadata, true);
                         accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name));
@@ -162,9 +160,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				log.Debug("Cannot get metadata of a file '{0}' because file was deleted", name);
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			}
-
             
-
 			var httpResponseMessage = GetEmptyMessage();
 
             var etag = new Etag(fileAndPages.Metadata.Value<string>(Constants.MetadataEtagField));
@@ -291,8 +287,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		[HttpPut]
         [Route("fs/{fileSystemName}/files/{*name}")]
-		public async Task<HttpResponseMessage> Put(string name, string uploadId = null)
-		{         
+		public async Task<HttpResponseMessage> Put(string name, string uploadId = null, bool preserveTimestamps = false)
+		{                     
 			try
 			{
                 FileSystem.MetricsCounters.FilesPerSecond.Mark();
@@ -300,12 +296,36 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 name = FileHeader.Canonize(name);
 
                 var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
+                if (preserveTimestamps)
+                {
+                    if (!headers.ContainsKey(Constants.RavenCreationDate))
+                    {
+                        if (headers.ContainsKey(Constants.CreationDate))
+                            headers[Constants.RavenCreationDate] = headers[Constants.CreationDate];                            
+                        else
+                            throw new InvalidOperationException("Preserve Timestamps requires that the client includes the Raven-Creation-Date header.");
+                    }
 
-                Historian.UpdateLastModified(headers);
+                    if ( InnerHeaders.Contains(Constants.RavenLastModified))
+                    {
+                        DateTimeOffset when;
+                        if (!DateTimeOffset.TryParse(InnerHeaders.GetValues(Constants.RavenLastModified).First(), out when))
+                            when = DateTimeOffset.UtcNow;
 
-                var now = DateTimeOffset.UtcNow;
-                headers[Constants.RavenCreationDate] = now;
-                headers[Constants.CreationDate] = now.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture); // TODO: To keep current filesystems working. We should remove when adding a new migration. 
+                        Historian.UpdateLastModified(headers, when);
+                    }
+                    else Historian.UpdateLastModified(headers);
+                }
+                else
+                {
+                    headers[Constants.RavenCreationDate] = DateTimeOffset.UtcNow;
+
+                    Historian.UpdateLastModified(headers);
+                }
+
+                // TODO: To keep current filesystems working. We should remove when adding a new migration. 
+                headers[Constants.CreationDate] = headers[Constants.RavenCreationDate].Value<DateTimeOffset>().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture);
+
                 Historian.Update(name, headers);
 
                 SynchronizationTask.Cancel(name);
@@ -347,11 +367,12 @@ namespace Raven.Database.Server.RavenFS.Controllers
    
                     if ( readFileToDatabase.TotalSizeRead != size )
                     {
-                        Storage.Batch(accessor => { StorageOperationsTask.IndicateFileToDelete(name); });
+                        Storage.Batch(accessor => StorageOperationsTask.IndicateFileToDelete(name));
                         throw new HttpResponseException(HttpStatusCode.BadRequest);
                     }                        
 
-                    Historian.UpdateLastModified(headers); // update with the final file size
+                    if ( !preserveTimestamps )
+                        Historian.UpdateLastModified(headers); // update with the final file size.
 
                     log.Debug("File '{0}' was uploaded. Starting to update file metadata and indexes", name);
 

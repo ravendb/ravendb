@@ -44,7 +44,7 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public void CanExportImportTransformers()
 		{
 		    var file = Path.GetTempFileName();
@@ -55,10 +55,10 @@ namespace Raven.Tests.Issues
 				{
 					new ProductWithTransformerParameters().Execute(documentStore);
 
-					var smugglerApi = new SmugglerApi();
+                    var smugglerApi = new SmugglerDatabaseApi();
 
 					smugglerApi.ExportData(
-						new SmugglerExportOptions
+                        new SmugglerExportOptions<RavenConnectionStringOptions>
 						{
 							ToFile = file,
 							From = new RavenConnectionStringOptions
@@ -71,10 +71,10 @@ namespace Raven.Tests.Issues
 
 				using (var documentStore = NewRemoteDocumentStore())
 				{
-					var smugglerApi = new SmugglerApi();
+                    var smugglerApi = new SmugglerDatabaseApi();
 
 					smugglerApi.ImportData(
-						new SmugglerImportOptions
+                        new SmugglerImportOptions<RavenConnectionStringOptions>
 						{
 							FromFile = file,
 							To = new RavenConnectionStringOptions

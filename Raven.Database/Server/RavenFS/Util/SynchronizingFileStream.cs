@@ -1,6 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.Security.Cryptography;
 using Raven.Abstractions.Util.Encryptors;
+using Raven.Database.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Search;

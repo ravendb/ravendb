@@ -47,8 +47,14 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 
         public void UpdateLastModified(RavenJObject metadata)
         {
+            UpdateLastModified(metadata, DateTimeOffset.UtcNow);
+        }
+
+        public void UpdateLastModified(RavenJObject metadata, DateTimeOffset when)
+        {
             // internally keep last modified date with millisecond precision
-            metadata[Constants.LastModified] = DateTimeOffset.UtcNow; 
+            metadata[Constants.LastModified] = when;
+            metadata[Constants.RavenLastModified] = when;
             metadata[Constants.MetadataEtagField] = new RavenJValue(uuidGenerator.CreateSequentialUuid());
         }
 

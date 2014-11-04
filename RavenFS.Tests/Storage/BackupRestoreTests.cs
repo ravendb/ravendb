@@ -12,8 +12,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Client.FileSystem;
-using Raven.Database.Server.RavenFS.Extensions;
-
+using Raven.Database.Extensions;
 using RavenFS.Tests.Synchronization.IO;
 
 using Xunit;
@@ -24,7 +23,7 @@ namespace RavenFS.Tests.Storage
     /// <summary>
     /// RavenDB-2699
     /// </summary>
-    public class BackupRestoreTests : RavenFsTestBase
+    public class BackupRestoreTests : RavenFilesTestWithLogs
     {
         private readonly string DataDir;
 

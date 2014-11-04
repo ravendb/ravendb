@@ -11,7 +11,7 @@ using Xunit.Extensions;
 
 namespace RavenFS.Tests.Issues
 {
-	public class RavenDB_2784 : RavenFsTestBase
+	public class RavenDB_2784 : RavenFilesTestWithLogs
 	{
 		[Theory]
 		[InlineData("voron")]

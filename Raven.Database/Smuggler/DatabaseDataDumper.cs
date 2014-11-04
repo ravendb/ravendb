@@ -1,24 +1,24 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="DataDumper.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="DatabaseDataDumper.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Smuggler
 {
-	public class DataDumper : SmugglerApiBase
+	public class DatabaseDataDumper : SmugglerDatabaseApiBase
 	{
-		public DataDumper(DocumentDatabase database, SmugglerOptions options = null)
-			: base(options ?? new SmugglerOptions())
+        public DatabaseDataDumper(DocumentDatabase database, SmugglerDatabaseOptions options = null)
+            : base(options ?? new SmugglerDatabaseOptions())
 		{
-			Operations = new EmbeddedSmugglerOperations(database);
+			Operations = new SmugglerEmbeddedDatabaseOperations(database);
 		}
 
 		public override async Task ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtagsToFetch)
@@ -34,7 +34,7 @@ namespace Raven.Database.Smuggler
 			jsonWriter.WriteEndArray();
 		}
 
-		public override Task Between(SmugglerBetweenOptions betweenOptions)
+        public override Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions)
 		{
 			throw new NotSupportedException();
 		}
@@ -43,12 +43,12 @@ namespace Raven.Database.Smuggler
 		{
 			get
 			{
-				return ((EmbeddedSmugglerOperations)Operations).Progress;
+				return ((SmugglerEmbeddedDatabaseOperations)Operations).Progress;
 			}
 
 			set
 			{
-				((EmbeddedSmugglerOperations)Operations).Progress = value;
+				((SmugglerEmbeddedDatabaseOperations)Operations).Progress = value;
 			}
 		}
 	}

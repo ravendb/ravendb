@@ -12,7 +12,7 @@
         TransactionStart,
         TransactionCommit,
         TransactionRollback,
-        TransactionDisposed,
+        TransactionDisposing,
 
         FlushStart,
         FlushEnd

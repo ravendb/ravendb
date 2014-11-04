@@ -1,21 +1,21 @@
-﻿using System;
+﻿using Raven.Abstractions.FileSystem;
+using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Util;
+using Raven.Json.Linq;
+using RavenFS.Tests.Synchronization;
+using RavenFS.Tests.Synchronization.IO;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Util;
-using RavenFS.Tests.Synchronization;
-using RavenFS.Tests.Synchronization.IO;
 using Xunit;
-using Raven.Json.Linq;
-using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests
 {
-    public class StorageOperationsTests : RavenFsTestBase
+    public class StorageOperationsTests : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public async Task Can_force_storage_cleanup_from_client()
@@ -40,7 +40,7 @@ namespace RavenFS.Tests
             var filename = FileHeader.Canonize("toDelete.bin");
 
 			var client = NewAsyncClient();
-			var rfs = GetRavenFileSystem();
+			var rfs = GetFileSystem();
 
             client.UploadAsync(filename, new MemoryStream(new byte[] { 1, 2, 3, 4, 5 })).Wait();
 
@@ -58,7 +58,7 @@ namespace RavenFS.Tests
 		public async void Should_remove_file_deletion_config_after_storage_cleanup()
 		{
 			var client = NewAsyncClient();
-			var rfs = GetRavenFileSystem();
+			var rfs = GetFileSystem();
 
 			await client.UploadAsync("toDelete.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5}));
 
@@ -76,7 +76,7 @@ namespace RavenFS.Tests
 		public async Task Should_update_indexes_after_storage_cleanup()
 		{
 			var client = NewAsyncClient();
-			var rfs = GetRavenFileSystem();
+			var rfs = GetFileSystem();
 
             await client.UploadAsync("toDelete.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
@@ -96,7 +96,7 @@ namespace RavenFS.Tests
 			const int numberOfPages = 10;
 
 			var client = NewAsyncClient();
-			var rfs = GetRavenFileSystem();
+			var rfs = GetFileSystem();
 
 			var bytes = new byte[numberOfPages*StorageConstants.MaxPageSize];
 			new Random().NextBytes(bytes);
@@ -126,7 +126,7 @@ namespace RavenFS.Tests
             var filename = FileHeader.Canonize("file.bin");
 
 			var client = NewAsyncClient();
-			var rfs = GetRavenFileSystem();
+			var rfs = GetFileSystem();
 
 			client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
 
@@ -154,7 +154,7 @@ namespace RavenFS.Tests
 			var downloadingFileName = RavenFileNameHelper.DownloadingFileName(fileName);
 
 			var client = NewAsyncClient();
-			var rfs = GetRavenFileSystem();
+			var rfs = GetFileSystem();
 
 			client.UploadAsync(fileName, new RandomStream(1)).Wait();
 
@@ -179,7 +179,7 @@ namespace RavenFS.Tests
         public async void Upload_before_performing_cleanup_do_a_rename_by_adding_version_number()
         {
             var client = NewAsyncClient();
-            var rfs = GetRavenFileSystem();
+            var rfs = GetFileSystem();
 
             await client.UploadAsync("file.bin", new RandomStream(1));
 
@@ -208,7 +208,7 @@ namespace RavenFS.Tests
 		public void Should_resume_to_rename_file_if_appropriate_config_exists()
 		{
 			var client = NewAsyncClient();
-			var rfs = GetRavenFileSystem();
+			var rfs = GetFileSystem();
 
             string fileName = FileHeader.Canonize("file.bin");
 			string rename = FileHeader.Canonize("renamed.bin");
@@ -247,7 +247,7 @@ namespace RavenFS.Tests
 		public async Task Should_resume_file_renaming_from_client()
 		{
 			var client = NewAsyncClient();
-			var rfs = GetRavenFileSystem();
+			var rfs = GetFileSystem();
 
 			string fileName = FileHeader.Canonize("file.bin");
 			string rename = FileHeader.Canonize("renamed.bin");

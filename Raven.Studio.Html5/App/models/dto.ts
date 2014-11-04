@@ -408,6 +408,13 @@ interface transformerDto {
     }
 }
 
+
+
+interface indexDefinitionListItemDto {
+    name: string;
+    definition: indexDefinitionDto
+}
+
 interface saveTransformerDto {
     'Name': string;
     'TransformResults': string;
@@ -1053,7 +1060,7 @@ interface performanceTestRequestDto {
     Path: string;
     FileSize: number;
     OperationType: string;
-    Buffered: boolean;
+    BufferingType: string;
     Sequential: boolean;
     ThreadCount: number;
     TimeToRunInSeconds: number;

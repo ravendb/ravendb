@@ -6,7 +6,7 @@ using Raven.Abstractions.FileSystem;
 
 namespace RavenFS.Tests
 {
-    public class Folders : RavenFsTestBase
+    public class Folders : RavenFilesTestWithLogs
 	{
 		[Fact]
 		public void CanGetListOfFolders()

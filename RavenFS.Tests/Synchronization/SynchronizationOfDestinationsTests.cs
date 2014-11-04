@@ -3,19 +3,20 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.FileSystem.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Util;
-using RavenFS.Tests.Synchronization.IO;
-using Xunit;
-using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
+using Raven.Client.FileSystem.Extensions;
+using Raven.Database.Extensions;
+using Raven.Database.Server.RavenFS.Util;
 using Raven.Abstractions.Data;
+using Raven.Json.Linq;
+using Raven.Tests.Helpers;
+using RavenFS.Tests.Synchronization.IO;
+using Xunit;
 
 namespace RavenFS.Tests.Synchronization
 {
-	public class SynchronizationOfDestinationsTests : RavenFsTestBase
+	public class SynchronizationOfDestinationsTests : RavenFilesTestWithLogs
 	{
 		private const int AddtitionalServerInstancePortNumber = 19083;
 

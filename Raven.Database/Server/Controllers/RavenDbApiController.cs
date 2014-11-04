@@ -245,14 +245,6 @@ namespace Raven.Database.Server.Controllers
             return false;
         }
 
-        public int GetNextPageStart()
-        {
-            bool isNextPage;
-            if (bool.TryParse(GetQueryStringValue("next-page"), out isNextPage) && isNextPage)
-                return GetStart();
-
-            return 0;
-        }
 
 		protected TransactionInformation GetRequestTransaction()
 		{
@@ -478,7 +470,24 @@ namespace Raven.Database.Server.Controllers
 			bool.TryParse(GetQueryStringValue("skipOverwriteIfUnchanged"), out result);
 			return result;
 		}
-	
+
+        protected int? GetMaxOpsPerSec()
+        {
+            int? result = null;
+            int parseResult;
+            var success = int.TryParse(GetQueryStringValue("maxOpsPerSec"), out parseResult);
+            if (success) result = parseResult;
+            return result;
+        }
+
+        protected TimeSpan? GetStaleTimeout()
+        {
+            TimeSpan? result = null;
+            TimeSpan parseResult;
+            var success = TimeSpan.TryParse(GetQueryStringValue("staleTimeout"), out parseResult);
+            if (success) result = parseResult;
+            return result;
+        }
 
 		protected void HandleReplication(HttpResponseMessage msg)
 		{

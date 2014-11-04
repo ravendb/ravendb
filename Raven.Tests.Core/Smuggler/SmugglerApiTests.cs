@@ -1,21 +1,21 @@
-﻿using Raven.Abstractions.Smuggler;
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using Raven.Tests.Core.Utils.Transformers;
-using System.IO;
-using Xunit;
-using Raven.Abstractions.Data;
-using Raven.Smuggler;
-using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Extensions;
 using System;
+using System.IO;
+using System.Threading.Tasks;
+using Xunit;
 
 namespace Raven.Tests.Core.Smuggler
 {
@@ -95,8 +95,8 @@ namespace Raven.Tests.Core.Smuggler
                         }.Initialize())
                         {
 
-                            var smugglerApi = new SmugglerApi();
-                            await smugglerApi.Between(new SmugglerBetweenOptions
+                            var smugglerApi = new SmugglerDatabaseApi();
+                            await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
                             {
                                 From = new RavenConnectionStringOptions { Url = "http://localhost:" + Port1, DefaultDatabase = "db1" },
                                 To = new RavenConnectionStringOptions { Url = "http://localhost:" + Port2, DefaultDatabase = "db2" }
@@ -151,8 +151,8 @@ namespace Raven.Tests.Core.Smuggler
 
                     store1.DatabaseCommands.PutAttachment("attachement1", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
 
-                    var smugglerApi = new SmugglerApi();
-                    await smugglerApi.ExportData(new SmugglerExportOptions 
+                    var smugglerApi = new SmugglerDatabaseApi();
+                    await smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> 
                         { 
                             From = new RavenConnectionStringOptions { Url = "http://localhost:" + Port1, DefaultDatabase = "db1" },
                             ToFile = BackupDir
@@ -177,7 +177,7 @@ namespace Raven.Tests.Core.Smuggler
                             DefaultDatabase = "db2"
                         }.Initialize())
                         {
-                            await smugglerApi.ImportData(new SmugglerImportOptions
+                            await smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
                             {
                                 FromFile = BackupDir,
                                 To = new RavenConnectionStringOptions { Url = "http://localhost:" + Port2, DefaultDatabase = "db2" }

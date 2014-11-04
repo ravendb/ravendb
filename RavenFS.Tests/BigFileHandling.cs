@@ -1,20 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Util;
-using Raven.Imports.Newtonsoft.Json;
-using RavenFS.Tests.Tools;
+using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
-using System.Linq;
-using Raven.Json.Linq;
-using RavenFS.Tests.Synchronization.IO;
-using System.IO;
 
 namespace RavenFS.Tests
 {
-    public class BigFileHandling : RavenFsWebApiTest
+    public class BigFileHandling : RavenFilesWebApiTest
 	{
 		[Theory]
         [InlineData(1024 * 1024)]		// 1 mb        
@@ -27,9 +22,6 @@ namespace RavenFS.Tests
             var files = await client.BrowseAsync();
             Assert.Equal(1, files.Count());
             Assert.Equal(size, files.First().TotalSize);
-
-            // REVIEW: (Oren) what does UploadedSize means and where it is sent over? RavenFS-Size is that?
-            //Assert.Equal(size, files.First().UploadedSize);
 
             var downloadData = new MemoryStream();            
             (await client.DownloadAsync("mb.bin")).CopyTo(downloadData);
