@@ -14,8 +14,6 @@ namespace Raven.Database.Server.Controllers
 {
 	public class DatabasesController : RavenDbApiController
 	{
-	    private string disabledStatusString;
-
 	    [HttpGet]
 		[Route("databases")]
 		public HttpResponseMessage Databases(bool getAdditionalData = false)
@@ -107,7 +105,7 @@ namespace Raven.Database.Server.Controllers
 	        if (settingsProperty == null)
 	            return false;
 
-            disabledStatusString = settingsProperty.Value<string>("Raven/IndexingDisabled");
+            var disabledStatusString = settingsProperty.Value<string>("Raven/IndexingDisabled");
             if (disabledStatusString == null)
                 return false;
 
