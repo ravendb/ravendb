@@ -57,6 +57,7 @@ namespace Raven.Database.Plugins.Builtins
 			{
 				pathsToCheck.Add(filesystem.Configuration.FileSystem.DataDirectory);
 				pathsToCheck.Add(filesystem.Configuration.FileSystem.IndexStoragePath);
+				pathsToCheck.Add(filesystem.Configuration.JournalsStoragePath);
 			});
 
 			var roots = pathsToCheck.Where(path => path != null && Path.IsPathRooted(path) && path.StartsWith("\\\\") == false).Select(Path.GetPathRoot).ToList();
