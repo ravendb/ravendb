@@ -49,10 +49,15 @@ task Init -depends Verify40, Clean {
 
 task Compile -depends Init, CompileHtml5 {
 	
+	$commit = Get-Git-Commit-Full
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
 	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount }
+	
+	if ($commit -ne "0000000000000000000000000000000000000000") {
+		exec { &"$tools_dir\GitLink.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" }
+	}
 }
 
 task CompileHtml5 {
