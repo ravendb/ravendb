@@ -34,6 +34,10 @@ select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""]
 						{"Tag", FieldIndexing.NotAnalyzed},
 						{"LastModified", FieldIndexing.NotAnalyzed},
 					},
+                    SortOptions =
+                    {
+                        {"LastModified",SortOptions.String}
+                    },
 				Stores =
 					{
 						{"Tag", FieldStorage.No},
