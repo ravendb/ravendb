@@ -1,10 +1,10 @@
 ﻿using System.Threading;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Storage.Esent;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Synchronization
+namespace Raven.Database.FileSystem.Synchronization
 {
 	public class SynchronizationHiLo
 	{

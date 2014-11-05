@@ -7,7 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Web.Http;
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
 	public class StaticFSController : RavenFsApiController
 	{

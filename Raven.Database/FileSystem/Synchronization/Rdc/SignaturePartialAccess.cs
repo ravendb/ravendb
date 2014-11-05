@@ -1,9 +1,9 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
+using Raven.Database.FileSystem.Util;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
+namespace Raven.Database.FileSystem.Synchronization.Rdc
 {
 	public class SignaturePartialAccess : IPartialDataAccess
 	{

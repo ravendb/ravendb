@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using RavenFS.Tests.Synchronization.IO;
+using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
     public class BigFileHandling : RavenFilesWebApiTest
 	{

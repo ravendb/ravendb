@@ -10,7 +10,7 @@ using Raven.Json.Linq;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
     public class Notifications : RavenFilesTestWithLogs
     {

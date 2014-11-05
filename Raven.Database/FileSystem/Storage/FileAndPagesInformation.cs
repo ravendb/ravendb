@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 
-namespace Raven.Database.Server.RavenFS.Storage
+namespace Raven.Database.FileSystem.Storage
 {
 	public class FileAndPagesInformation
 	{

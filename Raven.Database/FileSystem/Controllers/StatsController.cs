@@ -1,10 +1,10 @@
 ﻿using System.Linq;
 using System.Web.Http;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.FileSystem.Extensions;
 using System.Net.Http;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
 	public class StatsController : RavenFsApiController
 	{

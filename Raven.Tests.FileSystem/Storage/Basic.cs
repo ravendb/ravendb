@@ -8,7 +8,7 @@ using System.IO;
 using Xunit;
 using Xunit.Extensions;
 
-namespace RavenFS.Tests.Storage
+namespace Raven.Tests.FileSystem.Storage
 {
     public class Basic : StorageAccessorTestBase
     {

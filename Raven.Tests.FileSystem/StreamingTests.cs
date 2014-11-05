@@ -8,7 +8,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Tests.Common.Dto;
 using Xunit;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
     public class StreamingTests : RavenFilesTestWithLogs
     {

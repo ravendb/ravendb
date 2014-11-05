@@ -12,7 +12,7 @@ using Xunit;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
 
-namespace RavenFS.Tests.Auth
+namespace Raven.Tests.FileSystem.Auth
 {
     public class ClientWithoutAuthenticationSetup : RavenFilesTestWithLogs
     {

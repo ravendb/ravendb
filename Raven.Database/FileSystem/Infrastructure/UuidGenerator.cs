@@ -2,7 +2,7 @@
 using System.Threading;
 using Raven.Database.Extensions;
 
-namespace Raven.Database.Server.RavenFS.Infrastructure
+namespace Raven.Database.FileSystem.Infrastructure
 {
 	public class UuidGenerator
 	{

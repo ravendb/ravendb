@@ -4,11 +4,11 @@ using System.Linq;
 using System.Web.Http;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.FileSystem.Storage;
 using System.Net.Http;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
 	public class SearchController : RavenFsApiController
 	{

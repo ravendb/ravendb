@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
+namespace Raven.Database.FileSystem.Synchronization.Rdc
 {
 	internal class NeedListParser
 	{

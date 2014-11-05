@@ -1,8 +1,8 @@
-﻿using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
+﻿using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Storage.Esent;
 
-namespace Raven.Database.Server.RavenFS.Infrastructure
+namespace Raven.Database.FileSystem.Infrastructure
 {
 	public class SequenceActions
 	{

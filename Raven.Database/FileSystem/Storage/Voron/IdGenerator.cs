@@ -6,12 +6,12 @@
 using System;
 using System.Collections.Concurrent;
 
-using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
+using Raven.Database.FileSystem.Storage.Voron.Impl;
 
 using Voron;
 using Voron.Impl;
 
-namespace Raven.Database.Server.RavenFS.Storage.Voron
+namespace Raven.Database.FileSystem.Storage.Voron
 {
 	internal class IdGenerator
     {

@@ -6,7 +6,7 @@
 using System.Net;
 using Raven.Client.FileSystem.Connection;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
     public class RavenFilesWebApiTest : RavenFilesTestWithLogs
     {

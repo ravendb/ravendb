@@ -2,14 +2,14 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Synchronization;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Synchronization;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
 
-namespace Raven.Database.Server.RavenFS.Infrastructure
+namespace Raven.Database.FileSystem.Infrastructure
 {
 	public class Historian
 	{

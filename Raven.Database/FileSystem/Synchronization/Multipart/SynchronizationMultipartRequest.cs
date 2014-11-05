@@ -4,8 +4,8 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
+using Raven.Database.FileSystem.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System;
@@ -17,7 +17,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
+namespace Raven.Database.FileSystem.Synchronization.Multipart
 {
 	internal class SynchronizationMultipartRequest : IHoldProfilingInformation
 	{

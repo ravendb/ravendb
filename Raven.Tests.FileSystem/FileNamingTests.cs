@@ -1,7 +1,7 @@
 ﻿using Raven.Abstractions.FileSystem;
 using Xunit;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
 	public class FileNamingTests
 	{

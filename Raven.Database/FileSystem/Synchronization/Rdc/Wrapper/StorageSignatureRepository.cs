@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Logging;
-using Raven.Database.Server.RavenFS.Infrastructure;
-using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.FileSystem.Infrastructure;
+using Raven.Database.FileSystem.Storage;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
+namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 {
 	public class StorageSignatureRepository : ISignatureRepository
 	{

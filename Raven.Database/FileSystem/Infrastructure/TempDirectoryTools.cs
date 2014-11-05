@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Raven.Database.Server.RavenFS.Infrastructure
+namespace Raven.Database.FileSystem.Infrastructure
 {
 	public class TempDirectoryTools
 	{

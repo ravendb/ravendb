@@ -1,4 +1,4 @@
-﻿namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper.Unmanaged
+﻿namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper.Unmanaged
 {
 	public enum GeneratorParametersType
 	{

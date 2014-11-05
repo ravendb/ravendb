@@ -6,11 +6,11 @@
 
 using System;
 
-using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
+using Raven.Database.FileSystem.Storage.Voron.Impl;
 
 using Voron;
 
-namespace Raven.Database.Server.RavenFS.Storage.Voron.Schema.Updates
+namespace Raven.Database.FileSystem.Storage.Voron.Schema.Updates
 {
 	internal abstract class SchemaUpdateBase : ISchemaUpdate
 	{

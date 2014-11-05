@@ -19,7 +19,7 @@ using Raven.Json.Linq;
 
 using Voron.Impl.Backup;
 
-namespace Raven.Database.Server.RavenFS.Storage
+namespace Raven.Database.FileSystem.Storage
 {
     public abstract class BaseBackupOperation
     {

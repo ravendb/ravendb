@@ -9,11 +9,11 @@ using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Json.Linq;
-using RavenFS.Tests.Synchronization.IO;
+using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
     public class CommandsUsage : RavenFilesTestWithLogs
 	{

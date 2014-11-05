@@ -13,7 +13,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.FileSystem;
 using Raven.Storage.Esent.Backup;
 
-namespace Raven.Database.Server.RavenFS.Storage.Esent.Backup
+namespace Raven.Database.FileSystem.Storage.Esent.Backup
 {
 	public class BackupOperation : BaseBackupOperation
 	{

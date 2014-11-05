@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 
-namespace Raven.Database.Server.RavenFS.Storage.Exceptions
+namespace Raven.Database.FileSystem.Storage.Exceptions
 {
     public class FileExistsException : Exception
     {

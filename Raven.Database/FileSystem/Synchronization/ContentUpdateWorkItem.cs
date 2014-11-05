@@ -5,17 +5,17 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
-using Raven.Database.Server.RavenFS.Synchronization.Multipart;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Storage.Esent;
+using Raven.Database.FileSystem.Synchronization.Multipart;
+using Raven.Database.FileSystem.Synchronization.Rdc;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
+using Raven.Database.FileSystem.Util;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
 
-namespace Raven.Database.Server.RavenFS.Synchronization
+namespace Raven.Database.FileSystem.Synchronization
 {
 	public class ContentUpdateWorkItem : SynchronizationWorkItem
 	{

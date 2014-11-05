@@ -25,7 +25,7 @@ using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -33,7 +33,7 @@ using Raven.Json.Linq;
 using Voron.Impl.Backup;
 
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
     public class AdminFileSystemController : BaseAdminController
     {

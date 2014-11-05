@@ -4,7 +4,7 @@ using System.IO;
 using Raven.Tests.Helpers;
 using Xunit;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
     public class CompleteUsage : RavenFilesTestWithLogs
 	{

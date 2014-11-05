@@ -10,7 +10,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace RavenFS.Tests.ClientApi
+namespace Raven.Tests.FileSystem.ClientApi
 {
     public class FileSessionTests : RavenFilesTestWithLogs
     {

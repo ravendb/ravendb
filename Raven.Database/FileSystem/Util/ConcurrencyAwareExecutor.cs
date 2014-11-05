@@ -2,7 +2,7 @@
 using System.Threading;
 using Raven.Abstractions.Exceptions;
 
-namespace Raven.Database.Server.RavenFS.Util
+namespace Raven.Database.FileSystem.Util
 {
 	public static class ConcurrencyAwareExecutor
 	{

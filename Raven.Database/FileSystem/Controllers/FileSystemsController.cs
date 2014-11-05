@@ -3,20 +3,21 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions.FileSystem;
+using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.Server;
+using Raven.Database.Server.Controllers;
+using Raven.Database.Server.Security;
+using Raven.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Raven.Database.Extensions;
-using Raven.Database.Server.Controllers;
-using Raven.Database.Server.Security;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Json.Linq;
-using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
 	public class FileSystemsController : RavenDbApiController
 	{

@@ -8,9 +8,9 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.FileSystem.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -19,7 +19,7 @@ using System.Text.RegularExpressions;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
 	public class ConfigController : RavenFsApiController
 	{

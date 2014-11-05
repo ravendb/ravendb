@@ -13,11 +13,11 @@ using System.Web;
 
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage.Exceptions;
-using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Storage.Exceptions;
+using Raven.Database.FileSystem.Storage.Voron.Impl;
+using Raven.Database.FileSystem.Synchronization.Rdc;
+using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 
 using Voron;
@@ -28,7 +28,7 @@ using System.Diagnostics;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
 
-namespace Raven.Database.Server.RavenFS.Storage.Voron
+namespace Raven.Database.FileSystem.Storage.Voron
 {
     internal class StorageActionsAccessor : StorageActionsBase, IStorageActionsAccessor
     {

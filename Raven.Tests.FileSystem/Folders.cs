@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Xunit;
 using Raven.Abstractions.FileSystem;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
     public class Folders : RavenFilesTestWithLogs
 	{

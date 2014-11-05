@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using Raven.Database.Extensions;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
-using RavenFS.Tests.Synchronization.IO;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
+using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 using System.Linq;
 
-namespace RavenFS.Tests.Synchronization
+namespace Raven.Tests.FileSystem.Synchronization
 {
 	public class SigGeneratorTest : IDisposable
 	{

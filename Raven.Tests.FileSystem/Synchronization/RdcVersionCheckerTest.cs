@@ -1,7 +1,7 @@
-﻿using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+﻿using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Xunit;
 
-namespace RavenFS.Tests.Synchronization
+namespace Raven.Tests.FileSystem.Synchronization
 {
 
 

@@ -12,7 +12,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Data;
 
-namespace RavenFS.Tests.ClientApi
+namespace Raven.Tests.FileSystem.ClientApi
 {
     public class SerializationTests
     {

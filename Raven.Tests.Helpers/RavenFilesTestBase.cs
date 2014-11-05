@@ -21,7 +21,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
-using Raven.Database.Server.RavenFS;
+using Raven.Database.FileSystem;
 using Raven.Database.Server.Security;
 using Raven.Server;
 using Raven.Tests.Helpers.Util;

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
+namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 {
 	public interface ISignatureRepository : IDisposable
 	{

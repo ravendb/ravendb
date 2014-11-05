@@ -13,7 +13,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
 
-namespace Raven.Database.Server.RavenFS.Extensions
+namespace Raven.Database.FileSystem.Extensions
 {
 
 	/// <summary>

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Xunit;
 using Xunit.Sdk;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
 	public class MtaFactAttribute : FactAttribute
 	{

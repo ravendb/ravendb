@@ -4,9 +4,9 @@ using System.Diagnostics;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper.Unmanaged;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper.Unmanaged;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
+namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 {
 	internal class NeedListGenerator : CriticalFinalizerObject, IDisposable
 	{

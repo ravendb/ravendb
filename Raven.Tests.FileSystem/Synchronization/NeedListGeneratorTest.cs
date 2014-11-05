@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
-using Raven.Database.Server.RavenFS.Util;
-using RavenFS.Tests.Synchronization.IO;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
+using Raven.Database.FileSystem.Util;
+using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 
-namespace RavenFS.Tests.Synchronization
+namespace Raven.Tests.FileSystem.Synchronization
 {
 	public class NeedListGeneratorTest
 	{

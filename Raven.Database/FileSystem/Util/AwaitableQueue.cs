@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Raven.Database.Server.RavenFS.Util
+namespace Raven.Database.FileSystem.Util
 {
 	public class AwaitableQueue<T>
 	{

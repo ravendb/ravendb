@@ -14,7 +14,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Server.Connections;
-using Raven.Database.Server.RavenFS;
+using Raven.Database.FileSystem;
 
 namespace Raven.Database.Server.Tenancy
 {

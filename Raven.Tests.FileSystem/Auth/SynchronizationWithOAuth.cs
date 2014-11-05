@@ -11,12 +11,12 @@ using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers;
-using RavenFS.Tests.Synchronization;
-using RavenFS.Tests.Synchronization.IO;
+using Raven.Tests.FileSystem.Synchronization;
+using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 using Raven.Abstractions.FileSystem;
 
-namespace RavenFS.Tests.Auth
+namespace Raven.Tests.FileSystem.Auth
 {
     public class SynchronizationWithOAuth : RavenFilesTestWithLogs
     {

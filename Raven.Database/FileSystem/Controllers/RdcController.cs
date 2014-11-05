@@ -8,16 +8,16 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Logging;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Synchronization;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Synchronization;
+using Raven.Database.FileSystem.Synchronization.Rdc;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Util;
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
 	public class RdcController : RavenFsApiController
 	{

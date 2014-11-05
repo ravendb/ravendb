@@ -2,14 +2,14 @@
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
-using Raven.Database.Server.RavenFS.Infrastructure;
-using Raven.Database.Server.RavenFS.Search;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
+using Raven.Database.FileSystem.Infrastructure;
+using Raven.Database.FileSystem.Search;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Storage.Esent;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Util
+namespace Raven.Database.FileSystem.Util
 {
 	public class StorageStream : Stream
 	{

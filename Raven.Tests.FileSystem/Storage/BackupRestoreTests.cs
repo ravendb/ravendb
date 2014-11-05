@@ -13,12 +13,12 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.FileSystem;
 using Raven.Database.Extensions;
-using RavenFS.Tests.Synchronization.IO;
+using Raven.Tests.FileSystem.Synchronization.IO;
 
 using Xunit;
 using Xunit.Extensions;
 
-namespace RavenFS.Tests.Storage
+namespace Raven.Tests.FileSystem.Storage
 {
     /// <summary>
     /// RavenDB-2699

@@ -2,9 +2,9 @@
 using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.FileSystem.Extensions;
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
 	public class FoldersController : RavenFsApiController
 	{

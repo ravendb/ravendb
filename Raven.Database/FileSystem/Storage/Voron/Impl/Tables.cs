@@ -3,7 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
+namespace Raven.Database.FileSystem.Storage.Voron.Impl
 {
 	public class Tables
 	{

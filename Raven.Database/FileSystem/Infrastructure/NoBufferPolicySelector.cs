@@ -1,6 +1,6 @@
 ﻿//using System.Web.Http.WebHost;
 
-//namespace Raven.Database.Server.RavenFS.Infrastructure
+//namespace Raven.Database.FileSystem.Infrastructure
 //{
 //	public class NoBufferPolicySelector : WebHostBufferPolicySelector
 //	{

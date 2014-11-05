@@ -9,7 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality.Resolvers
+namespace Raven.Database.FileSystem.Synchronization.Conflictuality.Resolvers
 {
 	[PartNotDiscoverable]
 	public class LatestFileSynchronizationConflictResolver : AbstractFileSynchronizationConflictResolver

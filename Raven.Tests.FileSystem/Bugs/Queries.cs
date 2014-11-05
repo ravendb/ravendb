@@ -4,7 +4,7 @@ using System.IO;
 using Raven.Tests.Helpers;
 using Xunit;
 
-namespace RavenFS.Tests.Bugs
+namespace Raven.Tests.FileSystem.Bugs
 {
     public class Queries : RavenFilesTestWithLogs
 	{

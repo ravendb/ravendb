@@ -1,7 +1,7 @@
 ﻿using Raven.Database.Config;
 using Raven.Database.Storage.Esent;
 
-namespace Raven.Database.Server.RavenFS.Storage.Esent
+namespace Raven.Database.FileSystem.Storage.Esent
 {
 	public class TransactionalStorageConfigurator : StorageConfigurator
 	{

@@ -1,11 +1,11 @@
 ﻿using Raven.Json.Linq;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.FileSystem.Extensions;
 using System;
 using System.Collections.Specialized;
 using System.Linq;
 using Xunit;
 
-namespace RavenFS.Tests.Bugs
+namespace Raven.Tests.FileSystem.Bugs
 {
     public class FileRenaming : StorageTest
     {

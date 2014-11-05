@@ -13,9 +13,9 @@ using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 using Xunit.Extensions;
 using Raven.Json.Linq;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.FileSystem.Extensions;
 
-namespace RavenFS.Tests.Storage
+namespace Raven.Tests.FileSystem.Storage
 {
     public class PageTests : StorageAccessorTestBase
     {

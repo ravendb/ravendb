@@ -10,12 +10,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Logging;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Infrastructure;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Synchronization;
-using Raven.Database.Server.RavenFS.Synchronization.Multipart;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Infrastructure;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Synchronization;
+using Raven.Database.FileSystem.Synchronization.Multipart;
+using Raven.Database.FileSystem.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -23,7 +23,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Data;
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
 	public class SynchronizationController : RavenFsApiController
 	{

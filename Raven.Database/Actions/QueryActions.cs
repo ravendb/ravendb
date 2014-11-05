@@ -17,7 +17,7 @@ using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;

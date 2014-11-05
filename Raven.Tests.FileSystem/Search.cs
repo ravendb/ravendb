@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using Xunit;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
     public class Search : RavenFilesTestWithLogs
     {

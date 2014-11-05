@@ -51,7 +51,7 @@ namespace Raven.Database.Server.Connections
     using WebSocketReceiveResult = Tuple<int, // type
         bool, // end of message?
         int>;
-    using Raven.Database.Server.RavenFS; // count
+    using Raven.Database.FileSystem; // count
 
     public class WebSocketTransportFactory
     {

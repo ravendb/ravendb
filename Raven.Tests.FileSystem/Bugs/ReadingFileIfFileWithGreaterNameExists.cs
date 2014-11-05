@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Specialized;
-using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.FileSystem.Storage;
 using Xunit;
 using Raven.Json.Linq;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.FileSystem.Extensions;
 
-namespace RavenFS.Tests.Bugs
+namespace Raven.Tests.FileSystem.Bugs
 {
 	public class ReadingFileIfFileWithGreaterNameExists : StorageTest
 	{

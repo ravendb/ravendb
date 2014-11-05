@@ -10,7 +10,7 @@ using System.IO;
 using Voron;
 using Voron.Impl.Backup;
 
-namespace Raven.Database.Server.RavenFS.Storage.Voron.Backup
+namespace Raven.Database.FileSystem.Storage.Voron.Backup
 {
 	internal class RestoreOperation : BaseRestoreOperation
     {

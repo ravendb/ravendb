@@ -7,7 +7,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 
-namespace Raven.Database.Server.RavenFS.Storage
+namespace Raven.Database.FileSystem.Storage
 {
 	internal abstract class BaseRestoreOperation
     {

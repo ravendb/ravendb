@@ -18,9 +18,9 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Database.Server.RavenFS.Storage.Voron.Backup;
-using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
-using Raven.Database.Server.RavenFS.Storage.Voron.Schema;
+using Raven.Database.FileSystem.Storage.Voron.Backup;
+using Raven.Database.FileSystem.Storage.Voron.Impl;
+using Raven.Database.FileSystem.Storage.Voron.Schema;
 using Raven.Json.Linq;
 
 using Voron;
@@ -30,7 +30,7 @@ using Voron.Impl.Backup;
 using Constants = Raven.Abstractions.Data.Constants;
 using VoronExceptions = Voron.Exceptions;
 
-namespace Raven.Database.Server.RavenFS.Storage.Voron
+namespace Raven.Database.FileSystem.Storage.Voron
 {
     public class TransactionalStorage : ITransactionalStorage
     {

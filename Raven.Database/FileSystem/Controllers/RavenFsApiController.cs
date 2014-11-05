@@ -1,4 +1,27 @@
-﻿using System;
+﻿using Raven.Abstractions;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util.Streams;
+using Raven.Client.FileSystem;
+using Raven.Database.Config;
+using Raven.Database.FileSystem.Infrastructure;
+using Raven.Database.FileSystem.Notifications;
+using Raven.Database.FileSystem.Search;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Synchronization;
+using Raven.Database.FileSystem.Synchronization.Conflictuality;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
+using Raven.Database.Server;
+using Raven.Database.Server.Controllers;
+using Raven.Database.Server.Security;
+using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi;
+using Raven.Json.Linq;
+using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
@@ -12,30 +35,8 @@ using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
-using Raven.Abstractions;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util.Streams;
-using Raven.Client.FileSystem;
-using Raven.Database.Config;
-using Raven.Database.Server.Controllers;
-using Raven.Database.Server.RavenFS.Infrastructure;
-using Raven.Database.Server.RavenFS.Notifications;
-using Raven.Database.Server.RavenFS.Search;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Synchronization;
-using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
-using Raven.Database.Server.Security;
-using Raven.Database.Server.Tenancy;
-using Raven.Database.Server.WebApi;
-using Raven.Json.Linq;
-using System.Collections.Generic;
-using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Data;
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
 	public abstract class RavenFsApiController : RavenBaseApiController
 	{

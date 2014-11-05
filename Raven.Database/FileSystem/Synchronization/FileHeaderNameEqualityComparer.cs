@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
-using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.FileSystem.Storage;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Synchronization
+namespace Raven.Database.FileSystem.Synchronization
 {
     internal class FileHeaderNameEqualityComparer : IEqualityComparer<FileHeader>
 	{

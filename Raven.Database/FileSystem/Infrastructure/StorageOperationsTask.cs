@@ -9,19 +9,19 @@ using System.Threading.Tasks;
 using Microsoft.Isam.Esent.Interop;
 using NLog;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Notifications;
-using Raven.Database.Server.RavenFS.Search;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
-using Raven.Database.Server.RavenFS.Storage.Exceptions;
-using Raven.Database.Server.RavenFS.Synchronization;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Notifications;
+using Raven.Database.FileSystem.Search;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Storage.Esent;
+using Raven.Database.FileSystem.Storage.Exceptions;
+using Raven.Database.FileSystem.Synchronization;
+using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Infrastructure
+namespace Raven.Database.FileSystem.Infrastructure
 {
 	public class StorageOperationsTask
 	{

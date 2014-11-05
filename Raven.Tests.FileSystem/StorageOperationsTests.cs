@@ -1,10 +1,10 @@
 ﻿using Raven.Abstractions.FileSystem;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
-using RavenFS.Tests.Synchronization;
-using RavenFS.Tests.Synchronization.IO;
+using Raven.Tests.FileSystem.Synchronization;
+using Raven.Tests.FileSystem.Synchronization.IO;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -13,7 +13,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
     public class StorageOperationsTests : RavenFilesTestWithLogs
 	{

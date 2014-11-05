@@ -10,16 +10,16 @@ using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Infrastructure;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Infrastructure;
+using Raven.Database.FileSystem.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using RavenFS.Tests.Synchronization.IO;
-using RavenFS.Tests.Tools;
+using Raven.Tests.FileSystem.Synchronization.IO;
+using Raven.Tests.FileSystem.Tools;
 using Xunit;
 
-namespace RavenFS.Tests.Synchronization
+namespace Raven.Tests.FileSystem.Synchronization
 {
     public class WorkingWithConflictsTests : RavenFilesTestWithLogs
 	{

@@ -4,14 +4,14 @@ using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
-using Raven.Database.Server.RavenFS.Infrastructure;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Synchronization.Conflictuality.Resolvers;
+using Raven.Database.FileSystem.Infrastructure;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Synchronization.Conflictuality.Resolvers;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
+namespace Raven.Database.FileSystem.Synchronization.Conflictuality
 {
 	public class ConflictResolver
 	{

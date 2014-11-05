@@ -10,7 +10,7 @@ using Raven.Json.Linq;
 using Raven.Tests.Helpers;
 using Xunit;
 
-namespace RavenFS.Tests.Bugs
+namespace Raven.Tests.FileSystem.Bugs
 {
 	public class SearchingCollections : RavenFilesTestWithLogs
 	{

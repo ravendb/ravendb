@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Web.Http;
 using Raven.Database.Server.Connections;
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
     public class HttpTraceFsController : RavenFsApiController
     {

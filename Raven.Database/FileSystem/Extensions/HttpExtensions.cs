@@ -6,7 +6,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Database.Server.RavenFS.Extensions
+namespace Raven.Database.FileSystem.Extensions
 {
     public static class HttpExtensions
     {

@@ -20,7 +20,7 @@ using Raven.Tests.Common;
 using Raven.Tests.Common.Util;
 using Xunit;
 
-namespace RavenFS.Tests.Smuggler
+namespace Raven.Tests.FileSystem.Smuggler
 {
     public partial class SmugglerExecutionTests : RavenFilesTestWithLogs
 	{

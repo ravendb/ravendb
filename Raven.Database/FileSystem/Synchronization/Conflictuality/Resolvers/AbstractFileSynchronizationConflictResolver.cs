@@ -7,7 +7,7 @@ using System.ComponentModel.Composition;
 using Raven.Abstractions.FileSystem;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality.Resolvers
+namespace Raven.Database.FileSystem.Synchronization.Conflictuality.Resolvers
 {
 	[InheritedExport]
 	public abstract class AbstractFileSynchronizationConflictResolver

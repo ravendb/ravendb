@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Util.Streams;
 
-namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
+namespace Raven.Database.FileSystem.Storage.Voron.Impl
 {
 	internal class Index : TableBase
 	{

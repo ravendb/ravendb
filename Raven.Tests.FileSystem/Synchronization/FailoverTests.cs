@@ -1,12 +1,12 @@
 ﻿using System.Threading.Tasks;
 using Raven.Tests.Helpers;
-using RavenFS.Tests.Synchronization.IO;
+using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Client.FileSystem.Connection;
 
-namespace RavenFS.Tests.Synchronization
+namespace Raven.Tests.FileSystem.Synchronization
 {
 	public class FailoverTests : RavenFilesTestWithLogs
 	{

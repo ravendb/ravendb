@@ -14,7 +14,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
 using Raven.Server;
-using RavenFS.Tests.Synchronization.IO;
+using Raven.Tests.FileSystem.Synchronization.IO;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -24,7 +24,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace RavenFS.Tests.Auth
+namespace Raven.Tests.FileSystem.Auth
 {
     public class ClientWindowsAuth : RavenFilesTestWithLogs
     {

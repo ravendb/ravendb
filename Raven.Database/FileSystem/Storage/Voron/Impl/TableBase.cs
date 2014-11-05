@@ -20,7 +20,7 @@ using Voron;
 using Voron.Impl;
 using Voron.Trees;
 
-namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
+namespace Raven.Database.FileSystem.Storage.Voron.Impl
 {
     internal abstract class TableBase
 	{

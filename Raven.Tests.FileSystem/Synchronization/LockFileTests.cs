@@ -3,13 +3,13 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem;
-using Raven.Database.Server.RavenFS.Synchronization;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Synchronization;
+using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
-using RavenFS.Tests.Synchronization.IO;
+using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 
-namespace RavenFS.Tests.Synchronization
+namespace Raven.Tests.FileSystem.Synchronization
 {
     public class LockFileTests : RavenFilesTestWithLogs
 	{

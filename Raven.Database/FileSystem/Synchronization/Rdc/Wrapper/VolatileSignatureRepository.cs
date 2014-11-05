@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Logging;
-using Raven.Database.Server.RavenFS.Infrastructure;
+using Raven.Database.FileSystem.Infrastructure;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
+namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 {
 	public class VolatileSignatureRepository : ISignatureRepository
 	{

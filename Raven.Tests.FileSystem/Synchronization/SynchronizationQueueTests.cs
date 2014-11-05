@@ -2,14 +2,14 @@ using System;
 using System.Collections.Specialized;
 using System.Linq;
 using Raven.Json.Linq;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Synchronization;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Synchronization;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Xunit;
 using Raven.Abstractions.FileSystem;
 
 
-namespace RavenFS.Tests.Synchronization
+namespace Raven.Tests.FileSystem.Synchronization
 {
 	public class SynchronizationQueueTests : StorageTest
 	{

@@ -3,15 +3,15 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Text;
 using System.Linq;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Raven.Database.Server.RavenFS.Extensions
+namespace Raven.Database.FileSystem.Extensions
 {
 	public static class ConfigurationExtension
 	{

@@ -4,7 +4,7 @@ using NLog.Config;
 using Raven.Database.Server;
 using Raven.Tests.Helpers;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
     public class RavenFilesTestWithLogs : RavenFilesTestBase
 	{

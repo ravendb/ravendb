@@ -4,10 +4,10 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Util;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
+namespace Raven.Database.FileSystem.Synchronization.Multipart
 {
 	public class SourceFilePart : StreamContent
 	{

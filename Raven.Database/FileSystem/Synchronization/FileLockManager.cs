@@ -2,13 +2,13 @@
 using System.IO;
 using NLog;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Synchronization
+namespace Raven.Database.FileSystem.Synchronization
 {
 	public class FileLockManager
 	{

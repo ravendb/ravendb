@@ -2,9 +2,9 @@
 using System.Collections.Specialized;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Database.Server.RavenFS.Storage.Esent;
+using Raven.Database.FileSystem.Storage.Esent;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
 	public class StorageTest : IDisposable
 	{

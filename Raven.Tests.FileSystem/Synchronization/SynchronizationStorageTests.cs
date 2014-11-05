@@ -2,14 +2,14 @@
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Database.Extensions;
-using Raven.Database.Server.RavenFS;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Synchronization;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Synchronization;
+using Raven.Database.FileSystem.Util;
 using Xunit;
 using Xunit.Extensions;
 
-namespace RavenFS.Tests.Synchronization
+namespace Raven.Tests.FileSystem.Synchronization
 {
     public class SynchronizationStorageTests : RavenFilesTestWithLogs
 	{

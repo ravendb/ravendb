@@ -2,11 +2,11 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Database.Extensions;
-using RavenFS.Tests.Synchronization;
+using Raven.Tests.FileSystem.Synchronization;
 using Xunit;
 using Raven.Abstractions.FileSystem;
 
-namespace RavenFS.Tests.Bugs
+namespace Raven.Tests.FileSystem.Bugs
 {
     public class SynchronizationAfterSetUpDestinations : RavenFilesTestWithLogs
 	{

@@ -13,11 +13,11 @@ using Lucene.Net.Store;
 using Raven.Abstractions.Logging;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.FileSystem.Extensions;
 using Lucene.Net.QueryParsers;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Util;
 
-namespace Raven.Database.Server.RavenFS.Search
+namespace Raven.Database.FileSystem.Search
 {
 	public class IndexStorage : IDisposable
 	{

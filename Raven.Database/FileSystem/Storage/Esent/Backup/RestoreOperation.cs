@@ -14,7 +14,7 @@ using Raven.Database.Config;
 
 using System.Linq;
 
-namespace Raven.Database.Server.RavenFS.Storage.Esent.Backup
+namespace Raven.Database.FileSystem.Storage.Esent.Backup
 {
 	internal class RestoreOperation : BaseRestoreOperation
 	{

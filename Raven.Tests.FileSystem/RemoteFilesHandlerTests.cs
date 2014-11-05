@@ -1,7 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using Xunit;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
 	public class RemoteFilesHandlerTests : RavenFilesWebApiTest
 	{

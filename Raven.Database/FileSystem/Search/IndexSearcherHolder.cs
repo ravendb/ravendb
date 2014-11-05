@@ -2,7 +2,7 @@
 using System.Threading;
 using Lucene.Net.Search;
 
-namespace Raven.Database.Server.RavenFS.Search
+namespace Raven.Database.FileSystem.Search
 {
 	public class IndexSearcherHolder
 	{

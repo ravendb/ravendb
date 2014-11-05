@@ -9,7 +9,7 @@ using Raven.Client.FileSystem;
 using Raven.Json.Linq;
 using Xunit;
 
-namespace RavenFS.Tests.Synchronization
+namespace Raven.Tests.FileSystem.Synchronization
 {
 	public class SynchronizationNotificationTests : RavenFilesTestWithLogs
 	{

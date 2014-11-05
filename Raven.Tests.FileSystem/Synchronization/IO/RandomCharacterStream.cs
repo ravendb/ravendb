@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace RavenFS.Tests.Synchronization.IO
+namespace Raven.Tests.FileSystem.Synchronization.IO
 {
 	public class RandomCharacterStream : Stream
 	{

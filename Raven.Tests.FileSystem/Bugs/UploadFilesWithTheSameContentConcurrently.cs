@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Raven.Database.Extensions;
 using Xunit;
 
-namespace RavenFS.Tests.Bugs
+namespace Raven.Tests.FileSystem.Bugs
 {
     public class UploadFilesWithTheSameContentConcurrently : RavenFilesTestWithLogs
 	{

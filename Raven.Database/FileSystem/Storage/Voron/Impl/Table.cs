@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Concurrent;
 
-namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
+namespace Raven.Database.FileSystem.Storage.Voron.Impl
 {
 	internal class Table : TableBase
 	{

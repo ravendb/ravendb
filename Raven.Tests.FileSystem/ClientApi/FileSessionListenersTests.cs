@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using Raven.Tests.Helpers;
 using Xunit;
 
-namespace RavenFS.Tests.ClientApi
+namespace Raven.Tests.FileSystem.ClientApi
 {
     public class FileSessionListenersTests : RavenFilesTestWithLogs
     {

@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
+namespace Raven.Database.FileSystem.Synchronization.Rdc
 {
 	public interface IPartialDataAccess
 	{

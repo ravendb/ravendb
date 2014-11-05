@@ -10,7 +10,7 @@ using Raven.Json.Linq;
 using Raven.Client.FileSystem.Shard;
 using Raven.Client.FileSystem;
 
-namespace RavenFS.Tests.Shard
+namespace Raven.Tests.FileSystem.Shard
 {
     public class SimpleSharding : RavenFilesTestWithLogs
 	{

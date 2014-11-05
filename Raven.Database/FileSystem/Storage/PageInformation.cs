@@ -1,4 +1,4 @@
-﻿namespace Raven.Database.Server.RavenFS.Storage
+﻿namespace Raven.Database.FileSystem.Storage
 {
 	public class PageInformation
 	{

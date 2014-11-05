@@ -4,7 +4,7 @@ using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
 
-namespace Raven.Database.Server.RavenFS.Search
+namespace Raven.Database.FileSystem.Search
 {
 	public class RavenQueryParser : QueryParser
 	{

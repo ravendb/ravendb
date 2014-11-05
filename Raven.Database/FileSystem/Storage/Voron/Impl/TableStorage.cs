@@ -15,7 +15,7 @@ using Voron;
 using Voron.Debugging;
 using Voron.Impl;
 
-namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
+namespace Raven.Database.FileSystem.Storage.Voron.Impl
 {
 	internal class TableStorage : IDisposable
     {

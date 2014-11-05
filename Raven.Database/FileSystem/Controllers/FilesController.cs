@@ -7,9 +7,9 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -22,7 +22,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
     public class FilesController : RavenFsApiController
     {

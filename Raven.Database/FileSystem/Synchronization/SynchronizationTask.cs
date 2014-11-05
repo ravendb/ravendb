@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 using NLog;
 using Raven.Abstractions;
 using Raven.Database.Config;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Notifications;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Notifications;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
+using Raven.Database.FileSystem.Util;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem;
@@ -23,7 +23,7 @@ using System.Collections.Concurrent;
 using Raven.Abstractions.Data;
 using System.Threading;
 
-namespace Raven.Database.Server.RavenFS.Synchronization
+namespace Raven.Database.FileSystem.Synchronization
 {
 	public class SynchronizationTask : IDisposable
 	{

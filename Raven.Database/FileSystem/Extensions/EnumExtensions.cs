@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 
-namespace Raven.Database.Server.RavenFS.Extensions
+namespace Raven.Database.FileSystem.Extensions
 {
 	public static class EnumExtensions
 	{

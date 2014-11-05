@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
+namespace Raven.Database.FileSystem.Synchronization.Multipart
 {
 	public class SeedFilePart : HttpContent
 	{

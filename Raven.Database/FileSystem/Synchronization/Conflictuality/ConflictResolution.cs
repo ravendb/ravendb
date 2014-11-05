@@ -1,6 +1,6 @@
 ﻿using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
+namespace Raven.Database.FileSystem.Synchronization.Conflictuality
 {
 	public class ConflictResolution
 	{

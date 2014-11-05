@@ -17,17 +17,17 @@ using Microsoft.Isam.Esent.Interop;
 
 using Raven.Abstractions.Exceptions;
 using Raven.Database.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage.Exceptions;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Storage.Exceptions;
+using Raven.Database.FileSystem.Synchronization.Rdc;
+using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
 
-namespace Raven.Database.Server.RavenFS.Storage.Esent
+namespace Raven.Database.FileSystem.Storage.Esent
 {
     public class StorageActionsAccessor : IStorageActionsAccessor
     {

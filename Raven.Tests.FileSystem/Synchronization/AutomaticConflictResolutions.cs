@@ -11,14 +11,14 @@ using System.Threading.Tasks;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Replication;
 using Raven.Client.FileSystem;
-using Raven.Database.Server.RavenFS.Synchronization;
-using Raven.Database.Server.RavenFS.Synchronization.Multipart;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Database.FileSystem.Synchronization;
+using Raven.Database.FileSystem.Synchronization.Multipart;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Json.Linq;
 using Raven.Tests.Helpers;
 using Xunit;
 
-namespace RavenFS.Tests.Synchronization
+namespace Raven.Tests.FileSystem.Synchronization
 {
 	public class AutomaticConflictResolutions : RavenFilesTestWithLogs
 	{

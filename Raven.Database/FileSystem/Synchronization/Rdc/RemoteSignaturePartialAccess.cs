@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Client.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
+namespace Raven.Database.FileSystem.Synchronization.Rdc
 {
 	public class RemoteSignaturePartialAccess : IPartialDataAccess
 	{

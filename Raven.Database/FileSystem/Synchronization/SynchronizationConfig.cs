@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Replication;
 
-namespace Raven.Database.Server.RavenFS.Synchronization
+namespace Raven.Database.FileSystem.Synchronization
 {
 	public class SynchronizationConfig
 	{

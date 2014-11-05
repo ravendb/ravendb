@@ -10,7 +10,7 @@ using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace RavenFS.Tests.Synchronization
+namespace Raven.Tests.FileSystem.Synchronization
 {
     public class FileChangesPropagationTests : RavenFilesTestWithLogs
 	{

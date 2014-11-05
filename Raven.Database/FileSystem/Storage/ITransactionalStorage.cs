@@ -5,7 +5,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Database.Config;
 
-namespace Raven.Database.Server.RavenFS.Storage
+namespace Raven.Database.FileSystem.Storage
 {
     public interface ITransactionalStorage : IDisposable
     {

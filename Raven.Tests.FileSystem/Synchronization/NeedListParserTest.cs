@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Database.FileSystem.Synchronization.Rdc;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Xunit;
 
-namespace RavenFS.Tests.Synchronization
+namespace Raven.Tests.FileSystem.Synchronization
 {
 	public class NeedListParserTest
 	{

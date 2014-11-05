@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 
-namespace RavenFS.Tests.Synchronization.IO
+namespace Raven.Tests.FileSystem.Synchronization.IO
 {
 	public static class TestDataGenerators
 	{

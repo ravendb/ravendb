@@ -11,21 +11,21 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Infrastructure;
-using Raven.Database.Server.RavenFS.Notifications;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Infrastructure;
+using Raven.Database.FileSystem.Notifications;
 using Raven.Database.Util;
-using Raven.Database.Server.RavenFS.Search;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Synchronization;
-using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Database.FileSystem.Search;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Synchronization;
+using Raven.Database.FileSystem.Synchronization.Conflictuality;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
-using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper.Unmanaged;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper.Unmanaged;
 using System.Runtime.InteropServices;
 
-namespace Raven.Database.Server.RavenFS
+namespace Raven.Database.FileSystem
 {
     public class RavenFileSystem : IResourceStore, IDisposable
 	{

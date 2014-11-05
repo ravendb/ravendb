@@ -1,9 +1,9 @@
 ﻿using System.Threading.Tasks;
-using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.FileSystem.Storage;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Synchronization
+namespace Raven.Database.FileSystem.Synchronization
 {
 	public class DeleteWorkItem : SynchronizationWorkItem
 	{

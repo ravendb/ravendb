@@ -27,7 +27,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.Connections;
-using Raven.Database.Server.RavenFS;
+using Raven.Database.FileSystem;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron.Impl;

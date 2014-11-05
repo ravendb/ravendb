@@ -12,7 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace RavenFS.Tests.Smuggler
+namespace Raven.Tests.FileSystem.Smuggler
 {
     partial class SmugglerExecutionTests
     {

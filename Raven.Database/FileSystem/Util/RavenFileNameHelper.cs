@@ -3,7 +3,7 @@ using System;
 using System.Globalization;
 using System.Text;
 
-namespace Raven.Database.Server.RavenFS.Util
+namespace Raven.Database.FileSystem.Util
 {
 	public static class RavenFileNameHelper
 	{

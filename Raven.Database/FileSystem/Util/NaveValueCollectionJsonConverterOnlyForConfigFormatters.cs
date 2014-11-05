@@ -2,7 +2,7 @@
 using System.Collections.Specialized;
 using Newtonsoft.Json;
 
-namespace Raven.Database.Server.RavenFS.Util
+namespace Raven.Database.FileSystem.Util
 {
 	class NaveValueCollectionJsonConverterOnlyForConfigFormatters : JsonConverter
 	{

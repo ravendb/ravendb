@@ -2,14 +2,14 @@
 using System.Security.Cryptography;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Infrastructure;
-using Raven.Database.Server.RavenFS.Search;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Infrastructure;
+using Raven.Database.FileSystem.Search;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Storage.Esent;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Server.RavenFS.Util
+namespace Raven.Database.FileSystem.Util
 {
 	public class SynchronizingFileStream : StorageStream
 	{

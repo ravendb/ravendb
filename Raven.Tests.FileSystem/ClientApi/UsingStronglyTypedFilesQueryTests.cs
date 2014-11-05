@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace RavenFS.Tests.ClientApi
+namespace Raven.Tests.FileSystem.ClientApi
 {
     public class UsingStronglyTypedFilesQueryTests
     {

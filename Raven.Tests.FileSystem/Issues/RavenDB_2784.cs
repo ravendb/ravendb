@@ -5,11 +5,11 @@
 // -----------------------------------------------------------------------
 using System.IO;
 using System.Threading.Tasks;
-using RavenFS.Tests.Synchronization.IO;
+using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
 
-namespace RavenFS.Tests.Issues
+namespace Raven.Tests.FileSystem.Issues
 {
 	public class RavenDB_2784 : RavenFilesTestWithLogs
 	{

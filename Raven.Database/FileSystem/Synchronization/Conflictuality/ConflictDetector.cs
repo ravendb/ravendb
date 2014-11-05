@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Specialized;
-using Raven.Database.Server.RavenFS.Infrastructure;
+using Raven.Database.FileSystem.Infrastructure;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
+namespace Raven.Database.FileSystem.Synchronization.Conflictuality
 {
 	public class ConflictDetector
 	{

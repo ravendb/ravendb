@@ -4,11 +4,11 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 
-using Raven.Database.Server.RavenFS.Synchronization.Rdc;
+using Raven.Database.FileSystem.Synchronization.Rdc;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Storage
+namespace Raven.Database.FileSystem.Storage
 {
     public interface IStorageActionsAccessor : IDisposable
     {

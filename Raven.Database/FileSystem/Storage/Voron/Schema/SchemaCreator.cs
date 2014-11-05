@@ -13,13 +13,13 @@ using System.Threading;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
-using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
+using Raven.Database.FileSystem.Storage.Voron.Impl;
 using Raven.Database.Util;
 
 using Voron;
 using Voron.Impl;
 
-namespace Raven.Database.Server.RavenFS.Storage.Voron.Schema
+namespace Raven.Database.FileSystem.Storage.Voron.Schema
 {
 	internal class SchemaCreator
 	{

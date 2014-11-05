@@ -1,7 +1,7 @@
 ﻿using System;
 using Raven.Abstractions.FileSystem;
 
-namespace Raven.Database.Server.RavenFS.Synchronization
+namespace Raven.Database.FileSystem.Synchronization
 {
 	public class SynchronizationLock
 	{

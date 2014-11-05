@@ -1,7 +1,7 @@
 using System.Net;
 using Xunit;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
     public class FileHandling : RavenFilesWebApiTest
 	{

@@ -5,15 +5,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection.Profiling;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Synchronization.Conflictuality;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Abstractions.Data;
 
-namespace Raven.Database.Server.RavenFS.Synchronization
+namespace Raven.Database.FileSystem.Synchronization
 {
 	public abstract class SynchronizationWorkItem : IHoldProfilingInformation
 	{

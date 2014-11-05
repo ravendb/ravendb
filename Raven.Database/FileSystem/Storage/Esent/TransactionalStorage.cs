@@ -20,14 +20,14 @@ using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Database.Server.RavenFS.Storage.Esent.Backup;
+using Raven.Database.FileSystem.Storage.Esent.Backup;
 using Raven.Json.Linq;
 
 using Voron.Impl.Backup;
 
-using BackupOperation = Raven.Database.Server.RavenFS.Storage.Esent.Backup.BackupOperation;
+using BackupOperation = Raven.Database.FileSystem.Storage.Esent.Backup.BackupOperation;
 
-namespace Raven.Database.Server.RavenFS.Storage.Esent
+namespace Raven.Database.FileSystem.Storage.Esent
 {
 	public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
 	{

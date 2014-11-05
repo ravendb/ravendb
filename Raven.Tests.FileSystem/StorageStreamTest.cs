@@ -2,16 +2,16 @@ using System;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.FileSystem;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Infrastructure;
-using Raven.Database.Server.RavenFS.Notifications;
-using Raven.Database.Server.RavenFS.Search;
-using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Infrastructure;
+using Raven.Database.FileSystem.Notifications;
+using Raven.Database.FileSystem.Search;
+using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 using Xunit;
 
-namespace RavenFS.Tests
+namespace Raven.Tests.FileSystem
 {
 	public class StorageStreamTest : StorageTest
 	{

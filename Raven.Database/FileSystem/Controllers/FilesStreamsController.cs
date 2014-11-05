@@ -18,7 +18,7 @@ using Raven.Database.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
     public class FilesStreamsController : RavenFsApiController
     {
