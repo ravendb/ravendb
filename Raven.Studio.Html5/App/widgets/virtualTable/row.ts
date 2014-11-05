@@ -130,7 +130,7 @@ class row {
         var cellVal: cell = this.cellMap[cellName];
         if (cellVal) {
             if (cellVal.resetFlag === true) {
-                cellVal.templateName = this.getCellTemplateName(cellName, this.cellMap[cellName].data())
+                cellVal.templateName = this.getCellTemplateName(cellName, this.cellMap[cellName].data());
                 cellVal.resetFlag = false;
                 return cellVal.templateName;
             }
