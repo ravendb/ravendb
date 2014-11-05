@@ -30,6 +30,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
+using Raven.Database.Storage.Voron.Impl;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -333,8 +334,17 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("databases/{databaseName}/admin/indexingStatus")]
 		public HttpResponseMessage IndexingStatus()
 		{
-		    var indexDisableStatus = Database.Configuration.Settings[Constants.IndexingDisabled];
-            return GetMessageWithObject(new { IndexingStatus = (null != indexDisableStatus && indexDisableStatus.ToLower().Equals("true"))?"Disabled":Database.WorkContext.RunIndexing ? "Indexing" : "Paused" });		
+			string indexDisableStatus;
+			bool result;
+			if (bool.TryParse(Database.Configuration.Settings[Constants.IndexingDisabled], out result) && result)
+			{
+				indexDisableStatus = "Disabled";
+			}
+			else
+			{
+				indexDisableStatus = Database.WorkContext.RunIndexing ? "Indexing" : "Paused";
+			}
+			return GetMessageWithObject(new { IndexingStatus = indexDisableStatus });		
 		}
 
 		[HttpPost]
