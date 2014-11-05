@@ -155,7 +155,10 @@ namespace Raven.Client.Connection
 
 				if (result.ContainsKey("Results"))
 				{
-					var results = (RavenJArray)result["Results"];
+					var results = result["Results"] as RavenJArray;
+					if (results == null)
+						continue;
+
 					foreach (RavenJObject docResult in results)
 					{
 						if (docResult == null) 
