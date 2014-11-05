@@ -24,8 +24,9 @@ namespace Raven.Smuggler
 	{
         private readonly SmugglerDatabaseApi smugglerApi = new SmugglerDatabaseApi();
         private readonly SmugglerFilesApi smugglerFilesApi = new SmugglerFilesApi();
-        
-        private readonly OptionSet optionSet;
+
+        private readonly OptionSet databaseOptionSet;
+        private readonly OptionSet filesystemOptionSet;
         private readonly OptionSet selectionDispatching;
 	    private bool allowImplicitDatabase = false;
 
@@ -52,7 +53,7 @@ namespace Raven.Smuggler
                 },
 	        };
 
-		    optionSet = new OptionSet
+            databaseOptionSet = new OptionSet
 		    {
 			    {
 				    "operate-on-types:", "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
@@ -115,15 +116,9 @@ namespace Raven.Smuggler
 							Values = FilterSetting.ParseValues(val)
 						})
 			    },
-			    {
-				    "transform:", "Transform documents using a given script (import only)", script => databaseOptions.TransformScript = script
-			    },
-			    {
-				    "transform-file:", "Transform documents using a given script file (import only)", script => databaseOptions.TransformScript = File.ReadAllText(script)
-			    },
-			    {
-				    "max-steps-for-transform-script:", "Maximum number of steps that transform script can have (import only)", s => databaseOptions.MaxStepsForTransformScript = int.Parse(s)
-			    },
+			    {"transform:", "Transform documents using a given script (import only)", script => databaseOptions.TransformScript = script },
+			    { "transform-file:", "Transform documents using a given script file (import only)", script => databaseOptions.TransformScript = File.ReadAllText(script) },
+			    { "max-steps-for-transform-script:", "Maximum number of steps that transform script can have (import only)", s => databaseOptions.MaxStepsForTransformScript = int.Parse(s) },
 
 			    {"batch-size:", "The batch size for requests", s => databaseOptions.BatchSize = int.Parse(s)},
 				{"chunk-size:", "The number of documents to import before new connection will be opened", s => databaseOptions.ChunkSize = int.Parse(s)},
@@ -135,54 +130,36 @@ namespace Raven.Smuggler
 
                 // Common
                 {"h|?|help", v => PrintUsageAndExit(0)},
-                {"timeout:", "The timeout to use for requests", s => 
-                    {
-                        databaseOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s));
-                        filesOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s));
-                    }},
-                {"incremental", "States usage of incremental operations", _ => 
-                    {
-                        databaseOptions.Incremental = true;
-                        filesOptions.Incremental = true;
-                    }},
-			    {"u|user|username:", "The username to use when the database/filesystem requires the client to authenticate.", value => {
-                    ((NetworkCredential)databaseOptions.Source.Credentials).UserName = value;
-                    ((NetworkCredential)filesOptions.Source.Credentials).UserName = value;
-                }},
-			    {"u2|user2|username2:", "The username to use when the database/filesystem requires the client to authenticate. This parameter is used only in the between operation.", value =>{
-                    ((NetworkCredential)databaseOptions.Destination.Credentials).UserName = value;
-                    ((NetworkCredential)filesOptions.Destination.Credentials).UserName = value;
-                }},
-			    {"p|pass|password:", "The password to use when the database/filesystem requires the client to authenticate.", value => {
-                    ((NetworkCredential) databaseOptions.Source.Credentials).Password = value;
-                    ((NetworkCredential)filesOptions.Source.Credentials).Password = value;
-                }},
-			    {"p2|pass2|password2:", "The password to use when the database/filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => {
-                    ((NetworkCredential)databaseOptions.Destination.Credentials).Password = value;
-                    ((NetworkCredential)filesOptions.Destination.Credentials).Password = value;
-                } },
-			    {"domain:", "The domain to use when the database/filesystem requires the client to authenticate.", value => {
-                    ((NetworkCredential)databaseOptions.Source.Credentials).Domain = value;
-                    ((NetworkCredential)filesOptions.Source.Credentials).Domain = value;
-                }},
-			    {"domain2:", "The domain to use when the database/filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => {
-                    ((NetworkCredential)databaseOptions.Destination.Credentials).Domain = value;
-                    ((NetworkCredential)filesOptions.Destination.Credentials).Domain = value;
-                }},
-			    {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => {
-                    databaseOptions.Source.ApiKey = value;
-                    filesOptions.Source.ApiKey = value;
-                }},
-			    {"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => {
-                    databaseOptions.Destination.ApiKey = value;
-                    filesOptions.Destination.ApiKey = value;
-                }},
+                {"timeout:", "The timeout to use for requests", s => databaseOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)) },
+                {"incremental", "States usage of incremental operations", _ => databaseOptions.Incremental = true },
+			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential)databaseOptions.Source.Credentials).UserName = value },
+			    {"u2|user2|username2:", "The username to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)databaseOptions.Destination.Credentials).UserName = value },
+			    {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => ((NetworkCredential) databaseOptions.Source.Credentials).Password = value },
+			    {"p2|pass2|password2:", "The password to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)databaseOptions.Destination.Credentials).Password = value },
+			    {"domain:", "The domain to use when the database requires the client to authenticate.", value => ((NetworkCredential)databaseOptions.Source.Credentials).Domain = value },
+			    {"domain2:", "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)databaseOptions.Destination.Credentials).Domain = value },
+			    {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => databaseOptions.Source.ApiKey = value },
+			    {"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => databaseOptions.Destination.ApiKey = value },
+		    };
 
+            filesystemOptionSet = new OptionSet
+		    {
+                // Common
+                {"h|?|help", v => PrintUsageAndExit(0)},
+                {"timeout:", "The timeout to use for requests", s => filesOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)) },
+                {"incremental", "States usage of incremental operations", _ => filesOptions.Incremental = true },
+			    {"u|user|username:", "The username to use when the filesystem requires the client to authenticate.", value => ((NetworkCredential)filesOptions.Source.Credentials).UserName = value },
+			    {"u2|user2|username2:", "The username to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)filesOptions.Destination.Credentials).UserName = value },
+			    {"p|pass|password:", "The password to use when the filesystem requires the client to authenticate.", value => ((NetworkCredential)filesOptions.Source.Credentials).Password = value },
+			    {"p2|pass2|password2:", "The password to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)filesOptions.Destination.Credentials).Password = value },
+			    {"domain:", "The domain to use when the filesystem requires the client to authenticate.", value => ((NetworkCredential)filesOptions.Source.Credentials).Domain = value },
+			    {"domain2:", "The domain to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)filesOptions.Destination.Credentials).Domain = value },
+			    {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => filesOptions.Source.ApiKey = value },
+			    {"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => filesOptions.Destination.ApiKey = value },
 
                 // Filesystem ONLY!
-                {"f|filesystem:", "The filesystem to operate on. If no specified, the operations will be on the default filesystem.", value => filesOptions.Source.DefaultFileSystem = value},
-			    {"f2|filesystem2:", "The filesystem to export to. If no specified, the operations will be on the default filesystem. This parameter is used only in the between operation.", value => filesOptions.Destination.DefaultFileSystem = value},
-
+                {"f|filesystem:", "The filesystem to operate on. If no specified, the operations will be on the default filesystem.", value => filesOptions.Source.DefaultFileSystem = value },
+			    {"f2|filesystem2:", "The filesystem to export to. If no specified, the operations will be on the default filesystem. This parameter is used only in the between operation.", value => filesOptions.Destination.DefaultFileSystem = value },
 		    };
 	    }
 
@@ -235,26 +212,25 @@ namespace Raven.Smuggler
                 return;
             }
 
-            if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
-			{
-                smugglerApi.Options.Incremental = true;
-			}
-
-			try
-			{
-                optionSet.Parse(args);
-			}
-            catch (Exception e)
-			{
-                PrintUsageAndExit(e);
-			}
 
             switch (this.mode)
             {
                 case SmugglerMode.Database:
                     {
+                        try
+                        {
+                            databaseOptionSet.Parse(args);
+                        }
+                        catch (Exception e)
+                        {
+                            PrintUsageAndExit(e);
+                        }
+
                         options.Source.Url = url;
                         options.BackupPath = args[2];
+
+                        if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
+                            smugglerApi.Options.Incremental = true;
 
                         ValidateDatabaseParameters(smugglerApi, action);
                         var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
@@ -263,8 +239,20 @@ namespace Raven.Smuggler
                     break;
                 case SmugglerMode.Filesystem:
                     {
+                        try
+                        {
+                            filesystemOptionSet.Parse(args);
+                        }
+                        catch (Exception e)
+                        {
+                            PrintUsageAndExit(e);
+                        }
+
                         filesOptions.Source.Url = url;
                         filesOptions.BackupPath = args[2];
+
+                        if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
+                            smugglerFilesApi.Options.Incremental = true;
 
                         var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
                         await filesDispatcher.Execute(action);
@@ -319,7 +307,7 @@ Usage:
 
 Command line options:", SystemTime.UtcNow.Year);
 
-			optionSet.WriteOptionDescriptions(Console.Out);
+			databaseOptionSet.WriteOptionDescriptions(Console.Out);
 			Console.WriteLine();
 
 			Environment.Exit(exitCode);
