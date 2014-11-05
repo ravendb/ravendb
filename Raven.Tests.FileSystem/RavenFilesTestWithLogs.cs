@@ -15,7 +15,7 @@ namespace RavenFS.Tests
 
             HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
-            using (var stream = typeof(RavenFilesTestWithLogs).Assembly.GetManifestResourceStream("RavenFS.Tests.DefaultLogging.config"))
+            using (var stream = typeof(RavenFilesTestWithLogs).Assembly.GetManifestResourceStream("Raven.Tests.FileSystem.DefaultLogging.config"))
             using (var reader = XmlReader.Create(stream))
             {
                 LogManager.Configuration = new XmlLoggingConfiguration(reader, "default-config");

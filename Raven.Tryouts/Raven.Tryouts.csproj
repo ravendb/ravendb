@@ -227,9 +227,9 @@
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
       <Name>Raven.Tests</Name>
     </ProjectReference>
-    <ProjectReference Include="..\RavenFS.Tests\RavenFS.Tests.csproj">
+    <ProjectReference Include="..\Raven.Tests.FileSystem\Raven.Tests.FileSystem.csproj">
       <Project>{01ca67f3-1e46-455c-8713-86fccf2efbc7}</Project>
-      <Name>RavenFS.Tests</Name>
+      <Name>Raven.Tests.FileSystem</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
