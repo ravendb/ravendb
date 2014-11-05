@@ -34,15 +34,15 @@ namespace Raven.Migration
 			    {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
 			    {"fs|filesystem:", "The file system to export to.", value => fileSystemName = value},
 			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).UserName = value},
-				{"u2|user2|username2:", "The username to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).UserName = value},
+				{"u2|user2|username2:", "The username to use when the file system requires the client to authenticate. This parameter is used only if 'filesystemserver' parameter is specified.", value => ((NetworkCredential) connectionStringOptions2.Credentials).UserName = value},
 			    {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).Password = value},
-				{"p2|pass2|password2:", "The password to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).Password = value},
+				{"p2|pass2|password2:", "The password to use when the file system requires the client to authenticate. This parameter is used only if 'filesystemserver' parameter is specified.", value => ((NetworkCredential) connectionStringOptions2.Credentials).Password = value},
 			    {"domain:", "The domain to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).Domain = value},
-				{"domain2:", "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).Domain = value},
+				{"domain2:", "The domain to use when the file system requires the client to authenticate. This parameter is used only if 'filesystemserver' parameter is specified.", value => ((NetworkCredential) connectionStringOptions2.Credentials).Domain = value},
 			    {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
-				{"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => connectionStringOptions2.ApiKey = value},
+				{"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only if 'filesystemserver' parameter is specified.", value => connectionStringOptions2.ApiKey = value},
 			    {"h|?|help", v => PrintUsageAndExit(0)},
-				{"deletecopiedattachments", v => deleteCopiedAttachments = true},
+				{"deletecopiedattachments", "Delete an attachment after uploading it to the file system during the migration process", v => deleteCopiedAttachments = true},
 		    };
 		}
 
