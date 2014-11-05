@@ -73,9 +73,8 @@ namespace Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.FindIdentityProperty = info => info.Name == "NotFound!";
                 store.Conventions.RegisterIdConvention<TShirt>((databaseName, commands, entity) => "ts/" + entity.ReleaseYear);
-                store.Conventions.RegisterIdLoadConvention<TShirt, int>(id => "ts/" + id);
+                store.Conventions.RegisterIdLoadConvention<TShirt>(id => "ts/" + id);
 
                 using (var session = store.OpenSession())
                 {
