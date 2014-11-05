@@ -309,7 +309,7 @@ class ctor {
         if (rowAtIndex) {
             rowAtIndex.fillCells(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromDocument(rowData));
-            rowAtIndex.editUrl(appUrl.forEditItem(rowData.getUrl(), appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
+            rowAtIndex.editUrl(appUrl.forEditItem(!!rowData.getUrl()? rowData.getUrl():rowData["Id"], appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
         }
     }
 
