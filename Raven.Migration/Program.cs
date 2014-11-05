@@ -18,6 +18,7 @@ namespace Raven.Migration
 		private string fileSystemName;
 		private bool use2NdConnection;
 		private bool deleteCopiedAttachments = false;
+		private int batchSize = 128;
 
 		public Program()
 		{
@@ -43,6 +44,7 @@ namespace Raven.Migration
 				{"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only if 'filesystemserver' parameter is specified.", value => connectionStringOptions2.ApiKey = value},
 			    {"h|?|help", v => PrintUsageAndExit(0)},
 				{"deletecopiedattachments", "Delete an attachment after uploading it to the file system during the migration process", v => deleteCopiedAttachments = true},
+				{"batchSize", "Batch size for downloading / uploading attachments during migration. Default: 128.", v => batchSize = int.Parse(v)},
 		    };
 		}
 
@@ -76,7 +78,7 @@ namespace Raven.Migration
 
 			try
 			{
-				new CopyAttachmentsToFileSystem(connectionStringOptions, use2NdConnection ? connectionStringOptions2 : null, fileSystemName, deleteCopiedAttachments).Execute();
+				new CopyAttachmentsToFileSystem(connectionStringOptions, use2NdConnection ? connectionStringOptions2 : null, fileSystemName, deleteCopiedAttachments, batchSize).Execute();
 			}
 			catch (Exception ex)
 			{
