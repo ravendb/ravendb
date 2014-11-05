@@ -193,6 +193,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\Bundles -Type directory | Out-Null
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
 	New-Item $build_dir\Output\Backup -Type directory | Out-Null
+	New-Item $build_dir\Output\Migration -Type directory | Out-Null
 }
 
 task CleanOutputDirectory { 
@@ -211,6 +212,12 @@ task CopyBackup {
 	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Backup
 	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Backup.??? $build_dir\Output\Backup
 	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Backup
+}
+
+task CopyMigration {
+	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Migration
+	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Migration
+	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Migration.??? $build_dir\Output\Migration
 }
 
 task CopyClient {
@@ -359,6 +366,7 @@ task ZipOutput {
 			Client\*.* `
 			Smuggler\*.* `
 			Backup\*.* `
+			Migration\*.* `
 			Web\*.* `
 			Bundles\*.* `
 			Web\bin\*.* `
@@ -375,6 +383,7 @@ task DoReleasePart1 -depends Compile, `
 	CreateOutpuDirectories, `
 	CopySmuggler, `
 	CopyBackup, `
+	CopyMigration, `
 	CopyClient, `
 	CopyWeb, `
 	CopyBundles, `
