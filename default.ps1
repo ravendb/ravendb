@@ -12,7 +12,8 @@ properties {
 	$lib_dir = "$base_dir\SharedLibs"
 	$packages_dir = "$base_dir\packages"
 	$build_dir = "$base_dir\build"
-	$sln_file = "$base_dir\zzz_RavenDB_Release.sln"
+	$sln_file_name = "zzz_RavenDB_Release.sln"
+	$sln_file = "$base_dir\$sln_file_name"
 	$version = "3.0"
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
@@ -56,7 +57,7 @@ task Compile -depends Init, CompileHtml5 {
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount }
 	
 	if ($commit -ne "0000000000000000000000000000000000000000") {
-		exec { &"$tools_dir\GitLink.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" }
+		exec { &"$tools_dir\GitLink.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
 	}
 }
 
