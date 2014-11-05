@@ -54,7 +54,7 @@ namespace Raven.Database.Commercial
 				Status = "AGPL - Open Source",
 				Error = false,
 				Message = "No license file was found.\r\n" +
-				          "The AGPL license restrictions apply, only Open Source / Development work is permitted.",
+						  "The AGPL license restrictions apply, only Open Source / Development work is permitted.",
 				Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
 			};
 		}
@@ -70,7 +70,7 @@ namespace Raven.Database.Commercial
 		{
 			var licensePath = GetLicensePath(config);
 			var licenseText = GetLicenseText(config);
-			
+
 			if (TryLoadLicense(config) == false)
 				return;
 
@@ -86,7 +86,7 @@ namespace Raven.Database.Commercial
 
 		                errorMessage = AssertLicenseAttributes(licenseValidator.LicenseAttributes, licenseValidator.LicenseType);
 					if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&
-					    "true".Equals(value, StringComparison.OrdinalIgnoreCase))
+						"true".Equals(value, StringComparison.OrdinalIgnoreCase))
 					{
 						licenseValidator.MultipleLicenseUsageBehavior = AbstractLicenseValidator.MultipleLicenseUsage.AllowSameLicense;
 					}
@@ -200,7 +200,7 @@ namespace Raven.Database.Commercial
 					Status = "AGPL - Open Source",
 					Error = false,
 					Message = "No license file was found at " + fullPath +
-					          "\r\nThe AGPL license restrictions apply, only Open Source / Development work is permitted."
+							  "\r\nThe AGPL license restrictions apply, only Open Source / Development work is permitted."
 				};
 				return false;
 			}
@@ -226,7 +226,7 @@ namespace Raven.Database.Commercial
                 if (licenseType != LicenseType.Subscription || (version != "2.0" && version != "2.5"))
 				{
                     throw new LicenseExpiredException("This is not a license for RavenDB 3.0");
-				}                     
+				}
 			}
 
 			string maxRam;
@@ -237,7 +237,7 @@ namespace Raven.Database.Commercial
 					MemoryStatistics.MemoryLimit = (int)(long.Parse(maxRam) / 1024 / 1024);
 				}
 			}
-			
+
 			string maxParallel;
 			if (licenseAttributes.TryGetValue("maxParallelism", out maxParallel))
 			{
@@ -297,9 +297,9 @@ namespace Raven.Database.Commercial
 
 		private void OnMultipleLicensesWereDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
 		{
-			logger.Error("A duplicate license was found at {0} for user {1}. User Id: {2}. Both licenses were disabled!", 
-				clientDiscoveredEventArgs.MachineName, 
-				clientDiscoveredEventArgs.UserName, 
+			logger.Error("A duplicate license was found at {0} for user {1}. User Id: {2}. Both licenses were disabled!",
+				clientDiscoveredEventArgs.MachineName,
+				clientDiscoveredEventArgs.UserName,
 				clientDiscoveredEventArgs.UserId);
 
 			CurrentLicense = new LicensingStatus
@@ -308,8 +308,8 @@ namespace Raven.Database.Commercial
 				Error = true,
 				Message =
 					string.Format("A duplicate license was found at {0} for user {1}. User Id: {2}.", clientDiscoveredEventArgs.MachineName,
-					              clientDiscoveredEventArgs.UserName,
-					              clientDiscoveredEventArgs.UserId)
+								  clientDiscoveredEventArgs.UserName,
+								  clientDiscoveredEventArgs.UserId)
 			};
 		}
 
