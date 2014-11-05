@@ -48,7 +48,14 @@ namespace Raven.Client.Document.Batches
 
 		public void HandleResponse(GetResponse response)
 		{
-			if(response.Status == 404)
+			if (response.ForceRetry)
+			{
+				Result = null;
+				RequiresRetry = true;
+				return;
+			}
+
+			if (response.Status == 404)
 			{
 				Result = null;
 				RequiresRetry = false;
@@ -75,5 +82,5 @@ namespace Raven.Client.Document.Batches
 		{
 			return loadOperation.EnterLoadContext();
 		}
-	}
-}
+		}
+			}
