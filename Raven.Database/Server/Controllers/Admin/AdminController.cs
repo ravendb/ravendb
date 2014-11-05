@@ -333,7 +333,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("databases/{databaseName}/admin/indexingStatus")]
 		public HttpResponseMessage IndexingStatus()
 		{
-			return GetMessageWithObject(new {IndexingStatus = Database.WorkContext.RunIndexing ? "Indexing" : "Paused"});		
+		    var indexDisableStatus = Database.Configuration.Settings[Constants.IndexingDisabled];
+            return GetMessageWithObject(new { IndexingStatus = (null != indexDisableStatus && indexDisableStatus.ToLower().Equals("true"))?"Disabled":Database.WorkContext.RunIndexing ? "Indexing" : "Paused" });		
 		}
 
 		[HttpPost]
