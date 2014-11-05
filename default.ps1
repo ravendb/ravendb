@@ -56,9 +56,9 @@ task Compile -depends Init, CompileHtml5 {
 	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount }
 	
-	if ($commit -ne "0000000000000000000000000000000000000000") {
-		exec { &"$tools_dir\GitLink.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
-	}
+	# if ($commit -ne "0000000000000000000000000000000000000000") {
+		# exec { &"$tools_dir\GitLink.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
+	# }
 }
 
 task CompileHtml5 {
