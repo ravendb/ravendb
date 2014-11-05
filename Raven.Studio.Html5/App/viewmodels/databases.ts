@@ -263,13 +263,14 @@ class databases extends viewModelBase {
     }
 
     disableDatabaseIndexing(db: database) {
-        var action = db.indexingDisabled() ? "Enable" : "Disable"; 
-        var message = this.confirmationMessage(action + " indexing?", "Are you sure?");
+        var action = !db.indexingDisabled();
+        var actionText = db.indexingDisabled() ? "Enable" : "Disable"; 
+        var message = this.confirmationMessage(actionText + " indexing?", "Are you sure?");
         
         message.done(() => {
             require(["commands/disableIndexingCommand"], disableIndexingCommand => {
-                var task = new disableIndexingCommand(db.name, !db.indexingDisabled()).execute();
-                task.done(() => db.indexingDisabled.toggle());
+                var task = new disableIndexingCommand(db.name, action).execute();
+                task.done(() => db.indexingDisabled(action));
             });
         });
     }
