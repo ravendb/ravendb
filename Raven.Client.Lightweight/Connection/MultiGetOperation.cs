@@ -29,7 +29,7 @@ namespace Raven.Client.Connection
 
 		public MultiGetOperation(
 			IHoldProfilingInformation holdProfilingInformation,
-			DocumentConvention convention, 
+			DocumentConvention convention,
 			string url,
 			GetRequest[] requests)
 		{
@@ -120,7 +120,7 @@ namespace Raven.Client.Connection
 			}
 
 			if (hasCachedRequests == false || convention.DisableProfiling ||
-                holdProfilingInformation.ProfilingInformation.Requests.Count == 0)
+				holdProfilingInformation.ProfilingInformation.Requests.Count == 0)
 				return responses;
 
 			var lastRequest = holdProfilingInformation.ProfilingInformation.Requests.Last();
@@ -146,17 +146,20 @@ namespace Raven.Client.Connection
 
 				if (result.ContainsKey("Results"))
 				{
-					var results = (RavenJArray)result["Results"];
+					var results = result["Results"] as RavenJArray;
+					if (results == null)
+						continue;
+
 					foreach (RavenJObject docResult in results)
 					{
-						if (docResult == null) 
+						if (docResult == null)
 							return;
 
 						var metadata = docResult[Constants.Metadata];
-						if (metadata == null) 
+						if (metadata == null)
 							return;
 
-						if (metadata.Value<int>("@Http-Status-Code") != 409) 
+						if (metadata.Value<int>("@Http-Status-Code") != 409)
 							return;
 
 						var id = metadata.Value<string>("@id");
@@ -168,10 +171,10 @@ namespace Raven.Client.Connection
 							etag,
 							docResult,
 							response);
-	}
+					}
 
 					continue;
-}
+				}
 				if (result.ContainsKey("Conflicts"))
 				{
 					var id = response.Headers[Constants.DocumentIdFieldName];

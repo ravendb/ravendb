@@ -844,7 +844,7 @@ namespace Raven.Client.Connection.Async
 													HandleReplicationStatusChanges);
 
 				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-				return await CompleteMultiGetAsync(operationMetadata, keys, includes, result).ConfigureAwait(false);
+				return await CompleteMultiGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, result).ConfigureAwait(false);
 			}
 			request =
 				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST", metadata, operationMetadata.Credentials, convention)
@@ -852,11 +852,11 @@ namespace Raven.Client.Connection.Async
 
 			await request.WriteAsync(new RavenJArray(uniqueIds)).ConfigureAwait(false);
 			var responseResult = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-			return await CompleteMultiGetAsync(operationMetadata, keys, includes, responseResult).ConfigureAwait(false);
+			return await CompleteMultiGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, responseResult).ConfigureAwait(false);
 		}
 
-		private async Task<MultiLoadResult> CompleteMultiGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes,
-																  RavenJToken result)
+		private async Task<MultiLoadResult> CompleteMultiGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
+														   Dictionary<string, RavenJToken> transformerParameters, RavenJToken result)
 		{
 			ErrorResponseException responseException;
 			try
@@ -895,7 +895,7 @@ namespace Raven.Client.Connection.Async
 				return
 					await
 					RetryOperationBecauseOfConflict(operationMetadata, docResults, multiLoadResult,
-													() => DirectGetAsync(operationMetadata, keys, includes, null, null, false)).ConfigureAwait(false);
+													() => DirectGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, false)).ConfigureAwait(false);
 			}
 			catch (ErrorResponseException e)
 			{
@@ -1292,6 +1292,11 @@ namespace Raven.Client.Connection.Async
 				await httpJsonRequest.WriteAsync(postedData).ConfigureAwait(false);
 				var result = await httpJsonRequest.ReadResponseJsonAsync().ConfigureAwait(false);
 				var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(new RavenJTokenReader(result));
+
+				await multiGetOperation
+					.TryResolveConflictOrCreateConcurrencyException(responses, (key, conflictDoc, etag) => TryResolveConflictOrCreateConcurrencyException(operationMetadata, key, conflictDoc, etag))
+					.ConfigureAwait(false);
+
 				return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
 			});
 		}
