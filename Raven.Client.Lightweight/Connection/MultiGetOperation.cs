@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading.Tasks;
+
+using Raven.Client.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -127,6 +131,76 @@ namespace Raven.Client.Connection
 			lastRequest.Result = JsonConvert.SerializeObject(responses);
 
 			return responses;
+		}
+
+		public async Task TryResolveConflictOrCreateConcurrencyException(GetResponse[] responses, Func<string, RavenJObject, Etag, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException)
+		{
+			foreach (var response in responses)
+			{
+				if (response.RequestHasErrors() && response.Status != 409)
+					continue;
+
+				var result = response.Result as RavenJObject;
+				if (result == null)
+					continue;
+
+				if (result.ContainsKey("Results"))
+				{
+					var results = (RavenJArray)result["Results"];
+					foreach (RavenJObject docResult in results)
+					{
+						if (docResult == null) 
+							return;
+
+						var metadata = docResult[Constants.Metadata];
+						if (metadata == null) 
+							return;
+
+						if (metadata.Value<int>("@Http-Status-Code") != 409) 
+							return;
+
+						var id = metadata.Value<string>("@id");
+						var etag = HttpExtensions.EtagHeaderToEtag(metadata.Value<string>("@etag"));
+
+						await TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
+							tryResolveConflictOrCreateConcurrencyException,
+							id,
+							etag,
+							docResult,
+							response);
+	}
+
+					continue;
+}
+				if (result.ContainsKey("Conflicts"))
+				{
+					var id = response.Headers[Constants.DocumentIdFieldName];
+					var etag = response.GetEtagHeader();
+
+					await TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
+							tryResolveConflictOrCreateConcurrencyException,
+							id,
+							etag,
+							result,
+							response);
+				}
+			}
+		}
+
+		private static async Task TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
+			Func<string, RavenJObject, Etag, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException,
+			string id,
+			Etag etag,
+			RavenJObject docResult,
+			GetResponse response)
+		{
+			var concurrencyException = await tryResolveConflictOrCreateConcurrencyException(id, docResult, etag);
+
+			if (concurrencyException != null)
+				throw concurrencyException;
+
+			response.Status = 200;
+			response.ForceRetry = true;
 		}
 	}
 }
