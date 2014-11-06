@@ -161,16 +161,17 @@ namespace Raven.Client.Connection
 					if (results == null)
 						continue;
 
-					foreach (RavenJObject docResult in results)
+					foreach (RavenJToken value in results)
 					{
-						if (docResult == null) 
+						var docResult = value as RavenJObject;
+						if (docResult == null)
 							return;
 
 						var metadata = docResult[Constants.Metadata];
-						if (metadata == null) 
+						if (metadata == null)
 							return;
 
-						if (metadata.Value<int>("@Http-Status-Code") != 409) 
+						if (metadata.Value<int>("@Http-Status-Code") != 409)
 							return;
 
 						var id = metadata.Value<string>("@id");
