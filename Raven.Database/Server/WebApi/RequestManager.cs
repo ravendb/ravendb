@@ -445,7 +445,7 @@ namespace Raven.Database.Server.WebApi
             if (Logger.IsDebugEnabled == false)
                 return;
 
-            if (controller is StudioController || controller is HardRouteController)
+            if (controller is StudioController || controller is HardRouteController || controller is SilverlightController)
                 return;
 
             // we filter out requests for the UI because they fill the log with information
