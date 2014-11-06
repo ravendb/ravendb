@@ -41,7 +41,10 @@ namespace Raven.Tests.Issues
 				{
 					Url = store.Url,
 					DefaultDatabase = store.DefaultDatabase
-				}, null, "RavenDB_2115", false,1).Execute();
+				}, new RavenConnectionStringOptions()
+				{
+					Url = store.Url,
+				}, "RavenDB_2115", false, 1).Execute();
 
 				Assert.Equal(10, store.DatabaseCommands.GetStatistics().CountOfAttachments);
 
@@ -58,7 +61,10 @@ namespace Raven.Tests.Issues
 				{
 					Url = store.Url,
 					DefaultDatabase = store.DefaultDatabase
-				}, null, "RavenDB_2115", true, 5).Execute();
+				}, new RavenConnectionStringOptions()
+				{
+					Url = store.Url,
+				}, "RavenDB_2115", true, 5).Execute();
 
 				Assert.Equal(0, store.DatabaseCommands.GetStatistics().CountOfAttachments);
 
