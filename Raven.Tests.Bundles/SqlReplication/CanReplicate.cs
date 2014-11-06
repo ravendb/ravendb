@@ -17,6 +17,7 @@ using Raven.Tests.Common;
 using Raven.Tests.Common.Attributes;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bundles.SqlReplication
 {
@@ -86,11 +87,12 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-		[Fact]
-		public void SimpleTransformation()
+		[Theory]
+		[PropertyData("Storages")]
+		public void SimpleTransformation(string requestedStorage)
 		{
             CreateRdbmsSchema();
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
 			{
 				var eventSlim = new ManualResetEventSlim(false);
 				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
@@ -135,11 +137,12 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-		[Fact]
-		public void ReplicateMultipleBatches()
+		[Theory]
+		[PropertyData("Storages")]
+		public void ReplicateMultipleBatches(string requestedStorage)
 		{
             CreateRdbmsSchema();
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
 			{
 				var eventSlim = new ManualResetEventSlim(false);
 
@@ -198,11 +201,12 @@ CREATE TABLE [dbo].[Orders]
 
 		}
 
-		[Fact]
-		public void CanUpdateToBeNoItemsInChildTable()
+		[Theory]
+		[PropertyData("Storages")]
+		public void CanUpdateToBeNoItemsInChildTable(string requestedStorage)
 		{
             CreateRdbmsSchema();
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
 			{
 				var eventSlim = new ManualResetEventSlim(false);
 				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
@@ -246,11 +250,12 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-		[Fact]
-		public void CanDelete()
+		[Theory]
+		[PropertyData("Storages")]
+		public void CanDelete(string requestedStorage)
 		{
             CreateRdbmsSchema();
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
 			{
 				var eventSlim = new ManualResetEventSlim(false);
 				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
@@ -290,13 +295,14 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-		[Fact]
-		public void WillLog()
+		[Theory]
+		[PropertyData("Storages")]
+		public void WillLog(string requestedStorage)
 		{
             LogManager.RegisterTarget<DatabaseMemoryTarget>();
 
 			CreateRdbmsSchema();
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
 			{
 				var eventSlim = new ManualResetEventSlim(false);
 				store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
@@ -319,7 +325,7 @@ var nameArr = this.StepName.split('.');");
 				
 				var databaseMemoryTarget = LogManager.GetTarget<DatabaseMemoryTarget>();
 				var foo = databaseMemoryTarget[Constants.SystemDatabase].WarnLog.First(x=>x.LoggerName == typeof(SqlReplicationTask).FullName);
-				Assert.Equal("Could parse SQL Replication script for OrdersAndLines", foo.FormattedMessage);
+				Assert.Equal("Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1", foo.FormattedMessage);
 			}
 		}
 
