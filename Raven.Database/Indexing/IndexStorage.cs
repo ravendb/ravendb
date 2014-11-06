@@ -42,6 +42,8 @@ using System.Security.Cryptography;
 
 namespace Raven.Database.Indexing
 {
+	using Imports.Newtonsoft.Json.Linq;
+
 	/// <summary>
 	/// 	Thread safe, single instance for the entire application
 	/// </summary>
@@ -559,7 +561,7 @@ namespace Raven.Database.Indexing
 			using (var commitPointFile = File.Create(commitPointDirectory.FileFullPath))
 			using (var sw = new StreamWriter(commitPointFile))
 			{
-				var jsonSerializer = new JsonSerializer();
+				var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
 				var textWriter = new JsonTextWriter(sw);
 
 				jsonSerializer.Serialize(textWriter, indexCommit);
@@ -717,16 +719,43 @@ namespace Raven.Database.Indexing
             return result;
         }
 
-		private static bool TryGetCommitPoint(IndexCommitPointDirectory commitPointDirectory, out IndexCommitPoint indexCommit)
+		public static bool TryGetCommitPoint(IndexCommitPointDirectory commitPointDirectory, out IndexCommitPoint indexCommit)
 		{
 			using (var commitPointFile = File.OpenRead(commitPointDirectory.FileFullPath))
 			{
-				var jsonSerializer = new JsonSerializer();
-				var textReader = new JsonTextReader(new StreamReader(commitPointFile));
+				try
+				{
+					var textReader = new JsonTextReader(new StreamReader(commitPointFile));
+					var jsonCommitPoint = RavenJObject.Load(textReader);
+					var jsonEtag = jsonCommitPoint.Value<RavenJToken>("HighestCommitedETag");
 
-				indexCommit = jsonSerializer.Deserialize<IndexCommitPoint>(textReader);
+					Etag recoveredEtag = null;
+					if (jsonEtag.Type == JTokenType.Object) // backward compatibility - HighestCommitedETag is written as {"Restarts":123,"Changes":1}
+					{
+						jsonCommitPoint.Remove("HighestCommitedETag");
+						recoveredEtag = new Etag(UuidType.Documents, jsonEtag.Value<long>("Restarts"), jsonEtag.Value<long>("Changes"));
+					}
 
-				return indexCommit != null;
+					indexCommit = jsonCommitPoint.JsonDeserialization<IndexCommitPoint>();
+
+					if (indexCommit == null)
+						return false;
+
+					if (recoveredEtag != null)
+						indexCommit.HighestCommitedETag = recoveredEtag;
+
+					if (indexCommit.HighestCommitedETag == null || indexCommit.HighestCommitedETag.CompareTo(Etag.Empty) == 0)
+						return false;
+
+					return true;
+				}
+				catch (Exception e)
+				{
+					log.Warn("Could not get commit point from the following location {0}. Exception {1}", commitPointDirectory.FileFullPath, e);
+
+					indexCommit = null;
+					return false;
+				}
 			}
 		}
 

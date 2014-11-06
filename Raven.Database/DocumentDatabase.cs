@@ -814,7 +814,13 @@ namespace Raven.Database
                             Etag = newEtag,
                             LastModified = addDocumentResult.SavedAt,
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
-                        }, documents => prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents));
+                        }, documents =>
+                        {
+	                        if(IndexDefinitionStorage.IndexesCount == 0 || WorkContext.RunIndexing == false)
+								return;
+
+	                        prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
+                        });
 
                         if (addDocumentResult.Updated)
                             prefetcher.AfterUpdate(key, addDocumentResult.PrevEtag);
@@ -2602,7 +2608,7 @@ namespace Raven.Database
                     if (document == null)
                         return;
 
-                    if (document.Metadata.ContainsKey("Raven-Read-Veto"))
+                    if (document.Metadata.ContainsKey("Raven-Read-Veto") || document.Metadata.ContainsKey(Constants.RavenReplicationConflict))
                     {
                         result = document;
                         return;

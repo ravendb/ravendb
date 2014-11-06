@@ -14,6 +14,7 @@ namespace Raven.Abstractions.Data
 		public RavenJToken Result { get; set; }
 		public IDictionary<string,string> Headers { get; set; }
 		public int Status { get; set; }
+		public bool ForceRetry { get; set; }
 
 		public bool RequestHasErrors()
 		{

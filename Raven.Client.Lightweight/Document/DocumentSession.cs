@@ -172,22 +172,40 @@ namespace Raven.Client.Document
             return LazyLoadInternal(documentKeys.ToArray(), new KeyValuePair<string, Type>[0], onEval);
         }
 
-        Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id)
+		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure)
         {
             var transformer = new TTransformer().TransformerName;
             var ids = new[] { id };
-            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer,
-                                                                          new LoadTransformerOperation(this, transformer, ids),
-                                                                          singleResult: true);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
+				ids,
+				transformer,
+				configuration.QueryInputs,
+				new LoadTransformerOperation(this, transformer, ids),
+				singleResult: true);
+
             return AddLazyOperation<TResult>(lazyLoadOperation, null);
         }
 
-        Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(string[] ids)
+		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure)
         {
             var transformer = new TTransformer().TransformerName;
-            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer,
-                                                                          new LoadTransformerOperation(this, transformer, ids),
-                                                                          singleResult: false);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var idsArray = ids.ToArray();
+
+	        var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
+				idsArray,
+		        transformer,
+		        configuration.QueryInputs,
+				new LoadTransformerOperation(this, transformer, idsArray),
+		        singleResult: false);
+
             return AddLazyOperation<TResult[]>(lazyLoadOperation, null);
         }
 
