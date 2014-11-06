@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30501.0
+VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -44,7 +44,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Voron", "Raven.Voron\Voron\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Voron.Tests", "Raven.Voron\Voron.Tests\Voron.Tests.csproj", "{3C2CD044-CF12-48D1-9C43-64A9058C165E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RavenFS.Tests", "RavenFS.Tests\RavenFS.Tests.csproj", "{01CA67F3-1E46-455C-8713-86FCCF2EFBC7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.FileSystem", "Raven.Tests.FileSystem\Raven.Tests.FileSystem.csproj", "{01CA67F3-1E46-455C-8713-86FCCF2EFBC7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Bundles", "Bundles", "{B7C4AD28-873C-45D5-8331-5CF9EEB41CC8}"
 	ProjectSection(FolderStartupServices) = postProject

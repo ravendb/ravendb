@@ -7,7 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Streams;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
-using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
+using Raven.Database.FileSystem.Storage.Voron.Impl;
 using Raven.Tests.Helpers;
 using Xunit;
 using Voron;

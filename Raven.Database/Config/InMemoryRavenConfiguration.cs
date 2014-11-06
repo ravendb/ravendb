@@ -20,7 +20,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Util;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;

@@ -11,7 +11,7 @@ using System.Web.Http;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Controllers.Admin;
-using Raven.Database.Server.RavenFS.Controllers;
+using Raven.Database.FileSystem.Controllers;
 using Raven.Tests.Common;
 
 using Xunit;

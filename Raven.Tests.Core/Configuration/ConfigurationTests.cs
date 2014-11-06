@@ -14,7 +14,7 @@ using System.Text;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Util;
 
 using Xunit;
 
