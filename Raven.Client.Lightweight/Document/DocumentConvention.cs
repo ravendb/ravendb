@@ -85,6 +85,7 @@ namespace Raven.Client.Document
 				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
 			};
 			MaxNumberOfRequestsPerSession = 30;
+		    MaxLengthOfGetUrl = 2048;
 			ApplyReduceFunction = DefaultApplyReduceFunction;
 			ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
 			CustomizeJsonSerializer = serializer => { };
@@ -205,10 +206,16 @@ namespace Raven.Client.Document
 		public List<ITypeConverter> IdentityTypeConvertors { get; set; }
 
 		/// <summary>
-		/// Gets or sets the default max number of requests per session.
+		/// Gets or sets the max length of Url of GET requests.
 		/// </summary>
 		/// <value>The max number of requests per session.</value>
 		public int MaxNumberOfRequestsPerSession { get; set; }
+
+        /// <summary>
+        /// Gets or sets the default max number of requests per session.
+        /// </summary>
+        /// <value>The max number of requests per session.</value>
+        public int MaxLengthOfGetUrl { get; set; }
 
 		/// <summary>
 		/// Whatever to allow queries on document id.
