@@ -1,4 +1,45 @@
-﻿<section id="replicationTopologySection" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+﻿
+<style>
+
+    #replicationStatsContainer {
+        font: 11px sans-serif;
+    }
+
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+    }
+
+    .bar {
+        fill: steelblue;
+    }
+
+    rect.outputCounts, rect.inputCounts {
+        fill-opacity: 0.8;
+        cursor: pointer;
+    }
+
+    rect.outputCounts:hover, rect.inputCounts:hover {
+        fill-opacity: 1;
+    }
+    .legend rect {
+        cursor: pointer;
+    }
+
+    .legend_bg {
+        fill: white;
+        fill-opacity: 0.8;
+        stroke: #ccc;
+    }
+
+    .legendHidden {
+        fill-opacity: 0.2;   
+    }
+
+</style>
+<section id="replicationTopologySection" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
 
     <div class="page-header" data-bind="visible: hasNoReplStatsAvailable">
         <h3><i class="fa fa-info-circle text-info"></i> No replication stats available. <small>Either this database isn't <a target="_blank" href="http://ravendb.net/docs/server/scaling-out/replication">setup for replication</a>, or replication hasn't occurred in some time.</small></h3>
@@ -231,6 +272,23 @@
                             <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon" style="width: 30px; height: 30px;"><span class="fa fa-spinner fa-spin fa-2x"></span></div>
 
 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="panel-group" data-bind="visible: hasReplicationEnabled">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h4 class="panel-title pull-left">
+                        <a data-bind="click: replicationStatToggle" data-toggle="collapse" href="#replicationPerfStatsCollapse">Replication Performance Statistics</a>
+                    </h4>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="panel-collapse collapse" id="replicationPerfStatsCollapse">
+                    <div class="panel-body">
+                        <div id="replicationStatsContainer" style="width: 100%; height: 600px" >
+                            <svg id="replicationStatsGraph" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
                         </div>
                     </div>
                 </div>
