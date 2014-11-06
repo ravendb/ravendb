@@ -137,6 +137,8 @@ namespace Raven.Client.Connection
 		{
 			foreach (var response in responses)
 			{
+				if(response == null)
+					continue;
 				if (response.RequestHasErrors() && response.Status != 409)
 					continue;
 
