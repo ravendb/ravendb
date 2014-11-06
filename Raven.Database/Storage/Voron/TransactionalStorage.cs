@@ -140,6 +140,7 @@ namespace Raven.Storage.Voron
 				}
 			}
 
+			Action afterStorageCommit;
 			disposerLock.EnterReadLock();
 			try
 			{
@@ -149,7 +150,7 @@ namespace Raven.Storage.Voron
 					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 				}
 
-				ExecuteBatch(action);
+				afterStorageCommit = ExecuteBatch(action);
 			}
 			catch (Exception e)
 			{
@@ -180,10 +181,13 @@ namespace Raven.Storage.Voron
 					current.Value = null;
 			}
 
+			if (afterStorageCommit != null)
+				afterStorageCommit();
+
 			onCommit(); // call user code after we exit the lock
 		}
 
-        private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
+        private Action ExecuteBatch(Action<IStorageActionsAccessor> action)
         {
             var snapshotRef = new Reference<SnapshotReader>();
             var writeBatchRef = new Reference<WriteBatch>();
@@ -203,9 +207,7 @@ namespace Raven.Storage.Voron
 
                 tableStorage.Write(writeBatchRef.Value);
 
-                storageActionsAccessor.ExecuteOnStorageCommit();
-
-                return storageActionsAccessor;
+	            return storageActionsAccessor.ExecuteOnStorageCommit;
             }
             finally
             {
