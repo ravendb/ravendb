@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Threading;
+using Raven.Abstractions.Data;
+using Raven.Client.Document;
 using Raven.Database.DiskIO;
 using Raven.Json.Linq;
 using System.Linq;
 using Raven.Database.Extensions;
+using Raven.Tests.Bugs;
 
 namespace Raven.Tryouts
 {
@@ -11,25 +14,25 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-            var performanceRequest = new PerformanceTestRequest
-            {
-                FileSize = (long) 1024 * 1024 * 1024,
-                OperationType = OperationType.Read,
-                BufferingType = BufferingType.ReadAndWrite,
-                Path = "c:\\temp\\data.ravendb-io-test",
-                Sequential = true,
-                ThreadCount = 4,
-                TimeToRunInSeconds = 100,
-                ChunkSize = 4 * 1024
-            };
+			using (var documentStore = new DocumentStore
+			{
+				Url = "http://localhost:8080",
+			}.Initialize())
+			{
+				
+				documentStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+				{
+					Id = "MyDb",
+					Settings =
+					{
+						{"Raven/RunInMemory", "true"}
+					}
+				});
 
-            var tester = new DiskPerformanceTester(performanceRequest, Console.WriteLine, CancellationToken.None);
-            tester.TestDiskIO();
+				// run your code
 
-		    var r = tester.Result;
-
-            Console.WriteLine(RavenJObject.FromObject(r));
-		    Console.ReadKey();
+				documentStore.DatabaseCommands.GlobalAdmin.DeleteDatabase("MyDb");
+			}
 		}
 	}
 

@@ -404,7 +404,6 @@
     <Compile Include="Server\Controllers\PluginController.cs" />
     <Compile Include="Server\Controllers\QueriesController.cs" />
     <Compile Include="Server\Controllers\RavenDbApiController.cs" />
-    <Compile Include="Server\Controllers\SilverlightController.cs" />
     <Compile Include="Server\Controllers\SingleAuthTokenController.cs" />
     <Compile Include="Server\Controllers\StaticController.cs" />
     <Compile Include="Server\Controllers\StatisticsController.cs" />
@@ -730,7 +729,6 @@
     <Compile Include="Server\HttpEndpointRegistration.cs" />
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
-    <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
     <Compile Include="Server\Security\IgnoreDb.cs" />
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
@@ -761,7 +759,6 @@
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCalls.cs" />
     <Compile Include="Linq\Ast\TransformNullCoalescingOperatorTransformer.cs" />
     <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
-    <Compile Include="Plugins\Builtins\CreateSilverlightIndexes.cs" />
     <Compile Include="Plugins\IAlterConfiguration.cs" />
     <Compile Include="Queries\FacetedQueryRunner.cs" />
     <Compile Include="Queries\FacetedQueryRunnerExtensions.cs" />

@@ -86,8 +86,6 @@ namespace Raven.Tests.Issues
             RegisterRouteForOnlySysDb<StudioController>(a => a.GetStudioFile(null));
             RegisterRouteForOnlySysDb<StudioTasksController>(a => a.GetNewEncryption(null));
             RegisterRouteForOnlySysDb<StudioTasksController>(a => a.IsBase64Key(null));
-            RegisterRouteForOnlySysDb<SilverlightController>(a => a.SilverlightUi(null));
-            RegisterRouteForOnlySysDb<SilverlightController>(a => a.SilverlightEnsureStartup());
 
             const string nonSystemDbPrefix = "databases/{databaseName}/";
 
