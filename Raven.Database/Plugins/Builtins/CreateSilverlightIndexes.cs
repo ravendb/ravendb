@@ -14,12 +14,17 @@ namespace Raven.Database.Plugins.Builtins
 					Map =
 						@"from doc in docs 
 let Tag = doc[""@metadata""][""Raven-Entity-Name""]
-select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""] };",
+select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""], LastModifiedTicks = (DateTime)doc[""@metadata""][""Last-Modified""].Ticks };",
 					Indexes =
 					{
 						{"Tag", FieldIndexing.NotAnalyzed},
 						{"LastModified", FieldIndexing.NotAnalyzed},
 					},
+                    SortOptions =
+                    {
+                      {"LastModified",SortOptions.String}  ,
+                      {"LastModifiedTicks", SortOptions.Long}
+                    },
 					Stores =
 					{
 						{"Tag", FieldStorage.No},

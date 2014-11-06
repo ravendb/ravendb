@@ -28,12 +28,18 @@ namespace Raven.Client.Indexes
 			{
 				Map = @"from doc in docs 
 let Tag = doc[""@metadata""][""Raven-Entity-Name""]
-select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""] };",
+select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""] , LastModifiedTicsk = (DateTime)doc[""@metadata""][""Last-Modified""].Ticks };",
 				Indexes =
 					{
 						{"Tag", FieldIndexing.NotAnalyzed},
 						{"LastModified", FieldIndexing.NotAnalyzed},
+                        {"LastModifiedTicks", FieldIndexing.NotAnalyzed}
 					},
+                    SortOptions =
+                    {
+                        {"LastModified",SortOptions.String},
+                        {"LastModifiedTicks", SortOptions.Long}
+                    },
 				Stores =
 					{
 						{"Tag", FieldStorage.No},
