@@ -27,8 +27,12 @@ namespace Raven.Client.Indexes
 			return new IndexDefinition
 			{
 				Map = @"from doc in docs 
-let Tag = doc[""@metadata""][""Raven-Entity-Name""]
-select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""] , LastModifiedTicsk = (DateTime)doc[""@metadata""][""Last-Modified""].Ticks };",
+select new 
+{ 
+	Tag = doc[""@metadata""][""Raven-Entity-Name""], 
+	LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+	LastModifiedTicks = ((DateTime)doc[""@metadata""][""Last-Modified""]).Ticks 
+};",
 				Indexes =
 					{
 						{"Tag", FieldIndexing.NotAnalyzed},
