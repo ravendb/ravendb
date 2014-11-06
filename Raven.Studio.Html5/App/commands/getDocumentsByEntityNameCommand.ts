@@ -15,7 +15,7 @@ class getDocumentsByEntityNameCommand extends commandBase {
             query: "Tag:" + this.collection.name,
             start: this.skip,
             pageSize: this.take,
-            sort: "-LastModified"
+            sort: "-LastModifiedTicks"
         };
 
         var resultsSelector = (dto: collectionInfoDto) => new collectionInfo(dto);

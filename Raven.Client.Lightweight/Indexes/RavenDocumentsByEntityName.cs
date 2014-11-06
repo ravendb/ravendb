@@ -40,17 +40,7 @@ select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""]
                         {"LastModified",SortOptions.String},
                         {"LastModifiedTicks", SortOptions.Long}
                     },
-				Stores =
-					{
-						{"Tag", FieldStorage.No},
-						{"LastModified", FieldStorage.No}
-					},
-				TermVectors =
-					{
-						{"Tag", FieldTermVector.No},
-						{"LastModified", FieldTermVector.No}
-					},
-
+			
 				DisableInMemoryIndexing = true
 			};
 		}
