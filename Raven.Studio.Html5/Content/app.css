@@ -6950,10 +6950,15 @@ body {
 #resources-page .resources-container .resource .details .stats-disabled {
   color: #df382c;
 }
+#resources-page .resources-container .resource .indexing-disabled {
+  position: absolute;
+  top: 30px;
+  right: 11px;
+}
 #resources-page .resources-container .resource .btn-group {
   float: right;
   margin-left: 39.3px;
-  margin-top: 45.3px;
+  margin-top: 50px;
 }
 #resources-page .resources-container .resource .btn-group .dropdown-menu .fa-trash-o {
   color: #ec8c85;
