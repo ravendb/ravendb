@@ -32,9 +32,9 @@
     <Compile Include="Components\Service\Raven.Server.wxs" />
     <Compile Include="Product.wxs" />
     <Compile Include="UI\CustomFatalError.wxs" />
+    <Compile Include="UI\CustomInstallDirDlg.wxs" />
     <Compile Include="UI\IIS\ApplicationPoolSettings.wxs" />
     <Compile Include="UI\IIS\MissingComponents.wxs" />
-    <Compile Include="UI\IIS\PerformanceCounters.wxs" />
     <Compile Include="UI\IIS\WebSiteSettings.wxs" />
     <Compile Include="UI\InstallationType.wxs" />
     <Compile Include="UI\LicenseFileChooser.wxs" />

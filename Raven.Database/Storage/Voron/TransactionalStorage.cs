@@ -270,7 +270,8 @@ namespace Raven.Storage.Voron
                 filePathFolder.Create();
 
 		    var tempPath = configuration.Storage.Voron.TempPath;
-	        var journalPath = configuration.Settings[Abstractions.Data.Constants.RavenTxJournalPath] ?? configuration.JournalsStoragePath;
+			var txJournalPath = configuration.Settings[Abstractions.Data.Constants.RavenTxJournalPath];
+			var journalPath = string.IsNullOrEmpty(txJournalPath) ? configuration.JournalsStoragePath : txJournalPath;
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = configuration.Storage.Voron.AllowIncrementalBackups;
 		    options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;

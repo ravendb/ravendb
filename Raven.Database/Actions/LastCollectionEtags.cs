@@ -58,14 +58,14 @@ namespace Raven.Database.Actions
 
 			var collectionEtags = indexesStats.Where(x => x.ForEntityName.Count > 0)
 										.SelectMany(x => x.ForEntityName, (stats, collectionName) => new Tuple<string, Etag>(collectionName, stats.LastIndexedEtag))
-										.GroupBy(x => x.Item1)
+										.GroupBy(x => x.Item1, StringComparer.OrdinalIgnoreCase)
 										.Select(x => new
 										{
-											CollectionName = x.Key, MaxEtag = x.Max(y => y.Item2)
+											CollectionName = x.Key, MaxEtag = x.Min(y => y.Item2)
 										})
 										.ToDictionary(x => x.CollectionName, y => y.MaxEtag);
 
-			lastCollectionEtags = new ConcurrentDictionary<string, Etag>(collectionEtags,StringComparer.InvariantCultureIgnoreCase);
+			lastCollectionEtags = new ConcurrentDictionary<string, Etag>(collectionEtags, StringComparer.OrdinalIgnoreCase);
 		}
 
 		public bool HasEtagGreaterThan(List<string> collectionsToCheck, Etag etagToCheck)

@@ -33,7 +33,6 @@ namespace Raven.Client.Connection
 		{
 			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
 				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
-
 			var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
             MultiDatabase.AssertValidName(dbname);
 			doc = RavenJObject.FromObject(databaseDocument);

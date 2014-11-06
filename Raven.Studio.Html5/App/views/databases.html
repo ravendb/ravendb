@@ -81,6 +81,12 @@
                             <span data-bind="text: disabled() ? 'Enable' : 'Disable'"></span>
                         </a>
                     </li>
+                    <li role="presentation">
+                        <a data-bind="click: function () { $root.disableDatabaseIndexing($data); return true; }, attr: { title: indexingDisabled() ? 'Enable Indexing' : 'Disable Indexing' }">
+                            <i class="fa fa-fw" data-bind="css: { 'fa-lock': !indexingDisabled(), 'fa-unlock': indexingDisabled }"></i>
+                            <span data-bind="text: indexingDisabled() ? 'Enable indexing' : 'Disable indexing'"></span>
+                        </a>
+                    </li>
                     <li class="divider"></li>
                     <li role="presentation" class="delete-resource">
                         <a title="Delete selected database" data-bind="click: function () { $root.deleteSelectedDatabases([$data]); return true; }">

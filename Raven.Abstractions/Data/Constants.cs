@@ -61,6 +61,7 @@ namespace Raven.Abstractions.Data
 		public const int DefaultPrefetchingDurationLimit = 5000;
 		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";
 		public const int BulkImportDefaultTimeoutInMs = 60000;
+	    public const string IndexingDisabled = "Raven/IndexingDisabled";
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";

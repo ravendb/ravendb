@@ -14,13 +14,15 @@ namespace Raven.Migration.MigrationTasks
 		private readonly RavenConnectionStringOptions fileSystemConnectionOptions;
 		private readonly string fileSystemName;
 		private readonly bool deleteCopiedAttachments;
+		private readonly int batchSize;
 
-		public CopyAttachmentsToFileSystem(RavenConnectionStringOptions databaseConnectionOptions, RavenConnectionStringOptions fileSystemConnectionOptions, string fileSystemName, bool deleteCopiedAttachments)
+		public CopyAttachmentsToFileSystem(RavenConnectionStringOptions databaseConnectionOptions, RavenConnectionStringOptions fileSystemConnectionOptions, string fileSystemName, bool deleteCopiedAttachments, int batchSize)
 		{
 			this.databaseConnectionOptions = databaseConnectionOptions;
 			this.fileSystemConnectionOptions = fileSystemConnectionOptions;
 			this.fileSystemName = fileSystemName;
 			this.deleteCopiedAttachments = deleteCopiedAttachments;
+			this.batchSize = batchSize;
 		}
 
 		public override void Execute()
@@ -28,8 +30,6 @@ namespace Raven.Migration.MigrationTasks
 			using (var store = CreateStore(databaseConnectionOptions))
 			using (var fsclient = CreateFileSystemClient(fileSystemConnectionOptions ?? databaseConnectionOptions, fileSystemName))
 			{
-				const int batchSize = 128;
-
 				var commands = store.DatabaseCommands;
 
 				var totalAttachmentCount = commands.GetStatistics().CountOfAttachments;

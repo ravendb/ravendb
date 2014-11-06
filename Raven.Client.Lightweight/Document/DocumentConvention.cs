@@ -56,8 +56,8 @@ namespace Raven.Client.Document
 		private readonly IList<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
 			new List<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>>();
 
-        private readonly IList<Tuple<Type, Func<object, string>>> listOfRegisteredIdLoadConventions = 
-            new List<Tuple<Type, Func<object, string>>>();
+        private readonly IList<Tuple<Type, Func<ValueType, string>>> listOfRegisteredIdLoadConventions = 
+            new List<Tuple<Type, Func<ValueType, string>>>();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentConvention"/> class.
@@ -145,9 +145,14 @@ namespace Raven.Client.Document
 		///<returns></returns>
 		public string DefaultFindFullDocumentKeyFromNonStringIdentifier(object id, Type type, bool allowNull)
 		{
-            var outputId = TryGetDocumentIdFromRegisteredIdLoadConventions(id, type);
-            if (outputId != null)
-                return outputId;
+			var valueTypeId = id as ValueType;
+			if (valueTypeId != null)
+			{
+				var outputId = TryGetDocumentIdFromRegisteredIdLoadConventions(valueTypeId, type);
+				if (outputId != null)
+					return outputId;
+			}
+            
 
 			var converter = IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(id.GetType()));
 			var tag = GetTypeTagName(type);
@@ -164,22 +169,22 @@ namespace Raven.Client.Document
 		}
 
         /// <summary>
-        /// Tries to get the full dokument id/key from a "simple" id to the full id.
+        /// Tries to get the full document id/key from a "simple" id to the full id.
         /// </summary>
         /// <param name="id">Simple id.</param>
         /// <returns>The full document id, null if no registered id load conventions found</returns>
-        public string TryGetDocumentIdFromRegisteredIdLoadConventions<TEntity, TId>(TId id)
+        public string TryGetDocumentIdFromRegisteredIdLoadConventions<TEntity>(ValueType id)
         {
             return TryGetDocumentIdFromRegisteredIdLoadConventions(id, typeof(TEntity));
         }
 
         /// <summary>
-        /// Tries to get the full dokument id/key from a "simple" id to the full id.
+        /// Tries to get the full document id/key from a "simple" id to the full id.
         /// </summary>
         /// <param name="id">Simple id.</param>
         /// <param name="type">Document type</param>
         /// <returns>Full document id, null if no registered id load conventions found</returns>
-        public string TryGetDocumentIdFromRegisteredIdLoadConventions(object id, Type type)
+        public string TryGetDocumentIdFromRegisteredIdLoadConventions(ValueType id, Type type)
         {
             foreach (var typeToRegisteredIdLoadConvention in listOfRegisteredIdLoadConventions
                 .Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
@@ -503,8 +508,7 @@ namespace Raven.Client.Document
         /// Register an id convention for a single type (and all its derived types) to be used when calling session.Load{TEntity}(TId id)
         /// It is used by the default implementation of FindFullDocumentKeyFromNonStringIdentifier.
         /// </summary>
-        public DocumentConvention RegisterIdLoadConvention<TEntity, TId>(Func<TId, string> func)
-            where TId : struct
+        public DocumentConvention RegisterIdLoadConvention<TEntity>(Func<ValueType, string> func)
         {
             var type = typeof(TEntity);
             var entryToRemove = listOfRegisteredIdLoadConventions.FirstOrDefault(x => x.Item1 == type);
@@ -519,7 +523,7 @@ namespace Raven.Client.Document
                     break;
             }
 
-            var item = new Tuple<Type, Func<object, string>>(typeof(TEntity), o => func((TId)o));
+            var item = new Tuple<Type, Func<ValueType, string>>(typeof(TEntity), o => func(o));
             listOfRegisteredIdLoadConventions.Insert(index, item);
 
             return this;

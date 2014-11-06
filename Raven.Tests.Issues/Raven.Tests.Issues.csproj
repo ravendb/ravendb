@@ -119,6 +119,7 @@
     <Compile Include="RavenDB-2716.cs" />
     <Compile Include="RavenDB-2717.cs" />
     <Compile Include="RavenDB2854.cs" />
+    <Compile Include="RavenDB_2115.cs" />
     <Compile Include="RavenDB_2699.cs" />
     <Compile Include="DatabaseConfiguration.cs" />
     <Compile Include="EmbeddedMultipleDatabases.cs" />
@@ -317,6 +318,7 @@
     <Compile Include="RavenDB_2794.cs" />
     <Compile Include="RavenDB_2824 .cs" />
     <Compile Include="RavenDB_2862.cs" />
+    <Compile Include="RavenDB_2908.cs" />
     <Compile Include="RavenDB_295.cs" />
     <Compile Include="RavenDB_299.cs" />
     <Compile Include="RavenDB_301.cs" />
@@ -407,6 +409,10 @@
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
       <Name>Raven.Database</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Migration\Raven.Migration.csproj">
+      <Project>{E6C2EAA5-B5BC-4BE2-B981-0064E819DBEB}</Project>
+      <Name>Raven.Migration</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
       <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>

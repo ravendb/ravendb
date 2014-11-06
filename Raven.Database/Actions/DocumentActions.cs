@@ -527,7 +527,7 @@ namespace Raven.Database.Actions
                     if (document == null)
                         return;
 
-                    if (document.Metadata.ContainsKey("Raven-Read-Veto"))
+					if (document.Metadata.ContainsKey("Raven-Read-Veto") || document.Metadata.ContainsKey(Constants.RavenReplicationConflict))
                     {
                         result = document;
                         return;
