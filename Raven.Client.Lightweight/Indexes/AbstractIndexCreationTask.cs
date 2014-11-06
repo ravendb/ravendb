@@ -224,7 +224,7 @@ namespace Raven.Client.Indexes
 			// the new definition.
 			databaseCommands.PutIndex(IndexName, indexDefinition, true);
 
-			if (Conventions.IndexAndTransformerReplicationMode != IndexAndTransformerReplicationMode.None)
+			if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
 			{
 				UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
 					commands.DirectPutIndex(IndexName, url, true, indexDefinition));

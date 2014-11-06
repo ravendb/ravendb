@@ -130,7 +130,7 @@ namespace Raven.Client.Indexes
 			// the new definition.
 			databaseCommands.PutTransformer(TransformerName, transformerDefinition);
 
-			if (documentConvention.IndexAndTransformerReplicationMode != IndexAndTransformerReplicationMode.None)
+			if (documentConvention.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Transformers))
 			{
 				UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
 					commands.PutTransformer(TransformerName, transformerDefinition));

@@ -91,7 +91,7 @@ namespace Raven.Client.Document
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
 			ShouldAggressiveCacheTrackChanges = true;
 			ShouldSaveChangesForceAggressiveCacheCheck = true;
-			IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.All;
+			IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
@@ -722,17 +722,23 @@ namespace Raven.Client.Document
 
 	}
 
+	[Flags]
 	public enum IndexAndTransformerReplicationMode
 	{
 		/// <summary>
 		/// No indexes or transformers are updated to replicated instances.
 		/// </summary>
-		None,
+		None = 0,
 
 		/// <summary>
-		/// All indexes and transformers are replicated.
+		/// All indexes are replicated.
 		/// </summary>
-		All
+		Indexes = 2,
+
+		/// <summary>
+		/// All transformers are replicated.
+		/// </summary>
+		Transformers = 4,
 	}
 
 	public enum QueryValueConvertionType
