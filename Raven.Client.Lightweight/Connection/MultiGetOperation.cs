@@ -152,8 +152,9 @@ namespace Raven.Client.Connection
 					if (results == null)
 						continue;
 
-					foreach (RavenJObject docResult in results)
+					foreach (RavenJToken value in results)
 					{
+						var docResult = value as RavenJObject;
 						if (docResult == null)
 							return;
 
