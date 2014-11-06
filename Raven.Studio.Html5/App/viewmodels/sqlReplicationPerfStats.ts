@@ -8,9 +8,13 @@ import getSqlReplicationPerfStatsCommand = require("commands/getSqlReplicationPe
 import d3 = require("d3/d3");
 import nv = require('nvd3');
 import shell = require("viewmodels/shell");
+import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import changeSubscription = require('models/changeSubscription');
 
 class sqlReplicationPerfStats extends viewModelBase {
+
+    hasReplicationEnabled = ko.observable(false);
+
     jsonData: any[] = [];
     rawJsonData: any[] = [];
     hiddenNames = d3.set([]);
@@ -37,6 +41,25 @@ class sqlReplicationPerfStats extends viewModelBase {
     fetchJsonData() {
         return new getSqlReplicationPerfStatsCommand(this.activeDatabase()).execute();
     }
+
+    activate(args) {
+        super.activate(args);
+
+        this.activeDatabase.subscribe(() => {
+            this.checkIfHasReplicationEnabled();
+        });
+        this.checkIfHasReplicationEnabled();
+    }
+
+    checkIfHasReplicationEnabled() {
+        new getDatabaseSettingsCommand(this.activeDatabase())
+            .execute()
+            .done(document => {
+                var documentSettings = document.Settings["Raven/ActiveBundles"];
+                this.hasReplicationEnabled(documentSettings.toLowerCase().indexOf("sqlreplication") !== -1);
+            });
+    }
+
 
     attached() {
         $("#replicationStatsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
@@ -382,6 +405,7 @@ class sqlReplicationPerfStats extends viewModelBase {
             .entries(statsInline);
         return byKey.map(d => d.key);
     }
+
 }
 
 export = sqlReplicationPerfStats;
