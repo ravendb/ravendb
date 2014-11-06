@@ -8,20 +8,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Net;
-using System.Net.Http;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Imports.Newtonsoft.Json.Utilities;
@@ -34,8 +28,6 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
-	using Raven.Abstractions.Connection;
-
 	/// <summary>
 	/// The set of conventions used by the <see cref="DocumentStore"/> which allow the users to customize
 	/// the way the Raven client API behaves
@@ -99,6 +91,7 @@ namespace Raven.Client.Document
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
 			ShouldAggressiveCacheTrackChanges = true;
 			ShouldSaveChangesForceAggressiveCacheCheck = true;
+			IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.All;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
@@ -319,7 +312,7 @@ namespace Raven.Client.Document
 	         }
 	      }
 
-	      return this.GetTypeTagName(entity.GetType());
+	      return GetTypeTagName(entity.GetType());
 	   }
 
 		/// <summary>
@@ -632,6 +625,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		public bool PrettifyGeneratedLinqExpressions { get; set; }
 
+		/// <summary>
+		/// How index and transformer updates should be handled in replicated setup.
+		/// Defaults to <see cref="Document.IndexAndTransformerReplicationMode.All"/>.
+		/// </summary>
+		public IndexAndTransformerReplicationMode IndexAndTransformerReplicationMode { get; set; }
+
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 
 		private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
@@ -721,6 +720,19 @@ namespace Raven.Client.Document
 			return customRangeTypes.Contains(type);
 		}
 
+	}
+
+	public enum IndexAndTransformerReplicationMode
+	{
+		/// <summary>
+		/// No indexes or transformers are updated to replicated instances.
+		/// </summary>
+		None,
+
+		/// <summary>
+		/// All indexes and transformers are replicated.
+		/// </summary>
+		All
 	}
 
 	public enum QueryValueConvertionType
