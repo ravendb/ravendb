@@ -58,10 +58,10 @@
                     <a class="resource-name" data-bind="text: name"></a>
                     <!-- /ko -->
                 </h4>
-                <br />
+                <br />                              
                 <!-- ko if: !$data.disabled() && $data.isLicensed() -->
                 <span class="stats" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
-                <!-- /ko -->
+                <!-- /ko -->               
                 <!-- ko if: $data.disabled -->
                 <span class="stats-disabled">Disabled</span>
                 <!-- /ko -->
@@ -69,7 +69,9 @@
                 <span class="stats-disabled">Unlicensed</span>
                 <!-- /ko -->
             </div>
-
+            <!-- ko if: $data.indexingDisabled -->
+            <span class="indexing-disabled"><i class="fa fa-warning text-warning" title="Indexing Disabled"></i></span>
+            <!-- /ko -->
             <div class="btn-group" data-bind="click: function(){ $root.optionsClicked(true); }">
                 <a class="dropdown-toggle" data-toggle="dropdown">
                     <i class="fa fa-cogs fa-lg"></i>
