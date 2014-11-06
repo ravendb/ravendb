@@ -11,30 +11,22 @@ namespace Raven.Database.Plugins.Builtins
 			{
                 database.Indexes.PutIndex(Constants.DocumentsByEntityNameIndex, new IndexDefinition
 				{
-					Map =
-						@"from doc in docs 
+					Map = @"from doc in docs 
 let Tag = doc[""@metadata""][""Raven-Entity-Name""]
-select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""], LastModifiedTicks = (DateTime)doc[""@metadata""][""Last-Modified""].Ticks };",
+select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""] , LastModifiedTicsk = (DateTime)doc[""@metadata""][""Last-Modified""].Ticks };",
 					Indexes =
 					{
 						{"Tag", FieldIndexing.NotAnalyzed},
 						{"LastModified", FieldIndexing.NotAnalyzed},
+                        {"LastModifiedTicks", FieldIndexing.NotAnalyzed}
 					},
-                    SortOptions =
+					SortOptions =
                     {
-                      {"LastModified",SortOptions.String}  ,
-                      {"LastModifiedTicks", SortOptions.Long}
+                        {"LastModified",SortOptions.String},
+                        {"LastModifiedTicks", SortOptions.Long}
                     },
-					Stores =
-					{
-						{"Tag", FieldStorage.No},
-						{"LastModified", FieldStorage.No}
-					},
-					TermVectors =
-					{
-						{"Tag", FieldTermVector.No},
-						{"LastModified", FieldTermVector.No}						
-					}
+
+					DisableInMemoryIndexing = true
 				});
 			}
 		}
