@@ -28,7 +28,7 @@ namespace Raven.Migration.MigrationTasks
 		public override void Execute()
 		{
 			using (var store = CreateStore(databaseConnectionOptions))
-			using (var fsclient = CreateFileSystemClient(fileSystemConnectionOptions ?? databaseConnectionOptions, fileSystemName))
+			using (var fsclient = CreateFileSystemClient(fileSystemConnectionOptions, fileSystemName))
 			{
 				var commands = store.DatabaseCommands;
 
