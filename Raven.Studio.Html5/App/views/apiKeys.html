@@ -127,7 +127,9 @@
                                                 </div>
                                             </td>
                                             <td>
-                                                <button type="button" class="close" style="display: inline-block; font-size: 14px;" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data)" title="Remove this database"></button>
+                                                <button type="button" style="display: inline-block;float:none;vertical-align: middle; font-size: 14px;" class="close" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data)" title="Remove this database">
+                                                    <i class="fa fa-times"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     </tbody>
