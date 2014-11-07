@@ -24,5 +24,18 @@ namespace Raven.Tests.Common
 			}
 			throw new ThrowsException(typeof(TException), null);
 		}
+
+        public static async Task<bool> DoesNotThrow(Func<Task> func) 
+        {
+            try
+            {
+                await func();
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+            return true;
+        }
 	}
 }

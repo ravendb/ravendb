@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -44,7 +45,6 @@ namespace Raven.Client.Connection.Async
 	/// </summary>
 	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncInfoDatabaseCommands
 	{
-		private const int MaxQuerySizeForGetRequest = 8 * 1024;
 		private readonly ProfilingInformation profilingInformation;
 		private readonly IDocumentConflictListener[] conflictListeners;
 		private readonly string url;
@@ -1301,6 +1301,41 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
+
+        private bool ShouldQueryUseGetMethod(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
+	    {
+            var shoudUseGetMethod = query.Query == null || query.Query.Length <= convention.MaxLengthOfGetUrl;
+
+            if (!shoudUseGetMethod)
+                return shoudUseGetMethod;
+
+            var maxLengthUrl = url;
+            // calculate max possible url
+            var replicationUrls = replicationInformer.ReplicationDestinationsUrls;
+            if (replicationUrls.Count > 0)
+            {
+                var maxReplicatedUrlLength = replicationUrls.Max(x => x.Url.Length);
+                if (maxReplicatedUrlLength > maxLengthUrl.Length)
+                {
+                    maxLengthUrl = replicationUrls.First(x => x.Url.Length == maxReplicatedUrlLength).Url;
+                }
+            }
+
+            var path = query.GetIndexQueryUrl(maxLengthUrl, index, "indexes", includeQuery: shoudUseGetMethod);
+
+            if (metadataOnly)
+                path += "&metadata-only=true";
+            if (indexEntriesOnly)
+                path += "&debug=entries";
+            if (includes != null && includes.Length > 0)
+            {
+                path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
+            }
+
+            shoudUseGetMethod = path.Length <= convention.MaxLengthOfGetUrl;
+            return shoudUseGetMethod;
+	    }
+
 		/// <summary>
 		/// Begins the async query.
 		/// </summary>
@@ -1311,8 +1346,8 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-			var method = query.Query != null && query.Query.Length > MaxQuerySizeForGetRequest ? "POST" : "GET";
-
+            var method = ShouldQueryUseGetMethod(index, query, includes, metadataOnly, indexEntriesOnly) ? "GET" : "POST";
+            
 			return ExecuteWithReplication(method, async operationMetadata =>
 			{
 				EnsureIsNotNullOrEmpty(index, "index");
@@ -1329,7 +1364,7 @@ namespace Raven.Client.Connection.Async
 
 				if (method == "POST")
 					path += "&postQuery=true";
-
+                Debug.Assert(method == "POST"|| method == "GET" && path.Length > convention.MaxLengthOfGetUrl);
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 						new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention)
 						{
@@ -1772,7 +1807,7 @@ namespace Raven.Client.Connection.Async
 			EnsureIsNotNullOrEmpty(index, "index");
 			string path;
 			string method;
-			if (query.Query != null && query.Query.Length > MaxQuerySizeForGetRequest)
+			if (query.Query != null && query.Query.Length > convention.MaxLengthOfGetUrl)
 			{
 				path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false) + "&postQuery=true";
 				method = "POST";
@@ -1781,7 +1816,15 @@ namespace Raven.Client.Connection.Async
 			{
 				method = "GET";
 				path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: true);
+
+			    if (path.Length > convention.MaxLengthOfGetUrl)
+			    {
+                    method = "POST";
+                    path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false) + "&postQuery=true";
+			    }
 			}
+
+            Debug.Assert(method == "POST" || method == "GET" && path.Length > convention.MaxLengthOfGetUrl);
 
 			var request = jsonRequestFactory
 				.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention)
