@@ -1306,8 +1306,8 @@ namespace Raven.Client.Connection.Async
 	    {
             var shoudUseGetMethod = query.Query == null || query.Query.Length <= convention.MaxLengthOfGetUrl;
 
-            if (!shoudUseGetMethod)
-                return shoudUseGetMethod;
+            if (shoudUseGetMethod == false)
+                return false;
 
             var maxLengthUrl = url;
             // calculate max possible url

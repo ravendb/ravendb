@@ -212,9 +212,8 @@ namespace Raven.Client.Document
 		public int MaxNumberOfRequestsPerSession { get; set; }
 
         /// <summary>
-        /// Gets or sets the default max number of requests per session.
+        /// Gets or sets the default max length of a query using the GET method against a server.
         /// </summary>
-        /// <value>The max number of requests per session.</value>
         public int MaxLengthOfGetUrl { get; set; }
 
 		/// <summary>
