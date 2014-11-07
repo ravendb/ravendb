@@ -111,7 +111,7 @@ class editSqlReplication extends viewModelBase {
 
     activate(replicationToEditName: string) {
         super.activate(replicationToEditName);
-        this.dirtyFlag = new ko.DirtyFlag([this.editedReplication], false, jsonUtil.newLineNormalizingHashFunction);
+        this.dirtyFlag = new ko.DirtyFlag([this.editedReplication], false, jsonUtil.newLineNormalizingHashFunctionWithIgnoredFields(["__metadata", "metadata"]));
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 
