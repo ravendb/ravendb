@@ -67,7 +67,7 @@ namespace Raven.Database.Server
 
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
-        private readonly ConcurrentDictionary<string, TransportState> databaseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
+		private readonly ConcurrentDictionary<string, TransportState> databaseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
 
 #if DEBUG
 		private readonly ConcurrentQueue<string> recentRequests = new ConcurrentQueue<string>();
@@ -283,13 +283,13 @@ namespace Raven.Database.Server
 			{
 				TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
 				var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
-                exceptionAggregator.Execute(() =>
-                {
-                    foreach (var databaseTransportState in databaseTransportStates)
-                    {
-                        databaseTransportState.Value.Dispose();
-                    }
-                });
+				exceptionAggregator.Execute(() =>
+				{
+					foreach (var databaseTransportState in databaseTransportStates)
+					{
+						databaseTransportState.Value.Dispose();
+					}
+				});
 				exceptionAggregator.Execute(() =>
 				{
 					if (serverTimer != null)
@@ -332,7 +332,7 @@ namespace Raven.Database.Server
 							}
 							else if (dbTask.Status == TaskStatus.RanToCompletion)
 							{
-								logger.Info("Shutting down database {0} because we are shutting down the server", dbTask.Result.Name); 
+								logger.Info("Shutting down database {0} because we are shutting down the server", dbTask.Result.Name);
 								exceptionAggregator.Execute(dbTask.Result.Dispose);
 							}
 							// there is no else, the db is probably faulted
@@ -360,8 +360,8 @@ namespace Raven.Database.Server
 			string virtualDirectory = SystemConfiguration.VirtualDirectory;
 			if (virtualDirectory.EndsWith("/") == false)
 				virtualDirectory = virtualDirectory + "/";
-		    var prefix = Configuration.UseSsl ? "https://" : "http://";
-            var uri = prefix + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
+			var prefix = Configuration.UseSsl ? "https://" : "http://";
+			var uri = prefix + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
 			listener.Prefixes.Add(uri);
 
 			foreach (var configureHttpListener in ConfigureHttpListeners)
@@ -379,15 +379,15 @@ namespace Raven.Database.Server
 					HttpListenerContext context = null;
 					try
 					{
-					    context = await listener.GetContextAsync();
+						context = await listener.GetContextAsync();
 					}
 					catch (ObjectDisposedException)
 					{
-					    break;
+						break;
 					}
 					catch (Exception)
 					{
-                        continue;
+						continue;
 					}
 
 					ProcessRequest(context);
@@ -448,11 +448,11 @@ namespace Raven.Database.Server
 
 		private void IdleOperations(object state)
 		{
-            try
-            {
-                if (DatabaseHadRecentWritesRequests(SystemDatabase) == false)
-                    SystemDatabase.RunIdleOperations();
-            }
+			try
+			{
+				if (DatabaseHadRecentWritesRequests(SystemDatabase) == false)
+					SystemDatabase.RunIdleOperations();
+			}
 			catch (Exception e)
 			{
 				logger.ErrorException("Error during idle operation run for system database", e);
@@ -465,10 +465,10 @@ namespace Raven.Database.Server
 				{
 					if (documentDatabase.Value.Status != TaskStatus.RanToCompletion)
 						continue;
-				    var database = documentDatabase.Value.Result;
-				    if (DatabaseHadRecentWritesRequests(database) == false)
-                        database.RunIdleOperations();
-					if((SystemTime.UtcNow - database.WorkContext.LastWorkTime) > maxTimeDatabaseCanBeIdle)
+					var database = documentDatabase.Value.Result;
+					if (DatabaseHadRecentWritesRequests(database) == false)
+						database.RunIdleOperations();
+					if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime) > maxTimeDatabaseCanBeIdle)
 						databasesToCleanup.Add(database);
 				}
 				catch (Exception e)
@@ -489,21 +489,21 @@ namespace Raven.Database.Server
 			}
 		}
 
-	    private bool DatabaseHadRecentWritesRequests(DocumentDatabase db)
-	    {
-	         DateTime lastWrite;
-	        if (lastWriteRequest.TryGetValue(db.Name ?? Constants.SystemDatabase, out lastWrite) == false)
-	            return false;
-	        return (SystemTime.UtcNow - lastWrite).TotalMinutes < 1;
+		private bool DatabaseHadRecentWritesRequests(DocumentDatabase db)
+		{
+			DateTime lastWrite;
+			if (lastWriteRequest.TryGetValue(db.Name ?? Constants.SystemDatabase, out lastWrite) == false)
+				return false;
+			return (SystemTime.UtcNow - lastWrite).TotalMinutes < 1;
 
-	    }
+		}
 
-	    protected void CleanupDatabase(string db, bool skipIfActive)
+		protected void CleanupDatabase(string db, bool skipIfActive)
 		{
 			using (var locker = ResourcesStoresCache.TryWithAllLocks())
 			{
-			    if (locker == null)
-			        return;
+				if (locker == null)
+					return;
 
 				DateTime time;
 				Task<DocumentDatabase> databaseTask;
@@ -511,24 +511,24 @@ namespace Raven.Database.Server
 				{
 					return;
 				}
-				
+
 				if (databaseTask.Status != TaskStatus.RanToCompletion)
 				{
 					return; // still starting up
 				}
 
 				var database = databaseTask.Result;
-			    var isCurrentlyIndexing = database.IndexDefinitionStorage.IsCurrentlyIndexing();
-			    var lastWorkTime = database.WorkContext.LastWorkTime;
-			    if (skipIfActive &&
-					((SystemTime.UtcNow - lastWorkTime) < maxTimeDatabaseCanBeIdle || 
+				var isCurrentlyIndexing = database.IndexDefinitionStorage.IsCurrentlyIndexing();
+				var lastWorkTime = database.WorkContext.LastWorkTime;
+				if (skipIfActive &&
+					((SystemTime.UtcNow - lastWorkTime) < maxTimeDatabaseCanBeIdle ||
 					isCurrentlyIndexing))
-			    {
-			        logger.Info(
-			            "Will not be shutting down database {0} because is is doing work, last work at {1}, indexing: {2}",
+				{
+					logger.Info(
+						"Will not be shutting down database {0} because is is doing work, last work at {1}, indexing: {2}",
 						database.Name,
-			            lastWorkTime,
-			            isCurrentlyIndexing);
+						lastWorkTime,
+						isCurrentlyIndexing);
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
 					// This prevent us from shutting down big databases that have been left alone to do indexing work.
@@ -536,7 +536,7 @@ namespace Raven.Database.Server
 				}
 				try
 				{
-					logger.Info("Shutting down database {0}. Last work time: {1}, skipIfActive: {2}", 
+					logger.Info("Shutting down database {0}. Last work time: {1}, skipIfActive: {2}",
 						database.Name,
 						lastWorkTime,
 						skipIfActive
@@ -548,7 +548,7 @@ namespace Raven.Database.Server
 					logger.ErrorException("Could not cleanup tenant database: " + db, e);
 					return;
 				}
-				
+
 				var onDatabaseCleanupOccured = DatabaseCleanupOccured;
 				if (onDatabaseCleanupOccured != null)
 					onDatabaseCleanupOccured(db);
@@ -843,12 +843,12 @@ namespace Raven.Database.Server
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
 			CurrentOperationContext.User.Value = null;
 			LogContext.DatabaseName.Value = CurrentDatabase.Name;
-		    var dbName = CurrentDatabase.Name ?? Constants.SystemDatabase;
-            if (IsWriteRequest(ctx))
-            {
-                lastWriteRequest[dbName] = SystemTime.UtcNow;
-            }
-		    var disposable = LogManager.OpenMappedContext("database", dbName);
+			var dbName = CurrentDatabase.Name ?? Constants.SystemDatabase;
+			if (IsWriteRequest(ctx))
+			{
+				lastWriteRequest[dbName] = SystemTime.UtcNow;
+			}
+			var disposable = LogManager.OpenMappedContext("database", dbName);
 			CurrentOperationContext.RequestDisposables.Value.Add(disposable);
 			if (ctx.RequiresAuthentication &&
 				requestAuthorizer.Authorize(ctx) == false)
@@ -1049,8 +1049,8 @@ namespace Raven.Database.Server
 		protected bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
 		{
 			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
-			{				
-                return true;				
+			{
+				return true;
 			}
 
 			if (LockedDatabases.Contains(tenantId))
@@ -1062,8 +1062,8 @@ namespace Raven.Database.Server
 
 			database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			{
-			    var transportState = databaseTransportStates.GetOrAdd(tenantId, s => new TransportState());
-			    var documentDatabase = new DocumentDatabase(config, transportState);
+				var transportState = databaseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+				var documentDatabase = new DocumentDatabase(config, transportState);
 				try
 				{
 					AssertLicenseParameters(config);
@@ -1078,8 +1078,8 @@ namespace Raven.Database.Server
 					documentDatabase.Dispose();
 					throw;
 				}
-                documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
-                documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
+				documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
+				documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
 				return documentDatabase;
 			}).ContinueWith(task =>
 			{
@@ -1092,43 +1092,49 @@ namespace Raven.Database.Server
 			return true;
 		}
 
-        private void DocumentDatabaseDisposingStarted(object documentDatabase, EventArgs args)
-        {
-            try{
-                DocumentDatabase database = documentDatabase as DocumentDatabase;
-                if (database == null){
-                    return;
-                }
+		private void DocumentDatabaseDisposingStarted(object documentDatabase, EventArgs args)
+		{
+			try
+			{
+				var database = documentDatabase as DocumentDatabase;
+				if (database == null || disposed)
+				{
+					return;
+				}
 
-                ResourcesStoresCache.Set(database.Name, (dbName) =>
-                {
-	                var tcs = new TaskCompletionSource<DocumentDatabase>();
-					tcs.SetException(new ObjectDisposedException(dbName ,"Database named " + dbName + " is being disposed right now and cannot be accessed.\r\n" +
-					                                             "Access will be available when the dispose process will end"));
-	                return tcs.Task;
-                });
-            }
-            catch(Exception ex){
-                logger.WarnException("Failed to substitute database task with temporary place holder. This should not happen", ex);
-            }
-            
-        }
+				ResourcesStoresCache.Set(database.Name, (dbName) =>
+				{
+					var tcs = new TaskCompletionSource<DocumentDatabase>();
+					tcs.SetException(new ObjectDisposedException(dbName, "Database named " + dbName + " is being disposed right now and cannot be accessed.\r\n" +
+																 "Access will be available when the dispose process will end"));
+					return tcs.Task;
+				});
+			}
+			catch (Exception ex)
+			{
+				logger.WarnException("Failed to substitute database task with temporary place holder. This should not happen", ex);
+			}
 
-        private void DocumentDatabaseDisposingEnded(object documentDatabase, EventArgs args)
-        {
-            try{
-                DocumentDatabase database = documentDatabase as DocumentDatabase;
-                if (database == null){
-                    return;
-                }
+		}
 
-                ResourcesStoresCache.Remove(database.Name);
-            }
-            catch(Exception ex){
-                logger.ErrorException("Failed to remove database at the end of the disposal. This should not happen", ex);
-            }
-           
-        }
+		private void DocumentDatabaseDisposingEnded(object documentDatabase, EventArgs args)
+		{
+			try
+			{
+				var database = documentDatabase as DocumentDatabase;
+				if (database == null || disposed)
+				{
+					return;
+				}
+
+				ResourcesStoresCache.Remove(database.Name);
+			}
+			catch (Exception ex)
+			{
+				logger.ErrorException("Failed to remove database at the end of the disposal. This should not happen", ex);
+			}
+
+		}
 
 		private void AssertLicenseParameters(InMemoryRavenConfiguration config)
 		{
@@ -1155,7 +1161,7 @@ namespace Raven.Database.Server
 				// We explicitly don't want to fail here for missing bundle if the user
 				// has an valid license that expired, for example. We only perform the check
 				// if the user has a _valid_ license that doesn't have the specified bundle
-				if (ValidateLicense.CurrentLicense.Error) 
+				if (ValidateLicense.CurrentLicense.Error)
 					return;
 				foreach (var bundle in bundlesList.Where(s => string.IsNullOrWhiteSpace(s) == false && s != "PeriodicBackup"))
 				{
@@ -1247,11 +1253,11 @@ namespace Raven.Database.Server
 			bool originAllowed = SystemConfiguration.AccessControlAllowOrigin == "*" ||
 					SystemConfiguration.AccessControlAllowOrigin.Split(' ')
 						.Any(o => o == ctx.Request.Headers["Origin"]);
-			if(originAllowed)
+			if (originAllowed)
 			{
 				ctx.Response.AddHeader("Access-Control-Allow-Origin", ctx.Request.Headers["Origin"]);
 			}
-			
+
 			ctx.Response.AddHeader("Access-Control-Max-Age", SystemConfiguration.AccessControlMaxAge);
 			ctx.Response.AddHeader("Access-Control-Allow-Methods", SystemConfiguration.AccessControlAllowMethods);
 			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlRequestHeaders))
@@ -1443,8 +1449,8 @@ namespace Raven.Database.Server
 				SerializeError(ctx, new
 				{
 					Url = ctx.Request.RawUrl,
-                    ActualETag = e.ActualETag ?? Etag.Empty,
-                    ExpectedETag = e.ExpectedETag ?? Etag.Empty,
+					ActualETag = e.ActualETag ?? Etag.Empty,
+					ExpectedETag = e.ExpectedETag ?? Etag.Empty,
 					Error = e.Message
 				});
 			}
