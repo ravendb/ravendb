@@ -805,6 +805,7 @@
     <Compile Include="MailingList\ConcurrencyTests.cs" />
     <Compile Include="MailingList\ConcurrencyTests2.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
+    <Compile Include="MailingList\DanielPilon.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
     <Compile Include="MailingList\DictionaryOfEnum.cs" />
     <Compile Include="MailingList\DifferentKeysWithTheSameFirst127CharactersAreDifferent.cs" />
