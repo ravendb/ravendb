@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Helpers;
 using Xunit;
@@ -53,17 +54,23 @@ namespace Raven.Tests.Issues
                 var waits = 0;
                 SystemTime.WaitCalled = ms => waits++;
 
-                var op = store.DatabaseCommands.DeleteByIndex("Users/ByName",
-                    new IndexQuery {Query = "Name:Users*"}
-                    , new BulkOperationOptions {AllowStale = false, MaxOpsPerSec = null, StaleTimeout = TimeSpan.FromSeconds(15)});
+	            var op = store.DatabaseCommands.DeleteByIndex("Users/ByName",
+		            new IndexQuery {Query = "Name:Users*"}
+		            , new BulkOperationOptions
+		            {
+			            AllowStale = false,
+			            MaxOpsPerSec = null,
+			            StaleTimeout = TimeSpan.FromSeconds(15)
+		            });
 
                 store.DatabaseCommands.Admin.StartIndexing();
 
                 op.WaitForCompletion();
                 using (var session = store.OpenSession())
                 {
-                    var results = from user in session.Query<User>() select user;
-                    Assert.True(waits > 0 && !results.Any());
+                    Assert.True(waits > 0);
+
+	                Assert.Empty(session.Query<User>());
                 }
                             
             }
