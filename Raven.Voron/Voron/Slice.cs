@@ -2,6 +2,7 @@
 using System.Text;
 using Voron.Impl;
 using Voron.Trees;
+using Voron.Util.Conversion;
 
 namespace Voron
 {
@@ -126,6 +127,18 @@ namespace Voron
 			// this is used for debug purposes only
 			if (Options != SliceOptions.Key)
 				return Options.ToString();
+
+			if (Size == sizeof (long))
+			{
+				if (Array != null && Array[0] == 0)
+					return "I64 = " +  EndianBitConverter.Big.ToInt64(Array,0);
+				if (*Pointer == 0)
+				{
+					var bytes = new byte[sizeof(long)];
+					CopyTo(bytes);
+					return "I64 = " + EndianBitConverter.Big.ToInt64(bytes, 0);
+				}
+			}
 
 			if (Array != null)
 				return Encoding.UTF8.GetString(Array,0, Size);

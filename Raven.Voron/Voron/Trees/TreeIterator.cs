@@ -74,8 +74,9 @@ namespace Voron.Trees
 		/// </summary>
 		public bool DeleteCurrentAndMoveNext()
 		{
-			_tree.Delete(CurrentKey);
-			return MovePrev() && MoveNext();
+			var currentKey = CurrentKey;
+			_tree.Delete(currentKey);
+			return Seek(currentKey);
 		}
 
 		public NodeHeader* Current
