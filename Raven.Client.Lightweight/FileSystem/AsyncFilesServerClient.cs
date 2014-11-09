@@ -635,7 +635,7 @@ namespace Raven.Client.FileSystem
 
             return ExecuteWithReplication("PUT", async operation =>
             {
-                await UploadAsyncImpl(operation, filename, source, metadata, false, size);
+                await UploadAsyncImpl(operation, filename, source, metadata, false, size).ConfigureAwait(false);
             });
         }
 
@@ -670,7 +670,7 @@ namespace Raven.Client.FileSystem
 
             try
             {
-                await request.WriteAsync(source);
+                await request.WriteAsync(source).ConfigureAwait(false);
                 if (request.ResponseStatusCode == HttpStatusCode.BadRequest)
                     throw new BadRequestException("There is a mismatch between the size reported in the RavenFS-Size header and the data read server side.");
             }
