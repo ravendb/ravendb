@@ -414,7 +414,7 @@
       <Name>Raven.Database</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Migration\Raven.Migration.csproj">
-      <Project>{E6C2EAA5-B5BC-4BE2-B981-0064E819DBEB}</Project>
+      <Project>{e6c2eaa5-b5bc-4be2-b981-0064e819dbeb}</Project>
       <Name>Raven.Migration</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">

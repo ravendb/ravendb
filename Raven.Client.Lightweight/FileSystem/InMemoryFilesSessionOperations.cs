@@ -271,7 +271,7 @@ namespace Raven.Client.FileSystem
 	            foreach (var op in changes.Operations)
                 {
                     AssertConflictsAreNotAffectingOperation(op);
-                    var operationResult = await op.Execute((IAsyncFilesSession)this);
+                    var operationResult = await op.Execute((IAsyncFilesSession)this).ConfigureAwait(false);
                     if (operationResult != null)
                         results.Add(operationResult);
                 }
