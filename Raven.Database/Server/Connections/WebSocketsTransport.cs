@@ -51,7 +51,7 @@ namespace Raven.Database.Server.Connections
     using WebSocketReceiveResult = Tuple<int, // type
         bool, // end of message?
         int>;
-    using Raven.Database.Server.RavenFS; // count
+    using Raven.Database.FileSystem; // count
 
     public class WebSocketTransportFactory
     {
@@ -261,7 +261,7 @@ namespace Raven.Database.Server.Connections
         {
             try
             {
-                var localPath = _context.Request.Uri.LocalPath;
+	            var localPath = NormalizeLocalPath(_context.Request.Uri.LocalPath);
                 var resourcePath = localPath.Substring(0, localPath.Length - ExpectedRequestSuffix.Length);
 
                 var resourcePartsPathParts = resourcePath.Split('/');
@@ -379,6 +379,20 @@ namespace Raven.Database.Server.Connections
         {
             ActiveTenant.TransportState.Register(this);
         }
+
+	    private string NormalizeLocalPath(string localPath)
+	    {
+		    if (string.IsNullOrEmpty(localPath)) 
+				return null;
+
+			if (localPath.StartsWith(_options.SystemDatabase.Configuration.VirtualDirectory))
+				localPath = localPath.Substring(_options.SystemDatabase.Configuration.VirtualDirectory.Length);
+
+			if (localPath.StartsWith("/") == false)
+				localPath = "/" + localPath;
+
+		    return localPath;
+	    }
     }
 
     public class WatchTrafficWebsocketTransport : WebSocketsTransport

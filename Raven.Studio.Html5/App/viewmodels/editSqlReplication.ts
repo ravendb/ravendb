@@ -69,7 +69,7 @@ class editSqlReplication extends viewModelBase {
         var popOverSettings: PopoverOptions = {
             html: true,
             trigger: 'hover',
-            content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.OrderLines.length,<br/>   TotalCost: 0<br/>};<br/><br/>replicateToOrders(orderData);<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.OrderLines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.OrderLines[i];<br/>   orderData.TotalCost += line.Cost;<br/>   replicateToOrderLines({"<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: line.Cost<br/>   });<br/>}</pre>',
+			content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.Lines.length,<br/>   TotalCost: 0<br/>};<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.Lines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.Lines[i];<br/>   <span class="code-keyword">var</span> lineCost = ((line.Quantity * line.PricePerUnit) * (1 - line.Discount));<br/>   orderData.TotalCost += lineCost;<br/><br/>   replicateToOrderLines({"<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: lineCost<br/>   });<br/>}<br/><br/>replicateToOrders(orderData);</pre>',
             selector: '.script-label',
             placement: "right"
         };
@@ -111,7 +111,7 @@ class editSqlReplication extends viewModelBase {
 
     activate(replicationToEditName: string) {
         super.activate(replicationToEditName);
-        this.dirtyFlag = new ko.DirtyFlag([this.editedReplication], false, jsonUtil.newLineNormalizingHashFunction);
+        this.dirtyFlag = new ko.DirtyFlag([this.editedReplication], false, jsonUtil.newLineNormalizingHashFunctionWithIgnoredFields(["__metadata", "metadata"]));
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
 

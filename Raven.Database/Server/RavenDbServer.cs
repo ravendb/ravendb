@@ -15,7 +15,7 @@ using Raven.Database.Config;
 using Raven.Database.Embedded;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
-using Raven.Database.Server.RavenFS;
+using Raven.Database.FileSystem;
 using Raven.Database.Server.WebApi;
 
 namespace Raven.Server

@@ -15,14 +15,29 @@ class getDocumentsByEntityNameCommand extends commandBase {
             query: "Tag:" + this.collection.name,
             start: this.skip,
             pageSize: this.take,
-            sort: "-LastModified"
+            sort: "-LastModifiedTicks"
         };
 
         var resultsSelector = (dto: collectionInfoDto) => new collectionInfo(dto);
         var url =  "/indexes/Raven/DocumentsByEntityName";
         var documentsTask = $.Deferred();
         this.query(url, args, this.collection.ownerDatabase, resultsSelector)
-            .then(collection => {
+			.fail(response => {
+				if (response.status == 500) {
+					// old style index, probably, try again without the LastModifiedTicks
+					args.sort = "-LastModified";
+					this.query(url, args, this.collection.ownerDatabase, resultsSelector)
+						.fail(_ => documentsTask.reject())
+						.then(collection => {
+							var items = collection.results;
+							var resultSet = new pagedResultSet(items, collection.totalResults);
+							documentsTask.resolve(resultSet);
+						});
+					return;
+				}
+				documentsTask.reject()
+	        })
+			.then(collection => {
                 var items = collection.results;
                 var resultSet = new pagedResultSet(items, collection.totalResults);
                 documentsTask.resolve(resultSet);

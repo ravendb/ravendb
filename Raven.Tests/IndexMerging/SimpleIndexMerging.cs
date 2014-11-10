@@ -180,7 +180,10 @@ namespace Raven.Tests.IndexMerging
 
                 var newMergeSuggestion = suggestions.Suggestions[0];
                 Assert.Equal(new[] { "test1", "test2", "test3" }, newMergeSuggestion.CanMerge);
-                var expectedUnmergebleDict = new Dictionary<string, string> {  {"Raven/DocumentsByEntityName", "Cannot merge indexes that are using a let clause"},{ "test4", "Can't find any other index to merge this with" } };
+                var expectedUnmergebleDict = new Dictionary<string, string>
+                {
+	                { "Raven/DocumentsByEntityName", "Can't find any other index to merge this with" }
+                };
 
                 bool res = DataDictionaryCompare(suggestions.Unmergables, expectedUnmergebleDict);
                 Assert.Equal(true, res);
@@ -220,12 +223,11 @@ namespace Raven.Tests.IndexMerging
 
                 });
               var suggestions = store.DatabaseCommands.GetIndexMergeSuggestions();
-              Assert.Equal(5, suggestions.Unmergables.Count);
+              Assert.Equal(4, suggestions.Unmergables.Count);
 
 
                 var unmergebleExpectedDict = new Dictionary<string, string>
                 {
-                    {"Raven/DocumentsByEntityName", "Cannot merge indexes that are using a let clause"},
                     {"test1", "Cannot merge indexes that have a where clause"},
                     {"test6", "Cannot merge map/reduce indexes"},
                     {"test7", "Cannot merge indexes that are using a let clause"},

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -44,7 +45,6 @@ namespace Raven.Client.Connection.Async
 	/// </summary>
 	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncInfoDatabaseCommands
 	{
-		private const int MaxQuerySizeForGetRequest = 8 * 1024;
 		private readonly ProfilingInformation profilingInformation;
 		private readonly IDocumentConflictListener[] conflictListeners;
 		private readonly string url;
@@ -1301,6 +1301,7 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
+
 		/// <summary>
 		/// Begins the async query.
 		/// </summary>
@@ -1311,8 +1312,9 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-			var method = query.Query != null && query.Query.Length > MaxQuerySizeForGetRequest ? "POST" : "GET";
-
+			var method = (query.Query == null || query.Query.Length <= convention.MaxLengthOfQueryUsingGetUrl)
+				? "GET" : "POST";
+            
 			return ExecuteWithReplication(method, async operationMetadata =>
 			{
 				EnsureIsNotNullOrEmpty(index, "index");
@@ -1329,7 +1331,6 @@ namespace Raven.Client.Connection.Async
 
 				if (method == "POST")
 					path += "&postQuery=true";
-
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 						new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention)
 						{
@@ -1772,15 +1773,15 @@ namespace Raven.Client.Connection.Async
 			EnsureIsNotNullOrEmpty(index, "index");
 			string path;
 			string method;
-			if (query.Query != null && query.Query.Length > MaxQuerySizeForGetRequest)
+			if (query.Query != null && query.Query.Length > convention.MaxLengthOfQueryUsingGetUrl)
 			{
-				path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false) + "&postQuery=true";
+				path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false);
 				method = "POST";
 			}
 			else
 			{
 				method = "GET";
-				path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: true);
+				path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false);
 			}
 
 			var request = jsonRequestFactory

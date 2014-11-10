@@ -42,7 +42,7 @@ namespace Raven.Database.Server.Controllers
     }
 }
 
-namespace Raven.Database.Server.RavenFS.Controllers
+namespace Raven.Database.FileSystem.Controllers
 {
 
     public class FsSingleAuthTokenController : RavenFsApiController

@@ -137,6 +137,8 @@ namespace Raven.Client.Connection
 		{
 			foreach (var response in responses)
 			{
+				if(response == null)
+					continue;
 				if (response.RequestHasErrors() && response.Status != 409)
 					continue;
 
@@ -150,8 +152,9 @@ namespace Raven.Client.Connection
 					if (results == null)
 						continue;
 
-					foreach (RavenJObject docResult in results)
+					foreach (RavenJToken value in results)
 					{
+						var docResult = value as RavenJObject;
 						if (docResult == null)
 							return;
 

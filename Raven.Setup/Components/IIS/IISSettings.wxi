@@ -15,7 +15,7 @@
                      Type="raw" />
   </Property>
 
-  <Property Id="WEBSITE_VD" Value="RavenDB">
+  <Property Id="WEBSITE_VD">
     <RegistrySearch Id="WebsiteVirtualDirectoryFromRegistry"
                      Root="HKLM"
                      Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"

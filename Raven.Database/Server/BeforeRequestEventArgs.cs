@@ -2,7 +2,7 @@
 using Raven.Database.Counters;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Controllers;
-using Raven.Database.Server.RavenFS;
+using Raven.Database.FileSystem;
 
 namespace Raven.Database.Server
 {

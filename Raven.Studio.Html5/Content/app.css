@@ -1,4 +1,4 @@
-﻿@font-face {
+@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -7242,6 +7242,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 #logsContainer .selected .column {
   background-color: #ffffcc;
+  color: black;
 }
 #logsContainer .logRecord .logName .logName-actions-container {
   display: none;
@@ -7856,6 +7857,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 #indexErrorsContainer table .selected td,
 #requestTracingContainer table .selected td {
   background-color: #ffffcc;
+  color: black;
 }
 #logsContainer .log-details,
 #alertsContainer .log-details,
@@ -8320,4 +8322,3 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   word-break: break-all;
   white-space: pre-line;
 }
-/*# sourceMappingURL=app.css.map */

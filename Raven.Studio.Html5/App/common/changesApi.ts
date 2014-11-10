@@ -89,7 +89,8 @@ class changesApi {
         var connectionOpened: boolean = false;
 
         var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        this.webSocket = new WebSocket(wsProtocol + window.location.host + this.resourcePath + '/changes/websocket?' + connectionString);
+	    var url = wsProtocol + window.location.host + this.resourcePath + '/changes/websocket?' + connectionString;
+	    this.webSocket = new WebSocket(url);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
@@ -166,12 +167,12 @@ class changesApi {
         if ("EventSource" in window) {
             this.connect(this.connectEventSource);
             warningMessage = "Your server doesn't support the WebSocket protocol!";
-            details = "EventSource API is going to be used instead. However, multi tab usage isn't supported. " +
+            details = "EventSource API is going to be used instead. However, multi tab usage isn't supported.\r\n" +
                 "WebSockets are only supported on servers running on Windows Server 2012 and equivalent.";
         } else {
             this.connectToChangesApiTask.reject();
             warningMessage = "Changes API is Disabled!";
-            details = "Your server doesn't support the WebSocket protocol and your browser doesn't support the EventSource API. " +
+            details = "Your server doesn't support the WebSocket protocol and your browser doesn't support the EventSource API.\r\n" +
                 "In order to use it, please use a browser that supports the EventSource API.";
         }
 

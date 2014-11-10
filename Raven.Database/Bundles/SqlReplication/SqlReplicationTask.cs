@@ -126,7 +126,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					accessor.Lists.Set(GetSqlReplicationDeletionName(config), id, metadata, UuidType.Documents);
 				}
 				if (hasChanges)
-					Database.WorkContext.NotifyAboutWork();
+					Database.WorkContext.ShouldNotifyAboutWork(() => "recorded a deleted document " + id);
 			});
 			if (log.IsDebugEnabled)
 				log.Debug(() => "recorded a deleted document " + id);

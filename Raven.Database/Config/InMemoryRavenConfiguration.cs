@@ -20,7 +20,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Util;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -923,14 +923,16 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// Limits the number of map outputs that a simple index is allowed to create for a one source document. If a map operation applied to the one document
-		/// produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+		/// produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document will be skipped and
+		/// the appropriate error message will be added to the indexing errors.
 		/// Default value: 15. In order to disable this check set value to -1.
 		/// </summary>
 		public int MaxSimpleIndexOutputsPerDocument { get; set; }
 
 		/// <summary>
 		/// Limits the number of map outputs that a map-reduce index is allowed to create for a one source document. If a map operation applied to the one document
-		/// produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+		/// produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document will be skipped and
+		/// the appropriate error message will be added to the indexing errors.
 		/// Default value: 50. In order to disable this check set value to -1.
 		/// </summary>
 		public int MaxMapReduceIndexOutputsPerDocument { get; set; }

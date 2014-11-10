@@ -157,16 +157,11 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/streams/query/{*id}")]
 		public async Task<HttpResponseMessage> SteamQueryPost(string id)
 		{
-			if ("true".Equals(GetQueryStringValue("postQuery"), StringComparison.InvariantCultureIgnoreCase))
-			{
-				var postedQuery = await ReadStringAsync();
+			var postedQuery = await ReadStringAsync();
 
-				SetPostRequestQuery(postedQuery);
+			SetPostRequestQuery(postedQuery);
 
-				return SteamQueryGet(id);
-			}
-
-			return GetMessageWithString("Not idea how to handle a POST on " + id + " without a posted query", HttpStatusCode.BadRequest);
+			return SteamQueryGet(id);
 		}
 
 		public class StreamQueryContent : HttpContent

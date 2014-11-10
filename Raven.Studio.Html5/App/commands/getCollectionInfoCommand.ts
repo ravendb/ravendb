@@ -11,7 +11,7 @@ class getCollectionInfoCommand extends commandBase {
 
     execute(): JQueryPromise<collectionInfo> {
         var args = {
-            query: "Tag:" + (this.collection.isAllDocuments ? '' : this.collection.name),
+            query: "Tag:" + (this.collection.isAllDocuments ? '*' : this.collection.name),
             start: 0,
             pageSize: 0
         };

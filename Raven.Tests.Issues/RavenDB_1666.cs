@@ -11,7 +11,7 @@ using System.Web.Http;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Controllers.Admin;
-using Raven.Database.Server.RavenFS.Controllers;
+using Raven.Database.FileSystem.Controllers;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -72,6 +72,7 @@ namespace Raven.Tests.Issues
 			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseToggleDisable(string.Empty, true));
 			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseBatchToggleDisable(false));
 			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseBatchToggleDisable(true));
+			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseToggleIndexingDisable(null, false));
             RegisterRouteForOnlySysDb<DatabasesController>(a => a.Databases(false));
 			RegisterRouteForOnlySysDb<DatabasesController>(a => a.Databases(true));
             RegisterRouteForOnlySysDb<DebugController>(a => a.Routes());

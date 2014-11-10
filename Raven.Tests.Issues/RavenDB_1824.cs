@@ -6,7 +6,7 @@
 
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Extensions;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.FileSystem.Extensions;
 using Raven.Tests.Common;
 using System.Text;
 using Xunit;
