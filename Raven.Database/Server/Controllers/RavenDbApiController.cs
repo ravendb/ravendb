@@ -58,7 +58,7 @@ namespace Raven.Database.Server.Controllers
 			var result = new HttpResponseMessage();
 			if (InnerRequest.Method.Method != "OPTIONS")
 			{
-				result = await RequestManager.HandleActualRequest(this, async () =>
+				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
 				{
                     RequestManager.SetThreadLocalState(InnerHeaders, DatabaseName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
@@ -226,8 +226,13 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-	
-		protected bool EnsureSystemDatabase()
+	    public override InMemoryRavenConfiguration ResourceConfiguration
+	    {
+	        get { return Database.Configuration; }
+	    }
+
+
+	    protected bool EnsureSystemDatabase()
 		{
 			return DatabasesLandlord.SystemDatabase == Database;
 		}

@@ -5,13 +5,14 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using System.Web.Http.Controllers;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -143,6 +144,7 @@ namespace Raven.Database.Server.WebApi
 
 
         public async Task<HttpResponseMessage> HandleActualRequest(RavenBaseApiController controller,
+                                                                   HttpControllerContext controllerContext,
                                                                    Func<Task<HttpResponseMessage>> action,
                                                                    Func<HttpException, HttpResponseMessage> onHttpException)
         {
@@ -162,11 +164,19 @@ namespace Raven.Database.Server.WebApi
 
                 if (controller.SetupRequestToProperDatabase(this))
                 {
-                    response = await action();
+                    if (controller.ResourceConfiguration.RejectClientsMode && controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
+                    {
+                        response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                        {
+                            Content = new StringContent("This service is not accepting clients calls")
+                        };
+                    }
+                    else
+                    {
+                        response = await action();
+                    }
                 }
             }
-
-
             catch (HttpException httpException)
             {
                 response = onHttpException(httpException);
@@ -404,7 +414,7 @@ namespace Raven.Database.Server.WebApi
                 return;
 
 
-            
+
 
             NotifyTrafficWatch(
             new TrafficWatchNotification()
@@ -414,32 +424,32 @@ namespace Raven.Database.Server.WebApi
                 CustomInfo = logHttpRequestStatsParams.CustomInfo,
                 HttpMethod = logHttpRequestStatsParams.HttpMethod,
                 ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
-				TenantName = NormalizeTennantName(databaseName),
+                TenantName = NormalizeTennantName(databaseName),
                 TimeStamp = SystemTime.UtcNow
             }
             );
         }
 
 
-		private string NormalizeTennantName(string resourceName)
-		{
-			if (string.IsNullOrEmpty(resourceName))
-			{
-				return "<system>";
-			}
+        private string NormalizeTennantName(string resourceName)
+        {
+            if (string.IsNullOrEmpty(resourceName))
+            {
+                return "<system>";
+            }
 
-			if (resourceName.IndexOf("counters/") == 0)
-			{
-				return resourceName.Substring(9);
-			}
+            if (resourceName.IndexOf("counters/") == 0)
+            {
+                return resourceName.Substring(9);
+            }
 
-			if (resourceName.IndexOf("fs/") == 0)
-			{
-				return resourceName.Substring(3);
-			}
+            if (resourceName.IndexOf("fs/") == 0)
+            {
+                return resourceName.Substring(3);
+            }
 
-			return resourceName;
-		}
+            return resourceName;
+        }
         private void LogHttpRequestStats(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, long curReq)
         {
             if (Logger.IsDebugEnabled == false)
@@ -495,7 +505,7 @@ namespace Raven.Database.Server.WebApi
 
                 if (!resourceHttpTraces.TryGetValue(trafficWatchNotification.TenantName, out resourceEventTransports) || resourceEventTransports.Count == 0)
                     return;
-                
+
                 foreach (var eventTransport in resourceEventTransports)
                 {
                     eventTransport.SendAsync(notificationMessage);

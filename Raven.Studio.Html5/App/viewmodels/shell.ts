@@ -407,6 +407,9 @@ class shell extends viewModelBase {
 
                         var indexingDisabled = this.getIndexingDisbaledValue(dto.Settings["Raven/IndexingDisabled"]);
                         existingResource.indexingDisabled(indexingDisabled);
+
+                        var isRejectclientsEnabled = this.getIndexingDisbaledValue(dto.Settings["Raven/RejectClientsModeEnabled"]);
+                        existingResource.rejectClientsMode(isRejectclientsEnabled);
                     }
                 });
             }

@@ -899,6 +899,7 @@ interface databaseDto {
     Disabled: boolean;
     Bundles: string[];
     IndexingDisabled: boolean;
+    RejectClientsEnabled: boolean;
 }
 
 interface customFunctionsDto {

@@ -147,6 +147,9 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/TaskScheduler"], (string) null);
 			AllowLocalAccessWithoutAuthorization =
 				new BooleanSetting(settings["Raven/AllowLocalAccessWithoutAuthorization"], false);
+		    RejectClientsModeEnabled =
+                new BooleanSetting(settings[Constants.RejectClientsModeEnabled], false);
+
 			MaxIndexCommitPointStoreTimeInterval =
 				new TimeSpanSetting(settings["Raven/MaxIndexCommitPointStoreTimeInterval"], TimeSpan.FromMinutes(5),
 				                    TimeSpanArgumentType.FromParse);
@@ -309,6 +312,9 @@ namespace Raven.Database.Config
 		public StringSetting TaskScheduler { get; private set; }
 
 		public BooleanSetting AllowLocalAccessWithoutAuthorization { get; private set; }
+
+
+        public BooleanSetting RejectClientsModeEnabled { get; private set; }
 
 		public TimeSpanSetting MaxIndexCommitPointStoreTimeInterval { get; private set; }
 

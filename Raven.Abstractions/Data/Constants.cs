@@ -55,6 +55,7 @@ namespace Raven.Abstractions.Data
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
 		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
+	    public const string RejectClientsModeEnabled = "Raven/RejectClientsModeEnabled";
 
 		// Indexing
 		public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
