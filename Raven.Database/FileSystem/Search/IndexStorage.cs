@@ -4,7 +4,9 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Util;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
 using System;
@@ -23,6 +25,8 @@ namespace Raven.Database.FileSystem.Search
     /// </summary>
     public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
+        private const string IndexVersion = "1.0.0.0";
+
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
         private static readonly ILog startupLog = LogManager.GetLogger(typeof(IndexStorage).FullName + ".Startup");
 
@@ -30,9 +34,11 @@ namespace Raven.Database.FileSystem.Search
 		private static readonly string[] NumericIndexFields = new[] { "__size_numeric" };
 
         private readonly FileStream crashMarker;
+
+        private readonly string name;
         private readonly InMemoryRavenConfiguration configuration;
 
-		private readonly string path;
+		private readonly string indexDirectory;
 		private FSDirectory directory;
 		private LowerCaseKeywordAnalyzer analyzer;
 		private IndexWriter writer;
@@ -42,21 +48,24 @@ namespace Raven.Database.FileSystem.Search
 
         private bool resetIndexOnUncleanShutdown = false;
 
-        public IndexStorage(InMemoryRavenConfiguration configuration)
+        public IndexStorage(string name, InMemoryRavenConfiguration configuration)
 		{
             if (configuration == null)
                 throw new ArgumentNullException("configuration");
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("name");
 
+            this.name = name;
             this.configuration = configuration;
 
             try
             {
-                this.path = configuration.FileSystem.IndexStoragePath;
+                this.indexDirectory = configuration.FileSystem.IndexStoragePath;
 
-                if (System.IO.Directory.Exists(path) == false)
-                    System.IO.Directory.CreateDirectory(path);
+                if (System.IO.Directory.Exists(indexDirectory) == false)
+                    System.IO.Directory.CreateDirectory(indexDirectory);
 
-                var crashMarkerPath = Path.Combine(path, "indexing.crash-marker");
+                var crashMarkerPath = Path.Combine(indexDirectory, "indexing.crash-marker");
 
                 if (File.Exists(crashMarkerPath))
                 {
@@ -73,16 +82,7 @@ namespace Raven.Database.FileSystem.Search
                 // a power outage while the server was running.
                 crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 
-                this.directory = FSDirectory.Open(new DirectoryInfo(path));
-                if (IndexWriter.IsLocked(directory))
-                    IndexWriter.Unlock(directory);
-
-                this.analyzer = new LowerCaseKeywordAnalyzer();
-                this.snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-                this.writer = new IndexWriter(directory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
-                this.writer.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
-                
-                this.currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
+                OpenIndexOnStartup();
             }
             catch
             {
@@ -90,6 +90,169 @@ namespace Raven.Database.FileSystem.Search
                 throw;
             }            
 		}
+
+        private void OpenIndexOnStartup()
+        {            
+            this.analyzer = new LowerCaseKeywordAnalyzer();
+            this.snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+
+            bool resetTried = false;
+            bool recoveryTried = false;
+            while (true)
+            {
+                FSDirectory luceneDirectory = null;
+                try
+                {
+                    luceneDirectory = OpenOrCreateLuceneDirectory(this.indexDirectory);
+
+                    // TODO: CheckIndexState ... 
+
+                    this.directory = luceneDirectory;
+
+                    this.writer = new IndexWriter(directory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
+                    this.writer.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+
+                    this.currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
+
+                    break;
+                }
+                catch (Exception e)
+                {
+                    if (resetTried)
+                        throw new InvalidOperationException("Could not open / create index for file system '" + this.name + "', reset already tried", e);
+
+                    if (recoveryTried == false && luceneDirectory != null)
+                    {
+                        recoveryTried = true;
+                        startupLog.WarnException("Could not open index for file system '" + this.name + "'. Trying to recover index", e);
+                        startupLog.Info("Recover functionality is still not implemented. Skipping.");
+                    }
+                    else
+                    {
+                        resetTried = true;
+                        startupLog.WarnException("Could not open index for file system '" + this.name + "'. Recovery operation failed, forcibly resetting index", e);
+
+                        TryResettingIndex();                        
+                    }
+                }
+            }          
+        }
+
+        private void TryResettingIndex()
+        {
+            try
+            {
+                IOExtensions.DeleteDirectory(this.indexDirectory);
+			}
+			catch (Exception exception)
+			{
+				throw new InvalidOperationException("Could not reset index for file system: " + this.name, exception);
+			}
+        }
+
+        private Lucene.Net.Store.FSDirectory OpenOrCreateLuceneDirectory(string path)
+        {
+            var luceneDirectory = FSDirectory.Open(new DirectoryInfo(path));
+
+            try
+            {
+                // We check if the directory already exists
+                if (!IndexReader.IndexExists(luceneDirectory))
+                {
+                    WriteIndexVersion(luceneDirectory);
+
+                    //creating index structure if we need to
+                    new IndexWriter(luceneDirectory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
+                }
+                else
+                {
+                    // We prepare in case we have to change the index definition to have a proper upgrade path.
+                    EnsureIndexVersionMatches(luceneDirectory);
+
+                    if (luceneDirectory.FileExists("write.lock")) // force lock release, because it was still open when we shut down
+                    {
+                        IndexWriter.Unlock(luceneDirectory);
+
+                        // for some reason, just calling unlock doesn't remove this file
+                        luceneDirectory.DeleteFile("write.lock");
+                    }
+
+                    if (luceneDirectory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
+                    {
+                        if (resetIndexOnUncleanShutdown)
+                            throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", this.name, path));
+
+                        CheckIndexAndTryToFix(luceneDirectory);
+                        luceneDirectory.DeleteFile("writing-to-index.lock");
+                    }
+                }
+
+                return luceneDirectory;
+            }
+            catch
+            {
+                luceneDirectory.Dispose();
+                throw;
+            }
+        }
+
+        private const string indexVersionFilename = "index.version";
+
+        private void EnsureIndexVersionMatches(FSDirectory directory)
+        {
+            if (directory.FileExists(indexVersionFilename) == false)
+                throw new InvalidOperationException("Could not find " + indexVersionFilename + " for '" + this.name + "', resetting index");
+            
+            using (var indexInput = directory.OpenInput(indexVersionFilename))
+            {
+                var versionToCheck = IndexVersion;
+                var versionFromDisk = indexInput.ReadString();
+                if (versionFromDisk != versionToCheck)
+                    throw new InvalidOperationException("Index for " + this.name + " is of version " + versionFromDisk +
+                                                        " which is not compatible with " + versionToCheck + ", resetting index");
+            }
+        }
+
+        private void WriteIndexVersion(FSDirectory directory)
+        {
+            using (var indexOutput = directory.CreateOutput(indexVersionFilename))
+            {
+                indexOutput.WriteString(IndexVersion);
+                indexOutput.Flush();
+            }
+        }
+
+        private void CheckIndexAndTryToFix(FSDirectory directory)
+        {
+            startupLog.Warn(string.Format("Unclean shutdown detected on file system '{0}', checking the index for errors. This may take a while.", this.name));
+
+            var memoryStream = new MemoryStream();
+            var stringWriter = new StreamWriter(memoryStream);
+            var checkIndex = new CheckIndex(directory);
+
+            if (startupLog.IsWarnEnabled)
+                checkIndex.SetInfoStream(stringWriter);
+
+            var sp = Stopwatch.StartNew();
+            var status = checkIndex.CheckIndex_Renamed_Method();
+            sp.Stop();
+
+            if (startupLog.IsWarnEnabled)
+            {
+                startupLog.Warn("Checking index for file system '{0}' took: {1}, clean: {2}", this.name, sp.Elapsed, status.clean);
+                memoryStream.Position = 0;
+
+                log.Warn(new StreamReader(memoryStream).ReadToEnd());
+            }
+
+            if (status.clean)
+                return;
+
+            startupLog.Warn("Attempting to fix index of file system: '{0}'", this.name);
+            sp.Restart();
+            checkIndex.FixIndex(status);
+            startupLog.Warn("Fixed index of file system '{0}' in {1}", this.name, sp.Elapsed);
+        }
 
 		public string[] Query(string query, string[] sortFields, int start, int pageSize, out int totalResults)
 		{
@@ -238,13 +401,31 @@ namespace Raven.Database.FileSystem.Search
 
 		public void Dispose()
 		{
-			analyzer.Close();
-			if (currentIndexSearcherHolder != null)
-			{
-				currentIndexSearcherHolder.SetIndexSearcher(null);
-			}
-			writer.Dispose();
-			directory.Dispose();
+            var exceptionAggregator = new ExceptionAggregator(log, string.Format("Could not properly close index storage for file system '{0}'", this.name));
+
+            exceptionAggregator.Execute( () => analyzer.Close());
+            exceptionAggregator.Execute( () => 
+            {
+                if (currentIndexSearcherHolder != null)
+				    currentIndexSearcherHolder.SetIndexSearcher(null);
+            });
+            exceptionAggregator.Execute( () => 
+            {
+                if (crashMarker != null)
+				    crashMarker.Dispose();
+            });
+            exceptionAggregator.Execute( () => 
+            {
+                if (writer != null)
+                    writer.Dispose();
+            });
+            exceptionAggregator.Execute( () => 
+            { 
+                if (directory != null)
+                    directory.Dispose();
+            });
+
+            exceptionAggregator.ThrowIfNeeded();
 		}
 
 		public void Delete(string key)
@@ -324,7 +505,7 @@ namespace Raven.Database.FileSystem.Search
                 using (var neededFilesWriter = File.CreateText(neededFilePath))
                 {
                     var segmentsFileName = "segments.gen";
-                    var segmentsFullPath = Path.Combine(path, segmentsFileName);
+                    var segmentsFullPath = Path.Combine(indexDirectory, segmentsFileName);
                     File.Copy(segmentsFullPath, Path.Combine(saveToFolder, segmentsFileName));
                     allFilesWriter.WriteLine(segmentsFileName);
                     neededFilesWriter.WriteLine(segmentsFileName);
@@ -333,7 +514,7 @@ namespace Raven.Database.FileSystem.Search
                     hasSnapshot = true;
                     foreach (var fileName in commit.FileNames)
                     {
-                        var fullPath = Path.Combine(path, fileName);
+                        var fullPath = Path.Combine(indexDirectory, fileName);
 
                         if (".lock".Equals(Path.GetExtension(fullPath), StringComparison.InvariantCultureIgnoreCase))
                             continue;

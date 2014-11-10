@@ -132,7 +132,8 @@ namespace Raven.Smuggler
                     {
                         throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", webException.Message), webException);
                     }
-                } throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
+                } 
+                throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
             }
             finally
             {

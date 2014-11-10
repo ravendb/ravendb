@@ -51,16 +51,16 @@ namespace Raven.Database.FileSystem
 		    this.Name = name;
 			this.systemConfiguration = systemConfiguration;
 
-            storage = CreateTransactionalStorage(systemConfiguration);			
+            storage = CreateTransactionalStorage(systemConfiguration);
+            search = new IndexStorage(name, systemConfiguration);
+
 			sigGenerator = new SigGenerator();
 			var replicationHiLo = new SynchronizationHiLo(storage);
 			var sequenceActions = new SequenceActions(storage);
 			transportState = recievedTransportState ?? new TransportState();
 			notificationPublisher = new NotificationPublisher(transportState);
 			fileLockManager = new FileLockManager();
-			storage.Initialize();
-
-            search = new IndexStorage(systemConfiguration);
+			storage.Initialize();          
 
 			var uuidGenerator = new UuidGenerator(sequenceActions);
 			historian = new Historian(storage, replicationHiLo, uuidGenerator);

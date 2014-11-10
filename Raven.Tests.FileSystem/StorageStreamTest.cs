@@ -133,7 +133,7 @@ namespace Raven.Tests.FileSystem
 		private class MockIndexStorage : IndexStorage
 		{
             public MockIndexStorage(InMemoryRavenConfiguration configuration)
-                : base(configuration)
+                : base("mock", configuration)
 			{
 			}
 
