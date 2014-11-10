@@ -51,8 +51,7 @@ namespace Raven.Database.FileSystem
 		    this.Name = name;
 			this.systemConfiguration = systemConfiguration;
 
-            storage = CreateTransactionalStorage(systemConfiguration);
-			search = new IndexStorage(systemConfiguration.FileSystem.IndexStoragePath, systemConfiguration.Settings);
+            storage = CreateTransactionalStorage(systemConfiguration);			
 			sigGenerator = new SigGenerator();
 			var replicationHiLo = new SynchronizationHiLo(storage);
 			var sequenceActions = new SequenceActions(storage);
@@ -60,7 +59,9 @@ namespace Raven.Database.FileSystem
 			notificationPublisher = new NotificationPublisher(transportState);
 			fileLockManager = new FileLockManager();
 			storage.Initialize();
-			search.Initialize();
+
+            search = new IndexStorage(systemConfiguration);
+
 			var uuidGenerator = new UuidGenerator(sequenceActions);
 			historian = new Historian(storage, replicationHiLo, uuidGenerator);
 			BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);

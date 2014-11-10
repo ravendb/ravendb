@@ -1,30 +1,36 @@
-﻿using System;
+﻿using Lucene.Net.Documents;
+using Lucene.Net.Index;
+using Lucene.Net.Search;
+using Lucene.Net.Store;
+using Raven.Abstractions.Logging;
+using Raven.Database.Config;
+using Raven.Database.FileSystem.Util;
+using Raven.Database.Indexing;
+using Raven.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Lucene.Net.Documents;
-using Lucene.Net.Index;
-using Lucene.Net.Search;
-using Lucene.Net.Store;
-
-using Raven.Abstractions.Logging;
-using Raven.Database.Indexing;
-using Raven.Json.Linq;
-using Raven.Database.FileSystem.Extensions;
-using Lucene.Net.QueryParsers;
-using Raven.Database.FileSystem.Util;
+using System.Runtime.ConstrainedExecution;
 
 namespace Raven.Database.FileSystem.Search
 {
-	public class IndexStorage : IDisposable
+    /// <summary>
+    /// 	Thread safe, single instance for the entire application
+    /// </summary>
+    public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
-	    protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog startupLog = LogManager.GetLogger(typeof(IndexStorage).FullName + ".Startup");
 
 		private const string DateIndexFormat = "yyyy-MM-dd_HH-mm-ss";
 		private static readonly string[] NumericIndexFields = new[] { "__size_numeric" };
+
+        private readonly FileStream crashMarker;
+        private readonly InMemoryRavenConfiguration configuration;
 
 		private readonly string path;
 		private FSDirectory directory;
@@ -34,24 +40,55 @@ namespace Raven.Database.FileSystem.Search
 		private readonly object writerLock = new object();
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
-		public IndexStorage(string path, NameValueCollection _)
-		{
-			this.path = path;
-		}
+        private bool resetIndexOnUncleanShutdown = false;
 
-		public void Initialize()
+        public IndexStorage(InMemoryRavenConfiguration configuration)
 		{
-			if (System.IO.Directory.Exists(path) == false)
-				System.IO.Directory.CreateDirectory(path);
-			directory = FSDirectory.Open(new DirectoryInfo(path));
-			if (IndexWriter.IsLocked(directory))
-				IndexWriter.Unlock(directory);
+            if (configuration == null)
+                throw new ArgumentNullException("configuration");
 
-			analyzer = new LowerCaseKeywordAnalyzer();
-            snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-			writer = new IndexWriter(directory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
-			writer.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
-			currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
+            this.configuration = configuration;
+
+            try
+            {
+                this.path = configuration.FileSystem.IndexStoragePath;
+
+                if (System.IO.Directory.Exists(path) == false)
+                    System.IO.Directory.CreateDirectory(path);
+
+                var crashMarkerPath = Path.Combine(path, "indexing.crash-marker");
+
+                if (File.Exists(crashMarkerPath))
+                {
+                    // the only way this can happen is if we crashed because of a power outage
+                    // in this case, we consider all open indexes to be corrupt and force them
+                    // to be reset. This is because to get better perf, we don't flush the files to disk,
+                    // so in the case of a power outage, we can't be sure that there wasn't still stuff in
+                    // the OS buffer that wasn't written yet.
+
+                    resetIndexOnUncleanShutdown = true;
+                }
+
+                // The delete on close ensures that the only way this file will exists is if there was
+                // a power outage while the server was running.
+                crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
+
+                this.directory = FSDirectory.Open(new DirectoryInfo(path));
+                if (IndexWriter.IsLocked(directory))
+                    IndexWriter.Unlock(directory);
+
+                this.analyzer = new LowerCaseKeywordAnalyzer();
+                this.snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+                this.writer = new IndexWriter(directory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
+                this.writer.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+                
+                this.currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }            
 		}
 
 		public string[] Query(string query, string[] sortFields, int start, int pageSize, out int totalResults)
