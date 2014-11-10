@@ -65,7 +65,7 @@ namespace Raven.Database.Tasks
 
 						if (doc == null)
 						{
-							logger.Debug("Cannot touch {0}, non existant document", kvp.Key);
+							logger.Debug("Cannot touch {0}, non existent document", kvp.Key);
 							continue;
 						}
 						if (doc.Etag == kvp.Value)
