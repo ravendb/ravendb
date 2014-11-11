@@ -277,7 +277,7 @@ namespace Raven.Database.Indexing
 				throw new InvalidOperationException("Could not create document id fetcher for this document");
 			var documentId = docIdFetcher(doc);
 			if (documentId == null || documentId is DynamicNullObject)
-				throw new InvalidOperationException("Could not getdocument id fetcher for this document");
+				throw new InvalidOperationException("Could not get document id fetcher for this document");
 
 			return (string)documentId;
 		}

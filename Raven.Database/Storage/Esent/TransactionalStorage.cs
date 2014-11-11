@@ -129,7 +129,7 @@ namespace Raven.Storage.Esent
             try
             {
                 if (tryEnterWriteLock == false)
-					log.Warn("After waiting for 2 minutes, could not aqcuire disposal lock, will force disposal anyway, pending transactions will all error");
+					log.Warn("After waiting for 2 minutes, could not acquire disposal lock, will force disposal anyway, pending transactions will all error");
 
                 if (disposed)
                     return;
@@ -152,7 +152,7 @@ namespace Raven.Storage.Esent
 	                    catch (Exception e1)
 	                    {
 		                    log.ErrorException(
-			                    "Unexpected error occured while terminating Esent Storage. Ignoring this error to allow to shutdown RavenDB instance.",
+			                    "Unexpected error occurred while terminating Esent Storage. Ignoring this error to allow to shutdown RavenDB instance.",
 			                    e1);
 
 		                    try
@@ -525,7 +525,7 @@ namespace Raven.Storage.Esent
 							{
 								Monitor.TryEnter(UpdateLocker, TimeSpan.FromSeconds(15), ref lockTaken);
 								if (lockTaken == false)
-									throw new TimeoutException("Could not take upgrade lock after 15 seconds, probably another database is upgrading itself and we can't interupt it midway. Please try again later");
+									throw new TimeoutException("Could not take upgrade lock after 15 seconds, probably another database is upgrading itself and we can't interrupt it midway. Please try again later");
 
                             do
                             {
