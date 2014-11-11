@@ -129,8 +129,6 @@ class databases extends viewModelBase {
                         settings["Raven/IndexStoragePath"] = databaseIndexes;
                     }
 
-                    settings["Raven/IndexingDisabled"] = false;
-
                     this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings);
                 });
             app.showDialog(createDatabaseViewModel);
@@ -271,6 +269,18 @@ class databases extends viewModelBase {
             require(["commands/disableIndexingCommand"], disableIndexingCommand => {
                 var task = new disableIndexingCommand(db.name, action).execute();
                 task.done(() => db.indexingDisabled(action));
+            });
+        });
+    }
+
+    toggleRejectDatabaseClients(db: database) {
+        var action = !db.rejectClientsMode();
+        var actionText = action ? "reject clients mode" : "accept clients mode";
+        var message = this.confirmationMessage("Switch to " + actionText, "Are you sure?");
+        message.done(() => {
+            require(["commands/toggleRejectDatabaseClients"], toggleRejectDatabaseClients => {
+                var task = new toggleRejectDatabaseClients(db.name, action).execute();
+                task.done(() => db.rejectClientsMode(action));
             });
         });
     }

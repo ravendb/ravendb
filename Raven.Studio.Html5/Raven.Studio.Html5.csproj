@@ -97,6 +97,7 @@
     <TypeScriptCompile Include="App\commands\deleteCollectionCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocsMatchingQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\toggleRejectDatabaseClients.ts" />
     <TypeScriptCompile Include="App\commands\updateServerPrefixHiLoCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\executeBulkDocsCommand.ts" />
@@ -1007,7 +1008,7 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
-    <TypeScriptSourceMap>False</TypeScriptSourceMap>
+    <TypeScriptSourceMap>True</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
