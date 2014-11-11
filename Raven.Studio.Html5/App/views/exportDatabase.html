@@ -7,11 +7,21 @@
         <br />
         <br />
         <div class="btn-toolbar">
-            <div >
-                <a class="btn btn-primary" data-bind="click: startExport" download>
-                    <i class="fa fa-download"></i>
-                    Export Database
-                </a>
+            <div>
+                <div class="checkbox">
+                    <a class="btn btn-primary" data-bind="click: startExport" download>
+                        <i class="fa fa-download"></i>
+                        Export Database
+                    </a>
+
+                    <label data-bind="visible: !chooseDifferntFileName()">
+                        <input type="checkbox" data-bind="checked: chooseDifferntFileName">Override file name
+                    </label>
+                    <span data-bind="visible: chooseDifferntFileName">
+                        File name:
+                        <input type="text" name="fileName" data-bind="visible: chooseDifferntFileName, value: noneDefualtFileName" title="Insert a file name to ovveride the default one.">
+                    </span>
+                </div>
                 
                 <form id="dbExportDownloadForm" method="post" data-bind="attr:{action:exportActionUrl}" target="about:blank">
                     <input type="hidden" id="SmugglerOptions" name="SmugglerOptions" />
