@@ -10,10 +10,10 @@ using Xunit;
 
 namespace Raven.Tests.Core.Replication
 {
-    public class ManualConfilctResolution : RavenReplicationCoreTest
+    public class ManualConflictResolution : RavenReplicationCoreTest
     {
         [Fact]
-        public void CanManuallyResovleConflict()
+        public void CanManuallyResolveConflict()
         {
 			using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
