@@ -19,7 +19,7 @@ namespace Raven.Tests.MailingList
 		[IISExpressInstalledFact]
 		public void ShouldNotFail_DynamicIndex()
 		{
-			using (var store = NewDocumentStore(fiddler:true))
+			using (var store = NewDocumentStore())
 			{
 				var name = new string('x', 0x1000);
 				store.OpenSession().Query<User>().Where(u => u.FirstName == name).ToList();
@@ -29,7 +29,7 @@ namespace Raven.Tests.MailingList
 		[IISExpressInstalledFact]
 		public void ShouldNotFail_StaticIndex()
 		{
-			using (var store = NewDocumentStore(fiddler: true))
+			using (var store = NewDocumentStore())
 			{
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
