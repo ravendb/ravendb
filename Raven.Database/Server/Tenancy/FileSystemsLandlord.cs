@@ -125,6 +125,7 @@ namespace Raven.Database.Server.Tenancy
 
 				AssertLicenseParameters();
 				var fs = new RavenFileSystem(config, tenantId, transportState);
+                fs.Initialize();
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);

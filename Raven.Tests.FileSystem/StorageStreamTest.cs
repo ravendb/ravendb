@@ -11,6 +11,7 @@ using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 using Xunit;
 using Raven.Database.Config;
+using Raven.Database.FileSystem;
 
 namespace Raven.Tests.FileSystem
 {

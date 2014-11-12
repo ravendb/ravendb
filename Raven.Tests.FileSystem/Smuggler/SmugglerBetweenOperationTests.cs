@@ -149,7 +149,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                 var server = GetServer();
 
                 var alreadyReset = false;
-                var forwarder = new ProxyServer(8070, server.Configuration.Port)
+                var forwarder = new ProxyServer(8090, server.Configuration.Port)
                 {
                     VetoTransfer = (totalRead, buffer) =>
                     {
@@ -168,7 +168,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                 {
                     From = new FilesConnectionStringOptions
                     {
-                        Url = "http://localhost:8070",
+                        Url = "http://localhost:8090",
                         DefaultFileSystem = SourceFilesystem
                     },
                     To = new FilesConnectionStringOptions

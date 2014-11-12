@@ -2,7 +2,9 @@
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Util;
@@ -33,19 +35,20 @@ namespace Raven.Database.FileSystem.Search
 		private const string DateIndexFormat = "yyyy-MM-dd_HH-mm-ss";
 		private static readonly string[] NumericIndexFields = new[] { "__size_numeric" };
 
-        private readonly FileStream crashMarker;
-
         private readonly string name;
-        private readonly InMemoryRavenConfiguration configuration;
+        private readonly InMemoryRavenConfiguration configuration; 
+        private readonly object writerLock = new object();
+        private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
-		private readonly string indexDirectory;
+		private string indexDirectory;
 		private FSDirectory directory;
-		private LowerCaseKeywordAnalyzer analyzer;
-		private IndexWriter writer;
+        private RavenFileSystem filesystem;
+        
+		private LowerCaseKeywordAnalyzer analyzer;		
         private SnapshotDeletionPolicy snapshotter;
-		private readonly object writerLock = new object();
-		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
-
+        private IndexWriter writer;
+		
+        private FileStream crashMarker;
         private bool resetIndexOnUncleanShutdown = false;
 
         public IndexStorage(string name, InMemoryRavenConfiguration configuration)
@@ -56,21 +59,27 @@ namespace Raven.Database.FileSystem.Search
                 throw new ArgumentException("name");
 
             this.name = name;
-            this.configuration = configuration;
+            this.configuration = configuration;   
+		}
 
+
+        public void Initialize(RavenFileSystem filesystem)
+        {
             try
             {
-                this.indexDirectory = configuration.FileSystem.IndexStoragePath;
+                this.filesystem = filesystem;                                
+                this.indexDirectory = configuration.FileSystem.IndexStoragePath;                
 
                 if (System.IO.Directory.Exists(indexDirectory) == false)
                     System.IO.Directory.CreateDirectory(indexDirectory);
 
-                var crashMarkerPath = Path.Combine(indexDirectory, "indexing.crash-marker");
+                var filesystemDirectory = this.configuration.FileSystem.DataDirectory;
+                var crashMarkerPath = Path.Combine(filesystemDirectory, "indexing.crash-marker");
 
                 if (File.Exists(crashMarkerPath))
                 {
                     // the only way this can happen is if we crashed because of a power outage
-                    // in this case, we consider all open indexes to be corrupt and force them
+                    // in this case, we consider open indexes to be corrupt and force them
                     // to be reset. This is because to get better perf, we don't flush the files to disk,
                     // so in the case of a power outage, we can't be sure that there wasn't still stuff in
                     // the OS buffer that wasn't written yet.
@@ -88,8 +97,8 @@ namespace Raven.Database.FileSystem.Search
             {
                 Dispose();
                 throw;
-            }            
-		}
+            }           
+        }
 
         private void OpenIndexOnStartup()
         {            
@@ -105,7 +114,8 @@ namespace Raven.Database.FileSystem.Search
                 {
                     luceneDirectory = OpenOrCreateLuceneDirectory(this.indexDirectory);
 
-                    // TODO: CheckIndexState ... 
+                    if (!IsIndexStateValid(luceneDirectory))
+                        throw new InvalidOperationException("Sanity check on the index failed.");
 
                     this.directory = luceneDirectory;
 
@@ -136,6 +146,37 @@ namespace Raven.Database.FileSystem.Search
                     }
                 }
             }          
+        }
+
+        private bool IsIndexStateValid(FSDirectory luceneDirectory)
+        {
+            // 1. If commitData is null it means that there were no commits, so just in case we are resetting to Etag.Empty
+            // 2. If no 'LastEtag' in commitData then we consider it an invalid index
+            // 3. If 'LastEtag' is present (and valid), then resetting to it (if it is lower than lastStoredEtag)
+
+            var commitData = IndexReader.GetCommitUserData(luceneDirectory);            
+
+            string value;
+            Etag lastEtag = null;
+            if (commitData != null && commitData.TryGetValue("LastEtag", out value))
+                Etag.TryParse(value, out lastEtag); // etag will be null if parsing will fail
+
+            var lastStoredEtag = GetLastEtagForIndex() ?? Etag.Empty;
+            lastEtag = lastEtag ?? Etag.Empty;
+
+            if (EtagUtil.IsGreaterThan(lastEtag, lastStoredEtag))
+                return false;
+
+            return true;
+        }
+
+        protected Etag GetLastEtagForIndex()
+        {
+            return null;
+
+            // IndexStats stats = null;
+            // documentDatabase.TransactionalStorage.Batch(accessor => stats = accessor.Indexing.GetIndexStats(index.IndexId));
+            // return stats != null ? stats.LastIndexedEtag : Etag.Empty;
         }
 
         private void TryResettingIndex()
@@ -399,31 +440,22 @@ namespace Raven.Database.FileSystem.Search
 			return currentIndexSearcherHolder.GetSearcher(out searcher);
 		}
 
+
+        private void SafeDispose ( IDisposable disposable )
+        {
+            if (disposable != null)
+                disposable.Dispose();
+        }
+
 		public void Dispose()
 		{
             var exceptionAggregator = new ExceptionAggregator(log, string.Format("Could not properly close index storage for file system '{0}'", this.name));
 
-            exceptionAggregator.Execute( () => analyzer.Close());
-            exceptionAggregator.Execute( () => 
-            {
-                if (currentIndexSearcherHolder != null)
-				    currentIndexSearcherHolder.SetIndexSearcher(null);
-            });
-            exceptionAggregator.Execute( () => 
-            {
-                if (crashMarker != null)
-				    crashMarker.Dispose();
-            });
-            exceptionAggregator.Execute( () => 
-            {
-                if (writer != null)
-                    writer.Dispose();
-            });
-            exceptionAggregator.Execute( () => 
-            { 
-                if (directory != null)
-                    directory.Dispose();
-            });
+            exceptionAggregator.Execute(() => { if (analyzer != null) analyzer.Close(); });
+            exceptionAggregator.Execute(() => { if (currentIndexSearcherHolder != null)  currentIndexSearcherHolder.SetIndexSearcher(null); });
+            exceptionAggregator.Execute(() => SafeDispose(crashMarker) );
+            exceptionAggregator.Execute(() => SafeDispose(writer) );
+            exceptionAggregator.Execute(() => SafeDispose(directory) );
 
             exceptionAggregator.ThrowIfNeeded();
 		}
@@ -579,5 +611,6 @@ namespace Raven.Database.FileSystem.Search
             {
             }
         }
-	}
+
+    }
 }
