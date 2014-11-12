@@ -138,6 +138,11 @@ namespace Raven.Abstractions.Smuggler
 		/// </summary>
 		public bool ShouldExcludeExpired { get; set; }
 
+        /// <summary>
+        /// When set ovverides the default document name.
+        /// </summary>
+        public string NoneDefualtFileName { get; set; }
+
 		public virtual bool ExcludeExpired(RavenJToken item, DateTime now)
 		{
 			var metadata = item.Value<RavenJObject>("@metadata");

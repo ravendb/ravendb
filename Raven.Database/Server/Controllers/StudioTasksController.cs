@@ -226,10 +226,13 @@ for(var customFunction in customFunctions) {{
 
 				
 			});
-
+		    
+            var fileName = String.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ? 
+		        string.Format("Dump of {0}, {1}", this.DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
+		        smugglerOptions.NoneDefualtFileName;
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
-                FileName = string.Format("Dump of {0}, {1}.ravendump", this.DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture))
+                FileName = fileName + ".ravendump"
             };
 			
 			return new CompletedTask<HttpResponseMessage>(result);
