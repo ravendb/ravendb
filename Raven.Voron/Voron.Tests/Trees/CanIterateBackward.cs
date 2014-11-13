@@ -66,5 +66,27 @@ namespace Voron.Tests.Trees
 				tx.Commit();
 			}
 		}
+
+        [Fact]
+        public void CanGetMax()
+        {
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                tx.State.Root.Add("a", new MemoryStream(0));
+                tx.State.Root.Add("c", new MemoryStream(0));
+                tx.State.Root.Add("b", new MemoryStream(0));
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            using (var it = tx.State.Root.Iterate())
+            {                
+                Assert.True(it.Seek(Slice.AfterAllKeys));
+                Assert.Equal("c", it.MaxKey);
+
+                tx.Commit();
+            }
+        }
 	}
 }
