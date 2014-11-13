@@ -124,15 +124,18 @@ namespace Raven.Client.Document
 				"GET",
 				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials), 
 				documentStore.Conventions);
-			var httpJsonRequest = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
-			var json = await httpJsonRequest.ReadResponseJsonAsync();
 
-			return new ReplicatedEtagInfo
-			{
-				DestinationUrl = destinationUrl,
-				DocumentEtag = Etag.Parse(json.Value<string>("LastDocumentEtag")),
-				AttachmentEtag = Etag.Parse(json.Value<string>("LastAttachmentEtag"))
-			};
+		    using (var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams))
+		    {
+			    var json = await request.ReadResponseJsonAsync();
+
+			    return new ReplicatedEtagInfo
+			    {
+				    DestinationUrl = destinationUrl, 
+					DocumentEtag = Etag.Parse(json.Value<string>("LastDocumentEtag")), 
+					AttachmentEtag = Etag.Parse(json.Value<string>("LastAttachmentEtag"))
+			    };
+		    }
 		}
 	}
 }

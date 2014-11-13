@@ -61,14 +61,15 @@ namespace Raven.Backup
                 url += "?incremental=true";
             try
             {
-                var req = CreateRequest("/fs/" + parameters.Filesystem + url, "POST");
+	            using (var req = CreateRequest("/fs/" + parameters.Filesystem + url, "POST"))
+	            {
+					req.WriteAsync(json).Wait();
 
-                req.WriteAsync(json).Wait();
+					Console.WriteLine("Sending json {0} to {1}", json, parameters.ServerUrl);
 
-                Console.WriteLine("Sending json {0} to {1}", json, parameters.ServerUrl);
-
-                var response = req.ReadResponseJson();
-                Console.WriteLine(response);
+					var response = req.ReadResponseJson();
+					Console.WriteLine(response);
+	            }  
             }
             catch (Exception exc)
             {
@@ -82,39 +83,33 @@ namespace Raven.Backup
         protected override HttpJsonRequest CreateRequest(string url, string method)
         {
             var uriString = parameters.ServerUrl + url;
-
-            var req = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationCredentials(parameters.ApiKey, CredentialCache.DefaultCredentials), store.Conventions));
-            if (parameters.Timeout.HasValue)
-            {
-                req.Timeout = TimeSpan.FromMilliseconds(parameters.Timeout.Value);
-            }
-
-            return req;
+			return store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationCredentials(parameters.ApiKey, CredentialCache.DefaultCredentials), store.Conventions, parameters.Timeout.HasValue ? TimeSpan.FromMilliseconds(parameters.Timeout.Value) : (TimeSpan?)null));
         }
 
         public override BackupStatus GetStatusDoc()
         {
-            var req = CreateRequest("/fs/" + parameters.Filesystem + "/config/" + BackupStatus.RavenBackupStatusDocumentKey, "GET");
+	        using (var req = CreateRequest("/fs/" + parameters.Filesystem + "/config/" + BackupStatus.RavenBackupStatusDocumentKey, "GET"))
+	        {
+		        try
+		        {
+			        var json = (RavenJObject)req.ReadResponseJson();
+			        return json.JsonDeserialization<BackupStatus>();
+		        }
+		        catch (WebException ex)
+		        {
+			        var res = ex.Response as HttpWebResponse;
+			        if (res == null)
+			        {
+				        throw new Exception("Network error");
+			        }
+			        if (res.StatusCode == HttpStatusCode.NotFound)
+			        {
+				        return null;
+			        }
+		        }
 
-            try
-            {
-                var json = (RavenJObject)req.ReadResponseJson();
-                return json.JsonDeserialization<BackupStatus>();
-            }
-            catch (WebException ex)
-            {
-                var res = ex.Response as HttpWebResponse;
-                if (res == null)
-                {
-                    throw new Exception("Network error");
-                }
-                if (res.StatusCode == HttpStatusCode.NotFound)
-                {
-                    return null;
-                }
-            }
-
-            return null;
+		        return null;
+	        }
         }
 
         public override void Dispose()
