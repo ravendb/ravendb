@@ -3,13 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Lucene.Net.Analysis;
 using Raven.Database.Indexing;
 using Xunit;
 
 namespace Raven.Tests.Queries
 {
-	public class CommentsInQueries
+	public class CommentsInQueries : IDisposable
 	{
 		[Fact]
 		public void ShouldBeSafelyIgnored()
@@ -25,6 +26,11 @@ Be: http\://localhost\:8080
 			var s = query.ToString();
 
 			Assert.DoesNotContain("comment", s);
+		}
+
+		public void Dispose()
+		{
+			
 		}
 	}
 }
