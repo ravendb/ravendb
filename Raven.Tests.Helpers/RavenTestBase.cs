@@ -363,7 +363,10 @@ namespace Raven.Tests.Helpers
 			bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(20)));
 			if (spinUntil == false && store is EmbeddableDocumentStore)
 				WaitForUserToContinueTheTest(store);
-            if (!spinUntil) throw new Exception("Indexes took took long to become unstale");
+			if (!spinUntil)
+			{
+				WaitForUserToContinueTheTest(store, false);
+			}
 		}
 
 
