@@ -12,8 +12,9 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			IDocumentSession s = null;
+			TimeSpan a, b;
 			
+
 		}
 	}
 
