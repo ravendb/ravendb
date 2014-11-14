@@ -831,5 +831,10 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
 			return configs;
 		}
-	}
+        public Etag GetLastEtag()
+        {
+            throw new NotImplementedException();
+        }
+
+    }
 }

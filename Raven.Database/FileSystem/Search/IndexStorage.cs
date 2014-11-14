@@ -7,6 +7,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
@@ -172,23 +173,32 @@ namespace Raven.Database.FileSystem.Search
 
         protected Etag GetLastEtagForIndex()
         {
-            return null;
-
-            // IndexStats stats = null;
-            // documentDatabase.TransactionalStorage.Batch(accessor => stats = accessor.Indexing.GetIndexStats(index.IndexId));
-            // return stats != null ? stats.LastIndexedEtag : Etag.Empty;
+            Etag etag = null;
+            filesystem.Storage.Batch(accessor => etag = accessor.GetLastEtag());
+            return etag != null ? etag : Etag.Empty;
         }
 
-        private void TryResettingIndex()
+        internal void TryResettingIndex()
         {
             try
             {
                 IOExtensions.DeleteDirectory(this.indexDirectory);
+
+                IndexAllSync();
 			}
 			catch (Exception exception)
 			{
 				throw new InvalidOperationException("Could not reset index for file system: " + this.name, exception);
 			}
+        }
+
+        private void IndexAllSync()
+        {
+            this.filesystem.Storage.Batch(accessor =>
+            {
+                foreach (var file in accessor.GetFilesAfter(Etag.Empty, int.MaxValue))
+                    this.Index(file.Name, file.Metadata);
+            });
         }
 
         private Lucene.Net.Store.FSDirectory OpenOrCreateLuceneDirectory(string path)
@@ -373,8 +383,11 @@ namespace Raven.Database.FileSystem.Search
 
                 writer.DeleteDocuments(new Term("__key", lowerKey));
                 writer.AddDocument(doc);
+
                 // yes, this is slow, but we aren't expecting high writes count
-                writer.Commit();
+                var etag = lookup["ETag"].First();
+                var customCommitData = new Dictionary<string, string>() { {"LastETag", etag.Value.ToString() } };               
+                writer.Commit(customCommitData);
                 ReplaceSearcher();
             }
         }
@@ -435,7 +448,7 @@ namespace Raven.Database.FileSystem.Search
             return doc;
         }
 
-		internal IDisposable GetSearcher(out IndexSearcher searcher)
+        internal IDisposable GetSearcher(out IndexSearcher searcher)
 		{
 			return currentIndexSearcherHolder.GetSearcher(out searcher);
 		}
