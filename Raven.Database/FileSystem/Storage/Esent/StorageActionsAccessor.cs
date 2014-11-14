@@ -45,6 +45,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
 		public StorageActionsAccessor(TableColumnsCache tableColumnsCache, JET_INSTANCE instance, string databaseName)
 		{
+            this.lastEtag = new Guid("ffffffff-ffff-ffff-ffff-ffffffffffff").TransformToValueForEsentSorting();
 			this.tableColumnsCache = tableColumnsCache;
 			try
 			{
@@ -277,7 +278,6 @@ namespace Raven.Database.FileSystem.Storage.Esent
         public FileHeader ReadFile(string filename)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");
-			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
 				return null;
@@ -379,9 +379,9 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
 		public IEnumerable<FileHeader> GetFilesAfter(Guid etag, int take)
 		{
-			Api.JetSetCurrentIndex(session, Files, "by_etag");
+            Api.JetSetCurrentIndex(session, Files, "by_etag");
 			Api.MakeKey(session, Files, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Files, SeekGrbit.SeekGT) == false)
+            if (Api.TrySeek(session, Files, SeekGrbit.SeekGT) == false)
                 return Enumerable.Empty<FileHeader>();
 
             var result = new List<FileHeader>();
@@ -398,6 +398,19 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
 			return result;
 		}
+
+        private readonly byte[] lastEtag;
+
+        public Etag GetLastEtag()
+        {
+            Api.JetSetCurrentIndex(session, Files, "by_etag");
+            Api.MakeKey(session, Files, lastEtag, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Files, SeekGrbit.SeekLE) == false)
+                return Etag.Empty;
+
+            var val = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"], RetrieveColumnGrbit.RetrieveFromIndex, null);
+			return Etag.Parse(val);
+        }
 
 		public void Delete(string filename)
 		{
@@ -831,10 +844,5 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
 			return configs;
 		}
-        public Etag GetLastEtag()
-        {
-            throw new NotImplementedException();
-        }
-
     }
 }
