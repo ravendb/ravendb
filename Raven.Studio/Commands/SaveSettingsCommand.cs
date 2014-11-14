@@ -203,7 +203,11 @@ namespace Raven.Studio.Commands
 
 							session.Store(status, ravenSqlreplicationStatus);
 						}
-
+						// preload all those values, so we only do this in a single request
+						await session.LoadAsync<SqlReplicationConfig>(
+							sqlReplicationSettings.SqlReplicationConfigs.Select(
+								x => "Raven/SqlReplication/Configuration/" + x.Name)
+							);
 						foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
 						{
 							var id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
