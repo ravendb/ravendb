@@ -15,6 +15,9 @@ using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using ICSharpCode.NRefactory.CSharp;
+
+using Lucene.Net.Messages;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
@@ -22,8 +25,9 @@ using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
-using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Connections;
+using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using IOExtensions = Raven.Database.Extensions.IOExtensions;
@@ -33,6 +37,27 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class DebugController : RavenDbApiController
 	{
+		public const string ChangesApiWebsocketDebugSuffix = "/debug/websocket";
+
+		[HttpGet]
+		[Route("debug/websocket")]
+		[Route("databases/{databaseName}/websocket")]
+		public async Task<HttpResponseMessage> WebSocket()
+		{
+			try
+			{
+				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+				var parser = new WebSocketsRequestParser(DatabasesLandlord, CountersLandlord, FileSystemsLandlord, authorizer, ChangesApiWebsocketDebugSuffix);
+				await parser.ParseWebSocketRequestAsync(Request.RequestUri, GetQueryStringValue("token")); // not using 'singleUseAuthToken' to avoid token consumption
+
+				return GetMessageWithObject(new { Message = "Validation passed." });
+			}
+			catch (WebSocketsRequestParser.WebSocketRequestValidationException e)
+			{
+				return GetMessageWithObject(new { Error = e.Message }, e.StatusCode);
+			}
+		}
+
 		[HttpGet]
 		[Route("debug/prefetch-status")]
 		[Route("databases/{databaseName}/debug/prefetch-status")]
