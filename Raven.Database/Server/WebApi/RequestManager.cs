@@ -572,9 +572,19 @@ namespace Raven.Database.Server.WebApi
 					landlord.Cleanup(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.RunInMemory);
 				}
 			}
+			catch (Exception e)
+			{
+				Logger.WarnException("Error during idle operations for the server", e);
+			}
 			finally
 			{
-				serverTimer.Change(frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
+				try
+				{
+					serverTimer.Change(frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
+				}
+				catch (ObjectDisposedException)
+				{
+				}
 			}
 		}
 	}
