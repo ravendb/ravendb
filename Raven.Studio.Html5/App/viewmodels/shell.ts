@@ -366,7 +366,8 @@ class shell extends viewModelBase {
             this.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase, logTenantType.Database)),
             this.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem, logTenantType.Filesystem)),
             this.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage, logTenantType.CounterStorage)),
-            this.globalChangesApi.watchDocsStartingWith("Raven/StudioConfig", () => this.fetchStudioConfig())
+            this.globalChangesApi.watchDocsStartingWith("Raven/StudioConfig", () => this.fetchStudioConfig()),
+            this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())
         ];
     }
 
@@ -489,6 +490,7 @@ class shell extends viewModelBase {
                 this.fetchServerBuildVersion();
                 this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
+                this.fetchSystemDatabaseAlerts();
                 router.activate();
             });
 
@@ -835,6 +837,14 @@ class shell extends viewModelBase {
             var dialog = new licensingStatus(license.licenseStatus());
             app.showDialog(dialog);
         });
+    }
+
+    fetchSystemDatabaseAlerts() {
+        new getDocumentWithMetadataCommand("Raven/Alerts", this.systemDatabase)
+            .execute()
+            .done((doc: documentClass) => {
+                //
+            });
     }
 }
 

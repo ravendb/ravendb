@@ -114,12 +114,26 @@ class databases extends viewModelBase {
             var createDatabaseViewModel = new createDatabase(this.databases, license.licenseStatus);
             createDatabaseViewModel
                 .creationTask
-                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, storageEngine: string) => {
+                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, storageEngine: string, incrementalBackup: boolean
+                    ,alertTimeout: string, alertRecurringTimeout: string) => {
                     var settings = {
                         "Raven/ActiveBundles": bundles.join(";")
                     };
                     if (storageEngine) {
                         settings["Raven/StorageTypeName"] = storageEngine;
+                    }
+                    if (incrementalBackup) {
+                        if (storageEngine === "esent") {
+                            settings["Raven/Esent/CircularLog"] = "false"
+                        } else {
+                            settings["Raven/Voron/AllowIncrementalBackups"] = "true"
+                        }
+                    }
+                    if (alertTimeout !== "") {
+                        settings["Raven/IncrementalBackup/AlertTimeoutHours"] = alertTimeout;
+                    }
+                    if (alertRecurringTimeout !== "") {
+                        settings["Raven/IncrementalBackup/RecurringAlertTimeoutDays"] = alertRecurringTimeout;
                     }
                     settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/Databases/" + databaseName;
                     if (!this.isEmptyStringOrWhitespace(databaseLogs)) {

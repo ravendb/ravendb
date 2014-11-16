@@ -13,8 +13,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
+using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -188,6 +190,8 @@ namespace Raven.Database
 		public event EventHandler StorageInaccessible;
 
 		public event Action OnIndexingWiringComplete;
+
+	    public event Action<DocumentDatabase> OnBackupComplete;
 
 		public static string BuildVersion
         {
@@ -1160,6 +1164,14 @@ namespace Raven.Database
 				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, configuration.Container.GetExportedValues<AbstractViewGenerator>(), database.Extensions);
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
         }
+
+		   
     }
-}
+
+	    public void RaiseBackupComplete()
+	    {
+	        var onOnBackupComplete = OnBackupComplete;
+	        if (onOnBackupComplete != null) onOnBackupComplete(this);
+	    }
+    }
 }
