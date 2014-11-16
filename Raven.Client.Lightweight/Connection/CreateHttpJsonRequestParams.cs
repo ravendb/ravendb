@@ -13,7 +13,7 @@ namespace Raven.Client.Connection
 
 	public class CreateHttpJsonRequestParams
 	{
-		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, RavenJObject metadata, OperationCredentials credentials, Convention convention)
+		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, RavenJObject metadata, OperationCredentials credentials, Convention convention, TimeSpan? timeout = null)
 		{
 			Owner = self;
 			Url = url;
@@ -21,6 +21,7 @@ namespace Raven.Client.Connection
 			Metadata = metadata;
 			Credentials = credentials;
 			Convention = convention;
+			Timeout = timeout;
 			operationsHeadersCollection = new NameValueCollection();
 		}
 
@@ -66,8 +67,8 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, OperationCredentials credentials, Convention convention)
-			: this(self, url, method, new RavenJObject(), credentials, convention)
+		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, OperationCredentials credentials, Convention convention, TimeSpan? timeout = null)
+			: this(self, url, method, new RavenJObject(), credentials, convention, timeout)
 		{}
 
 		private int operationHeadersHash;
@@ -103,6 +104,11 @@ namespace Raven.Client.Connection
 		public OperationCredentials Credentials { get; set; }
 
 		public Convention Convention { get; set; }
+
+		public TimeSpan? Timeout { get; set; }
+
 		public bool DisableRequestCompression { get; set; }
+
+		public bool DisableAuthentication { get; set; }
 	}
 }

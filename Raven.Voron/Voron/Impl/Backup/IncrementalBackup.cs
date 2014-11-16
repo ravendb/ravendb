@@ -87,10 +87,25 @@ namespace Voron.Impl.Backup
                             if (journalFile == null)
                             {
                                 long journalSize;
-                                using (var pager = env.Options.OpenJournalPager(journalNum))
-                                {
-                                    journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * AbstractPager.PageSize);
-                                }
+	                            try
+	                            {
+		                            using (var pager = env.Options.OpenJournalPager(journalNum))
+		                            {
+			                            journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * AbstractPager.PageSize);
+		                            }
+	                            }
+	                            catch (Exception e)
+	                            {
+		                            if (backupInfo.LastBackedUpJournal == -1 && journalNum == 0 && e.Message.StartsWith("No such journal"))
+		                            {
+			                            throw new InvalidOperationException("The first incremental backup creation failed because the first journal file " +
+											StorageEnvironmentOptions.JournalName(journalNum) + " was not found. " +
+											"Did you turn on the incremental backup feature after initializing the storage? " +
+											"In order to create backups incrementally the storage must be created with IncrementalBackupEnabled option set to 'true'.", e);
+		                            }
+
+		                            throw;
+	                            }
 
                                 journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
                             }

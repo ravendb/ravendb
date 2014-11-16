@@ -603,7 +603,7 @@ namespace Raven.Database.Server.Controllers
 			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
 			var reduceKeysArray = GetQueryStringValue("reduceKeys");
 
-			if (string.IsNullOrEmpty(indexQuery.Query) == false && string.IsNullOrEmpty(reduceKeysArray))
+			if (string.IsNullOrEmpty(indexQuery.Query) == false && string.IsNullOrEmpty(reduceKeysArray) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -613,7 +613,7 @@ namespace Raven.Database.Server.Controllers
 
 			List<string> reduceKeys = null;
 
-			if (reduceKeysArray != null)
+			if (string.IsNullOrEmpty(reduceKeysArray) == false)
 			{
                 reduceKeys = reduceKeysArray.Split(',').Select(x => x.Trim()).ToList();
                 // overwrite indexQueryPagining as __reduce_key field is not indexed, and we don't have simple method to obtain column alias

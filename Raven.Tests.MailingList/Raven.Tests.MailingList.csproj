@@ -233,6 +233,7 @@
     <Compile Include="IndexMetadata.cs" />
     <Compile Include="IndexTest.cs" />
     <Compile Include="IndexTest2.cs" />
+    <Compile Include="IndexTransformerTest.cs" />
     <Compile Include="IndexWhereClause .cs" />
     <Compile Include="IndexWithEnumNullableFailingUnitTest.cs" />
     <Compile Include="IndexWithUnion.cs" />

@@ -246,7 +246,7 @@ namespace Raven.Database.Server.Tenancy
                     return;
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
                 Logger.Info("Shutting down database {0} because the tenant database has been updated or removed", dbName);
-				Cleanup(dbName, skipIfActive: false, notificationType: notification.Type);
+				Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
             };
         }
 
@@ -320,7 +320,7 @@ namespace Raven.Database.Server.Tenancy
 
 					Logger.Warn("Shutting down database {0} because its storage has become inaccessible", database.Name);
 
-					Cleanup(database.Name, skipIfActive: false, shouldSkip: x => false);
+					Cleanup(database.Name, skipIfActiveInDuration: null, shouldSkip: x => false);
 				});
 
 			}

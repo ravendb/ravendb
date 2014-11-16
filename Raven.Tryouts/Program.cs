@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Raven.Client;
 using Raven.Database.DiskIO;
 using Raven.Json.Linq;
 using System.Linq;
@@ -11,25 +12,9 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-            var performanceRequest = new PerformanceTestRequest
-            {
-                FileSize = (long) 1024 * 1024 * 1024,
-                OperationType = OperationType.Read,
-                BufferingType = BufferingType.ReadAndWrite,
-                Path = "c:\\temp\\data.ravendb-io-test",
-                Sequential = true,
-                ThreadCount = 4,
-                TimeToRunInSeconds = 100,
-                ChunkSize = 4 * 1024
-            };
+			TimeSpan a, b;
+			
 
-            var tester = new DiskPerformanceTester(performanceRequest, Console.WriteLine, CancellationToken.None);
-            tester.TestDiskIO();
-
-		    var r = tester.Result;
-
-            Console.WriteLine(RavenJObject.FromObject(r));
-		    Console.ReadKey();
 		}
 	}
 

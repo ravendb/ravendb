@@ -249,60 +249,57 @@ namespace Raven.Client.Counters
             {
                 var requestUriString = string.Format("{0}/stats", counterStorageUrl);
 
-                var request =
-                    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-                        "GET", credentials, convention));
-
-                try
-                {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<List<CounterStorageStats>>(new RavenJTokenReader(response));
-                }
-                catch (Exception e)
-                {
-                    throw e;
-                    //throw e.TryThrowBetterError();
-                }
+	            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+	            {
+		            try
+		            {
+			            var response = await request.ReadResponseJsonAsync();
+			            return new JsonSerializer().Deserialize<List<CounterStorageStats>>(new RavenJTokenReader(response));
+		            }
+		            catch (Exception e)
+		            {
+			            throw e;
+			            //throw e.TryThrowBetterError();
+		            }
+	            }
             }
 
             public async Task<List<CountersStorageMetrics>> GetCounterStorageMetrics()
             {
                 var requestUriString = string.Format("{0}/metrics", counterStorageUrl);
 
-                var request =
-                    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-                        "GET", credentials, convention));
-
-                try
-                {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<List<CountersStorageMetrics>>(new RavenJTokenReader(response));
-                }
-                catch (Exception e)
-                {
-                    throw e;
-                    //throw e.TryThrowBetterError();
-                }
+	            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+	            {
+		            try
+		            {
+			            var response = await request.ReadResponseJsonAsync();
+			            return new JsonSerializer().Deserialize<List<CountersStorageMetrics>>(new RavenJTokenReader(response));
+		            }
+		            catch (Exception e)
+		            {
+			            throw e;
+			            //throw e.TryThrowBetterError();
+		            }
+	            }
             }
 
             public async Task<List<CounterStorageReplicationStats>> GetCounterStoragRelicationStats()
             {
                 var requestUriString = string.Format("{0}/replications/stats", counterStorageUrl);
 
-                var request =
-                    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-                        "GET", credentials, convention));
-
-                try
-                {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<List<CounterStorageReplicationStats>>(new RavenJTokenReader(response));
-                }
-                catch (Exception e)
-                {
-                    throw e;
-                    //throw e.TryThrowBetterError();
-                }
+	            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+	            {
+		            try
+		            {
+			            var response = await request.ReadResponseJsonAsync();
+			            return new JsonSerializer().Deserialize<List<CounterStorageReplicationStats>>(new RavenJTokenReader(response));
+		            }
+		            catch (Exception e)
+		            {
+			            throw e;
+			            //throw e.TryThrowBetterError();
+		            }
+	            }
             }
         }
 
@@ -329,19 +326,18 @@ namespace Raven.Client.Counters
 			{
 				var requestUriString = String.Format("{0}/replications/get", counterStorageUrl);
 
-				var request =
-                    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-						"GET", credentials, convention));
-
-				try
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
 				{
-					var response = await request.ReadResponseJsonAsync();
-					return response.Value<CounterStorageReplicationDocument>();
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
+					try
+					{
+						var response = await request.ReadResponseJsonAsync();
+						return response.Value<CounterStorageReplicationDocument>();
+					}
+					catch (Exception e)
+					{
+						throw e;
+						//throw e.TryThrowBetterError();
+					}
 				}
 			}
 
@@ -349,19 +345,18 @@ namespace Raven.Client.Counters
 			{
 				var requestUriString = String.Format("{0}/replications/save", counterStorageUrl);
 
-				var request =
-                    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-						"POST", credentials, convention));
-
-				try
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)))
 				{
-					await request.WriteAsync(RavenJObject.FromObject(newReplicationDocument));
-					var response = await request.ReadResponseJsonAsync();
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
+					try
+					{
+						await request.WriteAsync(RavenJObject.FromObject(newReplicationDocument));
+						var response = await request.ReadResponseJsonAsync();
+					}
+					catch (Exception e)
+					{
+						throw e;
+						//throw e.TryThrowBetterError();
+					}
 				}
 			}
         }
@@ -390,18 +385,17 @@ namespace Raven.Client.Counters
 				var requestUriString = String.Format("{0}/change?group={1}&counterName={2}&delta={3}",
 					counterStorageUrl, group, counterName, delta);
 
-				var request =
-					countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-						"POST", credentials, convention));
-
-				try
+				using (var request = countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)))
 				{
-					var response = await request.ReadResponseJsonAsync();
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
+					try
+					{
+						var response = await request.ReadResponseJsonAsync();
+					}
+					catch (Exception e)
+					{
+						throw e;
+						//throw e.TryThrowBetterError();
+					}
 				}
 		    }
 
@@ -410,18 +404,17 @@ namespace Raven.Client.Counters
 				var requestUriString = String.Format("{0}/change?group={1}&counterName={2}",
 					counterStorageUrl, group, counterName);
 
-				var request =
-					countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-						"POST", credentials, convention));
-
-				try
+				using (var request = countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)))
 				{
-					var response = await request.ReadResponseJsonAsync();
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
+					try
+					{
+						var response = await request.ReadResponseJsonAsync();
+					}
+					catch (Exception e)
+					{
+						throw e;
+						//throw e.TryThrowBetterError();
+					}
 				}
 		    }
 
@@ -440,19 +433,18 @@ namespace Raven.Client.Counters
 				var requestUriString = String.Format("{0}/getCounterOverallTotal?group={1}&counterName={2}",
 					counterStorageUrl, group, counterName);
 
-				var request =
-					countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-						"GET", credentials, convention));
-
-				try
+				using (var request = countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
 				{
-					var response = await request.ReadResponseJsonAsync();
-					return response.Value<long>();
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
+					try
+					{
+						var response = await request.ReadResponseJsonAsync();
+						return response.Value<long>();
+					}
+					catch (Exception e)
+					{
+						throw e;
+						//throw e.TryThrowBetterError();
+					}
 				}
 		    }
 
@@ -461,19 +453,18 @@ namespace Raven.Client.Counters
 				var requestUriString = String.Format("{0}/getCounterServersValues?group={1}&counterName={2}",
 					counterStorageUrl, group, counterName);
 
-				var request =
-					countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-						"GET", credentials, convention));
-
-				try
+				using (var request = countersClient.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
 				{
-					var response = await request.ReadResponseJsonAsync();
-					return response.Value<List<CounterView.ServerValue>>();
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
+					try
+					{
+						var response = await request.ReadResponseJsonAsync();
+						return response.Value<List<CounterView.ServerValue>>();
+					}
+					catch (Exception e)
+					{
+						throw e;
+						//throw e.TryThrowBetterError();
+					}
 				}
 		    }
 
@@ -534,19 +525,18 @@ namespace Raven.Client.Counters
 
 					var requestUriString = String.Format("{0}/batch", counterStorageUrl);
 
-				    var request =
-					    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-						    "POST", credentials, convention));
-
-				    try
+				    using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "POST", credentials, convention)))
 				    {
-						await request.WriteAsync(RavenJObject.FromObject(counterChanges));
-					    var response = await request.ReadResponseJsonAsync();
-				    }
-				    catch (Exception e)
-				    {
-					    throw e;
-					    //throw e.TryThrowBetterError();
+					    try
+					    {
+						    await request.WriteAsync(RavenJObject.FromObject(counterChanges));
+						    var response = await request.ReadResponseJsonAsync();
+					    }
+					    catch (Exception e)
+					    {
+						    throw e;
+						    //throw e.TryThrowBetterError();
+					    }
 				    }
 			    }			
 		    }
@@ -575,40 +565,38 @@ namespace Raven.Client.Counters
             {
 				var requestUriString = string.Format("{0}/counterStorage/conterStorages", serverUrl);
 
-                var request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-						"GET", credentials, convention));
-
-                try
-                {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<string[]>(new RavenJTokenReader(response));
-                }
-                catch (Exception e)
-                {
-                    //throw e.TryThrowBetterError();
-	                throw e;
-                }
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+				{
+					try
+					{
+						var response = await request.ReadResponseJsonAsync();
+						return new JsonSerializer().Deserialize<string[]>(new RavenJTokenReader(response));
+					}
+					catch (Exception e)
+					{
+						//throw e.TryThrowBetterError();
+						throw e;
+					}
+				}
             }
 
             public async Task<List<CounterStorageStats>> GetCounterStoragesStats()
             {
 				var requestUriString = string.Format("{0}/counterStorage/stats", serverUrl);
 
-                var request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-						"GET", credentials, convention));
-
-                try
-                {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<List<CounterStorageStats>>(new RavenJTokenReader(response));
-                }
-                catch (Exception e)
-                {
-					throw e;
-                    //throw e.TryThrowBetterError();
-                }
+	            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "GET", credentials, convention)))
+	            {
+		            try
+		            {
+			            var response = await request.ReadResponseJsonAsync();
+			            return new JsonSerializer().Deserialize<List<CounterStorageStats>>(new RavenJTokenReader(response));
+		            }
+		            catch (Exception e)
+		            {
+			            throw e;
+			            //throw e.TryThrowBetterError();
+		            }
+	            }
             }
 
 			public async Task CreateCounterStorageAsync(DatabaseDocument databaseDocument, string newCounterStorageName = null)
@@ -616,26 +604,25 @@ namespace Raven.Client.Counters
 				var requestUriString = string.Format("{0}/counterstorage/admin/{1}", serverUrl,
 													 newCounterStorageName ?? counterStorageName);
 
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-										new CreateHttpJsonRequestParams(this, requestUriString,
-																		"PUT", credentials, convention));
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", credentials, convention)))
+				{
+					try
+					{
+						await request.WriteAsync(RavenJObject.FromObject(databaseDocument));
+					}
+					catch (ErrorResponseException e)
+					{
+						//if (e.StatusCode == HttpStatusCode.Conflict)
+						//	throw new InvalidOperationException("Cannot create counter storage with the name '" + newCounterStorageName + "' because it already exists. Use CreateOrUpdateCounterStorageAsync in case you want to update an existing counter storage", e)
+						//		.TryThrowBetterError();
 
-				try
-				{
-					await request.WriteAsync(RavenJObject.FromObject(databaseDocument));
-				}
-				catch (ErrorResponseException e)
-				{
-					//if (e.StatusCode == HttpStatusCode.Conflict)
-					//	throw new InvalidOperationException("Cannot create counter storage with the name '" + newCounterStorageName + "' because it already exists. Use CreateOrUpdateCounterStorageAsync in case you want to update an existing counter storage", e)
-					//		.TryThrowBetterError();
-
-					throw e;
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
+						throw e;
+					}
+					catch (Exception e)
+					{
+						throw e;
+						//throw e.TryThrowBetterError();
+					}
 				}
 			}
 
@@ -644,18 +631,17 @@ namespace Raven.Client.Counters
 				var requestUriString = string.Format("{0}/counterstorage/admin/{1}?update=true", serverUrl,
 													 newCounterStorageName ?? counterStorageName);
 
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-										new CreateHttpJsonRequestParams(this, requestUriString,
-																		"PUT", credentials, convention));
-
-				try
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", credentials, convention)))
 				{
-					await request.WriteAsync(RavenJObject.FromObject(databaseDocument));
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
+					try
+					{
+						await request.WriteAsync(RavenJObject.FromObject(databaseDocument));
+					}
+					catch (Exception e)
+					{
+						throw e;
+						//throw e.TryThrowBetterError();
+					}
 				}
 			}
 
@@ -664,18 +650,17 @@ namespace Raven.Client.Counters
 				var requestUriString = string.Format("{0}/counterstorage/admin/{1}?hard-delete={2}", serverUrl,
 														counterStorageNameToDelete ?? counterStorageName, hardDelete);
 
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-										new CreateHttpJsonRequestParams(this, requestUriString,
-																		"DELETE", credentials, convention));
-
-				try
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "DELETE", credentials, convention)))
 				{
-					await request.ExecuteRequestAsync();
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
+					try
+					{
+						await request.ExecuteRequestAsync();
+					}
+					catch (Exception e)
+					{
+						throw e;
+						//throw e.TryThrowBetterError();
+					}
 				}
 			}
         }
