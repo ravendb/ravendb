@@ -225,7 +225,6 @@
     <Compile Include="HttpIdTest.cs" />
     <Compile Include="IdCasing.cs" />
     <Compile Include="IdComesBackLowerCase.cs" />
-    <Compile Include="IdentityUserDeserialization.cs" />
     <Compile Include="IdsaTest.cs" />
     <Compile Include="IisQueryLengthIssues.cs" />
     <Compile Include="IncludeOnDictionary.cs" />
