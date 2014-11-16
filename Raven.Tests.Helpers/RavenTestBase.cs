@@ -361,11 +361,9 @@ namespace Raven.Tests.Helpers
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
 			bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(20)));
-			if (spinUntil == false && store is EmbeddableDocumentStore)
-				WaitForUserToContinueTheTest(store);
 			if (!spinUntil)
 			{
-				WaitForUserToContinueTheTest(store, false);
+				throw new TimeoutException("The indexes stayed stale for more than " + timeout);
 			}
 		}
 
