@@ -194,6 +194,7 @@ namespace Raven.Database.Storage
                 database.Documents.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
                              jsonDocument.Metadata,
                              null);
+                database.RaiseBackupComplete();
             }
             catch (Exception e)
             {
