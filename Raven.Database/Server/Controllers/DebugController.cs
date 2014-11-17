@@ -41,7 +41,7 @@ namespace Raven.Database.Server.Controllers
 
 		[HttpGet]
 		[Route("debug/websocket")]
-		[Route("databases/{databaseName}/websocket")]
+		[Route("databases/{databaseName}/debug/websocket")]
 		public async Task<HttpResponseMessage> WebSocket()
 		{
 			try

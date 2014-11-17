@@ -58,6 +58,7 @@ interface computedAppUrls {
     statusDebugIndexFields: KnockoutComputed<string>;
     statusDebugSlowDocCounts: KnockoutComputed<string>;
     statusDebugIdentities: KnockoutComputed<string>;
+    statusDebugWebSocket: KnockoutComputed<string>;
     infoPackage: KnockoutComputed<string>;
 
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
