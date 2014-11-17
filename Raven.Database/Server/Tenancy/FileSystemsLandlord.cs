@@ -15,6 +15,25 @@ using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Server.Connections;
 using Raven.Database.FileSystem;
+using Raven.Abstractions.FileSystem;
+using System.Collections.Specialized;
+using Raven.Abstractions;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
+using Raven.Database.Commercial;
+using Raven.Database.Config;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Connections;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -24,6 +43,8 @@ namespace Raven.Database.Server.Tenancy
         private readonly DocumentDatabase systemDatabase;
         private const string FILESYSTEMS_PREFIX = "Raven/FileSystems/";
         public override string ResourcePrefix { get { return FILESYSTEMS_PREFIX; } }
+
+        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
 
         public InMemoryRavenConfiguration SystemConfiguration
         {
@@ -59,25 +80,110 @@ namespace Raven.Database.Server.Tenancy
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 throw new ArgumentException("tenantId");
-			var document = GetTenantDatabaseDocument(tenantId, ignoreDisabledFileSystem);
+            var document = GetTenantFileSystemDocument(tenantId, ignoreDisabledFileSystem);
             if (document == null)
                 return null;
 
             return CreateConfiguration(tenantId, document,"Raven/FileSystem/DataDir", systemDatabase.Configuration);
         }
 
-		private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledFileSystem = false)
+        protected InMemoryRavenConfiguration CreateConfiguration(
+                                string tenantId,
+                                FileSystemDocument document,
+                                string folderPropName,
+                                InMemoryRavenConfiguration parentConfiguration)
+        {
+            var config = new InMemoryRavenConfiguration
+            {
+                Settings = new NameValueCollection(parentConfiguration.Settings),
+            };
+
+            SetupTenantConfiguration(config);
+
+            config.CustomizeValuesForTenant(tenantId);
+            config.Settings["Raven/FileSystem/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
+
+            foreach (var setting in document.Settings)
+            {
+                config.Settings[setting.Key] = setting.Value;
+            }
+            Unprotect(document);
+
+
+            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
+            config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
+            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);
+
+            config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+
+            config.DatabaseName = tenantId;
+            config.IsTenantDatabase = true;
+
+            config.Initialize();
+            config.CopyParentSettings(parentConfiguration);
+            return config;
+        }
+
+        public void Unprotect(FileSystemDocument configDocument)
+        {
+            if (configDocument.SecuredSettings == null)
+            {
+                configDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                return;
+            }
+
+            foreach (var prop in configDocument.SecuredSettings.ToList())
+            {
+                if (prop.Value == null)
+                    continue;
+                var bytes = Convert.FromBase64String(prop.Value);
+                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
+                try
+                {
+                    var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
+                    configDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
+                }
+                catch (Exception e)
+                {
+                    Logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
+                    configDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
+                }
+            }
+        }
+
+        public void Protect(FileSystemDocument configDocument)
+        {
+            if (configDocument.SecuredSettings == null)
+            {
+                configDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                return;
+            }
+
+            foreach (var prop in configDocument.SecuredSettings.ToList())
+            {
+                if (prop.Value == null)
+                    continue;
+                var bytes = Encoding.UTF8.GetBytes(prop.Value);
+                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
+                var protectedValue = ProtectedData.Protect(bytes, entrophy, DataProtectionScope.CurrentUser);
+                configDocument.SecuredSettings[prop.Key] = Convert.ToBase64String(protectedValue);
+            }
+        }
+
+        private FileSystemDocument GetTenantFileSystemDocument(string tenantId, bool ignoreDisabledFileSystem = false)
         {
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
+            {
                 jsonDocument = systemDatabase.Documents.Get("Raven/FileSystems/" + tenantId, null);
-            if (jsonDocument == null ||
-                jsonDocument.Metadata == null ||
+            }
+
+            if (jsonDocument == null || jsonDocument.Metadata == null ||
                 jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) ||
                 jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))
                 return null;
 
-            var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+            var document = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
             if (document.Settings.Keys.Contains("Raven/FileSystem/DataDir") == false)
                 throw new InvalidOperationException("Could not find Raven/FileSystem/DataDir");
 

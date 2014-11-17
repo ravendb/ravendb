@@ -29,7 +29,7 @@ namespace Raven.Database.Server.Tenancy
 	    protected static string DisposingLock = Guid.NewGuid().ToString();
 
         protected static readonly ILog Logger = LogManager.GetCurrentClassLogger();
-        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
+        
         protected readonly ConcurrentSet<string> Locks = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
         public readonly AtomicDictionary<Task<TResource>> ResourcesStoresCache =
                 new AtomicDictionary<Task<TResource>>(StringComparer.OrdinalIgnoreCase);
@@ -86,33 +86,6 @@ namespace Raven.Database.Server.Tenancy
             }
 
             return reourcesNames;
-        }
-
-        public void Unprotect(DatabaseDocument databaseDocument)
-        {
-            if (databaseDocument.SecuredSettings == null)
-            {
-                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                return;
-            }
-
-            foreach (var prop in databaseDocument.SecuredSettings.ToList())
-            {
-                if (prop.Value == null)
-                    continue;
-                var bytes = Convert.FromBase64String(prop.Value);
-                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-                try
-                {
-                    var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
-                    databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
-                }
-                catch (Exception e)
-                {
-                    Logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
-	                databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
-                }
-            }
         }
 
         public void Cleanup(string resource, bool skipIfActive, Func<TResource,bool> shouldSkip = null, DocumentChangeTypes notificationType = DocumentChangeTypes.None)
@@ -177,68 +150,6 @@ namespace Raven.Database.Server.Tenancy
         }
 
         protected abstract DateTime LastWork(TResource resource);
-
-        public void Protect(DatabaseDocument databaseDocument)
-        {
-            if (databaseDocument.SecuredSettings == null)
-            {
-                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                return;
-            }
-
-            foreach (var prop in databaseDocument.SecuredSettings.ToList())
-            {
-                if (prop.Value == null)
-                    continue;
-                var bytes = Encoding.UTF8.GetBytes(prop.Value);
-                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-                var protectedValue = ProtectedData.Protect(bytes, entrophy, DataProtectionScope.CurrentUser);
-                databaseDocument.SecuredSettings[prop.Key] = Convert.ToBase64String(protectedValue);
-            }
-        }
-
-        protected InMemoryRavenConfiguration CreateConfiguration(
-            string tenantId, 
-            DatabaseDocument document, 
-            string folderPropName,
-            InMemoryRavenConfiguration parentConfiguration)
-        {
-            var config = new InMemoryRavenConfiguration
-            {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
-            };
-
-            SetupTenantConfiguration(config);
-
-            config.CustomizeValuesForTenant(tenantId);
-
-            config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
-            config.Settings["Raven/FileSystem/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
-
-            foreach (var setting in document.Settings)
-            {
-                config.Settings[setting.Key] = setting.Value;
-            }
-            Unprotect(document);
-
-            foreach (var securedSetting in document.SecuredSettings)
-            {
-                config.Settings[securedSetting.Key] = securedSetting.Value;
-            }
-
-	        config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
-            config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
-            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);
-            
-            config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
-
-            config.DatabaseName = tenantId;
-            config.IsTenantDatabase = true;
-
-            config.Initialize();
-            config.CopyParentSettings(parentConfiguration);
-            return config;
-        }
 
         public void Lock(string tenantId, Action actionToTake)
         {

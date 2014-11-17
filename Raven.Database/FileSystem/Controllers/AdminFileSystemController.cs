@@ -3,6 +3,17 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Client.Extensions;
+using Raven.Database.Actions;
+using Raven.Database.Config;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Controllers.Admin;
+using Raven.Database.Server.Tenancy;
+using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,22 +25,6 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
-
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.FileSystem;
-using Raven.Client.Extensions;
-using Raven.Database.Actions;
-using Raven.Database.Commercial;
-using Raven.Database.Config;
-using Raven.Database.Extensions;
-using Raven.Database.Server.Controllers.Admin;
-using Raven.Database.FileSystem.Extensions;
-using Raven.Database.Server.Tenancy;
-using Raven.Database.Storage;
-using Raven.Json.Linq;
-
 using Voron.Impl.Backup;
 
 
@@ -109,7 +104,7 @@ namespace Raven.Database.FileSystem.Controllers
                     return GetEmptyMessage(HttpStatusCode.Conflict);
             }
 
-			var fsDoc = await ReadJsonObjectAsync<DatabaseDocument>();
+            var fsDoc = await ReadJsonObjectAsync<FileSystemDocument>();
 			FileSystemsLandlord.Protect(fsDoc);
 			var json = RavenJObject.FromObject(fsDoc);
             json.Remove("Id");

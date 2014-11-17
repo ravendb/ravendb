@@ -77,7 +77,7 @@ namespace Raven.Tests.Helpers
                 RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
-#endif
+#endif                
                 DefaultStorageTypeName = storageType,
                 AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, Encryption = {UseFips = SettingsHelper.UseFipsEncryptionAlgorithms}, FileSystem = {MaximumSynchronizationInterval = this.SynchronizationInterval, DataDirectory = Path.Combine(directory, "FileSystem"), DefaultStorageTypeName = storageType},
             };
