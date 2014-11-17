@@ -89,21 +89,18 @@ namespace Raven.Database.Server.Connections
 		{
 			var closeAsync = (WebSocketCloseAsync)websocketContext["websocket.CloseAsync"];
 
-			int statusCode;
-			string statusMessage;
+			int statusCode = 1001;
+			string statusMessage = "OK";
 
 			try
 			{
 				var parser = WebSocketsRequestParser;
 				await parser.ParseWebSocketRequestAsync(_context.Request.Uri, _context.Request.Query["singleUseAuthToken"]);
-
-				statusCode = 1000;
-				statusMessage = "OK";
 			}
 			catch (WebSocketsRequestParser.WebSocketRequestValidationException e)
 			{
 				statusCode = 4000 + (int)e.StatusCode;
-				statusMessage = e.Message;
+				statusMessage = string.IsNullOrEmpty(e.Message) == false ? e.Message.Substring(0, Math.Min(123, e.Message.Length)) : string.Empty;
 			}
 
 			await closeAsync(statusCode, statusMessage, CancellationToken.None);
