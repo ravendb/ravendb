@@ -1475,7 +1475,7 @@ namespace Raven.Client.Connection.Async
 		[Obsolete("Use RavenFS instead.")]
 		public Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata)
 		{
-			return ExecuteWithReplication("PUT", operationMetadata =>
+			return ExecuteWithReplication("PUT", async operationMetadata =>
 			{
 				if (metadata == null)
 					metadata = new RavenJObject();
@@ -1488,7 +1488,7 @@ namespace Raven.Client.Connection.Async
 					request.AddOperationHeaders(OperationsHeaders);
 					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-					return request.WriteAsync(data);
+					await request.WriteAsync(data).ConfigureAwait(false);
 				}
 			});
 		}
