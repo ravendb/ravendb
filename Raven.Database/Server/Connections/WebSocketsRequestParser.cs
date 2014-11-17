@@ -132,7 +132,7 @@ namespace Raven.Database.Server.Connections
 			}
 			catch (Exception e)
 			{
-				throw new WebSocketRequestValidationException(HttpStatusCode.InternalServerError, e.ToString());
+				throw new WebSocketRequestValidationException(HttpStatusCode.InternalServerError, e.Message);
 			}
 		}
 

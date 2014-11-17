@@ -49,6 +49,7 @@ namespace Raven.Database.Server.Connections
         public const string ChangesApiWebsocketSuffix = "/changes/websocket";
         public const string WatchTrafficWebsocketSuffix = "/traffic-watch/websocket";
         public const string AdminLogsWebsocketSuffix = "/admin/logs/events";
+		public const string WebsocketValidateSuffix = "/websocket/validate";
 
         public static WebSocketsTransport CreateWebSocketTransport(RavenDBOptions options, IOwinContext context)
         {
@@ -64,11 +65,57 @@ namespace Raven.Database.Server.Connections
             {
                 return new AdminLogsWebsocketTransport(options, context);
             }
+			if (context.Request.Uri.LocalPath.EndsWith(WebsocketValidateSuffix))
+			{
+				return new WebSocketsValidateTransport(options, context);
+			}
             return null;
         }
     }
 
-    public class WebSocketsTransport : IEventsTransport
+	public class WebSocketsValidateTransport : WebSocketsTransport
+	{
+		public WebSocketsValidateTransport(RavenDBOptions options, IOwinContext context)
+			: base(options, context)
+		{
+		}
+
+		protected override WebSocketsRequestParser CreateWebSocketsRequestParser()
+		{
+			return new WebSocketsRequestParser(_options.DatabaseLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.WebsocketValidateSuffix);
+		}
+
+		public override async Task Run(IDictionary<string, object> websocketContext)
+		{
+			var closeAsync = (WebSocketCloseAsync)websocketContext["websocket.CloseAsync"];
+
+			int statusCode;
+			string statusMessage;
+
+			try
+			{
+				var parser = WebSocketsRequestParser;
+				await parser.ParseWebSocketRequestAsync(_context.Request.Uri, _context.Request.Query["singleUseAuthToken"]);
+
+				statusCode = 1000;
+				statusMessage = "OK";
+			}
+			catch (WebSocketsRequestParser.WebSocketRequestValidationException e)
+			{
+				statusCode = 4000 + (int)e.StatusCode;
+				statusMessage = e.Message;
+			}
+
+			await closeAsync(statusCode, statusMessage, CancellationToken.None);
+		}
+
+		public override Task<bool> TrySetupRequest()
+		{
+			return new CompletedTask<bool>(true);
+		}
+	}
+
+	public class WebSocketsTransport : IEventsTransport
     {
 	    private static ILog log = LogManager.GetCurrentClassLogger();
 
@@ -134,7 +181,7 @@ namespace Raven.Database.Server.Connections
             manualResetEvent.Set();
         }
 
-        public async Task Run(IDictionary<string, object> websocketContext)
+        public virtual async Task Run(IDictionary<string, object> websocketContext)
         {
             try
             {
@@ -253,7 +300,7 @@ namespace Raven.Database.Server.Connections
                 onDisconnected();
         }
 
-        public async Task<bool> TrySetupRequest()
+        public virtual async Task<bool> TrySetupRequest()
         {
 	        try
 	        {
