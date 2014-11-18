@@ -242,6 +242,8 @@
     <Compile Include="Plugins\IServerStartupTask.cs" />
     <Compile Include="Server\Abstractions\IResourceStore.cs" />
     <Compile Include="Server\Connections\HttpTracePushContent.cs" />
+    <Compile Include="Server\Connections\WebSocketsRequestParser.cs" />
+    <Compile Include="Server\Connections\WebSocketRequest.cs" />
     <Compile Include="Server\Controllers\HttpTraceController.cs" />
     <Compile Include="Server\Connections\ILogsTransport.cs" />
     <Compile Include="Server\Connections\LogPushContent.cs" />

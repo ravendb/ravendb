@@ -406,6 +406,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\backupFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\ioTest.ts" />
     <TypeScriptCompile Include="App\viewmodels\sqlReplicationPerfStats.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugWebSocket.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\restoreFilesystem.ts" />
@@ -415,6 +416,7 @@
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\compactDatabase.html" />
+    <Content Include="App\views\statusDebugWebSocket.html" />
     <Content Include="App\views\sqlReplicationPerfStats.html" />
     <Content Include="App\views\indexesAndTransformersClipboardDialog.html" />
     <Content Include="App\views\ioTest.html" />
