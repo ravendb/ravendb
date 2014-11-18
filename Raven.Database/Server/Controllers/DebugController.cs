@@ -37,27 +37,6 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class DebugController : RavenDbApiController
 	{
-		public const string ChangesApiWebsocketDebugSuffix = "/debug/websocket";
-
-		[HttpGet]
-		[Route("debug/websocket")]
-		[Route("databases/{databaseName}/debug/websocket")]
-		public async Task<HttpResponseMessage> WebSocket()
-		{
-			try
-			{
-				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
-				var parser = new WebSocketsRequestParser(DatabasesLandlord, CountersLandlord, FileSystemsLandlord, authorizer, ChangesApiWebsocketDebugSuffix);
-				await parser.ParseWebSocketRequestAsync(Request.RequestUri, GetQueryStringValue("token")); // not using 'singleUseAuthToken' to avoid token consumption
-
-				return GetMessageWithObject(new { Message = "Validation passed." });
-			}
-			catch (WebSocketsRequestParser.WebSocketRequestValidationException e)
-			{
-				return GetMessageWithObject(new { Error = e.Message }, e.StatusCode);
-			}
-		}
-
 		[HttpGet]
 		[Route("debug/prefetch-status")]
 		[Route("databases/{databaseName}/debug/prefetch-status")]
