@@ -102,7 +102,7 @@ namespace Raven.Database.Server.Connections
 			catch (WebSocketsRequestParser.WebSocketRequestValidationException e)
 			{
 				statusCode = (int)e.StatusCode;
-				statusMessage = string.IsNullOrEmpty(e.Message) == false ? e.Message.Substring(0, Math.Min(123, e.Message.Length)) : string.Empty;
+				statusMessage = string.IsNullOrEmpty(e.Message) == false ? e.Message : string.Empty;
 			}
 
 			using (var memoryStream = new MemoryStream())

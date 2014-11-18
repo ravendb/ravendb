@@ -5,7 +5,7 @@ import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand")
 
 class statusDebugWebSocket extends viewModelBase {
 
-    results = ko.observable<string>();
+    results = ko.observable<string>("");
 
     test() {
         if ("WebSocket" in window) {
@@ -19,14 +19,14 @@ class statusDebugWebSocket extends viewModelBase {
                 })
                 .fail((e) => {
                     if (e.status == 0) {
-                        this.results("Connection has closed");
+                        this.appendLog("Connection has closed (during getToken)");
                     }
-                    else if (e.status != 403) { // authorized connection
-                        this.results(e.responseJSON.Error);
+                    else { // authorized connection
+                        this.appendLog(e.responseJSON.Error);
                     }
                 });
         } else {
-            this.results("Looks like your browser doesn't support web sockets");
+            this.appendLog("Looks like your browser doesn't support web sockets");
         }
     }
 
@@ -34,26 +34,42 @@ class statusDebugWebSocket extends viewModelBase {
     private connectWebSocket(connectionString: string) {
         var connectionOpened: boolean = false;
 
+        
+
         var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
         var url = wsProtocol + window.location.host + appUrl.forResourceQuery(this.activeDatabase()) + '/websocket/validate?' + connectionString;
+
+        this.appendLog("Connecting to web socket using url: " + url);
+
         var webSocket = new WebSocket(url);
 
         webSocket.onerror = (e) => {
             if (connectionOpened == false) {
-                this.results("Server doesn't support web sockets protocol");
+                this.appendLog("Server doesn't support web sockets protocol");
             } else {
-                //TODO:
-                console.log(e);
-                //this.onError(e);
+                this.appendLog("WebSocket Error" + JSON.stringify(e));
             }
         };
+        webSocket.onmessage = (e) => {
+            var data = JSON.parse(e.data);
+            this.appendLog("Got message from websocket. Status Code = " + data.StatusCode + ", message = " + data.StatusMessage);
+            setTimeout(() => webSocket.close(1000, "CLOSE_NORMAL"), 50);
+        }
         webSocket.onclose = (e: CloseEvent) => {
-            console.log("on close");
-            console.log(e);
+            if (e.wasClean == false) {
+                this.appendLog("WebSocket disconnected in unclean way");
+            } else {
+                this.appendLog("Closed WebSocket connection");
+            }
         }
         webSocket.onopen = () => {
+            this.appendLog("Connected to WebSocket");
             connectionOpened = true;
         }
+    }
+
+    private appendLog(msg:string) {
+        this.results(this.results() + msg + "\r\n");
     }
 }
 
