@@ -87,9 +87,11 @@ namespace Raven.Database.Server.Connections
 
 		public override async Task Run(IDictionary<string, object> websocketContext)
 		{
+			var sendAsync = (WebSocketSendAsync)websocketContext["websocket.SendAsync"];
 			var closeAsync = (WebSocketCloseAsync)websocketContext["websocket.CloseAsync"];
+			var callCancelled = (CancellationToken)websocketContext["websocket.CallCancelled"];
 
-			int statusCode = 1001;
+			int statusCode = 200;
 			string statusMessage = "OK";
 
 			try
@@ -99,11 +101,42 @@ namespace Raven.Database.Server.Connections
 			}
 			catch (WebSocketsRequestParser.WebSocketRequestValidationException e)
 			{
-				statusCode = 4000 + (int)e.StatusCode;
+				statusCode = (int)e.StatusCode;
 				statusMessage = string.IsNullOrEmpty(e.Message) == false ? e.Message.Substring(0, Math.Min(123, e.Message.Length)) : string.Empty;
 			}
 
-			await closeAsync(statusCode, statusMessage, CancellationToken.None);
+			using (var memoryStream = new MemoryStream())
+			{
+				var serializer = new JsonSerializer
+				                 {
+					                 Converters = { new EtagJsonConverter(), new JsonEnumConverter() }
+				                 };
+
+				await SendMessage(memoryStream, serializer, new { StatusCode = statusCode, StatusMessage = statusMessage, Time = SystemTime.UtcNow }, sendAsync, callCancelled);
+			}
+
+			try
+			{
+				var buffer = new ArraySegment<byte>(new byte[1024]);
+				var receiveAsync = (WebSocketReceiveAsync)websocketContext["websocket.ReceiveAsync"];
+				var receiveResult = await receiveAsync(buffer, callCancelled);
+
+				if (receiveResult.Item1 == WebSocketCloseMessageType)
+				{
+					var clientCloseStatus = (int)websocketContext["websocket.ClientCloseStatus"];
+					var clientCloseDescription = (string)websocketContext["websocket.ClientCloseDescription"];
+
+					if (clientCloseStatus == NormalClosureCode && clientCloseDescription == NormalClosureMessage)
+					{
+						await closeAsync(clientCloseStatus, clientCloseDescription, callCancelled);
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				Log.WarnException("Error when recieving message from web socket transport", e);
+				throw;
+			}
 		}
 
 		public override Task<bool> TrySetupRequest()
@@ -114,7 +147,7 @@ namespace Raven.Database.Server.Connections
 
 	public class WebSocketsTransport : IEventsTransport
     {
-	    private static ILog log = LogManager.GetCurrentClassLogger();
+	    protected static ILog Log = LogManager.GetCurrentClassLogger();
 
 		[CLSCompliant(false)]
         protected readonly IOwinContext _context;
@@ -126,9 +159,9 @@ namespace Raven.Database.Server.Connections
 
         private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
 
-		private const int WebSocketCloseMessageType = 8;
-		private const int NormalClosureCode = 1000;
-		private const string NormalClosureMessage = "CLOSE_NORMAL";
+		protected const int WebSocketCloseMessageType = 8;
+		protected const int NormalClosureCode = 1000;
+		protected const string NormalClosureMessage = "CLOSE_NORMAL";
         
         public string Id { get; private set; }
         public bool Connected { get; set; }
@@ -270,7 +303,7 @@ namespace Raven.Database.Server.Connections
 					}
 					catch (Exception e)
 					{
-						log.WarnException("Error when recieving message from web socket transport", e);
+						Log.WarnException("Error when recieving message from web socket transport", e);
 						return;
 					}
 				}
