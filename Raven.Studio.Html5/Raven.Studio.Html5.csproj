@@ -339,7 +339,6 @@
     <TypeScriptCompile Include="App\commands\dismissAlertCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSqlReplicationPerfStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationPerfStatsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getValidateWebSocketParamsCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
