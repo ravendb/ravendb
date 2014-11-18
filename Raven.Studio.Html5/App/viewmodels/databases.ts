@@ -242,13 +242,13 @@ class databases extends viewModelBase {
             case "DES":
                 fullEncryptionName = "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib";
                 break;
-            case "R2C2":
+            case "RC2":
                 fullEncryptionName = "System.Security.Cryptography.RC2CryptoServiceProvider, mscorlib";
                 break;
             case "Rijndael":
                 fullEncryptionName = "System.Security.Cryptography.RijndaelManaged, mscorlib";
                 break;
-            default: //case "Triple DESC":
+            default: //case "Triple DES":
                 fullEncryptionName = "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
         }
         return fullEncryptionName;
