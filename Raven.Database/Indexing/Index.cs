@@ -176,7 +176,7 @@ namespace Raven.Database.Indexing
 			currentlyIndexing.TryRemove(indexingStep, out value);
 		}
 
-		protected void AddindexingPerformanceStat(IndexingPerformanceStats stats)
+		public void AddindexingPerformanceStat(IndexingPerformanceStats stats)
 		{
 			indexingPerformanceStats.Enqueue(stats);
 			while (indexingPerformanceStats.Count > 25)

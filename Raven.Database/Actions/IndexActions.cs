@@ -294,8 +294,8 @@ namespace Raven.Database.Actions
 	            Database.IndexStorage.CreateIndexImplementation(definition);
 				index = Database.IndexStorage.GetIndexInstance(definition.IndexId);
 				//ensure that we don't start indexing it right away, let the precomputation run first, if applicable
-	            index.IsMapIndexingInProgress = true; 
-	            InvokeSuggestionIndexing(name, definition);
+	            index.IsMapIndexingInProgress = true;
+				InvokeSuggestionIndexing(name, definition, index);
 
 	            actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
             });
@@ -468,7 +468,7 @@ namespace Raven.Database.Actions
 		    return query;
 	    }
 
-	    private void InvokeSuggestionIndexing(string name, IndexDefinition definition)
+	    private void InvokeSuggestionIndexing(string name, IndexDefinition definition, Index index)
         {
             foreach (var suggestion in definition.Suggestions)
             {
@@ -483,6 +483,7 @@ namespace Raven.Database.Actions
                                               suggestionOption.Accuracy);
 
                 var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
+					index,
                      WorkContext,
                      Path.Combine(Database.Configuration.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
                      SuggestionQueryRunner.GetStringDistance(suggestionOption.Distance),
