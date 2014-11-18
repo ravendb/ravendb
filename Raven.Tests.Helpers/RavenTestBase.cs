@@ -36,6 +36,7 @@ using Raven.Database.FileSystem.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers.Util;
@@ -364,7 +365,9 @@ namespace Raven.Tests.Helpers
 			bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout.Value);
 			if (!spinUntil)
 			{
-				throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value);
+				var statistics = databaseCommands.GetStatistics();
+				var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
+				throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + Environment.NewLine + stats);
 			}
 		}
 
