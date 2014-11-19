@@ -44,6 +44,10 @@ namespace Raven.Database.Indexing
 
 		public bool IsProjection { get; private set; }
 
+		public bool HasExplicitFieldsToFetch
+		{
+			get { return fieldsToFetch != null && fieldsToFetch.Count > 0; }
+		}
 
 		public IEnumerable<string> Fields
 		{

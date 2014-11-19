@@ -304,7 +304,7 @@ namespace Raven.Database.Indexing
 		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
 			fieldsToFetch.EnsureHasField(Constants.ReduceKeyFieldName);
-			if (fieldsToFetch.IsProjection)
+			if (fieldsToFetch.HasExplicitFieldsToFetch)
 			{
 				return base.RetrieveDocument(document, fieldsToFetch, score);
 			}

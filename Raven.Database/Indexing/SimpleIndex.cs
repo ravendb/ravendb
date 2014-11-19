@@ -12,7 +12,6 @@ using System.Linq;
 using System.Threading;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
-using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
