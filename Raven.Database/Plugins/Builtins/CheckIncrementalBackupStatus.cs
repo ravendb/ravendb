@@ -20,7 +20,7 @@ using Raven.Json.Linq;
 using Raven.Server;
 namespace Raven.Database.Plugins.Builtins
 {
-    public class CheckIncrementalBackupStatus : IServerStartupTask, IDisposable
+    public class CheckIncrementalBackupStatus : IServerStartupTask
     {
 		private Timer checkTimer;
 		private RavenDbServer server;

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -29,6 +30,8 @@ namespace Raven.Server
         private DocumentStore documentStore;
 		private FilesStore filesStore;
 	    private string url;
+
+		private IList<IDisposable> toDispose = new List<IDisposable>(); 
 
 	    public RavenDbServer()
 			: this(new RavenConfiguration())
@@ -112,6 +115,7 @@ namespace Raven.Server
 
 			foreach (var task in configuration.Container.GetExportedValues<IServerStartupTask>())
 			{
+				toDispose.Add(task);
 				task.Execute(this);
 			}
 
@@ -148,7 +152,11 @@ namespace Raven.Server
 
 	    public void Dispose()
 	    {
+			if (Disposed)
+				return;
+
 		    Disposed = true;
+
 		    if (documentStore != null)
 			    documentStore.Dispose();
 
@@ -157,6 +165,12 @@ namespace Raven.Server
 
 		    if (owinHttpServer != null)
 			    owinHttpServer.Dispose();
+
+		    foreach (var disposable in toDispose)
+				disposable.Dispose();
+
+			if (configuration != null)
+				configuration.Dispose();
 	    }
 
 		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451

@@ -16,7 +16,7 @@ using Raven.Server;
 
 namespace Raven.Database.Plugins.Builtins
 {
-	public class CheckFreeDiskSpace : IServerStartupTask, IDisposable
+	public class CheckFreeDiskSpace : IServerStartupTask
 	{
 		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
 		[return: MarshalAs(UnmanagedType.Bool)]
