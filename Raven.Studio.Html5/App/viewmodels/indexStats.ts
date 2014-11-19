@@ -412,7 +412,10 @@ class indexStats extends viewModelBase {
             .style("text-anchor", "end")
             .text(d => d);
 
-        this.legendWidth = d3.max(<any>$(".legend text"), (d: any) => d.getBBox().width) + 40;
+        // Bug fix: default to zero if we don't have any .legend text objects. This can happen when 
+        // getIndexPerfStatsCommand returns an empty array. See http://issues.hibernatingrhinos.com/issue/RavenDB-2929
+        this.legendWidth = (d3.max(<any>$(".legend text"), (d: any) => d.getBBox().width) + 40)
+            || 0;
 
         this.svg.select('.legend_bg')
             .attr('y', -6)

@@ -12,7 +12,8 @@ properties {
 	$lib_dir = "$base_dir\SharedLibs"
 	$packages_dir = "$base_dir\packages"
 	$build_dir = "$base_dir\build"
-	$sln_file = "$base_dir\zzz_RavenDB_Release.sln"
+	$sln_file_name = "zzz_RavenDB_Release.sln"
+	$sln_file = "$base_dir\$sln_file_name"
 	$version = "3.0"
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
@@ -49,10 +50,15 @@ task Init -depends Verify40, Clean {
 
 task Compile -depends Init, CompileHtml5 {
 	
+	$commit = Get-Git-Commit-Full
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
 	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount }
+	
+	# if ($commit -ne "0000000000000000000000000000000000000000") {
+		# exec { &"$tools_dir\GitLink.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
+	# }
 }
 
 task CompileHtml5 {
@@ -187,6 +193,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\Bundles -Type directory | Out-Null
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
 	New-Item $build_dir\Output\Backup -Type directory | Out-Null
+	New-Item $build_dir\Output\Migration -Type directory | Out-Null
 }
 
 task CleanOutputDirectory { 
@@ -205,6 +212,12 @@ task CopyBackup {
 	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Backup
 	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Backup.??? $build_dir\Output\Backup
 	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Backup
+}
+
+task CopyMigration {
+	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Migration
+	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Migration
+	Copy-Item $base_dir\Raven.Migration\bin\$global:configuration\Raven.Migration.??? $build_dir\Output\Migration
 }
 
 task CopyClient {
@@ -353,6 +366,7 @@ task ZipOutput {
 			Client\*.* `
 			Smuggler\*.* `
 			Backup\*.* `
+			Migration\*.* `
 			Web\*.* `
 			Bundles\*.* `
 			Web\bin\*.* `
@@ -369,6 +383,7 @@ task DoReleasePart1 -depends Compile, `
 	CreateOutpuDirectories, `
 	CopySmuggler, `
 	CopyBackup, `
+	CopyMigration, `
 	CopyClient, `
 	CopyWeb, `
 	CopyBundles, `

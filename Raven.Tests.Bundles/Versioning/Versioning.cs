@@ -445,7 +445,7 @@ namespace Raven.Tests.Bundles.Versioning
 			}
 		}
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public void Previously_deleted_docs_will_survive_export_import_cycle_if_purge_is_false()
 		{
 			using (var session = documentStore.OpenSession())
@@ -482,13 +482,13 @@ namespace Raven.Tests.Bundles.Versioning
             var file = Path.GetTempFileName();
 		    try
 			{
-				new SmugglerApi().ExportData(new SmugglerExportOptions { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }).Wait();
+                new SmugglerDatabaseApi().ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }).Wait();
 
 				using (var documentStore2 = CreateDocumentStore(port: 8078))
 				{
-					var importSmuggler = new SmugglerApi();
+                    var importSmuggler = new SmugglerDatabaseApi();
 					importSmuggler.ImportData(
-						new SmugglerImportOptions
+                        new SmugglerImportOptions<RavenConnectionStringOptions>
 						{
 							FromFile = file,
 							To = new RavenConnectionStringOptions

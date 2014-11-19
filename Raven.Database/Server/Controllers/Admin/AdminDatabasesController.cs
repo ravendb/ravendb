@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Commercial;
@@ -144,6 +145,32 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetEmptyMessage();
 		}
 
+        [HttpPost]
+        [Route("admin/databases/toggle-indexing/{*id}")]
+        public HttpResponseMessage DatabaseToggleIndexingDisable(string id, bool isSettingIndexingDisabled)
+        {
+            var message = ToggeleDatabaseIndexingDisabled(id, isSettingIndexingDisabled);
+            if (message.ErrorCode != HttpStatusCode.OK)
+            {
+                return GetMessageWithString(message.Message, message.ErrorCode);
+            }
+
+            return GetEmptyMessage();
+        }
+
+        [HttpPost]
+        [Route("admin/databases/toggle-reject-clients/{*id}")]
+        public HttpResponseMessage DatabaseToggleRejectClientsEnabled(string id, bool isRejectClientsEnabled)
+        {
+            var message = ToggleRejectClientsEnabled(id, isRejectClientsEnabled);
+            if (message.ErrorCode != HttpStatusCode.OK)
+            {
+                return GetMessageWithString(message.Message, message.ErrorCode);
+            }
+
+            return GetEmptyMessage();
+        }
+        
 		[HttpPost]
 		[Route("admin/databases/batch-toggle-disable")]
 		public HttpResponseMessage DatabaseBatchToggleDisable(bool isSettingDisabled)
@@ -220,6 +247,61 @@ namespace Raven.Database.Server.Controllers.Admin
 			return new MessageWithStatusCode();
 		}
 
+        private MessageWithStatusCode ToggeleDatabaseIndexingDisabled(string databaseId, bool isindexingDisabled)
+        {
+            if (IsSystemDatabase(databaseId))
+                return new MessageWithStatusCode { ErrorCode = HttpStatusCode.Forbidden, Message = "System Database document indexing cannot be disabled" };
+
+            var docKey = "Raven/Databases/" + databaseId;
+            var document = Database.Documents.Get(docKey, null);
+            if (document == null)
+                return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
+
+            var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
+            if (dbDoc.Settings.ContainsKey(Constants.IndexingDisabled))
+            {
+                bool indexDisabled;
+                var success = bool.TryParse(dbDoc.Settings[Constants.IndexingDisabled], out indexDisabled);
+                if (success && indexDisabled == isindexingDisabled)
+                {
+                    string state = isindexingDisabled ? "disabled" : "enabled";
+                    return new MessageWithStatusCode {ErrorCode = HttpStatusCode.BadRequest, Message = "Database " + databaseId + "indexing is already " + state};
+                }
+            }
+            dbDoc.Settings[Constants.IndexingDisabled] = isindexingDisabled.ToString();
+            var json = RavenJObject.FromObject(dbDoc);
+            json.Remove("Id");
+            Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
+            return new MessageWithStatusCode();
+        }
+
+        private MessageWithStatusCode ToggleRejectClientsEnabled(string databaseId, bool isRejectClientsEnabled)
+        {
+            if (IsSystemDatabase(databaseId))
+                return new MessageWithStatusCode { ErrorCode = HttpStatusCode.Forbidden, Message = "System Database clients rejection can't change." };
+
+            var docKey = "Raven/Databases/" + databaseId;
+            var document = Database.Documents.Get(docKey, null);
+            if (document == null)
+                return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
+
+            var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
+            if (dbDoc.Settings.ContainsKey(Constants.RejectClientsModeEnabled))
+            {
+                bool rejectClientsEnabled;
+                var success = bool.TryParse(dbDoc.Settings[Constants.RejectClientsModeEnabled], out rejectClientsEnabled);
+                if (success && rejectClientsEnabled == isRejectClientsEnabled)
+                {
+                    string state = rejectClientsEnabled ? "reject clients mode" : "accept clients mode";
+                    return new MessageWithStatusCode {ErrorCode = HttpStatusCode.BadRequest, Message = "Database " + databaseId + "is already in " + state};
+                }
+            }
+            dbDoc.Settings[Constants.RejectClientsModeEnabled] = isRejectClientsEnabled.ToString();
+            var json = RavenJObject.FromObject(dbDoc);
+            json.Remove("Id");
+            Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
+            return new MessageWithStatusCode();
+        }
 		private string CheckExistingDatbaseName(string id, Etag etag)
 		{
 			string errorMessage = null;

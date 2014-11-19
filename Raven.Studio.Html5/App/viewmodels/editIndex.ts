@@ -20,6 +20,7 @@ import scriptedIndexModel = require("models/scriptedIndex");
 import autoCompleterSupport = require("common/autoCompleterSupport");
 import mergedIndexesStorage = require("common/mergedIndexesStorage");
 import indexMergeSuggestion = require("models/indexMergeSuggestion");
+import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 
 class editIndex extends viewModelBase { 
 
@@ -266,11 +267,9 @@ class editIndex extends viewModelBase {
     }
 
     private deleteMergedIndexes(indexesToDelete: string[]) {
-        require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
-            var db = this.activeDatabase();
-            var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db, "Delete Merged Indexes?");
-            dialog.show(deleteViewModel);
-        });
+        var db = this.activeDatabase();
+        var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db, "Delete Merged Indexes?");
+        dialog.show(deleteViewModel);
     }
 
     updateUrl(indexName: string, isSavingMergedIndex: boolean = false) {
@@ -296,18 +295,16 @@ class editIndex extends viewModelBase {
 
     deleteIndex() {
         var indexName = this.loadedIndexName();
-        if (indexName) {
-            require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
-                var db = this.activeDatabase();
-                var deleteViewModel = new deleteIndexesConfirm([indexName], db);
-                deleteViewModel.deleteTask.done(() => {
-                    //prevent asking for unsaved changes
-                    this.dirtyFlag().reset(); // Resync Changes
-                    router.navigate(appUrl.forIndexes(db));
-                });
-
-                dialog.show(deleteViewModel);
+        if (indexName) {            
+            var db = this.activeDatabase();
+            var deleteViewModel = new deleteIndexesConfirm([indexName], db);
+            deleteViewModel.deleteTask.done(() => {
+                //prevent asking for unsaved changes
+                this.dirtyFlag().reset(); // Resync Changes
+                router.navigate(appUrl.forIndexes(db));
             });
+
+            dialog.show(deleteViewModel);
         }
     }
 

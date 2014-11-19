@@ -149,6 +149,15 @@ namespace Raven.Database.Server.Controllers
 			return Math.Max(0, start);
 		}
 
+        public int GetNextPageStart()
+        {
+            bool isNextPage;
+            if (bool.TryParse(GetQueryStringValue("next-page"), out isNextPage) && isNextPage)
+                return GetStart();
+
+            return 0;
+        }
+
 		public int GetPageSize(int maxPageSize)
 		{
 			int pageSize;
@@ -160,6 +169,8 @@ namespace Raven.Database.Server.Controllers
 				pageSize = maxPageSize;
 			return pageSize;
 		}
+
+
 
 		public bool MatchEtag(Etag etag)
 		{
@@ -244,11 +255,21 @@ namespace Raven.Database.Server.Controllers
 					default:
 						if (header.Value.Type == JTokenType.Date)
 						{
-							var rfc1123 = GetDateString(header.Value, "r");
-							var iso8601 = GetDateString(header.Value, "o");
-							msg.Content.Headers.Add(header.Key, rfc1123);
-							if (header.Key.StartsWith("Raven-") == false)
-								msg.Content.Headers.Add("Raven-" + header.Key, iso8601);
+                            if (header.Key.StartsWith("Raven-"))
+                            {
+                                var iso8601 = GetDateString(header.Value, "o");
+                                msg.Content.Headers.Add(header.Key, iso8601);
+                            }
+                            else
+                            {
+                                var rfc1123 = GetDateString(header.Value, "r");
+                                msg.Content.Headers.Add(header.Key, rfc1123);
+                                if (!headers.ContainsKey("Raven-" + header.Key))
+                                {
+                                    var iso8601 = GetDateString(header.Value, "o");
+                                    msg.Content.Headers.Add("Raven-" + header.Key, iso8601);
+                                }                                    
+                            }
 						}
                         else if (header.Value.Type == JTokenType.Boolean)
                         {
@@ -505,6 +526,12 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage WriteFile(string filePath)
 		{
 			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
+            if (etagValue != null)
+            {
+                // Bug fix: the etag header starts and ends with quotes, resulting in cache-busting; the Studio always receives new files, even if should be cached.
+                etagValue = etagValue.Trim(new[] { '\"' });
+            }
+
 			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
 			if (etagValue == fileEtag)
 				return GetEmptyMessage(HttpStatusCode.NotModified);
@@ -626,6 +653,7 @@ namespace Raven.Database.Server.Controllers
         public abstract string TenantName { get; }
 
         public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
+        public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
 
         public void AddRequestTraceInfo(Action<StringBuilder> info)
         {

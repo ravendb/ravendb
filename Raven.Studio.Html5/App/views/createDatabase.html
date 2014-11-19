@@ -4,7 +4,7 @@
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"></button>
             <h4 class="modal-title">Create Database</h4>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" style="max-height: 560px; overflow: auto">
             <div class="row" style="min-height: 478px;">
                 <div class="col-md-7">
                     <div class="form-group">
@@ -40,6 +40,27 @@
                                             <option value="">Default</option>
                                             <option value="esent">Esent</option>
                                             <option value="voron">Voron</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="incrementalBackup">Incremental Backup</label>
+                                        <input type="checkbox" data-bind="checked: isIncrementalBackupChecked" />
+                                        <label for="alertTimeout" data-bind="visible: isIncrementalBackupChecked">Alert timeout in hours:</label>
+                                        <select data-bind="value: alertTimeout, visible: isIncrementalBackupChecked" title="Sets the span of time allowed before issuing an alert for missing backup(in hours)." class="form-control" id="alertTimeout">
+                                            <option value="4">4</option>
+                                            <option value="8">8</option>
+                                            <option value="12">12</option>
+                                            <option value="">24</option>
+                                            <option value="48">48</option>
+                                            <option value="72">72</option>
+                                        </select>
+                                        <label for="alertRecurringTimeout" data-bind="visible: isIncrementalBackupChecked">Alert recurring Timeout in days:</label>
+                                        <select data-bind="value: alertRecurringTimeout, visible: isIncrementalBackupChecked" title="Sets the span of time allowed before issuing multiple alerts on the same missed backup(in days)." class="form-control" id="alertRecurringTimeout">
+                                            <option value="1">1</option>
+                                            <option value="2">2</option>
+                                            <option value="4">4</option>
+                                            <option value="">7</option>
+                                            <option value="14">14</option>
                                         </select>
                                     </div>
                                 </div>

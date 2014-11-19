@@ -14,7 +14,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Server.Connections;
-using Raven.Database.Server.RavenFS;
+using Raven.Database.FileSystem;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -51,7 +51,7 @@ namespace Raven.Database.Server.Tenancy
                     return;
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
                 Logger.Info("Shutting down filesystem {0} because the tenant fs document has been updated or removed", dbName);
-				Cleanup(dbName, skipIfActive: false, notificationType: notification.Type);
+				Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
             };
         }
 

@@ -28,7 +28,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void SmugglerTransformShouldRecognizeNumericPropertiesEvenThoughTheyHaveTheSameNames()
 		{
-			jintHelper.Initialize(new SmugglerOptions
+            jintHelper.Initialize(new SmugglerDatabaseOptions
 			{
 				TransformScript = emptyTransform
 			});

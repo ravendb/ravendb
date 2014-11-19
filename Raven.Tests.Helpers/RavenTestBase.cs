@@ -32,10 +32,11 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers.Util;
@@ -43,7 +44,7 @@ using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Helpers
 {
-	public abstract class RavenTestBase : IDisposable
+    public abstract class RavenTestBase : IDisposable
 	{
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
@@ -360,10 +361,14 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-			bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(20)));
-			if (spinUntil == false && store is EmbeddableDocumentStore)
-				WaitForUserToContinueTheTest(store);
-            if (!spinUntil) throw new Exception("Indexes took took long to become unstale");
+			timeout = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(20));
+			bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout.Value);
+			if (!spinUntil)
+			{
+				var statistics = databaseCommands.GetStatistics();
+				var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
+				throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + Environment.NewLine + stats);
+			}
 		}
 
 

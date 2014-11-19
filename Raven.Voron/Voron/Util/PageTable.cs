@@ -132,8 +132,11 @@ namespace Voron.Util
 					if (val.TransactionId > latestTxId)
 						continue;
 
-					if(val.IsFreedPageMarker)
-						break;
+					// intentionally commenting the below code in order to expose such marker over multiple journals files
+					// handling of free page markers moved to the caller of this method
+
+					//if (val.IsFreedPageMarker) 
+					//	break;
 
 					yield return new KeyValuePair<long, PagePosition>(value.Key, val);
 					break;

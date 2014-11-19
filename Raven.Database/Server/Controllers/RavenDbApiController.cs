@@ -58,7 +58,7 @@ namespace Raven.Database.Server.Controllers
 			var result = new HttpResponseMessage();
 			if (InnerRequest.Method.Method != "OPTIONS")
 			{
-				result = await RequestManager.HandleActualRequest(this, async () =>
+				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
 				{
                     RequestManager.SetThreadLocalState(InnerHeaders, DatabaseName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
@@ -226,8 +226,13 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-	
-		protected bool EnsureSystemDatabase()
+	    public override InMemoryRavenConfiguration ResourceConfiguration
+	    {
+	        get { return Database.Configuration; }
+	    }
+
+
+	    protected bool EnsureSystemDatabase()
 		{
 			return DatabasesLandlord.SystemDatabase == Database;
 		}
@@ -245,14 +250,6 @@ namespace Raven.Database.Server.Controllers
             return false;
         }
 
-        public int GetNextPageStart()
-        {
-            bool isNextPage;
-            if (bool.TryParse(GetQueryStringValue("next-page"), out isNextPage) && isNextPage)
-                return GetStart();
-
-            return 0;
-        }
 
 		protected TransactionInformation GetRequestTransaction()
 		{
@@ -478,7 +475,24 @@ namespace Raven.Database.Server.Controllers
 			bool.TryParse(GetQueryStringValue("skipOverwriteIfUnchanged"), out result);
 			return result;
 		}
-	
+
+        protected int? GetMaxOpsPerSec()
+        {
+            int? result = null;
+            int parseResult;
+            var success = int.TryParse(GetQueryStringValue("maxOpsPerSec"), out parseResult);
+            if (success) result = parseResult;
+            return result;
+        }
+
+        protected TimeSpan? GetStaleTimeout()
+        {
+            TimeSpan? result = null;
+            TimeSpan parseResult;
+            var success = TimeSpan.TryParse(GetQueryStringValue("staleTimeout"), out parseResult);
+            if (success) result = parseResult;
+            return result;
+        }
 
 		protected void HandleReplication(HttpResponseMessage msg)
 		{

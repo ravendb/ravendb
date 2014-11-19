@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
@@ -53,22 +54,17 @@ namespace Raven.Database.Plugins.Builtins
 		    if (newDbDocument.Settings.TryGetValue(Constants.ActiveBundles, out value))
 		        newBundles = value.GetSemicolonSeparatedValues();
 
-
-		    if (currentBundles.Count == newBundles.Count)
-		        return VetoResult.Allowed;
-
-		    if (currentBundles.Count == 0)
-		        return VetoResult.Allowed;
-
-		    if (currentBundles.TrueForAll(x => newBundles.Contains(x)))
-                return VetoResult.Allowed;
-
-		    return VetoResult.Deny(
-		        "You should not change 'Raven/ActiveBundles' setting for a database. This setting should be set only once when a database is created. " +
-				"If you really need to override it you have to specify {\"" + Constants.AllowBundlesChange +
-		        "\": true} in metadata of a database document every time when you send it." + Environment.NewLine +
-		        "Current: " + string.Join("; ", currentBundles) + Environment.NewLine +
-		        "New: " + string.Join("; '", newBundles));
+			if (currentBundles.Count != newBundles.Count || currentBundles.TrueForAll(x => newBundles.Contains(x, StringComparer.InvariantCultureIgnoreCase)) == false)
+			{
+				return VetoResult.Deny(
+					"You should not change 'Raven/ActiveBundles' setting for a database. This setting should be set only once when a database is created. " +
+					"If you really need to override it you have to specify {\"" + Constants.AllowBundlesChange +
+					"\": true} in metadata of a database document every time when you send it." + Environment.NewLine +
+					"Current: " + string.Join("; ", currentBundles) + Environment.NewLine +
+					"New: " + string.Join("; '", newBundles));
+			}
+            
+			return VetoResult.Allowed;
 		}
 	}
 }

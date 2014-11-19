@@ -12,37 +12,59 @@ namespace Raven.Migration
 {
 	public class Program
 	{
-		private readonly RavenConnectionStringOptions connectionStringOptions = new RavenConnectionStringOptions { Credentials = new NetworkCredential() };
-		private readonly RavenConnectionStringOptions connectionStringOptions2 = new RavenConnectionStringOptions { Credentials = new NetworkCredential() };
+		private readonly RavenConnectionStringOptions dbConnectionStringOptions = new RavenConnectionStringOptions { Credentials = new NetworkCredential() };
+		private readonly RavenConnectionStringOptions fsConnectionStringOptions = new RavenConnectionStringOptions { Credentials = new NetworkCredential() };
 		private readonly OptionSet optionSet;
 		private string fileSystemName;
 		private bool use2NdConnection;
 		private bool deleteCopiedAttachments = false;
+		private int batchSize = 128;
 
 		public Program()
 		{
 			optionSet = new OptionSet
 		    {
 			    {
-				    "filesystemserver:", "The url of the RavenDB instance where attachments will be copied to the specified file system",
+				    "fs-server:", "The url of the RavenDB instance where attachments will be copied to the specified file system",
 				    value =>
 				    {
 					    use2NdConnection = true;
-					    connectionStringOptions2.Url = value;
+					    fsConnectionStringOptions.Url = value;
 				    }
 			    },
-			    {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
+			    {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => dbConnectionStringOptions.DefaultDatabase = value},
 			    {"fs|filesystem:", "The file system to export to.", value => fileSystemName = value},
-			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).UserName = value},
-				{"u2|user2|username2:", "The username to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).UserName = value},
-			    {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).Password = value},
-				{"p2|pass2|password2:", "The password to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).Password = value},
-			    {"domain:", "The domain to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).Domain = value},
-				{"domain2:", "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).Domain = value},
-			    {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
-				{"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => connectionStringOptions2.ApiKey = value},
-			    {"h|?|help", v => PrintUsageAndExit(0)},
-				{"deletecopiedattachments", v => deleteCopiedAttachments = true},
+			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential) dbConnectionStringOptions.Credentials).UserName = value},
+				{"u2|user2|username2:", "The username to use when the file system requires the client to authenticate.", value =>
+					{
+						use2NdConnection = true;
+						((NetworkCredential) fsConnectionStringOptions.Credentials).UserName = value;
+					}
+				},
+			    {"db-pass|db-password:", "The password to use when the database requires the client to authenticate.", value => ((NetworkCredential) dbConnectionStringOptions.Credentials).Password = value},
+				{"fs-pass|fs-password:", "The password to use when the file system requires the client to authenticate.", value =>
+					{
+						use2NdConnection = true;
+						((NetworkCredential) fsConnectionStringOptions.Credentials).Password = value;
+					}
+				},
+			    {"db-domain:", "The domain to use when the database requires the client to authenticate.", value => ((NetworkCredential) dbConnectionStringOptions.Credentials).Domain = value},
+				{"fs-domain:", "The domain to use when the file system requires the client to authenticate.", value =>
+					{
+						use2NdConnection = true;
+						((NetworkCredential) fsConnectionStringOptions.Credentials).Domain = value;
+					}
+				},
+			    {"db-key|db-api-key|db-apikey:", "The API-key to use if the database requires OAuth authentication.", value => dbConnectionStringOptions.ApiKey = value},
+				{"fs-key|fs-api-key|fs-apikey:", "The API-key to use if the file system requires OAuth authentication.", value =>
+					{
+						use2NdConnection = true;
+						fsConnectionStringOptions.ApiKey = value;
+					}
+				},
+				{"bs|batch-size:", "Batch size for downloading attachments at once and uploading one-by-one to the file system. Default: 128.", value => batchSize = int.Parse(value)},
+				{"delete-copied-attachments", "Delete an attachment after uploading it to the file system.", v => deleteCopiedAttachments = true},
+				 {"h|?|help", v => PrintUsageAndExit(0)},
 		    };
 		}
 
@@ -58,7 +80,7 @@ namespace Raven.Migration
 				return;
 			}
 
-			connectionStringOptions.Url = url;
+			dbConnectionStringOptions.Url = url;
 
 			try
 			{
@@ -76,7 +98,7 @@ namespace Raven.Migration
 
 			try
 			{
-				new CopyAttachmentsToFileSystem(connectionStringOptions, use2NdConnection ? connectionStringOptions2 : null, fileSystemName, deleteCopiedAttachments).Execute();
+				new CopyAttachmentsToFileSystem(dbConnectionStringOptions, use2NdConnection ? fsConnectionStringOptions : dbConnectionStringOptions, fileSystemName, deleteCopiedAttachments, batchSize).Execute();
 			}
 			catch (Exception ex)
 			{
@@ -93,7 +115,7 @@ namespace Raven.Migration
 				{
 					if (e.Status == WebExceptionStatus.ConnectFailure)
 					{
-						Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url + (use2NdConnection ? " => " + connectionStringOptions2.Url : ""));
+						Console.WriteLine("Error: {0} {1}", e.Message, dbConnectionStringOptions.Url + (use2NdConnection ? " => " + fsConnectionStringOptions.Url : ""));
 						var socketException = e.InnerException as SocketException;
 						if (socketException != null)
 						{
@@ -146,7 +168,7 @@ Usage:
 	- Move all attachments from MyDatabase database to the specified MyFileSystem file system within the same RavenDB instance:
 		Raven.Migration http://localhost:8080/ --database=MyDatabase --filesystem=MyFileSystem
 	- Move all attachments from MyDatabase database to the specified MyFileSystem file system on the different RavenDB instance:
-		Raven.Migration http://localhost:8080/ --database=MyDatabase --filesystemserver=http://localhost:8081/ --filesystem=MyFileSystem
+		Raven.Migration http://localhost:8080/ --database=MyDatabase --filesystem=MyFileSystem --fs-server=http://localhost:8081/
 
 Command line options:", SystemTime.UtcNow.Year);
 

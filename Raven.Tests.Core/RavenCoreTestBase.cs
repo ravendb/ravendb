@@ -13,6 +13,8 @@ using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Extensions;
 using System.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using Xunit;
 using Raven.Server;
 using Raven.Database;
@@ -93,7 +95,12 @@ namespace Raven.Tests.Core
 				databaseCommands = databaseCommands.ForDatabase(db);
 			var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(20)));
 
-			Assert.True(spinUntil, "Indexes took took long to become unstale");
+			if (spinUntil == false)
+			{
+				var statistics = databaseCommands.GetStatistics();
+				var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
+				throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + Environment.NewLine + stats);
+			}
 		}
 
 		protected void WaitForBackup(IDatabaseCommands commands, bool checkError)

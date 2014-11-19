@@ -3,11 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Text;
-using Raven.Abstractions.Util.Encryptors;
-using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Tests.Common;
 
+using Raven.Abstractions.Util.Encryptors;
+using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Tests.Common;
+using System.Text;
 using Xunit;
 
 namespace Raven.Tests.Issues

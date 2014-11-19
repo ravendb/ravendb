@@ -8,20 +8,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Net;
-using System.Net.Http;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Imports.Newtonsoft.Json.Utilities;
@@ -34,8 +28,6 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
-	using Raven.Abstractions.Connection;
-
 	/// <summary>
 	/// The set of conventions used by the <see cref="DocumentStore"/> which allow the users to customize
 	/// the way the Raven client API behaves
@@ -56,8 +48,8 @@ namespace Raven.Client.Document
 		private readonly IList<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
 			new List<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>>();
 
-        private readonly IList<Tuple<Type, Func<object, string>>> listOfRegisteredIdLoadConventions = 
-            new List<Tuple<Type, Func<object, string>>>();
+        private readonly IList<Tuple<Type, Func<ValueType, string>>> listOfRegisteredIdLoadConventions = 
+            new List<Tuple<Type, Func<ValueType, string>>>();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentConvention"/> class.
@@ -93,12 +85,14 @@ namespace Raven.Client.Document
 				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
 			};
 			MaxNumberOfRequestsPerSession = 30;
+		    MaxLengthOfQueryUsingGetUrl = 1024 + 512;
 			ApplyReduceFunction = DefaultApplyReduceFunction;
 			ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
 			ShouldAggressiveCacheTrackChanges = true;
 			ShouldSaveChangesForceAggressiveCacheCheck = true;
+			IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
@@ -145,9 +139,14 @@ namespace Raven.Client.Document
 		///<returns></returns>
 		public string DefaultFindFullDocumentKeyFromNonStringIdentifier(object id, Type type, bool allowNull)
 		{
-            var outputId = TryGetDocumentIdFromRegisteredIdLoadConventions(id, type);
-            if (outputId != null)
-                return outputId;
+			var valueTypeId = id as ValueType;
+			if (valueTypeId != null)
+			{
+				var outputId = TryGetDocumentIdFromRegisteredIdLoadConventions(valueTypeId, type);
+				if (outputId != null)
+					return outputId;
+			}
+            
 
 			var converter = IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(id.GetType()));
 			var tag = GetTypeTagName(type);
@@ -164,22 +163,22 @@ namespace Raven.Client.Document
 		}
 
         /// <summary>
-        /// Tries to get the full dokument id/key from a "simple" id to the full id.
+        /// Tries to get the full document id/key from a "simple" id to the full id.
         /// </summary>
         /// <param name="id">Simple id.</param>
         /// <returns>The full document id, null if no registered id load conventions found</returns>
-        public string TryGetDocumentIdFromRegisteredIdLoadConventions<TEntity, TId>(TId id)
+        public string TryGetDocumentIdFromRegisteredIdLoadConventions<TEntity>(ValueType id)
         {
             return TryGetDocumentIdFromRegisteredIdLoadConventions(id, typeof(TEntity));
         }
 
         /// <summary>
-        /// Tries to get the full dokument id/key from a "simple" id to the full id.
+        /// Tries to get the full document id/key from a "simple" id to the full id.
         /// </summary>
         /// <param name="id">Simple id.</param>
         /// <param name="type">Document type</param>
         /// <returns>Full document id, null if no registered id load conventions found</returns>
-        public string TryGetDocumentIdFromRegisteredIdLoadConventions(object id, Type type)
+        public string TryGetDocumentIdFromRegisteredIdLoadConventions(ValueType id, Type type)
         {
             foreach (var typeToRegisteredIdLoadConvention in listOfRegisteredIdLoadConventions
                 .Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
@@ -207,10 +206,15 @@ namespace Raven.Client.Document
 		public List<ITypeConverter> IdentityTypeConvertors { get; set; }
 
 		/// <summary>
-		/// Gets or sets the default max number of requests per session.
+		/// Gets or sets the max length of Url of GET requests.
 		/// </summary>
 		/// <value>The max number of requests per session.</value>
 		public int MaxNumberOfRequestsPerSession { get; set; }
+
+        /// <summary>
+        /// Gets or sets the default max length of a query using the GET method against a server.
+        /// </summary>
+        public int MaxLengthOfQueryUsingGetUrl { get; set; }
 
 		/// <summary>
 		/// Whatever to allow queries on document id.
@@ -314,7 +318,7 @@ namespace Raven.Client.Document
 	         }
 	      }
 
-	      return this.GetTypeTagName(entity.GetType());
+	      return GetTypeTagName(entity.GetType());
 	   }
 
 		/// <summary>
@@ -503,8 +507,7 @@ namespace Raven.Client.Document
         /// Register an id convention for a single type (and all its derived types) to be used when calling session.Load{TEntity}(TId id)
         /// It is used by the default implementation of FindFullDocumentKeyFromNonStringIdentifier.
         /// </summary>
-        public DocumentConvention RegisterIdLoadConvention<TEntity, TId>(Func<TId, string> func)
-            where TId : struct
+        public DocumentConvention RegisterIdLoadConvention<TEntity>(Func<ValueType, string> func)
         {
             var type = typeof(TEntity);
             var entryToRemove = listOfRegisteredIdLoadConventions.FirstOrDefault(x => x.Item1 == type);
@@ -519,7 +522,7 @@ namespace Raven.Client.Document
                     break;
             }
 
-            var item = new Tuple<Type, Func<object, string>>(typeof(TEntity), o => func((TId)o));
+            var item = new Tuple<Type, Func<ValueType, string>>(typeof(TEntity), o => func(o));
             listOfRegisteredIdLoadConventions.Insert(index, item);
 
             return this;
@@ -628,6 +631,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		public bool PrettifyGeneratedLinqExpressions { get; set; }
 
+		/// <summary>
+		/// How index and transformer updates should be handled in replicated setup.
+		/// Defaults to <see cref="Document.IndexAndTransformerReplicationMode.All"/>.
+		/// </summary>
+		public IndexAndTransformerReplicationMode IndexAndTransformerReplicationMode { get; set; }
+
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 
 		private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
@@ -717,6 +726,25 @@ namespace Raven.Client.Document
 			return customRangeTypes.Contains(type);
 		}
 
+	}
+
+	[Flags]
+	public enum IndexAndTransformerReplicationMode
+	{
+		/// <summary>
+		/// No indexes or transformers are updated to replicated instances.
+		/// </summary>
+		None = 0,
+
+		/// <summary>
+		/// All indexes are replicated.
+		/// </summary>
+		Indexes = 2,
+
+		/// <summary>
+		/// All transformers are replicated.
+		/// </summary>
+		Transformers = 4,
 	}
 
 	public enum QueryValueConvertionType

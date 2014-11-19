@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -8,6 +9,7 @@ using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Indexing;
 using SpellChecker.Net.Search.Spell;
@@ -17,23 +19,19 @@ namespace Raven.Database.Queries
 {
 	public class SuggestionQueryIndexExtension : IIndexExtension
 	{
+		private readonly Index _indexInstance;
 		private readonly WorkContext workContext;
-		private readonly string key;
 		private readonly string field;
 		private readonly Directory directory;
 		private readonly SpellChecker.Net.Search.Spell.SpellChecker spellChecker;
+		private string _operationText;
 
 		[CLSCompliant(false)]
-		public SuggestionQueryIndexExtension(
-			WorkContext workContext,
-			string key,
-			StringDistance distanceType,
-			bool isRunInMemory,
-			string field,
-			float accuracy)
+		public SuggestionQueryIndexExtension(Index indexInstance, WorkContext workContext, string key, 
+			StringDistance distanceType, bool isRunInMemory, string field, float accuracy)
 		{
+			_indexInstance = indexInstance;
 			this.workContext = workContext;
-			this.key = key;
 			this.field = field;
 
 			if (isRunInMemory)
@@ -45,9 +43,10 @@ namespace Raven.Database.Queries
 				directory = FSDirectory.Open(new DirectoryInfo(key));
 			}
 
-			this.spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(directory, null);
-			this.spellChecker.SetAccuracy(accuracy);
-			this.spellChecker.setStringDistance(distanceType);
+			spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(directory, null);
+			spellChecker.SetAccuracy(accuracy);
+			spellChecker.setStringDistance(distanceType);
+			_operationText = "Suggestions for " + field + " " + distanceType + " (" + accuracy + ")";
 		}
 
 		public void Init(IndexReader reader)
@@ -123,7 +122,17 @@ namespace Raven.Database.Queries
 
 		public void OnDocumentsIndexed(IEnumerable<Document> documents, Analyzer searchAnalyzer)
 		{
-			spellChecker.IndexDictionary(new EnumerableDictionary(documents, field, searchAnalyzer), workContext.CancellationToken);
+			var indexingPerformanceStats = new IndexingPerformanceStats {Operation = _operationText, Started = SystemTime.UtcNow};
+			_indexInstance.AddindexingPerformanceStat(indexingPerformanceStats);
+			
+			var sp = Stopwatch.StartNew();
+			var enumerableDictionary = new EnumerableDictionary(documents, field, searchAnalyzer);
+			spellChecker.IndexDictionary(enumerableDictionary, workContext.CancellationToken);
+			
+			indexingPerformanceStats.Duration = sp.Elapsed;
+			indexingPerformanceStats.InputCount = enumerableDictionary.NumberOfDocuments;
+			indexingPerformanceStats.ItemsCount = enumerableDictionary.NumberOfTokens;
+			indexingPerformanceStats.OutputCount = enumerableDictionary.NumberOfFields;
 		}
 
 		public class EnumerableDictionary : SpellChecker.Net.Search.Spell.IDictionary
@@ -132,6 +141,9 @@ namespace Raven.Database.Queries
 			private readonly string field;
 			private readonly Analyzer searchAnalyzer;
 
+			public int NumberOfDocuments;
+			public int NumberOfFields;
+			public int NumberOfTokens;
 			public EnumerableDictionary(IEnumerable<Document> documents, string field, Analyzer searchAnalyzer)
 			{
 				this.documents = documents;
@@ -143,6 +155,7 @@ namespace Raven.Database.Queries
 			{
 				foreach (var document in documents)
 				{
+					NumberOfDocuments++;
 					if (document == null)
 						continue;
 					var fieldables = document.GetFieldables(field);
@@ -150,6 +163,7 @@ namespace Raven.Database.Queries
 						continue;
 					foreach (var fieldable in fieldables)
 					{
+						NumberOfFields++;
 						if (fieldable == null)
 							continue;
 						var str = fieldable.StringValue;
@@ -158,6 +172,7 @@ namespace Raven.Database.Queries
 						var tokenStream = searchAnalyzer.ReusableTokenStream(field, new StringReader(str));
 						while (tokenStream.IncrementToken())
 						{
+							NumberOfTokens++;
 							var term = tokenStream.GetAttribute<ITermAttribute>();
 							yield return term.Term;
 						}

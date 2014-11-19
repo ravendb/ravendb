@@ -14,7 +14,7 @@ namespace Raven.Client.Connection.Async
         where TConvention : Convention
         where TReplicationInformer : IReplicationInformerBase
     {
-        public AsyncServerClientBase(string serverUrl, TConvention convention, OperationCredentials credentials, HttpJsonRequestFactory jsonRequestFactory, 
+        protected AsyncServerClientBase(string serverUrl, TConvention convention, OperationCredentials credentials, HttpJsonRequestFactory jsonRequestFactory, 
                                      Guid? sessionId, NameValueCollection operationsHeaders)
         {
             this.WasDisposed = false;
@@ -29,7 +29,7 @@ namespace Raven.Client.Connection.Async
             if (this.OperationsHeaders == null)
                 this.OperationsHeaders = new NameValueCollection();
 
-            this._replicationInformer = new Lazy<TReplicationInformer>(() => GetReplicationInformer(), true);
+            this._replicationInformer = new Lazy<TReplicationInformer>(GetReplicationInformer, true);
             this.readStrippingBase = new Lazy<int>(() => this.ReplicationInformer.GetReadStripingBase(), true);
 
             this.MaxQuerySizeForGetRequest = 8 * 1024;

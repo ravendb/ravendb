@@ -47,6 +47,8 @@ namespace Raven.Client.Document
 			var jsonObjectContract = base.CreateObjectContract(objectType);
 			jsonObjectContract.ExtensionDataSetter += (o, key, value) =>
 			{
+			    if (jsonObjectContract.Properties.Contains(key))
+			        return;
 				if (currentExtensionData != null)
 					currentExtensionData(o, key, value);
 			};

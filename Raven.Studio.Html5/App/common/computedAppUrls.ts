@@ -19,6 +19,8 @@ interface computedAppUrls {
     tasks: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexStats: KnockoutComputed<string>;
+    replicationPerfStats: KnockoutComputed<string>;
+    sqlReplicationPerfStats: KnockoutComputed<string>;
     metrics: KnockoutComputed<string>;
     metricsIndexing: KnockoutComputed<string>;
     metricsRequests: KnockoutComputed<string>;
@@ -56,6 +58,7 @@ interface computedAppUrls {
     statusDebugIndexFields: KnockoutComputed<string>;
     statusDebugSlowDocCounts: KnockoutComputed<string>;
     statusDebugIdentities: KnockoutComputed<string>;
+    statusDebugWebSocket: KnockoutComputed<string>;
     infoPackage: KnockoutComputed<string>;
 
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;

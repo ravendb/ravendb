@@ -25,9 +25,9 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-				var smugglerApi = new SmugglerApi();
+                var smugglerApi = new SmugglerDatabaseApi();
 
-				var options = new SmugglerBetweenOptions
+                var options = new SmugglerBetweenOptions<RavenConnectionStringOptions>
 				              {
 									From = new RavenConnectionStringOptions
 					                {

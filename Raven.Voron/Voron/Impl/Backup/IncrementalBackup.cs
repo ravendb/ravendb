@@ -87,10 +87,25 @@ namespace Voron.Impl.Backup
                             if (journalFile == null)
                             {
                                 long journalSize;
-                                using (var pager = env.Options.OpenJournalPager(journalNum))
-                                {
-                                    journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * AbstractPager.PageSize);
-                                }
+	                            try
+	                            {
+		                            using (var pager = env.Options.OpenJournalPager(journalNum))
+		                            {
+			                            journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * AbstractPager.PageSize);
+		                            }
+	                            }
+	                            catch (Exception e)
+	                            {
+		                            if (backupInfo.LastBackedUpJournal == -1 && journalNum == 0 && e.Message.StartsWith("No such journal"))
+		                            {
+			                            throw new InvalidOperationException("The first incremental backup creation failed because the first journal file " +
+											StorageEnvironmentOptions.JournalName(journalNum) + " was not found. " +
+											"Did you turn on the incremental backup feature after initializing the storage? " +
+											"In order to create backups incrementally the storage must be created with IncrementalBackupEnabled option set to 'true'.", e);
+		                            }
+
+		                            throw;
+	                            }
 
                                 journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
                             }
@@ -209,7 +224,7 @@ namespace Voron.Impl.Backup
                         try
                         {
                             TransactionHeader* lastTxHeader = null;
-                            var pagesToWrite = new Dictionary<long, Func<Page>>();
+                            var pagesToWrite = new Dictionary<long, Page>();
 
                             long journalNumber = -1;
                             foreach (var entry in package.Entries)
@@ -247,7 +262,18 @@ namespace Voron.Impl.Backup
                                         foreach (var translation in reader.TransactionPageTranslation)
                                         {
                                             var pageInJournal = translation.Value.JournalPos;
-                                            pagesToWrite[translation.Key] = () => recoveryPager.Read(pageInJournal);
+	                                        var page = recoveryPager.Read(pageInJournal);
+	                                        pagesToWrite[translation.Key] = page;
+
+											if (page.IsOverflow)
+											{
+												var numberOfOverflowPages = recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
+
+												for (int i = 1; i < numberOfOverflowPages; i++)
+												{
+													pagesToWrite.Remove(translation.Key + i);
+												}
+											}
                                         }
 
                                         break;
@@ -257,7 +283,7 @@ namespace Voron.Impl.Backup
                             }
 
                             var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-                                .Select(x => x.Value())
+                                .Select(x => x.Value)
                                 .ToList();
 
                             if (sortedPages.Count == 0)

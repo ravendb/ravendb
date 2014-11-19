@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Database.Smuggler;
 using Raven.Tests.Common;
@@ -15,10 +16,10 @@ namespace Raven.Tests.MailingList
 		{
 			using (var store = NewDocumentStore())
 			{
-				var dataDumper = new DataDumper(store.SystemDatabase);
+                var dataDumper = new DatabaseDataDumper(store.SystemDatabase);
 				using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.Sandbox.ravendump"))
 				{
-					await dataDumper.ImportData(new SmugglerImportOptions {FromStream = stream});
+                    await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = stream });
 				}
 
 				using(var s = store.OpenSession())
@@ -36,10 +37,10 @@ namespace Raven.Tests.MailingList
 		{
 			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
-				var dataDumper = new DataDumper(store.SystemDatabase);
+                var dataDumper = new DatabaseDataDumper(store.SystemDatabase);
 				using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.Sandbox.ravendump"))
 				{
-					await dataDumper.ImportData(new SmugglerImportOptions {FromStream = stream});
+                    await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = stream });
 				}
 
 				WaitForUserToContinueTheTest(store);

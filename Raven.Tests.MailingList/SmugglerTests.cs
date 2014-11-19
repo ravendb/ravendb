@@ -17,7 +17,7 @@ namespace Raven.Tests.MailingList
             public DateTime Created { get; set; }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public void DateTimePreserved()
         {
             var file = Path.GetTempFileName();
@@ -35,14 +35,14 @@ namespace Raven.Tests.MailingList
                         docId = foo.Id;
                         session.SaveChanges();
                     }
-                    var smugglerApi = new SmugglerApi();
-					smugglerApi.ExportData(new SmugglerExportOptions { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smugglerApi = new SmugglerDatabaseApi();
+                    smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var documentStore = NewRemoteDocumentStore())
                 {
-                    var smugglerApi = new SmugglerApi();
-					smugglerApi.ImportData(new SmugglerImportOptions { FromFile = file, To = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smugglerApi = new SmugglerDatabaseApi();
+                    smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = file, To = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                     
                     using (var session = documentStore.OpenSession())
                     {

@@ -16,7 +16,7 @@ using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
-using Raven.Database.Server.RavenFS.Util;
+using Raven.Database.FileSystem.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
@@ -142,7 +142,9 @@ namespace Owin
 		{
 			public ICollection<Assembly> GetAssemblies()
 			{
-				return AppDomain.CurrentDomain.GetAssemblies().ToList(); ;
+				return AppDomain.CurrentDomain.GetAssemblies()
+					.Where(a => !a.IsDynamic && a.ExportedTypes.Any(t => t.IsSubclassOf(typeof(RavenBaseApiController))))
+					.ToArray();
 			}
 		}
 

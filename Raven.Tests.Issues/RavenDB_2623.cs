@@ -38,7 +38,7 @@ namespace Raven.Tests.Issues
 
 				var e = Assert.Throws<InvalidOperationException>(() => store
 					.DatabaseCommands
-					.DeleteByIndex(Constants.DocumentsByEntityNameIndex, new IndexQuery { Query = "Tag:People" }, allowStale: false)
+                    .DeleteByIndex(Constants.DocumentsByEntityNameIndex, new IndexQuery { Query = "Tag:People" }, options: null)
 					.WaitForCompletion());
 
 				Assert.Equal("Operation failed: Bulk operation cancelled because the index is stale and allowStale is false", e.Message);

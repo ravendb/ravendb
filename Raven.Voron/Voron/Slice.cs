@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
 using Voron.Impl;
 using Voron.Trees;
+using Voron.Util.Conversion;
 
 namespace Voron
 {
@@ -127,22 +129,25 @@ namespace Voron
 			if (Options != SliceOptions.Key)
 				return Options.ToString();
 
-			if (Size == sizeof(long))
+			if (Size == sizeof(long) && Debugger.IsAttached)
 			{
-				var stringValue = GetStringValue();
-				if (stringValue[0] == '\0')
-					return "Numeric: " + CreateReader().ReadBigEndianInt64();
+				if (Array != null)
+				{
+					if(Array[0] == 0)
+						return "I64 = " +  EndianBitConverter.Big.ToInt64(Array,0);
+				}
+				else if (*Pointer == 0)
+				{
+					var bytes = new byte[sizeof(long)];
+					CopyTo(bytes);
+					return "I64 = " + EndianBitConverter.Big.ToInt64(bytes, 0);
+				}
 			}
 
-			return GetStringValue();
-		}
-
-		private unsafe string GetStringValue()
-		{
 			if (Array != null)
-				return Encoding.UTF8.GetString(Array, 0, Size);
+				return Encoding.UTF8.GetString(Array,0, Size);
 
-			return new string((sbyte*) Pointer, 0, Size, Encoding.UTF8);
+			return new string((sbyte*)Pointer, 0, Size, Encoding.UTF8);
 		}
 
 		protected override int CompareData(MemorySlice other, ushort size)

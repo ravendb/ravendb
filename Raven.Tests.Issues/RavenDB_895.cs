@@ -42,7 +42,7 @@ namespace Raven.Tests.Issues
                 File.Delete(file);
 	    }
 
-	    [Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task TransformScriptFiltering()
 		{
 	        using (var store = NewRemoteDocumentStore())
@@ -54,8 +54,8 @@ namespace Raven.Tests.Issues
 
 	                session.SaveChanges();
 	            }
-	            var smugglerApi = new SmugglerApi();
-		        smugglerApi.SmugglerOptions.TransformScript =
+                var smugglerApi = new SmugglerDatabaseApi();
+		        smugglerApi.Options.TransformScript =
 			        @"function(doc) { 
 						var id = doc['@metadata']['@id']; 
 						if(id === 'foos/1')
@@ -63,7 +63,7 @@ namespace Raven.Tests.Issues
 						return doc;
 					}";
 		        await smugglerApi.ExportData(
-			        new SmugglerExportOptions
+                    new SmugglerExportOptions<RavenConnectionStringOptions>
 			        {
 				        ToFile = file,
 				        From = new RavenConnectionStringOptions
@@ -76,8 +76,8 @@ namespace Raven.Tests.Issues
 
 	        using (var documentStore = NewRemoteDocumentStore())
 	        {
-	            var smugglerApi = new SmugglerApi();
-		        smugglerApi.SmugglerOptions.TransformScript =
+                var smugglerApi = new SmugglerDatabaseApi();
+		        smugglerApi.Options.TransformScript =
 			        @"function(doc) { 
 						var id = doc['@metadata']['@id']; 
 						if(id === 'foos/1')
@@ -85,7 +85,7 @@ namespace Raven.Tests.Issues
 						return doc;
 					}";
 		        await smugglerApi.ImportData(
-			        new SmugglerImportOptions
+                    new SmugglerImportOptions<RavenConnectionStringOptions>
 			        {
 				        FromFile = file,
 				        To = new RavenConnectionStringOptions
@@ -110,7 +110,7 @@ namespace Raven.Tests.Issues
 	        }
 		}
 
-	    [Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task TransformScriptModifying()
 		{
 	        using (var store = NewRemoteDocumentStore())
@@ -122,14 +122,14 @@ namespace Raven.Tests.Issues
 
 	                session.SaveChanges();
 	            }
-	            var smugglerApi = new SmugglerApi();
-		        smugglerApi.SmugglerOptions.TransformScript =
+                var smugglerApi = new SmugglerDatabaseApi();
+		        smugglerApi.Options.TransformScript =
 			        @"function(doc) { 
 						doc['Name'] = 'Changed';
 						return doc;
 					}";
 		        await smugglerApi.ExportData(
-			        new SmugglerExportOptions
+                    new SmugglerExportOptions<RavenConnectionStringOptions>
 			        {
 				        From = new RavenConnectionStringOptions
 				        {
@@ -142,14 +142,14 @@ namespace Raven.Tests.Issues
 
 	        using (var store = NewRemoteDocumentStore())
 	        {
-	            var smugglerApi = new SmugglerApi();
-		        smugglerApi.SmugglerOptions.TransformScript =
+                var smugglerApi = new SmugglerDatabaseApi();
+		        smugglerApi.Options.TransformScript =
 			        @"function(doc) { 
 						doc['Name'] = 'Changed';
 						return doc;
 					}";
 		        await smugglerApi.ImportData(
-			        new SmugglerImportOptions
+                    new SmugglerImportOptions<RavenConnectionStringOptions>
 			        {
 				        To = new RavenConnectionStringOptions
 				        {

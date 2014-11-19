@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Linq;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.FileSystem.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 

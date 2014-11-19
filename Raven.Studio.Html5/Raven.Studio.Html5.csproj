@@ -32,6 +32,7 @@
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
+    <TypeScriptCompile Include="App\commands\disableIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\disableResourceToggleCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
@@ -62,6 +63,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getIndexesDefinitionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexMergeSuggestionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
@@ -95,6 +97,7 @@
     <TypeScriptCompile Include="App\commands\deleteCollectionCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocsMatchingQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\toggleRejectDatabaseClients.ts" />
     <TypeScriptCompile Include="App\commands\updateServerPrefixHiLoCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\executeBulkDocsCommand.ts" />
@@ -186,6 +189,7 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\confirmationDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\indexesAndTransformersClipboardDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyTransformerDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexMergeSuggestions.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyIndexDialog.ts" />
@@ -332,6 +336,9 @@
     <TypeScriptCompile Include="App\commands\filesystem\monitorRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCollectionsCountCommand.ts" />
     <TypeScriptCompile Include="App\commands\ioTestCommand.ts" />
+    <TypeScriptCompile Include="App\commands\dismissAlertCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getSqlReplicationPerfStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getReplicationPerfStatsCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
@@ -398,6 +405,8 @@
     <TypeScriptCompile Include="App\viewmodels\indexStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\backupFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\ioTest.ts" />
+    <TypeScriptCompile Include="App\viewmodels\sqlReplicationPerfStats.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugWebSocket.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\restoreFilesystem.ts" />
@@ -407,6 +416,9 @@
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\compactDatabase.html" />
+    <Content Include="App\views\statusDebugWebSocket.html" />
+    <Content Include="App\views\sqlReplicationPerfStats.html" />
+    <Content Include="App\views\indexesAndTransformersClipboardDialog.html" />
     <Content Include="App\views\ioTest.html" />
     <Content Include="App\views\indexStats.html" />
     <Content Include="App\views\filesystem\backupFilesystem.html" />
@@ -613,6 +625,9 @@
     <Content Include="Content\nv.d3.css" />
     <Content Include="Content\variables.css">
       <DependentUpon>variables.less</DependentUpon>
+    </Content>
+    <Content Include="Content\variables.min.css">
+      <DependentUpon>variables.css</DependentUpon>
     </Content>
     <Content Include="favicon.ico" />
     <Content Include="fonts\fontawesome-webfont.svg" />
@@ -995,7 +1010,7 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
-    <TypeScriptSourceMap>true</TypeScriptSourceMap>
+    <TypeScriptSourceMap>True</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">

@@ -44,7 +44,7 @@ namespace Raven.Tests.MailingList
 				                                     		Name = "EntityType",
 				                                     		Value = new RavenJValue("EntityTypeId")
 				                                     	}
-				                                     }, false);
+				                                     }, null);
 			    var id = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("EntityEntityIdPatch").IndexId;
 				store.DatabaseCommands.DeleteIndex("EntityEntityIdPatch");
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Include>
-  <Property Id="WEBSITE_DESCRIPTION">
+  <Property Id="WEBSITE_DESCRIPTION" Value="RavenDB Web Site">
     <RegistrySearch Id="WebsiteDescriptionFromRegistry"
                      Root="HKLM"
                      Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"
@@ -15,7 +15,7 @@
                      Type="raw" />
   </Property>
 
-  <Property Id="WEBSITE_VD" Value="RavenDB">
+  <Property Id="WEBSITE_VD">
     <RegistrySearch Id="WebsiteVirtualDirectoryFromRegistry"
                      Root="HKLM"
                      Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"
@@ -23,7 +23,7 @@
                      Type="raw" />
   </Property>
 
-  <Property Id="WEBSITE_PATH">
+  <Property Id="WEBSITE_PATH" Value="C:\RavenSite">
     <RegistrySearch Id="WebsitePathFromRegistry"
                      Root="HKLM"
                      Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"
@@ -34,7 +34,7 @@
   <Property Id="WEB_APP_POOL_NAME" Value="RavenApplicationPool" />
   <Property Id="WEB_APP_POOL_IDENTITY_PWD" Hidden="yes" />
 
-  <Property Id="WEBSITE_PORT" Value="80">
+  <Property Id="WEBSITE_PORT" Value="8080">
     <RegistrySearch Id="WebsitePortFromRegistry"
                      Root="HKLM"
                      Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"

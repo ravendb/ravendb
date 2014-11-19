@@ -148,7 +148,8 @@ namespace Raven.Abstractions.Indexing
 
 		/// <summary>
 		/// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
-		/// the one document produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+		/// the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document 
+		/// will be skipped and the appropriate error message will be added to the indexing errors.
 		/// Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }

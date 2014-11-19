@@ -279,31 +279,30 @@ html, body {
 }
 
 
-
+  @media(max-device-height:1024px) {
+      .query-stats {
+        width: 80vw!important;}    }
+    @media(min-device-height:1025px) {
+        .query-stats {
+        width: 50vw!important;
+        }
+    }
 
 .query-stats {
-    width: 600px;
-    margin: -250px 0 0 -450px;
+  
+   
+    
+    //margin: -250px 0 0 -450px;
+    .row {       
+            padding-left: 10px;
+            padding-right: 10px;
+       
 
-    ul {
-        li {
-            padding: 0 10px 0 10px;
-
-            strong {
-                padding: 0 10px 0 10px;
-                display: inline-block;
-            }
-
-            span {
-                padding: 0 10px 0 10px;
-                display: inline-block;
-            }
-
-            border-bottom: 0 !important;
-            border-top: 0 !important;
-            border-left: 0 !important;
-            border-right: 0 !important;
+        span {
+            -ms-word-break: break-all;
+            word-break: break-all;
         }
+       
     }
 }
 
@@ -457,20 +456,79 @@ html, body {
                 }
             }
 
+            .indexing-disabled{
+                position: absolute;
+                top: 30px;
+                right: 11px;
+            }
+            .clients-rejected{
+                position: absolute;
+                top: 30px;
+                right: 28px;
+            }
             .btn-group {
                 float: right;
                 margin-left: 39.3px;
-                margin-top: 45.3px;
+                margin-top: 50px;
 
                 .dropdown-menu {
+                    .fa-arrow-down{
+                        color:@alert-danger-bg;
+                    }
                     .fa-trash-o {
                         color: lighten(@disabledColor, 20%);
                     }
 
                     .delete-resource:hover .fa-trash-o {
-                        color: @disabledColor;
+                        color: white;
                     }
-                }
+                }.dropdown-submenu {
+    position: relative;
+}
+
+.dropdown-submenu>.dropdown-menu {
+    top: 0;
+    left: 100%;
+    margin-top: -6px;
+    margin-left: -1px;
+    -webkit-border-radius: 0 6px 6px 6px;
+    -moz-border-radius: 0 6px 6px;
+    border-radius: 0 6px 6px 6px;
+}
+
+.dropdown-submenu:hover>.dropdown-menu {
+    display: block;
+}
+
+.dropdown-submenu>a:after {
+    display: block;
+    content: " ";
+    float: right;
+    width: 0;
+    height: 0;
+    border-color: transparent;
+    border-style: solid;
+    border-width: 5px 0 5px 5px;
+    border-left-color: #ccc;
+    margin-top: 5px;
+    margin-right: -10px;
+}
+
+.dropdown-submenu:hover>a:after {
+    border-left-color: #fff;
+}
+
+.dropdown-submenu.pull-left {
+    float: none;
+}
+
+.dropdown-submenu.pull-left>.dropdown-menu {
+    left: -100%;
+    margin-left: 10px;
+    -webkit-border-radius: 6px 0 6px 6px;
+    -moz-border-radius: 6px 0 6px 6px;
+    border-radius: 6px 0 6px 6px;
+}
             }
 
             .btn-default {
@@ -767,6 +825,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
     .selected .column {
         background-color: @selectionColor;
+        color: black;
     }
 
     .logRecord {
@@ -1092,11 +1151,19 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
     .breadcrumb {
         width: 100%;
-
-        li {
-            overflow: visible !important;
+        .dropdown-menu{
+            li{
+                overflow-x:visible!important;
+                max-width:none!important;
+            }
         }
     }
+
+    .breadcrumb > li {            
+            overflow: visible !important;
+            
+        }
+
 
     .editor {
         height: 60px;
@@ -1505,6 +1572,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         .selected {
             td {
                 background-color: @selectionColor;
+                color: black;
             }
         }
     }
@@ -2046,4 +2114,9 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 
 .topBorder td {
     border-top: solid 1px #ddd !important;
+}
+.confirmationMessage{
+     -ms-word-break: break-all;
+     word-break: break-all;
+     white-space:pre-line;
 }

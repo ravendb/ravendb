@@ -35,7 +35,7 @@ namespace Raven.Tests.Issues
 				IOExtensions.DeleteDirectory(ExportDir);
         }
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task ShouldSmuggleIdentitiesBetweenDatabases()
 		{
 			using (var server1 = GetNewServer(port: 8079))
@@ -53,8 +53,8 @@ namespace Raven.Tests.Issues
                 {
 					using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
 					{
-						var smugglerApi = new SmugglerApi();
-						await smugglerApi.Between(new SmugglerBetweenOptions
+                        var smugglerApi = new SmugglerDatabaseApi();
+						await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
 						{
 							From = new RavenConnectionStringOptions {Url = "http://localhost:8079", DefaultDatabase = "Database1"},
 							To = new RavenConnectionStringOptions {Url = "http://localhost:8078", DefaultDatabase = "Database2"}
@@ -76,7 +76,7 @@ namespace Raven.Tests.Issues
             }
 		}
 
-		[Fact]
+        [Fact, Trait("Category", "Smuggler")]
 		public async Task ShouldSmuggleIdentitiesInExportImport()
 		{
 			using (var server1 = GetNewServer(port: 8079))
@@ -90,10 +90,10 @@ namespace Raven.Tests.Issues
 
 				store1.DatabaseCommands.SeedIdentityFor("users/", 10);
 
-				var smugglerApi = new SmugglerApi();
-				await smugglerApi.ExportData(new SmugglerExportOptions
+                var smugglerApi = new SmugglerDatabaseApi();
+				await smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
 				{
-					From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
+                    From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
 					ToFile = ExportDir
 				});
 
@@ -101,7 +101,7 @@ namespace Raven.Tests.Issues
 				{
 					using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
 					{
-						await smugglerApi.ImportData(new SmugglerImportOptions
+						await smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
 						{
 							FromFile = ExportDir,
 							To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }

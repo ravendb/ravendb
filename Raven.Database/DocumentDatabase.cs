@@ -13,8 +13,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
+using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -188,6 +190,8 @@ namespace Raven.Database
 		public event EventHandler StorageInaccessible;
 
 		public event Action OnIndexingWiringComplete;
+
+		public event Action<DocumentDatabase> OnBackupComplete;
 
 		public static string BuildVersion
 		{
@@ -441,38 +445,38 @@ namespace Raven.Database
 					result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
 
 					result.StaleIndexes = IndexStorage.Indexes.Where(indexId =>
+					{
+						Index indexInstance = IndexStorage.GetIndexInstance(indexId);
+
+						var isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
+
+						if (isStale && actions.Staleness.IsIndexStaleByTask(indexId, null) == false && actions.Staleness.IsReduceStale(indexId) == false)
 						{
-							Index indexInstance = IndexStorage.GetIndexInstance(indexId);
+							var collectionNames = IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
+							var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
 
-							var isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
+							if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
+								return false;
+						}
 
-							if (isStale && actions.Staleness.IsIndexStaleByTask(indexId, null) == false && actions.Staleness.IsReduceStale(indexId) == false)
-							{
-								var collectionNames = IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
-								var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
-
-								if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
-									return false;
-							}
-
-							return isStale;
-						}).Select(indexId =>
-				{
-					Index index = IndexStorage.GetIndexInstance(indexId);
-					return index == null ? null : index.PublicName;
-				}).ToArray();
+						return isStale;
+					}).Select(indexId =>
+					{
+						Index index = IndexStorage.GetIndexInstance(indexId);
+						return index == null ? null : index.PublicName;
+					}).ToArray();
 
 					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-		{
-			Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-			if (indexInstance == null)
-				return null;
-			x.Name = indexInstance.PublicName;
-			x.SetLastDocumentEtag(result.LastDocEtag);
-			return x;
-		})
-								.Where(x => x != null)
-								.ToArray();
+					{
+						Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+						if (indexInstance == null)
+							return null;
+						x.Name = indexInstance.PublicName;
+						x.SetLastDocumentEtag(result.LastDocEtag);
+						return x;
+					})
+						.Where(x => x != null)
+						.ToArray();
 				});
 
 				if (result.Indexes != null)
@@ -669,19 +673,19 @@ namespace Raven.Database
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of DatabaseDocument");
 
 			exceptionAggregator.Execute(() =>
-					{
-						if (prefetcher != null)
-							prefetcher.Dispose();
-					});
+							{
+								if (prefetcher != null)
+									prefetcher.Dispose();
+							});
 
 			exceptionAggregator.Execute(() =>
-						{
-							initializer.UnsubscribeToDomainUnloadOrProcessExit();
-							disposed = true;
+							{
+								initializer.UnsubscribeToDomainUnloadOrProcessExit();
+								disposed = true;
 
-							if (workContext != null)
-								workContext.StopWorkRude();
-						});
+								if (workContext != null)
+									workContext.StopWorkRude();
+							});
 
 			if (initializer != null)
 			{
@@ -689,22 +693,22 @@ namespace Raven.Database
 			}
 
 			exceptionAggregator.Execute(() =>
-							{
-								if (ExtensionsState == null)
-									return;
+		{
+			if (ExtensionsState == null)
+				return;
 
-								foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
-									exceptionAggregator.Execute(value.Dispose);
-							});
+			foreach (IDisposable value in ExtensionsState.Values.OfType<IDisposable>())
+				exceptionAggregator.Execute(value.Dispose);
+		});
 
 			exceptionAggregator.Execute(() =>
-							{
-								if (toDispose == null)
-									return;
+		{
+			if (toDispose == null)
+				return;
 
-								foreach (IDisposable shouldDispose in toDispose)
-									exceptionAggregator.Execute(shouldDispose.Dispose);
-							});
+			foreach (IDisposable shouldDispose in toDispose)
+				exceptionAggregator.Execute(shouldDispose.Dispose);
+		});
 
 			exceptionAggregator.Execute(() =>
 			{
@@ -713,15 +717,15 @@ namespace Raven.Database
 			});
 
 			exceptionAggregator.Execute(() =>
-					{
-						if (indexingBackgroundTask != null)
-							indexingBackgroundTask.Wait();
-					});
+			{
+				if (indexingBackgroundTask != null)
+					indexingBackgroundTask.Wait();
+			});
 			exceptionAggregator.Execute(() =>
-				{
-					if (reducingBackgroundTask != null)
-						reducingBackgroundTask.Wait();
-				});
+			{
+				if (reducingBackgroundTask != null)
+					reducingBackgroundTask.Wait();
+			});
 
 			exceptionAggregator.Execute(() =>
 		{
@@ -782,20 +786,20 @@ namespace Raven.Database
 
 			string[] indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
 			long totalIndexSize = indexes.Sum(file =>
+			{
+				try
 				{
-					try
-					{
-						return new FileInfo(file).Length;
-					}
-					catch (UnauthorizedAccessException)
-					{
-						return 0;
-					}
-					catch (FileNotFoundException)
-					{
-						return 0;
-					}
-				});
+					return new FileInfo(file).Length;
+				}
+				catch (UnauthorizedAccessException)
+				{
+					return 0;
+				}
+				catch (FileNotFoundException)
+				{
+					return 0;
+				}
+			});
 
 			return totalIndexSize;
 		}
@@ -866,25 +870,16 @@ namespace Raven.Database
 		{
 			if (backgroundWorkersSpun)
 				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
-
+			var disableIndexing = Configuration.Settings[Constants.IndexingDisabled];
+			if (null != disableIndexing)
+			{
+				bool disableIndexingStatus;
+				var res = bool.TryParse(disableIndexing, out disableIndexingStatus);
+				if (res && disableIndexingStatus) return; //indexing were set to disable 
+			}
 			backgroundWorkersSpun = true;
 
 			workContext.StartWork();
-			indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-
-			ReducingExecuter = new ReducingExecuter(workContext);
-
-			reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-		}
-
-		public void SpinIndexingWorkers()
-		{
-			if (backgroundWorkersSpun)
-				throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
-
-			backgroundWorkersSpun = true;
-
-			workContext.StartIndexing();
 			indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 
 			ReducingExecuter = new ReducingExecuter(workContext);
@@ -1156,11 +1151,11 @@ namespace Raven.Database
 			{
 				string storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
 				database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications, () =>
-				{
-					if (database.StorageInaccessible != null)
-						database.StorageInaccessible(database, EventArgs.Empty);
+							{
+								if (database.StorageInaccessible != null)
+									database.StorageInaccessible(database, EventArgs.Empty);
 
-				});
+							});
 				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
 			}
 
@@ -1169,6 +1164,14 @@ namespace Raven.Database
 				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, configuration.Container.GetExportedValues<AbstractViewGenerator>(), database.Extensions);
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
 			}
+
+
+		}
+
+		public void RaiseBackupComplete()
+		{
+			var onOnBackupComplete = OnBackupComplete;
+			if (onOnBackupComplete != null) onOnBackupComplete(this);
 		}
 	}
 }

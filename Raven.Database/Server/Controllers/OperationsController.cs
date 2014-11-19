@@ -2,9 +2,15 @@
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
 
 using System.Linq;
+using Raven.Abstractions;
+using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Abstractions.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -61,13 +67,50 @@ namespace Raven.Database.Server.Controllers
         [Route("databases/{databaseName}/operation/alerts")]
         public HttpResponseMessage Alerts()
         {
-            const int FreeThreshold = 15;
-            var drives = DriveInfo.GetDrives();
-            string[] alerts = drives
-                .Where(x => x.DriveType == DriveType.Fixed && x.TotalFreeSpace*1.0 / x.TotalSize < FreeThreshold / 100.0)
-                .Select(x => string.Format("Database disk ({0}) has less than {1}% free space.", x.Name, FreeThreshold))
-                .ToArray();
-            return GetMessageWithObject(alerts);
+            var jsonDocument = Database.Documents.Get("Raven/Alerts", null);
+            if (jsonDocument == null)
+            {
+                return GetMessageWithObject(new Alert[0]);
+            }
+
+            var alerts = jsonDocument.DataAsJson.JsonDeserialization<AlertsDocument>();
+            if (alerts == null)
+            {
+                return GetMessageWithObject(new Alert[0]);
+            }
+            var now = SystemTime.UtcNow;
+            var filteredAlerts = alerts.Alerts.Where(
+                a => a.Observed == false &&
+                    (a.LastDismissedAt.HasValue == false || a.LastDismissedAt.Value.AddDays(1) < now))
+                .ToList();
+
+            return GetMessageWithObject(filteredAlerts);
+        }
+
+        [HttpPost]
+        [Route("operation/alert/dismiss")]
+        [Route("databases/{databaseName}/operation/alert/dismiss")]
+        public async Task<HttpResponseMessage> AlertDismiss()
+        {
+            var request = await ReadJsonObjectAsync<RavenJObject>();
+            var key = request.Value<string>("key");
+            var jsonDocument = Database.Documents.Get("Raven/Alerts", null);
+            if (jsonDocument == null)
+            {
+                return GetMessageWithString("Unable to find Raven/Alerts document", HttpStatusCode.BadRequest);
+            }
+
+            var alerts = jsonDocument.DataAsJson.JsonDeserialization<AlertsDocument>();
+            var alertToDismiss = alerts.Alerts.FirstOrDefault(alert => alert.UniqueKey == key);
+            if (alertToDismiss == null)
+            {
+                return GetMessageWithString("Unable to find alert with key: " + key, HttpStatusCode.BadRequest);
+            }
+            alertToDismiss.Observed = true;
+            alertToDismiss.LastDismissedAt = SystemTime.UtcNow;
+
+            Database.Documents.Put("Raven/Alerts", null, RavenJObject.FromObject(alerts), jsonDocument.Metadata, null);
+            return GetEmptyMessage();
         }
 	}
-}
+};

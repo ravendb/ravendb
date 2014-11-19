@@ -42,15 +42,15 @@ namespace Raven.Client.FileSystem.Impl
 
             var pipe = new BlockingStream(10);           
 
-            var task = Task.Run(() => StreamWriter(pipe))
-                           .ContinueWith(x => { pipe.CompleteWriting(); })
-                           .ConfigureAwait(false);
+            Task.Run(() => StreamWriter(pipe))
+                                .ContinueWith(x => pipe.CompleteWriting())
+                                .ConfigureAwait(false);
 
             if (sessionOperations.EntityChanged(Filename))
             {
                 if (!sessionOperations.IsDeleted(Filename))
                 {
-                    var fileHeaderInCache = await session.LoadFileAsync(Filename);
+                    var fileHeaderInCache = await session.LoadFileAsync(Filename).ConfigureAwait(false);
                     Metadata = fileHeaderInCache.Metadata;
                 }
             }

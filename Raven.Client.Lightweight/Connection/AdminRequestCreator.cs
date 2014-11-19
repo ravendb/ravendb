@@ -33,7 +33,6 @@ namespace Raven.Client.Connection
 		{
 			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
 				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
-
 			var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
             MultiDatabase.AssertValidName(dbname);
 			doc = RavenJObject.FromObject(databaseDocument);
@@ -108,11 +107,13 @@ namespace Raven.Client.Connection
         /// </summary>
         public async Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0)
         {
-            var requestForSystemDatabase = createRequestForSystemDatabase(string.Format(CultureInfo.InvariantCulture,"/databases?pageSize={0}&start={1}", pageSize, start), "GET");
-            var result = await requestForSystemDatabase.ReadResponseJsonAsync();
-            var json = (RavenJArray)result;
-            return json.Select(x => x.ToString())
-                .ToArray();
+	        using (var requestForSystemDatabase = createRequestForSystemDatabase(string.Format(CultureInfo.InvariantCulture, "/databases?pageSize={0}&start={1}", pageSize, start), "GET"))
+	        {
+				var result = await requestForSystemDatabase.ReadResponseJsonAsync().ConfigureAwait(false);
+				var json = (RavenJArray)result;
+				return json.Select(x => x.ToString())
+					.ToArray();
+	        }
         }
 	}
 }

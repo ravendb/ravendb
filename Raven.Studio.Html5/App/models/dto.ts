@@ -223,6 +223,7 @@ interface alertDto {
     Title: string;
     CreatedAt: string;
     Observed: boolean;
+    LastDismissedAt: string;
     Message: string;
     AlertLevel: string;
     Exception: string;
@@ -405,6 +406,13 @@ interface transformerDto {
         TransformResults: string;
         Name: string;
     }
+}
+
+
+
+interface indexDefinitionListItemDto {
+    name: string;
+    definition: indexDefinitionDto
 }
 
 interface saveTransformerDto {
@@ -633,6 +641,7 @@ interface smugglerOptionsDto {
     IncludeTransformers: boolean;
     IncludeAttachments: boolean;
     RemoveAnalyzers: boolean;
+    NoneDefualtFileName: string;
 }
 
 interface customColumnParamsDto {
@@ -890,6 +899,8 @@ interface databaseDto {
     Name: string;
     Disabled: boolean;
     Bundles: string[];
+    IndexingDisabled: boolean;
+    RejectClientsEnabled: boolean;
 }
 
 interface customFunctionsDto {
@@ -1052,7 +1063,7 @@ interface performanceTestRequestDto {
     Path: string;
     FileSize: number;
     OperationType: string;
-    Buffered: boolean;
+    BufferingType: string;
     Sequential: boolean;
     ThreadCount: number;
     TimeToRunInSeconds: number;

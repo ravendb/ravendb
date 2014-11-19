@@ -89,7 +89,8 @@ class changesApi {
         var connectionOpened: boolean = false;
 
         var wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        this.webSocket = new WebSocket(wsProtocol + window.location.host + this.resourcePath + '/changes/websocket?' + connectionString);
+	    var url = wsProtocol + window.location.host + this.resourcePath + '/changes/websocket?' + connectionString;
+	    this.webSocket = new WebSocket(url);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
@@ -166,12 +167,13 @@ class changesApi {
         if ("EventSource" in window) {
             this.connect(this.connectEventSource);
             warningMessage = "Your server doesn't support the WebSocket protocol!";
-            details = "EventSource API is going to be used instead. However, multi tab usage isn't supported. " +
-                "WebSockets are only supported on servers running on Windows Server 2012 and equivalent.";
+            details = "EventSource API is going to be used instead. However, multi tab usage isn't supported.\r\n" +
+            "WebSockets are only supported on servers running on Windows Server 2012 and equivalent. \r\n" +
+            " If you have issues with WebSockets on Windows Server 2012 and equivalent use Status > Debug > WebSocket to debug.";
         } else {
             this.connectToChangesApiTask.reject();
             warningMessage = "Changes API is Disabled!";
-            details = "Your server doesn't support the WebSocket protocol and your browser doesn't support the EventSource API. " +
+            details = "Your server doesn't support the WebSocket protocol and your browser doesn't support the EventSource API.\r\n" +
                 "In order to use it, please use a browser that supports the EventSource API.";
         }
 
@@ -351,20 +353,6 @@ class changesApi {
             this.allBulkInsertsHandlers.remove(callback);
             if (this.allDocsHandlers().length == 0) {
                 this.send('unwatch-bulk-operation');
-            }
-        });
-    }
-
-    watchDocPrefix(onChange: (e: documentChangeNotificationDto) => void, prefix?: string) {
-        var callback = new changesCallback<documentChangeNotificationDto>(onChange);
-        if (this.allDocsHandlers().length == 0) {
-            this.send('watch-prefix', prefix);
-        }
-        this.allDocsHandlers.push(callback);
-        return new changeSubscription(() => {
-            this.allDocsHandlers.remove(callback);
-            if (this.allDocsHandlers().length == 0) {
-                this.send('unwatch-prefix', prefix);
             }
         });
     }

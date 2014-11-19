@@ -12,7 +12,7 @@ namespace Raven.Database.DiskIO
         public string Path { get; set; }
         public long FileSize { get; set; }
         public OperationType OperationType { get; set; }
-        public bool Buffered { get; set; }
+        public BufferingType BufferingType { get; set; }
         public bool Sequential { get; set; }
         public int ThreadCount { get; set; }
         public int TimeToRunInSeconds { get; set; }
@@ -36,9 +36,21 @@ namespace Raven.Database.DiskIO
             chunkSize = 4*1024;
             Sequential = false;
             FileSize = 1024*1024*1024;
+            BufferingType = BufferingType.None;
             TimeToRunInSeconds = 30;
             ThreadCount = Environment.ProcessorCount;
         }
+
+        public bool BufferedReads
+        {
+            get { return BufferingType == BufferingType.Read || BufferingType == BufferingType.ReadAndWrite; }
+        }
+
+        public bool BufferedWrites
+        {
+            get { return BufferingType == BufferingType.ReadAndWrite; }
+        }
+
     }
 
     public enum OperationType
@@ -46,5 +58,12 @@ namespace Raven.Database.DiskIO
         Read,
         Write,
         Mix
+    }
+
+    public enum BufferingType
+    {
+        None,
+        ReadAndWrite, 
+        Read
     }
 }

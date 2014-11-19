@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Threading;
 
 namespace Raven.Abstractions
 {
@@ -14,6 +15,8 @@ namespace Raven.Abstractions
 
 		public static Func<DateTime> UtcDateTime;
 
+	    public static Action<int> WaitCalled; 
+
 		public static DateTime UtcNow
 		{
 			get
@@ -22,5 +25,16 @@ namespace Raven.Abstractions
 				return temp == null ? DateTime.UtcNow : temp();
 			}
 		}
+
+	    public static void Wait(int durationMs)
+	    {
+	        var waitCalled = WaitCalled;
+	        if (waitCalled != null)
+	        {
+	            waitCalled(durationMs);
+	            return;
+	        }
+            Thread.Sleep(durationMs);
+	    }
 	}
 }

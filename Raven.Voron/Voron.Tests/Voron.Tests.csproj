@@ -71,6 +71,7 @@
   <ItemGroup>
     <Compile Include="Backups\Full.cs" />
     <Compile Include="Backups\Incremental.cs" />
+    <Compile Include="Backups\RavenDB_2939.cs" />
     <Compile Include="Bugs\AccessViolationWithIteratorUsage.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\DeleteCurrentAndMoveNextShouldWorkWithKeysWithNulls.cs" />

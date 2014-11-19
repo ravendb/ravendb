@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -162,8 +163,8 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
-		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale = false);
+        /// <param name="options">Holds configuration options for base operation.</param>
+        Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null);
 
 		/// <summary>
 		/// Deletes the transformer definition for the specified name asynchronously
@@ -239,7 +240,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Create a http request to the specified relative url on the current database
 		/// </summary>
-		HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false);
+		HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 
 		/// <summary>
 		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
@@ -329,8 +330,8 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale = false);
+        /// <param name="options">Holds configuration options for base operation.</param>
+        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null);
 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
@@ -413,7 +414,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		string UrlFor(string documentKey);
 
-		HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false);
+		HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 
 		/// <summary>
 		/// Updates just the attachment with the specified key's metadata
@@ -454,8 +455,8 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
-		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale = false);
+        /// <param name="options">Holds configuration options for base operation.</param>
+        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null);
 
 		/// <summary>
 		/// Return a list of documents that based on the MoreLikeThisQuery.

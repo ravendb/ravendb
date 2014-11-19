@@ -55,12 +55,14 @@ namespace Raven.Abstractions.Data
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
 		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
+	    public const string RejectClientsModeEnabled = "Raven/RejectClientsModeEnabled";
 
 		// Indexing
 		public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
 		public const int DefaultPrefetchingDurationLimit = 5000;
 		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";
 		public const int BulkImportDefaultTimeoutInMs = 60000;
+	    public const string IndexingDisabled = "Raven/IndexingDisabled";
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
@@ -172,7 +174,9 @@ namespace Raven.Abstractions.Data
 
 		public const string DatabaseDocumentFilename = "Database.Document";
 		public const string FilesystemDocumentFilename = "Filesystem.Document";
-
+	    public const string IncrementalBackupAlertTimeout = "Raven/IncrementalBackup/AlertTimeoutHours";
+        public const string IncrementalBackupRecurringAlertTimeout = "Raven/IncrementalBackup/RecurringAlertTimeoutDays";
 		public const string IncrementalBackupState = "IncrementalBackupState.Document";
+
 	}
 }

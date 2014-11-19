@@ -158,7 +158,7 @@ namespace Raven.Database.Storage
         /// <summary>
         /// The key of this check is to determinate if incremental backup can be executed 
         /// 
-        /// For voron: first and subsequent backups are incremenetal 
+        /// For voron: first and subsequent backups are incremental 
         /// For esent: first backup can't be incremental - when user requested incremental esent backup and target directory is empty, we have to start with full backup.
         /// </summary>
         /// <returns></returns>
@@ -194,6 +194,7 @@ namespace Raven.Database.Storage
                 database.Documents.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
                              jsonDocument.Metadata,
                              null);
+                database.RaiseBackupComplete();
             }
             catch (Exception e)
             {

@@ -74,6 +74,8 @@ namespace Raven.Abstractions.Data
     {
         public string DefaultFileSystem { get; set; }
 
+        public int MaxChunkSizeInMb { get; set; }
+
         public override string ToString()
         {
             var filesystem = string.IsNullOrWhiteSpace(DefaultFileSystem) ? "<none>" : DefaultFileSystem;

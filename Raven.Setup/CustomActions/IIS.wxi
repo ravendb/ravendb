@@ -32,7 +32,7 @@
       <![CDATA[NOT Installed AND (&IIS=3) AND NOT(!IIS=3)]]>
     </Custom>
     <Custom Action="RegisterAspNet" After="RegisterAspNet_Cmd">
-      <![CDATA[NOT Installed AND (NOT ASPNETREGISTERED) AND ASPNETREGIIS AND (&IIS=3) AND NOT(!IIS=3)]]>
+      <![CDATA[NOT Installed AND (NOT ASPNETREGISTERED AND VersionNT < 602) AND ASPNETREGIIS AND (&IIS=3) AND NOT(!IIS=3)]]>
     </Custom>
 
     <Custom Action="FindIdOfCreatedWebSite" After="InstallFinalize">

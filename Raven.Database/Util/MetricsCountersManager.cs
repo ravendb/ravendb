@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
 
 using metrics;
@@ -45,6 +46,8 @@ namespace Raven.Database.Util
         public ConcurrentDictionary<string, HistogramMetric> ReplicationBatchSizeHistogram { get; private set; }
 
         public ConcurrentDictionary<string, HistogramMetric> ReplicationDurationHistogram { get; private set; }
+
+        public ConcurrentDictionary<string, ConcurrentQueue<ReplicationPerformanceStats>> ReplicationPerformanceStats { get; private set; }
         
         public MetricsCountersManager()
         {
@@ -64,6 +67,7 @@ namespace Raven.Database.Util
             ReplicationBatchSizeMeter = new ConcurrentDictionary<string, MeterMetric>();
             ReplicationBatchSizeHistogram = new ConcurrentDictionary<string, HistogramMetric>();
             ReplicationDurationHistogram = new ConcurrentDictionary<string, HistogramMetric>();
+            ReplicationPerformanceStats = new ConcurrentDictionary<string, ConcurrentQueue<ReplicationPerformanceStats>>();
             
 
         }
@@ -106,6 +110,12 @@ namespace Raven.Database.Util
         {
             return ReplicationDurationHistogram.GetOrAdd(destination.ConnectionStringOptions.Url,
                 s => dbMetrics.Histogram("metrics", "Replication duration Histogram for " + s));
+        }
+
+        public ConcurrentQueue<ReplicationPerformanceStats> GetReplicationPerformanceStats(ReplicationStrategy destination)
+        {
+            return ReplicationPerformanceStats.GetOrAdd(destination.ConnectionStringOptions.Url,
+                                                        s => new ConcurrentQueue<ReplicationPerformanceStats>());
         }
     }
 }

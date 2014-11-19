@@ -2,6 +2,7 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
 using System;
@@ -72,6 +73,7 @@ namespace Raven.Client.FileSystem
 
         Task UploadAsync(string filename, Stream source, long? size = null, Action<string, long> progress = null);
         Task UploadAsync(string filename, Stream source, RavenJObject metadata, long? size = null, Action<string, long> progress = null);
+        Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size);
 
         Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null, long? from = null, long? to = null);
 
@@ -84,6 +86,10 @@ namespace Raven.Client.FileSystem
         Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 1024);
 
         Task<FileHeader[]> GetAsync(string[] filename);
+
+        Task<IAsyncEnumerator<FileHeader>> StreamFilesAsync(Etag fromEtag, int pageSize = int.MaxValue);
+
+        
     }
 
     public interface IAsyncFilesAdminCommands : IDisposable, IHoldProfilingInformation
@@ -97,6 +103,7 @@ namespace Raven.Client.FileSystem
         Task CreateOrUpdateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null);
         Task DeleteFileSystemAsync(string fileSystemName = null, bool hardDelete = false);
 
+        Task EnsureFileSystemExistsAsync(string fileSystem);        
         Task<long> StartRestore(FilesystemRestoreRequest restoreRequest);
         Task StartBackup(string backupLocation, FileSystemDocument databaseDocument, bool incremental, string filesystemName);
         Task<long> StartCompact(string filesystemName);

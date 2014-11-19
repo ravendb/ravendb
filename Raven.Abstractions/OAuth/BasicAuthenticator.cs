@@ -20,30 +20,32 @@ namespace Raven.Abstractions.OAuth
 
         public async Task<Action<HttpClient>> HandleOAuthResponseAsync(string oauthSource, string apiKey)
         {
-            var httpClient = new HttpClient(new HttpClientHandler());
-            httpClient.DefaultRequestHeaders.TryAddWithoutValidation("grant_type", "client_credentials");
-            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "UTF-8" });
+	        using (var httpClient = new HttpClient(new HttpClientHandler()))
+	        {
+				httpClient.DefaultRequestHeaders.TryAddWithoutValidation("grant_type", "client_credentials");
+				httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "UTF-8" });
 
-            httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
-            httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+				httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
+				httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
 
-            if (string.IsNullOrEmpty(apiKey) == false)
-                httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Api-Key", apiKey);
+				if (string.IsNullOrEmpty(apiKey) == false)
+					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Api-Key", apiKey);
 
-            if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
-                throw new InvalidOperationException(BasicOAuthOverHttpError);
+				if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
+					throw new InvalidOperationException(BasicOAuthOverHttpError);
 
-            var requestUri = oauthSource;
-            var response = await httpClient.GetAsync(requestUri)
-                                           .ConvertSecurityExceptionToServerNotFound()
-                                           .AddUrlIfFaulting(new Uri(requestUri));
+				var requestUri = oauthSource;
+				var response = await httpClient.GetAsync(requestUri)
+											   .ConvertSecurityExceptionToServerNotFound()
+											   .AddUrlIfFaulting(new Uri(requestUri));
 
-            var stream = await response.GetResponseStreamWithHttpDecompression();
-            using (var reader = new StreamReader(stream))
-            {
-                CurrentOauthToken = reader.ReadToEnd();
-                return (Action<HttpClient>)(SetAuthorization);
-            }
+				var stream = await response.GetResponseStreamWithHttpDecompression();
+				using (var reader = new StreamReader(stream))
+				{
+					CurrentOauthToken = reader.ReadToEnd();
+					return (Action<HttpClient>)(SetAuthorization);
+				}
+	        }
         }
 
         private HttpWebRequest PrepareOAuthRequest(string oauthSource, string apiKey)
