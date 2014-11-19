@@ -976,6 +976,7 @@ namespace Raven.Database.Config
 			{
 				Container.Dispose();
 				Container = null;
+				containerExternallySet = false;
 			}
 		}
 
