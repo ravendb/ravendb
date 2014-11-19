@@ -73,6 +73,7 @@
     <Compile Include="Backups\Incremental.cs" />
     <Compile Include="Bugs\AccessViolationWithIteratorUsage.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
+    <Compile Include="Bugs\DeleteCurrentAndMoveNextShouldWorkWithKeysWithNulls.cs" />
     <Compile Include="Bugs\MemoryAccess.cs" />
     <Compile Include="Bugs\FlushingToDataFile.cs" />
     <Compile Include="Bugs\PageAllocation.cs" />

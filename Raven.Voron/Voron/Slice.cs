@@ -127,10 +127,22 @@ namespace Voron
 			if (Options != SliceOptions.Key)
 				return Options.ToString();
 
-			if (Array != null)
-				return Encoding.UTF8.GetString(Array,0, Size);
+			if (Size == sizeof(long))
+			{
+				var stringValue = GetStringValue();
+				if (stringValue[0] == '\0')
+					return "Numeric: " + CreateReader().ReadBigEndianInt64();
+			}
 
-			return new string((sbyte*)Pointer, 0, Size, Encoding.UTF8);
+			return GetStringValue();
+		}
+
+		private unsafe string GetStringValue()
+		{
+			if (Array != null)
+				return Encoding.UTF8.GetString(Array, 0, Size);
+
+			return new string((sbyte*) Pointer, 0, Size, Encoding.UTF8);
 		}
 
 		protected override int CompareData(MemorySlice other, ushort size)
