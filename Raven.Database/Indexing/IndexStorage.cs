@@ -1223,17 +1223,17 @@ namespace Raven.Database.Indexing
 
 		public void FlushMapIndexes()
 		{
-			foreach (var value in indexes.Values.Where(value => !value.IsMapReduce))
+			foreach (var value in indexes.Values.Where(value => value != null &&  !value.IsMapReduce))
 			{
-                value.Flush(value.GetLastEtagFromStats());
+        			value.Flush(value.GetLastEtagFromStats());
 			}
 		}
 
 		public void FlushReduceIndexes()
 		{
-			foreach (var value in indexes.Values.Where(value => value.IsMapReduce))
+			foreach (var value in indexes.Values.Where(value => value != null && value.IsMapReduce))
 			{
-                value.Flush(value.GetLastEtagFromStats());
+                		value.Flush(value.GetLastEtagFromStats());
 			}
 		}
 
