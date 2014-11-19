@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -268,9 +269,14 @@ if(customFunctions) {
 
 				var jsInstance = property.Value.Value;
 				if (!jsInstance.HasValue)
-					continue;
-
-				var output = jsInstance.Value.IsNumber() ? jsInstance.Value.AsNumber().ToString() : jsInstance.Value.AsString();
+					continue;				
+				
+				var output = jsInstance.Value.IsNumber() ? 
+					jsInstance.Value.AsNumber().ToString(CultureInfo.InvariantCulture) : 
+								(jsInstance.Value.IsBoolean() ? //if the parameter is boolean, we need to take it into account, 
+																//since jsInstance.Value.AsString() will not work for boolean values
+										jsInstance.Value.AsBoolean().ToString() : 
+										jsInstance.Value.AsString());
 
 				Debug.Add(output);
 			}
