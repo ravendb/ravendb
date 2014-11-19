@@ -88,7 +88,7 @@ namespace Raven.Database.Server.Tenancy
 
             SetupTenantConfiguration(config);
 
-            config.CustomizeValuesForTenant(tenantId);
+            config.CustomizeValuesForDatabaseTenant(tenantId);
 
             config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
             config.Settings["Raven/Counters/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
@@ -110,8 +110,7 @@ namespace Raven.Database.Server.Tenancy
 
             config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
 
-            config.DatabaseName = tenantId;
-            config.IsTenantDatabase = true;
+            config.CountersDatabaseName = tenantId;
 
             config.Initialize();
             config.CopyParentSettings(parentConfiguration);

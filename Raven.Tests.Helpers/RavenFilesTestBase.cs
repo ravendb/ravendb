@@ -79,7 +79,17 @@ namespace Raven.Tests.Helpers
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif                
                 DefaultStorageTypeName = storageType,
-                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, Encryption = {UseFips = SettingsHelper.UseFipsEncryptionAlgorithms}, FileSystem = {MaximumSynchronizationInterval = this.SynchronizationInterval, DataDirectory = Path.Combine(directory, "FileSystem"), DefaultStorageTypeName = storageType},
+                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
+                Encryption = 
+                { 
+                    UseFips = SettingsHelper.UseFipsEncryptionAlgorithms 
+                },
+                FileSystem = 
+                {
+                    MaximumSynchronizationInterval = this.SynchronizationInterval, 
+                    DataDirectory = Path.Combine(directory, "FileSystems"), 
+                    DefaultStorageTypeName = storageType
+                },
             };
 
             if (customConfig != null)
@@ -321,7 +331,6 @@ namespace Raven.Tests.Helpers
                 }
             }
 
-
             if (errors.Count > 0)
                 throw new AggregateException(errors);
         }
@@ -408,8 +417,7 @@ namespace Raven.Tests.Helpers
                 {
                     if (checkError)
                     {
-                        var firstOrDefault =
-                            backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
+                        var firstOrDefault = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
                         if (firstOrDefault != null)
                             Assert.True(false, string.Format("{0}\n\nDetails: {1}", firstOrDefault.Message, firstOrDefault.Details));
                     }

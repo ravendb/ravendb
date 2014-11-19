@@ -38,7 +38,7 @@ using System.Web.Http.Routing;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public abstract class RavenFsApiController : RavenBaseApiController
+    public abstract class RavenFsApiController : RavenBaseApiController
 	{
 	    private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
@@ -435,7 +435,7 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			// Raven internal headers
 			"Raven-Server-Build",
-			"Non-Authoritive-Information",
+			"Non-Authoritative-Information",
 			"Raven-Timer-Request",
 
             //proxy

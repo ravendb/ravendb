@@ -91,7 +91,7 @@ namespace Raven.Database.FileSystem.Search
                 // The delete on close ensures that the only way this file will exists is if there was
                 // a power outage while the server was running.
                 crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
-
+                                
                 OpenIndexOnStartup();
             }
             catch
@@ -552,8 +552,16 @@ namespace Raven.Database.FileSystem.Search
                     var segmentsFileName = "segments.gen";
                     var segmentsFullPath = Path.Combine(indexDirectory, segmentsFileName);
                     File.Copy(segmentsFullPath, Path.Combine(saveToFolder, segmentsFileName));
+
                     allFilesWriter.WriteLine(segmentsFileName);
                     neededFilesWriter.WriteLine(segmentsFileName);
+
+                    var versionFileName = "index.version";
+                    var versionFullPath = Path.Combine(indexDirectory, versionFileName);
+                    File.Copy(versionFullPath, Path.Combine(saveToFolder, versionFileName));
+
+                    allFilesWriter.WriteLine(versionFileName);
+                    neededFilesWriter.WriteLine(versionFileName);                    
 
                     var commit = snapshotter.Snapshot();
                     hasSnapshot = true;

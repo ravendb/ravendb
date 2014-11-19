@@ -36,7 +36,9 @@ namespace Raven.Database.FileSystem.Storage.Voron.Backup
 				var backupFilenamePath = BackupFilenamePath(BackupMethods.Filename);
 
 				if (Directory.GetDirectories(backupLocation, "Inc*").Any() == false)
-		            BackupMethods.Full.Restore(backupFilenamePath, Configuration.FileSystem.DataDirectory, journalLocation);
+                {
+                    BackupMethods.Full.Restore(backupFilenamePath, Configuration.FileSystem.DataDirectory, journalLocation);
+                }		            
 	            else
 				{
                     using (var options = StorageEnvironmentOptions.ForPath(Configuration.FileSystem.DataDirectory, journalPath: journalLocation))

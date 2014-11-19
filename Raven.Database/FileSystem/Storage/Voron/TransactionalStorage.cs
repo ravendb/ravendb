@@ -221,7 +221,9 @@ namespace Raven.Database.FileSystem.Storage.Voron
             Task.Factory.StartNew(() =>
             {
                 using (backupOperation)
+                {
                     backupOperation.Execute();
+                }                    
             });
         }
 

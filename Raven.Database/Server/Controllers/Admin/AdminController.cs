@@ -158,7 +158,7 @@ namespace Raven.Database.Server.Controllers.Admin
             else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
 				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 
-			ravenConfiguration.CustomizeValuesForTenant(databaseName);
+			ravenConfiguration.CustomizeValuesForDatabaseTenant(databaseName);
 			ravenConfiguration.Initialize();
 
 			string documentDataDir;
