@@ -15,7 +15,7 @@
 
 			var sizeOfUInt = Constants.SizeOfUInt;
 
-			if (n > sizeOfUInt)
+			if (n >= sizeOfUInt)
 			{
 				var lUintAlignment = (long)lhs % sizeOfUInt;
 				var rUintAlignment = (long)rhs % sizeOfUInt;
