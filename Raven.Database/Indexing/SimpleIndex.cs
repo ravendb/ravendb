@@ -46,6 +46,7 @@ namespace Raven.Database.Indexing
 			var sourceCount = 0;
 			var sw = Stopwatch.StartNew();
 			var start = SystemTime.UtcNow;
+			int loadDocumentCount = 0;
 			Write((indexWriter, analyzer, stats) =>
 			{
 				var processedKeys = new HashSet<string>();
@@ -158,6 +159,8 @@ namespace Raven.Database.Indexing
 							}
 							allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
 							allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
+
+							loadDocumentCount = CurrentIndexingScope.Current.LoadDocumentCount;
 						}
 					});
 					UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
@@ -197,7 +200,8 @@ namespace Raven.Database.Indexing
 				InputCount = batch.Docs.Count,
 				Duration = sw.Elapsed,
 				Operation = "Index",
-				Started = start
+				Started = start,
+				LoadDocumentCount = loadDocumentCount
 			});
 			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
 		}
