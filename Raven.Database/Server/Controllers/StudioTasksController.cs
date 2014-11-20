@@ -23,6 +23,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
@@ -254,6 +255,12 @@ for(var customFunction in customFunctions) {{
                 var dataDumper = new DatabaseDataDumper(Database) { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false } };
                 await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = sampleData });
 			}
+
+            // lock Raven/DocumentsByEntityName index
+		    var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(Constants.DocumentsByEntityNameIndex);
+            var definition = indexDefinition.Clone();
+            definition.LockMode = IndexLockMode.LockedIgnore;
+            Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
 
 			return GetEmptyMessage();
 		}
