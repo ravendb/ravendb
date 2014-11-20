@@ -25,6 +25,7 @@ namespace Raven.Tests.Common.Util
         public ProxyServer(ref int port, int to)
         {
             this.to = to;
+	        var originPort = port;
 	        while (port > 0)
 	        {
 		        try
@@ -36,8 +37,13 @@ namespace Raven.Tests.Common.Util
 		        catch (SocketException)
 		        {
 			        port--;
+			        listener = null;
 		        }
 	        }
+
+	        if (listener == null)
+		        throw new InvalidOperationException("Couldn't find an open port in the range " + port + " - " + originPort);
+
             totalRead = 0;
             totalWrite = 0;
             isRunning = true;
