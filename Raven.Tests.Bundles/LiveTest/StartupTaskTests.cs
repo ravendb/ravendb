@@ -6,6 +6,7 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Threading;
+using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Bundles.LiveTest;
@@ -56,8 +57,33 @@ namespace Raven.Tests.Bundles.LiveTest
 
 				store
 					.DatabaseCommands
+					.GlobalAdmin
+					.CreateDatabase(new DatabaseDocument
+					{
+						Id = "Northwind3",
+						Settings =
+						{
+							{ "Raven/ActiveBundles", "Replication" },
+							{ "Raven/DataDir", NewDataPath() }
+						}
+					});
+
+				store
+					.DatabaseCommands
 					.ForDatabase("Northwind2")
 					.GetStatistics();
+
+				var run = true;
+				var task = Task.Factory.StartNew(() =>
+				{
+					var commands = store.DatabaseCommands.ForDatabase("Northwind3");
+					while (run)
+					{
+						commands.GetStatistics();
+
+						Thread.Sleep(1000);
+					}
+				});
 
 				Assert.NotNull(store.DatabaseCommands.Get(Constants.RavenDatabasesPrefix + "Northwind"));
 				Assert.NotNull(store.DatabaseCommands.Get(Constants.RavenDatabasesPrefix + "Northwind2"));
@@ -66,6 +92,10 @@ namespace Raven.Tests.Bundles.LiveTest
 
 				Assert.Null(store.DatabaseCommands.Get(Constants.RavenDatabasesPrefix + "Northwind"));
 				Assert.Null(store.DatabaseCommands.Get(Constants.RavenDatabasesPrefix + "Northwind2"));
+				Assert.NotNull(store.DatabaseCommands.Get(Constants.RavenDatabasesPrefix + "Northwind3"));
+
+				run = false;
+				task.Wait();
 			}
 		}
 	}
