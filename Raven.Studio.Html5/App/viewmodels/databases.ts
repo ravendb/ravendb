@@ -15,7 +15,8 @@ class databases extends viewModelBase {
     databases = ko.observableArray<database>();
     searchText = ko.observable("");
     selectedDatabase = ko.observable<database>();
-    isAnyDatabaseSelected: KnockoutComputed<boolean>;
+	isAnyDatabaseSelected: KnockoutComputed<boolean>;
+	hasAllDatabasesSelected: KnockoutComputed<boolean>;
     allCheckedDatabasesDisabled: KnockoutComputed<boolean>;
     systemDb: database;
     optionsClicked = ko.observable<boolean>(false);
@@ -39,14 +40,33 @@ class databases extends viewModelBase {
 
         this.isAnyDatabaseSelected = ko.computed(() => {
             for (var i = 0; i < this.databases().length; i++) {
-                var db: database = this.databases()[i];
+				var db: database = this.databases()[i];
+				if (db.isSystem) {
+					continue;
+				}
+
                 if (db.isChecked()) {
                     return true;
                 }
             }
 
             return false;
-        });
+		});
+
+	    this.hasAllDatabasesSelected = ko.computed(() => {
+			for (var i = 0; i < this.databases().length; i++) {
+				var db: database = this.databases()[i];
+				if (db.isSystem) {
+					continue;
+				}
+
+				if (db.isChecked() == false) {
+					return false;
+				}
+			}
+
+		    return true;
+	    });
 
         this.allCheckedDatabasesDisabled = ko.computed(() => {
             var disabledStatus = null;
@@ -62,7 +82,8 @@ class databases extends viewModelBase {
             }
 
             return disabledStatus;
-        });
+		});
+
         this.fetchAlerts();
     }
 
@@ -380,7 +401,23 @@ class databases extends viewModelBase {
     urlForAlert(alert: alert) {
         var index = this.alerts().indexOf(alert);
         return appUrl.forAlerts(appUrl.getSystemDatabase()) + "&item=" + index;
-    }
+	}
+
+	toggleSelectAll() {
+		var check = true;
+		if (this.isAnyDatabaseSelected())
+			check = false;
+
+		for (var i = 0; i < this.databases().length; i++) {
+			var db: database = this.databases()[i];
+			if (db.isSystem) {
+				db.isChecked(false);
+				continue;
+			}
+
+			db.isChecked(check);
+		}
+	}
 }
 
 export = databases;
