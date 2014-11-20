@@ -32,9 +32,9 @@ namespace Raven.Database.Indexing
 			}
 
 			IsDistinctQuery = isDistinct && fieldsToFetch != null && fieldsToFetch.Length > 0;
-			
-			
-			IsProjection = this.fieldsToFetch != null && this.fieldsToFetch.Count > 0;
+
+
+		   IsProjection = FetchAllStoredFields || (this.fieldsToFetch != null && this.fieldsToFetch.Count > 0);
 		
 			if(IsProjection && IsDistinctQuery == false)
 				EnsureHasField(additionalField);
@@ -44,6 +44,10 @@ namespace Raven.Database.Indexing
 
 		public bool IsProjection { get; private set; }
 
+		public bool HasExplicitFieldsToFetch
+		{
+			get { return fieldsToFetch != null && fieldsToFetch.Count > 0; }
+		}
 
 		public IEnumerable<string> Fields
 		{

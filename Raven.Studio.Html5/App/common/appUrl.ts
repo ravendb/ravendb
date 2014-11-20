@@ -85,6 +85,7 @@ class appUrl {
         statusDebugIndexFields: ko.computed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
         statusDebugSlowDocCounts: ko.computed(() => appUrl.forStatusDebugSlowDocCounts(appUrl.currentDatabase())),
         statusDebugIdentities: ko.computed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
+        statusDebugWebSocket: ko.computed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
         infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
 
         isAreaActive: (routeRoot: string) => ko.computed(() => appUrl.checkIsAreaActive(routeRoot)),
@@ -342,6 +343,10 @@ class appUrl {
 
     static forStatusDebugIdentities(db: database): string {
         return "#databases/status/debug/identities?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugWebSocket(db: database): string {
+        return "#databases/status/debug/webSocket?" + appUrl.getEncodedDbPart(db);
     }
 
     static forInfoPackage(db: database): string {

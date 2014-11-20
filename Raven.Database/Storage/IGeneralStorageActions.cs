@@ -14,6 +14,6 @@ namespace Raven.Database.Storage
 		IEnumerable<KeyValuePair<string, long>> GetIdentities(int start, int take, out long totalCount);
 
 		void PulseTransaction();
-		void MaybePulseTransaction();
+		bool MaybePulseTransaction();
 	}
 }

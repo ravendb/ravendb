@@ -108,18 +108,18 @@ namespace Raven.Smuggler
 			do
 			{
 				var url = exportStore.Url.ForDatabase(exportStore.DefaultDatabase) + "/debug/identities?start=" + start + "&pageSize=" + pageSize;
-				var request = exportStore.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", exportStore.DatabaseCommands.PrimaryCredentials, exportStore.Conventions));
-
-				var identitiesInfo = (RavenJObject) await request.ReadResponseJsonAsync();
-				totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");
-
-				foreach (var identity in identitiesInfo.Value<RavenJArray>("Identities"))
+				using (var request = exportStore.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", exportStore.DatabaseCommands.PrimaryCredentials, exportStore.Conventions)))
 				{
-					identities.Add(new KeyValuePair<string, long>(identity.Value<string>("Key"), identity.Value<long>("Value")));	
+					var identitiesInfo = (RavenJObject)await request.ReadResponseJsonAsync();
+					totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");
+
+					foreach (var identity in identitiesInfo.Value<RavenJArray>("Identities"))
+					{
+						identities.Add(new KeyValuePair<string, long>(identity.Value<string>("Key"), identity.Value<long>("Value")));
+					}
+
+					start += pageSize;
 				}
-
-				start += pageSize;
-
 			} while (identities.Count < totalIdentitiesCount);
 
 			ShowProgress("Exported {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
@@ -156,14 +156,16 @@ namespace Raven.Smuggler
 				return databaseOptions.BatchSize;
 
 			var url = store.Url.ForDatabase(store.DefaultDatabase) + "/debug/config";
-			var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
-			var configuration = (RavenJObject)request.ReadResponseJson();
+			using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", store.DatabaseCommands.PrimaryCredentials, store.Conventions)))
+			{
+				var configuration = (RavenJObject)request.ReadResponseJson();
 
-			var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
-			if (maxNumberOfItemsToProcessInSingleBatch <= 0)
-				return databaseOptions.BatchSize;
+				var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
+				if (maxNumberOfItemsToProcessInSingleBatch <= 0) 
+					return databaseOptions.BatchSize;
 
-			return Math.Min(databaseOptions.BatchSize, maxNumberOfItemsToProcessInSingleBatch);
+				return Math.Min(databaseOptions.BatchSize, maxNumberOfItemsToProcessInSingleBatch);
+			}
 		}
 
 		private static void SetDatabaseNameIfEmpty(RavenConnectionStringOptions connection)

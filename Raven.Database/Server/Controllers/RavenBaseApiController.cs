@@ -30,6 +30,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -653,6 +654,7 @@ namespace Raven.Database.Server.Controllers
         public abstract string TenantName { get; }
 
         public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
+        public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
 
         public void AddRequestTraceInfo(Action<StringBuilder> info)
         {

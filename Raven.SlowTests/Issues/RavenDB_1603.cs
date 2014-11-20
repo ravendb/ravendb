@@ -764,7 +764,8 @@ namespace Raven.SlowTests.Issues
 
             var alreadyReset = false;
 
-            var forwarder = new ProxyServer(8070, 8079)
+	        var port = 8070;
+	        var forwarder = new ProxyServer(ref port, 8079)
             {
                 VetoTransfer = (totalRead, buffer) =>
                 {
@@ -803,7 +804,7 @@ namespace Raven.SlowTests.Issues
                         ToFile = backupPath,
 						From = new RavenConnectionStringOptions
 						{
-                            Url = "http://localhost:8070",
+							Url = "http://localhost:" + port,
 							DefaultDatabase = databaseName,
 						}
                     });
@@ -861,7 +862,8 @@ namespace Raven.SlowTests.Issues
 
             var allowDownload = false;
 
-            var forwarder = new ProxyServer(8070, 8079)
+	        var port = 8070;
+	        var forwarder = new ProxyServer(ref port, 8079)
             {
                 VetoTransfer = (totalRead, buffer) =>
                 {
@@ -894,7 +896,7 @@ namespace Raven.SlowTests.Issues
                         ToFile = backupPath,
 						From = new RavenConnectionStringOptions
 						{
-							Url = "http://localhost:8070",
+							Url = "http://localhost:" + port,
 							DefaultDatabase = databaseName,
 						}
                     }).Result;

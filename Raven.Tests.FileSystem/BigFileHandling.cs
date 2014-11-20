@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
@@ -14,7 +15,7 @@ namespace Raven.Tests.FileSystem
 		[Theory]
         [InlineData(1024 * 1024)]		// 1 mb        
         [InlineData(1024 * 1024 * 8)]	// 8 mb
-        public async void CanHandleBigFiles(int size)
+		public async Task CanHandleBigFiles(int size)
 		{
             var client = NewAsyncClient(1);
             await client.UploadAsync("mb.bin", new RandomStream(size));
@@ -31,7 +32,7 @@ namespace Raven.Tests.FileSystem
 
 		[Theory]
 		[SizeAndPartition(BaseSize = 1024*1024*2, Sizes = 2, Partitions = 3)]
-		public async void CanReadPartialFiles(int size, int skip)
+		public async Task CanReadPartialFiles(int size, int skip)
 		{
             var buffer = new byte[size];
             new Random().NextBytes(buffer);

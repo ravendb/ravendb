@@ -58,7 +58,8 @@ namespace Raven.Database.Server.Controllers
 					{
 						Name = database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty),
 						Disabled = database.Value<bool>("Disabled"),
-                        IndexingDisabled = GetIndexingDisabledStatus(database.Value<RavenJObject>("Settings")),
+                        IndexingDisabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"),Constants.IndexingDisabled),
+                        RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.RejectClientsModeEnabled),
 						Bundles = bundles
 					};
 				}).ToList();
@@ -99,19 +100,25 @@ namespace Raven.Database.Server.Controllers
 			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
 			return responseMessage;
 		}
-
-        private bool GetIndexingDisabledStatus(RavenJObject settingsProperty)
+        /// <summary>
+        /// Gets a boolean value out of the setting object.
+        /// </summary>
+        /// <param name="settingsProperty">Setting as raven object</param>
+        /// <param name="propertyName">The property to be fetched</param>
+        /// <returns>the value of the requested property as bool, default not found value is false.</returns>
+        private bool GetBooleanSettingStatus(RavenJObject settingsProperty,string propertyName)
 	    {
 	        if (settingsProperty == null)
 	            return false;
 
-            var disabledStatusString = settingsProperty.Value<string>("Raven/IndexingDisabled");
-            if (disabledStatusString == null)
+            var propertyStatusString = settingsProperty.Value<string>(propertyName);
+            if (propertyStatusString == null)
                 return false;
 
-            bool indexingDisabled;
-            bool.TryParse(disabledStatusString, out indexingDisabled);
-            return indexingDisabled;
+            bool propertyStatus;
+            if(bool.TryParse(propertyStatusString, out propertyStatus))
+                return propertyStatus;
+            return false;
 	    }
 
 	    [HttpGet]

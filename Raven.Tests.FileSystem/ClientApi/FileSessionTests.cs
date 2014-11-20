@@ -46,7 +46,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void EnsureMaxNumberOfRequestsPerSessionIsHonored()
+        public async Task EnsureMaxNumberOfRequestsPerSessionIsHonored()
         {
             var store = (FilesStore)filesStore;
             store.Conventions.MaxNumberOfRequestsPerSession = 0;
@@ -62,7 +62,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void UploadWithDeferredAction()
+		public async Task UploadWithDeferredAction()
         {
             var store = (FilesStore)filesStore;
 
@@ -95,7 +95,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void UploadActionWritesIncompleteStream()
+		public async Task UploadActionWritesIncompleteStream()
         {
             var store = (FilesStore)filesStore;
 
@@ -112,7 +112,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void UploadActionWritesIncompleteWithErrorStream()
+		public async Task UploadActionWritesIncompleteWithErrorStream()
         {
             var store = (FilesStore)filesStore;
 
@@ -132,7 +132,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void UploadAndDeleteFileOnDifferentSessions()
+		public async Task UploadAndDeleteFileOnDifferentSessions()
         {
             var store = (FilesStore)filesStore;
 
@@ -158,7 +158,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void RenameWithDirectoryChange()
+        public async Task RenameWithDirectoryChange()
         {
             var store = (FilesStore)filesStore;
 
@@ -177,7 +177,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void RenameWithoutDirectoryChange()
+        public async Task RenameWithoutDirectoryChange()
         {
             var store = (FilesStore)filesStore;
 
@@ -198,7 +198,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void EnsureSlashPrefixWorks()
+        public async Task EnsureSlashPrefixWorks()
         {
             var store = (FilesStore)filesStore;
 
@@ -222,7 +222,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
 
         [Fact]
-        public async void EnsureTwoLoadsWillReturnSameObject()
+        public async Task EnsureTwoLoadsWillReturnSameObject()
         {
             var store = (FilesStore)filesStore;
 
@@ -244,7 +244,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
 
         [Fact]
-        public async void DownloadStream()
+        public async Task DownloadStream()
         {
             var store = (FilesStore)filesStore;
 
@@ -275,7 +275,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void SaveIsIncompleteEnsureAllPendingOperationsAreCancelledStream()
+        public async Task SaveIsIncompleteEnsureAllPendingOperationsAreCancelledStream()
         {
             var store = (FilesStore)filesStore;
 
@@ -300,7 +300,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void LoadMultipleFileHeaders()
+        public async Task LoadMultipleFileHeaders()
         {
             var store = (FilesStore)filesStore;
 
@@ -317,7 +317,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void MetadataUpdateWithRenames()
+        public async Task MetadataUpdateWithRenames()
         {
             var store = (FilesStore)filesStore;
 
@@ -355,7 +355,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void MetadataUpdateWithContentUpdate()
+        public async Task MetadataUpdateWithContentUpdate()
         {
             var store = (FilesStore)filesStore;
 
@@ -387,7 +387,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void MetadataUpdateWithDeletes()
+        public async Task MetadataUpdateWithDeletes()
         {
             var store = (FilesStore)filesStore;
 
@@ -422,7 +422,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void WorkingWithMultipleFiles()
+        public async Task WorkingWithMultipleFiles()
         {
             var store = (FilesStore)filesStore;
 
@@ -469,7 +469,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CombinationOfDeletesAndUpdatesNotPermitted()
+        public async Task CombinationOfDeletesAndUpdatesNotPermitted()
         {
             using (var session = filesStore.OpenAsyncSession())
             {

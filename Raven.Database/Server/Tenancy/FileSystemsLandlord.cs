@@ -72,7 +72,7 @@ namespace Raven.Database.Server.Tenancy
                     return;
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
                 Logger.Info("Shutting down filesystem {0} because the tenant fs document has been updated or removed", dbName);
-				Cleanup(dbName, skipIfActive: false, notificationType: notification.Type);
+				Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
             };
         }
 
@@ -110,11 +110,7 @@ namespace Raven.Database.Server.Tenancy
             Unprotect(document);
 
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
-            //config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
-            //config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
-            //config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
-
+            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
             config.FileSystemName = tenantId;
 
             config.Initialize();

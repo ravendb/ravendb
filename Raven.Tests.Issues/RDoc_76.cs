@@ -112,7 +112,7 @@ namespace Raven.Tests.Issues
 		}
 
         [Fact]
-        public async void ThrowInvalidOperationExceptionIfConventionExistsForOtherTypeOfOperationButDoesntForCurrentType()
+        public async Task ThrowInvalidOperationExceptionIfConventionExistsForOtherTypeOfOperationButDoesntForCurrentType()
         {
             var exception = Assert.Throws<InvalidOperationException>(() =>
             {

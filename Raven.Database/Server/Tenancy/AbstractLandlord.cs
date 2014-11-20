@@ -88,7 +88,37 @@ namespace Raven.Database.Server.Tenancy
             return reourcesNames;
         }
 
-        public void Cleanup(string resource, bool skipIfActive, Func<TResource,bool> shouldSkip = null, DocumentChangeTypes notificationType = DocumentChangeTypes.None)
+        public void Unprotect(DatabaseDocument databaseDocument)
+        {
+            if (databaseDocument.SecuredSettings == null)
+            {
+                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                return;
+            }
+
+            foreach (var prop in databaseDocument.SecuredSettings.ToList())
+            {
+                if (prop.Value == null)
+                    continue;
+                var bytes = Convert.FromBase64String(prop.Value);
+                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
+                try
+                {
+                    var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
+                    databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
+                }
+                catch (Exception e)
+                {
+                    Logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
+	                databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
+                }
+            }
+        }
+
+        public void Cleanup(string resource, 
+			TimeSpan? skipIfActiveInDuration, 
+			Func<TResource,bool> shouldSkip = null,
+			DocumentChangeTypes notificationType = DocumentChangeTypes.None)
         {
             using (ResourcesStoresCache.WithAllLocks())
             {
@@ -97,7 +127,7 @@ namespace Raven.Database.Server.Tenancy
 				if (ResourcesStoresCache.TryGetValue(resource, out resourceTask) == false)
                 {
 					LastRecentlyUsed.TryRemove(resource, out time);
-                    return;
+                    return;	
                 }
 				if (resourceTask.Status == TaskStatus.Faulted || resourceTask.Status == TaskStatus.Canceled)
                 {
@@ -111,8 +141,7 @@ namespace Raven.Database.Server.Tenancy
                 }
 
 				var database = resourceTask.Result;
-                if ((skipIfActive &&
-					(SystemTime.UtcNow - LastWork(database)).TotalMinutes < 10) || 
+                if ((skipIfActiveInDuration != null && (SystemTime.UtcNow - LastWork(database)) < skipIfActiveInDuration) || 
 					(shouldSkip != null && shouldSkip(database)))
                 {
                     // this document might not be actively working with user, but it is actively doing indexes, we will 
@@ -157,7 +186,7 @@ namespace Raven.Database.Server.Tenancy
                 throw new InvalidOperationException(tenantId + "' is currently locked and cannot be accessed");
             try
             {
-                Cleanup(tenantId, false);
+				Cleanup(tenantId, skipIfActiveInDuration: null);
                 actionToTake();
             }
             finally

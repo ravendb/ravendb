@@ -160,8 +160,11 @@ namespace Raven.Client.Connection
 	                        var r = await TryOperationAsync<object>(async metadata =>
 	                        {
 	                            var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), "GET", metadata.Credentials, conventions);
-	                            await requestFactory.CreateHttpJsonRequest(requestParams).ReadResponseJsonAsync().ConfigureAwait(false);
-	                            return null;
+		                        using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
+		                        {
+			                        await request.ReadResponseJsonAsync().ConfigureAwait(false);
+		                        }
+		                        return null;
 	                        }, operationMetadata, primaryOperation, avoidThrowing: true).ConfigureAwait(false);
 	                        if (r.Success)
 	                        {

@@ -50,7 +50,7 @@ namespace Raven.Client.FileSystem.Impl
             {
                 if (!sessionOperations.IsDeleted(Filename))
                 {
-                    var fileHeaderInCache = await session.LoadFileAsync(Filename);
+                    var fileHeaderInCache = await session.LoadFileAsync(Filename).ConfigureAwait(false);
                     Metadata = fileHeaderInCache.Metadata;
                 }
             }

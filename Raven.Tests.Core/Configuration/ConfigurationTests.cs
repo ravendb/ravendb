@@ -62,6 +62,7 @@ namespace Raven.Tests.Core.Configuration
 
 			var configurationComparer = new ConfigurationComparer(inMemoryConfiguration, stronglyTypedConfiguration, propertyPathsToIgnore);
 
+			configurationComparer.Assert(expected => expected.RejectClientsModeEnabled.Value, actual => actual.RejectClientsMode);
 			configurationComparer.Assert(expected => expected.Replication.FetchingFromDiskTimeoutInSeconds.Value, actual => actual.Replication.FetchingFromDiskTimeoutInSeconds);
 			configurationComparer.Assert(expected => expected.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value, actual => actual.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb);
 			configurationComparer.Assert(expected => expected.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value, actual => actual.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds);

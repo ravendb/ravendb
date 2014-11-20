@@ -28,7 +28,6 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
         private readonly RavenJObject sourceMetadata;
 		private readonly Stream sourceStream;
 		private readonly string syncingBoundary;
-		private HttpJsonRequest request;
 
         public SynchronizationMultipartRequest(IAsyncFilesSynchronizationCommands destination, ServerInfo serverInfo, string fileName,
                                                RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
@@ -41,7 +40,6 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
 			this.needList = needList;
 			syncingBoundary = "syncing";
 		}
-
 
 		public async Task<SynchronizationReport> PushChangesAsync(CancellationToken token)
 		{
@@ -58,41 +56,40 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
             var credentials = commands.PrimaryCredentials;
             var conventions = commands.Conventions;
 
-            request = commands.RequestFactory.CreateHttpJsonRequest(
-                                    new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed",
-                                                                    "POST", credentials, conventions));
-
-            // REVIEW: (Oren) There is a mismatch of expectations in the AddHeaders. ETag must always have to be surrounded by quotes. 
-            //         If AddHeader/s ever put an etag it should check for that.
-            //         I was hesitant to do the change though, because I do not understand the complete scope of such a change.
-            request.AddHeaders(sourceMetadata);           
-			request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);
-
-			request.AddHeader(SyncingMultipartConstants.FileName, fileName);
-			request.AddHeader(SyncingMultipartConstants.SourceServerInfo, serverInfo.AsJson());
-
-			try
+			using (var request = commands.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", "POST", credentials, conventions)))
 			{
-				await request.WriteAsync(PrepareMultipartContent(token));
+				// REVIEW: (Oren) There is a mismatch of expectations in the AddHeaders. ETag must always have to be surrounded by quotes. 
+				//         If AddHeader/s ever put an etag it should check for that.
+				//         I was hesitant to do the change though, because I do not understand the complete scope of such a change.
+				request.AddHeaders(sourceMetadata);
+				request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);
 
-				var response = await request.ReadResponseJsonAsync();
-				return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
-			}
-			catch (Exception exception)
-			{
-				if (token.IsCancellationRequested)
+				request.AddHeader(SyncingMultipartConstants.FileName, fileName);
+				request.AddHeader(SyncingMultipartConstants.SourceServerInfo, serverInfo.AsJson());
+
+				try
 				{
-					throw new OperationCanceledException(token);
+					await request.WriteAsync(PrepareMultipartContent(token));
+
+					var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+					return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
 				}
-
-				var webException = exception as ErrorResponseException;
-
-				if (webException != null)
+				catch (Exception exception)
 				{
-					webException.SimplifyException();
-				}
+					if (token.IsCancellationRequested)
+					{
+						throw new OperationCanceledException(token);
+					}
 
-				throw;
+					var webException = exception as ErrorResponseException;
+
+					if (webException != null)
+					{
+						webException.SimplifyException();
+					}
+
+					throw;
+				}
 			}
 		}
 

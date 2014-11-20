@@ -254,6 +254,7 @@ namespace Raven.Database.Config
 			}
 
 			AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
+		    RejectClientsMode = ravenSettings.RejectClientsModeEnabled.Value;
 
 		    Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
 			Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
@@ -657,6 +658,13 @@ namespace Raven.Database.Config
 		/// </summary>
 		public bool AllowLocalAccessWithoutAuthorization { get; set; }
 
+        /// <summary>
+        /// If set all client request to the server will be rejected with 
+        /// the http 503 response.
+        /// Other servers or the studio could still access the server.
+        /// </summary>
+        public bool RejectClientsMode { get; set; }
+
 		/// <summary>
 		/// The certificate to use when verifying access token signatures for OAuth
 		/// </summary>
@@ -970,6 +978,7 @@ namespace Raven.Database.Config
 			{
 				Container.Dispose();
 				Container = null;
+				containerExternallySet = false;
 			}
 		}
 

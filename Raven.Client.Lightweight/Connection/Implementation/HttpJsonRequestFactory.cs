@@ -42,7 +42,11 @@ namespace Raven.Client.Connection
 		}
 
 		private readonly int maxNumberOfCachedRequests;
-	    internal readonly HttpMessageHandler httpMessageHandler;
+
+		internal readonly HttpClientCache httpClientCache;
+
+		internal readonly HttpMessageHandler httpMessageHandler;
+
 	    private SimpleCache cache;
 
 		internal int NumOfCachedRequests;
@@ -54,6 +58,9 @@ namespace Raven.Client.Connection
 		{
 			if (disposed)
 				throw new ObjectDisposedException(typeof(HttpJsonRequestFactory).FullName);
+
+			if (RequestTimeout != null)
+				createHttpJsonRequestParams.Timeout = RequestTimeout.Value;
 
 			var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
 			{
@@ -69,10 +76,7 @@ namespace Raven.Client.Connection
 				request.SkipServerCheck = cachedRequestDetails.SkipServerCheck;
 			}
 
-			if (RequestTimeout != null)
-				request.Timeout = RequestTimeout.Value;
-
-			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs {Client = request.httpClient, Credentials = createHttpJsonRequestParams.Credentials});
+			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs { Client = request.httpClient, Credentials = createHttpJsonRequestParams.Credentials });
 			return request;
 		}
 
@@ -156,7 +160,9 @@ namespace Raven.Client.Connection
 		public HttpJsonRequestFactory(int maxNumberOfCachedRequests, HttpMessageHandler httpMessageHandler = null)
 		{
 			this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
-		    this.httpMessageHandler = httpMessageHandler;
+			this.httpMessageHandler = httpMessageHandler;
+			httpClientCache = new HttpClientCache();
+
 		    ResetCache();
 		}
 
@@ -308,6 +314,7 @@ namespace Raven.Client.Connection
 			aggressiveCacheDuration.Dispose();
 			disableHttpCaching.Dispose();
 			requestTimeout.Dispose();
+			httpClientCache.Dispose();
 		}
 
 		internal void UpdateCacheTime(HttpJsonRequest httpJsonRequest)

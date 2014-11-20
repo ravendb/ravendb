@@ -13,7 +13,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 {
     internal class GeneralStorageActions : StorageActionsBase, IGeneralStorageActions
     {
-	    private const int PulseTreshold = 16 * 1024;
+	    private const int PulseTreshold = 16 * 1024 * 1024; // 16 MB
 
 	    private readonly TableStorage storage;
 		private readonly Reference<WriteBatch> writeBatch;
@@ -102,16 +102,16 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			writeBatch.Value = new WriteBatch {DisposeAfterWrite = writeBatch.Value.DisposeAfterWrite};
 		}
 
-		public void MaybePulseTransaction()
-        {
-			if (++maybePulseCount / 1000 == 0)
-				return;
+		public bool MaybePulseTransaction()
+		{
+			if (++maybePulseCount%1000 != 0)
+				return false;
 
 			if (writeBatch.Value.Size() >= PulseTreshold)
 			{
 				PulseTransaction();
-				maybePulseCount = 0;
 			}
-        }
+			return true;
+		}
     }
 }

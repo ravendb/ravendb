@@ -114,12 +114,26 @@ class databases extends viewModelBase {
             var createDatabaseViewModel = new createDatabase(this.databases, license.licenseStatus);
             createDatabaseViewModel
                 .creationTask
-                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, storageEngine: string) => {
+                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, storageEngine: string, incrementalBackup: boolean
+                    ,alertTimeout: string, alertRecurringTimeout: string) => {
                     var settings = {
                         "Raven/ActiveBundles": bundles.join(";")
                     };
                     if (storageEngine) {
                         settings["Raven/StorageTypeName"] = storageEngine;
+                    }
+                    if (incrementalBackup) {
+                        if (storageEngine === "esent") {
+                            settings["Raven/Esent/CircularLog"] = "false"
+                        } else {
+                            settings["Raven/Voron/AllowIncrementalBackups"] = "true"
+                        }
+                    }
+                    if (alertTimeout !== "") {
+                        settings["Raven/IncrementalBackup/AlertTimeoutHours"] = alertTimeout;
+                    }
+                    if (alertRecurringTimeout !== "") {
+                        settings["Raven/IncrementalBackup/RecurringAlertTimeoutDays"] = alertRecurringTimeout;
                     }
                     settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/Databases/" + databaseName;
                     if (!this.isEmptyStringOrWhitespace(databaseLogs)) {
@@ -128,8 +142,6 @@ class databases extends viewModelBase {
                     if (!this.isEmptyStringOrWhitespace(databaseIndexes)) {
                         settings["Raven/IndexStoragePath"] = databaseIndexes;
                     }
-
-                    settings["Raven/IndexingDisabled"] = false;
 
                     this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings);
                 });
@@ -230,13 +242,13 @@ class databases extends viewModelBase {
             case "DES":
                 fullEncryptionName = "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib";
                 break;
-            case "R2C2":
+            case "RC2":
                 fullEncryptionName = "System.Security.Cryptography.RC2CryptoServiceProvider, mscorlib";
                 break;
             case "Rijndael":
                 fullEncryptionName = "System.Security.Cryptography.RijndaelManaged, mscorlib";
                 break;
-            default: //case "Triple DESC":
+            default: //case "Triple DES":
                 fullEncryptionName = "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
         }
         return fullEncryptionName;
@@ -271,6 +283,18 @@ class databases extends viewModelBase {
             require(["commands/disableIndexingCommand"], disableIndexingCommand => {
                 var task = new disableIndexingCommand(db.name, action).execute();
                 task.done(() => db.indexingDisabled(action));
+            });
+        });
+    }
+
+    toggleRejectDatabaseClients(db: database) {
+        var action = !db.rejectClientsMode();
+        var actionText = action ? "reject clients mode" : "accept clients mode";
+        var message = this.confirmationMessage("Switch to " + actionText, "Are you sure?");
+        message.done(() => {
+            require(["commands/toggleRejectDatabaseClients"], toggleRejectDatabaseClients => {
+                var task = new toggleRejectDatabaseClients(db.name, action).execute();
+                task.done(() => db.rejectClientsMode(action));
             });
         });
     }

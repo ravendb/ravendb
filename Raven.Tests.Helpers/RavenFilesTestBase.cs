@@ -52,9 +52,15 @@ namespace Raven.Tests.Helpers
         public static readonly int[] Ports = { 8079, 8078, 8077 };
 
         public TimeSpan SynchronizationInterval { get; protected set; }
-
+		
+	    private static bool checkedAsyncVoid;
         protected RavenFilesTestBase()
         {
+			if (checkedAsyncVoid == false)
+			{
+				checkedAsyncVoid = true;
+				RavenTestBase.AssertNoAsyncVoidMethods(GetType().Assembly);
+			}
             this.SynchronizationInterval = TimeSpan.FromMinutes(10);
         }
 
@@ -87,7 +93,7 @@ namespace Raven.Tests.Helpers
                 FileSystem = 
                 {
                     MaximumSynchronizationInterval = this.SynchronizationInterval, 
-                    DataDirectory = Path.Combine(directory, "FileSystems"), 
+                    DataDirectory = Path.Combine(directory, "FileSystems"),
                     DefaultStorageTypeName = storageType
                 },
             };

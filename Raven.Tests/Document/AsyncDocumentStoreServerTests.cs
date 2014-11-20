@@ -339,7 +339,7 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Should_not_throw_when_ignore_missing_true()
 		{
-			Assert.DoesNotThrow(async () => await DocumentStore.AsyncDatabaseCommands.PatchAsync(
+			Assert.DoesNotThrow(() => DocumentStore.AsyncDatabaseCommands.PatchAsync(
 				"Company/1",
 				new[]
 				{
@@ -349,9 +349,9 @@ namespace Raven.Tests.Document
 						Name = "Name",
 						Value = "Existing",
 					}
-				}));
+				}).Wait());
 
-			Assert.DoesNotThrow(async () => await DocumentStore.AsyncDatabaseCommands.PatchAsync(
+			Assert.DoesNotThrow( () =>  DocumentStore.AsyncDatabaseCommands.PatchAsync(
 				"Company/1",
 				new[]
 				{
@@ -361,7 +361,7 @@ namespace Raven.Tests.Document
 						Name = "Name",
 						Value = "Existing",
 					}
-				}, true));
+				}, true).Wait());
 		}
 
 		[Fact]

@@ -9,7 +9,7 @@ namespace Raven.Tests.FileSystem.Bugs
     public class UploadFilesWithTheSameContentConcurrently : RavenFilesTestWithLogs
 	{
 		[Fact]
-		public async void ShouldWork()
+		public async Task ShouldWork()
 		{
 			var client = NewAsyncClient();
 			var tasks = new List<Task>(10);

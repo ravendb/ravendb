@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Threading.Tasks;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Database.Extensions;
@@ -30,7 +31,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		[Theory]
 		[InlineData(2)]
 		[InlineData(10)]
-		public async void Should_reuse_pages_when_data_appended(int numberOfPages)
+		public async Task Should_reuse_pages_when_data_appended(int numberOfPages)
 		{
             string filename = FileHeader.Canonize("test");
 
@@ -110,7 +111,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		}
 
 		[Fact]
-		public async void Should_reuse_pages_where_nothing_has_changed()
+		public async Task Should_reuse_pages_where_nothing_has_changed()
 		{
             string filename = FileHeader.Canonize("test");
 

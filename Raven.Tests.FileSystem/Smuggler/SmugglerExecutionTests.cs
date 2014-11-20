@@ -195,7 +195,8 @@ namespace Raven.Tests.FileSystem.Smuggler
 				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
 
 				var alreadyReset = false;
-				var forwarder = new ProxyServer(8070, server.Configuration.Port)
+				var proxyPort = 8070;
+				var forwarder = new ProxyServer(ref proxyPort, server.Configuration.Port)
 				{
 					VetoTransfer = (totalRead, buffer) =>
 					{
@@ -227,7 +228,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 								ToFile = outputDirectory,
 								From = new FilesConnectionStringOptions
 								{
-									Url = "http://localhost:8070",
+									Url = "http://localhost:" + proxyPort,
 									DefaultFileSystem = store.DefaultFileSystem,
 								}
 							});

@@ -27,6 +27,7 @@ class statusDebug extends viewModelBase {
                 { route: 'databases/status/debug/indexFields',       moduleId: 'viewmodels/statusDebugIndexFields',       title: 'Index fields',      tooltip: "Shows names of indexed fields based on entered index definition", nav: true, hash: appUrl.forCurrentDatabase().statusDebugIndexFields },
                 { route: 'databases/status/debug/slowDocCounts',     moduleId: 'viewmodels/statusDebugSlowDocCounts',     title: 'Doc counts',        tooltip: "Shows document counts (VERY SLOW)", nav: true, hash: appUrl.forCurrentDatabase().statusDebugSlowDocCounts },
                 { route: 'databases/status/debug/identities',        moduleId: 'viewmodels/statusDebugIdentities',        title: 'Identities',        tooltip: "Shows identities values for collections", nav: true, hash: appUrl.forCurrentDatabase().statusDebugIdentities },
+                { route: 'databases/status/debug/websocket',         moduleId: 'viewmodels/statusDebugWebSocket',         title: 'Web Socket',        tooltip: "Allows to debug websockets connection", nav: true, hash: appUrl.forCurrentDatabase().statusDebugWebSocket },
             ])
             .buildNavigationModel();
 

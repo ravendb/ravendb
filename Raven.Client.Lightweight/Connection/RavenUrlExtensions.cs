@@ -88,21 +88,5 @@ namespace Raven.Client.Connection
 		{
 			return new Uri(url);
 		}
-
-		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, OperationCredentials credentials, DocumentConvention convention)
-		{
-			return requestor.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, "GET", credentials, convention));
-		}
-
-		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor,
-												 OperationCredentials credentials, DocumentConvention convention,
-												 NameValueCollection operationsHeaders, string method)
-		{
-			var httpJsonRequest = requestor.jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention)
-					.AddOperationHeaders(operationsHeaders));
-			
-			return httpJsonRequest;
-		}
 	}
 }

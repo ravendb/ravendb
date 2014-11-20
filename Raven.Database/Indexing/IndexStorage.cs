@@ -322,6 +322,7 @@ namespace Raven.Database.Indexing
 									  true, out distanceType);
 						var field = decodedKey.Substring(0, lastIndexOfDistance);
 						var extension = new SuggestionQueryIndexExtension(
+							indexImplementation,
 							documentDatabase.WorkContext,
 							Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key),
 							SuggestionQueryRunner.GetStringDistance(distanceType),
@@ -1271,10 +1272,8 @@ namespace Raven.Database.Indexing
 
 		public void FlushMapIndexes()
 		{
-			foreach (var value in indexes.Values.Where(value => !value.IsMapReduce))
+			foreach (var value in indexes.Values.Where(value => value != null && !value.IsMapReduce))
 			{
-				if(value == null)
-					continue;
 				try
 				{
 					value.Flush(value.GetLastEtagFromStats());
@@ -1289,10 +1288,8 @@ namespace Raven.Database.Indexing
 
 		public void FlushReduceIndexes()
 		{
-			foreach (var value in indexes.Values.Where(value => value.IsMapReduce))
+			foreach (var value in indexes.Values.Where(value => value != null && value.IsMapReduce))
 			{
-				if (value == null)
-					continue;
 				try
 				{
 					value.Flush(value.GetLastEtagFromStats());

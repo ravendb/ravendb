@@ -641,6 +641,7 @@ interface smugglerOptionsDto {
     IncludeTransformers: boolean;
     IncludeAttachments: boolean;
     RemoveAnalyzers: boolean;
+    NoneDefualtFileName: string;
 }
 
 interface customColumnParamsDto {
@@ -899,6 +900,7 @@ interface databaseDto {
     Disabled: boolean;
     Bundles: string[];
     IndexingDisabled: boolean;
+    RejectClientsEnabled: boolean;
 }
 
 interface customFunctionsDto {

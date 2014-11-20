@@ -10,8 +10,8 @@
             <div class="row">
                 <div class="col-md-12">
                     <div class="form-group">
-                        <div class="col-sm-4"><label for="maxEntries" class="control-label">Log Entries Buffer Size</label></div>
-                        <div class="col-sm-8">
+                        <div class="col-sm-3"><label for="maxEntries" class="control-label">Maximum number of displayed entries</label></div>
+                        <div class="col-sm-9">
                             <input type="number" data-bind="value: maxEntries" class="form-control" id="maxEntries" required max="30000" min="1">
                         </div>
                     </div>
@@ -28,7 +28,7 @@
                                 </label>
                             </div>
                             <div class="col-sm-9">
-                                <input id="watchedResource" placeholder="Resource Name" type="text" class="form-control"
+                                <input id="watchedResource" placeholder="Database or FileSystem name" type="text" class="form-control"
                                        data-bind="enable:watchedResourceMode()=='SingleResourceView', customValidity: nameCustomValidityError, value: resourceName, valueUpdate: 'afterkeydown'" autocomplete="off" />
                                 <ul class="dropdown-menu"  role="menu" style="display: none;"
                                     data-bind="autoComplete: '#watchedResource', foreach: resourceAutocompletes">

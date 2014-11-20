@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Raven.Json.Linq;
 using System.Collections.Specialized;
 using System.IO;
@@ -9,7 +10,7 @@ namespace Raven.Tests.FileSystem
     public class CompleteUsage : RavenFilesTestWithLogs
 	{
 		[Fact]
-		public async void HowToUseTheClient()
+		public async Task HowToUseTheClient()
 		{
 			var client = NewAsyncClient();
             var uploadTask = client.UploadAsync("dragon.design", new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject

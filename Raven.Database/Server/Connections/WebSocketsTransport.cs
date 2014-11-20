@@ -2,9 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Owin;
@@ -13,13 +10,8 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Database.Counters;
-using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.Security;
-using Raven.Database.Server.Tenancy;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Connections
 {
@@ -50,14 +42,14 @@ namespace Raven.Database.Server.Connections
             Task>;
     using WebSocketReceiveResult = Tuple<int, // type
         bool, // end of message?
-        int>;
-    using Raven.Database.FileSystem; // count
+        int>; // count
 
     public class WebSocketTransportFactory
     {
         public const string ChangesApiWebsocketSuffix = "/changes/websocket";
         public const string WatchTrafficWebsocketSuffix = "/traffic-watch/websocket";
         public const string AdminLogsWebsocketSuffix = "/admin/logs/events";
+		public const string WebsocketValidateSuffix = "/websocket/validate";
 
         public static WebSocketsTransport CreateWebSocketTransport(RavenDBOptions options, IOwinContext context)
         {
@@ -73,13 +65,89 @@ namespace Raven.Database.Server.Connections
             {
                 return new AdminLogsWebsocketTransport(options, context);
             }
+			if (context.Request.Uri.LocalPath.EndsWith(WebsocketValidateSuffix))
+			{
+				return new WebSocketsValidateTransport(options, context);
+			}
             return null;
         }
     }
 
-    public class WebSocketsTransport : IEventsTransport
+	public class WebSocketsValidateTransport : WebSocketsTransport
+	{
+		public WebSocketsValidateTransport(RavenDBOptions options, IOwinContext context)
+			: base(options, context)
+		{
+		}
+
+		protected override WebSocketsRequestParser CreateWebSocketsRequestParser()
+		{
+			return new WebSocketsRequestParser(_options.DatabaseLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.WebsocketValidateSuffix);
+		}
+
+		public override async Task Run(IDictionary<string, object> websocketContext)
+		{
+			var sendAsync = (WebSocketSendAsync)websocketContext["websocket.SendAsync"];
+			var closeAsync = (WebSocketCloseAsync)websocketContext["websocket.CloseAsync"];
+			var callCancelled = (CancellationToken)websocketContext["websocket.CallCancelled"];
+
+			int statusCode = 200;
+			string statusMessage = "OK";
+
+			try
+			{
+				var parser = WebSocketsRequestParser;
+				await parser.ParseWebSocketRequestAsync(_context.Request.Uri, _context.Request.Query["singleUseAuthToken"]);
+			}
+			catch (WebSocketsRequestParser.WebSocketRequestValidationException e)
+			{
+				statusCode = (int)e.StatusCode;
+				statusMessage = string.IsNullOrEmpty(e.Message) == false ? e.Message : string.Empty;
+			}
+
+			using (var memoryStream = new MemoryStream())
+			{
+				var serializer = new JsonSerializer
+				                 {
+					                 Converters = { new EtagJsonConverter(), new JsonEnumConverter() }
+				                 };
+
+				await SendMessage(memoryStream, serializer, new { StatusCode = statusCode, StatusMessage = statusMessage, Time = SystemTime.UtcNow }, sendAsync, callCancelled);
+			}
+
+			try
+			{
+				var buffer = new ArraySegment<byte>(new byte[1024]);
+				var receiveAsync = (WebSocketReceiveAsync)websocketContext["websocket.ReceiveAsync"];
+				var receiveResult = await receiveAsync(buffer, callCancelled);
+
+				if (receiveResult.Item1 == WebSocketCloseMessageType)
+				{
+					var clientCloseStatus = (int)websocketContext["websocket.ClientCloseStatus"];
+					var clientCloseDescription = (string)websocketContext["websocket.ClientCloseDescription"];
+
+					if (clientCloseStatus == NormalClosureCode && clientCloseDescription == NormalClosureMessage)
+					{
+						await closeAsync(clientCloseStatus, clientCloseDescription, callCancelled);
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				Log.WarnException("Error when recieving message from web socket transport", e);
+				throw;
+			}
+		}
+
+		public override Task<bool> TrySetupRequest()
+		{
+			return new CompletedTask<bool>(true);
+		}
+	}
+
+	public class WebSocketsTransport : IEventsTransport
     {
-	    private static ILog log = LogManager.GetCurrentClassLogger();
+	    protected static ILog Log = LogManager.GetCurrentClassLogger();
 
 		[CLSCompliant(false)]
         protected readonly IOwinContext _context;
@@ -91,9 +159,9 @@ namespace Raven.Database.Server.Connections
 
         private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
 
-		private const int WebSocketCloseMessageType = 8;
-		private const int NormalClosureCode = 1000;
-		private const string NormalClosureMessage = "CLOSE_NORMAL";
+		protected const int WebSocketCloseMessageType = 8;
+		protected const int NormalClosureCode = 1000;
+		protected const string NormalClosureMessage = "CLOSE_NORMAL";
         
         public string Id { get; private set; }
         public bool Connected { get; set; }
@@ -101,12 +169,10 @@ namespace Raven.Database.Server.Connections
 
         private long lastMessageSentTick = 0;
         private object lastMessageEnqueuedAndNotSent = null;
-        
-        private const string COUNTERS_URL_PREFIX = "counters";
-        private const string DATABASES_URL_PREFIX = "databases";
-        private const string FILESYSTEMS_URL_PREFIX = "fs";
 
-        protected IResourceStore ActiveTenant { get; set; }
+	    private WebSocketsRequestParser webSocketsRequestParser;
+
+	    protected IResourceStore ActiveTenant { get; set; }
         public string ResourceName { get; set; }
         
         public WebSocketsTransport(RavenDBOptions options, IOwinContext context)
@@ -118,13 +184,20 @@ namespace Raven.Database.Server.Connections
             long waitTimeBetweenMessages = 0;
             long.TryParse(context.Request.Query["coolDownWithDataLoss"], out waitTimeBetweenMessages);
             CoolDownWithDataLossInMiliseconds = waitTimeBetweenMessages;
-            
         }
 
-        protected virtual string ExpectedRequestSuffix
-        {
-            get { return WebSocketTransportFactory.ChangesApiWebsocketSuffix; }
-        }
+	    protected virtual WebSocketsRequestParser CreateWebSocketsRequestParser()
+	    {
+		    return new WebSocketsRequestParser(_options.DatabaseLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.ChangesApiWebsocketSuffix);
+	    }
+
+	    public WebSocketsRequestParser WebSocketsRequestParser
+	    {
+		    get
+		    {
+			    return webSocketsRequestParser ?? (webSocketsRequestParser = CreateWebSocketsRequestParser());
+		    }
+	    }
         
         public void Dispose()
         {
@@ -138,7 +211,7 @@ namespace Raven.Database.Server.Connections
             manualResetEvent.Set();
         }
 
-        public async Task Run(IDictionary<string, object> websocketContext)
+        public virtual async Task Run(IDictionary<string, object> websocketContext)
         {
             try
             {
@@ -230,7 +303,7 @@ namespace Raven.Database.Server.Connections
 					}
 					catch (Exception e)
 					{
-						log.WarnException("Error when recieving message from web socket transport", e);
+						Log.WarnException("Error when recieving message from web socket transport", e);
 						return;
 					}
 				}
@@ -257,120 +330,26 @@ namespace Raven.Database.Server.Connections
                 onDisconnected();
         }
 
-        protected async Task<IResourceStore> GetActiveResource()
+        public virtual async Task<bool> TrySetupRequest()
         {
-            try
-            {
-	            var localPath = NormalizeLocalPath(_context.Request.Uri.LocalPath);
-                var resourcePath = localPath.Substring(0, localPath.Length - ExpectedRequestSuffix.Length);
+	        try
+	        {
+		        var parser = WebSocketsRequestParser;
+		        var request = await parser.ParseWebSocketRequestAsync(_context.Request.Uri, _context.Request.Query["singleUseAuthToken"]);
 
-                var resourcePartsPathParts = resourcePath.Split('/');
+		        Id = request.Id;
+		        ActiveTenant = request.ActiveResource;
+		        ResourceName = request.ResourceName;
+	        }
+	        catch (WebSocketsRequestParser.WebSocketRequestValidationException e)
+	        {
+				_context.Response.StatusCode = (int)e.StatusCode;
+				_context.Response.ReasonPhrase = e.StatusCode.ToString();
+				_context.Response.Write(string.Format("{{ 'Error': '{0}' }}", e.Message));
 
-                if (ExpectedRequestSuffix.Equals(localPath))
-                {
-                    ResourceName = "<system>";
-                    return _options.SystemDatabase;
-                }
-                IResourceStore activeResource;
-                switch (resourcePartsPathParts[1])
-                {
-                    case COUNTERS_URL_PREFIX:
-                        activeResource  = await _options.CountersLandlord.GetCounterInternal(resourcePath.Substring(COUNTERS_URL_PREFIX.Length + 2));
-                        break;
-                    case DATABASES_URL_PREFIX:
-                        activeResource = await _options.DatabaseLandlord.GetDatabaseInternal(resourcePath.Substring(DATABASES_URL_PREFIX.Length + 2));
-                        break;
-                    case FILESYSTEMS_URL_PREFIX:
-                        activeResource = await _options.FileSystemLandlord.GetFileSystemInternal(resourcePath.Substring(FILESYSTEMS_URL_PREFIX.Length + 2));
-                        break;
-                    default:
-                        _context.Response.StatusCode = 400;
-                        _context.Response.ReasonPhrase = "BadRequest";
-                        _context.Response.Write("{'Error':'Illegal websocket path'}");
-                        return null;
-                }
+		        return false;
+	        }
 
-                if (activeResource != null)
-                    ResourceName = activeResource.Name;
-
-                return activeResource;
-            }
-            catch (Exception e)
-            {
-                _context.Response.StatusCode = 500;
-                _context.Response.ReasonPhrase = "InternalServerError";
-                _context.Response.Write(e.ToString());
-                return null;
-            }
-        }
-
-        protected virtual async Task<bool> ValidateRequest()
-        {
-            if (string.IsNullOrEmpty(Id))
-            {
-                _context.Response.StatusCode = 400;
-                _context.Response.ReasonPhrase = "BadRequest";
-                _context.Response.Write("{ 'Error': 'Id is mandatory' }");
-                return false;
-            }
-
-            ActiveTenant = await GetActiveResource();
-            if (ActiveTenant== null)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        protected virtual bool AuthenticateRequest(out IPrincipal user)
-        {
-            var singleUseToken = _context.Request.Query["singleUseAuthToken"];
-            if (string.IsNullOrEmpty(singleUseToken) == false)
-            {
-                object msg;
-                HttpStatusCode code;
-
-                if (_options.MixedModeRequestAuthorizer.TryAuthorizeSingleUseAuthToken(singleUseToken, ResourceName, out msg, out code, out user) == false)
-                {
-                    _context.Response.StatusCode = (int)code;
-                    _context.Response.ReasonPhrase = code.ToString();
-                    _context.Response.Write(RavenJToken.FromObject(msg).ToString(Formatting.Indented));
-                    return false;
-                }
-            }
-            else
-            {
-                switch (_options.SystemDatabase.Configuration.AnonymousUserAccessMode)
-                {
-                    case AnonymousUserAccessMode.Admin:
-                    case AnonymousUserAccessMode.All:
-                    case AnonymousUserAccessMode.Get:
-                        // this is effectively a GET request, so we'll allow it
-                        // under this circumstances
-                        user = CurrentOperationContext.User.Value;
-                        break;
-                    case AnonymousUserAccessMode.None:
-                        _context.Response.StatusCode = 403;
-                        _context.Response.ReasonPhrase = "Forbidden";
-                        _context.Response.Write("{'Error': 'Single use token is required for authenticated web sockets connections' }");
-                        user = null;
-                        return false;
-                    default:
-                        throw new ArgumentOutOfRangeException(_options.SystemDatabase.Configuration.AnonymousUserAccessMode.ToString());
-                }
-            }
-            return true;
-        }
-
-        public async Task<bool> TrySetupRequest()
-        {
-            IPrincipal user;
-            if (!await ValidateRequest() || !AuthenticateRequest(out user))
-            {
-                return false;
-            }
-            
             RegisterTransportState();
             return true;
         }
@@ -379,20 +358,6 @@ namespace Raven.Database.Server.Connections
         {
             ActiveTenant.TransportState.Register(this);
         }
-
-	    private string NormalizeLocalPath(string localPath)
-	    {
-		    if (string.IsNullOrEmpty(localPath)) 
-				return null;
-
-			if (localPath.StartsWith(_options.SystemDatabase.Configuration.VirtualDirectory))
-				localPath = localPath.Substring(_options.SystemDatabase.Configuration.VirtualDirectory.Length);
-
-			if (localPath.StartsWith("/") == false)
-				localPath = "/" + localPath;
-
-		    return localPath;
-	    }
     }
 
     public class WatchTrafficWebsocketTransport : WebSocketsTransport
@@ -400,41 +365,16 @@ namespace Raven.Database.Server.Connections
         public WatchTrafficWebsocketTransport(RavenDBOptions options, IOwinContext context)
             : base(options, context)
         {
-
-        }
-        
-        override protected string ExpectedRequestSuffix
-        {
-            get { return WebSocketTransportFactory.WatchTrafficWebsocketSuffix; }
         }
 
-        protected override bool AuthenticateRequest(out IPrincipal user)
-        {
-            if (!base.AuthenticateRequest(out user))
-            {
-                return false;
-            }
-
-            if (ResourceName == "<system>")
-            {
-                var oneTimetokenPrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
-
-                if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
-                    _options.SystemDatabase.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
-                {
-                    _context.Response.StatusCode = 403;
-                    _context.Response.ReasonPhrase = "Forbidden";
-                    _context.Response.Write("{'Error': 'Administrator user is required in order to trace the whole server' }");
-                    return false;
-                }
-            }
-
-            return true;
-        }
+	    protected override WebSocketsRequestParser CreateWebSocketsRequestParser()
+	    {
+		    return new WatchTrafficWebSocketsRequestParser(_options.DatabaseLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.WatchTrafficWebsocketSuffix);
+	    }
 
         protected override void RegisterTransportState()
         {
-            if (ResourceName != "<system>")
+            if (ResourceName != Constants.SystemDatabase)
             {
                 _options.RequestManager.RegisterResourceHttpTraceTransport(this, ResourceName);
             }
@@ -450,15 +390,14 @@ namespace Raven.Database.Server.Connections
         public AdminLogsWebsocketTransport(RavenDBOptions options, IOwinContext context)
             : base(options, context)
         {
-
         }
 
-        override protected string ExpectedRequestSuffix
-        {
-            get { return WebSocketTransportFactory.AdminLogsWebsocketSuffix; }
-        }
+	    protected override WebSocketsRequestParser CreateWebSocketsRequestParser()
+	    {
+		    return new AdminLogsWebSocketsRequestParser(_options.DatabaseLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.AdminLogsWebsocketSuffix);
+	    }
 
-        protected override Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)
+	    protected override Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)
         {
             var typedMessage = message as LogEventInfo;
 
@@ -470,48 +409,10 @@ namespace Raven.Database.Server.Connections
             return base.SendMessage(memoryStream, serializer, message, sendAsync, callCancelled);
         }
 
-        protected override async Task<bool> ValidateRequest()
-        {
-            if (!await base.ValidateRequest())
-            {
-                return false;
-            }
-            if (ResourceName != "<system>")
-            {
-                _context.Response.StatusCode = 400;
-                _context.Response.ReasonPhrase = "BadRequest";
-                _context.Response.Write("{ 'Error': 'Request should be withour resource context, or with system database' }");
-                return false;
-            }
-            return true;
-        }
-
-        protected override bool AuthenticateRequest(out IPrincipal user)
-        {
-            if (!base.AuthenticateRequest(out user))
-            {
-                return false;
-            }
-
-            var oneTimetokenPrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
-
-            if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
-                _options.SystemDatabase.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
-            {
-                _context.Response.StatusCode = 403;
-                _context.Response.ReasonPhrase = "Forbidden";
-                _context.Response.Write("{'Error': 'Administrator user is required in order to trace the whole server' }");
-                return false;
-            }
-
-            return true;
-        }
-
         protected override void RegisterTransportState()
         {
             var logTarget = LogManager.GetTarget<AdminLogsTarget>();
             logTarget.Register(this);
         }
-
     }
 }

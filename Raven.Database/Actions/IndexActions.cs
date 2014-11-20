@@ -112,13 +112,15 @@ namespace Raven.Database.Actions
         {
             TouchedDocumentInfo touch;
             RecentTouches.TryRemove(key, out touch);
-
-            foreach (var referencing in actions.Indexing.GetDocumentsReferencing(key))
+	        Stopwatch sp = null;
+	        int count = 0;
+	        foreach (var referencing in actions.Indexing.GetDocumentsReferencing(key))
             {
                 Etag preTouchEtag = null;
                 Etag afterTouchEtag = null;
                 try
                 {
+	                count++;
 	                actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
 
 	                var docMetadata = actions.Documents.DocumentMetadataByKey(referencing);
@@ -138,7 +140,17 @@ namespace Raven.Database.Actions
                 if (preTouchEtag == null || afterTouchEtag == null)
                     continue;
 
-                actions.General.MaybePulseTransaction();
+	            if (actions.General.MaybePulseTransaction())
+	            {
+		            if (sp == null)
+			            sp = Stopwatch.StartNew();
+		            if (sp.Elapsed >= TimeSpan.FromSeconds(30))
+		            {
+			            throw new TimeoutException("Early failure when checking references for document '"+ key +"', we waited over 30 seconds to touch all of the documents referenced by this document.\r\n" +
+			                                       "The operation (and transaction) has been aborted, since to try longer (we already touched " + count +" documents) risk a thread abort.\r\n" +
+			                                       "Consider restructuring your indexes to avoid LoadDocument on such a popular document.");
+		            }
+	            }
 
                 RecentTouches.Set(referencing, new TouchedDocumentInfo
                 {
@@ -294,8 +306,8 @@ namespace Raven.Database.Actions
 	            Database.IndexStorage.CreateIndexImplementation(definition);
 				index = Database.IndexStorage.GetIndexInstance(definition.IndexId);
 				//ensure that we don't start indexing it right away, let the precomputation run first, if applicable
-	            index.IsMapIndexingInProgress = true; 
-	            InvokeSuggestionIndexing(name, definition);
+	            index.IsMapIndexingInProgress = true;
+				InvokeSuggestionIndexing(name, definition, index);
 
 	            actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
             });
@@ -468,7 +480,7 @@ namespace Raven.Database.Actions
 		    return query;
 	    }
 
-	    private void InvokeSuggestionIndexing(string name, IndexDefinition definition)
+	    private void InvokeSuggestionIndexing(string name, IndexDefinition definition, Index index)
         {
             foreach (var suggestion in definition.Suggestions)
             {
@@ -483,6 +495,7 @@ namespace Raven.Database.Actions
                                               suggestionOption.Accuracy);
 
                 var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
+					index,
                      WorkContext,
                      Path.Combine(Database.Configuration.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
                      SuggestionQueryRunner.GetStringDistance(suggestionOption.Distance),

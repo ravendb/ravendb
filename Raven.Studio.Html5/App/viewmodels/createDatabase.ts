@@ -33,6 +33,9 @@ class createDatabase extends dialogViewModelBase {
     isVersioningBundleEnabled = ko.observable(false);
     isPeriodicExportBundleEnabled = ko.observable(false); // Old Raven Studio has this enabled by default
     isScriptedIndexBundleEnabled = ko.observable(false);
+    isIncrementalBackupChecked = ko.observable(false);
+    alertTimeout = ko.observable("");
+    alertRecurringTimeout = ko.observable("");
 
     constructor(private databases: KnockoutObservableArray<database>, private licenseStatus: KnockoutObservable<licenseStatusDto>) {
         super();
@@ -109,7 +112,8 @@ class createDatabase extends dialogViewModelBase {
 
         this.creationTaskStarted = true;
         dialog.close(this);
-        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogsPath(), this.databaseIndexesPath(), this.storageEngine());
+        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogsPath(), this.databaseIndexesPath(), this.storageEngine(),
+            this.isIncrementalBackupChecked(), this.alertTimeout(), this.alertRecurringTimeout());
     }
 
     private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {

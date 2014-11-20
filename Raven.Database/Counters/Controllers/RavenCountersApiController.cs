@@ -71,7 +71,7 @@ namespace Raven.Database.Counters.Controllers
 			var result = new HttpResponseMessage();
 			if (InnerRequest.Method.Method != "OPTIONS")
 			{
-				result = await RequestManager.HandleActualRequest(this, async () =>
+				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
 				{
 					RequestManager.SetThreadLocalState(InnerHeaders, CountersName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
@@ -188,9 +188,12 @@ namespace Raven.Database.Counters.Controllers
 			public int Start;
 		}
 
+	    public override InMemoryRavenConfiguration ResourceConfiguration
+	    {
+	        get { throw new NotImplementedException(); }
+	    }
 
-
-		public override bool SetupRequestToProperDatabase(RequestManager rm)
+	    public override bool SetupRequestToProperDatabase(RequestManager rm)
 		{
 			var tenantId = CountersName;
 
