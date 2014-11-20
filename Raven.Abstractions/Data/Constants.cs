@@ -178,5 +178,9 @@ namespace Raven.Abstractions.Data
         public const string IncrementalBackupRecurringAlertTimeout = "Raven/IncrementalBackup/RecurringAlertTimeoutDays";
 		public const string IncrementalBackupState = "IncrementalBackupState.Document";
 
+
+		// General
+
+		public const string RavenDatabasesPrefix = "Raven/Databases/";
 	}
 }
