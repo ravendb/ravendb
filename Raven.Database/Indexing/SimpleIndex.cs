@@ -160,7 +160,7 @@ namespace Raven.Database.Indexing
 							allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
 							allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
 
-							loadDocumentCount = CurrentIndexingScope.Current.LoadDocumentCount;
+							Interlocked.Add(ref loadDocumentCount, CurrentIndexingScope.Current.LoadDocumentCount);
 						}
 					});
 					UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
