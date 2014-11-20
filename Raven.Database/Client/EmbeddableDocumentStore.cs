@@ -19,6 +19,7 @@ using Raven.Client.Listeners;
 using Raven.Database;
 using Raven.Database.Client;
 using Raven.Database.Config;
+using Raven.Server;
 
 namespace Raven.Client.Embedded
 {
@@ -141,6 +142,17 @@ namespace Raven.Client.Embedded
 	    }
 
         public Guid ResourceManagerId { get; set; }
+
+	    public RavenDbServer ServerIfEmbedded
+	    {
+		    get
+		    {
+				var eds = Inner as EmbeddedDocumentStore;
+				if (eds != null)
+					return eds.Server;
+				return null;
+		    }
+	    }
 
 		/// <summary>
 		/// Direct access to system database.

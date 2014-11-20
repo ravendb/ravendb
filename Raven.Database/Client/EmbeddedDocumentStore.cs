@@ -27,7 +27,11 @@ namespace Raven.Database.Client
             server = new RavenDbServer();
         }
 
-        /// <summary>
+	    public RavenDbServer Server
+	    {
+		    get { return server; }
+	    }
+	    /// <summary>
         ///     Whatever we should also host an HTTP endpoint for the document database
         /// </summary>
         public bool UseEmbeddedHttpServer

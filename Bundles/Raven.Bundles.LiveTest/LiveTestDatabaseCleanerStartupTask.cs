@@ -44,7 +44,7 @@ namespace Raven.Bundles.LiveTest
 				checkTimer.Dispose();
 		}
 
-		private void ExecuteCleanup(object state)
+		public void ExecuteCleanup(object state)
 		{
 			var databaseLandLord = server.Options.DatabaseLandlord;
 			var systemDatabase = databaseLandLord.SystemDatabase;
@@ -77,7 +77,7 @@ namespace Raven.Bundles.LiveTest
 				DateTime value;
 				if (databaseLandLord.IsDatabaseLoaded(key) == false)
 					shouldCleanup = true;
-				else if (databaseLandLord.LastRecentlyUsed.TryGetValue(key, out value) && (SystemTime.UtcNow - value) > maxTimeDatabaseCanBeIdle)
+				else if (databaseLandLord.LastRecentlyUsed.TryGetValue(key, out value) == false || (SystemTime.UtcNow - value) > maxTimeDatabaseCanBeIdle)
 					shouldCleanup = true;
 
 				if (shouldCleanup == false)
