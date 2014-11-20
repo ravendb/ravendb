@@ -494,6 +494,13 @@ namespace Raven.Database.Server.Controllers
             return result;
         }
 
+		protected bool GetRetrieveDetails()
+		{
+			bool details;
+			bool.TryParse(GetQueryStringValue("details"), out details);
+			return details;
+		}
+
 		protected void HandleReplication(HttpResponseMessage msg)
 		{
 			var clientPrimaryServerUrl = GetHeader(Constants.RavenClientPrimaryServerUrl);
