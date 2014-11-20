@@ -119,12 +119,14 @@ namespace Raven.Database.Server.Controllers
             if (string.IsNullOrEmpty(index))
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-            var option = new BulkOperationOptions
-            {
-                AllowStale = GetAllowStale(),
-                MaxOpsPerSec = GetMaxOpsPerSec(),
-                StaleTimeout = GetStaleTimeout()
-            };
+	        var option = new BulkOperationOptions
+	        {
+		        AllowStale = GetAllowStale(),
+		        MaxOpsPerSec = GetMaxOpsPerSec(),
+		        StaleTimeout = GetStaleTimeout(),
+		        RetrieveDetails = GetRetrieveDetails()
+	        };
+
             var indexQuery = GetIndexQuery(maxPageSize: int.MaxValue);
 
             var status = new BulkOperationStatus();
