@@ -102,7 +102,8 @@ namespace Raven.Abstractions.Data
 		    }
 	    }
 
-	    public string Operation { get; set; }
+		public int LoadDocumentCount { get; set; }
+		public string Operation { get; set; }
 		public int OutputCount { get; set; }
 		public int InputCount { get; set; }
 		public int ItemsCount { get; set; }

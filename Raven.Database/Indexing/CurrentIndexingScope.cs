@@ -14,6 +14,8 @@ namespace Raven.Database.Indexing
 		private readonly DocumentDatabase database;
 		private readonly string index;
 
+		public int LoadDocumentCount { get; private set; }
+
 		[ThreadStatic]
 		private static CurrentIndexingScope current;
 
@@ -27,6 +29,7 @@ namespace Raven.Database.Indexing
 		{
 		    this.database = database;
 		    this.index = index;
+			LoadDocumentCount = 0;
 		}
 
         public IDictionary<string, HashSet<string>> ReferencedDocuments
@@ -90,6 +93,8 @@ namespace Raven.Database.Indexing
 			}
 
 			docsCache[key] = value;
+
+			LoadDocumentCount++;
 			return value;
 		}
 
