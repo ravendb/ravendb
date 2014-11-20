@@ -139,5 +139,6 @@ namespace Raven.Abstractions.Data
         public string AbsoluteUri { get; set; }
         public string TenantName { get; set; }
         public string CustomInfo { get; set; }
+        public int InnerRequestsCount { get; set; }
     }
 }

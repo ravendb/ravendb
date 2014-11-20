@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -148,30 +149,44 @@ namespace Raven.Database.Server.Controllers
 			if ("yes".Equals(GetQueryStringValue("parallel"), StringComparison.OrdinalIgnoreCase))
 			{
 				var tasks = new Task[requests.Length];
+			    var traceInfos = Enumerable.Range(0, requests.Length).Select(i =>
+			    {
+			        var queue = new ConcurrentQueue<Action<StringBuilder>>();
+                    queue.Enqueue(sb => sb.Append("Inner Request: ").Append(requests[i].UrlAndQuery));
+			        return queue;
+			    }).ToList();
 				Parallel.For(0, requests.Length, position =>
-					tasks[position] = HandleRequestAsync(requests, results, position)
+					tasks[position] = HandleRequestAsync(requests, results, position, traceInfos[position])
 					);
 				await Task.WhenAll(tasks);
+
+                foreach (var @event in traceInfos.SelectMany(traceInfo => traceInfo))
+                {
+                    AddRequestTraceInfo(@event);
+                }
 			}
 			else
 			{
 				for (var i = 0; i < requests.Length; i++)
 				{
-					await HandleRequestAsync(requests, results, i);
+                    // as we perform requests sequentially we can pass parent trace info
+                    AddRequestTraceInfo(sb => sb.Append("Inner Request: ").Append(requests[i].UrlAndQuery));
+					await HandleRequestAsync(requests, results, i, CustomRequestTraceInfo);
 				}
 			}
 		}
 
-		private async Task HandleRequestAsync(GetRequest[] requests, HttpResponseMessage[] results, int i)
+		private async Task HandleRequestAsync(GetRequest[] requests, HttpResponseMessage[] results, int i, ConcurrentQueue<Action<StringBuilder>> traceInfo)
 		{
 			var request = requests[i];
 			if (request == null)
 				return;
 
-			results[i] = await HandleActualRequestAsync(request);
+			results[i] = await HandleActualRequestAsync(request, traceInfo);
+
 		}
 
-		private async Task<HttpResponseMessage> HandleActualRequestAsync(GetRequest request)
+        private async Task<HttpResponseMessage> HandleActualRequestAsync(GetRequest request, ConcurrentQueue<Action<StringBuilder>> traceInfo)
 		{
 			var query = "";
 			if (request.Query != null)
@@ -192,6 +207,9 @@ namespace Raven.Database.Server.Controllers
 				Query = query, 
 				Path = request.Url
 			}.Uri);
+
+		    IncrementInnerRequestsCount();
+
 			msg.SetConfiguration(Configuration);
 			var route = Configuration.Routes.GetRouteData(msg);
 			msg.SetRouteData(route);
@@ -219,6 +237,7 @@ namespace Raven.Database.Server.Controllers
 			controllerContext.Request = msg;
 			controller.RequestContext = controllerContext.RequestContext;
 			controller.Configuration = Configuration;
+		    controller.CustomRequestTraceInfo = traceInfo;
 
 			if (string.IsNullOrEmpty(indexQuery) == false && (controller as RavenDbApiController) != null)
 			{
@@ -228,7 +247,7 @@ namespace Raven.Database.Server.Controllers
 			return await controller.ExecuteAsync(controllerContext, CancellationToken.None);
 		}
 
-		private static bool TryExtractIndexQuery(string query, out string withoutIndexQuery, out string indexQuery)
+	    private static bool TryExtractIndexQuery(string query, out string withoutIndexQuery, out string indexQuery)
 		{
 			var parameters = HttpUtility.ParseQueryString(query);
 			if (parameters["query"] != null)
