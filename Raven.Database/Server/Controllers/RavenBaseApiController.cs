@@ -663,26 +663,24 @@ namespace Raven.Database.Server.Controllers
 
         public abstract string TenantName { get; }
 
-        public ConcurrentQueue<Action<StringBuilder>> CustomRequestTraceInfo { 
-            get { return customRequestTraceInfo; }
-            internal set { customRequestTraceInfo = value; } 
-        }
-
-        private ConcurrentQueue<Action<StringBuilder>> customRequestTraceInfo = new ConcurrentQueue<Action<StringBuilder>>();
-
         private int innerRequestsCount;
 
         public int InnerRequestsCount { get { return innerRequestsCount;  } }
 
-        public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
+		public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
 
-        public void AddRequestTraceInfo(Action<StringBuilder> info)
-        {
-            if (info == null)
-                return;
+		public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
 
-            customRequestTraceInfo.Enqueue(info);
-        }
+		public void AddRequestTraceInfo(Action<StringBuilder> info)
+		{
+			if (info == null)
+				return;
+
+			if (CustomRequestTraceInfo == null)
+				CustomRequestTraceInfo = new List<Action<StringBuilder>>();
+
+			CustomRequestTraceInfo.Add(info);
+		}
 
         public void IncrementInnerRequestsCount()
         {
