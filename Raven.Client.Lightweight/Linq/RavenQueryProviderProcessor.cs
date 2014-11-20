@@ -1468,6 +1468,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		public IAsyncDocumentQuery<T> GetAsyncLuceneQueryFor(Expression expression)
 		{
 			var asyncLuceneQuery = queryGenerator.AsyncQuery<T>(indexName, isMapReduce);
+			asyncLuceneQuery.SetQueryInputs(queryInputs);
 			asyncLuceneQuery.SetResultTransformer(resultsTransformer);
 			luceneQuery = (IAbstractDocumentQuery<T>) asyncLuceneQuery;
 			try
