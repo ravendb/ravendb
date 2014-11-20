@@ -343,7 +343,12 @@ namespace Raven.Client.Embedded
         /// Whatever we should also host an HTTP endpoint for the document database
         ///</summary>
         public bool UseEmbeddedHttpServer { get; set; }
-        public bool RunInMemory { get; set; }
+
+		public bool RunInMemory
+		{
+			get { return Configuration.RunInMemory; }
+			set { Configuration.RunInMemory = value; }
+		}
 
         public IDocumentStore RegisterListener(IDocumentStoreListener listener)
         {
