@@ -9,6 +9,11 @@
 		public string DeleteScript { get; set; }
 		public bool RetryOnConcurrencyExceptions { get; set; }
 
+		public ScriptedIndexResults()
+		{
+			RetryOnConcurrencyExceptions = true;
+		}
+
 		protected bool Equals(ScriptedIndexResults other)
 		{
 			return string.Equals(Id, other.Id) && string.Equals(IndexScript, other.IndexScript) && string.Equals(DeleteScript, other.DeleteScript);
