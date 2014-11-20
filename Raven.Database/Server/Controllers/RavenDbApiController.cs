@@ -91,8 +91,7 @@ namespace Raven.Database.Server.Controllers
 					return authMsg;
 			}
 
-			var internalHeader = GetHeader("Raven-internal-request");
-			if (internalHeader == null || internalHeader != "true")
+            if (IsInternalRequest == false)
 				RequestManager.IncrementRequestCount();
 
 			if (DatabaseName != null && await DatabasesLandlord.GetDatabaseInternal(DatabaseName) == null)

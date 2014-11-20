@@ -34,9 +34,9 @@ interface documentChangeNotificationDto {
 }
 
 interface logNotificationDto {
-    Level :string;
-    TimeStamp :string;
-    LoggerName :string;
+    Level: string;
+    TimeStamp: string;
+    LoggerName: string;
     RequestId: number;
     HttpMethod: string;
     ElapsedMilliseconds: number;
@@ -45,6 +45,7 @@ interface logNotificationDto {
     TenantName: string;
     CustomInfo: string;
     TenantType: logTenantType;
+    InnerRequestsCount?: number;
 
 }
 interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -11,6 +12,7 @@ using System.Net.Http.Headers;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
@@ -48,6 +50,15 @@ namespace Raven.Database.Server.Controllers
 				return Request ?? request;
 			}
 		}
+
+        public bool IsInternalRequest
+        {
+            get
+            {
+                var internalHeader = GetHeader("Raven-internal-request");
+                return internalHeader != null && internalHeader == "true";
+            }
+        }
 
 		public HttpHeaders InnerHeaders
 		{
@@ -652,7 +663,17 @@ namespace Raven.Database.Server.Controllers
 
         public abstract string TenantName { get; }
 
-        public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
+        public ConcurrentQueue<Action<StringBuilder>> CustomRequestTraceInfo { 
+            get { return customRequestTraceInfo; }
+            internal set { customRequestTraceInfo = value; } 
+        }
+
+        private ConcurrentQueue<Action<StringBuilder>> customRequestTraceInfo = new ConcurrentQueue<Action<StringBuilder>>();
+
+        private int innerRequestsCount;
+
+        public int InnerRequestsCount { get { return innerRequestsCount;  } }
+
         public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
 
         public void AddRequestTraceInfo(Action<StringBuilder> info)
@@ -660,11 +681,14 @@ namespace Raven.Database.Server.Controllers
             if (info == null)
                 return;
 
-            if (CustomRequestTraceInfo == null)
-                CustomRequestTraceInfo = new List<Action<StringBuilder>>();
-            
-            CustomRequestTraceInfo.Add(info);
+            customRequestTraceInfo.Enqueue(info);
         }
+
+        public void IncrementInnerRequestsCount()
+        {
+            Interlocked.Increment(ref innerRequestsCount);
+        }
+
 
 	    public abstract void MarkRequestDuration(long duration);
 	}

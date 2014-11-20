@@ -192,8 +192,18 @@ class trafficWatch extends viewModelBase {
             Method: e.HttpMethod,
             Url: e.RequestUri,
             CustomInfo: e.CustomInfo,
-            TimeStampText: this.createHumanReadableTime(e.TimeStamp, true, false)
+            TimeStampText: this.createHumanReadableTime(e.TimeStamp, true, false),
         };
+
+        if (logObject.CustomInfo) {
+            console.log
+            logObject.CustomInfo = decodeURIComponent(logObject.CustomInfo).replaceAll("\n", "<Br />").replaceAll("Inner Request", "<strong>Inner Request</strong>");
+        }
+
+        if (e.InnerRequestsCount > 0) {
+            logObject.Url = "(" + e.InnerRequestsCount + " requests) " + logObject.Url;
+        }
+
         if (this.recentEntries().length == this.logConfig().MaxEntries) {
             this.recentEntries.shift();
         }
