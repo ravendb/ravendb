@@ -50,7 +50,7 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		public HttpHeaders InnerHeaders
+        public HttpHeaders InnerHeaders
 		{
 			get
 			{
@@ -84,8 +84,13 @@ namespace Raven.Database.Server.Controllers
 
 		protected virtual void InnerInitialization(HttpControllerContext controllerContext)
 		{
-			request = controllerContext.Request;
-			User = controllerContext.RequestContext.Principal;
+			this.request = controllerContext.Request;
+			this.User = controllerContext.RequestContext.Principal;
+
+            this.landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
+            this.fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
+            this.countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
+            this.requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
 		}
 
 		public async Task<T> ReadJsonObjectAsync<T>()
@@ -623,10 +628,7 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		public class Headers : HttpHeaders
-		{
-
-		}
+        protected class Headers : HttpHeaders {}
 
 		public JsonContent JsonContent(RavenJToken data = null)
 		{
@@ -668,5 +670,52 @@ namespace Raven.Database.Server.Controllers
         }
 
 	    public abstract void MarkRequestDuration(long duration);
+
+
+
+
+        private DatabasesLandlord landlord;
+        public DatabasesLandlord DatabasesLandlord
+        {
+            get
+            {
+                if (Configuration == null)
+                    return landlord;
+                return (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
+            }
+        }
+
+        private CountersLandlord countersLandlord;
+        public CountersLandlord CountersLandlord
+        {
+            get
+            {
+                if (Configuration == null)
+                    return countersLandlord;
+                return (CountersLandlord)Configuration.Properties[typeof(CountersLandlord)];
+            }
+        }
+
+        private FileSystemsLandlord fileSystemsLandlord;
+        public FileSystemsLandlord FileSystemsLandlord
+        {
+            get
+            {
+                if (Configuration == null)
+                    return fileSystemsLandlord;
+                return (FileSystemsLandlord)Configuration.Properties[typeof(FileSystemsLandlord)];
+            }
+        }
+
+        private RequestManager requestManager;
+        public RequestManager RequestManager
+        {
+            get
+            {
+                if (Configuration == null)
+                    return requestManager;
+                return (RequestManager)Configuration.Properties[typeof(RequestManager)];
+            }
+        }
 	}
 }

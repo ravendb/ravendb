@@ -55,12 +55,14 @@ namespace Raven.Tests.FileSystem.Smuggler
         [Fact, Trait("Category", "Smuggler")]
         public async Task BetweenOperation_BehaviorWhenServerIsDown()
         {
-            using (var store = NewStore())
-            {
-                var server = GetServer();
+            string dataDirectory = null;
 
-                try
+            try
+            {
+                using (var store = NewStore())
                 {
+                    var server = GetServer();
+
                     var smugglerApi = new SmugglerFilesApi();
 
                     var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
@@ -88,23 +90,29 @@ namespace Raven.Tests.FileSystem.Smuggler
 
                     e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.Between(options));
                     Assert.Contains("Smuggler encountered a connection problem:", e.Message);
+
+                    server.Dispose();
                 }
-                finally
-                {
-                    IOExtensions.DeleteDirectory(server.Configuration.DataDirectory);
-                }
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(dataDirectory))
+                    IOExtensions.DeleteDirectory(dataDirectory);
             }
         }
 
         [Fact, Trait("Category", "Smuggler")]
         public async Task BetweenOperation_CanDumpEmptyFileSystem()
         {
-            using (var store = NewStore())
-            {
-                var server = GetServer();
+            string dataDirectory = null;
 
-                try
+            try
+            {
+                using (var store = NewStore())
                 {
+                    var server = GetServer();
+                    dataDirectory = server.Configuration.DataDirectory;
+
                     var smugglerApi = new SmugglerFilesApi();
 
                     var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
@@ -131,11 +139,14 @@ namespace Raven.Tests.FileSystem.Smuggler
                         var files = await session.Commands.BrowseAsync();
                         Assert.Equal(0, files.Count());
                     }
+
+                    server.Dispose();
                 }
-                finally
-                {
-                    IOExtensions.DeleteDirectory(server.Configuration.DataDirectory);
-                }
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(dataDirectory))
+                    IOExtensions.DeleteDirectory(dataDirectory);
             }
         }
 

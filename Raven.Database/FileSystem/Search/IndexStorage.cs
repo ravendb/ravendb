@@ -3,6 +3,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
@@ -104,7 +105,7 @@ namespace Raven.Database.FileSystem.Search
         private void OpenIndexOnStartup()
         {            
             this.analyzer = new LowerCaseKeywordAnalyzer();
-            this.snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+            this.snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());          
 
             bool resetTried = false;
             bool recoveryTried = false;
@@ -119,11 +120,10 @@ namespace Raven.Database.FileSystem.Search
                         throw new InvalidOperationException("Sanity check on the index failed.");
 
                     this.directory = luceneDirectory;
-
                     this.writer = new IndexWriter(directory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
                     this.writer.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
 
-                    this.currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
+                    this.currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(this.directory, true));
 
                     break;
                 }
@@ -184,21 +184,25 @@ namespace Raven.Database.FileSystem.Search
             {
                 IOExtensions.DeleteDirectory(this.indexDirectory);
 
-                IndexAllSync();
+                var luceneDirectory = OpenOrCreateLuceneDirectory(this.indexDirectory);
+
+                using ( var writer = new IndexWriter(luceneDirectory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED) )
+                {
+                    writer.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+
+                    this.filesystem.Storage.Batch(accessor =>
+                    {
+                        foreach (var file in accessor.GetFilesAfter(Etag.Empty, int.MaxValue))
+                            this.Index(writer, FileHeader.Canonize(file.FullPath), file.Metadata);
+                    });
+
+                    writer.Flush(true, true, true);
+                }
 			}
 			catch (Exception exception)
 			{
 				throw new InvalidOperationException("Could not reset index for file system: " + this.name, exception);
 			}
-        }
-
-        private void IndexAllSync()
-        {
-            this.filesystem.Storage.Batch(accessor =>
-            {
-                foreach (var file in accessor.GetFilesAfter(Etag.Empty, int.MaxValue))
-                    this.Index(file.Name, file.Metadata);
-            });
         }
 
         private Lucene.Net.Store.FSDirectory OpenOrCreateLuceneDirectory(string path)
@@ -356,7 +360,7 @@ namespace Raven.Database.FileSystem.Search
 			return topDocs;
 		}
 
-        public virtual void Index(string key, RavenJObject metadata)
+        private void Index(IndexWriter writer, string key, RavenJObject metadata)
         {
             lock (writerLock)
             {
@@ -366,18 +370,21 @@ namespace Raven.Database.FileSystem.Search
 
                 // REVIEW: Check if there is more straight-forward/efficient pattern out there to work with RavenJObjects.
                 var lookup = metadata.ToLookup(x => x.Key);
-                foreach ( var metadataKey in lookup )
+                foreach (var metadataKey in lookup)
                 {
-                    foreach ( var metadataHolder in metadataKey )
+                    foreach (var metadataHolder in metadataKey)
                     {
                         var array = metadataHolder.Value as RavenJArray;
                         if (array != null)
                         {
                             // Object is an array. Therefore, we index each token. 
                             foreach (var item in array)
-                                doc.Add(new Field(metadataHolder.Key, item.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));                         
+                                doc.Add(new Field(metadataHolder.Key, item.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
                         }
-                        else doc.Add(new Field(metadataHolder.Key, metadataHolder.Value.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+                        else
+                        {
+                            doc.Add(new Field(metadataHolder.Key, metadataHolder.Value.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+                        }                            
                     }
                 }
 
@@ -386,10 +393,15 @@ namespace Raven.Database.FileSystem.Search
 
                 // yes, this is slow, but we aren't expecting high writes count
                 var etag = lookup["ETag"].First();
-                var customCommitData = new Dictionary<string, string>() { {"LastETag", etag.Value.ToString() } };               
+                var customCommitData = new Dictionary<string, string>() { { "LastETag", etag.Value.ToString() } };
                 writer.Commit(customCommitData);
-                ReplaceSearcher();
+                ReplaceSearcher(writer);
             }
+        }
+
+        public virtual void Index(string key, RavenJObject metadata)
+        {
+            Index(this.writer, key, metadata);
         }
 
         private static Document CreateDocument(string lowerKey, RavenJObject metadata)
@@ -482,11 +494,11 @@ namespace Raven.Database.FileSystem.Search
 				writer.DeleteDocuments(new Term("__key", lowerKey));
 				writer.Optimize();
 				writer.Commit();
-				ReplaceSearcher();
+                ReplaceSearcher(writer);
 			}
 		}
 
-		private void ReplaceSearcher()
+        private void ReplaceSearcher(IndexWriter writer)
 		{
 			currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(writer.GetReader()));
 		}

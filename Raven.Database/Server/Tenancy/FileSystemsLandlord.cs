@@ -62,7 +62,9 @@ namespace Raven.Database.Server.Tenancy
         {
             if (initialized)
                 return;
+
             initialized = true;
+
             systemDatabase.Notifications.OnDocumentChange += (database, notification, doc) =>
             {
                 if (notification.Id == null)
@@ -70,8 +72,11 @@ namespace Raven.Database.Server.Tenancy
                 const string ravenDbPrefix = FILESYSTEMS_PREFIX;
                 if (notification.Id.StartsWith(ravenDbPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
                     return;
+
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
-                Logger.Info("Shutting down filesystem {0} because the tenant fs document has been updated or removed", dbName);
+
+                Logger.Info("Shutting down filesystem {0} because the tenant file system document has been updated or removed", dbName);
+
 				Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
             };
         }

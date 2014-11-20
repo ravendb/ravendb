@@ -518,7 +518,7 @@ namespace Raven.Database.FileSystem.Controllers
                 return documentDataDir;
             }
 
-            var baseDataPath = Path.GetDirectoryName(DatabasesLandlord.SystemDatabase.Configuration.DataDirectory);
+            var baseDataPath = Path.GetDirectoryName(this.FileSystemsLandlord.SystemConfiguration.FileSystem.DataDirectory);
             if (baseDataPath == null)
                 throw new InvalidOperationException("Could not find root data path");
 
