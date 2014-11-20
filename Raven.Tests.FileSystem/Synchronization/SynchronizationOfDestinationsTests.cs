@@ -21,7 +21,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		private const int AddtitionalServerInstancePortNumber = 19083;
 
 		[Fact]
-		public async void Should_synchronize_to_all_destinations()
+		public async Task Should_synchronize_to_all_destinations()
 		{
             var canonicalFilename = FileHeader.Canonize("test.bin");
 
@@ -504,7 +504,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		}
 
 		[Fact]
-		public async void Should_not_fail_if_there_is_no_file_to_synchronize()
+		public async Task Should_not_fail_if_there_is_no_file_to_synchronize()
 		{
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);

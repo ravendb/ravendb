@@ -55,7 +55,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void Should_remove_file_deletion_config_after_storage_cleanup()
+		public async Task Should_remove_file_deletion_config_after_storage_cleanup()
 		{
 			var client = NewAsyncClient();
 			var rfs = GetFileSystem();
@@ -91,7 +91,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void Should_remove_deleting_file_and_its_pages_after_storage_cleanup()
+		public async Task Should_remove_deleting_file_and_its_pages_after_storage_cleanup()
 		{
 			const int numberOfPages = 10;
 
@@ -176,7 +176,7 @@ namespace Raven.Tests.FileSystem
 		}
 
         [Fact]
-        public async void Upload_before_performing_cleanup_do_a_rename_by_adding_version_number()
+        public async Task Upload_before_performing_cleanup_do_a_rename_by_adding_version_number()
         {
             var client = NewAsyncClient();
             var rfs = GetFileSystem();

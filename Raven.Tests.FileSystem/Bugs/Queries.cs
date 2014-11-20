@@ -1,4 +1,5 @@
-﻿using Raven.Json.Linq;
+﻿using System.Threading.Tasks;
+using Raven.Json.Linq;
 using System.Collections.Specialized;
 using System.IO;
 using Raven.Tests.Helpers;
@@ -41,7 +42,7 @@ namespace Raven.Tests.FileSystem.Bugs
 		}
 
 		[Fact]
-		public async void WillGetOneItemWhenSavingDocumentTwice()
+		public async Task WillGetOneItemWhenSavingDocumentTwice()
 		{
 			var client = NewAsyncClient();
 			var ms = new MemoryStream();
@@ -76,7 +77,7 @@ namespace Raven.Tests.FileSystem.Bugs
 		}
 
 		[Fact]
-		public async void ShouldEncodeValues()
+		public async Task ShouldEncodeValues()
 		{
 
 			var client = NewAsyncClient(); 

@@ -341,7 +341,7 @@ namespace Raven.Client.Counters
 				}
 			}
 
-			public async void SaveReplications(CounterStorageReplicationDocument newReplicationDocument)
+			public async Task SaveReplications(CounterStorageReplicationDocument newReplicationDocument)
 			{
 				var requestUriString = String.Format("{0}/replications/save", counterStorageUrl);
 
@@ -380,7 +380,7 @@ namespace Raven.Client.Counters
 
 			public ProfilingInformation ProfilingInformation { get; private set; }
 
-			public async void Change(string group, string counterName, long delta)
+			public async Task Change(string group, string counterName, long delta)
 		    {
 				var requestUriString = String.Format("{0}/change?group={1}&counterName={2}&delta={3}",
 					counterStorageUrl, group, counterName, delta);
@@ -399,7 +399,7 @@ namespace Raven.Client.Counters
 				}
 		    }
 
-			public async void Reset(string group, string counterName)
+			public async Task Reset(string group, string counterName)
 		    {
 				var requestUriString = String.Format("{0}/change?group={1}&counterName={2}",
 					counterStorageUrl, group, counterName);
@@ -509,7 +509,7 @@ namespace Raven.Client.Counters
 				    Change(group, counterName, -1);
 			    }
 
-			    public async void Write()
+				public async Task Write()
 			    {
 					var counterChanges = new List<CounterChanges>();
 				    counterData.ForEach(keyValue =>

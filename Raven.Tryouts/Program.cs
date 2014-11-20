@@ -5,6 +5,7 @@ using Raven.Database.DiskIO;
 using Raven.Json.Linq;
 using System.Linq;
 using Raven.Database.Extensions;
+using Raven.Tests.FileSystem.ClientApi;
 
 namespace Raven.Tryouts
 {
@@ -12,7 +13,10 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			TimeSpan a, b;
+			using (var a = new FileSessionListenersTests())
+			{
+				a.ConflictListeners_RemoteVersion();
+			}
 			
 
 		}

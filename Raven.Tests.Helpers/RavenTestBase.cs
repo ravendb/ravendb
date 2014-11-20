@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition.Primitives;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -40,6 +41,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers.Util;
+using Xunit;
 
 
 namespace Raven.Tests.Helpers
@@ -54,8 +56,16 @@ namespace Raven.Tests.Helpers
 
 		private static int pathCount;
 
+	    private static bool checkedAsyncVoid;
+
 		protected RavenTestBase()
 		{
+			if (checkedAsyncVoid == false)
+			{
+				checkedAsyncVoid = true;
+				AssertNoAsyncVoidMethods(GetType().Assembly);
+			}
+
 			Environment.SetEnvironmentVariable(Constants.RavenDefaultQueryTimeout, "30");
 			CommonInitializationUtil.Initialize();
 
@@ -63,6 +73,45 @@ namespace Raven.Tests.Helpers
 			var dataFolder = FilePathTools.MakeSureEndsWithSlash(@"~\Data".ToFullPath());
 			ClearDatabaseDirectory(dataFolder);
 			pathsToDelete.Add(dataFolder);
+		}
+
+
+	    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+		{
+			if (assembly == null) throw new ArgumentNullException("assembly");
+			try
+			{
+				return assembly.GetTypes();
+			}
+			catch (ReflectionTypeLoadException e)
+			{
+				return e.Types.Where(t => t != null);
+			}
+		}
+
+	    private static IEnumerable<MethodInfo> GetAsyncVoidMethods(Assembly assembly)
+		{
+			return GetLoadableTypes(assembly)
+			  .SelectMany(type => type.GetMethods(
+				BindingFlags.NonPublic
+				| BindingFlags.Public
+				| BindingFlags.Instance
+				| BindingFlags.Static
+				| BindingFlags.DeclaredOnly))
+			  .Where(method => method.GetCustomAttribute<AsyncStateMachineAttribute>() != null)
+			  .Where(method => method.ReturnType == typeof(void));
+		}
+
+		public static void AssertNoAsyncVoidMethods(Assembly assembly)
+		{
+			var messages = GetAsyncVoidMethods(assembly)
+				.Select(method =>
+					String.Format("'{0}.{1}' is an async Task method.",
+						method.DeclaringType.Name,
+						method.Name))
+				.ToList();
+			if(messages.Any())
+				throw new InvalidConstraintException("async Task methods found!" + Environment.NewLine + String.Join(Environment.NewLine, messages));
 		}
 
 		~RavenTestBase()
