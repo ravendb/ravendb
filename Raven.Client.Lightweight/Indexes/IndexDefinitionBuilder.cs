@@ -111,6 +111,11 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		public bool DisableInMemoryIndexing { get; set; }
 
+        /// <summary>
+        /// Gets or sets the index lock mode
+        /// </summary>
+        public IndexLockMode LockMode { get; set; }
+
 		/// <summary>
 		/// Max number of allowed indexing outputs per one source document
 		/// </summary>
@@ -134,6 +139,7 @@ namespace Raven.Client.Indexes
 			TermVectorsStrings = new Dictionary<string, FieldTermVector>();
 			SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
 			SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
+            LockMode = IndexLockMode.Unlock;
 		}
 
 		/// <summary>
@@ -160,7 +166,8 @@ namespace Raven.Client.Indexes
 				TermVectors = ConvertToStringDictionary(TermVectors),
 				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes),
 				DisableInMemoryIndexing = DisableInMemoryIndexing,
-				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
+				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
+                LockMode = LockMode,
 			};
 
 			if (convention.PrettifyGeneratedLinqExpressions)

@@ -256,12 +256,6 @@ for(var customFunction in customFunctions) {{
                 await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = sampleData });
 			}
 
-            // lock Raven/DocumentsByEntityName index
-		    var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(Constants.DocumentsByEntityNameIndex);
-            var definition = indexDefinition.Clone();
-            definition.LockMode = IndexLockMode.LockedIgnore;
-            Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
-
 			return GetEmptyMessage();
 		}
 
