@@ -50,7 +50,7 @@ namespace Raven.Client.Connection.Async
 			using (var req = adminRequest.CompactDatabase(databaseName))
 			{
 				var json = await req.ReadResponseJsonAsync().ConfigureAwait(false);
-				return new Operation(innerAsyncServerClient, json.Value<long>("OperationId"));
+				return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), json.Value<long>("OperationId"));
 			}
 		}
 
@@ -115,7 +115,7 @@ namespace Raven.Client.Connection.Async
 
 				var jsonResponse = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
-				return new Operation(innerAsyncServerClient, jsonResponse.Value<long>("OperationId"));
+				return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), jsonResponse.Value<long>("OperationId"));
 			}
 		}
 

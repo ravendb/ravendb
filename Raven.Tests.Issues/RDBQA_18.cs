@@ -18,7 +18,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = new DocumentStore())
 			{
-				Assert.DoesNotThrow(async () => await store.Replication.WaitAsync());
+				Assert.DoesNotThrow(store.Replication.WaitAsync().Wait);
 			}
 		}
 	}

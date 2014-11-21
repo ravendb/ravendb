@@ -7,7 +7,7 @@ namespace Raven.Database.Server
 	public class LogHttpRequestStatsParams
 	{
 		public LogHttpRequestStatsParams(Stopwatch sw, NameValueCollection headers, string httpMethod, int responseStatusCode,
-		                                 string requestUri, string customInfo = null)
+		                                 string requestUri, string customInfo = null, int innerRequestsCount = 0)
 		{
 			Stopwatch = sw;
 			Headers = headers;
@@ -15,6 +15,7 @@ namespace Raven.Database.Server
 			ResponseStatusCode = responseStatusCode;
 			RequestUri = requestUri;
 			CustomInfo = customInfo;
+		    InnerRequestsCount = innerRequestsCount;
 		}
 
 		public Stopwatch Stopwatch { get; private set; }
@@ -28,5 +29,7 @@ namespace Raven.Database.Server
         public string RequestUri { get; private set; }
 
 		public string CustomInfo { get; private set; }
+
+        public int InnerRequestsCount { get; private set; }
 	}
 }

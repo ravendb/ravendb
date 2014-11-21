@@ -31,9 +31,10 @@ namespace Raven.Server
 		private FilesStore filesStore;
 	    private string url;
 
-		private IList<IDisposable> toDispose = new List<IDisposable>(); 
+		private IList<IDisposable> toDispose = new List<IDisposable>();
+		private IEnumerable<IServerStartupTask> serverStartupTasks;
 
-	    public RavenDbServer()
+		public RavenDbServer()
 			: this(new RavenConfiguration())
 		{}
 
@@ -113,7 +114,9 @@ namespace Raven.Server
 			filesStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
 			filesStore.Initialize();
 
-			foreach (var task in configuration.Container.GetExportedValues<IServerStartupTask>())
+			serverStartupTasks = configuration.Container.GetExportedValues<IServerStartupTask>();
+
+			foreach (var task in serverStartupTasks)
 			{
 				toDispose.Add(task);
 				task.Execute(this);
@@ -121,6 +124,11 @@ namespace Raven.Server
 
 	        return this;
 	    }
+
+		public IEnumerable<IServerStartupTask> ServerStartupTasks
+		{
+			get { return serverStartupTasks; }
+		}
 
 		public void EnableHttpServer()
 		{
@@ -192,6 +200,7 @@ namespace Raven.Server
 			{
 				get { return options.RequestManager.NumberOfRequests; }
 			}
+			public RavenDBOptions Options { get{return options;}}
 
 			public void ResetNumberOfRequests()
 			{
@@ -217,6 +226,7 @@ namespace Raven.Server
 	{
 		bool HasPendingRequests { get; }
 		int NumberOfRequests { get; }
+		RavenDBOptions Options { get; }
 		void ResetNumberOfRequests();
 		Task<DocumentDatabase> GetDatabaseInternal(string databaseName);
 	    Task<RavenFileSystem> GetRavenFileSystemInternal(string fileSystemName);

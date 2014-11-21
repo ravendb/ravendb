@@ -17,7 +17,9 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection;
 using Raven.Database.Actions;
 using Raven.Database.Backup;
 using Raven.Database.Config;
@@ -222,14 +224,24 @@ namespace Raven.Database.Server.Controllers.Admin
                     databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
                 if (restoreRequest.JournalsLocation != null)
                     databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+
+	            bool replicationBundleRemoved = false;
+	            if (restoreRequest.DisableReplicationDestinations) 
+					replicationBundleRemoved = TryRemoveReplicationBundle(databaseDocument);
+
                 databaseDocument.Id = databaseName;
                 DatabasesLandlord.Protect(databaseDocument);
-                DatabasesLandlord.SystemDatabase.Documents.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
-                    new RavenJObject(), null);
+                DatabasesLandlord
+					.SystemDatabase
+					.Documents
+					.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),new RavenJObject(), null);
 
                 restoreStatus.Messages.Add("The new database was created");
                 DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
                     RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+
+				if (replicationBundleRemoved)
+					AddReplicationBundleAndDisableReplicationDestinations(databaseName);
 
                 Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
             }, TaskCreationOptions.LongRunning);
@@ -247,6 +259,62 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				OperationId = id
 			});
+		}
+
+		private static bool TryRemoveReplicationBundle(DatabaseDocument databaseDocument)
+		{
+			string value;
+			if (databaseDocument.Settings.TryGetValue(Constants.ActiveBundles, out value) == false) 
+				return false;
+
+			var bundles = value.GetSemicolonSeparatedValues();
+			var removed = bundles.RemoveAll(n => n.Equals("Replication", StringComparison.OrdinalIgnoreCase)) > 0;
+
+			databaseDocument.Settings[Constants.ActiveBundles] = string.Join(";", bundles);
+			return removed;
+		}
+
+		private void AddReplicationBundleAndDisableReplicationDestinations(string databaseName)
+		{
+			Task<DocumentDatabase> databaseTask;
+			if (DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, out databaseTask) == false)
+				return;
+
+			var database = databaseTask.Result;
+			var replicationDocumentAsJson = database.Documents.Get(Constants.RavenReplicationDestinations, null);
+			if (replicationDocumentAsJson != null)
+			{
+				var replicationDocument = replicationDocumentAsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
+				foreach (var destination in replicationDocument.Destinations)
+				{
+					destination.Disabled = true;
+				}
+
+				database
+					.Documents
+					.Put(Constants.RavenReplicationDestinations, null, RavenJObject.FromObject(replicationDocument), new RavenJObject(), null);
+			}
+
+			var databaseDocumentAsJson = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.RavenDatabasesPrefix + databaseName, null);
+			var databaseDocument = databaseDocumentAsJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
+
+			var bundles = databaseDocument.Settings[Constants.ActiveBundles].GetSemicolonSeparatedValues();
+			bundles.Add("Replication");
+
+			databaseDocument.Settings[Constants.ActiveBundles] = string.Join(";", bundles);
+
+			DatabasesLandlord
+					.SystemDatabase
+					.Documents
+					.Put(
+						Constants.RavenDatabasesPrefix + databaseName,
+						null,
+						RavenJObject.FromObject(databaseDocument),
+						new RavenJObject
+					    {
+						    { "Raven-Temp-Allow-Bundles-Change", true }
+					    },
+						null);
 		}
 
 		private string ResolveTenantDataDirectory(string databaseLocation, string databaseName, out string documentDataDir)

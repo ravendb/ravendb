@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -35,7 +36,7 @@ namespace Raven.Database.Server.Controllers
 			try
 			{
 				var requests = await ReadJsonObjectAsync<GetRequest[]>();
-				var results = new HttpResponseMessage[requests.Length];
+				var results = new Tuple<HttpResponseMessage, List<Action<StringBuilder>>>[requests.Length];
 
 			    string clientVersion = null;
 			    IEnumerable<string> values;
@@ -64,10 +65,30 @@ namespace Raven.Database.Server.Controllers
 			    {
                     DatabasesLandlord.SystemConfiguration.ConcurrentMultiGetRequests.Release();
 			    }
-				
+
+				for (int i = 0; i < results.Length; i++)
+				{
+					if (results[i] == null)
+						continue;
+					var index = i;
+					AddRequestTraceInfo(sb =>
+					{
+						var customInfo = results[index].Item2;
+						sb.Append("\t").Append(index).Append(": ").Append(requests[index].UrlAndQuery);
+						if (customInfo == null)
+							return;
+						foreach (var action in customInfo)
+						{
+							sb.Append("\t\t");
+							action(sb);
+						}
+
+					});
+				}
+
 				var result = new HttpResponseMessage(HttpStatusCode.OK)
 				{
-					Content = new MultiGetContent(results)
+					Content = new MultiGetContent(results.Select(x=>x == null ? null : x.Item1))
 				};
 
 				HandleReplication(result);
@@ -82,9 +103,9 @@ namespace Raven.Database.Server.Controllers
 
 		public class MultiGetContent : HttpContent
 		{
-			private readonly HttpResponseMessage[] results;
+			private readonly IEnumerable<HttpResponseMessage> results;
 
-			public MultiGetContent(HttpResponseMessage[] results)
+			public MultiGetContent(IEnumerable<HttpResponseMessage> results)
 			{
 				this.results = results;
 			}
@@ -105,7 +126,7 @@ namespace Raven.Database.Server.Controllers
 
 					writer.WriteStartObject();
 					writer.WritePropertyName("Status");
-					writer.WriteValue((int) result.StatusCode);
+					writer.WriteValue((int)result.StatusCode);
 					writer.WritePropertyName("Headers");
 					writer.WriteStartObject();
 
@@ -123,7 +144,7 @@ namespace Raven.Database.Server.Controllers
 
 					var jsonContent = (JsonContent)result.Content;
 
-					if(jsonContent.Data != null)
+					if (jsonContent.Data != null)
 						jsonContent.Data.WriteTo(writer, Default.Converters);
 
 					writer.WriteEndObject();
@@ -142,7 +163,7 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		private async Task ExecuteRequests(HttpResponseMessage[] results, GetRequest[] requests)
+		private async Task ExecuteRequests(Tuple<HttpResponseMessage, List<Action<StringBuilder>>>[] results, GetRequest[] requests)
 		{
 			// Need to create this here to preserve any current TLS data that we have to copy
 			if ("yes".Equals(GetQueryStringValue("parallel"), StringComparison.OrdinalIgnoreCase))
@@ -157,21 +178,23 @@ namespace Raven.Database.Server.Controllers
 			{
 				for (var i = 0; i < requests.Length; i++)
 				{
+                    // as we perform requests sequentially we can pass parent trace info
 					await HandleRequestAsync(requests, results, i);
 				}
 			}
 		}
 
-		private async Task HandleRequestAsync(GetRequest[] requests, HttpResponseMessage[] results, int i)
+		private async Task HandleRequestAsync(GetRequest[] requests, Tuple<HttpResponseMessage, List<Action<StringBuilder>>>[] results, int i)
 		{
 			var request = requests[i];
 			if (request == null)
 				return;
 
 			results[i] = await HandleActualRequestAsync(request);
+
 		}
 
-		private async Task<HttpResponseMessage> HandleActualRequestAsync(GetRequest request)
+		private async Task<Tuple<HttpResponseMessage, List<Action<StringBuilder>>>> HandleActualRequestAsync(GetRequest request)
 		{
 			var query = "";
 			if (request.Query != null)
@@ -189,9 +212,12 @@ namespace Raven.Database.Server.Controllers
 			var msg = new HttpRequestMessage(HttpMethod.Get, new UriBuilder
 			{
 				Host = "multi.get",
-				Query = query, 
+				Query = query,
 				Path = request.Url
 			}.Uri);
+
+			IncrementInnerRequestsCount();
+
 			msg.SetConfiguration(Configuration);
 			var route = Configuration.Routes.GetRouteData(msg);
 			msg.SetRouteData(route);
@@ -225,7 +251,8 @@ namespace Raven.Database.Server.Controllers
 				((RavenDbApiController)controller).SetPostRequestQuery(indexQuery);
 			}
 
-			return await controller.ExecuteAsync(controllerContext, CancellationToken.None);
+			var httpResponseMessage = await controller.ExecuteAsync(controllerContext, CancellationToken.None);
+			return Tuple.Create(httpResponseMessage, controller.CustomRequestTraceInfo);
 		}
 
 		private static bool TryExtractIndexQuery(string query, out string withoutIndexQuery, out string indexQuery)
@@ -236,9 +263,9 @@ namespace Raven.Database.Server.Controllers
 				indexQuery = parameters["query"];
 
 				var array = (from key in parameters.AllKeys
-				             where key != null && key != "query"
-				             from value in parameters.GetValues(key)
-				             select string.Format("{0}={1}", key, value))
+							 where key != null && key != "query"
+							 from value in parameters.GetValues(key)
+							 select string.Format("{0}={1}", key, value))
 					.ToArray();
 
 				withoutIndexQuery = string.Join("&", array);

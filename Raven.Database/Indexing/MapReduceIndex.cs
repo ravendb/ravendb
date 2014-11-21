@@ -100,6 +100,9 @@ namespace Raven.Database.Indexing
 			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 			var allReferenceEtags = new ConcurrentQueue<IDictionary<string, Etag>>();
 			var allState = new ConcurrentQueue<Tuple<HashSet<ReduceKeyAndBucket>, IndexingWorkStats, Dictionary<string, int>>>();
+
+			int loadDocumentCount = 0;
+			long loadDocumentDuration = 0;
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, partition =>
 			{
 				var localStats = new IndexingWorkStats();
@@ -145,6 +148,8 @@ namespace Raven.Database.Indexing
 					});
 					allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
 					allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
+					Interlocked.Add(ref loadDocumentCount, CurrentIndexingScope.Current.LoadDocumentCount);
+					Interlocked.Add(ref loadDocumentDuration, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds);
 				}
 			});
 
@@ -188,7 +193,9 @@ namespace Raven.Database.Indexing
 				InputCount = documentsWrapped.Count,
 				Operation = "Map",
 				Duration = sw.Elapsed,
-				Started = start
+				Started = start,
+				LoadDocumentCount = loadDocumentCount,
+				LoadDocumentDurationMs = loadDocumentDuration 
 			});
 			BatchCompleted("Current Map");
 			logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);

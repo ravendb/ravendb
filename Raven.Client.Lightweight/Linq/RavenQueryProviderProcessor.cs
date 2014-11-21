@@ -1509,7 +1509,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				throw new NotSupportedException("Could not understand expression: " + expression, e);
 			}
-
+			
 			if (customizeQuery != null)
 				customizeQuery((IDocumentQueryCustomization)documentQuery);
 
@@ -1561,6 +1561,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			var asyncDocumentQuery = queryGenerator.AsyncQuery<T>(indexName, isMapReduce);
 			asyncDocumentQuery.SetResultTransformer(resultsTransformer);
+			asyncDocumentQuery.SetTransformerParameters(transformerParameters);
 			documentQuery = (IAbstractDocumentQuery<T>)asyncDocumentQuery;
 			try
 			{

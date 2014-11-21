@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -286,7 +287,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet]
 		[Route("debug/docrefs")]
 		[Route("databases/{databaseName}/debug/docrefs")]
-		public HttpResponseMessage Docrefs(string id)
+		public HttpResponseMessage DocRefs(string id)
 		{
 			var op = GetQueryStringValue("op") == "from" ? "from" : "to";
 
@@ -306,6 +307,27 @@ namespace Raven.Database.Server.Controllers
 			{
 				TotalCountReferencing = totalCountReferencing,
 				Results = results
+			});
+		}
+
+		[HttpGet]
+		[Route("debug/docrefs")]
+		[Route("databases/{databaseName}/debug/d0crefs-t0ps")]
+		public HttpResponseMessage DocRefsTops()
+		{
+			var sp = Stopwatch.StartNew();
+			Dictionary<string, int> documentReferencesStats = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				documentReferencesStats = accessor.Indexing.GetDocumentReferencesStats();
+			});
+
+			return GetMessageWithObject(new
+			{
+				TotalReferences = documentReferencesStats.Count,
+				GenerationCost = sp.Elapsed,
+				Results = documentReferencesStats.OrderByDescending(x => x.Value)
+					.Select(x => new {Document = x.Key, Count = x.Value})
 			});
 		}
 

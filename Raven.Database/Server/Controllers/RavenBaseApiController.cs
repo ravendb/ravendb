@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -11,6 +12,7 @@ using System.Net.Http.Headers;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
@@ -50,7 +52,16 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-        public HttpHeaders InnerHeaders
+        public bool IsInternalRequest
+        {
+            get
+            {
+                var internalHeader = GetHeader("Raven-internal-request");
+                return internalHeader != null && internalHeader == "true";
+            }
+        }
+
+		public HttpHeaders InnerHeaders
 		{
 			get
 			{
@@ -655,24 +666,35 @@ namespace Raven.Database.Server.Controllers
 
         public abstract string TenantName { get; }
 
-        public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
-        public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
+        private int innerRequestsCount;
 
-        public void AddRequestTraceInfo(Action<StringBuilder> info)
+        public int InnerRequestsCount { get { return innerRequestsCount;  } }
+
+		public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
+
+		public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
+
+		public void AddRequestTraceInfo(Action<StringBuilder> info)
+		{
+			if (info == null)
+				return;
+
+			if (CustomRequestTraceInfo == null)
+				CustomRequestTraceInfo = new List<Action<StringBuilder>>();
+
+			CustomRequestTraceInfo.Add(info);
+		}
+
+        public void IncrementInnerRequestsCount()
         {
-            if (info == null)
-                return;
-
-            if (CustomRequestTraceInfo == null)
-                CustomRequestTraceInfo = new List<Action<StringBuilder>>();
-            
-            CustomRequestTraceInfo.Add(info);
+            Interlocked.Increment(ref innerRequestsCount);
         }
+
 
 	    public abstract void MarkRequestDuration(long duration);
 
 
-
+        #region Landlords
 
         private DatabasesLandlord landlord;
         public DatabasesLandlord DatabasesLandlord
@@ -717,5 +739,7 @@ namespace Raven.Database.Server.Controllers
                 return (RequestManager)Configuration.Properties[typeof(RequestManager)];
             }
         }
-	}
+
+        #endregion
+    }
 }

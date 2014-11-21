@@ -260,7 +260,7 @@ namespace Raven.Database.Bundles.SqlReplication
 						{
 							try
 							{
-							    var startTime = SystemTime.UtcNow;
+								var startTime = SystemTime.UtcNow;
 								Stopwatch spRepTime = new Stopwatch();
 								spRepTime.Start();
 								var lastReplicatedEtag = GetLastEtagFor(localReplicationStatus, replicationConfig);
@@ -286,11 +286,12 @@ namespace Raven.Database.Bundles.SqlReplication
 									.ToList();
 
 								var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
-
+								if (currentLatestEtag == null && itemsToReplicate.Count > 0 && docsToReplicate.Count == 0)
+									currentLatestEtag = lastBatchEtag;
 
 								int countOfReplicatedItems = 0;
 								if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
-									ReplicateChangesToDestination(replicationConfig, docsToReplicate, out countOfReplicatedItems))
+										ReplicateChangesToDestination(replicationConfig, docsToReplicate, out countOfReplicatedItems))
 								{
 									if (deletedDocs.Count > 0)
 									{
@@ -308,7 +309,7 @@ namespace Raven.Database.Bundles.SqlReplication
 								sqlReplicationMetricsCounters.SqlReplicationBatchSizeHistogram.Update(countOfReplicatedItems);
 								sqlReplicationMetricsCounters.SqlReplicationDurationHistogram.Update(elapsedMicroseconds);
 
-							    UpdateReplicationPerformance(replicationConfig, startTime, spRepTime.Elapsed, docsToReplicate.Count);
+								UpdateReplicationPerformance(replicationConfig, startTime, spRepTime.Elapsed, docsToReplicate.Count);
 
 							}
 							catch (Exception e)
@@ -366,25 +367,25 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-	    private void UpdateReplicationPerformance(SqlReplicationConfig replicationConfig, DateTime startTime, TimeSpan elapsed, int batchSize)
-	    {
-	        var performance = new SqlReplicationPerformanceStats
-	        {
-                BatchSize = batchSize,
-	            Duration = elapsed,
-	            Started = startTime
-	        };
+		private void UpdateReplicationPerformance(SqlReplicationConfig replicationConfig, DateTime startTime, TimeSpan elapsed, int batchSize)
+		{
+			var performance = new SqlReplicationPerformanceStats
+			{
+				BatchSize = batchSize,
+				Duration = elapsed,
+				Started = startTime
+			};
 
-            var sqlReplicationMetricsCounters = GetSqlReplicationMetricsManager(replicationConfig);
-            sqlReplicationMetricsCounters.ReplicationPerformanceStats.Enqueue(performance);
-            while (sqlReplicationMetricsCounters.ReplicationPerformanceStats.Count() > 25)
-            {
-                SqlReplicationPerformanceStats _;
-                sqlReplicationMetricsCounters.ReplicationPerformanceStats.TryDequeue(out _);
-            }
-	    }
+			var sqlReplicationMetricsCounters = GetSqlReplicationMetricsManager(replicationConfig);
+			sqlReplicationMetricsCounters.ReplicationPerformanceStats.Enqueue(performance);
+			while (sqlReplicationMetricsCounters.ReplicationPerformanceStats.Count() > 25)
+			{
+				SqlReplicationPerformanceStats _;
+				sqlReplicationMetricsCounters.ReplicationPerformanceStats.TryDequeue(out _);
+			}
+		}
 
-	    private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus, Etag latestEtag)
+		private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus, Etag latestEtag)
 		{
 			int retries = 5;
 			while (retries > 0)
@@ -739,7 +740,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					if (writeToLog)
 						log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
 							cfg.ConnectionStringName,
-					sqlReplicationConfigDocumentKey);
+				sqlReplicationConfigDocumentKey);
 
 					replicationStats.LastAlert = new Alert()
 					{
@@ -761,8 +762,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					if (writeToLog)
 						log.Warn("Could not find setting named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
-					cfg.ConnectionStringSettingName,
-					sqlReplicationConfigDocumentKey);
+				cfg.ConnectionStringSettingName,
+				sqlReplicationConfigDocumentKey);
 					replicationStats.LastAlert = new Alert()
 					{
 						AlertLevel = AlertLevel.Error,

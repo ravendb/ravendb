@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ICSharpCode.NRefactory.CSharp;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 
@@ -317,6 +318,28 @@ namespace Raven.Database.Indexing.IndexMerging
             return true;
         }
 
+		private static bool AreSelectClausesTheSame(IndexData index, Dictionary<string, Expression> selectExpressionDict)
+		{
+			if (index.SelectExpressions.Count != selectExpressionDict.Count)
+				return false;
+
+			foreach (var pair in index.SelectExpressions)
+			{
+				Expression expressionValue;
+				if (selectExpressionDict.TryGetValue(pair.Key, out expressionValue) == false)
+					return false;
+
+				// for the same key, they have to be the same
+				string ySelectExpr = expressionValue.ToString();
+				string xSelectExpr = pair.Value.ToString();
+				if (xSelectExpr != ySelectExpr)
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
         private IndexMergeResults CreateMergeIndexDefinition(List<MergeProposal> indexDataForMerge)
         {
             var indexMergeResults = new IndexMergeResults();
@@ -355,7 +378,32 @@ namespace Raven.Database.Indexing.IndexMerging
 
                 if (mergeProposal.ProposedForMerge.Count > 1)
                 {
-                    indexMergeResults.Suggestions.Add(mergeSuggestion);
+		            var matchingExistingIndexes = mergeProposal.ProposedForMerge.Where(x =>
+														AreSelectClausesTheSame(x, selectExpressionDict) &&
+														DictionaryExtensions.ContentEquals(x.Stores, mergeSuggestion.MergedIndex.Stores) &&
+														DictionaryExtensions.ContentEquals(x.Indexes, mergeSuggestion.MergedIndex.Indexes) &&
+														DictionaryExtensions.ContentEquals(x.Analyzers, mergeSuggestion.MergedIndex.Analyzers) &&
+														DictionaryExtensions.ContentEquals(x.SortOptions, mergeSuggestion.MergedIndex.SortOptions) &&
+														DictionaryExtensions.ContentEquals(x.Suggestions, mergeSuggestion.MergedIndex.Suggestions) &&
+														DictionaryExtensions.ContentEquals(x.TermVectors, mergeSuggestion.MergedIndex.TermVectors) &&
+														DictionaryExtensions.ContentEquals(x.SpatialIndexes, mergeSuggestion.MergedIndex.SpatialIndexes))
+						.OrderBy(x => x.IndexName.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase))
+						.ToList();
+
+	                if (matchingExistingIndexes.Count > 0)
+	                {
+		                var surpassingIndex = matchingExistingIndexes.First();
+		                mergeSuggestion.SurpassingIndex = surpassingIndex.IndexName;
+
+						mergeSuggestion.MergedIndex = null;
+		                mergeSuggestion.CanMerge.Clear();
+		                mergeSuggestion.CanDelete = mergeProposal.ProposedForMerge.Except(new[]
+		                {
+			                surpassingIndex
+		                }).Select(x => x.IndexName).ToList();
+	                }
+
+	                indexMergeResults.Suggestions.Add(mergeSuggestion);
                 }
                 if ((mergeProposal.ProposedForMerge.Count == 1) && (mergeProposal.ProposedForMerge[0].IsSuitedForMerge == false))
                 {
@@ -366,7 +414,6 @@ namespace Raven.Database.Indexing.IndexMerging
             indexMergeResults = ExcludePartialResults(indexMergeResults);
             return indexMergeResults;
         }
-
 
         private IndexMergeResults ExcludePartialResults(IndexMergeResults originalIndexes)
         {

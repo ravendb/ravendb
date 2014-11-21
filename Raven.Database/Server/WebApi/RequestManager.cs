@@ -297,7 +297,7 @@ namespace Raven.Database.Server.WebApi
 			try
 			{
 				StringBuilder sb = null;
-				if (controller.CustomRequestTraceInfo != null)
+				if (controller.CustomRequestTraceInfo != null && controller.CustomRequestTraceInfo.Count > 0)
 				{
 
 					sb = new StringBuilder();
@@ -321,7 +321,8 @@ namespace Raven.Database.Server.WebApi
 					controller.InnerRequest.Method.Method,
 					response != null ? (int)response.StatusCode : 500,
 					controller.InnerRequest.RequestUri.ToString(),
-					sb != null ? sb.ToString() : null
+					sb != null ? sb.ToString() : null,
+                    controller.InnerRequestsCount
 					);
 			}
 
@@ -346,15 +347,16 @@ namespace Raven.Database.Server.WebApi
 
 			LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.TenantName, curReq);
 
-			TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName);
+            if (controller.IsInternalRequest == false)
+            {
+                TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName);    
+            }
 
 			RememberRecentRequests(logHttpRequestStatsParam, controller.TenantName);
-
-
 		}
 
 
-		private void RememberRecentRequests(LogHttpRequestStatsParams requestLog, string databaseName)
+	    private void RememberRecentRequests(LogHttpRequestStatsParams requestLog, string databaseName)
 		{
 			if (string.IsNullOrWhiteSpace(databaseName))
 				databaseName = Constants.SystemDatabase;
@@ -389,19 +391,12 @@ namespace Raven.Database.Server.WebApi
 			{
 				result.Add(innerHeader.Key, innerHeader.Value.FirstOrDefault());
 			}
-
-
-
-
 			return result;
 		}
 		private void TraceTraffic(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
 		{
 			if (HasAnyHttpTraceEventTransport() == false)
 				return;
-
-
-
 
 			NotifyTrafficWatch(
 			new TrafficWatchNotification()
@@ -412,7 +407,8 @@ namespace Raven.Database.Server.WebApi
 				HttpMethod = logHttpRequestStatsParams.HttpMethod,
 				ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
 				TenantName = NormalizeTennantName(databaseName),
-				TimeStamp = SystemTime.UtcNow
+				TimeStamp = SystemTime.UtcNow,
+                InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount
 			}
 			);
 		}

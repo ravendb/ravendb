@@ -92,8 +92,7 @@ namespace Raven.Database.FileSystem.Controllers
             if (authorizer.TryAuthorize(this, out authMsg) == false)
                 return authMsg;
 
-            var internalHeader = GetHeader("Raven-internal-request");
-            if (internalHeader == null || internalHeader != "true")
+            if (IsInternalRequest == false) 
                 RequestManager.IncrementRequestCount();
 
             var fileSystemInternal = await FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
