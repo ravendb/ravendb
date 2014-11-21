@@ -264,6 +264,8 @@ namespace Raven.Database.Bundles.SqlReplication
 								.ToList();
 
 							var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
+							if (currentLatestEtag == null && itemsToReplicate.Count > 0 && docsToReplicate.Count == 0)
+								currentLatestEtag = lastBatchEtag;
 
 							if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
 								ReplicateChangesToDestination(replicationConfig, docsToReplicate))
