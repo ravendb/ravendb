@@ -21,5 +21,20 @@ namespace Raven.Abstractions.Extensions
 			self.TryGetValue(key, out value);
 			return value;
 		}
+
+		public static bool ContentEquals<TKey, TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
+		{
+			if (x.Count != y.Count)
+				return false;
+			foreach (var v in x)
+			{
+				TValue value;
+				if (y.TryGetValue(v.Key, out value) == false)
+					return false;
+				if (Equals(value, v.Value) == false)
+					return false;
+			}
+			return true;
+		} 
 	}
 }

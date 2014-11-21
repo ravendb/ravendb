@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Indexing
@@ -169,29 +170,16 @@ namespace Raven.Abstractions.Indexing
 					Equals(other.IndexId, IndexId) &&
 					Equals(other.Reduce, Reduce) &&
                     Equals(other.MaxIndexOutputsPerDocument, MaxIndexOutputsPerDocument) &&
-					DictionaryEquals(other.Stores, Stores) &&
-					DictionaryEquals(other.Indexes, Indexes) &&
-					DictionaryEquals(other.Analyzers, Analyzers) &&
-					DictionaryEquals(other.SortOptions, SortOptions) &&
-					DictionaryEquals(other.Suggestions, Suggestions) &&
-					DictionaryEquals(other.TermVectors, TermVectors) &&
-					DictionaryEquals(other.SpatialIndexes, SpatialIndexes);
+					DictionaryExtensions.ContentEquals(other.Stores, Stores) &&
+					DictionaryExtensions.ContentEquals(other.Indexes, Indexes) &&
+					DictionaryExtensions.ContentEquals(other.Analyzers, Analyzers) &&
+					DictionaryExtensions.ContentEquals(other.SortOptions, SortOptions) &&
+					DictionaryExtensions.ContentEquals(other.Suggestions, Suggestions) &&
+					DictionaryExtensions.ContentEquals(other.TermVectors, TermVectors) &&
+					DictionaryExtensions.ContentEquals(other.SpatialIndexes, SpatialIndexes);
 		}
 
-		private static bool DictionaryEquals<TKey, TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
-		{
-			if (x.Count != y.Count)
-				return false;
-			foreach (var v in x)
-			{
-				TValue value;
-				if (y.TryGetValue(v.Key, out value) == false)
-					return false;
-				if (Equals(value, v.Value) == false)
-					return false;
-			}
-			return true;
-		}
+		
 
 		private static int DictionaryHashCode<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> x)
 		{
