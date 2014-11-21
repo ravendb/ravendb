@@ -76,23 +76,24 @@ namespace Raven.Client.Document
 		    }
 		    catch (Exception e)
 		    {
-		        var completedCount = tasks.Count(x => x.IsCompleted && x.IsFaulted == false);
-		        if (completedCount >= toCheck)
+		        var successCount = tasks.Count(x => x.IsCompleted && x.IsFaulted == false);
+		        if (successCount >= toCheck)
 		        {
 		            // we have nothing to do here, we replicated to at least the 
                     // number we had to check, so that is good
-			        return completedCount;
+			        return successCount;
 		        }
-			    if (tasks.Any(x => x.IsFaulted) && completedCount == 0)
+			    if (tasks.Any(x => x.IsFaulted) && successCount == 0)
 			    {
 				    // there was an error here, not just cancellation, let us just let it bubble up.
 				    throw;
 			    }
 
 			    // we have either completed (but not enough) or cancelled, meaning timeout
-		        var message = string.Format("Confirmed that the specified etag {0} was replicated to {1} of {2} servers after {3}", etag,
-		            (toCheck - completedCount),
-		            toCheck,
+		        var message = string.Format("Confirmed that the specified etag {0} was replicated to {1} of {2} servers after {3}", 
+                    etag,
+                    successCount,
+                    destinationsToCheck.Count,
                     sp.Elapsed);
 
 			    throw new TimeoutException(message, e);
@@ -124,15 +125,18 @@ namespace Raven.Client.Document
 				"GET",
 				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials), 
 				documentStore.Conventions);
-			var httpJsonRequest = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
-			var json = await httpJsonRequest.ReadResponseJsonAsync();
 
-			return new ReplicatedEtagInfo
-			{
-				DestinationUrl = destinationUrl,
-				DocumentEtag = Etag.Parse(json.Value<string>("LastDocumentEtag")),
-				AttachmentEtag = Etag.Parse(json.Value<string>("LastAttachmentEtag"))
-			};
+		    using (var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams))
+		    {
+			    var json = await request.ReadResponseJsonAsync();
+
+			    return new ReplicatedEtagInfo
+			    {
+				    DestinationUrl = destinationUrl, 
+					DocumentEtag = Etag.Parse(json.Value<string>("LastDocumentEtag")), 
+					AttachmentEtag = Etag.Parse(json.Value<string>("LastAttachmentEtag"))
+			    };
+		    }
 		}
 	}
 }

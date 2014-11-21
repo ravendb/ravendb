@@ -7,6 +7,12 @@
 		public string Id { get; set; }
 		public string IndexScript { get; set; }
 		public string DeleteScript { get; set; }
+		public bool RetryOnConcurrencyExceptions { get; set; }
+
+		public ScriptedIndexResults()
+		{
+			RetryOnConcurrencyExceptions = true;
+		}
 
 		protected bool Equals(ScriptedIndexResults other)
 		{

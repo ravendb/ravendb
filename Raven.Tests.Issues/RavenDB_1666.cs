@@ -73,6 +73,7 @@ namespace Raven.Tests.Issues
 			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseBatchToggleDisable(false));
 			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseBatchToggleDisable(true));
 			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseToggleIndexingDisable(null, false));
+			RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseToggleRejectClientsEnabled(string.Empty, false));
             RegisterRouteForOnlySysDb<DatabasesController>(a => a.Databases(false));
 			RegisterRouteForOnlySysDb<DatabasesController>(a => a.Databases(true));
             RegisterRouteForOnlySysDb<DebugController>(a => a.Routes());

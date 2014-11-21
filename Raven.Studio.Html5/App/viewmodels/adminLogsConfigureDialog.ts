@@ -67,11 +67,18 @@ class adminLogsConfigureDialog extends dialogViewModelBase {
                 dialog.close(this);
             })
             .fail((e) => {
-                app.showMessage("You are not authorized to trace this resource", "Ahuthorization error");
+                var response = JSON.parse(e.responseText);
+                var msg = e.statusText;
+                if ("Error" in response) {
+                    msg += ": " + response.Error;
+                } else if ("Reason" in response) {
+                    msg += ": " + response.Reason;
+                }
+                app.showMessage(msg, "Error");
             });
     }
 
-    insertNewRow() {
+    addCategory() {
         this.logConfig.entries.push(new adminLogsConfigEntry("", "Info"));
 
         if (!this.isScrollNeeded()) {

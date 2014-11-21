@@ -28,6 +28,7 @@ namespace Raven.Database.Indexing
 		static readonly Regex dateQuery = new Regex(FieldRegexVal + @"\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
 		static readonly Regex rightOpenRangeQuery = new Regex(FieldRegexVal + @"\[(\S+)\sTO\s(\S+)\}", RegexOptions.Compiled);
 		static readonly Regex leftOpenRangeQuery = new Regex(FieldRegexVal + @"\{(\S+)\sTO\s(\S+)\]", RegexOptions.Compiled);
+		static readonly Regex commentsRegex = new Regex(@"( //[^""]+?)$", RegexOptions.Compiled | RegexOptions.Multiline);
 
 		/* The reason that we use @emptyIn<PermittedUsers>:(no-results)
 		 * instead of using @in<PermittedUsers>:()
@@ -56,6 +57,7 @@ namespace Raven.Database.Indexing
 										: QueryParser.Operator.AND,
 					AllowLeadingWildcard = true
 				};
+				query = PreProcessComments(query);
 				query = PreProcessMixedInclusiveExclusiveRangeQueries(query);
 				query = PreProcessUntokenizedTerms(query, queryParser);
 				query = PreProcessSearchTerms(query);
@@ -71,6 +73,20 @@ namespace Raven.Database.Indexing
 				throw new ParseException("Could not parse modified query: '" + query + "' original was: '" + originalQuery + "'", pe);
 
 			}
+		}
+
+		private static string PreProcessComments(string query)
+		{
+			var matches = commentsRegex.Matches(query);
+			if (matches.Count < 1)
+				return query;
+			var q = new StringBuilder(query);
+			for (int i = matches.Count-1; i >= 0; i--)
+			{
+				var match = matches[i];
+				q.Remove(match.Index, match.Length);
+			}
+			return q.ToString();
 		}
 
 		private static Query HandleMethods(Query query, RavenPerFieldAnalyzerWrapper analyzer)

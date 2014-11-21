@@ -13,7 +13,7 @@ namespace Raven.SlowTests.Issues
 	{
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
-			configuration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"] = "10";
+			configuration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"] = "3";
 			configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"] = "1";
 		}
 
@@ -39,7 +39,7 @@ namespace Raven.SlowTests.Issues
 
 
 				//DB that is stored on H.D should *not* be unloaded
-				Assert.True(tenantRemovedEvent.Wait(TimeSpan.FromMinutes(15)));
+				Assert.True(tenantRemovedEvent.Wait(TimeSpan.FromSeconds(15)));
 			}
 		}
 
@@ -65,7 +65,7 @@ namespace Raven.SlowTests.Issues
 				
 
 				//DB that is stored in-memory should* be unloaded
-				Assert.False(tenantRemovedEvent.Wait(TimeSpan.FromMinutes(15)));
+				Assert.False(tenantRemovedEvent.Wait(TimeSpan.FromSeconds(15)));
 			}			
 		}
 	}

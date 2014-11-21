@@ -78,7 +78,7 @@ namespace Raven.Database.FileSystem.Controllers
             var result = new HttpResponseMessage();
             if (InnerRequest.Method.Method != "OPTIONS")
             {
-                result = await RequestManager.HandleActualRequest(this, async () =>
+                result = await RequestManager.HandleActualRequest(this,controllerContext, async () =>
                 {
                     RequestManager.SetThreadLocalState(InnerHeaders, FileSystemName);
                     return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
@@ -99,8 +99,7 @@ namespace Raven.Database.FileSystem.Controllers
             if (authorizer.TryAuthorize(this, out authMsg) == false)
                 return authMsg;
 
-            var internalHeader = GetHeader("Raven-internal-request");
-            if (internalHeader == null || internalHeader != "true")
+            if (IsInternalRequest == false) 
                 RequestManager.IncrementRequestCount();
 
             var fileSystemInternal = await FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
@@ -353,7 +352,12 @@ namespace Raven.Database.FileSystem.Controllers
 			public int Start;
 		}
 
-        public override bool SetupRequestToProperDatabase(RequestManager rm)
+	    public override InMemoryRavenConfiguration ResourceConfiguration
+	    {
+	        get { return FileSystem.Configuration; }
+	    }
+
+	    public override bool SetupRequestToProperDatabase(RequestManager rm)
         {
             if (!RavenFileSystem.IsRemoteDifferentialCompressionInstalled)
                 throw new HttpException(503, "File Systems functionality is not supported. Remote Differential Compression is not installed.");

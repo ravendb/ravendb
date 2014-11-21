@@ -3,8 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-
 namespace Raven.Abstractions.Data
 {
     public class DatabaseRestoreRequest : AbstractRestoreRequest
@@ -12,5 +10,7 @@ namespace Raven.Abstractions.Data
 		public string DatabaseName { get; set; }
 
         public string DatabaseLocation { get; set; }
+
+		public bool DisableReplicationDestinations { get; set; }
 	}
 }

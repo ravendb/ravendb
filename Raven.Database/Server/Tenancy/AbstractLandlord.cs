@@ -115,7 +115,10 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public void Cleanup(string resource, bool skipIfActive, Func<TResource,bool> shouldSkip = null, DocumentChangeTypes notificationType = DocumentChangeTypes.None)
+        public void Cleanup(string resource, 
+			TimeSpan? skipIfActiveInDuration, 
+			Func<TResource,bool> shouldSkip = null,
+			DocumentChangeTypes notificationType = DocumentChangeTypes.None)
         {
             using (ResourcesStoresCache.WithAllLocks())
             {
@@ -124,7 +127,7 @@ namespace Raven.Database.Server.Tenancy
 				if (ResourcesStoresCache.TryGetValue(resource, out resourceTask) == false)
                 {
 					LastRecentlyUsed.TryRemove(resource, out time);
-                    return;
+                    return;	
                 }
 				if (resourceTask.Status == TaskStatus.Faulted || resourceTask.Status == TaskStatus.Canceled)
                 {
@@ -138,9 +141,12 @@ namespace Raven.Database.Server.Tenancy
                 }
 
 				var database = resourceTask.Result;
-                if ((skipIfActive &&
-					(SystemTime.UtcNow - LastWork(database)).TotalMinutes < 10) || 
-					(shouldSkip != null && shouldSkip(database)))
+                if (
+					(skipIfActiveInDuration != null && (SystemTime.UtcNow - LastWork(database)) < skipIfActiveInDuration) || 
+
+					(shouldSkip != null && shouldSkip(database))
+									
+					)
                 {
                     // this document might not be actively working with user, but it is actively doing indexes, we will 
                     // wait with unloading this database until it hasn't done indexing for a while.
@@ -246,7 +252,7 @@ namespace Raven.Database.Server.Tenancy
                 throw new InvalidOperationException(tenantId + "' is currently locked and cannot be accessed");
             try
             {
-                Cleanup(tenantId, false);
+				Cleanup(tenantId, skipIfActiveInDuration: null);
                 actionToTake();
             }
             finally

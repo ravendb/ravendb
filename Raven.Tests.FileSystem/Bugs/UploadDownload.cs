@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Threading.Tasks;
 using Raven.Tests.Helpers;
 using Xunit;
 
@@ -6,8 +7,8 @@ namespace Raven.Tests.FileSystem.Bugs
 {
 	public class UploadDownload : RavenFilesTestWithLogs
 	{
-		[Fact] 
-		public async void ShouldWork()
+		[Fact]
+		public async Task ShouldWork()
 		{
 			var fs = NewAsyncClient();
 			var ms = new MemoryStream();

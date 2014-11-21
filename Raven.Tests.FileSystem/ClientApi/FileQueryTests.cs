@@ -14,7 +14,7 @@ namespace Raven.Tests.FileSystem.ClientApi
     public class FileQueryTests : RavenFilesTestWithLogs
     {
         [Fact]
-        public async void CanQueryByName()
+		public async Task CanQueryByName()
         {
             var store = this.NewStore();
 
@@ -37,7 +37,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanQueryAll()
+		public async Task CanQueryAll()
         {
             var store = this.NewStore();
 
@@ -58,7 +58,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanQueryAllOnDirectory()
+		public async Task CanQueryAllOnDirectory()
         {
             var store = this.NewStore();
 
@@ -80,7 +80,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanQueryRootDirectoryWithoutRecursive()
+		public async Task CanQueryRootDirectoryWithoutRecursive()
         {
             var store = this.NewStore();
 
@@ -102,7 +102,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanQueryByMultipleWithOrStatement()
+		public async Task CanQueryByMultipleWithOrStatement()
         {
             var store = this.NewStore();
 
@@ -128,7 +128,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanQueryInsideDirectory()
+		public async Task CanQueryInsideDirectory()
         {
             var store = this.NewStore();
 
@@ -152,7 +152,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanQueryStoppingAtDirectory()
+		public async Task CanQueryStoppingAtDirectory()
         {
             var store = this.NewStore();
 
@@ -176,7 +176,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanQueryByExtension()
+		public async Task CanQueryByExtension()
         {
             var store = this.NewStore();
 
@@ -200,7 +200,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanQueryByMetadata()
+		public async Task CanQueryByMetadata()
         {
             var store = this.NewStore();
 
@@ -238,7 +238,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanQueryBySize()
+		public async Task CanQueryBySize()
         {
             var store = this.NewStore();
 
@@ -278,7 +278,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanUseFirst()
+		public async Task CanUseFirst()
         {
             var store = this.NewStore();
 
@@ -304,7 +304,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanUseFirstOrDefault()
+		public async Task CanUseFirstOrDefault()
         {
             var store = this.NewStore();
 
@@ -322,7 +322,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanUseSingle()
+		public async Task CanUseSingle()
         {
             var store = this.NewStore();
 
@@ -341,7 +341,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanUseSingleOrDefault()
+		public async Task CanUseSingleOrDefault()
         {
             var store = this.NewStore();
 
@@ -361,7 +361,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanUseOrderBySize()
+		public async Task CanUseOrderBySize()
         {
             var store = this.NewStore();
 
@@ -392,7 +392,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanUseOrderByDescendingSize()
+		public async Task CanUseOrderByDescendingSize()
         {
             var store = this.NewStore();
 
@@ -424,7 +424,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
 
         [Fact]
-        public async void CanUseOrderByName()
+		public async Task CanUseOrderByName()
         {
             var store = this.NewStore();
 
@@ -455,7 +455,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanUseOrderByDescendingName()
+		public async Task CanUseOrderByDescendingName()
         {
             var store = this.NewStore();
 
@@ -486,7 +486,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanUseOrderByMultipleConditionsOnDescending()
+		public async Task CanUseOrderByMultipleConditionsOnDescending()
         {
             var store = this.NewStore();
 
@@ -518,7 +518,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanUseOrderByMultipleConditions()
+		public async Task CanUseOrderByMultipleConditions()
         {
             var store = this.NewStore();
 
@@ -550,7 +550,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanUseOrderByMultipleGroupConditions()
+		public async Task CanUseOrderByMultipleGroupConditions()
         {
             var store = this.NewStore();
 
@@ -580,7 +580,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanUseContainsAll()
+		public async Task CanUseContainsAll()
         {
             var store = this.NewStore();
 
@@ -607,7 +607,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-        public async void CanUseContainsAny()
+		public async Task CanUseContainsAny()
         {
             var store = this.NewStore();
 

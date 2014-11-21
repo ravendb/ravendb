@@ -5,6 +5,13 @@
 
 	public abstract class HashEncryptorBase
 	{
+		protected bool AllowNonThreadSafeMethods { get; private set; }
+
+		protected HashEncryptorBase(bool allowNonThreadSafeMethods)
+		{
+			AllowNonThreadSafeMethods = allowNonThreadSafeMethods;
+		}
+
 		public byte[] ComputeHash(HashAlgorithm algorithm, byte[] bytes, int? size = null)
 		{
 			using (algorithm)
@@ -28,5 +35,11 @@
                 return hash;
             }
         }
+
+		protected void ThrowNotSupportedExceptionForNonThreadSafeMethod()
+		{
+			if (AllowNonThreadSafeMethods == false)
+				throw new NotSupportedException("Non-thread-safe methods are not allowed.");
+		}
 	}
 }

@@ -45,7 +45,8 @@ select new
                         {"LastModifiedTicks", SortOptions.Long}
                     },
 			
-				DisableInMemoryIndexing = true
+				DisableInMemoryIndexing = true,
+                LockMode = IndexLockMode.LockedIgnore,
 			};
 		}
 	}

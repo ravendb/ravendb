@@ -58,7 +58,7 @@ namespace Raven.Database.Server.Controllers
 			var result = new HttpResponseMessage();
 			if (InnerRequest.Method.Method != "OPTIONS")
 			{
-				result = await RequestManager.HandleActualRequest(this, async () =>
+				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
 				{
                     RequestManager.SetThreadLocalState(InnerHeaders, DatabaseName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
@@ -91,8 +91,7 @@ namespace Raven.Database.Server.Controllers
 					return authMsg;
 			}
 
-			var internalHeader = GetHeader("Raven-internal-request");
-			if (internalHeader == null || internalHeader != "true")
+            if (IsInternalRequest == false)
 				RequestManager.IncrementRequestCount();
 
 			if (DatabaseName != null && await DatabasesLandlord.GetDatabaseInternal(DatabaseName) == null)
@@ -226,8 +225,13 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-	
-		protected bool EnsureSystemDatabase()
+	    public override InMemoryRavenConfiguration ResourceConfiguration
+	    {
+	        get { return Database.Configuration; }
+	    }
+
+
+	    protected bool EnsureSystemDatabase()
 		{
 			return DatabasesLandlord.SystemDatabase == Database;
 		}
@@ -488,6 +492,13 @@ namespace Raven.Database.Server.Controllers
             if (success) result = parseResult;
             return result;
         }
+
+		protected bool GetRetrieveDetails()
+		{
+			bool details;
+			bool.TryParse(GetQueryStringValue("details"), out details);
+			return details;
+		}
 
 		protected void HandleReplication(HttpResponseMessage msg)
 		{

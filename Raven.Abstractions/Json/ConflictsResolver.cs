@@ -232,7 +232,9 @@ namespace Raven.Abstractions.Json
 
 	        if (resolver.isMetadataResolver)
 	        {
-		        metadataWriter.WritePropertyName(name);
+				if(name != "@metadata")
+					metadataWriter.WritePropertyName(name);
+
 		        WriteRawData(metadataWriter, result.Document, indent);
 	        }
 	        else
@@ -266,7 +268,7 @@ namespace Raven.Abstractions.Json
                 var resolver = o.Value as ConflictsResolver;
                 if (resolver != null)
                 {
-                    WriteConflictResolver(o.Key,documentWriter, metadataWriter, resolver, indent + 1);
+                    WriteConflictResolver(o.Key, documentWriter, metadataWriter, resolver, o.Key == "@metadata" ? 0 : indent + 1);
                 }
                 else
                 {

@@ -358,6 +358,38 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
+		public Dictionary<string,int> GetDocumentReferencesStats()
+		{
+			var documentReferencesByRef = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
+			var results = new Dictionary<string, int>();
+			using (var outerIterator = documentReferencesByRef.Iterate(Snapshot, null))
+			{
+				if (outerIterator.Seek(Slice.BeforeAllKeys) == false)
+					return results;
+				do
+				{
+					using (var iterator = documentReferencesByRef.MultiRead(Snapshot, outerIterator.CurrentKey))
+					{
+						var count = 0;
+
+						if (!iterator.Seek(Slice.BeforeAllKeys))
+							continue;
+
+						do
+						{
+							count++;
+						}
+						while (iterator.MoveNext());
+
+						results[outerIterator.CurrentKey.ToString()] = count;
+					}
+					
+				} while (outerIterator.MoveNext());
+			}
+
+			return results;
+		}
+
 		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
 		{
 			var documentReferencesByKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);

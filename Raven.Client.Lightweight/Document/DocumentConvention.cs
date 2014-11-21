@@ -85,7 +85,7 @@ namespace Raven.Client.Document
 				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
 			};
 			MaxNumberOfRequestsPerSession = 30;
-		    MaxLengthOfQueryUsingGetUrl = 2048;
+		    MaxLengthOfQueryUsingGetUrl = 1024 + 512;
 			ApplyReduceFunction = DefaultApplyReduceFunction;
 			ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
 			CustomizeJsonSerializer = serializer => { };

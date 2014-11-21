@@ -56,15 +56,20 @@ class aceEditorBindingHandler {
                 exec: function (editor) {
                     aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
                     aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
-                    editor.resize();
+					editor.resize();
+
 
                     if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen") === true) {
                         $(".fullScreenModeLabel").text(aceEditorBindingHandler.leaveFullScreenText);
                         $(".fullScreenModeLabel").hide();
-                        $(editor.container).find(".fullScreenModeLabel").show();
+						$(editor.container).find(".fullScreenModeLabel").show();
+						editor.setOption("maxLines", null);
+
                     } else {
                         $(".fullScreenModeLabel").text(aceEditorBindingHandler.goToFullScreenText);
-                        $(".fullScreenModeLabel").show();
+						$(".fullScreenModeLabel").show();
+						editor.setOption("maxLines", 10 * 1000 );
+
                     }
 
                 }

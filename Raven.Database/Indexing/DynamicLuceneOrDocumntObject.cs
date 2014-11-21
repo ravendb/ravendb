@@ -81,6 +81,8 @@ namespace Raven.Database.Indexing
 	        }
 
 	        parentDoc = retriever.Load(documentId);
+
+
 	        return true;
 	    }
     }

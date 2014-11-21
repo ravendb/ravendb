@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
@@ -14,6 +15,9 @@ namespace Raven.Database.Indexing
 		private readonly DocumentDatabase database;
 		private readonly string index;
 
+		public int LoadDocumentCount { get; private set; }
+		public Stopwatch LoadDocumentDuration { get; private set; }
+
 		[ThreadStatic]
 		private static CurrentIndexingScope current;
 
@@ -27,6 +31,8 @@ namespace Raven.Database.Indexing
 		{
 		    this.database = database;
 		    this.index = index;
+			LoadDocumentCount = 0;
+			LoadDocumentDuration = new Stopwatch();
 		}
 
         public IDictionary<string, HashSet<string>> ReferencedDocuments
@@ -72,7 +78,10 @@ namespace Raven.Database.Indexing
 			if (docsCache.TryGetValue(key, out value))
 				return value;
 
+			LoadDocumentDuration.Start();
 			var doc = database.Documents.Get(key, null);
+			LoadDocumentDuration.Stop();
+			LoadDocumentCount++;
 
 			if (doc == null)
             {
@@ -90,6 +99,7 @@ namespace Raven.Database.Indexing
 			}
 
 			docsCache[key] = value;
+
 			return value;
 		}
 

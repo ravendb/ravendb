@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Voron.Impl;
 
@@ -74,8 +75,9 @@ namespace Voron.Trees
 		/// </summary>
 		public bool DeleteCurrentAndMoveNext()
 		{
-			_tree.Delete(CurrentKey);
-			return MovePrev() && MoveNext();
+			var currentKey = CurrentKey;
+			_tree.Delete(currentKey);
+			return Seek(currentKey);
 		}
 
 		public NodeHeader* Current
@@ -125,7 +127,8 @@ namespace Voron.Trees
 
 		public bool MoveNext()
 		{
-			while (true)
+
+			while (_currentPage != null)
 			{
 				_currentPage.LastSearchPosition++;
 				if (_currentPage.LastSearchPosition < _currentPage.NumberOfEntries)
@@ -152,6 +155,7 @@ namespace Voron.Trees
 				_currentPage = _cursor.Pop();
 			}
 			_currentPage = null;
+			
 			return false;
 		}
 

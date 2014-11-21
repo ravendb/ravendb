@@ -149,7 +149,8 @@ namespace Raven.Tests.FileSystem.Smuggler
                 var server = GetServer();
 
                 var alreadyReset = false;
-                var forwarder = new ProxyServer(8070, server.Configuration.Port)
+	            var port = 8070;
+	            var forwarder = new ProxyServer(ref port, server.Configuration.Port)
                 {
                     VetoTransfer = (totalRead, buffer) =>
                     {
@@ -161,50 +162,58 @@ namespace Raven.Tests.FileSystem.Smuggler
                         return false;
                     }
                 };
+	            try
+	            {
+					var smugglerApi = new SmugglerFilesApi();
 
-                var smugglerApi = new SmugglerFilesApi();
+					var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
+					{
+						From = new FilesConnectionStringOptions
+						{
+							Url = "http://localhost:" + port,
+							DefaultFileSystem = SourceFilesystem
+						},
+						To = new FilesConnectionStringOptions
+						{
+							Url = store.Url,
+							DefaultFileSystem = DestinationFilesystem
+						}
+					};
 
-                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
-                {
-                    From = new FilesConnectionStringOptions
-                    {
-                        Url = "http://localhost:8070",
-                        DefaultFileSystem = SourceFilesystem
-                    },
-                    To = new FilesConnectionStringOptions
-                    {
-                        Url = store.Url,
-                        DefaultFileSystem = DestinationFilesystem
-                    }
-                };
+					await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
+					await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
 
-                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
-                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
+					ReseedRandom(100); // Force a random distribution.
 
-                ReseedRandom(100); // Force a random distribution.
-
-                await InitializeWithRandomFiles(store, 20, 30);
+					await InitializeWithRandomFiles(store, 20, 30);
 
 
-                Etag lastEtag = Etag.InvalidEtag;
-                try
-                {
-                    await smugglerApi.Between(options);
-                }
-                catch (SmugglerExportException inner)
-                {
-                    lastEtag = inner.LastEtag;
-                }
+					Etag lastEtag = Etag.InvalidEtag;
+					try
+					{
+						await smugglerApi.Between(options);
+					}
+					catch (SmugglerExportException inner)
+					{
+						lastEtag = inner.LastEtag;
+					}
 
-                Assert.NotEqual(Etag.InvalidEtag, lastEtag);
+					Assert.NotEqual(Etag.InvalidEtag, lastEtag);
 
-                await smugglerApi.Between(options);
+					await smugglerApi.Between(options);
 
-                using (var session = store.OpenAsyncSession(DestinationFilesystem))
-                {
-                    var files = await session.Commands.BrowseAsync();
-                    Assert.Equal(20, files.Count());
-                }
+					using (var session = store.OpenAsyncSession(DestinationFilesystem))
+					{
+						var files = await session.Commands.BrowseAsync();
+						Assert.Equal(20, files.Count());
+					}
+	            }
+	            finally
+	            {
+		            forwarder.Dispose();
+					server.Dispose();
+	            }
+               
             }
         }
 
