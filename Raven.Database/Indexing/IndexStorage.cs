@@ -26,6 +26,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -1092,6 +1093,65 @@ namespace Raven.Database.Indexing
 
 			SetUnusedIndexesToIdle();
 			UpdateLatestPersistedQueryTime();
+			DeleteSurpassedAutoIndexes();
+		}
+
+		public bool IsIndexStale(string indexName, LastCollectionEtags lastCollectionEtags)
+		{
+			var index = TryIndexByName(indexName);
+
+			if(index == null)
+				throw new InvalidOperationException("Could not find index " + indexName);
+
+			return IsIndexStale(index.IndexId, lastCollectionEtags);
+		}
+
+		public bool IsIndexStale(int indexId, LastCollectionEtags lastCollectionEtags)
+		{
+			bool isStale = false;
+
+			documentDatabase.TransactionalStorage.Batch(actions =>
+			{
+				Index indexInstance = GetIndexInstance(indexId);
+
+				isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
+
+				if (isStale && actions.Staleness.IsIndexStaleByTask(indexId, null) == false && actions.Staleness.IsReduceStale(indexId) == false)
+				{
+					var collectionNames = indexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
+					var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
+
+					if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
+						isStale = false;
+				}
+			});
+
+			return isStale;
+		}
+
+		private void DeleteSurpassedAutoIndexes()
+		{
+			if (indexes.Any(x => x.Value.PublicName.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)) == false)
+				return;
+
+			var mergeSuggestions = indexDefinitionStorage.ProposeIndexMergeSuggestions();
+
+			foreach (var mergeSuggestion in mergeSuggestions.Suggestions)
+			{
+				if(string.IsNullOrEmpty(mergeSuggestion.SurpassingIndex))
+					continue;
+
+				if (mergeSuggestion.CanDelete.Any(x => x.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)) == false)
+					continue;
+
+				if(IsIndexStale(mergeSuggestion.SurpassingIndex, documentDatabase.LastCollectionEtags))
+					continue;
+
+				foreach (var indexToDelete in mergeSuggestion.CanDelete.Where(x => x.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)))
+				{
+					documentDatabase.Indexes.DeleteIndex(indexToDelete);
+				}
+			}
 		}
 
 		private void UpdateLatestPersistedQueryTime()

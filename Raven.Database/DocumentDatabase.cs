@@ -444,23 +444,8 @@ namespace Raven.Database
 					result.CountOfDocuments = actions.Documents.GetDocumentsCount();
 					result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
 
-					result.StaleIndexes = IndexStorage.Indexes.Where(indexId =>
-					{
-						Index indexInstance = IndexStorage.GetIndexInstance(indexId);
-
-						var isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
-
-						if (isStale && actions.Staleness.IsIndexStaleByTask(indexId, null) == false && actions.Staleness.IsReduceStale(indexId) == false)
-						{
-							var collectionNames = IndexDefinitionStorage.GetViewGenerator(indexId).ForEntityNames.ToList();
-							var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
-
-							if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
-								return false;
-						}
-
-						return isStale;
-					}).Select(indexId =>
+					result.StaleIndexes = IndexStorage.Indexes.Where(indexId => IndexStorage.IsIndexStale(indexId, LastCollectionEtags))
+					.Select(indexId =>
 					{
 						Index index = IndexStorage.GetIndexInstance(indexId);
 						return index == null ? null : index.PublicName;
