@@ -177,7 +177,8 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 										}
 									}
 								});
-								return;
+
+								shouldRetry = false;
 							}
 							catch (ConcurrencyException)
 							{
