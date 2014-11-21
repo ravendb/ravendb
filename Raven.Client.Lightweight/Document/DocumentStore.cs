@@ -271,11 +271,11 @@ namespace Raven.Client.Document
 			if (afterDispose != null)
 				afterDispose(this, EventArgs.Empty);
 		}
+		private ServicePoint rootServicePoint;
 
 #if DEBUG
 		private readonly System.Diagnostics.StackTrace e = new System.Diagnostics.StackTrace();
 
-		private ServicePoint rootServicePoint;
 
 		~DocumentStore()
 		{
