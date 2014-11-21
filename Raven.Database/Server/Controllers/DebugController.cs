@@ -311,7 +311,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("debug/docrefs")]
+		[Route("debug/d0crefs-t0ps")]
 		[Route("databases/{databaseName}/debug/d0crefs-t0ps")]
 		public HttpResponseMessage DocRefsTops()
 		{
