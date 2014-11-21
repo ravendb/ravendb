@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Configuration;
+using System.Linq;
 
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
@@ -54,7 +55,7 @@ namespace Raven.Bundles.LiveTest
 			var activeBundles = value.Value<string>();
 			var bundles = activeBundles.GetSemicolonSeparatedValues();
 
-			if (bundles.Contains("Quotas") == false)
+			if (bundles.Contains("Quotas", StringComparer.OrdinalIgnoreCase) == false)
 				bundles.Add("Quotas");
 
 			int hardLimitInKb;
