@@ -131,6 +131,7 @@
     <Compile Include="Connection\OperationCredentials.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
+    <Compile Include="Counters\CountersDocument.cs" />
     <Compile Include="Counters\CounterStorageStats.cs" />
     <Compile Include="Counters\CounterChanges.cs" />
     <Compile Include="Counters\CounterStorageReplicationDestination.cs" />

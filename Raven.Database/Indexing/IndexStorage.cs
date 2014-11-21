@@ -200,7 +200,7 @@ namespace Raven.Database.Indexing
 			// 2. If no 'LastEtag' in commitData then we consider it an invalid index
 			// 3. If 'LastEtag' is present (and valid), then resetting to it (if it is lower than lastStoredEtag)
 
-			var commitData = IndexReader.GetCommitUserData(directory);
+            var commitData = IndexReader.GetCommitUserData(directory);
 
 		    if (index.IsMapReduce)
 				CheckMapReduceIndexState(commitData, resetTried);

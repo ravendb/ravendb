@@ -1,20 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Media;
-using System.Threading;
-using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
-using Raven.Client.Connection;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Connections;
 using Raven.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -22,6 +23,8 @@ namespace Raven.Database.Server.Tenancy
     {
         private readonly InMemoryRavenConfiguration systemConfiguration;
         private readonly DocumentDatabase systemDatabase;
+
+        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
 
 	    private bool initialized;
         private const string DATABASES_PREFIX = "Raven/Databases/";
@@ -165,6 +168,94 @@ namespace Raven.Database.Server.Tenancy
                 return task;
             }).Unwrap());
             return true;
+        }
+
+        protected InMemoryRavenConfiguration CreateConfiguration(
+                        string tenantId,
+                        DatabaseDocument document,
+                        string folderPropName,
+                        InMemoryRavenConfiguration parentConfiguration)
+        {
+            var config = new InMemoryRavenConfiguration
+            {
+                Settings = new NameValueCollection(parentConfiguration.Settings),
+            };
+
+            SetupTenantConfiguration(config);
+
+            config.CustomizeValuesForDatabaseTenant(tenantId);
+
+            config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;           
+
+            foreach (var setting in document.Settings)
+            {
+                config.Settings[setting.Key] = setting.Value;
+            }
+            Unprotect(document);
+
+            foreach (var securedSetting in document.SecuredSettings)
+            {
+                config.Settings[securedSetting.Key] = securedSetting.Value;
+            }
+
+            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
+            config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
+            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);
+
+            config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+
+            config.DatabaseName = tenantId;
+            config.IsTenantDatabase = true;
+
+            config.Initialize();
+            config.CopyParentSettings(parentConfiguration);
+            return config;
+        }
+
+        public void Unprotect(DatabaseDocument databaseDocument)
+        {
+            if (databaseDocument.SecuredSettings == null)
+            {
+                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                return;
+            }
+
+            foreach (var prop in databaseDocument.SecuredSettings.ToList())
+            {
+                if (prop.Value == null)
+                    continue;
+                var bytes = Convert.FromBase64String(prop.Value);
+                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
+                try
+                {
+                    var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
+                    databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
+                }
+                catch (Exception e)
+                {
+                    Logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
+                    databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
+                }
+            }
+        }
+
+        public void Protect(DatabaseDocument databaseDocument)
+        {
+            if (databaseDocument.SecuredSettings == null)
+            {
+                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                return;
+            }
+
+            foreach (var prop in databaseDocument.SecuredSettings.ToList())
+            {
+                if (prop.Value == null)
+                    continue;
+                var bytes = Encoding.UTF8.GetBytes(prop.Value);
+                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
+                var protectedValue = ProtectedData.Protect(bytes, entrophy, DataProtectionScope.CurrentUser);
+                databaseDocument.SecuredSettings[prop.Key] = Convert.ToBase64String(protectedValue);
+            }
         }
 
         private void OnDatabaseBackupCompleted(DocumentDatabase db)

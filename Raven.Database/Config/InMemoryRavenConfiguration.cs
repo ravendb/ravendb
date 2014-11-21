@@ -70,9 +70,11 @@ namespace Raven.Database.Config
 			Catalog.Changed += (sender, args) => ResetContainer();
 		}
 
-		public string DatabaseName { get; set; }
+        public string DatabaseName { get; set; }
 
-        public string FileSystemName { get { return DatabaseName; } }
+        public string FileSystemName { get; set; }
+
+        public string CountersDatabaseName { get; set; }
 
 		public void PostInit()
 		{
@@ -1107,17 +1109,23 @@ namespace Raven.Database.Config
 			return types.Select(GetExtensionsFor).Where(extensionsLog => extensionsLog != null);
 		}
 
-		public void CustomizeValuesForTenant(string tenantId)
-		{
-			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
-				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Databases", tenantId);
+        public void CustomizeValuesForDatabaseTenant(string tenantId)
+        {
+            if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
+                Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Databases", tenantId);
 
-			if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
-				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Databases", tenantId);
+            if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
+                Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Databases", tenantId);
 
-			if(string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
-				Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "Databases", tenantId);
-		}
+            if (string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
+                Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "Databases", tenantId);
+        }
+
+        public void CustomizeValuesForFileSystemTenant(string tenantId)
+        {                                             
+            if (string.IsNullOrEmpty(Settings["Raven/FileSystem/DataDir"]) == false)
+                Settings["Raven/FileSystem/DataDir"] = Path.Combine(Settings["Raven/FileSystem/DataDir"], "FileSystems", tenantId);  
+        }
 
 		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
 		{
@@ -1141,7 +1149,7 @@ namespace Raven.Database.Config
 			public StorageConfiguration()
 			{
 				Voron = new VoronConfiguration();
-	}
+	        }
 
 			public VoronConfiguration Voron { get; private set; }
 
@@ -1261,5 +1269,6 @@ namespace Raven.Database.Config
 			/// </summary>
 			public bool UseSsl { get; set; }
 		}
-	}
+
+    }
 }

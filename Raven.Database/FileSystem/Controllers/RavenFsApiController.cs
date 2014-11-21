@@ -38,25 +38,18 @@ using System.Web.Http.Routing;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-	public abstract class RavenFsApiController : RavenBaseApiController
+    public abstract class RavenFsApiController : RavenBaseApiController
 	{
 	    private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
 		private PagingInfo paging;
 		private NameValueCollection queryString;
 
-	    private FileSystemsLandlord landlord;
-	    private RequestManager requestManager;
-        
-        public RequestManager RequestManager
+        public override InMemoryRavenConfiguration SystemConfiguration
         {
-            get
-            {
-                if (Configuration == null)
-                    return requestManager;
-                return (RequestManager)Configuration.Properties[typeof(RequestManager)];
-            }
+            get { return this.FileSystemsLandlord.SystemConfiguration; }
         }
+
 	    public RavenFileSystem FileSystem
 		{
 			get
@@ -122,8 +115,6 @@ namespace Raven.Database.FileSystem.Controllers
 		protected override void InnerInitialization(HttpControllerContext controllerContext)
 		{
             base.InnerInitialization(controllerContext);
-            landlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
-            requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
 
             var values = controllerContext.Request.GetRouteData().Values;
             if (values.ContainsKey("MS_SubRoutes"))
@@ -145,17 +136,6 @@ namespace Raven.Database.FileSystem.Controllers
 
 	    public string FileSystemName { get; private set; }
 
-	    public FileSystemsLandlord FileSystemsLandlord
-        {
-            get
-            {
-                if (Configuration == null)
-                    return landlord;
-                return (FileSystemsLandlord)Configuration.Properties[typeof(FileSystemsLandlord)];
-            }
-        }
-
-
 		public NotificationPublisher Publisher
 		{
 			get { return FileSystem.Publisher; }
@@ -175,11 +155,6 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			get { return FileSystem.Historian; }
 		}
-
-	    public override InMemoryRavenConfiguration SystemConfiguration
-	    {
-	        get { return FileSystemsLandlord.SystemConfiguration; }
-	    }
 
 	    private NameValueCollection QueryString
 		{
@@ -369,6 +344,8 @@ namespace Raven.Database.FileSystem.Controllers
                 throw new HttpException(503, "Could not find a file system with no name");
             }
 
+            var landlord = this.FileSystemsLandlord;
+
             Task<RavenFileSystem> resourceStoreTask;
             bool hasDb;
             try
@@ -419,6 +396,7 @@ namespace Raven.Database.FileSystem.Controllers
                 Logger.Warn(msg);
                 throw new HttpException(503, msg);
             }
+
             return true;
         }
 
@@ -439,7 +417,7 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			// Raven internal headers
 			"Raven-Server-Build",
-			"Non-Authoritive-Information",
+			"Non-Authoritative-Information",
 			"Raven-Timer-Request",
 
             //proxy

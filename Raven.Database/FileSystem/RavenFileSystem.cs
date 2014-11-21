@@ -32,8 +32,7 @@ namespace Raven.Database.FileSystem
 		private readonly ConflictArtifactManager conflictArtifactManager;
 		private readonly ConflictDetector conflictDetector;
 		private readonly ConflictResolver conflictResolver;
-		private readonly FileLockManager fileLockManager;
-		private readonly Historian historian;
+		private readonly FileLockManager fileLockManager;	
 		private readonly NotificationPublisher notificationPublisher;
 		private readonly IndexStorage search;
 		private readonly SigGenerator sigGenerator;
@@ -42,38 +41,51 @@ namespace Raven.Database.FileSystem
 		private readonly SynchronizationTask synchronizationTask;
 		private readonly InMemoryRavenConfiguration systemConfiguration;
 	    private readonly TransportState transportState;
-	    private readonly MetricsCountersManager metricsCounters;
+        private readonly MetricsCountersManager metricsCounters;
 
-        public string Name { get; private set; }
+        private Historian historian;
 
-		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, string name, TransportState recievedTransportState = null)
+        public string Name { get; private set;}
+
+		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, string name, TransportState receivedTransportState = null)
 		{
 		    this.Name = name;
 			this.systemConfiguration = systemConfiguration;
+            this.transportState = receivedTransportState ?? new TransportState();
 
-            storage = CreateTransactionalStorage(systemConfiguration);
-			search = new IndexStorage(systemConfiguration.FileSystem.IndexStoragePath, systemConfiguration.Settings);
-			sigGenerator = new SigGenerator();
-			var replicationHiLo = new SynchronizationHiLo(storage);
-			var sequenceActions = new SequenceActions(storage);
-			transportState = recievedTransportState ?? new TransportState();
-			notificationPublisher = new NotificationPublisher(transportState);
-			fileLockManager = new FileLockManager();
-			storage.Initialize();
-			search.Initialize();
-			var uuidGenerator = new UuidGenerator(sequenceActions);
-			historian = new Historian(storage, replicationHiLo, uuidGenerator);
-			BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
-			conflictArtifactManager = new ConflictArtifactManager(storage, search);
-			conflictDetector = new ConflictDetector();
-			conflictResolver = new ConflictResolver(storage, new CompositionContainer(systemConfiguration.Catalog));
-			synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, systemConfiguration);
-			storageOperationsTask = new StorageOperationsTask(storage, search, notificationPublisher);
-            metricsCounters = new MetricsCountersManager();
+            this.storage = CreateTransactionalStorage(systemConfiguration);
+
+            this.sigGenerator = new SigGenerator();
+            this.fileLockManager = new FileLockManager();			        
+   
+            this.BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
+            this.conflictDetector = new ConflictDetector();
+            this.conflictResolver = new ConflictResolver(storage, new CompositionContainer(systemConfiguration.Catalog));
+
+            this.notificationPublisher = new NotificationPublisher(transportState);
+            this.synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, systemConfiguration);
+
+            this.metricsCounters = new MetricsCountersManager();
+
+            this.search = new IndexStorage(name, systemConfiguration);
+            this.conflictArtifactManager = new ConflictArtifactManager(storage, search);
+            this.storageOperationsTask = new StorageOperationsTask(storage, search, notificationPublisher); 
 
 			AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
-		}
+		}        
+
+        public void Initialize ()
+        {
+            this.storage.Initialize();
+
+            var replicationHiLo = new SynchronizationHiLo(storage);
+            var sequenceActions = new SequenceActions(storage);
+            var uuidGenerator = new UuidGenerator(sequenceActions);
+            this.historian = new Historian(storage, replicationHiLo, uuidGenerator);
+
+            this.search.Initialize(this);
+        }
 
         public static bool IsRemoteDifferentialCompressionInstalled
         {
@@ -214,7 +226,7 @@ namespace Raven.Database.FileSystem
 	    {
 	        var fsStats = new FileSystemStats
 	        {
-	            Name = Name,
+	            Name = this.Name,
 	            Metrics = CreateMetrics(),
 	            ActiveSyncs = SynchronizationTask.Queue.Active.ToList(),
 	            PendingSyncs = SynchronizationTask.Queue.Pending.ToList(),

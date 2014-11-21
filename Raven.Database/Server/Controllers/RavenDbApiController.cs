@@ -1,16 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.Net;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web;
-using System.Web.Http.Controllers;
-using System.Web.Http.Routing;
-using Lucene.Net.Store;
-using Raven.Abstractions;
+﻿using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -21,11 +9,21 @@ using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Config;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
-using System.Linq;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
 
-using Raven.Client.Connection;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -112,10 +110,6 @@ namespace Raven.Database.Server.Controllers
 		protected override void InnerInitialization(HttpControllerContext controllerContext)
 		{
 			base.InnerInitialization(controllerContext);
-			landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
-			fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
-			countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
-			requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
 
 			var values = controllerContext.Request.GetRouteData().Values;
 			if (values.ContainsKey("MS_SubRoutes"))
@@ -162,54 +156,10 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-		private DatabasesLandlord landlord;
-		public DatabasesLandlord DatabasesLandlord
-		{
-			get
-			{
-				if (Configuration == null)
-					return landlord;
-				return (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
-			}
-		}
-
-		private CountersLandlord countersLandlord;
-		public CountersLandlord CountersLandlord
-		{
-			get
-			{
-				if (Configuration == null)
-					return countersLandlord;
-				return (CountersLandlord)Configuration.Properties[typeof(CountersLandlord)];
-			}
-		}
-
-        private FileSystemsLandlord fileSystemsLandlord;
-        public FileSystemsLandlord FileSystemsLandlord
+        public override InMemoryRavenConfiguration SystemConfiguration
         {
-            get
-            {
-                if (Configuration == null)
-                    return fileSystemsLandlord;
-                return (FileSystemsLandlord)Configuration.Properties[typeof(FileSystemsLandlord)];
-            }
+            get { return DatabasesLandlord.SystemConfiguration; }
         }
-
-	    public override InMemoryRavenConfiguration SystemConfiguration
-	    {
-	        get { return DatabasesLandlord.SystemConfiguration; }
-	    }
-
-	    private RequestManager requestManager;
-		public RequestManager RequestManager
-		{
-			get
-			{
-				if (Configuration == null)
-					return requestManager;
-				return (RequestManager)Configuration.Properties[typeof(RequestManager)];
-			}
-		}
 
 		public DocumentDatabase Database
 		{
@@ -530,11 +480,13 @@ namespace Raven.Database.Server.Controllers
 
         public override bool SetupRequestToProperDatabase(RequestManager rm)
         {
-            var tenantId = DatabaseName;
+            var tenantId = this.DatabaseName;
+            var landlord = this.DatabasesLandlord;
 
             if (string.IsNullOrWhiteSpace(tenantId) || tenantId == "<system>")
-            {
+            {                
                 landlord.LastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
+
                 var args = new BeforeRequestWebApiEventArgs
                 {
                     Controller = this,
@@ -542,6 +494,7 @@ namespace Raven.Database.Server.Controllers
                     TenantId = "System",
                     Database = landlord.SystemDatabase
                 };
+
                 rm.OnBeforeRequest(args);
                 if (args.IgnoreRequest)
                     return false;
