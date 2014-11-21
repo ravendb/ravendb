@@ -10,6 +10,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security;
+using System.Threading;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -273,6 +275,8 @@ namespace Raven.Client.Document
 #if DEBUG
 		private readonly System.Diagnostics.StackTrace e = new System.Diagnostics.StackTrace();
 
+		private ServicePoint rootServicePoint;
+
 		~DocumentStore()
 		{
 			var buffer = e.ToString();
@@ -405,18 +409,7 @@ namespace Raven.Client.Document
 
 		private HttpJsonRequestFactory InitializeJsonRequestFactory()
 		{
-			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
-			
-			return new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandler)
-			{
-				ConfigureServicePoint = () =>
-				{
-					var rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
-					rootServicePoint.UseNagleAlgorithm = false;
-					rootServicePoint.Expect100Continue = false;
-					rootServicePoint.ConnectionLimit = 256;
-				}
-			};
+			return new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandler);
 		}
 
 		public override void InitializeProfiling()
@@ -597,6 +590,12 @@ namespace Raven.Client.Document
 		protected virtual void InitializeInternal()
 		{
 			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+
+			rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
+			rootServicePoint.UseNagleAlgorithm = false;
+			rootServicePoint.Expect100Continue = false;
+			rootServicePoint.ConnectionLimit = 256;
+			rootServicePoint.MaxIdleTime = Timeout.Infinite;
 
 			databaseCommandsGenerator = () =>
 			{

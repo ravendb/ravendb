@@ -59,8 +59,6 @@ namespace Raven.Client.Connection
 			if (disposed)
 				throw new ObjectDisposedException(typeof(HttpJsonRequestFactory).FullName);
 
-			ConfigureServicePoint();
-
 			if (RequestTimeout != null)
 				createHttpJsonRequestParams.Timeout = RequestTimeout.Value;
 
@@ -202,8 +200,6 @@ namespace Raven.Client.Connection
 		/// will instruct RavenDB to make unsecured calls (usually only good for testing / internal networks).
 		/// </summary>
 		public bool EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
-
-		internal Action ConfigureServicePoint = () => { };
 
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
 		private readonly ThreadLocal<TimeSpan?> requestTimeout = new ThreadLocal<TimeSpan?>(() => null);
