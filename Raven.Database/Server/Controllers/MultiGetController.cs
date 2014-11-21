@@ -88,7 +88,7 @@ namespace Raven.Database.Server.Controllers
 
 				var result = new HttpResponseMessage(HttpStatusCode.OK)
 				{
-					Content = new MultiGetContent(results.Select(x=>x.Item1))
+					Content = new MultiGetContent(results.Select(x=>x == null ? null : x.Item1))
 				};
 
 				HandleReplication(result);
