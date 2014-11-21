@@ -1561,8 +1561,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			var asyncDocumentQuery = queryGenerator.AsyncQuery<T>(indexName, isMapReduce);
 			asyncDocumentQuery.SetResultTransformer(resultsTransformer);
+			asyncDocumentQuery.SetTransformerParameters(transformerParameters);
 			documentQuery = (IAbstractDocumentQuery<T>)asyncDocumentQuery;
-			asyncLuceneQuery.SetQueryInputs(queryInputs);
 			try
 			{
 				VisitExpression(expression);

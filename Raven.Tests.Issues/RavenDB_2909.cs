@@ -11,42 +11,18 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.Tests.Issues.RavenDB_2909
 {
 	public class RavenDB_2909 : RavenTest
 	{
 		[Fact]
-		public async Task ThisIsMyTest_Remote()
+		public async Task ThisIsMyTest()
 		{
 			using (IDocumentStore store = NewRemoteDocumentStore())
-			{
-				Console.WriteLine("Fill Database");
-				FillDatabase(store);
-
-				Console.WriteLine("Create Index");
-				new TestObject_Index().Execute(store);
-
-				Console.WriteLine("Create Transformer");
-				new TestObject_Transformer().Execute(store);
-
-				WaitForIndexing(store);
-
-				Console.WriteLine("Sync Session –> Transform");
-				TransformResult(store);
-
-				Console.WriteLine("Async Session –> Transform");
-				//Fails
-				await TransformResultAsync(store);
-			}
-		}
-
-		[Fact]
-		public async Task ThisIsMyTest_Embedded()
-		{
-			using (IDocumentStore store = NewDocumentStore())
 			{
 				Console.WriteLine("Fill Database");
 				FillDatabase(store);
