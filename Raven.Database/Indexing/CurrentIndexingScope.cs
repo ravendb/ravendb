@@ -76,6 +76,7 @@ namespace Raven.Database.Indexing
 				return value;
 
 			var doc = database.Documents.Get(key, null);
+			LoadDocumentCount++;
 
 			if (doc == null)
             {
@@ -94,7 +95,6 @@ namespace Raven.Database.Indexing
 
 			docsCache[key] = value;
 
-			LoadDocumentCount++;
 			return value;
 		}
 
