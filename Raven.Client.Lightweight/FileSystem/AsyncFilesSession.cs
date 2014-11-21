@@ -85,6 +85,8 @@ namespace Raven.Client.FileSystem
             if (!filenames.Any())
                 return new FileHeader[0];
 
+            filenames = filenames.Select(FileHeader.Canonize);
+
             // only load documents that aren't already cached
             var idsOfNotExistingObjects = filenames.Where(x => IsLoaded(x) == false && IsDeleted(x) == false)
                                             .Distinct(StringComparer.OrdinalIgnoreCase)

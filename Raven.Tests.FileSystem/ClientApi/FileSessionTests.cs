@@ -7,6 +7,7 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -479,6 +480,24 @@ namespace Raven.Tests.FileSystem.ClientApi
                 // deleting file, then uploading it again and doing metadata change
                 session.RegisterFileDeletion("test1.file");
 	            Assert.Throws<InvalidOperationException>(() => session.RegisterUpload("test1.file", CreateUniformFileStream(128)));
+            }
+        }
+
+        [Fact]
+        public async Task MultipleLoadsInTheSameCall()
+        {
+            using (var session = filesStore.OpenAsyncSession())
+            {
+                session.RegisterUpload("test.file", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(10));
+                session.RegisterUpload("test.f", CreateUniformFileStream(10));
+                await session.SaveChangesAsync();
+
+                var names = new string[] { "test.file", "test.fil", "test.fi", "test.f" };
+                var query = await session.LoadFileAsync(names);
+
+                Assert.False(query.Any(x => x == null));
             }
         }
 
