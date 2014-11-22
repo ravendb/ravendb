@@ -29,11 +29,14 @@ namespace Raven.Tests.Issues
 
 				Assert.Equal(2, autoIndexes.Count);
 
+				var biggerAutoIndex = autoIndexes.OrderBy(x => x.Name.Length).Select(x => x.Name).Last();
+
 				store.DocumentDatabase.IndexStorage.RunIdleOperations();
 
 				autoIndexes = store.DatabaseCommands.GetStatistics().Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
 
 				Assert.Equal(1, autoIndexes.Count);
+				Assert.Equal(biggerAutoIndex, autoIndexes[0].Name);
 			}
 		}
 
@@ -62,7 +65,6 @@ namespace Raven.Tests.Issues
 				autoIndexes = store.DatabaseCommands.GetStatistics().Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
 
 				Assert.Equal(0, autoIndexes.Count);
-
 			}
 		}
 
@@ -146,6 +148,38 @@ namespace Raven.Tests.Issues
 				autoIndexes = store.DatabaseCommands.GetStatistics().Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
 
 				Assert.Equal(2, autoIndexes.Count);
+			}
+		}
+
+		[Fact]
+		public void ShouldDeleteSmallerAutoIndexes()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.PutIndex("Auto/Users/ByName", new IndexDefinition
+				{
+					Map = "from user in docs.Users select new { user.Name }"
+				});
+
+				store.DatabaseCommands.PutIndex("Auto/Users/ByNameAndEmai", new IndexDefinition
+				{
+					Map = "from user in docs.Users select new { user.Name, user.Email }"
+				});
+
+				store.DatabaseCommands.PutIndex("Auto/Users/ByNameAndEmaiAndAddress", new IndexDefinition
+				{
+					Map = "from user in docs.Users select new { user.Name, user.Email, user.Address }"
+				});
+
+				var autoIndexes = store.DatabaseCommands.GetStatistics().Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
+
+				Assert.Equal(3, autoIndexes.Count);
+				store.DocumentDatabase.IndexStorage.RunIdleOperations();
+
+				autoIndexes = store.DatabaseCommands.GetStatistics().Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
+
+				Assert.Equal(1, autoIndexes.Count);
+				Assert.Equal("Auto/Users/ByNameAndEmaiAndAddress", autoIndexes[0].Name);
 			}
 		}
 	}
