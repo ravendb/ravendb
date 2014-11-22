@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Threading;
+using Voron.Util;
 using Xunit;
 
 namespace Voron.Tests.Bugs

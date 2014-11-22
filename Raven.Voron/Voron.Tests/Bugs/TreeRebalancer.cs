@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Voron.Util;
 
 namespace Voron.Tests.Bugs
 {

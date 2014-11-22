@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Voron.Util;
 using Xunit;
 
 namespace Voron.Tests.ScratchBuffer

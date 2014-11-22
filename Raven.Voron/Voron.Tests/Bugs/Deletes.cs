@@ -1,4 +1,6 @@
-﻿namespace Voron.Tests.Bugs
+﻿using Voron.Util;
+
+namespace Voron.Tests.Bugs
 {
 	using System;
 	using System.IO;
