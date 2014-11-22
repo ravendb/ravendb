@@ -236,7 +236,7 @@ namespace Raven.Database.Queries
                 Results = results;
                 Start = start;
                 PageSize = pageSize;
-                indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(this.Index);
+                indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(Index);
             }
 
             DocumentDatabase Database { get; set; }
@@ -264,7 +264,8 @@ namespace Raven.Database.Queries
 
                     var baseQuery = Database.IndexStorage.GetDocumentQuery(Index, IndexQuery, Database.IndexQueryTriggers);
                     currentIndexSearcher.Search(baseQuery, allCollector);
-                    var fields = Facets.Values.Select(x => x.Name)
+	                var indexReader = currentIndexSearcher.IndexReader;
+	                var fields = Facets.Values.Select(x => x.Name)
                             .Concat(Ranges.Select(x => x.Key));
                     var fieldsToRead = new HashSet<string>(fields);
                     IndexedTerms.ReadEntriesForFields(currentState,
@@ -288,7 +289,7 @@ namespace Raven.Database.Queries
                                             };
                                             facetValues[term.Text] = existing;
                                         }
-                                        ApplyFacetValueHit(existing, facet, doc, null);
+										ApplyFacetValueHit(existing, facet, doc, null, indexReader);
                                         break;
                                     case FacetMode.Ranges:
                                         List<ParsedRange> list;
@@ -300,7 +301,7 @@ namespace Raven.Database.Queries
                                                 if (parsedRange.IsMatch(term.Text))
                                                 {
                                                     var facetValue = Results.Results[term.Field].Values[i];
-                                                    ApplyFacetValueHit(facetValue, facet, doc, parsedRange);
+                                                    ApplyFacetValueHit(facetValue, facet, doc, parsedRange, indexReader);
                                                 }
                                             }
                                         }
@@ -540,10 +541,13 @@ namespace Raven.Database.Queries
                 return fieldName.EndsWith("_Range") ? fieldName.Substring(0, fieldName.Length - "_Range".Length) : fieldName;
             }
 
-            private void ApplyFacetValueHit(FacetValue facetValue, Facet value, int docId, ParsedRange parsedRange)
+            private void ApplyFacetValueHit(FacetValue facetValue, Facet value, int docId, ParsedRange parsedRange, IndexReader indexReader)
             {
                 facetValue.Hits++;
-                if (value.Aggregation == FacetAggregation.Count || value.Aggregation == FacetAggregation.None)
+                if (
+					IndexQuery.IsDistinct == false &&
+					(value.Aggregation == FacetAggregation.Count || value.Aggregation == FacetAggregation.None)
+				   )
                 {
                     return;
                 }
@@ -557,15 +561,80 @@ namespace Raven.Database.Queries
                         Range = parsedRange
                     };
                 }
+	            if (IndexQuery.IsDistinct)
+	            {
+		            if (set.AlreadySeen == null)
+			            set.AlreadySeen = new HashSet<StringCollectionValue>();
+
+		            var document = indexReader.Document(docId);
+		            var fields = new List<string>();
+					foreach (var fieldName in IndexQuery.FieldsToFetch)
+		            {
+						foreach (var field in document.GetFields(fieldName))
+						{
+							if (field.StringValue == null)
+								continue;
+				            fields.Add(field.StringValue);
+			            }
+		            }
+		            if (set.AlreadySeen.Add(new StringCollectionValue(fields)))
+		            {
+			            facetValue.Hits--;// already seen, cancel this
+			            return;
+		            }
+	            }
                 set.Docs.Add(docId);
             }
 
             private class FacetValueState
             {
+	            public HashSet<StringCollectionValue> AlreadySeen; 
                 public HashSet<int> Docs;
                 public Facet Facet;
                 public ParsedRange Range;
             }
+
+	        private class StringCollectionValue
+	        {
+		        private readonly List<string> _values;
+		        private readonly int _hashCode;
+		        public override bool Equals(object obj)
+		        {
+			        if (ReferenceEquals(null, obj)) return false;
+			        if (ReferenceEquals(this, obj)) return true;
+			        var other = obj as StringCollectionValue;
+			        if (other == null) return false;
+
+			        if (other._values.Count != _values.Count)
+				        return false;
+
+			        for (int i = 0; i < _values.Count; i++)
+			        {
+				        if (_values[i] != other._values[i])
+					        return false;
+			        }
+			        return true;
+		        }
+
+		        public override int GetHashCode()
+		        {
+			        return _hashCode;
+		        }
+
+				public StringCollectionValue(List<string> values)
+		        {
+			        _values = values;
+			        _hashCode = _values.Count;
+			        unchecked
+			        {
+				        for (int i = 0; i < _values.Count; i++)
+				        {
+					        _hashCode = _hashCode*397 ^ _hashCode;
+				        }
+			        }
+		        }
+
+	        }
 
             private void UpdateFacetResults(Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
             {

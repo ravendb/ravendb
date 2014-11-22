@@ -1085,7 +1085,7 @@ namespace Raven.Client.Connection.Async
 			{
 				var requestUri = operationMetadata.Url + string.Format("/facets/{0}?{1}&facetStart={2}&facetPageSize={3}",
 																Uri.EscapeUriString(index),
-																query.GetMinimalQueryString(),
+																query.GetQueryString(),
 																start,
 																pageSize);
 

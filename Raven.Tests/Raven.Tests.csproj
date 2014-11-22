@@ -242,9 +242,9 @@
     <Compile Include="Bugs\DocumentWithNaN.cs" />
     <Compile Include="Bugs\DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
-    <Compile Include="Indexes\LastCollectionEtagsShouldHandleTouchedDocuments.cs" />
     <Compile Include="Bugs\NoTracking.cs" />
     <Compile Include="Bugs\SortingAsMaxInt.cs" />
+    <Compile Include="DistinctAndFacets.cs" />
     <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Embedded\EmbeddedTests.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
