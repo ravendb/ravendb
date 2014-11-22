@@ -25,6 +25,7 @@ namespace Raven.Tests.Core.Configuration
 		private readonly HashSet<string> propertyPathsToIgnore = new HashSet<string>
 		                                                         {
 			                                                         "DatabaseName",
+																	 "CountersDatabaseName",
 																	 "FileSystemName",
 																	 "Settings",
 																	 "Container",
