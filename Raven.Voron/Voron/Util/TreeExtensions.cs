@@ -3,7 +3,7 @@ using Voron.Impl;
 using Voron.Trees;
 
 // ReSharper disable once CheckNamespace
-namespace Voron
+namespace Voron.Util
 {
 	public static class TreeExtensions
 	{

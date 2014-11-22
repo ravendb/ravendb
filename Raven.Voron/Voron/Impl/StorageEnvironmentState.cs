@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Voron.Impl;
-using Voron.Trees;
-using Voron.Util;
+﻿using Voron.Trees;
 
-namespace Voron
+namespace Voron.Impl
 {
     public class StorageEnvironmentState
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using Voron.Trees;
 
-namespace Voron.Impl
+namespace Voron.Impl.Paging
 {
     public unsafe interface IVirtualPager : IDisposable
     {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Voron.Impl.Paging;
 
 namespace Voron.Impl.Journal
 {
