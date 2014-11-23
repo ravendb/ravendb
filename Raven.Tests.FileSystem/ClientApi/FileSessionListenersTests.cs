@@ -144,7 +144,7 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
-        [Fact]
+        [Fact(Skip = "There is a race condition in the test")]
         public async Task ConflictListeners_RemoteVersion()
         {
             var filename = FileHeader.Canonize("test1.file");
