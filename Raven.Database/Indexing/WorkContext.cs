@@ -332,8 +332,9 @@ namespace Raven.Database.Indexing
 		}
 
 		public DocumentDatabase Database { get; set; }
+		public DateTime? ShowTimingByDefaultUntil { get; set; }
 
-	    public void AddFutureBatch(FutureBatchStats futureBatchStat)
+		public void AddFutureBatch(FutureBatchStats futureBatchStat)
 		{
 			futureBatchStats.Add(futureBatchStat);
 			if (futureBatchStats.Count <= 30)

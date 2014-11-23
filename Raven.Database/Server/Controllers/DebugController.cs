@@ -39,6 +39,25 @@ namespace Raven.Database.Server.Controllers
 	public class DebugController : RavenDbApiController
 	{
 		[HttpGet]
+		[Route("debug/enable-query-timing")]
+		[Route("databases/{databaseName}/debug/enable-query-timing")]
+		public HttpResponseMessage EnableQueryTiming()
+		{
+			var time = SystemTime.UtcNow + TimeSpan.FromMinutes(5);
+			Database.WorkContext.ShowTimingByDefaultUntil = time;
+			return GetMessageWithObject(new {Enabled = true, Until = time});
+		}
+
+		[HttpGet]
+		[Route("debug/disable-query-timing")]
+		[Route("databases/{databaseName}/debug/disable-query-timing")]
+		public HttpResponseMessage DisableQueryTiming()
+		{
+			Database.WorkContext.ShowTimingByDefaultUntil = null;
+			return GetMessageWithObject(new { Enabled = false});
+		}
+
+		[HttpGet]
 		[Route("debug/prefetch-status")]
 		[Route("databases/{databaseName}/debug/prefetch-status")]
 		public HttpResponseMessage PrefetchingQueueStatus()
