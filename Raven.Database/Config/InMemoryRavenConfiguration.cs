@@ -1034,7 +1034,6 @@ namespace Raven.Database.Config
 		}
 
 
-        //TODO : perhaps refactor with enums?
 	    public static string StorageEngineAssemblyNameByTypeName(string typeName)
 		{
 	        switch (typeName.ToLowerInvariant())
@@ -1046,7 +1045,7 @@ namespace Raven.Database.Config
 	                typeName = typeof (Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
 	                break;
                 default:
-                    throw new ArgumentException("Invalid storage engine type name");
+					throw new ArgumentException("Invalid storage engine type name: " + typeName);
 	        }
 	        return typeName;
 	    }	  
@@ -1072,7 +1071,7 @@ namespace Raven.Database.Config
 					return EsentTypeName;
 			}
 
-	        return DefaultStorageTypeName ?? VoronTypeName;
+	        return DefaultStorageTypeName;
 		}
 
 		public void Dispose()
