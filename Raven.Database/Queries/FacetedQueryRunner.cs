@@ -7,6 +7,7 @@ using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -563,6 +564,9 @@ namespace Raven.Database.Queries
                 }
 	            if (IndexQuery.IsDistinct)
 	            {
+					if(IndexQuery.FieldsToFetch.Length == 0)
+						throw new InvalidOperationException("Cannot process distinct facet query without specifying which fields to distinct upon.");
+
 		            if (set.AlreadySeen == null)
 			            set.AlreadySeen = new HashSet<StringCollectionValue>();
 
@@ -577,7 +581,11 @@ namespace Raven.Database.Queries
 				            fields.Add(field.StringValue);
 			            }
 		            }
-		            if (set.AlreadySeen.Add(new StringCollectionValue(fields)))
+		            if (fields.Count == 0)
+			            throw new InvalidOperationException("Cannot apply distinct facet on [" + string.Join(", ", IndexQuery.FieldsToFetch) +
+							"], did you forget to store them in the index? ");
+
+		            if (set.AlreadySeen.Add(new StringCollectionValue(fields)) == false)
 		            {
 			            facetValue.Hits--;// already seen, cancel this
 			            return;

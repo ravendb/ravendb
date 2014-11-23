@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
-using System.Web.UI;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
@@ -12,7 +11,7 @@ using Raven.Client.Indexes;
 using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests
+namespace Raven.Tests.DistinctFacets
 {
 	public class DistinctAndFacets : RavenTest
 	{
