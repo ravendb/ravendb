@@ -101,9 +101,11 @@ namespace Raven.Database.Queries
 						}
 
 						var indexingPriority = IndexingPriority.None;
+						var isInvalidIndex = false;
 						database.TransactionalStorage.Batch(accessor =>
 						{
 							var stats = accessor.Indexing.GetIndexStats(indexDefinitionKvp.Key);
+							isInvalidIndex = stats.IsInvalidIndex;
 							indexingPriority = stats.Priority;
 						});
 
@@ -119,7 +121,8 @@ namespace Raven.Database.Queries
 						else
 						{
 							if (indexingPriority == IndexingPriority.Error ||
-							    indexingPriority == IndexingPriority.Disabled)
+							    indexingPriority == IndexingPriority.Disabled ||
+								isInvalidIndex)
 							{
 								explain(indexName, () => string.Format("Cannot do dynamic queries on disabled index or index with errors (index name = {0})",indexName));
 								return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);							
