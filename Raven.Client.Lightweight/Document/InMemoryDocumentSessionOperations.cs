@@ -492,7 +492,7 @@ more responsive application.
 
 				IDisposable disposable = null;
 				var defaultRavenContractResolver = Conventions.JsonContractResolver as DefaultRavenContractResolver;
-				if (defaultRavenContractResolver != null)
+				if (defaultRavenContractResolver != null && Conventions.PreserveDocumentPropertiesNotFoundOnModel)
 				{
 					disposable = defaultRavenContractResolver.RegisterForExtensionData(RegisterMissingProperties);
 				}
