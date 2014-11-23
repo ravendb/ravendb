@@ -165,7 +165,9 @@ namespace Raven.Tests.FileSystem.ClientApi
                 sessionDestination2.RegisterUpload(filename, CreateUniformFileStream(firstStreamSize));
                 await sessionDestination2.SaveChangesAsync();
 
-                sessionDestination1.RegisterUpload(filename, CreateUniformFileStream(secondStreamSize));
+				await sessionDestination1.Commands.Synchronization.SynchronizeAsync();
+				
+				sessionDestination1.RegisterUpload(filename, CreateUniformFileStream(secondStreamSize));
                 await sessionDestination1.SaveChangesAsync();
 
                 var file = await sessionDestination1.LoadFileAsync(filename);

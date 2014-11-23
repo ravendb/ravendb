@@ -13,11 +13,15 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			using (var a = new FileSessionListenersTests())
+			for (int i = 0; i < 100; i++)
 			{
-				a.ConflictListeners_RemoteVersion();
-			}
+				using (var a = new FileSessionListenersTests())
+				{
+					Console.WriteLine(i);
+					a.ConflictListeners_RemoteVersion().Wait();
+				}
 			
+			}
 
 		}
 	}
