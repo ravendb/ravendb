@@ -314,7 +314,8 @@ namespace Raven.Database.Actions
 
 	        Debug.Assert(index != null);
 
-	        if (name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
+	        if (WorkContext.RunIndexing &&
+				name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
 	            Database.IndexStorage.HasIndex(Constants.DocumentsByEntityNameIndex))
 	        {
 		        // optimization of handling new index creation when the number of document in a database is significantly greater than
@@ -342,7 +343,7 @@ namespace Raven.Database.Actions
             var generator = IndexDefinitionStorage.GetViewGenerator(definition.IndexId);
             if (generator.ForEntityNames.Count == 0)
             {
-                // we don't optimize if we don't have what to optimize _on, we know this is going to return all docs.
+                // we don't optimize if we don't have what to optimize _on_, we know this is going to return all docs.
                 // no need to try to optimize that, then
 				index.IsMapIndexingInProgress = false;
 				return;
