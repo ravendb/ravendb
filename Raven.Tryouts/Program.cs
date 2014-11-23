@@ -6,6 +6,7 @@ using Raven.Json.Linq;
 using System.Linq;
 using Raven.Database.Extensions;
 using Raven.Tests.FileSystem.ClientApi;
+using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
 {
@@ -15,10 +16,10 @@ namespace Raven.Tryouts
 		{
 			for (int i = 0; i < 100; i++)
 			{
-				using (var a = new FileSessionListenersTests())
+				using (var a = new RavenDB_2717())
 				{
 					Console.WriteLine(i);
-					a.ConflictListeners_RemoteVersion().Wait();
+					a.CanWaitOnStaleTimeout();
 				}
 			
 			}
