@@ -48,6 +48,10 @@ namespace Raven.Database.Queries
                         throw new InvalidOperationException("Facet " + facet.Name + " cannot have aggregation set to " +
                                                             facet.Aggregation + " without having a value in AggregationField");
 
+                    if (string.IsNullOrEmpty(facet.AggregationType))
+                        throw new InvalidOperationException("Facet " + facet.Name + " cannot have aggregation set to " +
+                                                            facet.Aggregation + " without having a value in AggregationType");
+
                     if (facet.AggregationField.EndsWith("_Range") == false)
                     {
                         if( QueryForFacets.IsAggregationTypeNumerical(facet.AggregationType))
