@@ -45,13 +45,12 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenSession())
 				{
-					for (int i = 0; i < 250; i++)
+					for (int i = 0; i < 101; i++) //if less than 100 - not enough attempts to determine if the index is problematic
 						session.Store(new User {Name = "Foobar" + i});
 					session.SaveChanges();
 				}
 
 				WaitForIndexing(store);
-				WaitForUserToContinueTheTest(store);
 
 				var indexWithErrors = store.DocumentDatabase.Statistics.Indexes.First(x => x.Name == "Index/with/errors");
 				Assert.Equal(true,indexWithErrors.IsInvalidIndex); //precaution
