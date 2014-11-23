@@ -1054,10 +1054,6 @@ namespace Raven.Database.Config
 		{
 			if (RunInMemory)
 			{
-			    if (!string.IsNullOrWhiteSpace(DefaultStorageTypeName) &&
-			        DefaultStorageTypeName.Equals(EsentTypeName, StringComparison.InvariantCultureIgnoreCase))
-			        return EsentTypeName;
-
                 return VoronTypeName;                
 			}
 
