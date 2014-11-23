@@ -132,16 +132,17 @@ namespace Raven.Database.Queries
 			    map.IndexName = appropriateIndex.IndexName;
 				return Tuple.Create(appropriateIndex.IndexName, false);
 			}
-            else if (appropriateIndex.MatchType == DynamicQueryMatchType.Partial)
-            {
-                // At this point, we found an index that has some fields we need and
-                // isn't incompatible with anything else we're asking for
-                // We need to clone that other index 
-                // We need to add all our requested indexes information to our cloned index
-                // We can then use our new index instead
-                var currentIndex = documentDatabase.IndexDefinitionStorage.GetIndexDefinition(appropriateIndex.IndexName);
-                map.AddExistingIndexDefinition(currentIndex, documentDatabase, query);
-            }
+			
+			if (appropriateIndex.MatchType == DynamicQueryMatchType.Partial)
+			{
+				// At this point, we found an index that has some fields we need and
+				// isn't incompatible with anything else we're asking for
+				// We need to clone that other index 
+				// We need to add all our requested indexes information to our cloned index
+				// We can then use our new index instead
+				var currentIndex = documentDatabase.IndexDefinitionStorage.GetIndexDefinition(appropriateIndex.IndexName);			
+				map.AddExistingIndexDefinition(currentIndex, documentDatabase, query);
+			}
 			return CreateAutoIndex(map.IndexName, map.CreateIndexDefinition);
 		}
 
