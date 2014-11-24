@@ -309,13 +309,15 @@ namespace Raven.Database.Indexing
 		[CLSCompliant(false)]
         public MetricsCountersManager MetricsCounters { get; private set; }
 
-		public void ReportIndexingBatchStarted(int documentsCount, long documentsSize)
+		public void ReportIndexingBatchStarted(int documentsCount, long documentsSize, List<string> indexesToWorkOn, out IndexingBatchInfo indexingBatchInfo)
 		{
-			var indexingBatchInfo = new IndexingBatchInfo
+			indexingBatchInfo = new IndexingBatchInfo
 			{
+				IndexesToWorkOn = indexesToWorkOn,
 				TotalDocumentCount = documentsCount,
 				TotalDocumentSize = documentsSize,
-				Timestamp = SystemTime.UtcNow
+				StartedAt = SystemTime.UtcNow,
+				PerformanceStats = new ConcurrentDictionary<string, IndexingPerformanceStats>()
 			};
 
 			lastActualIndexingBatchInfo.Add(indexingBatchInfo);
