@@ -120,9 +120,13 @@ interface indexStatisticsDto {
 }
 
 interface indexingBatchInfoDto {
+    BatchType: string;
+    IndexesToWorkOn: string[];
     TotalDocumentCount: number;
     TotalDocumentSize: number;
-    Timestamp: string; // ISO date string.
+    StartedAt: string; // ISO date string.
+    TotalDuration: string;
+    PerformanceStats: indexPerformanceDto[];
 }
 
 interface indexPerformanceDto {

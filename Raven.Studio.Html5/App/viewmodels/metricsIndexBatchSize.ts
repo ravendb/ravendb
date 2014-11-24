@@ -39,7 +39,7 @@ class metricsIndexBatchSize extends viewModelBase {
 
         for (var i = 0; i < batchInfos.length; i++) {
             var item = {
-                x: new Date(batchInfos[i].Timestamp),
+                x: new Date(batchInfos[i].StartedAt),
                 y: batchInfos[i].TotalDocumentSize,
                 size: batchInfos[i].TotalDocumentSize
             }
