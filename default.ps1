@@ -160,11 +160,6 @@ task MeasurePerformance -depends Compile {
 		exec { &"$base_dir\Raven.Performance\bin\$global:configuration\Raven.Performance.exe" "--database-location=$RavenDbStableLocation --build-number=$_ --data-location=$DataLocation --logs-location=$LogsLocation" }
 	}
 }
-task Vnext3 {
-	$global:uploadCategory = "RavenDB-Unstable"
-	$global:uploadMode = "Vnext3"
-	$global:configuration = "Release"
-}
 
 task Unstable {
 	$global:uploadCategory = "RavenDB-Unstable"
@@ -406,8 +401,6 @@ task DoRelease -depends DoReleasePart1, `
 task UploadStable -depends Stable, DoRelease, Upload, UploadNuget
 
 task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
-
-task UploadVnext3 -depends Vnext3, DoRelease, Upload, UploadNuget
 
 task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 
