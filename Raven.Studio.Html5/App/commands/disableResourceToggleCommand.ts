@@ -73,14 +73,20 @@ class disableResourceToggleCommand extends commandBase {
             toggleTasks.push(this.toggleTask(cntToToggle, this.multipleCounterStoragesPath));
         }
 
+        var mergedPromise = $.Deferred();
+
         var combinedPromise = $.when.apply(null, toggleTasks);
         combinedPromise.done(() => {
             var toggledResources = [].concat.apply([], arguments);
             this.reportSuccess("Succefully " + action + "d " + toggledResources.length + " resources!")
+            mergedPromise.resolve(toggledResources);
         });
 
-        combinedPromise.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " resources", response.responseText, response.statusText));
-        return combinedPromise;
+        combinedPromise.fail((response: JQueryXHR) => {
+            this.reportError("Failed to " + action + " resources", response.responseText, response.statusText);
+            mergedPromise.reject(response);
+            });
+        return mergedPromise;
     }
 
     private toggleTask(resources: Array<resource>, togglePath: string):JQueryPromise<resource[]> {
@@ -94,7 +100,6 @@ class disableResourceToggleCommand extends commandBase {
         var task = $.Deferred();
         this.post(url, null, null, null, 9000 * resources.length)
             .done((resourceNames: string[]) => {
-                console.log(resourceNames);
                 task.resolve(resources.filter(r => resourceNames.contains(r.name)));
             })
             .fail(() => task.reject(arguments));

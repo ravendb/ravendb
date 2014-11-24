@@ -20,6 +20,7 @@ class resources extends viewModelBase {
     databases = ko.observableArray<database>();
     fileSystems = ko.observableArray<filesystem>();
     searchText = ko.observable("");
+    visibleResources = ko.observable('');
     selectedResource = ko.observable<resource>();
     fileSystemsStatus = ko.observable<string>("loading");
 	isAnyResourceSelected: KnockoutComputed<boolean>;
@@ -39,7 +40,7 @@ class resources extends viewModelBase {
         
         this.systemDb = appUrl.getSystemDatabase();
         this.appUrls = appUrl.forCurrentDatabase(); 
-        this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterResources(s));
+        this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterResources());
 
         var currentDatabse = this.activeDatabase();
         if (!!currentDatabse) {
@@ -100,6 +101,7 @@ class resources extends viewModelBase {
             return disabledStatus;
         });
         this.fetchAlerts();
+        this.visibleResources.subscribe(() => this.filterResources());
     }
 
     private fetchAlerts() {
@@ -127,16 +129,19 @@ class resources extends viewModelBase {
         }
     }
 
-    filterResources(filter: string) {
+    filterResources() {
+        var filter = this.searchText();
         var filterLower = filter.toLowerCase();
         this.databases().forEach((db: database) => {
-            var isMatch = (!filter || (db.name.toLowerCase().indexOf(filterLower) >= 0)) && db.name != '<system>';
+            var typeMatch = !this.visibleResources() || this.visibleResources() == "db";
+            var isMatch = (!filter || (db.name.toLowerCase().indexOf(filterLower) >= 0)) && db.name != '<system>' && typeMatch;
             db.isVisible(isMatch);
         });
         this.databases().map((db: database) => db.isChecked(!db.isVisible() ? false : db.isChecked()));
 
         this.fileSystems().forEach(d=> {
-            var isMatch = !filter || (d.name.toLowerCase().indexOf(filterLower) >= 0);
+            var typeMatch = !this.visibleResources() || this.visibleResources() == "fs";
+            var isMatch = (!filter || (d.name.toLowerCase().indexOf(filterLower) >= 0)) && typeMatch;
             d.isVisible(isMatch);
         });
 
@@ -239,7 +244,7 @@ class resources extends viewModelBase {
 
                 disableDatabaseToggleViewModel.disableToggleTask
                     .done((toggledResources: resource[]) => {
-                        if (resource.length == 1) {
+                        if (resources.length == 1) {
                             this.onResourceDisabledToggle(resources[0], action);
                         } else {
                             toggledResources.forEach(rs => {

@@ -67,14 +67,20 @@ class deleteDatabaseCommand extends commandBase {
             deleteTasks.push(this.deleteTask(cntToDelete, this.multipleCounterStoragesPath));
         }
 
+        var mergedPromise = $.Deferred();
+
         var combinedPromise = $.when.apply(null, deleteTasks);
         combinedPromise.done(() => {
-            var deletedResourcesNames = [].concat.apply([], arguments);
-            this.reportSuccess("Succefully deleted " + deletedResourcesNames.length + " resources!")
+            var deletedResources = [].concat.apply([], arguments);
+            this.reportSuccess("Succefully deleted " + deletedResources.length + " resources!");
+            mergedPromise.resolve(deletedResources);
         });
 
-        combinedPromise.fail((response: JQueryXHR) => this.reportError("Failed to delete resources", response.responseText, response.statusText));
-        return combinedPromise;
+        combinedPromise.fail((response: JQueryXHR) => {
+            this.reportError("Failed to delete resources", response.responseText, response.statusText);
+            mergedPromise.reject(response);
+        });
+        return mergedPromise;
     }
 
     private deleteTask(resources: Array<resource>, deletePath: string) {
@@ -84,7 +90,14 @@ class deleteDatabaseCommand extends commandBase {
         };
 
         var url = deletePath + this.urlEncodeArgs(args);
-        return this.del(url, null, null, null, 9000 * resources.length);
+
+        var task = $.Deferred();
+        this.del(url, null, null, null, 9000 * resources.length)
+            .done((resourceNames: string[]) => {
+                task.resolve(resources.filter(r => resourceNames.contains(r.name)));
+            })
+            .fail(() => task.reject(arguments));
+        return task;
     }
 
 } 
