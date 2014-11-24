@@ -34,7 +34,6 @@ using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Impl.DTC;
 using Raven.Database.Indexing;
-using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Server;
@@ -1147,7 +1146,7 @@ namespace Raven.Database
 
 			public void InitializeIndexStorage()
 			{
-				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, configuration.Container.GetExportedValues<AbstractViewGenerator>(), database.Extensions);
+				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, database.Extensions);
 				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
 			}
 
