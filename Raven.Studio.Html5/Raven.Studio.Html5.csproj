@@ -213,7 +213,6 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemEditFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\configuration.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemFiles.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystems.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\resolveConflict.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchDialogViewModel.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchHasMetadataClause.ts" />
@@ -235,7 +234,7 @@
     <TypeScriptCompile Include="App\viewmodels\createDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\createSampleData.ts" />
     <TypeScriptCompile Include="App\viewmodels\csvImport.ts" />
-    <TypeScriptCompile Include="App\viewmodels\databases.ts" />
+    <TypeScriptCompile Include="App\viewmodels\resources.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseSettings.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteDocumentsMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteDocuments.ts" />
@@ -526,7 +525,6 @@
     <Content Include="App\views\filesystem\configuration.html" />
     <Content Include="App\views\filesystem\filesystemFiles.html" />
     <Content Include="App\views\filesystem\createFilesystem.html" />
-    <Content Include="App\views\filesystem\filesystems.html" />
     <Content Include="App\views\filesystem\filesystemUploadFile.html" />
     <Content Include="App\views\scriptedIndexes.html" />
     <Content Include="App\views\resetIndexConfirm.html" />
@@ -934,7 +932,7 @@
     <TypeScriptCompile Include="App\models\document.ts" />
     <TypeScriptCompile Include="App\viewmodels\documents.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteCollection.ts" />
-    <Content Include="App\views\databases.html" />
+    <Content Include="App\views\resources.html" />
     <Content Include="App\views\deleteCollection.html" />
     <Content Include="App\views\deleteItems.html" />
     <Content Include="App\views\documents.html" />

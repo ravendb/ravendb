@@ -2,7 +2,7 @@
 interface computedAppUrls {
     adminSettings: KnockoutComputed<string>;
 
-    databases: KnockoutComputed<string>;
+    resources: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
@@ -63,10 +63,8 @@ interface computedAppUrls {
 
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
-    databasesManagement: KnockoutComputed<string>;
-    filesystemsManagement: KnockoutComputed<string>;
+    resourcesManagement: KnockoutComputed<string>;
 
-    filesystems: KnockoutComputed<string>;
     filesystemFiles: KnockoutComputed<string>;
     filesystemSearch: KnockoutComputed<string>;
     filesystemSynchronization: KnockoutComputed<string>;
@@ -75,7 +73,6 @@ interface computedAppUrls {
     filesystemConfiguration: KnockoutComputed<string>;
 
     couterStorages:KnockoutComputed<string>;
-    counterStorageManagement: KnockoutComputed<string>;
     counterStorageCounters: KnockoutComputed<string>;
     counterStorageReplication: KnockoutComputed<string>;
     counterStorageStats: KnockoutComputed<string>;
