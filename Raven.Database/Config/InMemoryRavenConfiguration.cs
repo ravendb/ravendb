@@ -1054,6 +1054,9 @@ namespace Raven.Database.Config
 		{
 			if (RunInMemory)
 			{
+				if (!string.IsNullOrWhiteSpace(DefaultStorageTypeName) &&
+				    DefaultStorageTypeName.Equals(EsentTypeName, StringComparison.InvariantCultureIgnoreCase))
+					return EsentTypeName;
                 return VoronTypeName;                
 			}
 
@@ -1067,7 +1070,9 @@ namespace Raven.Database.Config
 					return EsentTypeName;
 			}
 
-	        return DefaultStorageTypeName;
+		    if (string.IsNullOrEmpty(DefaultStorageTypeName))
+			    return EsentTypeName;
+			return DefaultStorageTypeName;
 		}
 
 		public void Dispose()

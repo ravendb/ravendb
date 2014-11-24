@@ -87,7 +87,9 @@ namespace Raven.Database.Indexing
 			var sw = Stopwatch.StartNew();
 			var start = SystemTime.UtcNow;
 			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
-			RecordCurrentBatch("Current Map", batch.Docs.Count);
+			var indexPerfStats = RecordCurrentBatch("Current Map", batch.Docs.Count);
+			batch.SetIndexingPerformance(indexPerfStats);
+
 			var documentsWrapped = batch.Docs.Select(doc =>
 			{
 				sourceCount++;

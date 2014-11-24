@@ -122,24 +122,46 @@ namespace Raven.Json.Linq
 					var o = current as RavenJObject;
 					if (o != null)
 					{
-                        if (createSnapshots)
-                        {
-                            var newProp = o[propertyName];
-                            if (newProp != null)
-                            {
-                                newProp.EnsureCannotBeChangeAndEnableSnapshotting();
-                                newProp = newProp.CreateSnapshot();
-                                current = o[propertyName] = newProp;
-                            }
-                            else
-                            {
-                                current = null;
-                            }
-                        }
-                        else
-                        {
-                            current = o[propertyName];    
-                        }
+						if (createSnapshots)
+						{
+							switch (propertyName)
+							{
+								case "$Values":
+									current = new RavenJArray(o.Values());
+									break;
+								case "$Keys":
+									current = new RavenJArray(o.Keys);
+									break;
+								default:
+									var newProp = o[propertyName];
+									if (newProp != null)
+									{
+										newProp.EnsureCannotBeChangeAndEnableSnapshotting();
+										newProp = newProp.CreateSnapshot();
+										current = o[propertyName] = newProp;
+									}
+									else
+									{
+										current = null;
+									}
+									break;
+							}
+						}
+						else
+						{
+							switch (propertyName)
+							{
+								case "$Values":
+									current = new RavenJArray(o.Values());
+									break;
+								case "$Keys":
+									current = new RavenJArray(o.Keys);
+									break;
+								default:
+									current = o[propertyName];
+									break;
+							}
+						}
 
 						if (current == null && errorWhenNoMatch)
 							throw new Exception("Property '{0}' does not exist on RavenJObject.".FormatWith(CultureInfo.InvariantCulture, propertyName));
@@ -147,7 +169,7 @@ namespace Raven.Json.Linq
 					else
 					{
 						var array = current as RavenJArray;
-						if(array != null)
+						if (array != null)
 						{
 							switch (propertyName)
 							{

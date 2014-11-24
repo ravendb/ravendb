@@ -132,32 +132,46 @@ namespace Raven.Abstractions.Extensions
 
 			protected override Expression VisitMember(MemberExpression node)
 			{
-				if (IsDictionaryProperty(node))
+				string propertyName;
+				if (IsDictionaryProperty(node, out propertyName))
 				{
+					if (string.IsNullOrEmpty(propertyName) == false)
+					{
+						Results.Push(propertySeparator);
+						Results.Push("$" + node.Member.Name);
+					}
+					
 					return base.VisitMember(node);
 				}
+
 				Results.Push(propertySeparator);
 				Results.Push(node.Member.Name);
 				return base.VisitMember(node);
 			}
 
-			private static bool IsDictionaryProperty(MemberExpression node)
+			private static bool IsDictionaryProperty(MemberExpression node, out string propertyName)
 			{
+				propertyName = null;
+
 				if (node.Member.DeclaringType == null)
 					return false;
 				if (node.Member.DeclaringType.IsGenericType == false)
 					return false;
+
 				var genericTypeDefinition = node.Member.DeclaringType.GetGenericTypeDefinition();
-				if (node.Member.Name == "Value")
+				if (node.Member.Name == "Value" || node.Member.Name == "Key")
 				{
 					return genericTypeDefinition == typeof (KeyValuePair<,>);
 				}
-				if (node.Member.Name == "Values")
+
+				if (node.Member.Name == "Values" || node.Member.Name == "Keys")
 				{
+					propertyName = node.Member.Name;
 					return genericTypeDefinition == typeof (Dictionary<,>) ||
 					       genericTypeDefinition == typeof (IDictionary<,>);
 
 				}
+
 				return false;
 			}
 

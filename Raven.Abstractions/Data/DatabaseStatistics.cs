@@ -10,6 +10,7 @@ namespace Raven.Abstractions.Data
 {
 	public class DatabaseStatistics
 	{
+		public string StorageEngine { get; set; }
 		public Etag LastDocEtag { get; set; }
 
         [Obsolete("Use RavenFS instead.")]

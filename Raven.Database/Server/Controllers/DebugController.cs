@@ -241,6 +241,16 @@ namespace Raven.Database.Server.Controllers
 
 
 		[HttpGet]
+		[Route("debug/indexing-batch-stats")]
+		[Route("databases/{databaseName}/debug/indexing-batch-stats")]
+		public HttpResponseMessage IndexingBatchStats()
+		{
+			var indexingBatchInfos = Database.Statistics.IndexingBatchInfo;
+
+			return GetMessageWithObject(indexingBatchInfos);
+		}
+
+		[HttpGet]
 		[Route("debug/plugins")]
 		[Route("databases/{databaseName}/debug/plugins")]
 		public HttpResponseMessage Plugins()

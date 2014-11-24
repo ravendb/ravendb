@@ -95,10 +95,6 @@ namespace Raven.Database.Indexing
                     catch (Exception e)
                     {
                         foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
-#if DEBUG
-                        if (Debugger.IsAttached)
-                            Debugger.Break();
-#endif
                         Log.ErrorException("Failed to execute indexing", e);
                         if (IsEsentOutOfMemory(e))
                         {
