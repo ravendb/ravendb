@@ -513,7 +513,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
 			var currentFileEtag = EmbeddedLastChangedDate + docPath;
-			if (etagValue == currentFileEtag)
+			if (etagValue == "\"" + currentFileEtag + "\"")
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			var fileStream = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -570,7 +570,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
 			var currentFileEtag = EmbeddedLastChangedDate + docPath;
-			if (etagValue == currentFileEtag)
+			if (etagValue == "\"" + currentFileEtag + "\"")
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			byte[] bytes;
@@ -634,6 +634,8 @@ namespace Raven.Database.Server.Controllers
 					return "image/png";
 				case ".xap":
 					return "application/x-silverlight-2";
+				case ".json":
+					return "application/json";
 				default:
 					return "text/plain";
 			}
