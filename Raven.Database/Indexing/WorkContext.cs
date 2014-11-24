@@ -118,7 +118,7 @@ namespace Raven.Database.Indexing
 			{
 				foreach (var indexName in IndexDefinitionStorage.IndexNames)
 				{
-					storedIndexingErrors.AddRange(accessor.Lists.Read("Raven/Indexing/Errors/" + indexName, Etag.Empty, null, 50));
+					storedIndexingErrors.AddRange(accessor.Lists.Read("Raven/Indexing/Errors/" + indexName, Etag.Empty, null, 5000));
 				}
 			});
 
@@ -131,6 +131,18 @@ namespace Raven.Database.Indexing
 			{
 				indexingErrors.Enqueue(error);
 			}
+
+			TransactionalStorage.Batch(accessor =>
+			{
+				while (indexingErrors.Count > 50)
+				{
+					IndexingError error;
+					if (indexingErrors.TryDequeue(out error) == false)
+						continue;
+
+					accessor.Lists.Remove("Raven/Indexing/Errors/" + error.IndexName, error.Id.ToString(CultureInfo.InvariantCulture));
+				}
+			});
 
 			errorsCounter = errors.Max(x => x.Id);
 		}
