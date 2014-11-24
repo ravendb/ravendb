@@ -1070,7 +1070,9 @@ namespace Raven.Database.Config
 					return EsentTypeName;
 			}
 
-	        return DefaultStorageTypeName;
+		    if (string.IsNullOrEmpty(DefaultStorageTypeName))
+			    return EsentTypeName;
+			return DefaultStorageTypeName;
 		}
 
 		public void Dispose()
