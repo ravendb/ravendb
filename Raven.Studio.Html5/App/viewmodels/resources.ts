@@ -181,36 +181,26 @@ class resources extends viewModelBase {
     }
 
     private onResourceDeleted(rs: resource) {
-        //TODO:
-    }
+        if (rs.type == database.type) {
+            var databaseInArray = this.databases.first((db: database) => db.name == rs.name);
 
-    private onDatabaseDeleted(databaseName: string) {
-        /*
-TODO
-        var databaseInArray = this.databases.first((db: database) => db.name == databaseName);
-
-        if (!!databaseInArray) {
-            this.databases.remove(databaseInArray);
-
-            if ((this.databases().length > 0) && (this.databases.contains(this.selectedDatabase()) === false)) {
-                this.selectDatabase(this.databases().first());
+            if (!!databaseInArray) {
+                this.databases.remove(databaseInArray);
             }
-        }*/
-    }
+        } else if (rs.type == filesystem.type) {
+            var fileSystemInArray = this.fileSystems.first((fs: filesystem) => fs.name == rs.name);
 
-    private onFileSystemDeleted(fileSystemName: string) {
-        /* TODO:
-        var fileSystemInArray = this.fileSystems.first((fs: filesystem) => fs.name == fileSystemName);
-
-        if (!!fileSystemInArray) {
-            this.fileSystems.remove(fileSystemInArray);
-
-            if ((this.fileSystems().length > 0) && (this.fileSystems.contains(this.selectedFileSystem()) === false)) {
-                this.selectedFileSystem(this.fileSystems().first());
+            if (!!fileSystemInArray) {
+                this.fileSystems.remove(fileSystemInArray);
             }
-        }*/
-    }
+        } else {
+            //TODO: counters
+        }
 
+        if ((this.resources().length > 0) && (this.resources().contains(this.selectedResource()) === false)) {
+            this.selectResource(this.resources().first());
+        }
+    }
 
     deleteCheckedResources() {
         var checkedResources: resource[] = this.resources().filter((rs: resource) => rs.isChecked());
@@ -249,13 +239,11 @@ TODO
 
                 disableDatabaseToggleViewModel.disableToggleTask
                     .done((toggledResources: resource[]) => {
-                        var activeResource: resource = null; // this.activeResource(); //TODO:
-
                         if (resource.length == 1) {
-                            this.onResourceDisabledToggle(resources[0], action, activeResource);
+                            this.onResourceDisabledToggle(resources[0], action);
                         } else {
                             toggledResources.forEach(rs => {
-                                this.onResourceDisabledToggle(rs, action, activeResource);
+                                this.onResourceDisabledToggle(rs, action);
                             });
                         }
                     });
@@ -265,15 +253,10 @@ TODO
         }
     }
 
-    private onResourceDisabledToggle(rs: resource, action: boolean, activeResource: resource) {
+    private onResourceDisabledToggle(rs: resource, action: boolean) {
         if (!!rs) {
             rs.disabled(action);
             rs.isChecked(false);
-
-            /* TODO
-            if (!!activeDatabase && db.name == activeDatabase.name) {
-                this.selectResource(db);
-            } */
         }
     }
 
@@ -500,15 +483,6 @@ TODO
         return foundFileSystem;
     }
 
-
-   
-
-   
-
-    
-    
-
-   
 }
 
 export = resources;

@@ -12,8 +12,6 @@ class deleteResourceConfirm extends dialogViewModelBase {
     private resourcesToDelete = ko.observableArray<resource>();
     public deleteTask = $.Deferred();
     isDeletingDatabase: boolean;
-    resourceType: string;
-    resourcesTypeText: string;
     exportDatabaseUrl: string;
 
     constructor(resources: Array<resource>) {
@@ -25,8 +23,6 @@ class deleteResourceConfirm extends dialogViewModelBase {
 
         this.resourcesToDelete(resources);
         this.isDeletingDatabase = resources[0] instanceof database;
-        this.resourceType = resources[0].type;
-        this.resourcesTypeText = this.resourceType == database.type ? 'databases' : this.resourceType == filesystem.type ? 'file systems' : 'counter storages';
         if (this.isDeletingDatabase) {
             this.exportDatabaseUrl = appUrl.forExportDatabase(<any>resources[0]);
         }
@@ -41,8 +37,7 @@ class deleteResourceConfirm extends dialogViewModelBase {
     }
 
     deleteDatabase() {
-        var resourcesNames = this.resourcesToDelete().map((rs: resource) => rs.name);
-        new deleteResourceCommand(resourcesNames, this.isKeepingFiles() === false, this.resourceType)
+        new deleteResourceCommand(this.resourcesToDelete(), this.isKeepingFiles() === false)
             .execute()
             .done(results => this.deleteTask.resolve(results))
             .fail(details => this.deleteTask.reject(details));
