@@ -24,7 +24,7 @@ namespace Raven.Bundles.Replication.Triggers
 			{
 				metadata.Remove(Constants.RavenReplicationConflict);// you can't put conflicts
 
-				var oldVersion = Database.Get(key, transactionInformation);
+				var oldVersion = Database.Documents.Get(key, transactionInformation);
 				if (oldVersion == null)
 					return;
 				if (oldVersion.Metadata[Constants.RavenReplicationConflict] == null)
@@ -47,7 +47,7 @@ namespace Raven.Bundles.Replication.Triggers
 				foreach (var prop in conflicts)
 				{
 					RavenJObject deletedMetadata;
-					Database.Delete(prop.Value<string>(), null, transactionInformation, out deletedMetadata);
+					Database.Documents.Delete(prop.Value<string>(), null, transactionInformation, out deletedMetadata);
 
 				    if (deletedMetadata != null)
 				    {
@@ -83,6 +83,17 @@ namespace Raven.Bundles.Replication.Triggers
                 {
                     history.RemoveAt(0);
                 }
+			}
+		}
+
+		public override IEnumerable<string> GeneratedMetadataNames
+		{
+			get
+			{
+				return new[]
+				{
+					Constants.RavenReplicationHistory
+				};
 			}
 		}
 	}

@@ -1,6 +1,9 @@
 using System;
 using System.Linq;
 using Lucene.Net.Documents;
+
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

@@ -4,5 +4,6 @@ namespace Raven.Abstractions.Smuggler
 	{
 		Import = 1,
 		Export,
+		Between,
 	}
 }

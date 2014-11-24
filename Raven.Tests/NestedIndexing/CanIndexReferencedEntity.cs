@@ -1,5 +1,7 @@
 ﻿using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.NestedIndexing
@@ -34,7 +36,7 @@ namespace Raven.Tests.NestedIndexing
 
 				using (var session = store.OpenSession())
 				{
-					var item = session.Advanced.LuceneQuery<Item>("test")
+                    var item = session.Advanced.DocumentQuery<Item>("test")
 					                  .WaitForNonStaleResults()
 					                  .WhereEquals("RefName", "ayende")
 					                  .Single();
@@ -75,7 +77,7 @@ namespace Raven.Tests.NestedIndexing
 
 				using (var session = store.OpenSession())
 				{
-					var item = session.Advanced.LuceneQuery<Item>("test")
+                    var item = session.Advanced.DocumentQuery<Item>("test")
 									  .WaitForNonStaleResults()
 									  .WhereEquals("RefName", "arava")
 									  .Single();
@@ -117,7 +119,7 @@ namespace Raven.Tests.NestedIndexing
 
 				using (var session = store.OpenSession())
 				{
-					var item = session.Advanced.LuceneQuery<Item>("test")
+                    var item = session.Advanced.DocumentQuery<Item>("test")
 									  .WaitForNonStaleResults()
 									  .WhereEquals("RefName", "arava")
 									  .Single();
@@ -158,7 +160,7 @@ namespace Raven.Tests.NestedIndexing
 
 				using (var session = store.OpenSession())
 				{
-					var item = session.Advanced.LuceneQuery<Item>("test")
+                    var item = session.Advanced.DocumentQuery<Item>("test")
 									  .WaitForNonStaleResults()
 									  .WhereEquals("RefNameNotNull", false)
 									  .Single();
@@ -207,7 +209,7 @@ namespace Raven.Tests.NestedIndexing
 
 				using (var session = store.OpenSession())
 				{
-					var item = session.Advanced.LuceneQuery<Item>("test")
+                    var item = session.Advanced.DocumentQuery<Item>("test")
 									  .WaitForNonStaleResults()
 									  .WhereEquals("RefName", "Rahien")
 									  .Single();
@@ -247,7 +249,7 @@ namespace Raven.Tests.NestedIndexing
 
 				using (var session = store.OpenSession())
 				{
-					var item = session.Advanced.LuceneQuery<Item>("test")
+                    var item = session.Advanced.DocumentQuery<Item>("test")
 									  .WaitForNonStaleResults()
 									  .WhereEquals("RefName", "Ayende")
 									  .Single();
@@ -288,7 +290,7 @@ namespace Raven.Tests.NestedIndexing
 
 				using (var session = store.OpenSession())
 				{
-					var item = session.Advanced.LuceneQuery<Item>("test")
+                    var item = session.Advanced.DocumentQuery<Item>("test")
 									  .WaitForNonStaleResults()
 									  .WhereEquals("RefName", "Ayende")
 									  .Single();

@@ -15,18 +15,47 @@ namespace Raven.Bundles.Replication.Impl
 {
 	internal class ReplicationHiLo
 	{
+		public static long NextId(DocumentDatabase database)
+		{
+			var replicationHiLo = (ReplicationHiLo)database.ExtensionsState.GetOrAdd(typeof(ReplicationHiLo).AssemblyQualifiedName, o => new ReplicationHiLo(database));
+			return replicationHiLo.NextId();
+		}
+
 		private readonly object generatorLock = new object();
-		private volatile Hodler currentMax = new Hodler(0);
+		private volatile Holder currentMax;
 		private long capacity = 256;
 		private long current;
 		private DateTime lastRequestedUtc;
+
+		private ReplicationHiLo(DocumentDatabase database)
+		{
+			Database = database;
+
+			// backward compatibility, read the hilo max then delete it, storing the value in the identity val
+
+			var document = database.Documents.Get(RavenReplicationVersionHiLo, null);
+			if (document == null)
+			{
+				currentMax = new Holder(0);
+				current = 0;
+				return;
+			}
+			var max = document.DataAsJson.Value<long>("Max");
+			currentMax = new Holder(max);
+			current = max;
+			GetNextMax(); // this saved the new max limit as part of its work
+			database.Documents.Delete(RavenReplicationVersionHiLo, null, null);
+		}
+
+		private const string RavenReplicationHilo = "Raven/Replication/Hilo";
+		private const string RavenReplicationVersionHiLo = "Raven/Replication/VersionHilo";
 		public DocumentDatabase Database { get; set; }
 
-		private class Hodler
+		private class Holder
 		{
 			public readonly long Value;
 
-			public Hodler(long value)
+			public Holder(long value)
 			{
 				Value = value;
 			}
@@ -35,24 +64,19 @@ namespace Raven.Bundles.Replication.Impl
 		public long NextId()
 		{
 			long incrementedCurrent = Interlocked.Increment(ref current);
-			while (incrementedCurrent > currentMax.Value)
+			if (incrementedCurrent <= currentMax.Value)
+				return incrementedCurrent;
+			lock (generatorLock)
 			{
-				lock (generatorLock)
+				incrementedCurrent = Interlocked.Increment(ref current);
+				if (incrementedCurrent <= currentMax.Value)
+					return incrementedCurrent;
+				if (current > currentMax.Value)
 				{
-					if (current > currentMax.Value)
-					{
-                        using (var locker = Database.DocumentLock.TryLock(250))
-                        {
-                            if (locker == null)
-                                continue;
-                            currentMax = new Hodler(GetNextMax());
-                        }
-					}
-					return Interlocked.Increment(ref current);
+					currentMax = new Holder(GetNextMax());
 				}
+				return Interlocked.Increment(ref current);
 			}
-			return incrementedCurrent;
-
 		}
 
 		private long GetNextMax()
@@ -66,56 +90,27 @@ namespace Raven.Bundles.Replication.Impl
 
 			while (true)
 			{
-				IDisposable newBatchToRecoverFromConcurrencyException = null;
-
 				try
 				{
-					using (newBatchToRecoverFromConcurrencyException)
+					using (Database.TransactionalStorage.DisableBatchNesting())
 					{
 						var minNextMax = currentMax.Value;
-						var document = Database.Get(Constants.RavenReplicationVersionHiLo, null);
-						if (document == null)
+						long max = 0;
+						Database.TransactionalStorage.Batch(accessor =>
 						{
-							Database.Put(Constants.RavenReplicationVersionHiLo,
-								Etag.Empty,
-								// sending empty etag means - ensure the that the document does NOT exists
-								RavenJObject.FromObject(RavenJObject.FromObject(new {Max = minNextMax + capacity})),
-								new RavenJObject(),
-								null);
-							return minNextMax + capacity;
-						}
-						var max = GetMaxFromDocument(document, minNextMax);
-						document.DataAsJson["Max"] = max + capacity;
-						Database.Put(Constants.RavenReplicationVersionHiLo, document.Etag,
-							document.DataAsJson,
-							document.Metadata, null);
-						current = max + 1;
-						return max + capacity;
+							var val = accessor.General.GetNextIdentityValue(RavenReplicationHilo, 0);
+							var next = Math.Max(minNextMax, val);
+							current = next + 1;
+							max = next + capacity;
+							accessor.General.SetIdentityValue(RavenReplicationHilo, max);
+						});
+						return max;
 					}
 				}
 				catch (ConcurrencyException)
 				{
-					// expected, we need to retry
-					// but in a new transaction to avoid getting stuck in infinite loop because of concurrency exception
-
-					newBatchToRecoverFromConcurrencyException = Database.TransactionalStorage.DisableBatchNesting();
 				}
 			}
 		}
-
-	    private long GetMaxFromDocument(JsonDocument document, long minMax)
-		{
-			long max;
-			if (document.DataAsJson.ContainsKey("ServerHi")) // convert from hi to max
-			{
-				var hi = document.DataAsJson.Value<long>("ServerHi");
-				max = ((hi - 1) * capacity);
-				document.DataAsJson.Remove("ServerHi");
-				document.DataAsJson["Max"] = max;
-			}
-			max = document.DataAsJson.Value<long>("Max");
-			return Math.Max(max, minMax);
-		}
-
 	}
 }

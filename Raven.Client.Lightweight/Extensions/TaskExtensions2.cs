@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.ExceptionServices;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,9 +15,6 @@ namespace Raven.Client.Extensions
 	{
 		public static Task Delay(TimeSpan timeOut)
 		{
-#if NETFX_CORE
-			return Task.Delay(timeOut);
-#else
 			var tcs = new TaskCompletionSource<object>();
 
 			var timer = new Timer(tcs.SetResult,
@@ -25,13 +23,44 @@ namespace Raven.Client.Extensions
 			                      TimeSpan.FromMilliseconds(-1));
 
 			return tcs.Task.ContinueWith(_ => timer.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
-#endif
 		}
 	}
 
 	public static class TaskExtensions2
 	{
-		
+		/// <summary>
+		/// Waits on a task and if it throws, it unwrapped the inner exception from the AggregateException
+		/// await keyword uses same mechanism.
+		/// </summary>
+		/// <param name="task"></param>
+		internal static void WaitUnwrap(this Task task)
+		{
+			try
+			{
+				task.Wait();
+			}
+			catch (AggregateException ex)
+			{
+				var exception = ex.ExtractSingleInnerException();
+				ExceptionDispatchInfo.Capture(exception).Throw();
+			}
+		}
+
+		public static T ResultUnwrap<T>(this Task<T> task)
+		{
+			T result = default(T);
+			try
+			{
+				result = task.Result;
+			}
+			catch (AggregateException ex)
+			{
+				var exception = ex.ExtractSingleInnerException();
+				ExceptionDispatchInfo.Capture(exception).Throw();
+			}
+			return result;
+		}
+
 		public static Task<object> WithNullResult(this Task task)
 		{
 			return task.WithResult((object)null);

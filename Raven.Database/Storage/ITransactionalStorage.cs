@@ -24,19 +24,23 @@ namespace Raven.Database.Storage
 
 		IDisposable DisableBatchNesting();
 
+		IStorageActionsAccessor CreateAccessor();
+
 		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSynchronization(Action action);
-		bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
+		void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase);
-		void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag);
-		long GetDatabaseSizeInBytes();
+		void Restore(DatabaseRestoreRequest restoreRequest, Action<string> output);
+		DatabaseSizeInformation GetDatabaseSize();
 		long GetDatabaseCacheSizeInBytes();
 		long GetDatabaseTransactionVersionSizeInBytes();
+		StorageStats GetStorageStats();
 
 		string FriendlyName { get; }
 		bool HandleException(Exception exception);
 
 		bool IsAlreadyInBatch { get; }
+        bool SupportsDtc { get; }
 
 		void Compact(InMemoryRavenConfiguration configuration);
 		Guid ChangeId();

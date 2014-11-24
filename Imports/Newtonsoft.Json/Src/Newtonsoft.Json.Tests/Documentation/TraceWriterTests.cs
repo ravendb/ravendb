@@ -53,40 +53,40 @@ using System.Globalization;
 
 namespace Newtonsoft.Json.Tests.Documentation
 {
+  public class LogEventInfo
+  {
+    public LogLevel Level;
+    public string Message;
+    public Exception Exception;
+  }
+
+  public class LogLevel
+  {
+    public static LogLevel Info;
+    public static LogLevel Trace;
+    public static LogLevel Error;
+    public static LogLevel Warn;
+    public static LogLevel Off;
+  }
+
+  public class Logger
+  {
+    public void Log(LogEventInfo logEvent)
+    {
+    }
+  }
+
+  public static class LogManager
+  {
+    public static Logger GetLogger(string className)
+    {
+      return new Logger();
+    }
+  }
+  
   [TestFixture]
   public class TraceWriterTests : TestFixtureBase
   {
-    public class LogEventInfo
-    {
-      public LogLevel Level;
-      public string Message;
-      public Exception Exception;
-    }
-
-    public class LogLevel
-    {
-      public static LogLevel Info;
-      public static LogLevel Trace;
-      public static LogLevel Error;
-      public static LogLevel Warn;
-      public static LogLevel Off;
-    }
-
-    public class Logger
-    {
-      public void Log(LogEventInfo logEvent)
-      { 
-      }
-    }
-
-    public static class LogManager
-    {
-      public static Logger GetLogger(string className)
-      {
-        return new Logger();
-      }
-    }
-
     #region CustomTraceWriterExample
     public class NLogTraceWriter : ITraceWriter
     {
@@ -137,7 +137,7 @@ namespace Newtonsoft.Json.Tests.Documentation
       Staff staff = new Staff();
       staff.Name = "Arnie Admin";
       staff.Roles = new List<string> { "Administrator" };
-      staff.StartDate = DateTime.Now;
+      staff.StartDate = new DateTime(2000, 12, 12, 12, 12, 12, DateTimeKind.Utc);
 
       ITraceWriter traceWriter = new MemoryTraceWriter();
 
@@ -152,12 +152,22 @@ namespace Newtonsoft.Json.Tests.Documentation
       // 2012-11-11T12:08:42.797 Info Started serializing System.Collections.Generic.List`1[System.String]. Path 'Roles'.
       // 2012-11-11T12:08:42.798 Info Finished serializing System.Collections.Generic.List`1[System.String]. Path 'Roles'.
       // 2012-11-11T12:08:42.799 Info Finished serializing Newtonsoft.Json.Tests.Serialization.Staff. Path ''.
+      // 2013-05-18T21:38:11.255 Verbose Serialized JSON: 
+      // {
+      //   "Name": "Arnie Admin",
+      //   "StartDate": new Date(
+      //     976623132000
+      //   ),
+      //   "Roles": [
+      //     "Administrator"
+      //   ]
+      // }
       #endregion
 
       MemoryTraceWriter memoryTraceWriter = (MemoryTraceWriter)traceWriter;
 
-      Assert.AreEqual(743, memoryTraceWriter.ToString().Length);
-      Assert.AreEqual(6, memoryTraceWriter.GetTraceMessages().Count());
+      Assert.AreEqual(916, memoryTraceWriter.ToString().Length);
+      Assert.AreEqual(7, memoryTraceWriter.GetTraceMessages().Count());
     }
   }
 }

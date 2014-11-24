@@ -4,13 +4,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Dynamic;
+
 using Raven.Client.Document;
 using Raven.Database.Extensions;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class ClientKeyGeneratorTests : RemoteClientTest
+	public class ClientKeyGeneratorTests : RavenTest
 	{
 		[Fact]
 		public void IdIsSetFromGeneratorOnStore()
@@ -27,7 +31,25 @@ namespace Raven.Tests.Document
 			}
 		}
 
-		[Fact]
+	   [Fact]
+	   public void IdIsSetFromGeneratorOnStoreForDynamic()
+	   {
+	      using (var store = NewDocumentStore())
+	      {
+	         store.Conventions.FindDynamicTagName = (entity) => entity.EntityName;
+
+	         using (var session = store.OpenSession())
+	         {
+	            dynamic client = new ExpandoObject();
+	            client.EntityName = "clients";
+	            session.Store(client);
+
+	            Assert.Equal("clients/1", client.Id);
+	         }
+	      }
+	   }
+
+	   [Fact]
 		public void DifferentTypesWillHaveDifferentIdGenerators()
 		{
 			using (var store = NewDocumentStore())

@@ -24,6 +24,7 @@
 #endregion
 
 using System;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Imports.Newtonsoft.Json.Serialization
 {
@@ -32,6 +33,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
   /// </summary>
   public class JsonPrimitiveContract : JsonContract
   {
+    internal PrimitiveTypeCode TypeCode { get; set; }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonPrimitiveContract"/> class.
     /// </summary>
@@ -40,6 +43,9 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       : base(underlyingType)
     {
       ContractType = JsonContractType.Primitive;
+
+      TypeCode = ConvertUtils.GetTypeCode(underlyingType);
+      IsReadOnlyOrFixedSize = true;
     }
   }
 }

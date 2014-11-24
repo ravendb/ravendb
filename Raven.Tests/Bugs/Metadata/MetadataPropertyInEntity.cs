@@ -8,6 +8,8 @@ using System;
 using Raven.Client;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Metadata
@@ -49,20 +51,23 @@ namespace Raven.Tests.Bugs.Metadata
 
 		public class MetadataToPropertyConvertionListener : IDocumentConversionListener
 		{
-			/// <summary>
-			/// Called when converting an entity to a document and metadata
-			/// </summary>
-			public void EntityToDocument(string key, object entity, RavenJObject document, RavenJObject metadata)
+			public void BeforeConversionToDocument(string key, object entity, RavenJObject metadata)
 			{
+			}
+
+			public void AfterConversionToDocument(string key, object entity, RavenJObject document, RavenJObject metadata)
+			{
+
 				if (entity is Account == false)
 					return;
 				document.Remove("Revision");
 			}
 
-			/// <summary>
-			/// Called when converting a document and metadata to an entity
-			/// </summary>
-			public void DocumentToEntity(string key, object entity, RavenJObject document, RavenJObject metadata)
+			public void BeforeConversionToEntity(string key, RavenJObject document, RavenJObject metadata)
+			{
+			}
+
+			public void AfterConversionToEntity(string key, RavenJObject document, RavenJObject metadata, object entity)
 			{
 				if (entity is Account == false)
 					return;
@@ -102,25 +107,27 @@ namespace Raven.Tests.Bugs.Metadata
 
 		public class RavenDocumentRevisionMetadataToRevisionProperty : IDocumentConversionListener
 		{
-			/// <summary>
-			/// Called when converting an entity to a document and metadata
-			/// </summary>
-			public void EntityToDocument(string key, object entity, RavenJObject document, RavenJObject metadata)
+			public void BeforeConversionToDocument(string key, object entity, RavenJObject metadata)
+			{
+				
+			}
+
+			public void AfterConversionToDocument(string key, object entity, RavenJObject document, RavenJObject metadata)
 			{
 				if (entity is Account == false)
 					return;
 				document.Remove("Revision");
 			}
 
-			/// <summary>
-			/// Called when converting a document and metadata to an entity
-			/// </summary>
-			public void DocumentToEntity(string key, object entity, RavenJObject document, RavenJObject metadata)
+			public void BeforeConversionToEntity(string key, RavenJObject document, RavenJObject metadata)
+			{
+			}
+
+			public void AfterConversionToEntity(string key, RavenJObject document, RavenJObject metadata, object entity)
 			{
 				if (entity is Account == false)
 					return;
 				((Account)entity).Revision = metadata.Value<long>("Raven-Document-Revision");
-
 			}
 		}
 	}

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Linq;
-using Raven.Tests.MailingList;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

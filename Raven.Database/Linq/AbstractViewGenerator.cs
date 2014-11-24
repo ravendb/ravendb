@@ -35,6 +35,7 @@ namespace Raven.Database.Linq
 		private readonly HashSet<string> mapFields = new HashSet<string>();
 		private readonly HashSet<string> reduceFields = new HashSet<string>();
 
+		[CLSCompliant(false)]
 // ReSharper disable once InconsistentNaming
 		protected DynamicNullObject __dynamic_null = new DynamicNullObject();
 
@@ -44,6 +45,8 @@ namespace Raven.Database.Linq
 		private IndexDefinition indexDefinition;
 
 		public string SourceCode { get; set; }
+
+    public string Name { get { return indexDefinition.Name;  }}
 
 		public int CountOfSelectMany
 		{
@@ -65,8 +68,6 @@ namespace Raven.Database.Linq
 		public List<IndexingFunc> MapDefinitions { get; private set; }
 
 		public IndexingFunc ReduceDefinition { get; set; }
-
-		public TranslatorFunc TransformResultsDefinition { get; set; }
 
 		public GroupByKeyFunc GroupByExtraction { get; set; }
 
@@ -130,10 +131,11 @@ namespace Raven.Database.Linq
 					index = Field.Index.NOT_ANALYZED_NO_NORMS;
 					break;
 			}
-			return new AnonymousObjectToLuceneDocumentConverter(null,indexDefinition, this)
+			return new AnonymousObjectToLuceneDocumentConverter(null,indexDefinition, this, null)
 				.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO, false, Field.TermVector.NO, index);
 		}
 
+        [Obsolete("Use RavenFS instead.")]
 		protected dynamic LoadAttachmentForIndexing(object item)
 		{
 			if (item == null || item is DynamicNullObject)
@@ -230,6 +232,11 @@ namespace Raven.Database.Linq
 
 		private ConcurrentDictionary<string, SpatialField> SpatialFields { get; set; }
 
+        public IEnumerable<IFieldable> SpatialClustering(string fieldName, object lat, object lng, int minPrecision = 3, int maxPrecision = 8)
+        {
+            return SpatialClustering(fieldName, ConvertToDouble(lat), ConvertToDouble(lng), minPrecision, maxPrecision);
+        }
+
 		public IEnumerable<IFieldable> SpatialClustering(string fieldName, double? lat, double? lng,
 		                                                 int minPrecision = 3,
 		                                                 int maxPrecision = 8)
@@ -248,21 +255,31 @@ namespace Raven.Database.Linq
 			}
 		}
 
-		public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
-		{
-			return SpatialGenerate(Constants.DefaultSpatialFieldName, lat, lng);
-		}
+        public IEnumerable<IFieldable> SpatialGenerate(object lat, object lng)
+        {
+            return SpatialGenerate(Constants.DefaultSpatialFieldName, lat, lng);
+        }
+
+        public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
+        {
+            return SpatialGenerate(Constants.DefaultSpatialFieldName, lat, lng);
+        }
+
+        public IEnumerable<IFieldable> SpatialGenerate(string fieldName, object lat, object lng)
+        {
+            return SpatialGenerate(fieldName, ConvertToDouble(lat), ConvertToDouble(lng));
+        }
 
 		public IEnumerable<IFieldable> SpatialGenerate(string fieldName, double? lat, double? lng)
 		{
 			var spatialField = GetSpatialField(fieldName);
 
-			if (lng == null || double.IsNaN(lng.Value))
+            if (lng == null || double.IsNaN(lng.Value))
 				return Enumerable.Empty<IFieldable>();
-			if (lat == null || double.IsNaN(lat.Value))
+            if (lat == null || double.IsNaN(lat.Value))
 				return Enumerable.Empty<IFieldable>();
 
-			Shape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
+            Shape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
 			return spatialField.CreateIndexableFields(shape);
 		}
 
@@ -317,5 +334,13 @@ namespace Raven.Database.Linq
 		}
 
 		#endregion
+
+        private static double? ConvertToDouble(object value)
+        {
+            if (value == null || value is DynamicNullObject) 
+                return null;
+
+            return Convert.ToDouble(value);
+        }
 	}
 }

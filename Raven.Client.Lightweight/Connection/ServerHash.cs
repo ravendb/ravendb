@@ -1,10 +1,7 @@
 using System;
 using System.Text;
-#if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
-using System.Security.Cryptography;
-#endif
+
+using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Client.Connection
 {
@@ -18,14 +15,7 @@ namespace Raven.Client.Connection
 
 		private static byte[] GetHash(byte[] bytes)
 		{
-#if SILVERLIGHT || NETFX_CORE
-			return MD5Core.GetHash(bytes);
-#else
-			using (var md5 = MD5.Create())
-			{
-				return md5.ComputeHash(bytes);
-			}
-#endif
+		    return Encryptor.Current.Hash.Compute16(bytes);
 		}
 	}
 }

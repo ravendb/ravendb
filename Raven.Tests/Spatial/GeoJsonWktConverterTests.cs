@@ -2,11 +2,13 @@
 using NetTopologySuite.IO;
 using Raven.Abstractions.Spatial;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Spatial
 {
-	public class GeoJsonWktConverterTests
+	public class GeoJsonWktConverterTests : NoDisposalNeeded
 	{
 		private readonly GeoJsonWktConverter reader;
 		private readonly WKTReader wktReader = new WKTReader();

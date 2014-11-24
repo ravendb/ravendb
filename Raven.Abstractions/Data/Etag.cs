@@ -1,19 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Linq;
-#if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
 using System.Security.Cryptography;
-#endif
+using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
 {
 	public class Etag : IEquatable<Etag>, IComparable<Etag>
 	{
+	
 		public override int GetHashCode()
 		{
 			unchecked
@@ -96,15 +96,9 @@ namespace Raven.Abstractions.Data
 
 		private IEnumerable<byte> ToBytes()
 		{
-			foreach (var source in BitConverter.GetBytes(restarts).Reverse())
-			{
-				yield return source;
+			return BitConverter.GetBytes(restarts).Reverse()
+				.Concat(BitConverter.GetBytes(changes).Reverse());
 			}
-			foreach (var source in BitConverter.GetBytes(changes).Reverse())
-			{
-				yield return source;
-			}
-		}
 
 		public byte[] ToByteArray()
 		{
@@ -113,16 +107,19 @@ namespace Raven.Abstractions.Data
 
 		public override string ToString()
 		{
-			var sb = new StringBuilder(36);
-			foreach (var by in ToBytes())
-			{
-				sb.Append(by.ToString("X2"));
-			}
+			var etagBytes = ToBytes().ToList();
+			var sb = etagBytes.Aggregate(new StringBuilder(36), 
+				(stringBuilder, b) => stringBuilder.Append(GenericUtil.ByteToHexAsStringLookup[b]));
+
 			sb.Insert(8, "-")
 					.Insert(13, "-")
 					.Insert(18, "-")
 					.Insert(23, "-");
-			return sb.ToString();
+
+			var etagAsString = sb.ToString();
+			Debug.Assert(etagAsString.Length == 36); //prevent stupid bugs if something is refactored
+
+			return etagAsString;
 		}
 
 		public static Etag Parse(byte[] bytes)
@@ -130,7 +127,7 @@ namespace Raven.Abstractions.Data
 			return new Etag
 			{
 				restarts = BitConverter.ToInt64(bytes.Take(8).Reverse().ToArray(), 0),
-				changes = BitConverter.ToInt64(bytes.Skip(8).Reverse().ToArray(), 0)
+				changes = BitConverter.ToInt64(bytes.Skip(8).Take(8).Reverse().ToArray(), 0)
 			};
 		}
 
@@ -153,7 +150,7 @@ namespace Raven.Abstractions.Data
 			if (string.IsNullOrEmpty(str))
 				throw new ArgumentException("str cannot be empty or null");
 			if (str.Length != 36)
-				throw new ArgumentException("str must be 36 characters");
+				throw new ArgumentException(string.Format("str must be 36 characters. Perhaps you are trying to parse non-etag as etag? (string that was passed into Etag::Parse is {0})", str));
 
 			var buffer = new byte[16]
 			{
@@ -267,14 +264,8 @@ namespace Raven.Abstractions.Data
 		public Etag HashWith(IEnumerable<byte> bytes)
 		{
 			var etagBytes = ToBytes().Concat(bytes).ToArray();
-#if SILVERLIGHT || NETFX_CORE
-			return Parse(MD5Core.GetHash(etagBytes));
-#else
-			using (var md5 = MD5.Create())
-			{
-				return Parse(md5.ComputeHash(etagBytes));
-			}
-#endif
+
+			return Parse(Encryptor.Current.Hash.Compute16(etagBytes));
 		}
 
 		public static Etag Max(Etag first, Etag second)
@@ -294,7 +285,7 @@ namespace Raven.Abstractions.Data
 				Array.Reverse(bytes, 0, 4);
 				Array.Reverse(bytes, 4, 2);
 				Array.Reverse(bytes, 6, 2);
-			}
+	}
 			return new Guid(bytes);
 		}
 

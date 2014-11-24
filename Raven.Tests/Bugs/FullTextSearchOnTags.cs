@@ -1,6 +1,9 @@
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Linq;
 using System.Linq;
@@ -244,7 +247,7 @@ namespace Raven.Tests.Bugs
 						.Where(x => x.Name == "User");
 
 
-					Assert.Equal("-Tags:(i love cats) AND (Name:User)", ravenQueryable.ToString());
+					Assert.Equal("( -Tags:(i love cats) AND Tags:(*)) AND (Name:User)", ravenQueryable.ToString());
 
 					Assert.Equal(1, ravenQueryable.Count());
 				}
@@ -264,7 +267,7 @@ namespace Raven.Tests.Bugs
 						.Where(x => x.Name == "User");
 
 
-					Assert.Equal("-Tags:(i love cats) Name:User", ravenQueryable.ToString());
+					Assert.Equal("( -Tags:(i love cats) AND Tags:(*)) Name:User", ravenQueryable.ToString());
 				}
 			}
 		}
@@ -282,7 +285,7 @@ namespace Raven.Tests.Bugs
 						.Where(x => x.Name == "User");
 
 
-					Assert.Equal("-Tags:(i love cats) AND (Name:User)", ravenQueryable.ToString());
+					Assert.Equal("( -Tags:(i love cats) AND Tags:(*)) AND (Name:User)", ravenQueryable.ToString());
 				}
 			}
 		}
@@ -381,7 +384,8 @@ namespace Raven.Tests.Bugs
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs.Images select new { doc.Tags, doc.Users }",
-					Indexes = { { "Tags", FieldIndexing.Analyzed } }
+					Indexes = { { "Tags", FieldIndexing.Analyzed } },
+					Suggestions = {{"Tags", new SuggestionOptions{Distance = StringDistanceTypes.Default, Accuracy = 0.5f}}}
 				});
 
 				using (var session = store.OpenSession())

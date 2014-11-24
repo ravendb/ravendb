@@ -1,13 +1,17 @@
 using System;
 using System.Collections.Generic;
+
+using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Shard.BlogModel
 {
-	public class ShardedDocumentStoreTest
+	public class ShardedDocumentStoreTest : NoDisposalNeeded
 	{
 		[Fact]
 		public void WillThrowIsThereIsNoShards()

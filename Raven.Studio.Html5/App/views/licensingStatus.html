@@ -1,0 +1,50 @@
+﻿<div class="messageBox licensing-status" tabindex="-1">
+    <div class="modal-header">
+        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+            <i class="fa fa-times"></i>
+        </button>
+        <h4 class="modal-title">Licensing Status</h4>
+    </div>
+    <div class="modal-body">
+        <label data-bind="text: licenseStatus.Message, css: { 'license-error': licenseStatus.Error }"></label>
+        <!-- ko with: licenseStatus.Details -->
+        <div class="panel-group" id="detailsAccordion">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <a data-toggle="collapse" data-parent="#detailsAccordion" href="#collapseDetails">
+                        <h3 class="panel-title">
+                            Details
+                        </h3>
+                    </a>
+                </div>
+                <div id="collapseDetails" class="panel-collapse collapse">
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <div class="col-lg-12">
+                                <p class="form-control-static" data-bind="text: $data"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /ko -->
+        <!-- ko if: licenseStatus.IsCommercial -->
+        <div data-bind="text: 'Version: ' + licenseStatus.Attributes.version"></div>
+        <div data-bind="text: 'Bundles: ' + bundleString + '.'"></div>
+        <div data-bind="text: 'RavenFS: ' + licenseStatus.Attributes.ravenfs"></div>
+        <div data-bind="text: 'FIPS compatible: ' + licenseStatus.Attributes.fips"></div>
+        <div data-bind="text: 'Authorization: ' + licenseStatus.Attributes.authorization"></div>
+        <div data-bind="text: 'Max Ram Utilization: ' + licenseStatus.Attributes.maxRamUtilization"></div>
+        <div data-bind="text: 'Max Parallelism: ' + licenseStatus.Attributes.maxParallelism"></div>
+        <div data-bind="text: 'Max Size in MB: ' + licenseStatus.Attributes.maxSizeInMb"></div>
+        <div data-bind="text: 'Windows Clustering Allowed: ' + licenseStatus.Attributes.allowWindowsClustering"></div>
+        <div data-bind="text: 'OEM: ' + licenseStatus.Attributes.OEM"></div>
+        <div data-bind="text: 'Number of Databases: ' + licenseStatus.Attributes.numberOfDatabases"></div>
+        <div data-bind="text: 'Updates Expiration: ' + licenseStatus.Attributes.updatesExpiration"></div>
+        <!-- /ko -->
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bind="click: ok">OK</button>
+    </div>
+</div>

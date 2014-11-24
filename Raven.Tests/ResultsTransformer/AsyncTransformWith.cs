@@ -6,6 +6,9 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client;
 using Raven.Client.Indexes;

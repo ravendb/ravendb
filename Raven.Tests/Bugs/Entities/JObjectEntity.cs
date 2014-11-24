@@ -1,4 +1,6 @@
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -19,7 +21,7 @@ namespace Raven.Tests.Bugs.Entities
 
 				using(var s = store.OpenSession())
 				{
-					var jObject = s.Advanced.LuceneQuery<RavenJObject>().WaitForNonStaleResults().First();
+                    var jObject = s.Advanced.DocumentQuery<RavenJObject>().WaitForNonStaleResults().First();
 					Assert.Equal("Ayende", jObject.Value<string>("Name"));
 				}
 			}

@@ -7,7 +7,8 @@ namespace Raven.Backup
     class Program
     {
         private static bool doReadKeyOnExit;
-        private BackupOperation op;
+        private BackupParameters op;
+        private BackupOperationDispatcher dispatcher;
         private OptionSet optionSet;
 
 	    static void Main(string[] args)
@@ -18,7 +19,7 @@ namespace Raven.Backup
             program.ParseArguments(args);
             program.EnsureMinimalParameters();
 
-            var backupOperationSucceeded = program.PerformBackup();
+	        var backupOperationSucceeded = program.PerformBackup();
 
             if (doReadKeyOnExit) 
 				Console.ReadKey();
@@ -27,13 +28,20 @@ namespace Raven.Backup
             Environment.Exit(exitCode);
         }
 
+        private bool PerformBackup()
+        {
+            return dispatcher.PerformBackup(op);
+        }
+
         private void Initialize()
         {
-	        op = new BackupOperation
+	        op = new BackupParameters()
 	        {
 		        NoWait = false,
 		        Incremental = false
 	        };
+
+            dispatcher = new BackupOperationDispatcher();
 
 	        optionSet = new OptionSet
 	        {
@@ -42,12 +50,13 @@ namespace Raven.Backup
 		        {"nowait", "Return immediately without waiting for a response from the server", _ => op.NoWait = true},
 		        {"readkey", "Specifying this flag will make the utility wait for key press before exiting.", _ => doReadKeyOnExit = true},
 
-				{"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => op.Database = value},
+				{"d|database:", "The database to operate on. If no specified, the operations will be on the default database unless filesystem option is set.", value => op.Database = value},
+                {"f|filesystem:", "The filesystem to operate on.", value => op.Filesystem = value},
 				{"u|user|username:", "The username to use when the database requires the client to authenticate.", value => op.Credentials.UserName = value},
 				{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => op.Credentials.Password = value},
 				{"domain:", "The domain to use when the database requires the client to authenticate.", value => op.Credentials.Domain = value},
 				{"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => op.ApiKey = value},
-		        {"incremental", "When specified, the backup process will be incremental when done to a folder where a previous backup lies. If dest is an empty folder, or it does not exist, a full backup will be created. For incremental backups to work, the configuration option Raven/Esent/CircularLog must be set to false.", _ => op.Incremental = true},
+		        {"incremental", "When specified, the backup process will be incremental when done to a folder where a previous backup lies. If dest is an empty folder, or it does not exist, a full backup will be created. For incremental backups to work, the configuration option Raven/Esent/CircularLog must be set to false for Esent storage or option Raven/Voron/AllowIncrementalBackups must be set to true for Voron.", _ => op.Incremental = true},
 				{"timeout:", "The timeout to use for requests", s => op.Timeout = int.Parse(s)},
 			    {"h|?|help", v =>
 			    {
@@ -96,28 +105,6 @@ namespace Raven.Backup
             }
         }
 
-        private bool PerformBackup()
-        {
-	        try
-	        {
-		        if (op.InitBackup())
-		        {
-			        op.WaitForBackup();
-			        return true;
-		        }
-	        }
-	        catch (Exception ex)
-	        {
-		        Console.WriteLine(ex);
-	        }
-	        finally
-	        {
-		        op.Dispose();
-	        }
-
-            return false;
-        }
-
         private void PrintUsage()
         {
             Console.WriteLine(
@@ -126,7 +113,7 @@ Backup utility for RavenDB
 ----------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
-Command line options:", SystemTime.UtcNow.Year);
+Command line databaseOptions:", SystemTime.UtcNow.Year);
 
             optionSet.WriteOptionDescriptions(Console.Out);
 

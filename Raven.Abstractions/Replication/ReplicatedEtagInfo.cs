@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+
 using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Replication
@@ -11,6 +13,8 @@ namespace Raven.Abstractions.Replication
 	{
 		public string DestinationUrl { get; set; }
 		public Etag DocumentEtag { get; set; }
+
+        [Obsolete("Use RavenFS instead.")]
 		public Etag AttachmentEtag { get; set; } 
 	}
 }

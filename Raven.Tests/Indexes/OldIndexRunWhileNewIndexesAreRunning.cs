@@ -6,6 +6,8 @@
 using System.Threading;
 using Raven.Abstractions.Indexing;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -15,8 +17,8 @@ namespace Raven.Tests.Indexes
 	{
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
-			configuration.MaxNumberOfItemsToIndexInSingleBatch = 128;
-			configuration.InitialNumberOfItemsToIndexInSingleBatch = 128;
+			configuration.MaxNumberOfItemsToProcessInSingleBatch = 128;
+			configuration.InitialNumberOfItemsToProcessInSingleBatch = 128;
 		}
 
 		[Fact]
@@ -73,7 +75,7 @@ namespace Raven.Tests.Indexes
 					session.Advanced.MaxNumberOfRequestsPerSession = 1000;
 					while (true) // we have to wait until we _start_ indexing
 					{
-						var objects = session.Advanced.LuceneQuery<object>("test").Take(1).ToList();
+                        var objects = session.Advanced.DocumentQuery<object>("test").Take(1).ToList();
 						if (objects.Count > 0)
 							break;
 						Thread.Sleep(10);

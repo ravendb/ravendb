@@ -12,6 +12,7 @@ namespace Raven.Abstractions.Data
 	/// <summary>
 	/// Attachment data and metadata
 	/// </summary>
+    [Obsolete("Use RavenFS instead.")]
 	public class Attachment
 	{
 		/// <summary>
@@ -21,8 +22,9 @@ namespace Raven.Abstractions.Data
 		public Func<Stream> Data { get; set; }
 
 		/// <summary>
-		/// The size of the attachment
+		/// The size of the attachment.
 		/// </summary>
+		/// <remarks>The max size of an attachment can be 2GB.</remarks>
 		public int Size { get; set; }
 
 		/// <summary>

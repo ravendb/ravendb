@@ -6,17 +6,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Principal;
-using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.Win32;
-using Raven.Database.Util;
 using Raven.Setup.CustomActions.Infrastructure.IIS;
 
 namespace Raven.Setup.CustomActions
 {
+	using System.Diagnostics;
+
 	public class IISActions
 	{
 		private const string WebSiteProperty = "WEBSITE";
@@ -101,7 +100,9 @@ namespace Raven.Setup.CustomActions
 				{
 					session["WEBSITE_ID"] = AsteriskSiteId;
 					session["WEBSITE_DEFAULT_APPPOOL"] = "DefaultAppPool";
+					session.DoAction("SetNewWebSiteDirectory");
 				}
+
 				session.DoAction("SetIISInstallFolder");
 
                 return ActionResult.Success;
@@ -313,45 +314,6 @@ namespace Raven.Setup.CustomActions
 			return ActionResult.Success;
 		}
 
-		[CustomAction]
-		public static ActionResult SetupPerformanceCountersForIISUser(Session session)
-		{
-			try
-			{
-				PerformanceCountersUtils.EnsurePerformanceCountersMonitoringAccess(string.Format("{0}\\{1}", session["WEB_APP_POOL_IDENTITY_DOMAIN"], session["WEB_APP_POOL_IDENTITY_NAME"]));
-			}
-			catch (Exception ex)
-			{
-				Log.Error(session, "Exception was thrown during SetupPerformanceCountersForIISUser:" + ex);
-
-				var sb =
-					new StringBuilder(
-						string.Format("Warning: The access to performance counters has not been configured for the account '{0}\\{1}'.{2}",
-						              session["WEB_APP_POOL_IDENTITY_DOMAIN"], session["WEB_APP_POOL_IDENTITY_NAME"], Environment.NewLine));
-
-
-				if (ex is IdentityNotMappedException)
-				{
-					sb.Append("The account does not exist.");
-				}
-				else
-				{
-					sb.Append("Exception type: " + ex.GetType());
-				}
-
-				if (string.IsNullOrEmpty(session["LOG_FILE_PATH"]) == false)
-				{
-					sb.Append(string.Format("{0}For more details check the log file:{0}{1}", Environment.NewLine, session["LOG_FILE_PATH"]));
-				}
-
-				MessageBox.Show(sb.ToString(), "Failed to grant permissions", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-
-				return ActionResult.Success;
-			}
-
-			return ActionResult.Success;
-		}
-
 		private static bool IsIIS7Upwards
         {
             get
@@ -378,8 +340,6 @@ namespace Raven.Setup.CustomActions
 					{
 						session["WEBSITE_PATH"] = fileDialog.SelectedPath;
 					}
-
-					session.DoAction("SetNewWebSiteDirectory");
 				});
 				task.SetApartmentState(ApartmentState.STA);
 				task.Start();

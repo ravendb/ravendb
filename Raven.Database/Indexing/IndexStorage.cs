@@ -26,6 +26,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -56,12 +57,13 @@ namespace Raven.Database.Indexing
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly string path;
-		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.OrdinalIgnoreCase);
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private static readonly ILog startupLog = LogManager.GetLogger(typeof(IndexStorage).FullName + ".Startup");
 		private readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();
 		private DateTime latestPersistedQueryTime;
 		private readonly FileStream crashMarker;
+		private ConcurrentDictionary<int, Index> indexes =
+			new ConcurrentDictionary<int, Index>();
 
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
 		{
@@ -109,11 +111,9 @@ namespace Raven.Database.Indexing
 			if (indexName == null) 
                 throw new ArgumentNullException("indexName");
 
-			var fixedName = indexDefinitionStorage.FixupIndexName(indexName);
-
 			startupLog.Debug("Loading saved index {0}", indexName);
 
-			var indexDefinition = indexDefinitionStorage.GetIndexDefinition(fixedName);
+			var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexName);
 			if (indexDefinition == null)
 				return;
 
@@ -124,11 +124,10 @@ namespace Raven.Database.Indexing
 			while (true)
 			{
 				Lucene.Net.Store.Directory luceneDirectory = null;
-
 				try
 				{
 					luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
-					indexImplementation = CreateIndexImplementation(fixedName, indexDefinition, luceneDirectory);
+					indexImplementation = CreateIndexImplementation(indexDefinition, luceneDirectory);
 
                     CheckIndexState(luceneDirectory, indexDefinition, indexImplementation, resetTried);
 
@@ -139,18 +138,18 @@ namespace Raven.Database.Indexing
 						simpleIndex.RemoveDirectlyFromIndex(keysToDeleteAfterRecovery, GetLastEtagForIndex(simpleIndex));
 					}
 
-					LoadExistingSuggestionsExtentions(fixedName, indexImplementation);
+					LoadExistingSuggestionsExtentions(indexDefinition.Name, indexImplementation);
 
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
-						var indexStats = accessor.Indexing.GetIndexStats(fixedName);
+						IndexStats indexStats = accessor.Indexing.GetIndexStats(indexDefinition.IndexId);
 						if (indexStats != null)
 							indexImplementation.Priority = indexStats.Priority;
 
-						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", fixedName);
+						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
 						if (read == null)
 						{
-							if(IsIdleAutoIndex(indexImplementation))
+							if (IsIdleAutoIndex(indexImplementation))
 								indexImplementation.MarkQueried(); // prevent index abandoning right after startup
 
 							return;
@@ -158,7 +157,7 @@ namespace Raven.Database.Indexing
 
 						var dateTime = read.Data.Value<DateTime>("LastQueryTime");
 
-						if(IsIdleAutoIndex(indexImplementation) && SystemTime.UtcNow - dateTime > configuration.TimeToWaitBeforeRunningAbandonedIndexes)
+						if (IsIdleAutoIndex(indexImplementation) && SystemTime.UtcNow - dateTime > configuration.TimeToWaitBeforeRunningAbandonedIndexes)
 							indexImplementation.MarkQueried(); // prevent index abandoning right after startup
 						else
 							indexImplementation.MarkQueried(dateTime);
@@ -179,17 +178,17 @@ namespace Raven.Database.Indexing
 						recoveryTried = true;
 						startupLog.WarnException("Could not open index " + indexName + ". Trying to recover index", e);
 
-						keysToDeleteAfterRecovery = TryRecoveringIndex(fixedName, indexDefinition, luceneDirectory);
+						keysToDeleteAfterRecovery = TryRecoveringIndex(indexDefinition, luceneDirectory);
 					}
 					else
 					{
 						resetTried = true;
 						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, forcibly resetting index", e);
-						TryResettingIndex(fixedName, indexDefinition);
+						TryResettingIndex(indexName, indexDefinition);
 					}
 				}
 			}
-			indexes.TryAdd(fixedName, indexImplementation);
+			indexes.TryAdd(indexDefinition.IndexId, indexImplementation);
 		}
 
 	    private void CheckIndexState(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition, Index index, bool resetTried)
@@ -201,7 +200,7 @@ namespace Raven.Database.Indexing
 			// 2. If no 'LastEtag' in commitData then we consider it an invalid index
 			// 3. If 'LastEtag' is present (and valid), then resetting to it (if it is lower than lastStoredEtag)
 
-			var commitData = IndexReader.GetCommitUserData(directory);
+            var commitData = IndexReader.GetCommitUserData(directory);
 
 		    if (index.IsMapReduce)
 				CheckMapReduceIndexState(commitData, resetTried);
@@ -244,25 +243,33 @@ namespace Raven.Database.Indexing
 
 		private static bool IsIdleAutoIndex(Index index)
 		{
-			return index.name.StartsWith("Auto/") && index.Priority == IndexingPriority.Idle;
+			return index.PublicName.StartsWith("Auto/") && index.Priority == IndexingPriority.Idle;
 		}
 
 		private void TryResettingIndex(string indexName, IndexDefinition indexDefinition)
 		{
 			try
 			{
-				documentDatabase.TransactionalStorage.Batch(accessor =>
+				// we have to defer the work here until the database is actually ready for work
+				documentDatabase.OnIndexingWiringComplete += () =>
 				{
-                    accessor.Indexing.DeleteIndex(indexName, documentDatabase.WorkContext.CancellationToken);
-					accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
-				});
+					try
+					{
+						documentDatabase.Indexes.DeleteIndex(indexName);
+						documentDatabase.Indexes.PutNewIndexIntoStorage(indexName, indexDefinition);
+					}
+					catch (Exception e)
+					{
+						throw new InvalidOperationException("Could not finalize reseting of index: " + indexName, e);
+					}
+				};
 
-				var indexDirectory = indexName;
-				var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
+				var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString(CultureInfo.InvariantCulture));
 				IOExtensions.DeleteDirectory(indexFullPath);
 
                 var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
                 IOExtensions.DeleteDirectory(suggestionsForIndex);
+
 			}
 			catch (Exception exception)
 			{
@@ -270,7 +277,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private string[] TryRecoveringIndex(string indexName, IndexDefinition indexDefinition,
+		private string[] TryRecoveringIndex(IndexDefinition indexDefinition,
 											Lucene.Net.Store.Directory luceneDirectory)
 		{
 			string[] keysToDeleteAfterRecovery = null;
@@ -288,7 +295,7 @@ namespace Raven.Database.Indexing
 			}
 			else
 			{
-				RegenerateMapReduceIndex(luceneDirectory, indexDefinition.Name, indexDefinition);
+				RegenerateMapReduceIndex(luceneDirectory, indexDefinition);
 			}
 			return keysToDeleteAfterRecovery;
 		}
@@ -309,16 +316,18 @@ namespace Raven.Database.Indexing
 		                var key = Path.GetFileName(directory);
 		                var decodedKey = MonoHttpUtility.UrlDecode(key);
 		                var lastIndexOfDash = decodedKey.LastIndexOf('-');
-		                var accuracy = float.Parse(decodedKey.Substring(lastIndexOfDash + 1));
+						var accuracy = float.Parse(decodedKey.Substring(lastIndexOfDash + 1), CultureInfo.InvariantCulture);
 		                var lastIndexOfDistance = decodedKey.LastIndexOf('-', lastIndexOfDash - 1);
 		                StringDistanceTypes distanceType;
 		                Enum.TryParse(decodedKey.Substring(lastIndexOfDistance + 1, lastIndexOfDash - lastIndexOfDistance - 1),
 		                              true, out distanceType);
 		                var field = decodedKey.Substring(0, lastIndexOfDistance);
 		                var extension = new SuggestionQueryIndexExtension(
+							indexImplementation,
 		                    documentDatabase.WorkContext,
-		                    Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.IndexReader.Directory() is RAMDirectory,
+							Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key),
 		                    SuggestionQueryRunner.GetStringDistance(distanceType),
+							searcher.IndexReader.Directory() is RAMDirectory,
 		                    field,
 		                    accuracy);
 		                indexImplementation.SetExtension(key, extension);
@@ -341,10 +350,7 @@ namespace Raven.Database.Indexing
 		}
 
 
-		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(
-			IndexDefinition indexDefinition,
-			string indexName = null,
-			bool createIfMissing = true)
+		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(IndexDefinition indexDefinition, bool createIfMissing = true)
 		{
 			Lucene.Net.Store.Directory directory;
 			if (configuration.RunInMemory ||
@@ -358,14 +364,14 @@ namespace Raven.Database.Indexing
 			}
 			else
 			{
-				var indexDirectory = indexName ?? IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
-				var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
+				var indexDirectory = indexDefinition.IndexId.ToString();
+				var indexFullPath = Path.Combine(path, indexDirectory);
 				directory = new LuceneCodecDirectory(indexFullPath, documentDatabase.IndexCodecs.OfType<AbstractIndexCodec>());
 
 				if (!IndexReader.IndexExists(directory))
 				{
 					if (createIfMissing == false)
-						throw new InvalidOperationException("Index does not exists: " + indexDirectory);
+						throw new InvalidOperationException(string.Format("Index directory '{0}' does not exists for '{1}' index.", indexFullPath, indexDefinition.Name));
 
 					WriteIndexVersion(directory, indexDefinition);
 
@@ -374,7 +380,7 @@ namespace Raven.Database.Indexing
 				}
 				else
 				{
-					EnsureIndexVersionMatches(indexName, directory, indexDefinition);
+					EnsureIndexVersionMatches(directory, indexDefinition);
 					if (directory.FileExists("write.lock"))// force lock release, because it was still open when we shut down
 					{
 						IndexWriter.Unlock(directory);
@@ -384,9 +390,9 @@ namespace Raven.Database.Indexing
 					if (directory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
 					{
 						if (configuration.ResetIndexOnUncleanShutdown)
-							throw new InvalidOperationException("Rude shutdown detected on: " + indexDirectory);
+							throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", indexDefinition.Name, indexFullPath));
 
-						CheckIndexAndTryToFix(directory, indexDirectory);
+						CheckIndexAndTryToFix(directory, indexDefinition);
 						directory.DeleteFile("writing-to-index.lock");
 					}
 				}
@@ -396,10 +402,10 @@ namespace Raven.Database.Indexing
 
 		}
 
-		private void RegenerateMapReduceIndex(Lucene.Net.Store.Directory directory, string indexName, IndexDefinition indexDefinition)
+		private void RegenerateMapReduceIndex(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
 			// remove old index data
-			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
+			var dirOnDisk = Path.Combine(path, indexDefinition.IndexId.ToString());
 			IOExtensions.DeleteDirectory(dirOnDisk);
 
 			// initialize by new index
@@ -416,7 +422,7 @@ namespace Raven.Database.Indexing
 
 				do
 				{
-					reduceKeysAndTypes = actions.MapReduce.GetReduceKeysAndTypes(indexName, start, take).ToList();
+					reduceKeysAndTypes = actions.MapReduce.GetReduceKeysAndTypes(indexDefinition.IndexId, start, take).ToList();
 					start += take;
 
 					var keysToScheduleOnLevel2 =
@@ -429,7 +435,7 @@ namespace Raven.Database.Indexing
 
 					foreach (var reduceKey in keysToScheduleOnLevel0.Select(x => x.ReduceKey))
 					{
-						var mappedBuckets = actions.MapReduce.GetMappedBuckets(indexName, reduceKey).Distinct();
+						var mappedBuckets = actions.MapReduce.GetMappedBuckets(indexDefinition.IndexId, reduceKey).Distinct();
 
 						itemsToScheduleOnLevel0.AddRange(mappedBuckets.Select(x => new ReduceKeyAndBucket(x, reduceKey)));
 
@@ -438,13 +444,13 @@ namespace Raven.Database.Indexing
 
 					foreach (var itemToReduce in itemsToScheduleOnLevel2)
 					{
-						actions.MapReduce.ScheduleReductions(indexName, 2, itemToReduce);
+						actions.MapReduce.ScheduleReductions(indexDefinition.IndexId, 2, itemToReduce);
 						actions.General.MaybePulseTransaction();
 					}
 
 					foreach (var itemToReduce in itemsToScheduleOnLevel0)
 					{
-						actions.MapReduce.ScheduleReductions(indexName, 0, itemToReduce);
+						actions.MapReduce.ScheduleReductions(indexDefinition.IndexId, 0, itemToReduce);
 						actions.General.MaybePulseTransaction();
 					}
 
@@ -456,7 +462,7 @@ namespace Raven.Database.Indexing
 		{
 			documentDatabase.TransactionalStorage.Batch(
 				accessor =>
-				accessor.Indexing.UpdateLastIndexed(indexDefinition.Name, lastIndexedEtag, timestamp));
+				accessor.Indexing.UpdateLastIndexed(indexDefinition.IndexId, lastIndexedEtag, timestamp));
 		}
 
         internal Etag GetLastEtagForIndex(Index index)
@@ -465,7 +471,7 @@ namespace Raven.Database.Indexing
 				return null;
 
             IndexStats stats = null;
-            documentDatabase.TransactionalStorage.Batch(accessor => stats = accessor.Indexing.GetIndexStats(index.name));
+			documentDatabase.TransactionalStorage.Batch(accessor => stats = accessor.Indexing.GetIndexStats(index.IndexId));
 
 	        return stats != null ? stats.LastIndexedEtag : Etag.Empty;
         }
@@ -480,7 +486,7 @@ namespace Raven.Database.Indexing
 		public static void WriteIndexVersion(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
 			var version = IndexVersion;
-			if(indexDefinition.IsMapReduce)
+			if (indexDefinition.IsMapReduce)
 			{
 				version = MapReduceIndexVersion;
 			}
@@ -491,30 +497,30 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static void EnsureIndexVersionMatches(string indexName, Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
+		private static void EnsureIndexVersionMatches(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
 			var versionToCheck = IndexVersion;
-			if(indexDefinition.IsMapReduce)
+			if (indexDefinition.IsMapReduce)
 			{
 				versionToCheck = MapReduceIndexVersion;
 			}
 			var indexVersion = IndexVersionFileName(indexDefinition);
 			if (directory.FileExists(indexVersion) == false)
 			{
-				throw new InvalidOperationException("Could not find " + indexVersion + " " + indexName + ", resetting index");
+				throw new InvalidOperationException("Could not find " + indexVersion + " " + indexDefinition.IndexId + ", resetting index");
 			}
 			using (var indexInput = directory.OpenInput(indexVersion))
 			{
 				var versionFromDisk = indexInput.ReadString();
 				if (versionFromDisk != versionToCheck)
-					throw new InvalidOperationException("Index " + indexName + " is of version " + versionFromDisk +
+					throw new InvalidOperationException("Index " + indexDefinition.IndexId + " is of version " + versionFromDisk +
 														" which is not compatible with " + versionToCheck + ", resetting index");
 			}
 		}
 
-		private static void CheckIndexAndTryToFix(Lucene.Net.Store.Directory directory, string indexDirectory)
+		private static void CheckIndexAndTryToFix(Lucene.Net.Store.Directory directory, IndexDefinition indexDefinition)
 		{
-			startupLog.Warn("Unclean shutdown detected on {0}, checking the index for errors. This may take a while.", indexDirectory);
+			startupLog.Warn("Unclean shutdown detected on {0}, checking the index for errors. This may take a while.", indexDefinition.Name);
 
 			var memoryStream = new MemoryStream();
 			var stringWriter = new StreamWriter(memoryStream);
@@ -528,7 +534,7 @@ namespace Raven.Database.Indexing
 			sp.Stop();
 			if (startupLog.IsWarnEnabled)
 			{
-				startupLog.Warn("Checking index {0} took: {1}, clean: {2}", indexDirectory, sp.Elapsed, status.clean);
+				startupLog.Warn("Checking index {0} took: {1}, clean: {2}", indexDefinition.Name, sp.Elapsed, status.clean);
 				memoryStream.Position = 0;
 
 				log.Warn(new StreamReader(memoryStream).ReadToEnd());
@@ -537,10 +543,10 @@ namespace Raven.Database.Indexing
 			if (status.clean)
 				return;
 
-			startupLog.Warn("Attempting to fix index: {0}", indexDirectory);
+			startupLog.Warn("Attempting to fix index: {0}", indexDefinition.Name);
 			sp.Restart();
 			checkIndex.FixIndex(status);
-			startupLog.Warn("Fixed index {0} in {1}", indexDirectory, sp.Elapsed);
+			startupLog.Warn("Fixed index {0} in {1}", indexDefinition.Name, sp.Elapsed);
 		}
 
 		public void StoreCommitPoint(string indexName, IndexCommitPoint indexCommit)
@@ -585,13 +591,13 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void AddDeletedKeysToCommitPoints(string indexName, string[] deletedKeys)
+		public void AddDeletedKeysToCommitPoints(IndexDefinition indexDefinition, string[] deletedKeys)
 		{
-			var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexName));
+			var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString());
 
 			var existingCommitPoints = IndexCommitPointDirectory.ScanAllCommitPointsDirectory(indexFullPath);
 
-			foreach (var commitPointDirectory in existingCommitPoints.Select(commitPoint => new IndexCommitPointDirectory(path, indexName, commitPoint)))
+			foreach (var commitPointDirectory in existingCommitPoints.Select(commitPoint => new IndexCommitPointDirectory(path, indexDefinition.IndexId.ToString(), commitPoint)))
 			{
 				using (var stream = File.Open(commitPointDirectory.DeletedKeysFile, FileMode.OpenOrCreate))
 				{
@@ -615,9 +621,9 @@ namespace Raven.Database.Indexing
 			if (indexDefinition.IsMapReduce)
 				return false;
 
-		    var indexName = indexDefinitionStorage.FixupIndexName(indexDefinition.Name);
+			var indexFullPath = Path.Combine(indexStoragePath, indexDefinition.IndexId.ToString());
 
-			var indexFullPath = Path.Combine(indexStoragePath, MonoHttpUtility.UrlEncode(indexName));
+
 
 			var allCommitPointsFullPath = IndexCommitPointDirectory.GetAllCommitPointsFullPath(indexFullPath);
 
@@ -635,7 +641,7 @@ namespace Raven.Database.Indexing
 			{
 				try
 				{
-					var commitPointDirectory = new IndexCommitPointDirectory(indexStoragePath, indexName,
+					var commitPointDirectory = new IndexCommitPointDirectory(indexStoragePath, indexDefinition.IndexId.ToString(),
 																				commitPointDirectoryName);
 
 					if (TryGetCommitPoint(commitPointDirectory, out indexCommit) == false)
@@ -688,7 +694,7 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception ex)
 				{
-					startupLog.WarnException("Could not recover an index named '" + indexDefinition.Name +
+					startupLog.WarnException("Could not recover an index named '" + indexDefinition.IndexId +
 									   "'from segments of the following generation " + commitPointDirectoryName, ex);
 				}
 			}
@@ -759,35 +765,40 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)
+		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, IndexDefinition indexDefinition)
 		{
-			var newDir = new LuceneCodecDirectory(Path.Combine(path, MonoHttpUtility.UrlEncode(IndexDefinitionStorage.FixupIndexName(indexName, path))), documentDatabase.IndexCodecs.OfType<AbstractIndexCodec>());
+			var newDir = new LuceneCodecDirectory(Path.Combine(path, indexDefinition.IndexId.ToString()), documentDatabase.IndexCodecs.OfType<AbstractIndexCodec>());
 			Lucene.Net.Store.Directory.Copy(ramDir, newDir, false);
 			return newDir;
 		}
 
-		private Index CreateIndexImplementation(string directoryPath, IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
+		private Index CreateIndexImplementation(IndexDefinition indexDefinition, Lucene.Net.Store.Directory directory)
 		{
-			var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
+			var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.IndexId);
 			var indexImplementation = indexDefinition.IsMapReduce
-										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext)
-										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator, documentDatabase.WorkContext);
+										? (Index)new MapReduceIndex(directory, indexDefinition.IndexId, indexDefinition, viewGenerator, documentDatabase.WorkContext)
+										: new SimpleIndex(directory, indexDefinition.IndexId, indexDefinition, viewGenerator, documentDatabase.WorkContext);
 
 			configuration.Container.SatisfyImportsOnce(indexImplementation);
 
 			return indexImplementation;
 		}
 
-		public string[] Indexes
+		public int[] Indexes
 		{
 			get { return indexes.Keys.ToArray(); }
+		}
+
+		public string[] IndexNames
+		{
+			get { return indexes.Values.Select(x => x.PublicName).ToArray(); }
 		}
 
 		public bool HasIndex(string index)
 		{
 			if (index == null)
 				return false;
-			return indexes.ContainsKey(index);
+			return indexes.Any(x => String.Compare(index, x.Value.PublicName, StringComparison.OrdinalIgnoreCase) == 0);
 		}
 
 		public void Dispose()
@@ -812,68 +823,82 @@ namespace Raven.Database.Indexing
 
 		public void DeleteIndex(string name)
 		{
-			Index value;
-			if (indexes.TryGetValue(name, out value) == false)
+			var value = TryIndexByName(name);
+			if (value == null)
+				return;
+			DeleteIndex(value.indexId);
+		}
+
+		public void DeleteIndex(int id)
 			{
-				log.Debug("Ignoring delete for non existing index {0}", name);
+			var value = GetIndexInstance(id);
+			if (value == null)
+			{
+				log.Debug("Ignoring delete for non existing index {0}", id);
 				return;
 			}
-			log.Debug("Deleting index {0}", name);
+			documentDatabase.TransactionalStorage.Batch(accessor =>
+			  accessor.Lists.Remove("Raven/Indexes/QueryTime", value.PublicName));
+			log.Debug("Deleting index {0}", value.PublicName);
 			value.Dispose();
 			Index ignored;
-			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(name));
 
-			documentDatabase.TransactionalStorage.Batch(accessor =>
-				accessor.Lists.Remove("Raven/Indexes/QueryTime", name));
-
-			if (!indexes.TryRemove(name, out ignored) || !Directory.Exists(dirOnDisk))
+			var dirOnDisk = Path.Combine(path, id.ToString());
+			if (!indexes.TryRemove(id, out ignored) || !Directory.Exists(dirOnDisk))
 				return;
 
+			UpdateIndexMappingFile();
+		}
+
+		public void DeleteIndexData(int id)
+		{
+			var dirOnDisk = Path.Combine(path, id.ToString(CultureInfo.InvariantCulture));
 			IOExtensions.DeleteDirectory(dirOnDisk);
 		}
 
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)
 		{
-			var fixedName = indexDefinitionStorage.FixupIndexName(indexDefinition.Name);
-			log.Debug("Creating index {0} with encoded name {1}", indexDefinition.Name, fixedName);
+			log.Debug("Creating index {0} with id {1}", indexDefinition.IndexId, indexDefinition.Name);
 
 			IndexDefinitionStorage.ResolveAnalyzers(indexDefinition);
-			AssertAnalyzersValid(indexDefinition);
 
-			indexes.AddOrUpdate(fixedName, n =>
+			if (TryIndexByName(indexDefinition.Name) != null)
 			{
-				var directory = OpenOrCreateLuceneDirectory(indexDefinition, fixedName);
-				return CreateIndexImplementation(fixedName, indexDefinition, directory);
-			}, (s, index) => index);
+				throw new InvalidOperationException("Index " + indexDefinition.Name + " already exists");
 		}
 
-		private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
+			indexes.AddOrUpdate(indexDefinition.IndexId, n =>
 		{
-			foreach (var analyzer in from analyzer in indexDefinition.Analyzers
-									 let analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzer.Value) ?? Type.GetType(analyzer.Value, throwOnError: false)
-									 where analyzerType == null
-									 select analyzer)
-			{
-				throw new ArgumentException(string.Format("Could not create analyzer for field: '{0}' because the type '{1}' was not found", analyzer.Key, analyzer.Value));
+			var directory = OpenOrCreateLuceneDirectory(indexDefinition);
+			return CreateIndexImplementation(indexDefinition, directory);
+		}, (s, index) => index);
+
+			UpdateIndexMappingFile();
 			}
-		}
 
-		public Query GetLuceneQuery(string index, IndexQuery query, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
+		public Query GetDocumentQuery(string index, IndexQuery query, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
 		{
-			Index value;
-			if (indexes.TryGetValue(index, out value) == false)
+			var value = TryIndexByName(index);
+			if (value == null)
 			{
 				log.Debug("Query on non existing index {0}", index);
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
-			var fieldsToFetch = new FieldsToFetch(new string[0], AggregationOperation.None, null);
-			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch, indexQueryTriggers).GetLuceneQuery();
+			var fieldsToFetch = new FieldsToFetch(new string[0], false, null);
+			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch, indexQueryTriggers).GetDocumentQuery();
+		}
+
+		private Index TryIndexByName(string name)
+		{
+			return indexes.Where(index => String.Compare(index.Value.PublicName, name, StringComparison.OrdinalIgnoreCase) == 0)
+			.Select(x => x.Value)
+			.FirstOrDefault();
 		}
 
 		public IEnumerable<IndexQueryResult> Query(string index, IndexQuery query, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, CancellationToken token)
 		{
-			Index value;
-			if (indexes.TryGetValue(index, out value) == false)
+			Index value = TryIndexByName(index);
+			if (value == null)
 			{
 				log.Debug("Query on non existing index '{0}'", index);
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
@@ -887,7 +912,7 @@ namespace Raven.Database.Indexing
 					value.Priority = IndexingPriority.Normal;
 					try
 					{
-						accessor.Indexing.SetIndexPriority(index, IndexingPriority.Normal);
+						accessor.Indexing.SetIndexPriority(value.indexId, IndexingPriority.Normal);
 					}
 					catch (Exception e)
 					{
@@ -897,9 +922,9 @@ namespace Raven.Database.Indexing
 						// we explciitly ignore write conflicts here, it is okay if we got set twice (two concurrent queries, or setting while indexing).
 					}
 					documentDatabase.WorkContext.ShouldNotifyAboutWork(() => "Idle index queried");
-					documentDatabase.RaiseNotifications(new IndexChangeNotification()
+					documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification()
 					{
-						Name = value.name,
+						Name = value.PublicName,
 						Type = IndexChangeTypes.IndexPromotedFromIdle
 					});
 				});
@@ -914,19 +939,20 @@ namespace Raven.Database.Indexing
 		}
 
 		public IEnumerable<RavenJObject> IndexEntires(
-			string index,
+			string indexName,
 			IndexQuery query,
+			List<string> reduceKeys,
 			OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers,
 			Reference<int> totalResults)
 		{
-			Index value;
-			if (indexes.TryGetValue(index, out value) == false)
+			Index value = TryIndexByName(indexName);
+			if (value == null)
 			{
-				log.Debug("Query on non existing index '{0}'", index);
-				throw new InvalidOperationException("Index '" + index + "' does not exists");
+				log.Debug("Query on non existing index '{0}'", indexName);
+				throw new InvalidOperationException("Index '" + indexName + "' does not exists");
 			}
 
-			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null, AggregationOperation.None, null), indexQueryTriggers);
+			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null, false, null), indexQueryTriggers, reduceKeys);
 			return indexQueryOperation.IndexEntries(totalResults);
 		}
 
@@ -947,10 +973,10 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-		public void RemoveFromIndex(string index, string[] keys, WorkContext context)
+		public void RemoveFromIndex(int index, string[] keys, WorkContext context)
 		{
-			Index value;
-			if (indexes.TryGetValue(index, out value) == false)
+			Index value = indexes[index];
+			if (value == null)
 			{
 				log.Debug("Removing from non existing index '{0}', ignoring", index);
 				return;
@@ -958,12 +984,13 @@ namespace Raven.Database.Indexing
 			value.Remove(keys, context);
 			context.RaiseIndexChangeNotification(new IndexChangeNotification
 			{
-				Name = index,
+				Name = value.PublicName,
 				Type = IndexChangeTypes.RemoveFromIndex
 			});
 		}
 
-		public void Index(string index,
+		[CLSCompliant(false)]
+		public void Index(int index,
 			AbstractViewGenerator viewGenerator,
 			IndexingBatch batch,
 			WorkContext context,
@@ -982,14 +1009,15 @@ namespace Raven.Database.Indexing
 				value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp);
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
-					Name = index,
+					Name = value.PublicName,
 					Type = IndexChangeTypes.MapCompleted
 				});
 			}
 		}
 
+		[CLSCompliant(false)]
 		public void Reduce(
-			string index,
+			int index,
 			AbstractViewGenerator viewGenerator,
 			IEnumerable<IGrouping<int, object>> mappedResults,
 			int level,
@@ -998,8 +1026,8 @@ namespace Raven.Database.Indexing
 			HashSet<string> reduceKeys,
 			int inputCount)
 		{
-			Index value;
-			if (indexes.TryGetValue(index, out value) == false)
+			Index value = indexes[index];
+			if (value == null)
 			{
 				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
 				return;
@@ -1016,7 +1044,7 @@ namespace Raven.Database.Indexing
 				reduceDocuments.ExecuteReduction();
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
-					Name = index,
+					Name = value.PublicName,
 					Type = IndexChangeTypes.ReduceCompleted
 				});
 			}
@@ -1027,9 +1055,9 @@ namespace Raven.Database.Indexing
 			return GetIndexByName(indexName).GetCurrentStateHolder();
 		}
 
-		public IDisposable GetCurrentIndexSearcher(string indexName, out IndexSearcher searcher)
+		public IDisposable GetCurrentIndexSearcher(int indexId, out IndexSearcher searcher)
 		{
-			return GetIndexByName(indexName).GetSearcher(out searcher);
+			return GetIndexInstance(indexId).GetSearcher(out searcher);
 		}
 
 		public IDisposable GetCurrentIndexSearcherAndTermDocs(string indexName, out IndexSearcher searcher, out RavenJObject[] termsDocs)
@@ -1039,9 +1067,7 @@ namespace Raven.Database.Indexing
 
 		private Index GetIndexByName(string indexName)
 		{
-			var result = indexes.Where(index => String.Compare(index.Key, indexName, StringComparison.OrdinalIgnoreCase) == 0)
-				.Select(x => x.Value)
-				.FirstOrDefault();
+			var result = TryIndexByName(indexName);
 			if (result == null)
 				throw new InvalidOperationException(string.Format("Index '{0}' does not exist", indexName));
 			return result;
@@ -1054,11 +1080,82 @@ namespace Raven.Database.Indexing
 				if ((SystemTime.UtcNow - value.LastIndexTime).TotalMinutes < 1)
 					continue;
 
+				try
+				{
                 value.Flush(value.GetLastEtagFromStats());
+			}
+				catch (Exception)
+				{
+					value.IncrementWriteErrors();
+					throw;
+				}
 			}
 
 			SetUnusedIndexesToIdle();
 			UpdateLatestPersistedQueryTime();
+			DeleteSurpassedAutoIndexes();
+		}
+
+		public bool IsIndexStale(string indexName, LastCollectionEtags lastCollectionEtags)
+		{
+			var index = TryIndexByName(indexName);
+
+			if(index == null)
+				throw new InvalidOperationException("Could not find index " + indexName);
+
+			return IsIndexStale(index.IndexId, lastCollectionEtags);
+		}
+
+		public bool IsIndexStale(int indexId, LastCollectionEtags lastCollectionEtags)
+		{
+			bool isStale = false;
+
+			documentDatabase.TransactionalStorage.Batch(actions =>
+			{
+				Index indexInstance = GetIndexInstance(indexId);
+
+				isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
+
+				if (isStale && actions.Staleness.IsIndexStaleByTask(indexId, null) == false && actions.Staleness.IsReduceStale(indexId) == false)
+				{
+					var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexId);
+					if (viewGenerator == null)
+						return;
+
+					var collectionNames = viewGenerator.ForEntityNames.ToList();
+					var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
+
+					if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
+						isStale = false;
+				}
+			});
+
+			return isStale;
+		}
+
+		private void DeleteSurpassedAutoIndexes()
+		{
+			if (indexes.Any(x => x.Value.PublicName.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)) == false)
+				return;
+
+			var mergeSuggestions = indexDefinitionStorage.ProposeIndexMergeSuggestions();
+
+			foreach (var mergeSuggestion in mergeSuggestions.Suggestions)
+			{
+				if(string.IsNullOrEmpty(mergeSuggestion.SurpassingIndex))
+					continue;
+
+				if (mergeSuggestion.CanDelete.Any(x => x.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)) == false)
+					continue;
+
+				if(IsIndexStale(mergeSuggestion.SurpassingIndex, documentDatabase.LastCollectionEtags))
+					continue;
+
+				foreach (var indexToDelete in mergeSuggestion.CanDelete.Where(x => x.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)))
+				{
+					documentDatabase.Indexes.DeleteIndex(indexToDelete);
+				}
+			}
 		}
 
 		private void UpdateLatestPersistedQueryTime()
@@ -1072,7 +1169,7 @@ namespace Raven.Database.Indexing
 					if (lastQueryTime <= latestPersistedQueryTime)
 						continue;
 
-					accessor.Lists.Set("Raven/Indexes/QueryTime", index.Key, new RavenJObject
+					accessor.Lists.Set("Raven/Indexes/QueryTime", index.Value.PublicName, new RavenJObject
 	                {
 	                    {"LastQueryTime", lastQueryTime}
 	                }, UuidType.Indexing);
@@ -1102,13 +1199,13 @@ namespace Raven.Database.Indexing
 					 let stats = GetIndexStats(accessor, index.Key)
 					 where stats != null
 					 let lastQueryTime = stats.LastQueryTimestamp ?? DateTime.MinValue
-					 where index.Key.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)
+					 where index.Value.PublicName.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)
 					 orderby lastQueryTime
 					 select new UnusedIndexState
 						 {
 							 LastQueryTime = lastQueryTime,
 							 Index = index.Value,
-							 Name = index.Key,
+							 Name = index.Value.PublicName,
 							 Priority = stats.Priority,
 							 CreationDate = stats.CreatedTimestamp
 						 }).ToArray();
@@ -1119,6 +1216,7 @@ namespace Raven.Database.Indexing
 					var thisItem = autoIndexesSortedByLastQueryTime[i];
 
 					if (thisItem.Priority.HasFlag(IndexingPriority.Disabled) || // we don't really have much to say about those in here
+						thisItem.Priority.HasFlag(IndexingPriority.Error) || // no need to touch erroring indexes
 						thisItem.Priority.HasFlag(IndexingPriority.Forced))// if it is forced, we can't change it
 						continue;
 
@@ -1142,9 +1240,9 @@ namespace Raven.Database.Indexing
 								var nextItem = autoIndexesSortedByLastQueryTime[i + 1];
 								if ((nextItem.LastQueryTime - thisItem.LastQueryTime).TotalMinutes > timeToWaitForIdleMinutes)
 								{
-									accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
+									accessor.Indexing.SetIndexPriority(thisItem.Index.indexId, IndexingPriority.Idle);
 									thisItem.Index.Priority = IndexingPriority.Idle;
-									documentDatabase.RaiseNotifications(new IndexChangeNotification()
+									documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification()
 									{
 										Name = thisItem.Name,
 										Type = IndexChangeTypes.IndexDemotedToIdle
@@ -1165,12 +1263,12 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-		private IndexStats GetIndexStats(IStorageActionsAccessor accessor, string indexName)
+		private IndexStats GetIndexStats(IStorageActionsAccessor accessor, int indexId)
 		{
-			var indexStats = accessor.Indexing.GetIndexStats(indexName);
+			var indexStats = accessor.Indexing.GetIndexStats(indexId);
 			if (indexStats == null)
 				return null;
-			indexStats.LastQueryTimestamp = GetLastQueryTime(indexName);
+			indexStats.LastQueryTimestamp = GetLastQueryTime(indexId);
 			return indexStats;
 		}
 
@@ -1182,7 +1280,7 @@ namespace Raven.Database.Indexing
 			// can be safely removed, probably
 			if (age < 90 && lastQuery > 30)
 			{
-				documentDatabase.DeleteIndex(thisItem.Name);
+				accessor.Indexing.DeleteIndex(thisItem.Index.indexId, documentDatabase.WorkContext.CancellationToken);
 				return;
 			}
 
@@ -1191,11 +1289,11 @@ namespace Raven.Database.Indexing
 
 			// old enough, and haven't been queried for a while, mark it as abandoned
 
-			accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Abandoned);
+			accessor.Indexing.SetIndexPriority(thisItem.Index.indexId, IndexingPriority.Abandoned);
 
 			thisItem.Index.Priority = IndexingPriority.Abandoned;
 
-			documentDatabase.RaiseNotifications(new IndexChangeNotification()
+			documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification()
 			{
 				Name = thisItem.Name,
 				Type = IndexChangeTypes.IndexDemotedToIdle
@@ -1210,22 +1308,45 @@ namespace Raven.Database.Indexing
 			if (age < (timeToWaitForIdle * 6) && lastQuery < (2.5 * timeToWaitForIdle))
 				return;
 
-			accessor.Indexing.SetIndexPriority(thisItem.Name, IndexingPriority.Idle);
+			accessor.Indexing.SetIndexPriority(thisItem.Index.indexId, IndexingPriority.Idle);
 
 			thisItem.Index.Priority = IndexingPriority.Idle;
 
-			documentDatabase.RaiseNotifications(new IndexChangeNotification()
+			documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification()
 			{
 				Name = thisItem.Name,
 				Type = IndexChangeTypes.IndexDemotedToIdle
 			});
 		}
 
+		private void UpdateIndexMappingFile()
+		{
+			if (configuration.RunInMemory)
+				return;
+
+			var sb = new StringBuilder();
+
+			foreach (var index in indexes)
+			{
+				sb.Append(string.Format("{0} - {1}{2}", index.Value.IndexId, index.Value.PublicName, Environment.NewLine));
+			}
+
+			File.WriteAllText(Path.Combine(path, "indexes.txt"), sb.ToString());
+		}
+
 		public void FlushMapIndexes()
 		{
-			foreach (var value in indexes.Values.Where(value => value != null &&  !value.IsMapReduce))
+			foreach (var value in indexes.Values.Where(value => value != null && !value.IsMapReduce))
 			{
-        			value.Flush(value.GetLastEtagFromStats());
+				try
+				{
+                value.Flush(value.GetLastEtagFromStats());
+			}
+				catch (Exception)
+				{
+					value.IncrementWriteErrors();
+					throw;
+		}
 			}
 		}
 
@@ -1233,7 +1354,15 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values.Where(value => value != null && value.IsMapReduce))
 			{
-                		value.Flush(value.GetLastEtagFromStats());
+				try
+				{
+                value.Flush(value.GetLastEtagFromStats());
+			}
+				catch (Exception)
+				{
+					value.IncrementWriteErrors();
+					throw;
+		}
 			}
 		}
 
@@ -1254,9 +1383,14 @@ namespace Raven.Database.Indexing
 
 		public Index GetIndexInstance(string indexName)
 		{
-			return indexes.Where(index => String.Compare(index.Key, indexName, StringComparison.OrdinalIgnoreCase) == 0)
-				.Select(x => x.Value)
-				.FirstOrDefault();
+			return TryIndexByName(indexName);
+		}
+
+		public Index GetIndexInstance(int indexId)
+		{
+			Index value;
+			indexes.TryGetValue(indexId, out value);
+			return value;
 		}
 
 		public void MarkCachedQuery(string indexName)
@@ -1264,14 +1398,19 @@ namespace Raven.Database.Indexing
 			GetIndexByName(indexName).MarkQueried();
 		}
 
-		public DateTime? GetLastQueryTime(string index)
+		public DateTime? GetLastQueryTime(int index)
 		{
-			return GetIndexByName(index).LastQueryTime;
+			return GetIndexInstance(index).LastQueryTime;
 		}
 
-		public IndexingPerformanceStats[] GetIndexingPerformance(string index)
+		public DateTime? GetLastQueryTime(string index)
 		{
-			return GetIndexByName(index).GetIndexingPerformance();
+			return GetIndexInstance(index).LastQueryTime;
+		}
+
+		public IndexingPerformanceStats[] GetIndexingPerformance(int index)
+		{
+			return GetIndexInstance(index).GetIndexingPerformance();
 		}
 
 		public void Backup(string directory, string incrementalTag = null)
@@ -1286,9 +1425,9 @@ namespace Raven.Database.Indexing
 											 index.MergeSegments());
 		}
 
-		public string IndexOnRam(string name)
+		public string IndexOnRam(int id)
 		{
-			return GetIndexByName(name).IsOnRam;
+			return GetIndexInstance(id).IsOnRam;
 		}
 
 		public void ForceWriteToDisk(string index)

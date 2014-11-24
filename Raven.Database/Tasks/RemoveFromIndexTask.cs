@@ -12,7 +12,7 @@ using Raven.Database.Storage;
 
 namespace Raven.Database.Tasks
 {
-	public class RemoveFromIndexTask : Task
+	public class RemoveFromIndexTask : DatabaseTask
 	{
 		public HashSet<string> Keys { get; set; }
 
@@ -31,7 +31,7 @@ namespace Raven.Database.Tasks
 			Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		}
 
-		public override void Merge(Task task)
+		public override void Merge(DatabaseTask task)
 		{
 			var removeFromIndexTask = ((RemoveFromIndexTask)task);
 			Keys.UnionWith(removeFromIndexTask.Keys);
@@ -63,7 +63,7 @@ namespace Raven.Database.Tasks
 		/// </summary>
 		private bool FilterDocuments(WorkContext context, IStorageActionsAccessor accessor, string key)
 		{
-			var documentMetadataByKey = accessor.Documents.DocumentMetadataByKey(key, null);
+			var documentMetadataByKey = accessor.Documents.DocumentMetadataByKey(key);
 			if (documentMetadataByKey == null)
 				return true;
 			var generator = context.IndexDefinitionStorage.GetViewGenerator(Index);
@@ -80,7 +80,7 @@ namespace Raven.Database.Tasks
 			return generator.ForEntityNames.Contains(entityName) == false;
 		}
 
-		public override Task Clone()
+		public override DatabaseTask Clone()
 		{
 			return new RemoveFromIndexTask
 			{

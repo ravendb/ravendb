@@ -1,23 +1,14 @@
 using System;
+using System.Collections.Specialized;
+using System.Linq;
+using System.Threading.Tasks;
 
 using Raven.Client.Exceptions;
-using Raven.Json.Linq;
-#if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
-using System.Collections.Specialized;
-#endif
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
-using System.Linq;
-using System.Net;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -142,7 +133,7 @@ namespace Raven.Client.Connection
 			return responses;
 		}
 
-		public void TryResolveConflictOrCreateConcurrencyException(GetResponse[] responses, Func<string, RavenJObject, Etag, ConflictException> tryResolveConflictOrCreateConcurrencyException)
+		public async Task TryResolveConflictOrCreateConcurrencyException(GetResponse[] responses, Func<string, RavenJObject, Etag, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException)
 		{
 			foreach (var response in responses)
 			{
@@ -177,7 +168,7 @@ namespace Raven.Client.Connection
 						var id = metadata.Value<string>("@id");
 						var etag = HttpExtensions.EtagHeaderToEtag(metadata.Value<string>("@etag"));
 
-						TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
+						await TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
 							tryResolveConflictOrCreateConcurrencyException,
 							id,
 							etag,
@@ -187,13 +178,12 @@ namespace Raven.Client.Connection
 
 					continue;
 				}
-
 				if (result.ContainsKey("Conflicts"))
 				{
 					var id = response.Headers[Constants.DocumentIdFieldName];
 					var etag = response.GetEtagHeader();
 
-					TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
+					await TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
 							tryResolveConflictOrCreateConcurrencyException,
 							id,
 							etag,
@@ -203,14 +193,14 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private static void TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
-			Func<string, RavenJObject, Etag, ConflictException> tryResolveConflictOrCreateConcurrencyException,
+		private static async Task TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
+			Func<string, RavenJObject, Etag, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException,
 			string id,
 			Etag etag,
 			RavenJObject docResult,
 			GetResponse response)
 		{
-			var concurrencyException = tryResolveConflictOrCreateConcurrencyException(id, docResult, etag);
+			var concurrencyException = await tryResolveConflictOrCreateConcurrencyException(id, docResult, etag);
 
 			if (concurrencyException != null)
 				throw concurrencyException;

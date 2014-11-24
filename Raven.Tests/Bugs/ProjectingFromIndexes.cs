@@ -6,8 +6,8 @@
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Database.Indexing;
-using Raven.Database.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -17,10 +17,8 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanProjectFromIndex()
 		{
-			using (var documentStore = NewDocumentStore())
-			using (var httpServer = new HttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
+			using (var documentStore = NewRemoteDocumentStore())
 			{
-				httpServer.StartListening();
 				documentStore.DatabaseCommands.PutIndex("ImagesByTag",
 														new IndexDefinitionBuilder<Image, ImageByTagSearchModel>
 														{
@@ -79,7 +77,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = documentStore.OpenSession())
 				{
-					var imageByTagSearchModels = s.Advanced.LuceneQuery<ImageByTagSearchModel>("ImagesByTag")
+                    var imageByTagSearchModels = s.Advanced.DocumentQuery<ImageByTagSearchModel>("ImagesByTag")
 						.OrderBy("TagName")
 						.WaitForNonStaleResults()
 						.ToList();

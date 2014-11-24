@@ -39,8 +39,6 @@ namespace Raven.Database.Queries
 			// We explicitly do NOT want to update the field names of FieldsToFetch - that reads directly from the document
 			//UpdateFieldsInArray(map, query.FieldsToFetch);
 			
-			UpdateFieldsInArray(map, query.GroupBy);
-
 			return ExecuteActualQuery(query, map, touchTemporaryIndexResult, realQuery, token);
 		}
 
@@ -55,18 +53,6 @@ namespace Raven.Database.Queries
 			}
 		}
 
-		private static void UpdateFieldsInArray(DynamicQueryMapping map, string[] fields)
-		{
-			if (fields == null)
-				return;
-			for (var i = 0; i < fields.Length; i++)
-			{
-				var item = map.Items.FirstOrDefault(x => x.From == fields[i]);
-				if (item != null)
-					fields[i] = item.To;
-			}
-		}
-
 		private QueryResultWithIncludes ExecuteActualQuery(IndexQuery query, DynamicQueryMapping map, Tuple<string, bool> touchTemporaryIndexResult, string realQuery, CancellationToken token)
 		{
 			// Perform the query until we have some results at least
@@ -75,7 +61,7 @@ namespace Raven.Database.Queries
 			while (true)
 			{
 				var indexQuery = CreateIndexQuery(query, map, realQuery);
-				result = documentDatabase.Query(map.IndexName, indexQuery, token);
+				result = documentDatabase.Queries.Query(map.IndexName, indexQuery, token);
 
 				if (!touchTemporaryIndexResult.Item2 ||
 					!result.IsStale ||
@@ -94,24 +80,25 @@ namespace Raven.Database.Queries
 			var indexQuery = new IndexQuery
 			{
 				Cutoff = query.Cutoff,
+                WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow,
 				PageSize = query.PageSize,
 				Query = realQuery,
 				Start = query.Start,
 				FieldsToFetch = query.FieldsToFetch,
-				GroupBy = query.GroupBy,
-				AggregationOperation = query.AggregationOperation,
+				IsDistinct = query.IsDistinct,
 				SortedFields = query.SortedFields,
 				DefaultField = query.DefaultField,
 				CutoffEtag = query.CutoffEtag,
 				DebugOptionGetIndexEntries = query.DebugOptionGetIndexEntries,
 				DefaultOperator = query.DefaultOperator,
-				SkipTransformResults = query.SkipTransformResults,
 				SkippedResults = query.SkippedResults,
 				HighlighterPreTags = query.HighlighterPreTags,
 				HighlighterPostTags = query.HighlighterPostTags,
 				HighlightedFields = query.HighlightedFields,
 				ResultsTransformer = query.ResultsTransformer,
-				QueryInputs = query.QueryInputs
+				TransformerParameters = query.TransformerParameters,
+				ExplainScores = query.ExplainScores,
+				SortHints = query.SortHints
 			};
 			if (indexQuery.SortedFields == null)
 				return indexQuery;
@@ -145,29 +132,30 @@ namespace Raven.Database.Queries
 			    map.IndexName = appropriateIndex.IndexName;
 				return Tuple.Create(appropriateIndex.IndexName, false);
 			}
-            else if (appropriateIndex.MatchType == DynamicQueryMatchType.Partial)
-            {
-                // At this point, we found an index that has some fields we need and
-                // isn't incompatible with anything else we're asking for
-                // We need to clone that other index 
-                // We need to add all our requested indexes information to our cloned index
-                // We can then use our new index instead
-                var currentIndex = documentDatabase.IndexDefinitionStorage.GetIndexDefinition(appropriateIndex.IndexName);
-                map.AddExistingIndexDefinition(currentIndex, documentDatabase, query);
-            }
+			
+			if (appropriateIndex.MatchType == DynamicQueryMatchType.Partial)
+			{
+				// At this point, we found an index that has some fields we need and
+				// isn't incompatible with anything else we're asking for
+				// We need to clone that other index 
+				// We need to add all our requested indexes information to our cloned index
+				// We can then use our new index instead
+				var currentIndex = documentDatabase.IndexDefinitionStorage.GetIndexDefinition(appropriateIndex.IndexName);			
+				map.AddExistingIndexDefinition(currentIndex, documentDatabase, query);
+			}
 			return CreateAutoIndex(map.IndexName, map.CreateIndexDefinition);
 		}
 
 
 	    private Tuple<string, bool> CreateAutoIndex(string permanentIndexName, Func<IndexDefinition> createDefinition)
 		{
-			if (documentDatabase.GetIndexDefinition(permanentIndexName) != null)
+			if (documentDatabase.Indexes.GetIndexDefinition(permanentIndexName) != null)
 				return Tuple.Create(permanentIndexName, false);
 
             lock (createIndexLock)
             {
                 var indexDefinition = createDefinition();
-                documentDatabase.PutIndex(permanentIndexName, indexDefinition);
+                documentDatabase.Indexes.PutIndex(permanentIndexName, indexDefinition);
             }
             
             return Tuple.Create(permanentIndexName, true);

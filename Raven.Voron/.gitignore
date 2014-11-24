@@ -1,0 +1,14 @@
+/*.suo
+obj/
+bin/
+packages/
+
+/*.user
+
+/Voron/*.user
+*.DotSettings
+/Voron.Tests/*.user
+
+/Performance.Comparison/Performance.Comparison.v12.suo
+
+/Performance.Comparison/*.suo

@@ -8,6 +8,8 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -29,12 +31,12 @@ namespace Raven.Tests.Bugs
 					Query = "Name:Oren"
 				}, new string[0]);
 
-				var argumentException = Assert.Throws<ArgumentException>(() => store.DatabaseCommands.Query("test", new IndexQuery
+				var argumentException = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.Query("test", new IndexQuery
 				{
 					Query = "User:Oren"
 				}, new string[0]));
 
-				Assert.Equal("The field 'User' is not indexed, cannot query on fields that are not indexed", argumentException.Message);
+				Assert.Contains("The field 'User' is not indexed, cannot query on fields that are not indexed", argumentException.InnerException.Message);
 			}
 		}
 
@@ -54,12 +56,12 @@ namespace Raven.Tests.Bugs
 					Query = "User:Oren"
 				}, new string[0]);
 
-				var argumentException = Assert.Throws<ArgumentException>(() => store.DatabaseCommands.Query("test", new IndexQuery
+				var argumentException = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.Query("test", new IndexQuery
 				{
 					Query = "Name:Oren"
 				}, new string[0]));
 
-				Assert.Equal("The field 'Name' is not indexed, cannot query on fields that are not indexed", argumentException.Message);
+				Assert.Contains("The field 'Name' is not indexed, cannot query on fields that are not indexed", argumentException.InnerException.Message);
 			}
 		}
 
@@ -73,13 +75,13 @@ namespace Raven.Tests.Bugs
 					Map = "from u in docs select new { u.Name }",
 				});
 
-				var argumentException = Assert.Throws<ArgumentException>(() => store.DatabaseCommands.Query("test", new IndexQuery
+                var argumentException = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.Query("test", new IndexQuery
 				{
 					Query = "Name:Oren",
 					SortedFields = new[]{new SortedField("User"), }
 				}, new string[0]));
 
-				Assert.Equal("The field 'User' is not indexed, cannot sort on fields that are not indexed", argumentException.Message);
+				Assert.Contains("The field 'User' is not indexed, cannot sort on fields that are not indexed", argumentException.InnerException.Message);
 			}
 		}
 	}

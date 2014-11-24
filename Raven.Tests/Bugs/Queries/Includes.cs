@@ -5,12 +5,14 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class Includes : RemoteClientTest
+	public class Includes : RavenTest
 	{
 		[Fact]
 		public void CanIncludeViaNestedPath()

@@ -11,6 +11,7 @@ using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -24,8 +25,8 @@ namespace Raven.Tests.Indexes
 		public QueryingOnStaleIndexes()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
-			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+			db = store.SystemDatabase;
+			db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
 		public override void Dispose()
@@ -37,9 +38,9 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void WillGetStaleResultWhenThereArePendingTasks()
 		{
-			db.Put("a", null, new RavenJObject(), new RavenJObject(), null);
+			db.Documents.Put("a", null, new RavenJObject(), new RavenJObject(), null);
 
-			Assert.True(db.Query("Raven/DocumentsByEntityName", new IndexQuery
+			Assert.True(db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 			{
 				PageSize = 2,
 				Start = 0,
@@ -49,11 +50,11 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void WillGetNonStaleResultWhenAskingWithCutoffDate()
 		{
-			db.Put("a", null, new RavenJObject(), new RavenJObject(), null);
+			db.Documents.Put("a", null, new RavenJObject(), new RavenJObject(), null);
 
 			for (int i = 0; i < 500; i++)
 			{
-				var queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				var queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
 					PageSize = 2,
 					Start = 0,
@@ -63,7 +64,7 @@ namespace Raven.Tests.Indexes
 				Thread.Sleep(100);
 			}
 
-			Assert.False(db.Query("Raven/DocumentsByEntityName", new IndexQuery
+			Assert.False(db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 			{
 				PageSize = 2,
 				Start = 0,
@@ -71,16 +72,16 @@ namespace Raven.Tests.Indexes
 
 			db.StopBackgroundWorkers();
 
-			db.Put("a", null, new RavenJObject(), new RavenJObject(), null);
+			db.Documents.Put("a", null, new RavenJObject(), new RavenJObject(), null);
 
 
-			Assert.True(db.Query("Raven/DocumentsByEntityName", new IndexQuery
+			Assert.True(db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 			{
 				PageSize = 2,
 				Start = 0,
 			}, CancellationToken.None).IsStale);
 
-			Assert.False(db.Query("Raven/DocumentsByEntityName", new IndexQuery
+			Assert.False(db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 			{
 				PageSize = 2,
 				Start = 0,

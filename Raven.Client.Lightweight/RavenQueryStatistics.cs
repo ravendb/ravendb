@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+
 using Raven.Abstractions.Data;
 
 namespace Raven.Client
@@ -14,6 +16,11 @@ namespace Raven.Client
 	/// </summary>
 	public class RavenQueryStatistics
 	{
+		public RavenQueryStatistics()
+		{
+			TimingsInMilliseconds = new Dictionary<string, double>();
+		}
+
 		/// <summary>
 		/// Whatever the query returned potentially stale results
 		/// </summary>
@@ -66,6 +73,17 @@ namespace Raven.Client
 		public DateTime LastQueryTime { get; set; }
 
 		/// <summary>
+		/// Detailed timings for various parts of a query (Lucene search, loading documents, transforming results)
+		/// </summary>
+		public Dictionary<string, double> TimingsInMilliseconds { get; set; }
+
+		/// <summary>
+		/// The size of the request which were sent from the server.
+		/// This value is the _uncompressed_ size. 
+		/// </summary>
+		public long ResultSize { get; set; }
+
+		/// <summary>
 		/// Update the query stats from the query results
 		/// </summary>
 		internal void UpdateQueryStats(QueryResult qr)
@@ -79,9 +97,15 @@ namespace Raven.Client
 			IndexName = qr.IndexName;
 			IndexTimestamp = qr.IndexTimestamp;
 			IndexEtag = qr.IndexEtag;
-			//LastQueryTime = qr.LastQueryTime;
+			TimingsInMilliseconds = qr.TimingsInMilliseconds;
+			LastQueryTime = qr.LastQueryTime;
+			ResultSize = qr.ResultSize;
+			ScoreExplanations = qr.ScoreExplanations;
 		}
 
-		
+		/// <summary>
+		/// Gets or sets explanations of document scores 
+		/// </summary>
+		public Dictionary<string, string> ScoreExplanations { get; set; }
 	}
 }

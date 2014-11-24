@@ -18,10 +18,10 @@ namespace Raven.Bundles.Versioning
 
 			var entityName = metadata.Value<string>("Raven-Entity-Name");
 			if (entityName != null)
-				doc = database.Get("Raven/Versioning/" + entityName, null);
+				doc = database.Documents.Get("Raven/Versioning/" + entityName, null);
 
 			if (doc == null)
-				doc = database.Get("Raven/Versioning/DefaultConfiguration", null);
+				doc = database.Documents.Get("Raven/Versioning/DefaultConfiguration", null);
 
 			if (doc == null)
 				return null;

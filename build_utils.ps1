@@ -19,9 +19,20 @@ function Get-Git-Commit
 	}
 }
 
+function Get-Git-Commit-Full
+{
+	if ((Get-File-Exists-On-Path "git.exe")){
+		$gitLog = git log -1 --format="%H"
+		return $gitLog;
+	}
+	else {
+		return "0000000000000000000000000000000000000000"
+	}
+}
+
 function Get-DependencyPackageFiles
 {
-	param([string]$packageName, [string]$frameworkVersion = "net40")
+	param([string]$packageName, [string]$frameworkVersion = "net45")
 	
 	$fullPackageName = Get-ChildItem "$base_dir\packages\$packageName.*" | 
 								Sort-Object Name -Descending | 

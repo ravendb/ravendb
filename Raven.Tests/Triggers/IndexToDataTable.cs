@@ -22,7 +22,7 @@ namespace Raven.Tests.Triggers
 		}
 
 
-		public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
+		public override AbstractIndexUpdateTriggerBatcher CreateBatcher(int indexName)
 		{
 			return new DataTableBatcher(this);
 		}
@@ -36,7 +36,7 @@ namespace Raven.Tests.Triggers
 				this.parent = parent;
 			}
 
-			public override void OnIndexEntryDeleted(string entryKey)
+            public override void OnIndexEntryDeleted(string entryKey, Lucene.Net.Documents.Document document = null)
 			{
 				lock (parent.DataTable)
 				{

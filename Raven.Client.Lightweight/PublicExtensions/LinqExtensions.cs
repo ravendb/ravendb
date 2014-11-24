@@ -74,7 +74,6 @@ namespace Raven.Client
 			return new DynamicAggregationQuery<T>(queryable, path, displayName);
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document with the given start and pageSize
 		/// </summary>
@@ -86,6 +85,26 @@ namespace Raven.Client
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			return ravenQueryInspector.GetFacets(facetSetupDoc, start, pageSize );
 		}
+
+		/// <summary>
+		/// Transforms the query to the facet query that will allow you to execute multi faceted search
+		/// </summary>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">>Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static FacetQuery ToFacetQuery<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+			return new FacetQuery
+			{
+				IndexName = ravenQueryInspector.IndexQueried,
+				Query = ravenQueryInspector.GetIndexQuery(false),
+				FacetSetupDoc = facetSetupDoc,
+				PageStart = start,
+				PageSize = pageSize
+			};
+		}
+
 
         /// <summary>
         /// Query the facets results for this query using the specified list of facets with the given start and pageSize
@@ -104,6 +123,30 @@ namespace Raven.Client
 
             return ravenQueryInspector.GetFacets(facetsList, start, pageSize);
         }
+
+		/// <summary>
+		/// Query the facets results for this query using the specified list of facets with the given start and pageSize
+		/// </summary>
+		/// <param name="facets">List of facets</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static FacetQuery ToFacetQuery<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+		{
+			var facetsList = facets.ToList();
+
+			if (!facetsList.Any())
+				throw new ArgumentException("Facets must contain at least one entry", "facets");
+
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+			return new FacetQuery
+			{
+				IndexName = ravenQueryInspector.IndexQueried,
+				Query = ravenQueryInspector.GetIndexQuery(false),
+				Facets = facetsList,
+				PageStart = start,
+				PageSize = pageSize
+			};
+		}
 
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document with the given start and pageSize
@@ -134,16 +177,14 @@ namespace Raven.Client
 
             return documentQuery.GetFacets(facetsList, start, pageSize);
         }
-#endif
 
-#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Lazily Query the facets results for this query using the specified facet document with the given start and pageSize
 		/// </summary>
 		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		public static Lazy<FacetResults> ToFacetsLazy<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
+		public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
@@ -211,7 +252,6 @@ namespace Raven.Client
             var documentSession = ((DocumentSession)documentQuery.Session);
             return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
         }
-#endif
 
 		/// <summary>
 		/// Async Query the facets results for this query using the specified facet document with the given start and pageSize
@@ -219,7 +259,7 @@ namespace Raven.Client
 		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		public static Task<FacetResults> ToFacetsAsync<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
+		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			return ravenQueryInspector.GetFacetsAsync(facetSetupDoc, start, pageSize );
@@ -255,7 +295,7 @@ namespace Raven.Client
 		}
 
 		/// <summary>
-		/// Project using a different type
+		/// Project into a different type.
 		/// </summary>
 		public static IQueryable<TResult> As<TResult>(this IQueryable queryable)
 		{
@@ -264,7 +304,6 @@ namespace Raven.Client
 			return results;
 		}
 
-#if !NETFX_CORE
 		/// <summary>
 		/// Partition the query so we can intersect different parts of the query
 		/// across different index entries.
@@ -282,25 +321,19 @@ namespace Raven.Client
 			return (IRavenQueryable<T>)queryable;
 		}
 
-		public static IRavenQueryable<TResult> ProjectFromIndexFieldsInto<TResult>(this IQueryable queryable)
-		{
-			return queryable.AsProjection<TResult>();
-		}
-
 		/// <summary>
-		/// Project using a different type
+		/// Project from index fields (must be stored) into different type. If fields are not stored in index, document fields will be used.
 		/// </summary>
-		public static IRavenQueryable<TResult> AsProjection<TResult>(this IQueryable queryable)
+		public static IRavenQueryable<TResult> ProjectFromIndexFieldsInto<TResult>(this IQueryable queryable)
 		{
 			var ofType = queryable.OfType<TResult>();
 			var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
 			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
-			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
+
+			var membersList = ReflectionUtil.GetPropertiesAndFieldsFor<TResult>(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ToList();
+			ravenQueryInspector.FieldsToFetch(membersList.Select(x => x.Name));			
 			return (IRavenQueryable<TResult>)results;
 		}
-#endif
-
-#if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
 		/// Suggest alternative values for the queried term
@@ -342,8 +375,6 @@ namespace Raven.Client
 			return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
 		}
 
-#endif
-
 		private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query, bool isAsync = false)
 		{
 			if (string.IsNullOrEmpty(query.Field) == false && string.IsNullOrEmpty(query.Term) == false)
@@ -376,6 +407,29 @@ namespace Raven.Client
 			return SuggestAsync(queryable, new SuggestionQuery());
 		}
 
+        /// <summary>
+        /// Register the query as a lazy async query in the session and return a lazy async
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+          public static Lazy<Task<IEnumerable<T>>> LazilyAsync<T>(this IQueryable<T> source)  
+        {
+            return LazilyAsync(source, null);
+        }
+
+        /// <summary>
+        /// Register the query as a lazy async query in the session and return a lazy async
+        /// instance that will evaluate the query only when needed
+        /// As well as a function to execute when the value is evaluated
+        /// </summary>
+    
+        public static Lazy<Task<IEnumerable<T>>> LazilyAsync<T>(this IQueryable<T> source, Action<IEnumerable<T>> onEval)  
+        {
+            var provider = source.Provider as IRavenQueryProvider;
+            if (provider == null)
+                throw new ArgumentException("You can only use Raven Queryable with Lazily");
+
+            return provider.LazilyAsync(source.Expression, onEval);
+        }
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -400,6 +454,41 @@ namespace Raven.Client
 			return provider.Lazily(source.Expression, onEval);
 		}
 
+        /// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public static Lazy<int> CountLazily<T>(this IQueryable<T> source)
+		{
+			if (source == null)
+				throw new ArgumentNullException("source");
+
+			var provider = source.Provider as IRavenQueryProvider;
+
+			if (provider == null)
+				throw new InvalidOperationException("CountLazily only be used with IRavenQueryable");
+
+			return provider.CountLazily<T>(source.Expression);
+		}
+
+
+		/// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public static Lazy<Task<int>> CountLazilyAsync<T>(this IQueryable<T> source)
+		{
+			if (source == null)
+				throw new ArgumentNullException("source");
+
+			var provider = source.Provider as IRavenQueryProvider;
+
+			if (provider == null)
+				throw new InvalidOperationException("CountLazily only be used with IRavenQueryable");
+
+			return provider.CountLazilyAsync<T>(source.Expression);
+		}
+
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
@@ -409,7 +498,7 @@ namespace Raven.Client
 			if (provider == null)
 				throw new ArgumentException("You can only use Raven Queryable with ToListAsync");
 
-			var documentQuery = provider.ToAsyncLuceneQuery<T>(source.Expression);
+			var documentQuery = provider.ToAsyncDocumentQuery<T>(source.Expression);
 			provider.MoveAfterQueryExecuted(documentQuery);
 			return documentQuery.ToListAsync();
 		}
@@ -443,7 +532,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("AnyAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
@@ -490,7 +579,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("AnyAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
@@ -536,7 +625,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("CountAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
@@ -588,7 +677,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("CountAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
@@ -634,7 +723,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("FirstAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
                                 .Take(1);
 
             provider.MoveAfterQueryExecuted(query);
@@ -684,7 +773,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("FirstAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
                                 .Take(1);
 
             provider.MoveAfterQueryExecuted(query);
@@ -728,7 +817,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("FirstOrDefaultAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
                                 .Take(1);
 
             provider.MoveAfterQueryExecuted(query);
@@ -780,7 +869,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("FirstOrDefaultAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
                                 .Take(1);
 
             provider.MoveAfterQueryExecuted(query);
@@ -825,7 +914,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("SingleAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
                                 .Take(2);
 
             provider.MoveAfterQueryExecuted(query);
@@ -876,7 +965,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("SingleAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
                                 .Take(2);
 
             provider.MoveAfterQueryExecuted(query);
@@ -923,7 +1012,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("SingleOrDefaultAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
                                 .Take(2);
 
             provider.MoveAfterQueryExecuted(query);
@@ -975,7 +1064,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("SingleOrDefaultAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
                                 .Take(2);
 
             provider.MoveAfterQueryExecuted(query);
@@ -985,7 +1074,6 @@ namespace Raven.Client
             return result.SingleOrDefault();
         }
 
-#if !NETFX_CORE
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
@@ -1024,7 +1112,20 @@ namespace Raven.Client
 			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
 			return (IOrderedQueryable<T>)queryable;
 		}
-#endif
 
+		/// <summary>
+		/// Perform an initial sort by lucene score descending.
+		/// </summary>
+		public static IOrderedQueryable<T> OrderByScoreDescending<T>(this IQueryable<T> self)
+		{
+			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+			Expression expression = self.Expression;
+			if (expression.Type != typeof(IRavenQueryable<T>))
+			{
+				expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+			}
+			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
+			return (IOrderedQueryable<T>)queryable;
+		}
 	}
 }

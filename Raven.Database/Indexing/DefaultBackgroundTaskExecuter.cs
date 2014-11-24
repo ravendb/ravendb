@@ -20,7 +20,7 @@ namespace Raven.Database.Indexing
 		public IList<TResult> Apply<T, TResult>(WorkContext context, IEnumerable<T> source, Func<T, TResult> func)
 			where TResult : class
 		{
-			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
+			if (context.Configuration.MaxNumberOfParallelProcessingTasks == 1)
 			{
 				return source.Select(func).ToList();
 			}
@@ -87,7 +87,7 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public void ExecuteAllBuffered<T>(WorkContext context, IList<T> source, Action<IEnumerator<T>> action)
 		{
-			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelIndexTasks;
+			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelProcessingTasks;
 			var size = Math.Max(source.Count / maxNumberOfParallelIndexTasks, 1024);
 			if (maxNumberOfParallelIndexTasks == 1 || source.Count <= size)
 			{
@@ -126,7 +126,7 @@ namespace Raven.Database.Indexing
 			WorkContext context,
 			IList<T> source, Action<T, long> action)
 		{
-			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
+			if (context.Configuration.MaxNumberOfParallelProcessingTasks == 1)
 			{
 				long i = 0;
 				foreach (var item in source)
@@ -136,7 +136,7 @@ namespace Raven.Database.Indexing
 				return;
 			}
 			context.CancellationToken.ThrowIfCancellationRequested();
-			var partitioneds = Partition(source, context.Configuration.MaxNumberOfParallelIndexTasks).ToList();
+			var partitioneds = Partition(source, context.Configuration.MaxNumberOfParallelProcessingTasks).ToList();
 			int start = 0;
 			foreach (var partitioned in partitioneds)
 			{
@@ -145,7 +145,7 @@ namespace Raven.Database.Indexing
 				Parallel.ForEach(partitioned, new ParallelOptions
 				{
 					TaskScheduler = context.TaskScheduler,
-					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks
+					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelProcessingTasks
 				}, (item, _, index) =>
 				{
 					using (LogContext.WithDatabase(context.DatabaseName))
@@ -159,6 +159,9 @@ namespace Raven.Database.Indexing
 
 		static IEnumerable<IList<T>> Partition<T>(IList<T> source, int size)
 		{
+			if (size <= 0)
+				throw new ArgumentException("Size cannot be 0");
+
 			for (int i = 0; i < source.Count; i += size)
 			{
 				yield return source.Skip(i).Take(size).ToList();
@@ -176,7 +179,7 @@ namespace Raven.Database.Indexing
 			}
 
 			using (LogContext.WithDatabase(context.DatabaseName))
-			using (var semaphoreSlim = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks))
+			using (var semaphoreSlim = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelProcessingTasks))
 			{
 				var tasks = new Task[result.Count];
 				for (int i = 0; i < result.Count; i++)

@@ -3,6 +3,8 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -74,7 +76,7 @@ namespace Raven.Tests.Bugs
 						.As<Order>()
 						.ToList();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.NotEmpty(orders);
 				}

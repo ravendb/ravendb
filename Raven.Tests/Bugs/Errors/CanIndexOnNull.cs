@@ -2,6 +2,8 @@ using System;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -29,14 +31,14 @@ namespace Raven.Tests.Bugs.Errors
 
 				using(var s = store.OpenSession())
 				{
-					s.Advanced.LuceneQuery<dynamic>("test")
+                    s.Advanced.DocumentQuery<dynamic>("test")
 						.WaitForNonStaleResults()
 						.WhereGreaterThan("Wheels_Range", 4)
 						.ToArray();
 					
 				}
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 	}

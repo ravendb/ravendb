@@ -1,5 +1,4 @@
 ﻿using System;
-using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq
@@ -9,6 +8,15 @@ namespace Raven.Database.Linq
 	{
 		public StringLiteralExpression(string value)
 			: base(value, '"' + value + '"')
+		{
+		}
+	}
+
+	[CLSCompliant(false)]
+	public class VerbatimStringLiteralExpression : PrimitiveExpression
+	{
+		public VerbatimStringLiteralExpression(string value)
+			: base(value, "@" + '"' + value.Replace("\"", "\"\"") + '"')
 		{
 		}
 	}

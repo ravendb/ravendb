@@ -14,9 +14,9 @@ namespace Raven.Database.Util
 	{
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
-		const int DefaultPort = 8080;
+		public const int DefaultPort = 8080;
 
-		public static int GetPort(string portStr)
+		public static int GetPort(string portStr, bool runInMemory)
 		{
 			try
 			{
@@ -38,20 +38,21 @@ namespace Raven.Database.Util
 
 			try
 			{
-				if (portStr == "*" || string.IsNullOrWhiteSpace(portStr))
+				if (portStr == "*")
 				{
 					int autoPort;
 
-					if (TryReadPreviouslySelectAutoPort(out autoPort))
+					if (runInMemory == false && TryReadPreviouslySelectAutoPort(out autoPort))
 						return autoPort;
 
 					autoPort = FindPort();
-					TrySaveAutoPortForNextTime(autoPort);
+
+					if (runInMemory == false)
+						TrySaveAutoPortForNextTime(autoPort);
 
 					if (autoPort != DefaultPort)
-					{
 						logger.Info("Default port {0} was not available, so using available port {1}", DefaultPort, autoPort);
-					}
+
 					return autoPort;
 				}
 

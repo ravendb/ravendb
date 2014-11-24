@@ -1,4 +1,7 @@
 using System.Linq;
+
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Metadata
@@ -25,7 +28,7 @@ namespace Raven.Tests.Bugs.Metadata
 
 				using (var session = DocStore.OpenSession())
 				{
-					var result = session.Advanced.LuceneQuery<User>()
+                    var result = session.Advanced.DocumentQuery<User>()
 						.WaitForNonStaleResultsAsOfNow()
 						.WhereEquals("@metadata." + propertyName1, propertyValue1)
 						.ToList();
@@ -55,12 +58,12 @@ namespace Raven.Tests.Bugs.Metadata
 
 				using (var session = DocStore.OpenSession())
 				{
-					Assert.Empty(session.Advanced.LuceneQuery<User>()
+                    Assert.Empty(session.Advanced.DocumentQuery<User>()
 					             	.WaitForNonStaleResultsAsOfNow()
 					             	.WhereEquals("@metadata." + "Test-Property1", "Test-Value-1")
 					             	.ToList());
 
-					var result = session.Advanced.LuceneQuery<User>()
+                    var result = session.Advanced.DocumentQuery<User>()
 						.WaitForNonStaleResultsAsOfNow()
 						.WhereEquals("@metadata." + "Test-Property-1", "Test-Value-1")
 						.ToList();

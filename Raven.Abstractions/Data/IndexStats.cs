@@ -5,18 +5,21 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Raven.Abstractions.Indexing;
 
 namespace Raven.Abstractions.Data
 {
 	public class IndexStats
 	{
+		public int Id { get; set; }
 		public string Name { get; set; }
 		public int IndexingAttempts { get; set; }
 		public int IndexingSuccesses { get; set; }
 		public int IndexingErrors { get; set; }
 		public Etag LastIndexedEtag { get; set; }
-		public DateTime LastIndexedTimestamp { get; set; }
+		public int? IndexingLag { get; set; }
+        public DateTime LastIndexedTimestamp { get; set; }
 		public DateTime? LastQueryTimestamp { get; set; }
 		public int TouchCount { get; set; }
         public IndexingPriority Priority { get; set; }
@@ -34,9 +37,30 @@ namespace Raven.Abstractions.Data
 		public IndexingPerformanceStats[] Performance { get; set; }
 		public int DocsCount { get; set; }
 
-		public override string ToString()
+	    public bool IsInvalidIndex
+	    {
+	        get
+	        {
+	            return IndexFailureInformation.CheckIndexInvalid(IndexingAttempts, IndexingErrors, ReduceIndexingAttempts, ReduceIndexingErrors);
+	        }
+	    }
+
+	    public override string ToString()
 		{
-			return Name;
+		    return Id.ToString(CultureInfo.InvariantCulture);
+		}
+
+		public void SetLastDocumentEtag(Etag lastDocEtag)
+		{
+			if (lastDocEtag == null)
+				return;
+
+			IndexingLag = (int) (lastDocEtag.Changes - LastIndexedEtag.Changes);
+
+			if (lastDocEtag.Restarts != LastIndexedEtag.Restarts)
+			{
+				IndexingLag *= -1;
+			}
 		}
 	}
 
@@ -52,6 +76,8 @@ namespace Raven.Abstractions.Data
 		Idle = 4,
 		
 		Abandoned = 8,
+
+        Error = 16,
 
         Forced = 512,
     }
@@ -76,7 +102,9 @@ namespace Raven.Abstractions.Data
 		    }
 	    }
 
-	    public string Operation { get; set; }
+		public int LoadDocumentCount { get; set; }
+		public long LoadDocumentDurationMs { get; set; }
+		public string Operation { get; set; }
 		public int OutputCount { get; set; }
 		public int InputCount { get; set; }
 		public int ItemsCount { get; set; }

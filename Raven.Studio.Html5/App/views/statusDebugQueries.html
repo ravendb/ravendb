@@ -1,0 +1,41 @@
+﻿<div>
+    <button id="refresh-btn" class="btn" data-bind="css: { active: autoRefresh }, click: toggleAutoRefresh"><i class="fa fa-refresh"></i> Autorefresh</button>
+    <hr />
+    <div class="panel-group" data-bind="foreach: data">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse"  data-bind="text: indexName, attr: { href: '#statsDebugQueriesCollapse' + $index() }"></a>
+                </h4>
+            </div>
+            <div class="panel-collapse collapse in" data-bind="attr: { id: 'statsDebugQueriesCollapse' + $index() }">
+                <div class="panel-body">
+                    <div class="form-horizontal" role="form" data-bind="foreach: queries">
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Start time</label>
+                            <div class="col-md-6">
+                                <p class="form-control-static" data-bind="text: startTime"></p>
+                            </div>
+                            <div class="col-md-4 text-right">
+                                <button class="btn btn-danger" data-bind="click: $root.killQuery.bind($root, queryId)"><i class="fa fa-bolt"></i> Kill this query</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Duration</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: duration"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Query Info</label>
+                            <div class="col-md-10">
+                                <pre class="form-control" data-bind="aceEditor: { code: queryInfo, readOnly: true }"  style="height: 350px;" ></pre>
+                            </div>
+                        </div>
+                        <hr />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

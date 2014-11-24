@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
@@ -143,14 +144,14 @@ namespace Raven.Storage.Esent.StorageActions
 
 			aggregator.Execute(() =>
 			{
-				if (Equals(dbid, JET_DBID.Nil) == false && session != null)
-					Api.JetCloseDatabase(session.JetSesid, dbid, CloseDatabaseGrbit.None);
+			if (Equals(dbid, JET_DBID.Nil) == false && session != null)
+				Api.JetCloseDatabase(session.JetSesid, dbid, CloseDatabaseGrbit.None);
 			});
 
 			aggregator.Execute(() =>
 			{
-				if (sessionAndTransactionDisposer != null)
-					sessionAndTransactionDisposer();
+		    if (sessionAndTransactionDisposer != null)
+		        sessionAndTransactionDisposer();
 			});
 
 			aggregator.ThrowIfNeeded();
@@ -169,10 +170,10 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 		private int maybePulseCount;
-		public void MaybePulseTransaction()
+		public bool MaybePulseTransaction()
 		{
-			if (++maybePulseCount % 1000 != 0)
-				return;
+			if (++maybePulseCount%1000 != 0)
+				return false;
 
 			var sizeInBytes = transactionalStorage.GetDatabaseTransactionVersionSizeInBytes();
 			const int maxNumberOfCallsBeforePulsingIsForced = 50 * 1000;
@@ -183,7 +184,7 @@ namespace Raven.Storage.Esent.StorageActions
 					logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
 					PulseTransaction();
 				}
-				return;
+				return true;
 			}
 			var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
 			if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
@@ -191,6 +192,7 @@ namespace Raven.Storage.Esent.StorageActions
 				logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
 				PulseTransaction();
 			}
+			return true;
 		}
 
 		public bool UsingLazyCommit { get; set; }
@@ -219,26 +221,53 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public long GetNextIdentityValue(string name)
+		public long GetNextIdentityValue(string name, int val)
 		{
 			Api.JetSetCurrentIndex(session, Identity, "by_key");
 			Api.MakeKey(session, Identity, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Identity, SeekGrbit.SeekEQ) == false)
 			{
+				if (val == 0)
+					return 0;
+			
 				using (var update = new Update(session, Identity, JET_prep.Insert))
 				{
 					Api.SetColumn(session, Identity, tableColumnsCache.IdentityColumns["key"], name, Encoding.Unicode);
-					Api.SetColumn(session, Identity, tableColumnsCache.IdentityColumns["val"], 1);
+					Api.SetColumn(session, Identity, tableColumnsCache.IdentityColumns["val"], val);
 
 					update.Save();
 				}
-				return 1;
+				return val;
 			}
 
-			return Api.EscrowUpdate(session, Identity, tableColumnsCache.IdentityColumns["val"], 1) + 1;
+
+
+			return Api.EscrowUpdate(session, Identity, tableColumnsCache.IdentityColumns["val"], val) + val;
 		}
 
+		public IEnumerable<KeyValuePair<string, long>> GetIdentities(int start, int take, out long totalCount)
+		{
+			Api.JetSetCurrentIndex(session, Identity, "by_key");
+
+			int numRecords;
+			Api.JetIndexRecordCount(session, Identity, out numRecords, 0);
+
+			totalCount = numRecords;
+			if (totalCount <= 0 || Api.TryMoveFirst(session, Identity) == false || TryMoveTableRecords(Identity, start, backward: false))
+				return Enumerable.Empty<KeyValuePair<string, long>>();
+
+			var results = new List<KeyValuePair<string, long>>();
+
+			do
+			{
+				var identityName = Api.RetrieveColumnAsString(session, Identity, tableColumnsCache.IdentityColumns["key"]);
+				var identityValue = Api.RetrieveColumnAsInt32(session, Identity, tableColumnsCache.IdentityColumns["val"]);
+
+				results.Add(new KeyValuePair<string, long>(identityName, identityValue.Value));
+}
+			while (Api.TryMoveNext(session, Identity) && results.Count < take);
+
+			return results;
+		}
 	}
-
-
 }

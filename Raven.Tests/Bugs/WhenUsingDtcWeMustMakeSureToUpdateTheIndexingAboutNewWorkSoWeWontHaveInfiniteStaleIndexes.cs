@@ -9,6 +9,8 @@ using System.Linq;
 using System.Net.Cache;
 using System.Transactions;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -21,6 +23,9 @@ namespace Raven.Tests.Bugs
 			// This must run on ESENT to expose the failure
 			using (var store = NewRemoteDocumentStore(databaseName: "Test", requestedStorage: "esent"))
 			{
+                if(store.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				for (var i = 1; i < 10; i++)
 				{
 					try

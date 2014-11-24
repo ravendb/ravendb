@@ -1,17 +1,21 @@
-﻿using System.Collections.Specialized;
+﻿using System;
+using System.Collections.Specialized;
 using System.Diagnostics;
 
 namespace Raven.Database.Server
 {
 	public class LogHttpRequestStatsParams
 	{
-		public LogHttpRequestStatsParams(Stopwatch sw, NameValueCollection headers, string httpMethod, int responseStatusCode, string requestUri)
+		public LogHttpRequestStatsParams(Stopwatch sw, NameValueCollection headers, string httpMethod, int responseStatusCode,
+		                                 string requestUri, string customInfo = null, int innerRequestsCount = 0)
 		{
-			this.Stopwatch = sw;
-			this.Headers = headers;
-			this.HttpMethod = httpMethod;
-			this.ResponseStatusCode = responseStatusCode;
-			this.RequestUri = requestUri;
+			Stopwatch = sw;
+			Headers = headers;
+			HttpMethod = httpMethod;
+			ResponseStatusCode = responseStatusCode;
+			RequestUri = requestUri;
+			CustomInfo = customInfo;
+		    InnerRequestsCount = innerRequestsCount;
 		}
 
 		public Stopwatch Stopwatch { get; private set; }
@@ -22,6 +26,10 @@ namespace Raven.Database.Server
 
 		public int ResponseStatusCode { get; private set; }
 
-		public string RequestUri { get; private set; }
+        public string RequestUri { get; private set; }
+
+		public string CustomInfo { get; private set; }
+
+        public int InnerRequestsCount { get; private set; }
 	}
 }

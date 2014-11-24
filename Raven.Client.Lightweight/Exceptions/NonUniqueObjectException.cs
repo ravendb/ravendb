@@ -12,9 +12,7 @@ namespace Raven.Client.Exceptions
 	/// This exception is thrown when a separate instance of an entity is added to the session
 	/// when a different entity with the same key already exists within the session.
 	/// </summary>
-#if !SILVERLIGHT && !NETFX_CORE
 	[Serializable]
-#endif
 	public class NonUniqueObjectException : Exception
 	{
 		/// <summary>
@@ -41,7 +39,6 @@ namespace Raven.Client.Exceptions
 		{
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Initializes a new instance of the <see cref="NonUniqueObjectException"/> class.
 		/// </summary>
@@ -54,6 +51,5 @@ namespace Raven.Client.Exceptions
 			StreamingContext context) : base(info, context)
 		{
 		}
-#endif
 	}
 }

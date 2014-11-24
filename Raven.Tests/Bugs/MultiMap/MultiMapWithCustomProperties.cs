@@ -1,5 +1,7 @@
 ﻿using System.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.MultiMap
@@ -23,7 +25,7 @@ namespace Raven.Tests.Bugs.MultiMap
 
 				WaitForIndexing(store);
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 				using (var s = store.OpenSession())
 				{

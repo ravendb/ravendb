@@ -5,6 +5,8 @@ using System.Text;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Linq;
 
@@ -99,7 +101,7 @@ namespace Raven.Tests.Bugs.Indexing
 				{
 					var result = s.Query<ContainerObject, NestedObjectIndex>()
 						.Customize(q => q.WaitForNonStaleResultsAsOfNow())
-						.AsProjection<IndexEntry>()
+						.ProjectFromIndexFieldsInto<IndexEntry>()
 						.Where(o => o.Name == expectedItemName)
 						.Single();
 

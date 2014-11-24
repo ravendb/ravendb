@@ -6,14 +6,34 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
+using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Database.Extensions
 {
+	using Raven.Abstractions.Util;
+
 	public static class IOExtensions
 	{
 		const int retries = 10;
+
+        public static void DeleteFile(string file)
+        {
+            try
+            {
+                File.Delete(file);
+            }
+            catch (IOException)
+            {
+
+            }
+            catch (UnauthorizedAccessException)
+            {
+                
+            }
+        }
 
 		public static void DeleteDirectory(string directory)
 		{
@@ -84,15 +104,7 @@ namespace Raven.Database.Extensions
 					}
 					catch (UnauthorizedAccessException)
 					{
-						var processesUsingFiles = WhoIsLocking.GetProcessesUsingFile(path);
-						var stringBuilder = new StringBuilder();
-						stringBuilder.Append("The following processing are locking ").Append(path).AppendLine();
-						foreach (var processesUsingFile in processesUsingFiles)
-						{
-							stringBuilder.Append("\t").Append(processesUsingFile.ProcessName).Append(' ').Append(processesUsingFile.Id).
-								AppendLine();
-						}
-						throw new IOException(stringBuilder.ToString());
+						throw new IOException(WhoIsLocking.ThisFile(path));
 					}
 					catch(IOException)
 					{
@@ -110,18 +122,24 @@ namespace Raven.Database.Extensions
 				throw new IOException("Could not delete " + Path.GetFullPath(directory), e);
 			}
 
-			GC.Collect();
-			GC.WaitForPendingFinalizers();
+			RavenGC.CollectGarbage(true);
 			Thread.Sleep(100);
 		}
 
-		public static string ToFullPath(this string path)
+		public static string ToFullPath(this string path, string basePath = null)
 		{
+			if (String.IsNullOrWhiteSpace(path))
+				return String.Empty;
 			path = Environment.ExpandEnvironmentVariables(path);
 			if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
-				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path.Substring(2));
+			{
+				if (!string.IsNullOrEmpty(basePath))
+					basePath = Path.GetDirectoryName(basePath.EndsWith("\\") ? basePath.Substring(0, basePath.Length - 2) : basePath);
 
-			return Path.IsPathRooted(path) ? path : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
+				path = Path.Combine(basePath ?? AppDomain.CurrentDomain.BaseDirectory, path.Substring(2));
+		}
+
+			return Path.IsPathRooted(path) ? path : Path.Combine(basePath ?? AppDomain.CurrentDomain.BaseDirectory, path);
 		}
 
 		public static void CopyDirectory(string from, string to)
@@ -136,12 +154,15 @@ namespace Raven.Database.Extensions
 			}
 		}
 
-		static void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
-		{
+	    static void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
+	    {
+	        CopyDirectory(source, target, new string[0]);
+	    }
+
+        static void CopyDirectory(DirectoryInfo source, DirectoryInfo target, string[] skip)
+        {
 			if (!target.Exists)
-			{
 				Directory.CreateDirectory(target.FullName);
-			}
 
 			// copy all files in the immediate directly
 			foreach (FileInfo fi in source.GetFiles())
@@ -152,20 +173,29 @@ namespace Raven.Database.Extensions
 			// and recurse
 			foreach (DirectoryInfo diSourceDir in source.GetDirectories())
 			{
-				DirectoryInfo nextTargetDir = target.CreateSubdirectory(diSourceDir.Name);
-				CopyDirectory(diSourceDir, nextTargetDir);
+                if (skip.Contains(diSourceDir.Name))
+                    continue;
+
+                DirectoryInfo nextTargetDir = target.CreateSubdirectory(diSourceDir.Name);
+                CopyDirectory(diSourceDir, nextTargetDir, skip);
 			}
 		}
 
 		public static string GetMD5Hex(byte[] input)
 		{
 			var sb = new StringBuilder();
-			for (var i = 0; i < input.Length; i++)
-			{
-				sb.Append(input[i].ToString("x2"));
-			}
+			foreach (byte t in input)
+			    sb.Append(t.ToString("x2"));
 
-			return sb.ToString();
-		}
+		    return sb.ToString();
+        }
+
+        public static string GetMD5Hash(this Stream stream)
+        {
+            using (var md5 = Encryptor.Current.CreateHash())
+            {
+                return GetMD5Hex(md5.Compute16(stream));
+            }
+        }
 	}
 }

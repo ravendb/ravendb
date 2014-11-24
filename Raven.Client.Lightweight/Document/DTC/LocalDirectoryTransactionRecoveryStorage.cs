@@ -1,5 +1,4 @@
-﻿#if !SILVERLIGHT && !NETFX_CORE
-using System;
+﻿using System;
 using System.Transactions;
 using System.Collections.Generic;
 using System.IO;
@@ -51,7 +50,7 @@ namespace Raven.Client.Document.DTC
 	        return preparingEnlistment.RecoveryInformation();
 	    }
 
-	    public void Dispose()
+		public void Dispose()
 		{
 			
 		}
@@ -62,4 +61,3 @@ namespace Raven.Client.Document.DTC
 		}
 	}
 }
-#endif

@@ -6,6 +6,8 @@ using Raven.Database.Data;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -34,7 +36,7 @@ namespace Raven.Tests.Bugs
 					}
 				}), new RavenJObject());
 
-				store.OpenSession().Advanced.LuceneQuery<object>("MyIndex").WaitForNonStaleResults().ToList();
+                store.OpenSession().Advanced.DocumentQuery<object>("MyIndex").WaitForNonStaleResults().ToList();
 
 				store.DatabaseCommands.UpdateByIndex("MyIndex",
 				   new IndexQuery
@@ -65,8 +67,8 @@ namespace Raven.Tests.Bugs
 						   }
 					   }
 				   },
-				   false
-			   );
+				   null
+			   ).WaitForCompletion();
 
 				Assert.Equal("{\"Comment\":{\"Notes\":[\"item\",\"new\"]}}", store.DatabaseCommands.Get("items/1").DataAsJson.ToString(Formatting.None));
 			}

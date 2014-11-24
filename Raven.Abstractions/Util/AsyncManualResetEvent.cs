@@ -6,24 +6,20 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+
 namespace Raven.Abstractions.Util
 {
     public class AsyncManualResetEvent
     {
-        private volatile TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+        private TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
 
         public Task WaitAsync() { return tcs.Task; }
 
         public async Task<bool> WaitAsync(int timeout)
         {
             var task = tcs.Task;
-#if !NET45
-            return await TaskEx.WhenAny(task, TaskEx.Delay(timeout)) == task;
-
-#else
-            return await Task.WhenAny(task, Task.Delay(timeout)) == task;
-#endif
-        }
+			return await Task.WhenAny(task, Task.Delay(timeout)) == task;
+		}
 
         public void Set() { tcs.TrySetResult(true); }
 

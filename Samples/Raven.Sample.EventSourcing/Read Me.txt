@@ -1,8 +1,0 @@
-This sample contains a simple example of Raven's compiled indexes and event sourcing.
-
-Start the server using "Start Raven.ps1", this will start an instance of Raven on port 8080 with a compiled index (ths source for which is found in 
-Raven.Sample.EventSourcing.ShoppingCartAggregator).
-
-Run the sample, you should get a message saying the the application has wrote several events to Raven.
-Go to the database instance, using http://localhost:8080 and view the events that were entered.
-

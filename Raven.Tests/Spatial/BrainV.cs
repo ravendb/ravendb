@@ -1,5 +1,7 @@
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -20,9 +22,9 @@ namespace Raven.Tests.Spatial
 				}
 				};
 
-				store.DocumentDatabase.PutIndex("eventsByLatLng", indexDefinition);
+				store.SystemDatabase.Indexes.PutIndex("eventsByLatLng", indexDefinition);
 
-				store.DocumentDatabase.Put("Events/1", null,
+				store.SystemDatabase.Documents.Put("Events/1", null,
 					RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": null }"),
 					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
 
@@ -32,7 +34,7 @@ namespace Raven.Tests.Spatial
 						.Customize(x => x.WaitForNonStaleResults())
 						.ToArray();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.Equal(1, objects.Length);
 				}
@@ -54,9 +56,9 @@ namespace Raven.Tests.Spatial
 				}
 				};
 
-				store.DocumentDatabase.PutIndex("eventsByLatLng", indexDefinition);
+				store.SystemDatabase.Indexes.PutIndex("eventsByLatLng", indexDefinition);
 
-				store.DocumentDatabase.Put("Events/1", null,
+				store.SystemDatabase.Documents.Put("Events/1", null,
 					RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": null }"),
 					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
 
@@ -67,7 +69,7 @@ namespace Raven.Tests.Spatial
 						.Customize(x => x.WaitForNonStaleResults())
 						.ToArray();
 
-					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+					Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
 					Assert.Equal(1, objects.Length);
 				}

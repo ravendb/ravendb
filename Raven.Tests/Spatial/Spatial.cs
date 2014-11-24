@@ -6,6 +6,8 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Spatial
@@ -89,7 +91,7 @@ namespace Raven.Tests.Spatial
 				{
 					RavenQueryStatistics stats;
 					var result = session.Advanced
-						.LuceneQuery<MyDocument, MyIndex>()
+                        .DocumentQuery<MyDocument, MyIndex>()
 						.WaitForNonStaleResults()
 						.WithinRadiusOf(0, 12.3456789f, 12.3456789f)
 						.Statistics(out stats)
@@ -133,7 +135,7 @@ namespace Raven.Tests.Spatial
 				{
 					RavenQueryStatistics stats;
 					var result = session.Advanced
-						.LuceneQuery<MyDocument, MyIndex>()
+                        .DocumentQuery<MyDocument, MyIndex>()
 						.WaitForNonStaleResults()
 						.WithinRadiusOf(1, 10, 10)
 						.Statistics(out stats)
@@ -188,7 +190,7 @@ namespace Raven.Tests.Spatial
 				{
 					RavenQueryStatistics stats;
 					var result = session.Advanced
-						.LuceneQuery<MySpatialDocument, MySpatialIndex>()
+                        .DocumentQuery<MySpatialDocument, MySpatialIndex>()
 						.WaitForNonStaleResults()
 						.WithinRadiusOf(200, 12.3456789f, 12.3456789f)
 						.Statistics(out stats)
@@ -227,7 +229,7 @@ namespace Raven.Tests.Spatial
 						Assert.Equal("1,5", (1.5f).ToString()); // Check that the culture change is affecting the current thread. Swedish decimal delimiter is comma.
 
 						var result = session.Advanced
-							.LuceneQuery<MySpatialDocument, MySpatialIndex>()
+                            .DocumentQuery<MySpatialDocument, MySpatialIndex>()
 							.WaitForNonStaleResults()
 							.WithinRadiusOf(radius: 10, latitude: Convert.ToDouble(12.3456789f), longitude: Convert.ToDouble(12.3456789f))
 							.SortByDistance()

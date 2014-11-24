@@ -1,9 +1,9 @@
-#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
 
 namespace Raven.Abstractions.Connection
@@ -12,12 +12,21 @@ namespace Raven.Abstractions.Connection
 	{
 		public int? RequestTimeoutInMs { get; set; }
 
+		public bool? AllowWriteStreamBuffering { get; set; }
+
 		readonly ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator> authenticators = new ConcurrentDictionary<Tuple<string, string>, AbstractAuthenticator>();
 
-		public void ConfigureRequest(RavenConnectionStringOptions options, WebRequest request)
+		public void ConfigureRequest(RavenConnectionStringOptions options, HttpWebRequest request)
 		{
 			if (RequestTimeoutInMs.HasValue)
 				request.Timeout = RequestTimeoutInMs.Value;
+
+			if (AllowWriteStreamBuffering.HasValue)
+			{
+				request.AllowWriteStreamBuffering = AllowWriteStreamBuffering.Value;
+				if(AllowWriteStreamBuffering.Value == false)
+					request.SendChunked = true;
+			}
 
 			if (options.ApiKey == null)
 			{
@@ -80,6 +89,12 @@ namespace Raven.Abstractions.Connection
 
 			return authenticator.DoOAuthRequest(oauthSource, options.ApiKey);
 		}
+
+		public static IDisposable Expect100Continue(string url)
+		{
+			var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
+			servicePoint.Expect100Continue = true;
+			return new DisposableAction(() => servicePoint.Expect100Continue = false);
+		}
 	}
 }
-#endif

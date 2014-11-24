@@ -6,10 +6,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
@@ -33,9 +35,9 @@ namespace Raven.Storage.Esent.StorageActions
 			return 0;
 		}
 
-		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
+		public JsonDocument DocumentByKey(string key)
 		{
-			return DocumentByKeyInternal(key, transactionInformation, (metadata, createDocument) =>
+			return DocumentByKeyInternal(key, (metadata, createDocument) =>
 			{
 				Debug.Assert(metadata.Etag != null);
 				return new JsonDocument
@@ -50,12 +52,12 @@ namespace Raven.Storage.Esent.StorageActions
 			});
 		}
 
-		public JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation)
+		public JsonDocumentMetadata DocumentMetadataByKey(string key)
 		{
-			return DocumentByKeyInternal(key, transactionInformation, (metadata, func) => metadata);
+			return DocumentByKeyInternal(key, (metadata, func) => metadata);
 		}
 
-		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<JsonDocumentMetadata, Func<string, Etag, RavenJObject, RavenJObject>, T> createResult)
+		private T DocumentByKeyInternal<T>(string key, Func<JsonDocumentMetadata, Func<string, Etag, RavenJObject, RavenJObject>, T> createResult)
 			where T : class
 		{
 
@@ -216,7 +218,7 @@ namespace Raven.Storage.Esent.StorageActions
 				if (untilEtag != null && count > 0)
 				{
 					var docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-					if (EtagUtil.IsGreaterThanOrEqual(docEtag, untilEtag))
+					if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
 						yield break;
 				}
 				var readCurrentDocument = ReadCurrentDocument();
@@ -260,32 +262,43 @@ namespace Raven.Storage.Esent.StorageActions
 	        {
 	            var key = Api.RetrieveColumnAsString(Session, Documents, tableColumnsCache.DocumentsColumns["key"],
 	                                                 Encoding.Unicode);
+               
+                var doc = DocumentByKey(key);
+                var size = doc.SerializedSizeOnDisk;
+                stat.TotalSize += size;
 	            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
-	                stat.System++;
+	            {
+                    stat.System.Update(size, doc.Key);
+	            }
+
 
 	            var metadata =
 	                Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 
 	            var entityName = metadata.Value<string>(Constants.RavenEntityName);
 	            if (string.IsNullOrEmpty(entityName))
-	                stat.NoCollection++;
+	            {
+                    stat.NoCollection.Update(size, doc.Key);
+	            }
 	            else
-	                stat.IncrementCollection(entityName);
+	            {
+                    stat.IncrementCollection(entityName, size, doc.Key);
+	            }
 
 	            if (metadata.ContainsKey("Raven-Delete-Marker"))
 	                stat.Tombstones++;
 	        }
-
 	        stat.TimeToGenerate = sp.Elapsed;
+	       
 	        return stat;
 	    }
 
-	    public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
+	    public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter)
 		{
 			if (take <= 0)
 				yield break;
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
-			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Documents, skipAfter ?? idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
 				yield break;
 
@@ -294,6 +307,9 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) ==
 				false)
 				yield break;
+
+		    if (skipAfter != null && TryMoveTableRecords(Documents, 1, backward: false))
+			    yield break;
 
 			if (TryMoveTableRecords(Documents, start, backward: false))
 				yield break;
@@ -358,7 +374,6 @@ namespace Raven.Storage.Esent.StorageActions
 
 			try
 			{
-
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
 				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
@@ -402,6 +417,7 @@ namespace Raven.Storage.Esent.StorageActions
 						}
 						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
 									  newEtag.TransformToValueForEsentSorting());
+
 						savedAt = SystemTime.UtcNow;
 						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
@@ -427,6 +443,7 @@ namespace Raven.Storage.Esent.StorageActions
 					throw;
 				}
 
+
 				logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
 							   key, isUpdate);
 
@@ -445,13 +462,14 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
+
+		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting)
 		{
 			var prep = JET_prep.Insert;
 			bool isUpdate = false;
 
 			Etag existingETag = null;
-			if (checkForUpdates)
+			if (overwriteExisting)
 			{
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
 				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -462,6 +480,9 @@ namespace Raven.Storage.Esent.StorageActions
 					prep = JET_prep.Replace;
 				}
 			}
+
+            try 
+            {
 			using (var update = new Update(session, Documents, prep))
 			{
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
@@ -502,6 +523,11 @@ namespace Raven.Storage.Esent.StorageActions
 					Updated = isUpdate
 				};
 			}
+		}
+            catch (EsentKeyDuplicateException e)
+            {
+                throw new ConcurrencyException("Illegal duplicate key " + key, e);
+            }
 		}
 
 		public bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag)

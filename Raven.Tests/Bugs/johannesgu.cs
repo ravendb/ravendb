@@ -2,6 +2,8 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -20,7 +22,7 @@ namespace Raven.Tests.Bugs
 				 };
 
 				 Assert.Throws<OperationVetoedException>(
-					 () => store.DocumentDatabase.Put(@"somebadid\123", null, new RavenJObject(), new RavenJObject(), tx));
+					 () => store.SystemDatabase.Documents.Put(@"somebadid\123", null, new RavenJObject(), new RavenJObject(), tx));
 			 }
 		 }
 	}

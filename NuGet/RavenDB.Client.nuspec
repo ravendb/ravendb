@@ -12,13 +12,6 @@
 		<projectUrl>http://www.ravendb.net/</projectUrl>
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
 		<tags>nosql ravendb raven document database client</tags>
-		<dependencies>
-			<group>
-				<dependency id="Microsoft.CompilerServices.AsyncTargetingPack" version=""/>
-			</group>
-			<group targetFramework="net45">
-			</group>
-		</dependencies>
 		<frameworkAssemblies>
 			<frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />
 		</frameworkAssemblies>

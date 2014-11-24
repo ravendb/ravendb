@@ -5,6 +5,8 @@ using System.Net;
 using System.Text;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Connection;
 
@@ -14,7 +16,7 @@ namespace Raven.Tests.NotModified
 	/// The tests in this class test that 304 is returned when nothing at all is changed, and that 200 is returned when the
 	/// object being tested is changed; they do not test what happens when other objects are changed
 	/// </summary>
-	public class NotModified : RemoteClientTest
+	public class NotModified : RavenTest
 	{
 		[Fact]
 		public void ServerReturnsNotModifiedWhenAppropriateForDocument()

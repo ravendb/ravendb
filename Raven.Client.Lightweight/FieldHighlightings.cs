@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 
 namespace Raven.Client
@@ -13,7 +14,7 @@ namespace Raven.Client
 		public FieldHighlightings(string fieldName)
 		{
 			this.FieldName = fieldName;
-			this.highlightings = new Dictionary<string, string[]>();
+			this.highlightings = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 		}
 
 		/// <summary>
@@ -44,6 +45,9 @@ namespace Raven.Client
 		internal void Update(QueryResult queryResult)
 		{
 			this.highlightings.Clear();
+
+			if (queryResult.Highlightings == null)
+				return;
 
 			foreach (var entityFragments in queryResult.Highlightings)
 				foreach (var fieldFragments in entityFragments.Value)

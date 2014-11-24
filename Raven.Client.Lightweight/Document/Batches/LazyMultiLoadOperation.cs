@@ -2,11 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
-#if !SILVERLIGHT
 using Raven.Client.Shard;
-#endif
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
@@ -48,9 +45,9 @@ namespace Raven.Client.Document.Batches
 		}
 
 		public object Result { get; set; }
+		public QueryResult QueryResult { get; set; }
 		public bool RequiresRetry { get; set; }
 
-#if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var list = new List<MultiLoadResult>(
@@ -59,7 +56,7 @@ namespace Raven.Client.Document.Batches
 				select new MultiLoadResult
 				{
 					Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-					Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
+                    Results = result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
 				});
 
 			var capacity = list.Max(x => x.Results.Count);
@@ -86,7 +83,6 @@ namespace Raven.Client.Document.Batches
 				Result = loadOperation.Complete<T>();
 
 		}
-#endif
 
 		public void HandleResponse(GetResponse response)
 		{
@@ -102,7 +98,7 @@ namespace Raven.Client.Document.Batches
 			var multiLoadResult = new MultiLoadResult
 			{
 				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-				Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
+				Results = result.Value<RavenJArray>("Results").Select(x=>x as RavenJObject).ToList()
 			};
 			HandleResponse(multiLoadResult);
 		}
@@ -118,18 +114,5 @@ namespace Raven.Client.Document.Batches
 		{
 			return loadOperation.EnterMultiLoadContext();
 		}
-
-#if !SILVERLIGHT
-		public object ExecuteEmbedded(IDatabaseCommands commands)
-		{
-			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-			return commands.Get(ids, includePaths, transformer);
-		}
-
-		public void HandleEmbeddedResponse(object result)
-		{
-			HandleResponse((MultiLoadResult) result);
-		}
-#endif
 	}
 }

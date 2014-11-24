@@ -14,45 +14,55 @@ namespace Raven.Database.Extensions
 		{
 			return new CancellationTimeout(cts, dueTime);
 		}
-
-		public class CancellationTimeout : IDisposable
-		{
-			private readonly CancellationTokenSource source;
-			private readonly Timer timer;
-			private readonly long dueTime;
-
-			public CancellationTimeout(CancellationTokenSource source, TimeSpan dueTime)
-			{
-				if (source == null)
-					throw new ArgumentNullException("source");
-				if (dueTime < TimeSpan.Zero)
-					throw new ArgumentOutOfRangeException("dueTime");
-
-				this.source = source;
-				this.dueTime = (long) dueTime.TotalMilliseconds;
-				timer = new Timer(self =>
-				{
-					timer.Dispose();
-					try
-					{
-						this.source.Cancel();
-					}
-					catch (ObjectDisposedException)
-					{
-					}
-				}, null, this.dueTime, -1);
-			}
-
-			public void Delay()
-			{
-				timer.Change(dueTime,-1);
-			}
-
-			public void Dispose()
-			{
-				timer.Dispose();
-			}
-		}
-
 	}
+
+
+    public class CancellationTimeout : IDisposable
+    {
+        private readonly CancellationTokenSource source;
+        private readonly Timer timer;
+        private readonly long dueTime;
+        private bool isTimerDisposed;
+
+        public void ThrowIfCancellationRequested()
+        {
+            source.Token.ThrowIfCancellationRequested();
+        }
+
+        public CancellationTimeout(CancellationTokenSource source, TimeSpan dueTime)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+            if (dueTime < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException("dueTime");
+
+            isTimerDisposed = false;
+            this.source = source;
+            this.dueTime = (long)dueTime.TotalMilliseconds;
+            timer = new Timer(self =>
+            {
+                timer.Dispose();
+                isTimerDisposed = true;
+                try
+                {
+                    this.source.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }, null, this.dueTime, -1);
+        }
+
+        public void Delay()
+        {
+            if (!isTimerDisposed)
+                timer.Change(dueTime, -1);
+        }
+
+        public void Dispose()
+        {
+	       isTimerDisposed = true;
+           timer.Dispose();
+        }
+    }
 }

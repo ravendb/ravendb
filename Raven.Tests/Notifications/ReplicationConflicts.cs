@@ -8,10 +8,12 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
-using Raven.Tests.Bundles.Replication;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Notifications

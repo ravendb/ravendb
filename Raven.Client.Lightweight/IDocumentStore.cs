@@ -6,18 +6,15 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#else
+using Raven.Client.Listeners;
+
 using System.Collections.Specialized;
-#endif
 using Raven.Client.Indexes;
 using Raven.Client.Connection.Async;
 
@@ -78,16 +75,17 @@ namespace Raven.Client
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
-#if !SILVERLIGHT && !NETFX_CORE
 		NameValueCollection SharedOperationsHeaders { get; }
-#else
-		IDictionary<string,string> SharedOperationsHeaders { get; }
-#endif
 
 		/// <summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for this store
 		/// </summary>
 		HttpJsonRequestFactory JsonRequestFactory { get; }
+
+		/// <summary>
+		/// Whatever this instance has json request factory available
+		/// </summary>
+		bool HasJsonRequestFactory { get; }
 
 		/// <summary>
 		/// Gets or sets the identifier for this store.
@@ -119,7 +117,6 @@ namespace Raven.Client
 		/// <returns></returns>
 		IAsyncDocumentSession OpenAsyncSession(string database);
 
-#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Opens the session.
 		/// </summary>
@@ -147,11 +144,18 @@ namespace Raven.Client
 		/// </summary>
 		void ExecuteIndex(AbstractIndexCreationTask indexCreationTask);
 
+        /// <summary>
+        /// Executes the index creation.
+        /// </summary>
+        /// <param name="indexCreationTask"></param>
+        Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask);
+
 		/// <summary>
 		/// Executes the transformer creation
 		/// </summary>
 		void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask);
-#endif
+
+        Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask);
 
 		/// <summary>
 		/// Gets the conventions.
@@ -170,8 +174,13 @@ namespace Raven.Client
 		///</summary>
 		Etag GetLastWrittenEtag();
 
-#if !SILVERLIGHT && !NETFX_CORE
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
-#endif
+
+        DocumentSessionListeners Listeners { get; }
+
+	    void SetListeners(DocumentSessionListeners listeners);
+		void InitializeProfiling();
+
+		ProfilingInformation GetProfilingInformationFor(Guid id);
 	}
 }

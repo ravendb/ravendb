@@ -1,4 +1,6 @@
 ﻿using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -7,14 +9,10 @@ namespace Raven.Tests.Bugs
 	{
 		private const string KnownId = "Links/Daniel";
 
-
 		[Fact]
 		public void ShouldLoadLinkAndUserAccountLazily()
 		{
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8080"
-			}.Initialize())
+			using (var store = NewRemoteDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{

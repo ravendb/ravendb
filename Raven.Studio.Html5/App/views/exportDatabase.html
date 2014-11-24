@@ -1,0 +1,185 @@
+﻿<div class="panel panel-default">    
+    <div class="panel-heading">
+        <h3 class="panel-title">Export Database</h3>
+    </div>
+    <div class="panel-body">
+        <h4 class="pull-left">Export your database to a .ravendump file.</h4>
+        <br />
+        <br />
+        <div class="btn-toolbar">
+            <div>
+                <div class="checkbox">
+                    <a class="btn btn-primary" data-bind="click: startExport" download>
+                        <i class="fa fa-download"></i>
+                        Export Database
+                    </a>
+
+                    <label data-bind="visible: !chooseDifferntFileName()">
+                        <input type="checkbox" data-bind="checked: chooseDifferntFileName">Override file name
+                    </label>
+                    <span data-bind="visible: chooseDifferntFileName">
+                        File name:
+                        <input type="text" name="fileName" data-bind="visible: chooseDifferntFileName, value: noneDefualtFileName" title="Insert a file name to ovveride the default one.">
+                    </span>
+                </div>
+                
+                <form id="dbExportDownloadForm" method="post" data-bind="attr:{action:exportActionUrl}" target="about:blank">
+                    <input type="hidden" id="SmugglerOptions" name="SmugglerOptions" />
+                </form>
+            </div>
+        </div>
+        <br />
+        <ul class="nav nav-tabs">
+            <li class="active" data-bind="css: { active: !showAdvancedOptions()}">
+                <a href="#" data-bind="click:function(){this.selectOptions()}">General</a>
+            </li>
+            <li data-bind="css: { active: showAdvancedOptions()}">
+                <a href="#" data-bind="click:function(){this.selectAdvancedOptions()}">Advanced</a>
+            </li>
+        </ul>
+        <br />
+        <div class="btn-group btn-group-vertical" data-bind="visible:!showAdvancedOptions()">
+
+            <label class="btn btn-default" data-bind="css:{active:includeDocuments() == true}, click: function(){$root.includeDocuments(!$root.includeDocuments()); return true;}, clickBubble: false">
+                <i data-bind="css: {'fa-check': includeDocuments }" class="fa fa-fw"></i> Include Documents
+            </label>
+            <label class="btn btn-default" data-bind="css:{active:includeIndexes() == true}, click: function(){$root.includeIndexes(!$root.includeIndexes()); return true;}, clickBubble: false">
+                <i data-bind="css: {'fa-check': includeIndexes }" class="fa fa-fw"></i> Include Indexes
+            </label>
+            <label class="btn btn-default" data-bind="css:{active:includeAttachments() == true}, click: function(){$root.includeAttachments(!$root.includeAttachments()); return true;}, clickBubble: false">
+                <i data-bind="css: {'fa-check': includeAttachments }" class="fa fa-fw"></i> Include Attachments
+            </label>
+            <label class="btn btn-default" data-bind="css:{active:includeTransformers() == true}, click: function(){$root.includeTransformers(!$root.includeTransformers()); return true;}, clickBubble: false">
+                <i data-bind="css: {'fa-check': includeTransformers }" class="fa fa-fw"></i> Include Transformers
+            </label>
+            <label class="btn btn-default" data-bind="css:{active:removeAnalyzers() == true}, click: function(){$root.removeAnalyzers(!$root.removeAnalyzers()); return true; }, clickBubble: false">
+                <i data-bind="css: {'fa-check': removeAnalyzers }" class="fa fa-fw"></i> Remove Analyzers
+            </label>
+
+        </div>
+        <div data-bind="visible:showAdvancedOptions()">
+            <form class="form-horizontal" role="form">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Batch size</label>
+                    <div class="col-sm-2">
+                        <input class="form-control" type="number" min="0" data-bind="value: batchSize" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Expired documents</label>
+                    <div class="col-sm-10">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: includeExpiredDocuments">Include</span>
+                                <span data-bind="visible: !includeExpiredDocuments()">Exclude</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, true)">Include</a></li>
+                                <li><a href="#" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, false)">Exclude</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Collections</label>
+                    <div class="col-sm-10">
+                        <!--<div class="btn-group">
+                    <label class="btn btn-default" data-bind="click: includeAllCollections.bind(includeAllCollections, true), css: { active: includeAllCollections }">
+                        All collections
+                    </label>
+                    <label class="btn btn-default" data-bind="click: includeAllCollections.bind(includeAllCollections, false), css: { active: !includeAllCollections() }">
+                        Specified collections only
+                    </label>
+                </div>-->
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: includeAllCollections">All collections</span>
+                                <span data-bind="visible: !includeAllCollections()">Specified collections only</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: includeAllCollections.bind(includeAllCollections, true)">All collections</a></li>
+                                <li><a href="#" data-bind="click: includeAllCollections.bind(includeAllCollections, false)">Specified collections only</a></li>
+                            </ul>
+                        </div>
+                        <div style="margin-left: 20px;" data-bind="visible: !includeAllCollections()">
+                            <p class="form-control-static">Choose collections:</p>
+                            <div class="btn-group-vertical" data-bind="foreach: includedCollections">
+                                <label class="btn btn-default" data-bind="click: isIncluded.bind(isIncluded, !isIncluded()), css: { active: isIncluded }">
+                                    <i class="fa fa-fw" data-bind="css: { 'fa-check': isIncluded }"></i>
+                                    <span data-bind="text: collection"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">
+                        <span>Filters</span>
+                        <span class="help-block">
+                            <a class="text-muted" title="External link: RavenDB filters documentation" target="_blank" href="http://ravendb.net/docs/server/administration/export-import">
+                                <i class="fa fa-question-circle"></i>
+                                Help
+                            </a>
+                        </span>
+                    </label>
+                    <div class="col-sm-10">
+                        <div class="btn-group">
+                            <table class="table table-striped" style="max-width: 500px;" data-bind="visible: filters().length">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40%;">Path</th>
+                                        <th style="width: 45%;">Value</th>
+                                        <th style="width: 10%">Should Match</th>
+                                        <th>&nbsp;</th>
+                                    </tr>
+                                </thead>
+                                <tbody data-bind="foreach: filters">
+                                    <tr>
+                                        <td><input class="form-control" type="text" data-bind="value: Path" /></td>
+                                        <td><input class="form-control" type="text" data-bind="value: Values[0]" /></td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                    <span data-bind="visible: ShouldMatchObservable">Should match</span>
+                                                    <span data-bind="visible: !ShouldMatchObservable()">Should <strong>not</strong> match</span>
+                                                    <span class="caret"></span>
+                                                </button>
+                                                <ul class="dropdown-menu" role="menu">
+                                                    <li><a href="#" style="text-decoration: none;" data-bind="click: ShouldMatchObservable.bind(ShouldMatchObservable, true)">Should match</a></li>
+                                                    <li><a href="#" style="text-decoration: none;" data-bind="click: ShouldMatchObservable.bind(ShouldMatchObservable, false)">Should <strong>not</strong> match</a></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="close" data-bind="click: $root.removeFilter.bind($root, $data)" title="Remove this filter">
+                                                <i class="fa fa-times"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <button class="btn btn-default" data-bind="click: addFilter">
+                                <i class="fa fa-plus"></i> Add filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label id="transformScriptHelp" class="col-sm-2 control-label">
+                        Transform script&nbsp;
+                        <i class="fa fa-info-circle help-cursor"></i>
+                    </label>
+                    <div class="col-sm-10">
+                        <pre style="height: 200px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }">
+                        </pre>
+                    </div>
+                </div>
+            </form>
+            <div>
+                
+            </div>
+        </div>
+    </div>
+</div>

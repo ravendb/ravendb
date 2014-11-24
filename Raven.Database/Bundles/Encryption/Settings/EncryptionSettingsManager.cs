@@ -23,10 +23,10 @@ namespace Raven.Bundles.Encryption.Settings
 			var result = (EncryptionSettings)database.ExtensionsState.GetOrAdd(EncryptionSettingsKeyInExtensionsState, _ =>
 			{
 				var type = GetTypeFromName(database.Configuration.Settings[Constants.AlgorithmTypeSetting]);
-				var key = GetKeyFromBase64(database.Configuration.Settings[Constants.EncryptionKeySetting], database.Configuration.EncryptionKeyBitsPreference);
+				var key = GetKeyFromBase64(database.Configuration.Settings[Constants.EncryptionKeySetting], database.Configuration.Encryption.EncryptionKeyBitsPreference);
 				var encryptIndexes = GetEncryptIndexesFromString(database.Configuration.Settings[Constants.EncryptIndexes], true);
 
-				return new EncryptionSettings(key, type, encryptIndexes,database.Configuration.EncryptionKeyBitsPreference);
+				return new EncryptionSettings(key, type, encryptIndexes, database.Configuration.Encryption.EncryptionKeyBitsPreference);
 			});
 
 
@@ -91,7 +91,7 @@ namespace Raven.Bundles.Encryption.Settings
 			JsonDocument doc;
 			try
 			{
-				doc = database.Get(Constants.InDatabaseKeyVerificationDocumentName, null);
+				doc = database.Documents.Get(Constants.InDatabaseKeyVerificationDocumentName, null);
 			}
 			catch (CryptographicException e)
 			{
@@ -113,7 +113,7 @@ namespace Raven.Bundles.Encryption.Settings
 					throw new InvalidOperationException("The database already has existing documents, you cannot start using encryption now.");
 
 				var clonedDoc = (RavenJObject)Constants.InDatabaseKeyVerificationDocumentContents.CreateSnapshot();
-				database.Put(Constants.InDatabaseKeyVerificationDocumentName, null, clonedDoc, new RavenJObject(), null);
+				database.Documents.Put(Constants.InDatabaseKeyVerificationDocumentName, null, clonedDoc, new RavenJObject(), null);
 			}
 		}
 
@@ -123,7 +123,7 @@ namespace Raven.Bundles.Encryption.Settings
 			int index = 0;
 			while (true)
 			{
-				var array = database.GetDocuments(index, index + pageSize, null, CancellationToken.None);
+				var array = database.Documents.GetDocuments(index, index + pageSize, null, CancellationToken.None);
 				if (array.Length == 0)
 				{
 					// We've gone over all the documents in the database, and none of them are encrypted.

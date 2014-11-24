@@ -6,78 +6,40 @@
 using System;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
-using Raven.Abstractions.Data;
+using Raven.Database.Data;
 using System.Linq;
+using Raven.Storage.Esent;
 
-namespace Raven.Storage.Esent.Backup
+namespace Raven.Database.Storage.Esent.Backup
 {
-	public class RestoreOperation
+	internal class RestoreOperation : BaseRestoreOperation
 	{
-		private static readonly ILog log = LogManager.GetCurrentClassLogger();
-
-		private readonly Action<string> output;
-		private readonly bool defrag;
-		private readonly string backupLocation;
-
-		private readonly InMemoryRavenConfiguration configuration;
-		private string databaseLocation { get { return configuration.DataDirectory.ToFullPath(); } }
-		private string indexLocation { get { return configuration.IndexStoragePath.ToFullPath(); } }
-
-		public RestoreOperation(string backupLocation, InMemoryRavenConfiguration configuration, Action<string> output, bool defrag)
+        public RestoreOperation(DatabaseRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
+            : base(restoreRequest, configuration, operationOutputCallback)
 		{
-			this.output = output;
-			this.defrag = defrag;
-			this.backupLocation = backupLocation.ToFullPath();
-			this.configuration = configuration;
 		}
 
-		public void Execute()
+
+		protected override bool IsValidBackup(string backupFilename)
 		{
-			if (File.Exists(Path.Combine(backupLocation, "RavenDB.Backup")) == false)
-			{
-				output("Error: " + backupLocation + " doesn't look like a valid backup");
-				output("Error: Restore Canceled");
-				throw new InvalidOperationException(backupLocation + " doesn't look like a valid backup");
-			}
+			return File.Exists(Path.Combine(backupLocation, backupFilename));
+		}
 
-			if (Directory.Exists(databaseLocation) && Directory.GetFileSystemEntries(databaseLocation).Length > 0)
-			{
-				output("Error: Database already exists, cannot restore to an existing database.");
-				output("Error: Restore Canceled");
-				throw new IOException("Database already exists, cannot restore to an existing database.");
-			}
-
-			if (Directory.Exists(databaseLocation) == false)
-				Directory.CreateDirectory(databaseLocation);
-
-			if (Directory.Exists(indexLocation) == false)
-				Directory.CreateDirectory(indexLocation);
-
-			var logsPath = databaseLocation;
-
-			if (!string.IsNullOrWhiteSpace(configuration.Settings[Constants.RavenLogsPath]))
-			{
-				logsPath = configuration.Settings[Constants.RavenLogsPath].ToFullPath();
-
-				if (Directory.Exists(logsPath) == false)
-				{
-					Directory.CreateDirectory(logsPath);
-				}
-			}
-
-			Directory.CreateDirectory(Path.Combine(logsPath, "logs"));
-			Directory.CreateDirectory(Path.Combine(logsPath, "temp"));
-			Directory.CreateDirectory(Path.Combine(logsPath, "system"));
+		public override void Execute()
+		{
+            ValidateRestorePreconditionsAndReturnLogsPath("RavenDB.Backup");
+			
+			Directory.CreateDirectory(Path.Combine(journalLocation, "logs"));
+            Directory.CreateDirectory(Path.Combine(journalLocation, "temp"));
+            Directory.CreateDirectory(Path.Combine(journalLocation, "system"));
 
 			CombineIncrementalBackups();
 
-			CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "IndexDefinitions")),
-				new DirectoryInfo(Path.Combine(databaseLocation, "IndexDefinitions")));
-
-			CopyIndexDefinitionsFromIncrementalBackups();
+			CopyIndexDefinitions();
 
 			CopyIndexes();
 
@@ -88,7 +50,8 @@ namespace Raven.Storage.Esent.Backup
 			TransactionalStorage.CreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
-				new TransactionalStorageConfigurator(configuration, null).ConfigureInstance(instance, databaseLocation);
+                Configuration.Settings["Raven/Esent/LogsPath"] = journalLocation;
+				new TransactionalStorageConfigurator(Configuration, null).ConfigureInstance(instance, databaseLocation);
 				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, RestoreStatusCallback);
 				var fileThatGetsCreatedButDoesntSeemLikeItShould =
 					new FileInfo(
@@ -102,10 +65,10 @@ namespace Raven.Storage.Esent.Backup
 					fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(dataFilePath);
 				}
 
-				if (defrag)
+				if (_restoreRequest.Defrag)
 				{
 					output("Esent Restore: Begin Database Compaction");
-					TransactionalStorage.Compact(configuration, CompactStatusCallback);
+					TransactionalStorage.Compact(Configuration, CompactStatusCallback);
 					output("Esent Restore: Database Compaction Completed");
 				}
 			}
@@ -131,93 +94,7 @@ namespace Raven.Storage.Esent.Backup
 			}
 		}
 
-		private void CopyIndexes()
-		{
-			var directories = Directory.GetDirectories(backupLocation, "Inc*")
-				.OrderByDescending(dir => dir)
-				.ToList();
-
-			if (directories.Count == 0)
-			{
-				foreach (var backupIndex in Directory.GetDirectories(Path.Combine(backupLocation, "Indexes")))
-				{
-					var indexName = Path.GetFileName(backupIndex);
-					var indexPath = Path.Combine(indexLocation, indexName);
-
-					try
-					{
-						CopyAll(new DirectoryInfo(backupIndex), new DirectoryInfo(indexPath));
-					}
-					catch (Exception ex)
-					{
-						ForceIndexReset(indexPath, indexName, ex);
-					}
-				}
-
-				return;
-			}
-
-			var latestIncrementalBackupDirectory = directories.First();
-			if(Directory.Exists(Path.Combine(latestIncrementalBackupDirectory, "Indexes")) == false)
-				return;
-
-			directories.Add(backupLocation); // add the root (first full backup) to the end of the list (last place to look for)
-
-			foreach (var index in Directory.GetDirectories(Path.Combine(latestIncrementalBackupDirectory, "Indexes")))
-			{
-				var indexName = Path.GetFileName(index);
-				var indexPath = Path.Combine(indexLocation, indexName);
-
-				try
-				{
-					var filesList = File.ReadAllLines(Path.Combine(index, "index-files.required-for-index-restore"))
-						.Where(x=>string.IsNullOrEmpty(x) == false)
-						.Reverse();
-					
-					output("Copying Index: " + indexName);
-
-					if (Directory.Exists(indexPath) == false)
-						Directory.CreateDirectory(indexPath);
-
-					foreach (var neededFile in filesList)
-					{
-						var found = false;
-
-						foreach (var directory in directories)
-						{
-							var possiblePathToFile = Path.Combine(directory, "Indexes", indexName, neededFile);
-							if (File.Exists(possiblePathToFile) == false) 
-								continue;
-
-							found = true;
-							File.Copy(possiblePathToFile, Path.Combine(indexPath, neededFile));
-							break;
-						}
-
-						if(found == false)
-							output(string.Format("Error: File \"{0}\" is missing from index {1}", neededFile, indexName));
-					}
-				}
-				catch (Exception ex)
-				{
-					ForceIndexReset(indexPath, indexName, ex);
-				}
-			}
-		}
-
-		private void ForceIndexReset(string indexPath, string indexName, Exception ex)
-		{
-			if (Directory.Exists(indexPath))
-				IOExtensions.DeleteDirectory(indexPath); // this will force index reset
-
-			output(
-				string.Format(
-					"Error: Index {0} could not be restored. All already copied index files was deleted. " +
-					"Index will be recreated after launching Raven instance. Thrown exception:{1}{2}",
-					indexName, Environment.NewLine, ex));
-		}
-
-		private void CombineIncrementalBackups()
+	    private void CombineIncrementalBackups()
 		{
 			var directories = Directory.GetDirectories(backupLocation, "Inc*")
 				.OrderBy(dir => dir)
@@ -234,19 +111,6 @@ namespace Raven.Storage.Esent.Backup
 			}
 		}
 
-		private void CopyIndexDefinitionsFromIncrementalBackups()
-		{
-			var directories = Directory.GetDirectories(backupLocation, "Inc*")
-				.OrderBy(dir => dir)
-				.ToList();
-
-			foreach (var directory in directories)
-			{
-				CopyAll(new DirectoryInfo(Path.Combine(directory, "IndexDefinitions")),
-				new DirectoryInfo(Path.Combine(databaseLocation, "IndexDefinitions")));
-			}
-		}
-
 		private JET_err RestoreStatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
 		{
 			output(string.Format("Esent Restore: {0} {1} {2}", snp, snt, data));
@@ -255,36 +119,23 @@ namespace Raven.Storage.Esent.Backup
 			return JET_err.Success;
 		}
 
+		private DateTime lastCompactionProgressStatusUpdate;
+
 		private JET_err CompactStatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
 		{
-			output(string.Format("Esent Compact: {0} {1} {2}", snp, snt, data));
 			Console.WriteLine("Esent Compact: {0} {1} {2}", snp, snt, data);
+
+			if (snt == JET_SNT.Progress)
+			{
+				if(SystemTime.UtcNow - lastCompactionProgressStatusUpdate < TimeSpan.FromMilliseconds(100))
+					return JET_err.Success;
+
+				lastCompactionProgressStatusUpdate = SystemTime.UtcNow;
+			}
+
+			output(string.Format("Esent Compact: {0} {1} {2}", snp, snt, data));
+			
 			return JET_err.Success;
-		}
-
-		private void CopyAll(DirectoryInfo source, DirectoryInfo target)
-		{
-			// Check if the target directory exists, if not, create it.
-			if (Directory.Exists(target.FullName) == false)
-			{
-				Directory.CreateDirectory(target.FullName);
-			}
-
-			// Copy each file into it's new directory.
-			foreach (FileInfo fi in source.GetFiles())
-			{
-				output(string.Format(@"Copying {0}\{1}", target.FullName, fi.Name));
-				Console.WriteLine(@"Copying {0}\{1}", target.FullName, fi.Name);
-				fi.CopyTo(Path.Combine(target.ToString(), fi.Name), true);
-			}
-
-			// Copy each subdirectory using recursion.
-			foreach (DirectoryInfo diSourceSubDir in source.GetDirectories())
-			{
-				DirectoryInfo nextTargetSubDir =
-					target.CreateSubdirectory(diSourceSubDir.Name);
-				CopyAll(diSourceSubDir, nextTargetSubDir);
-			}
 		}
 	}
 }

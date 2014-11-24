@@ -5,6 +5,9 @@
 //-----------------------------------------------------------------------
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Threading;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server;
@@ -48,7 +51,13 @@ namespace Raven.Database.Util
 			databaseTargets.Clear();
 		}
 
-		public class BoundedMemoryTarget
+	    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+	    public override bool ShouldLog(ILog logger, LogLevel level)
+	    {
+	        return LogManager.ShouldLogToTargets(level, logger);
+	    }
+
+	    public class BoundedMemoryTarget
 		{
 			public const int Limit = 500;
 			private ConcurrentQueue<LogEventInfo> generalLog = new ConcurrentQueue<LogEventInfo>();

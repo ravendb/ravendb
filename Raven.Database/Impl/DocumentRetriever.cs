@@ -24,7 +24,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Impl
 {
-	public class DocumentRetriever : ITranslatorDatabaseAccessor
+	internal class DocumentRetriever : ITranslatorDatabaseAccessor
 	{
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -34,7 +34,7 @@ namespace Raven.Database.Impl
 		private readonly IStorageActionsAccessor actions;
 		private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
 		private readonly InFlightTransactionalState inFlightTransactionalState;
-		private readonly Dictionary<string, RavenJToken> queryInputs;
+		private readonly Dictionary<string, RavenJToken> transformerParameters;
 	    private readonly HashSet<string> itemsToInclude;
 		private bool disableCache;
 
@@ -42,20 +42,20 @@ namespace Raven.Database.Impl
 
 		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers, 
 			InFlightTransactionalState inFlightTransactionalState,
-            Dictionary<string, RavenJToken> queryInputs = null,
+            Dictionary<string, RavenJToken> transformerParameters = null,
             HashSet<string> itemsToInclude = null)
 		{
 			this.actions = actions;
 			this.triggers = triggers;
 			this.inFlightTransactionalState = inFlightTransactionalState;
-			this.queryInputs = queryInputs ?? new Dictionary<string, RavenJToken>();
+			this.transformerParameters = transformerParameters ?? new Dictionary<string, RavenJToken>();
 		    this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
 		}
 
-		public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
+		public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch, bool skipDuplicateCheck)
 		{
 			return ExecuteReadTriggers(ProcessReadVetoes(
-				RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition),
+				RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, skipDuplicateCheck),
 				null, ReadOperation.Query), null, ReadOperation.Query);
 		}
 
@@ -102,7 +102,8 @@ namespace Raven.Database.Impl
 			IndexQueryResult queryResult,
 			HashSet<string> loadedIds,
 			FieldsToFetch fieldsToFetch,
-			IndexDefinition indexDefinition)
+			IndexDefinition indexDefinition,
+			bool skipDuplicateCheck)
 		{
 			var queryScore = queryResult.Score;
 
@@ -112,13 +113,17 @@ namespace Raven.Database.Impl
 			if (queryResult.Projection == null)
 			{
 				// duplicate document, filter it out
-				if (loadedIds.Add(queryResult.Key) == false)
+				if (skipDuplicateCheck == false && loadedIds.Add(queryResult.Key) == false)
 					return null;
 				var document = GetDocumentWithCaching(queryResult.Key);
-				if (document != null)
-				{
+				if (document == null)
+					return null;
+
+				document.Metadata = GetMetadata(document);
+
+				if (skipDuplicateCheck == false)
 					document.Metadata[Constants.TemporaryScoreValue] = queryScore;
-				}
+
 				return document;
 			}
 
@@ -211,8 +216,13 @@ namespace Raven.Database.Impl
 			JsonDocument doc;
 			if (disableCache == false && cache.TryGetValue(key, out doc))
 				return doc;
-			doc = actions.Documents.DocumentByKey(key, null);
+				
+			doc = actions.Documents.DocumentByKey(key);
 			EnsureIdInMetadata(doc);
+
+			if (doc != null && doc.Metadata != null)
+				doc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
+
 			var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
 			if (nonAuthoritativeInformationBehavior != null)
 				doc = nonAuthoritativeInformationBehavior(doc);
@@ -241,9 +251,9 @@ namespace Raven.Database.Impl
 			doc.Metadata["@id"] = doc.Key;
 		}
 
-		public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
+		public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch, bool skipDuplicateCheck)
 		{
-			var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, fieldsToFetch, indexDefinition);
+			var doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, fieldsToFetch, indexDefinition, skipDuplicateCheck);
 			if (doc == null)
 				return false;
 			doc = ProcessReadVetoes(doc, null, ReadOperation.Query);
@@ -302,37 +312,47 @@ namespace Raven.Database.Impl
 			if (jId != null)
 				return Include(jId.Value.ToString());
 
+		    var items = new List<dynamic>();
 			foreach (var itemId in (IEnumerable)maybeId)
 			{
-				Include(itemId);
+			    var include = Include(itemId);// this is where the real work happens
+			    items.Add(include);
 			}
-			return new DynamicNullObject();
+		    return new DynamicList(items);
 
 		}
 		public dynamic Include(string id)
 		{
-			itemsToInclude.Add(id);
-			return new DynamicNullObject();
+			ItemsToInclude.Add(id);
+		    return Load(id);
 		}
 
 		public dynamic Include(IEnumerable<string> ids)
 		{
-			foreach (var id in ids)
-			{
-				itemsToInclude.Add(id);
-			}
-			return new DynamicNullObject();
+            var items = new List<dynamic>();
+            foreach (var itemId in ids)
+            {
+                var include = Include(itemId);// this is where the real work happens
+                items.Add(include);
+            }
+            return new DynamicList(items);
 		}
 
 		public dynamic Load(string id)
 		{
 			var document = GetDocumentWithCaching(id);
+			document = ProcessReadVetoes(document, null, ReadOperation.Load);
 			if (document == null)
 			{
 			    Etag = Etag.HashWith(Etag.Empty);
 			    return new DynamicNullObject();
 			}
-		    Etag = Etag.HashWith(document.Etag);
+			Etag = Etag.HashWith(document.Etag);
+			if (document.Metadata.ContainsKey("Raven-Read-Veto"))
+			{
+				return new DynamicNullObject();
+			}
+
 			return new DynamicJsonObject(document.ToJson());
 		}
 
@@ -358,6 +378,10 @@ namespace Raven.Database.Impl
 			return new DynamicList(items.Select(x => (object)x).ToArray());
 		}
 
-        public Dictionary<string, RavenJToken> QueryInputs { get { return this.queryInputs; } } 
+        public Dictionary<string, RavenJToken> TransformerParameters { get { return this.transformerParameters; } }
+	    public HashSet<string> ItemsToInclude
+	    {
+	        get { return itemsToInclude; }
+	    }
 	}
 }

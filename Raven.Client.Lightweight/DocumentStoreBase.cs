@@ -1,31 +1,28 @@
 ﻿using System;
-#if !SILVERLIGHT
+using System.Threading.Tasks;
 using System.Collections.Specialized;
-#endif
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Configuration;
 using System.Linq;
-using System.Net;
+
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document.DTC;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Document;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
-using Raven.Client.WinRT.Connection;
-#endif
+
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
 
 namespace Raven.Client
 {
+	using System.Collections.Generic;
+
+	using Raven.Abstractions.Util.Encryptors;
+
 	/// <summary>
 	/// Contains implementation of some IDocumentStore operations shared by DocumentStore implementations
 	/// </summary>
@@ -33,11 +30,22 @@ namespace Raven.Client
 	{
 		protected DocumentStoreBase()
 		{
+			InitializeEncryptor();
+
 			LastEtagHolder = new GlobalLastEtagHolder();
 			TransactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
 		}
 
-		public abstract void Dispose();
+		public DocumentSessionListeners Listeners
+	    {
+	        get { return listeners; }
+	    }
+	    public void SetListeners(DocumentSessionListeners newListeners)
+	    {
+            this.listeners = newListeners;
+	    }
+
+	    public abstract void Dispose();
 		
 		/// <summary>
 		/// 
@@ -47,7 +55,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Whatever the instance has been disposed
 		/// </summary>
-		public bool WasDisposed { get; protected set; }
+        public bool WasDisposed { get; protected set; }
 
 		/// <summary>
 		/// Subscribe to change notifications from the server
@@ -61,15 +69,11 @@ namespace Raven.Client
 
 		public abstract IDisposable SetRequestsTimeoutFor(TimeSpan timeout);
 
-#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
 		public virtual NameValueCollection SharedOperationsHeaders { get; protected set; }
-#else
-		public virtual IDictionary<string,string> SharedOperationsHeaders { get; protected set; }
-#endif
 
 		public abstract bool HasJsonRequestFactory { get; }
 		public abstract HttpJsonRequestFactory JsonRequestFactory { get; }
@@ -79,12 +83,11 @@ namespace Raven.Client
 		public abstract IAsyncDocumentSession OpenAsyncSession();
 		public abstract IAsyncDocumentSession OpenAsyncSession(string database);
 
-#if !SILVERLIGHT && !NETFX_CORE
 		public abstract IDocumentSession OpenSession();
 		public abstract IDocumentSession OpenSession(string database);
 		public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
 		public abstract IDatabaseCommands DatabaseCommands { get; }
-
+        
 		/// <summary>
 		/// Executes the index creation.
 		/// </summary>
@@ -93,14 +96,23 @@ namespace Raven.Client
 			indexCreationTask.Execute(DatabaseCommands, Conventions);
 		}
 
-		/// <summary>
+	    public Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
+	    {
+	        return indexCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
+	    }
+
+	    /// <summary>
 		/// Executes the transformer creation
 		/// </summary>
 		public virtual void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
 		{
 			transformerCreationTask.Execute(DatabaseCommands, Conventions);
 		}
-#endif
+
+	    public Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask)
+	    {
+	        return transformerCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
+	    }
 
 		private DocumentConvention conventions;
 
@@ -124,6 +136,17 @@ namespace Raven.Client
 			get { return url; }
 			set { url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value; }
 		}
+
+		/// <summary>
+		/// Failover servers used by replication informers when cannot fetch the list of replication 
+		/// destinations if a master server is down.
+		/// </summary>
+		public FailoverServers FailoverServers { get; set; }
+
+		/// <summary>
+		/// Whenever or not we will use FIPS compliant encryption algorithms (must match server settings).
+		/// </summary>
+		public bool UseFipsEncryptionAlgorithms { get; set; }
 
 		///<summary>
 		/// Whatever or not we will automatically enlist in distributed transactions
@@ -153,9 +176,8 @@ namespace Raven.Client
 			return LastEtagHolder.GetLastWrittenEtag();
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
 		public abstract BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
-#endif
+
 		protected void EnsureNotClosed()
 		{
 			if (WasDisposed)
@@ -168,23 +190,14 @@ namespace Raven.Client
 				throw new InvalidOperationException("You cannot open a session or access the database commands before initializing the document store. Did you forget calling Initialize()?");
 		}
 
-		protected readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
-
-		/// <summary>
-		/// Registers the conversion listener.
-		/// </summary>
-		public DocumentStoreBase RegisterListener(IDocumentConversionListener conversionListener)
-		{
-			listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
-			return this;
-		}
+		private DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 		/// <summary>
 		/// Registers the extended conversion listener.
 		/// </summary>
-		public DocumentStoreBase RegisterListener(IExtendedDocumentConversionListener conversionListener)
+		public DocumentStoreBase RegisterListener(IDocumentConversionListener conversionListener)
 		{
-			listeners.ExtendedConversionListeners = listeners.ExtendedConversionListeners.Concat(new[] { conversionListener, }).ToArray();
+			listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
 			return this;
 		}
 
@@ -229,14 +242,6 @@ namespace Raven.Client
 		}
 
 		/// <summary>
-		/// Gets a read-only collection of the registered conversion listeners.
-		/// </summary>
-		public ReadOnlyCollection<IDocumentConversionListener> RegisteredConversionListeners
-		{
-			get { return new ReadOnlyCollection<IDocumentConversionListener>(listeners.ConversionListeners); }
-		}
-
-		/// <summary>
 		/// Gets a read-only collection of the registered query listeners.
 		/// </summary>
 		public ReadOnlyCollection<IDocumentQueryListener> RegisteredQueryListeners
@@ -268,17 +273,17 @@ namespace Raven.Client
 			get { return new ReadOnlyCollection<IDocumentConflictListener>(listeners.ConflictListeners); }
 		}
 
-		protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)
-		{
-			var onSessionCreatedInternal = SessionCreatedInternal;
-			if (onSessionCreatedInternal != null)
-				onSessionCreatedInternal(session);
-		}
+        protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)
+        {
+            var onSessionCreatedInternal = SessionCreatedInternal;
+            if (onSessionCreatedInternal != null)
+                onSessionCreatedInternal(session);
+        }
 
-		///<summary>
-		/// Internal notification for integration tools, mainly
-		///</summary>
-		public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
+        ///<summary>
+        /// Internal notification for integration tools, mainly
+        ///</summary>
+        public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
 
 		protected readonly ProfilingContext profilingContext = new ProfilingContext();
 
@@ -300,5 +305,18 @@ namespace Raven.Client
 		{
 			return AggressivelyCacheFor(TimeSpan.FromDays(1));
 		}
+
+		protected void InitializeEncryptor()
+		{
+			var setting = ConfigurationManager.AppSettings["Raven/Encryption/FIPS"];
+
+			bool fips;
+			if (string.IsNullOrEmpty(setting) || !bool.TryParse(setting, out fips))
+				fips = UseFipsEncryptionAlgorithms;
+
+			Encryptor.Initialize(fips);
+		}
+
+		public abstract void InitializeProfiling();
 	}
 }

@@ -7,7 +7,7 @@ using System;
 
 namespace Raven.Database.Config.Settings
 {
-	public class IntegerSetting : Setting<int>
+	internal class IntegerSetting : Setting<int>
 	{
 		public IntegerSetting(string value, int defaultValue)
 			: base(value, defaultValue)

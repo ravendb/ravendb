@@ -12,7 +12,7 @@ using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
-using Raven.Database.Server.Responders;
+using Raven.Database.Util;
 using Raven.Storage.Esent;
 
 namespace Raven.Database.Storage.Esent.Debug
@@ -28,7 +28,7 @@ namespace Raven.Database.Storage.Esent.Debug
 				{
 					{"Raven/Esent/LogFileSize", "1"}
 				}
-			}, () => { }))
+			}, () => { }, () => { }))
 			{
 				transactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
 
@@ -56,7 +56,7 @@ namespace Raven.Database.Storage.Esent.Debug
 			Api.JetGetDatabaseInfo(session, db, out dbPages, JET_DbInfo.Filesize);
 
 			var dbTotalSize = dbPages*SystemParameters.DatabasePageSize;
-			yield return Tuple.Create("Total db size: " + DatabaseSize.Humane(dbTotalSize), dbTotalSize);
+            yield return Tuple.Create("Total db size: " + SizeHelper.Humane(dbTotalSize), dbTotalSize);
 
 			 foreach (var tableName in Api.GetTableNames(session, db))
 			 {
@@ -72,12 +72,12 @@ namespace Raven.Database.Storage.Esent.Debug
 					Api.JetGetTableInfo(session, tbl, out ownedPages, JET_TblInfo.SpaceOwned);
 
 					sb.Append("\tOwned Size: ")
-					  .Append(DatabaseSize.Humane(ownedPages*SystemParameters.DatabasePageSize))
+                      .Append(SizeHelper.Humane(ownedPages * SystemParameters.DatabasePageSize))
 					  .AppendLine();
 
 
 					sb.Append("\tUsed Size: ")
-					  .Append(DatabaseSize.Humane(usedSize))
+                      .Append(SizeHelper.Humane(usedSize))
 					  .AppendLine();
 					
 					
@@ -89,7 +89,7 @@ namespace Raven.Database.Storage.Esent.Debug
 						sb.Append("\t\t")
 						  .Append(index.Name)
 						  .Append(": ")
-						  .Append(DatabaseSize.Humane(index.Pages*(SystemParameters.DatabasePageSize)))
+                          .Append(SizeHelper.Humane(index.Pages * (SystemParameters.DatabasePageSize)))
 						  .AppendLine();
 					}
 					yield return Tuple.Create(sb.ToString(), ownedPages * SystemParameters.DatabasePageSize);

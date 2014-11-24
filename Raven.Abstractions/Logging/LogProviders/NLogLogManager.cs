@@ -1,9 +1,6 @@
 using System;
 using System.Linq;
 using System.Reflection;
-#if NETFX_CORE
-using Raven.Client.WinRT.MissingFromWinRT;
-#endif
 
 namespace Raven.Abstractions.Logging.LogProviders
 {
@@ -39,41 +36,34 @@ namespace Raven.Abstractions.Logging.LogProviders
 
 		private static Type GetLogManagerTypeStatic()
 		{
-#if !SL_4 && !NETFX_CORE
 			Assembly nlogAssembly = GetNLogAssembly();
 			return nlogAssembly != null ? nlogAssembly.GetType("NLog.LogManager") : Type.GetType("NLog.LogManager, nlog");
-#else
-			return Type.GetType("NLog.LogManager, nlog");
-#endif
 		}
 
 		protected override Type GetNdcType()
 		{
-#if !SL_4 && !NETFX_CORE
 			Assembly nlogAssembly = GetNLogAssembly();
 			return nlogAssembly != null
 				       ? nlogAssembly.GetType("NLog.NestedDiagnosticsContext")
 					   : Type.GetType("NLog.NestedDiagnosticsContext, nlog");
-#else
-			return Type.GetType("NLog.NestedDiagnosticsContext, nlog");
-#endif
 		}
 
-#if !SL_4 && !NETFX_CORE
 		private static Assembly GetNLogAssembly()
 		{
-			return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly => assembly.FullName.StartsWith("NLog,"));
+		    try
+		    {
+                return Assembly.Load("NLog");
+		    }
+		    catch (Exception)
+		    {
+		        return null;
+		    }
 		}
-#endif
 
 		protected override Type GetMdcType()
 		{
-#if !SL_4 && !NETFX_CORE
 			Assembly log4NetAssembly = GetNLogAssembly();
 			return log4NetAssembly != null ? log4NetAssembly.GetType("NLog.MappedDiagnosticsContext") : Type.GetType("NLog.MappedDiagnosticsContext, nlog");
-#else
-			return Type.GetType("NLog.MappedDiagnosticsContext, nlog");
-#endif
 		}
 
 		public class NLogLogger : ILog

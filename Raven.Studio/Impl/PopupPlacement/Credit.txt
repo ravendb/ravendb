@@ -1,1 +1,0 @@
-﻿The code in this folder comes from Kent Boogaart: http://kentb.blogspot.com/2010/07/silverlight-popup-with-target-placement.html

@@ -845,7 +845,7 @@
         <member name="M:Xunit.TestAssembly.EnumerateTestMethods(System.Predicate{Xunit.TestMethod})">
             <inheritdoc/>
         </member>
-        <member name="M:Xunit.TestAssembly.Run(System.Collections.Generic.IEnumerable{Xunit.TestMethod},Xunit.ITestMethodRunnerCallback)">
+        <member name="M:Xunit.TestAssembly.Run(System.Collections.Generic.ICollection{Xunit.TestMethod},Xunit.ITestMethodRunnerCallback)">
             <summary>
             Runs the specified test methods.
             </summary>

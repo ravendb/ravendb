@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 
@@ -64,13 +65,12 @@ namespace Raven.Client.Document.SessionOperations
 			for (var i = 0; i < includeResults.Length; i++)
 			{
 				var include = includeResults[i];
-				var entityType = includes.Length > i ? includes[i].Value : typeof(object);
-				sessionOperations.TrackEntity(entityType, include);
+				sessionOperations.TrackIncludedDocument(include);
 			}
 
-			var finalResults = SelectResults()
-				.Select(document => document == null ? default(T) : sessionOperations.TrackEntity<T>(document))
-				.ToArray();
+			var transformedResults = TransformResults().ToList();
+			var finalResults = transformedResults.Select(ApplyTrackingIfNeeded<T>)
+												 .ToArray();
 
 			for (var i = 0; i < finalResults.Length; i++)
 			{
@@ -84,13 +84,21 @@ namespace Raven.Client.Document.SessionOperations
 			return finalResults;
 		}
 
-		private IEnumerable<JsonDocument> SelectResults()
+		private T ApplyTrackingIfNeeded<T>(JsonDocument document)
+		{
+			if (document != null)
+				return sessionOperations.TrackEntity<T>(document);
+
+			return default(T);
+		}
+
+		private IEnumerable<JsonDocument> TransformResults()
 		{
 			if (ids == null)
 				return results;
 
 			var finalResult = ids.Select(id => results.Where(r => r != null)
-			                                   	.FirstOrDefault(r => string.Equals(r.Metadata.Value<string>("@id"), id, StringComparison.OrdinalIgnoreCase)));
+			                                   		  .FirstOrDefault(r => string.Equals(r.Metadata.Value<string>("@id"), id, StringComparison.OrdinalIgnoreCase)));
 			return finalResult;
 		}
 	}

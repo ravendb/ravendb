@@ -25,7 +25,7 @@ namespace Raven.Database.Prefetching
 		{
 			lock (this)
 			{
-				var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext));
+				var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user));
 
 				prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors)
 				{
@@ -33,6 +33,19 @@ namespace Raven.Database.Prefetching
 				};
 
 				return newPrefetcher;
+			}
+		}
+
+		public void RemovePrefetchingBehavior(PrefetchingBehavior prefetchingBehavior)
+		{
+			lock (this)
+			{
+				prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors.Except(new[]
+				{
+					prefetchingBehavior
+				}));
+
+				prefetchingBehavior.Dispose();
 			}
 		}
 
@@ -52,12 +65,9 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
-		public int GetInMemoryIndexingQueueSize(PrefetchingUser user)
+		public int[] GetInMemoryIndexingQueueSizes(PrefetchingUser user)
 		{
-			var value = prefetchingBehaviors.FirstOrDefault(x => x.PrefetchingUser == user);
-			if (value != null)
-				return value.InMemoryIndexingQueueSize;
-			return -1;
+			return prefetchingBehaviors.Where(x => x.PrefetchingUser == user).Select(value => value.InMemoryIndexingQueueSize).ToArray();
 		}
 
 		public void AfterStorageCommitBeforeWorkNotifications(PrefetchingUser user, JsonDocument[] documents)
@@ -65,6 +75,14 @@ namespace Raven.Database.Prefetching
 			foreach (var prefetcher in prefetchingBehaviors.Where(x => x.PrefetchingUser == user))
 			{
 				prefetcher.AfterStorageCommitBeforeWorkNotifications(documents);
+			}
+		}
+
+		public void Dispose()
+		{
+			foreach (var prefetchingBehavior in prefetchingBehaviors)
+			{
+				prefetchingBehavior.Dispose();
 			}
 		}
 	}

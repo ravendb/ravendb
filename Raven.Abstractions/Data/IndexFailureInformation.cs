@@ -20,27 +20,32 @@ namespace Raven.Abstractions.Data
 		{
 			get
 			{
-				if (Attempts == 0 || Errors == 0)
-					return false;
-				if(ReduceAttempts != null)
-				{
-					// we don't have enough attempts to make a useful determination
-					if (Attempts + ReduceAttempts < 100)
-						return false;
-					return (Errors + (ReduceErrors ?? 0))/(float) (Attempts + (ReduceAttempts ?? 0)) > 0.15;
-				}
-				// we don't have enough attempts to make a useful determination
-				if (Attempts < 100)
-					return false;
-				return (Errors / (float)Attempts) > 0.15;
+			    return CheckIndexInvalid(Attempts, Errors, ReduceAttempts, ReduceErrors);
 			}
 		}
 
+        public static bool CheckIndexInvalid(int attempts, int errors, int? reduceAttempts, int? reduceErrors)
+        {
+            if (attempts == 0 || errors == 0)
+                return false;
+            if (reduceAttempts != null)
+            {
+                // we don't have enough attempts to make a useful determination
+                if (attempts + reduceAttempts < 100)
+                    return false;
+                return (errors + (reduceErrors ?? 0)) / (float)(attempts + (reduceAttempts ?? 0)) > 0.15;
+            }
+            // we don't have enough attempts to make a useful determination
+            if (attempts < 100)
+                return false;
+            return (errors / (float)attempts) > 0.15;
+        }
+
 		/// <summary>
-		/// Gets or sets the name.
+		/// Gets or sets the id
 		/// </summary>
 		/// <value>The name.</value>
-		public string Name { get; set; }
+		public int Id { get; set; }
 		/// <summary>
 		/// Gets or sets the number of indexing attempts.
 		/// </summary>
@@ -90,7 +95,7 @@ namespace Raven.Abstractions.Data
 			const string msg =
 				"Index {0} is invalid, out of {1} indexing attempts, {2} has failed.\r\nError rate of {3:#.##%} exceeds allowed 15% error rate";
 			return string.Format(msg,
-			                     Name, Attempts, Errors, FailureRate);
+			                     Id, Attempts, Errors, FailureRate);
 		}
 	}
 }

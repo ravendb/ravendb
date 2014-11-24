@@ -11,11 +11,13 @@ using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Linq
 {
-	public class LinqTransformerCompilationTests
+	public class LinqTransformerCompilationTests : NoDisposalNeeded
 	{
 		private const string query =
 			@"

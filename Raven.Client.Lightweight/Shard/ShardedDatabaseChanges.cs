@@ -53,9 +53,45 @@ namespace Raven.Client.Shard
 			return new ShardedObservableWithTask<IndexChangeNotification>(observableWithTasks);
 		}
 
+        public IObservableWithTask<TransformerChangeNotification> ForAllTransformers()
+        {
+            var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForAllTransformers()).ToArray();
+            return new ShardedObservableWithTask<TransformerChangeNotification>(observableWithTasks);
+        }
+
 		public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
 		{
 			var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForDocumentsStartingWith(docIdPrefix)).ToArray();
+			return new ShardedObservableWithTask<DocumentChangeNotification>(observableWithTasks);
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection(string collectionName)
+		{
+			var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForDocumentsInCollection(collectionName)).ToArray();
+			return new ShardedObservableWithTask<DocumentChangeNotification>(observableWithTasks);
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection<TEntity>()
+		{
+			var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForDocumentsInCollection<TEntity>()).ToArray();
+			return new ShardedObservableWithTask<DocumentChangeNotification>(observableWithTasks);
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(string typeName)
+		{
+			var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForDocumentsOfType(typeName)).ToArray();
+			return new ShardedObservableWithTask<DocumentChangeNotification>(observableWithTasks);
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(Type type)
+		{
+			var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForDocumentsOfType(type)).ToArray();
+			return new ShardedObservableWithTask<DocumentChangeNotification>(observableWithTasks);
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType<TEntity>()
+		{
+			var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForDocumentsOfType<TEntity>()).ToArray();
 			return new ShardedObservableWithTask<DocumentChangeNotification>(observableWithTasks);
 		}
 

@@ -14,14 +14,14 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
+using Raven.Client.Linq;
 using Raven.Client.Indexes;
-using Raven.Client.Util;
 using Raven.Json.Linq;
+using Raven.Client.Document.Batches;
+using System.Diagnostics;
 
 namespace Raven.Client.Document.Async
 {
-	using Linq;
-
 	/// <summary>
 	/// Implementation for async document session 
 	/// </summary>
@@ -48,14 +48,319 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		/// <value>The async database commands.</value>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
+        /// <summary>
+        /// Access the lazy operations
+        /// </summary>
+        public IAsyncLazySessionOperations Lazily
+        {
+            get { return this; }
+        }
+
+        /// <summary>
+        /// Access the eager operations
+        /// </summary>
+        public IAsyncEagerSessionOperations Eagerly
+        {
+            get { return this; }
+        }
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+
+        IAsyncLazyLoaderWithInclude<object> IAsyncLazySessionOperations.Include(string path)
+	    {
+            return new AsyncLazyMultiLoaderWithInclude<object>(this).Include(path);
+	    }
+       
+
+	    /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+        IAsyncLazyLoaderWithInclude<T> IAsyncLazySessionOperations.Include<T>(Expression<Func<T, object>> path)
+        {
+            return  new AsyncLazyMultiLoaderWithInclude<T>(this).Include(path);
+        }
+
+        /// <summary>
+        /// Loads the specified ids.
+        /// </summary>
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<string> ids)
+        {
+            return Lazily.LoadAsync<T>(ids, null);
+        }
+
+        /// <summary>
+        /// Loads the specified id.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The id.</param>
+        /// <returns></returns>
+        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id)
+        {
+            return Lazily.LoadAsync(id, (Action<T>)null);
+        }
+
+        /// <summary>
+        /// Loads the specified ids and a function to call when it is evaluated
+        /// </summary>
+        public Lazy<Task<T[]>> LoadAsync<T>(IEnumerable<string> ids, Action<T[]> onEval)
+        {
+            return LazyLoadInternal(ids.ToArray(), new KeyValuePair<string, Type>[0], onEval);
+        }
+
+
+
+		/// <summary>
+        /// Loads the specified id and a function to call when it is evaluated
+        /// </summary>
+        public Lazy<Task<T>> LoadAsync<T>(string id, Action<T> onEval)
+        {
+            if (IsLoaded(id))
+                 return new Lazy<Task<T>>(() => LoadAsync<T>(id));
+               
+            var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id), handleInternalMetadata: HandleInternalMetadata);
+            return AddLazyOperation(lazyLoadOperation, onEval);
+        }
+
+        /// <summary>
+        /// Loads the specified entities with the specified id after applying
+        /// conventions on the provided id to get the real document id.
+        /// </summary>
+        /// <remarks>
+        /// This method allows you to call:
+        /// Load{Post}(1)
+        /// And that call will internally be translated to 
+        /// Load{Post}("posts/1");
+        /// 
+        /// Or whatever your conventions specify.
+        /// </remarks>
+        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id, Action<T> onEval)
+        {
+            var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+            return Lazily.LoadAsync(documentKey, onEval);
+        }
+
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(params ValueType[] ids)
+        {
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return Lazily.LoadAsync<T>(documentKeys, null);
+        }
+
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<ValueType> ids)
+        {
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return Lazily.LoadAsync<T>(documentKeys, null);
+        }
+
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<ValueType> ids, Action<T[]> onEval)
+        {
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return LazyLoadInternal(documentKeys.ToArray(), new KeyValuePair<string, Type>[0], onEval);
+        }
+
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval)
+		{
+			return Lazily.LoadAsync(id, typeof(TTransformer), configure, onEval);
+		}
+
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
+		{
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+			var ids = new[] { id };
+
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
+				ids,
+				transformer,
+				configuration.TransformerParameters,
+				new LoadTransformerOperation(this, transformer, ids),
+				singleResult: true);
+
+			return AddLazyOperation(lazyLoadOperation, onEval);
+		}
+
+		public Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query)
+        {
+            var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, null, null);
+            var lazyOp = new LazyMoreLikeThisOperation<TResult>(multiLoadOperation, query);
+            return AddLazyOperation<TResult[]>(lazyOp, null);
+        }
+
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
+        {
+			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
+
+            return AddLazyOperation<T[]>(operation, null);
+        }
+
+		/// <summary>
+        /// Loads the specified entities with the specified id after applying
+        /// conventions on the provided id to get the real document id.
+        /// </summary>
+        /// <remarks>
+        /// This method allows you to call:
+        /// Load{Post}(1)
+        /// And that call will internally be translated to 
+        /// Load{Post}("posts/1");
+        /// 
+        /// Or whatever your conventions specify.
+        /// </remarks>
+         Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id)
+        {
+            return Lazily.LoadAsync(id, (Action<T>)null);
+        }
+
+         internal  Lazy<Task<T>> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval)
+         {
+             pendingLazyOperations.Add(operation);
+             var lazyValue = new Lazy<Task<T>>(() => ExecuteAllPendingLazyOperationsAsync()  
+                 .ContinueWith(t =>
+             {
+                   if(t.Exception != null)
+                        throw new InvalidOperationException("Could not perform add lazy operation", t.Exception);
+
+                    return (T)operation.Result;
+             }));
+
+             if (onEval != null)
+                 onEvaluateLazy[operation] = theResult => onEval((T)theResult);
+
+             return  lazyValue;
+         }
+
+         internal Lazy<Task<int>> AddLazyCountOperation(ILazyOperation operation)
+         {
+             pendingLazyOperations.Add(operation);
+             var lazyValue = new Lazy<Task<int>>(() => ExecuteAllPendingLazyOperationsAsync()
+                 .ContinueWith(t =>
+                 {
+                     if(t.Exception != null)
+                         throw new InvalidOperationException("Could not perform lazy count", t.Exception);
+                     return operation.QueryResult.TotalResults;
+                 }));
+
+             return lazyValue;
+         }
+         public async Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync()
+         {
+             if (pendingLazyOperations.Count == 0)
+                 return new ResponseTimeInformation();
+
+             try
+             {
+                 var sw = Stopwatch.StartNew();
+
+                 IncrementRequestCount();
+
+                 var responseTimeDuration = new ResponseTimeInformation();
+
+                 while (await ExecuteLazyOperationsSingleStep(responseTimeDuration))
+                 {
+                     await Task.Delay(100);
+                 }
+
+                 responseTimeDuration.ComputeServerTotal();
+
+
+                 foreach (var pendingLazyOperation in pendingLazyOperations)
+                 {
+                     Action<object> value;
+                     if (onEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
+                         value(pendingLazyOperation.Result);
+                 }
+                 responseTimeDuration.TotalClientDuration = sw.Elapsed;
+                 return responseTimeDuration;
+             }
+             finally
+             {
+                 pendingLazyOperations.Clear();
+             }
+         }
+
+         private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
+         {
+             var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
+             try
+             {
+                 var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToArray();
+                 var responses = await AsyncDatabaseCommands.MultiGetAsync(requests);
+
+                 for (int i = 0; i < pendingLazyOperations.Count; i++)
+                 {
+                     long totalTime;
+                     long.TryParse(responses[i].Headers["Temp-Request-Time"], out totalTime);
+
+                     responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
+                     {
+                         Url = requests[i].UrlAndQuery,
+                         Duration = TimeSpan.FromMilliseconds(totalTime)
+                     });
+                     if (responses[i].RequestHasErrors())
+                     {
+                         throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
+                                                             Environment.NewLine + responses[i].Result);
+                     }
+                     pendingLazyOperations[i].HandleResponse(responses[i]);
+                     if (pendingLazyOperations[i].RequiresRetry)
+                     {
+                         return true;
+                     }
+                 }
+                 return false;
+             }
+             finally
+             {
+                 foreach (var disposable in disposables)
+                 {
+                     disposable.Dispose();
+                 }
+             }
+         }
+         /// <summary>
+         /// Register to lazily load documents and include
+         /// </summary>
+         public Lazy<Task<T[]>> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
+         {
+             var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
+             var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
+             return AddLazyOperation(lazyOp, onEval);
+         }
+
+
 
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25, string exclude = null)
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null)
 		{
-			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, start, pageSize, exclude: exclude)
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation, skipAfter: skipAfter)
 										.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
+		}
+
+		public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
+		                                                    string exclude = null, RavenPagingInformation pagingInformation = null,
+		                                                    Action<ILoadConfiguration> configure = null,
+															string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var transformer = new TTransformer().TransformerName;
+
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+			{
+				configure(configuration);
+			}
+
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude,
+			                                             pagingInformation: pagingInformation, transformer: transformer,
+			                                             transformerParameters: configuration.TransformerParameters,
+														 skipAfter: skipAfter)
+			                            .ContinueWith(
+				                            task => (IEnumerable<TResult>) task.Result.Select(TrackEntity<TResult>).ToList());
 		}
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query)
@@ -72,7 +377,7 @@ namespace Raven.Client.Document.Async
 		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
 		{
 			var queryInspector = (IRavenQueryProvider)query.Provider;
-			var indexQuery = queryInspector.ToAsyncLuceneQuery<T>(query.Expression);
+			var indexQuery = queryInspector.ToAsyncDocumentQuery<T>(query.Expression);
             return await StreamAsync(indexQuery, queryHeaderInformation).ConfigureAwait(false);
 		}
 
@@ -80,6 +385,12 @@ namespace Raven.Client.Document.Async
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)query);
 			var indexQuery = ravenQueryInspector.GetIndexQuery(true);
+
+            if (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow)
+                throw new NotSupportedException(
+                    "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
+
+
             var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation).ConfigureAwait(false);
 			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation(null);
 			queryOperation.DisableEntitiesTracking = true;
@@ -88,20 +399,20 @@ namespace Raven.Client.Document.Async
 		}
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0,
-																	 int pageSize = Int32.MaxValue)
+																	 int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
 		{
-			return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize);
+			return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation);
 		}
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
-																	 int pageSize = Int32.MaxValue)
+								   int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
 		{
-			return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize);
+			return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation);
 		}
 
-		private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
+		private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null)
 		{
-            var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize).ConfigureAwait(false);
+			var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, pagingInformation: pagingInformation).ConfigureAwait(false);
 			return new DocsYieldStream<T>(this, enumerator);
 		}
 
@@ -182,7 +493,7 @@ namespace Raven.Client.Document.Async
 
 				Current = new StreamResult<T>
 				{
-					Document = (T)parent.ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
+					Document = (T)parent.ConvertToEntity(typeof(T),document.Key, document.DataAsJson, document.Metadata),
 					Etag = document.Etag,
 					Key = document.Key,
 					Metadata = document.Metadata
@@ -196,40 +507,59 @@ namespace Raven.Client.Document.Async
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
 		/// <returns></returns>
+		[Obsolete("Use AsyncDocumentQuery instead")]
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
+		    return AsyncDocumentQuery<T, TIndexCreator>();
+		}
+
+        /// <summary>
+        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <returns></returns>
+        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        {
 			var index = new TIndexCreator();
 
-			return AsyncLuceneQuery<T>(index.IndexName, index.IsMapReduce);
+            return AsyncDocumentQuery<T>(index.IndexName, index.IsMapReduce);
 		}
 
 		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>
+        [Obsolete("Use AsyncDocumentQuery instead.")]
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce)
 		{
-			return new AsyncDocumentQuery<T>(this,
-#if !SILVERLIGHT
- null,
-#endif
- AsyncDatabaseCommands, index, new string[0], new string[0], listeners.QueryListeners, isMapReduce);
+            return AsyncDocumentQuery<T>(index, isMapReduce);
+        }
+
+		/// <summary>
+		/// Query the specified index using Lucene syntax
+		/// </summary>
+		public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce)
+		{
+			return new AsyncDocumentQuery<T>(this,null,AsyncDatabaseCommands, index, new string[0], new string[0], theListeners.QueryListeners, isMapReduce);
 		}
 
 		/// <summary>
 		/// Dynamically query RavenDB using Lucene syntax
 		/// </summary>
+        [Obsolete("Use AsyncDocumentQuery instead.")]
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
 		{
-			var indexName = "dynamic";
-			if (typeof(T).IsEntityType())
+            return AsyncDocumentQuery<T>();
+        }
+
+		/// <summary>
+		/// Dynamically query RavenDB using Lucene syntax
+		/// </summary>
+		public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>()
 			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
-			return new AsyncDocumentQuery<T>(this,
-#if !SILVERLIGHT
- null,
-#endif
- AsyncDatabaseCommands, indexName, new string[0], new string[0], listeners.QueryListeners, false);
+            var indexName = CreateDynamicIndexName<T>();
+			
+			return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, indexName, new string[0], new string[0], theListeners.QueryListeners, false);
 		}
 
 		/// <summary>
@@ -330,19 +660,26 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
-		public Task<T> LoadAsync<T>(string id)
+		public async Task<T> LoadAsync<T>(string id)
 		{
 			if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
 			object entity;
 			if (entitiesByKey.TryGetValue(id, out entity))
 			{
-				var tcs = new TaskCompletionSource<T>();
-				tcs.TrySetResult((T)entity);
-				return tcs.Task;
+			    return (T) entity;
 			}
+		    JsonDocument value;
+		    if (includedDocumentsByKey.TryGetValue(id, out value))
+		    {
+		        includedDocumentsByKey.Remove(id);
+		        return TrackEntity<T>(value);
+			}
+		    if (IsDeleted(id))
+		        return default(T);
+
 			IncrementRequestCount();
 			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
-			return CompleteLoadAsync<T>(id, loadOperation);
+			return await CompleteLoadAsync<T>(id, loadOperation);
 		}
 
 		private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
@@ -359,120 +696,108 @@ namespace Raven.Client.Document.Async
 			}
 		}
 
-		/// <summary>
-		/// Begins the async multi load operation
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		/// <returns></returns>
-		public Task<T[]> LoadAsync<T>(params string[] ids)
-		{
-			return LoadAsync<T>(ids.AsEnumerable());
-		}
-
 		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids)
 		{
 			return LoadAsyncInternal<T>(ids.ToArray(), new KeyValuePair<string, Type>[0]);
 		}
 
-		public async Task<T> LoadAsync<TTransformer, T>(string id) where TTransformer : AbstractTransformerCreationTask, new()
-		{
-			var transformer = new TTransformer();
-            var result = await LoadAsyncInternal<T>(new[] { id }, null, transformer.TransformerName).ConfigureAwait(false);
-			return result.FirstOrDefault();
-		}
-
-		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
 		{
             var result = await LoadAsync<TTransformer, T>(new[] { id }.AsEnumerable(), configure).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
-		public async Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer();
-			var ravenLoadConfiguration = new RavenLoadConfiguration();
-			configure(ravenLoadConfiguration);
-            var result = await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer.TransformerName, ravenLoadConfiguration.QueryInputs).ConfigureAwait(false);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var result = await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer.TransformerName, configuration.TransformerParameters).ConfigureAwait(false);
 			return result;
 		}
 
-		public Task<T[]> LoadAsync<TTransformer, T>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<TResult> LoadAsync<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
 		{
-			var transformer = new TTransformer();
-			return LoadAsyncInternal<T>(ids, null, transformer.TransformerName);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			return result.FirstOrDefault();
 		}
 
-		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
+		public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
 		{
-			if (ids.Length == 0)
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			return await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+		}
+
+		public async Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
+		{
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			return result.FirstOrDefault();
+		}
+
+		public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
+		{
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+			return await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+		}
+
+		public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+		{
+		    if (transformer == null) 
+                throw new ArgumentNullException("transformer");
+		    if (ids.Length == 0)
 				return new T[0];
 
 			IncrementRequestCount();
 
-			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-
-			if (typeof(T).IsArray)
-			{
-				// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
-				// With a single Id
-                var arrayOfArrays = (await AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs).ConfigureAwait(false))
-											.Results
-											.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
-											.Select(values =>
-											{
-												var array = values.Select(y =>
-												{
-													HandleInternalMetadata(y);
-													return ConvertToEntity<T>(null, y, new RavenJObject());
-												}).ToArray();
-												var newArray = Array.CreateInstance(typeof(T).GetElementType(), array.Length);
-												Array.Copy(array, newArray, array.Length);
-												return newArray;
-											})
-											.Cast<T>()
-											.ToArray();
-
-				return arrayOfArrays;
-			}
-
-            var getResponse = (await this.AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs).ConfigureAwait(false));
-		    var items = new List<T>();
-		    foreach (var result in getResponse.Results)
-		    {
-                if (result == null)
-                {
-                    items.Add(default(T));
-                    continue;
-                }
-		        var transformedResults = result.Value<RavenJArray>("$values").ToArray()
-		              .Select(JsonExtensions.ToJObject)
-		              .Select(x =>
-		              {
-		                  this.HandleInternalMetadata(x);
-		                  return this.ConvertToEntity<T>(null, x, new RavenJObject());
-		              })
-		              .Cast<T>();
-
-
-                items.AddRange(transformedResults);
-
-		    }
-				
-			if (items.Count > ids.Length)
-			{
-				throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
-					transformer,
-					typeof(T).Name));
-			}
-
-			return items.ToArray();
+		    string[] includeNames = includes != null ? includes.Select(x=>x.Key).ToArray() : new string[0];
+		    var multiLoadResult = await AsyncDatabaseCommands.GetAsync(ids, includeNames, transformer, transformerParameters);
+            return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
+      
 		}
+
+	    public Lazy<Task<T[]>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
+	    {
+            if (CheckIfIdAlreadyIncluded(ids, includes))
+            {
+                return new Lazy<Task<T[]>>(async () => await Task.WhenAll(ids.Select(LoadAsync<T>).ToArray()));
+            }
+            var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
+            var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
+            return AddLazyOperation(lazyOp, onEval);
+	    }
 
 		/// <summary>
 		/// Begins the async multi load operation
 		/// </summary>
 		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
+            if (CheckIfIdAlreadyIncluded(ids, includes))
+            {                
+                var loadTasks = ids.Select(LoadAsync<T>).ToArray();
+                var loadedData = await Task.WhenAll(loadTasks);
+                return loadedData;
+            }
+
 			IncrementRequestCount();
 			var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
 
@@ -489,6 +814,8 @@ namespace Raven.Client.Document.Async
 			} while (multiLoadOperation.SetResult(result));
 			return multiLoadOperation.Complete<T>();
 		}
+
+     
 
 		/// <summary>
 		/// Begins the async save changes operation
@@ -543,11 +870,8 @@ namespace Raven.Client.Document.Async
 		/// <typeparam name="T">The result of the query</typeparam>
 		public IRavenQueryable<T> Query<T>()
 		{
-			string indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
+            string indexName = CreateDynamicIndexName<T>();
+			
 
 			return Query<T>(indexName);
 		}
@@ -563,21 +887,12 @@ namespace Raven.Client.Document.Async
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var highlightings = new RavenQueryHighlightings();
 			return new RavenQueryInspector<T>(
-				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings,
-#if !SILVERLIGHT
- null,
-#endif
- AsyncDatabaseCommands, isMapReduce),
+				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, AsyncDatabaseCommands, isMapReduce),
 				ravenQueryStatistics,
 				highlightings,
 				indexName,
 				null,
-				this,
-#if !SILVERLIGHT
- null,
-#endif
- AsyncDatabaseCommands,
-				isMapReduce);
+				this, null, AsyncDatabaseCommands, isMapReduce);
 		}
 
 		/// <summary>
@@ -593,7 +908,7 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName, bool isMapReduce = false)
 		{
-			return AsyncLuceneQuery<T>(indexName, isMapReduce);
+			return AsyncDocumentQuery<T>(indexName, isMapReduce);
 		}
 
 		protected override string GenerateKey(object entity)
@@ -610,5 +925,16 @@ namespace Raven.Client.Document.Async
 		{
 			return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
 		}
+
+		public async Task RefreshAsync<T>(T entity)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				throw new InvalidOperationException("Cannot refresh a transient instance");
+			IncrementRequestCount();
+			var jsonDocument = await AsyncDatabaseCommands.GetAsync(value.Key);
+			RefreshInternal(entity, jsonDocument, value);
+		}
+
 	}
 }

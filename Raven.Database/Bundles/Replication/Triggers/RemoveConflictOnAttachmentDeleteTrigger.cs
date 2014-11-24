@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
@@ -15,13 +16,14 @@ namespace Raven.Bundles.Replication.Triggers
 	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10001)]
 	[InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
+    [Obsolete("Use RavenFS instead.")]
 	public class RemoveConflictOnAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
 	{
 		public override void OnDelete(string key)
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var oldVersion = Database.GetStatic(key);
+				var oldVersion = Database.Attachments.GetStatic(key);
 				if(oldVersion == null)
 					return;
 
@@ -34,7 +36,7 @@ namespace Raven.Bundles.Replication.Triggers
 					return;
 				foreach (var prop in conflicts)
 				{
-					Database.DeleteStatic(prop.Value<string>(), null);
+					Database.Attachments.DeleteStatic(prop.Value<string>(), null);
 				}
 			}
 		}

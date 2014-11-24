@@ -15,9 +15,15 @@ namespace Raven.Database.Plugins
 		///  Key may represent a missing document
 		///  </summary>
 		/// <param name="entryKey">The entry key</param>
-		public virtual void OnIndexEntryDeleted(string entryKey) { }
+		public virtual void OnIndexEntryDeleted(string entryKey, Document document = null) { }
 
-		/// <summary>
+	    /// <summary>
+	    /// Gets information if we should fetch entry which is about to delete. Fetched entry is passed in OnIndexEntryDeleted invocation. 
+	    /// </summary>
+	    /// <returns></returns>
+	    public virtual bool RequiresDocumentOnIndexEntryDeleted { get { return false; }}
+
+	    /// <summary>
 		///  Notify that the specified document with the specified key is about 
 		///  to be inserted.
 		///  </summary><remarks>

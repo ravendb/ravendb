@@ -1,10 +1,12 @@
-﻿using System.ComponentModel.Composition;
+﻿using System;
+using System.ComponentModel.Composition;
 using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Quotas.Size.Triggers
 {
 	[InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
 	[ExportMetadata("Bundle", "Quotas")]
+    [Obsolete("Use RavenFS instead.")]
 	public class DatabaseSizeAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
 	{
 		public override void AfterDelete(string key)

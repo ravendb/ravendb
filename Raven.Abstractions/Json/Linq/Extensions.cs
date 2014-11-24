@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
-using Raven.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.Abstractions.Data;
+using System.Text;
 
 namespace Raven.Json.Linq
 {
@@ -128,7 +132,7 @@ namespace Raven.Json.Linq
 				// HACK
 				return (U)(object)token;
 			}
-			if (token == null)
+			if (token == null || token.Type == JTokenType.Null)
 				return default(U);
 
 			var value = token as RavenJValue;
@@ -194,7 +198,176 @@ namespace Raven.Json.Linq
 					return (U) (object) (new DateTimeOffset((DateTime) value.Value));
 				}
 			}
-			return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
+            if (targetType == typeof(byte[]) && value.Value is string)
+            {
+                return (U)(object)System.Convert.FromBase64String((string)value.Value);
+            }
+
+			if (value.Value == null && typeof(U).IsValueType)
+				throw new InvalidOperationException("value.Value == null and conversion target type is not nullable");
+
+			try
+			{
+				return (U) System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
+			}
+			catch (Exception e)
+			{
+				if (value.Value != null)
+					throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined and does not implement IConvertible. ", value.Value.GetType()),e);
+				
+				throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined ", value),e);
+			}
 		}
+
+        public static bool CompareRavenJArrayData(this ICollection<DocumentsChanges> docChanges, RavenJArray selfArray, RavenJArray otherArray, string fieldArrName)
+        {
+            IEnumerable<RavenJToken> differences = selfArray.Length < otherArray.Length ? otherArray.Except(selfArray) : selfArray.Except(otherArray);
+            if(!differences.Any())
+                return true;
+
+            foreach (var dif in differences)
+            {
+                var changes = new DocumentsChanges
+                {
+                    FieldName = fieldArrName
+                };
+
+
+                if (selfArray.Length < otherArray.Length)
+                {
+                    changes.Change = DocumentsChanges.ChangeType.ArrayValueRemoved;
+                    changes.FieldOldValue = dif.ToString();
+                    changes.FieldOldType = dif.Type.ToString();
+                }
+
+                if (selfArray.Length > otherArray.Length)
+                {
+                    changes.Change = DocumentsChanges.ChangeType.ArrayValueAdded;
+                    changes.FieldNewValue = dif.ToString();
+                    changes.FieldNewType = dif.Type.ToString();
+                }
+                docChanges.Add(changes);
+            }
+            return false;
+        }
+
+        public static bool CompareDifferentLengthRavenJObjectData(this ICollection<DocumentsChanges> docChanges, RavenJObject otherObj, RavenJObject selfObj, string fieldName)
+        {
+           
+            var diffData = new Dictionary<string, string>();
+            RavenJToken token;
+            if (otherObj.Count == 0)
+            {
+                foreach (var kvp in selfObj.Properties)
+                {
+                    var changes = new DocumentsChanges();
+
+                    if (selfObj.Properties.TryGetValue(kvp.Key, out token))
+                    {
+                        changes.FieldNewValue = token.ToString();
+                        changes.FieldNewType = token.Type.ToString();
+                        changes.Change = DocumentsChanges.ChangeType.NewField;
+
+                        changes.FieldName = kvp.Key;
+                    }
+
+                    changes.FieldOldValue = "null";
+                    changes.FieldOldType = "null";
+
+                    docChanges.Add(changes);
+                }
+
+               return false;
+            }
+            FillDifferentJsonData(selfObj.Properties, otherObj.Properties, diffData);
+
+            foreach (var key in diffData.Keys)
+            {
+	            var changes = new DocumentsChanges
+	            {
+		            FieldOldType = otherObj.Type.ToString(),
+		            FieldNewType = selfObj.Type.ToString(),
+					 FieldName = key
+	            };
+
+	            if (selfObj.Count < otherObj.Count)
+                {
+                    changes.Change = DocumentsChanges.ChangeType.RemovedField;
+
+                    changes.FieldOldValue = diffData[key];
+                }
+                else
+                {
+                    changes.Change = DocumentsChanges.ChangeType.NewField;
+                    changes.FieldNewValue = diffData[key];
+                }
+                docChanges.Add(changes);
+            }
+            return false;
+        }
+
+
+        private static  void FillDifferentJsonData(DictionaryWithParentSnapshot selfObj, DictionaryWithParentSnapshot otherObj, Dictionary<string, string> diffData)
+        {
+            Debug.Assert(diffData != null,"Precaution --> parameter should not be null");
+
+            string[] diffNames;
+            DictionaryWithParentSnapshot bigObj ;
+
+            if (selfObj.Keys.Count < otherObj.Keys.Count)
+            {
+                diffNames = otherObj.Keys.Except(selfObj.Keys).ToArray();
+                bigObj = otherObj;
+            }
+            else
+            {
+                diffNames = selfObj.Keys.Except(otherObj.Keys).ToArray();
+                bigObj = selfObj;
+            }
+            foreach (var kvp in diffNames)
+            {
+	            RavenJToken token;
+	            if (bigObj.TryGetValue(kvp, out token))
+                {
+                    diffData[kvp] = token.ToString();
+                }
+            }
+        }
+        public static void AddChanges(this List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
+        {
+	        docChanges.Add(new DocumentsChanges
+            {
+	            Change = change
+            });
+            
+        }
+        public static void AddChanges(this ICollection<DocumentsChanges> docChanges, KeyValuePair<string, RavenJToken> kvp, RavenJToken token,string fieldName)
+        {
+            var changes = new DocumentsChanges
+            {
+                FieldNewType = kvp.Value.Type.ToString(),
+                FieldOldType = token.Type.ToString(),
+                FieldNewValue = kvp.Value.ToString(),
+                FieldOldValue = token.ToString(),
+                Change = DocumentsChanges.ChangeType.FieldChanged,
+                FieldName = fieldName
+            };
+            docChanges.Add(changes);
+
+        }
+        public static void AddChanges(this ICollection<DocumentsChanges> docChanges, RavenJToken curThisReader, RavenJToken curOtherReader, string fieldName)
+        {
+            var changes = new DocumentsChanges
+            {
+                FieldNewType = curThisReader.Type.ToString(),
+                FieldOldType = curOtherReader.Type.ToString(),
+                FieldNewValue = curThisReader.ToString(),
+                FieldOldValue = curOtherReader.ToString(),
+                Change = DocumentsChanges.ChangeType.FieldChanged,
+                FieldName = fieldName
+            };
+            docChanges.Add(changes);
+           
+        }
 	}
 }

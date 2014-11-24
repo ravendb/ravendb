@@ -1,10 +1,11 @@
 ﻿using System.Collections.Generic;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
-using Raven.Tests.Bundles.Replication;
+using Raven.Tests.Common;
 using Raven.Tests.Document;
 using Xunit;
 
@@ -14,24 +15,25 @@ namespace Raven.Tests.Security.OAuth
 	{
 		private const string apiKey = "test/ThisIsMySecret";
 
-		protected override void ConfigureStore(DocumentStore store)
+		protected override void ModifyStore(DocumentStore store)
 		{
 			store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 			store.Credentials = null;
 			store.ApiKey = apiKey;
 		}
 
-		protected override void ConfigureDatabase(Database.DocumentDatabase database)
+		protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)
 		{
-			database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+			database.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 			{
 				Name = "test",
 				Secret = "ThisIsMySecret",
 				Enabled = true,
-				Databases = new List<DatabaseAccess>
+				Databases = new List<ResourceAccess>
 				{
-					new DatabaseAccess {TenantId = "*"},
-					new DatabaseAccess {TenantId = Constants.SystemDatabase},
+					new ResourceAccess {TenantId = "*"},
+					new ResourceAccess {TenantId = Constants.SystemDatabase},
+                    new ResourceAccess {TenantId = databaseName, Admin = true}
 				}
 			}), new RavenJObject(), null);
 		}

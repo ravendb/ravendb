@@ -1,0 +1,45 @@
+﻿<!--<div class="alert alert-danger">
+    <p>Note: not finished implementation yet</p>
+    <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2063">You can track progress here</a>
+</div>-->
+
+<section class="filesystem-page">
+
+    <div class="text-center" data-bind="visible: counterStorages().length == 0">
+        <h3 class="page-header text-info">No counter storages are available. <small>Go ahead and <a href="#" data-bind="click: createNewCountersStorage">create a distributed counter storage</a>.</small></h3>
+    </div>
+
+    <div data-bind="visible: counterStorages().length > 0">
+        <div style="position: relative">
+            <ul class="breadcrumb">
+                <li>
+                    <h3>
+                        <a href="#counterstorages">
+                            Counter Storages
+                        </a>
+                    </h3>
+                </li>
+            </ul>
+            <div class="btn-toolbar">
+                <button type="button" class="btn btn-primary" data-bind="click: createNewCountersStorage" accesskey="n" title="Create a new file system. (Alt+N)">
+                    <i class="fa fa-plus"></i> New Counter Storage
+                </button>
+                <form class="form-inline" style="display: inline-block; vertical-align: middle;">
+                    <input type="text" accesskey="s" class="form-control col-md-8" placeholder="Search" data-bind="value: searchCounterStorageByText, valueUpdate: 'afterkeydown'" title="Search for a file system (Alt+S)">
+                </form>
+                <button class="btn btn-danger" data-bind="visible: !!selectedCounterStorage(), click: deleteSelectedCounterStorage"><i class="fa fa-trash-o"></i></button>
+            </div>
+            <br />
+
+            <div class="filesystems-container" data-bind="foreach: counterStorages">
+                <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectCounterStorage($data); return true; }, css: { selected: isSelected }">
+                    <h4><a data-bind="text: name, attr: { href: $root.getCounterStorageUrl($data) }"></a></h4>
+                    <!--<span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCount() + ' files'"></span>-->
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>

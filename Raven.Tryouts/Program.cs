@@ -1,22 +1,32 @@
 ﻿using System;
-using System.Transactions;
+using System.Threading;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Document.DTC;
-using Raven.Client.Embedded;
-using Raven.Client.Extensions;
-using Raven.Client.Indexes;
-using Raven.Tests.Indexes;
+using Raven.Database.DiskIO;
+using Raven.Json.Linq;
+using System.Linq;
+using Raven.Database.Extensions;
+using Raven.Tests.FileSystem.ClientApi;
 using Raven.Tests.Issues;
-using Xunit;
 
 namespace Raven.Tryouts
 {
-    class Program
-    {
-        private static void Main(string[] args)
-        {
+    public class Program
+	{
+		private static void Main(string[] args)
+		{
+			for (int i = 0; i < 100; i++)
+			{
+				using (var a = new RavenDB_2717())
+				{
+					Console.WriteLine(i);
+					a.CanWaitOnStaleTimeout();
+				}
 			
-        }
-    }
+			}
+
+		}
+	}
+
+
+	
 }

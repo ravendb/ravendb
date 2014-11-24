@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
 
 namespace Raven.Tests.Indexes
 {
@@ -9,7 +10,7 @@ namespace Raven.Tests.Indexes
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.DatabaseCommands.PutIndex("test", new IndexDefinitionBuilder<Bugs.Patching.Post>
+				store.DatabaseCommands.PutIndex("test", new IndexDefinitionBuilder<Bugs.Patching.Post>()
 															{
 																Map = docs => from doc in docs select new { doc.Id },
 																Analyzers = { { x => x.Id, "SimpleAnalyzer" } }

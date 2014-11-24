@@ -1,10 +1,12 @@
 ﻿using System.Linq;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryByTypeOnlyRemote : RemoteClientTest
+	public class QueryByTypeOnlyRemote : RavenTest
 	{
 		[Fact]
 		public void QueryOnlyByType()

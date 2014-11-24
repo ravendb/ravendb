@@ -51,22 +51,14 @@ namespace Raven.Database.Queries
 			IndexQuery indexQuery,
 			List<Explanation> explanations = null)
 		{
-			// There isn't much point for query optimizer of aggregation indexes
-			// the main reason is that we must always aggregate on the same items, and using the same 
-			// aggregation. Therefore we can't reuse one aggregate index for another query.
-			// We decline to suggest an index here and choose to use the default index created for this
-			// sort of query, which is what we would have to choose anyway.
-			if (indexQuery.AggregationOperation != AggregationOperation.None)
-				return new DynamicQueryOptimizerResult("", DynamicQueryMatchType.Failure);
-
 			if (string.IsNullOrEmpty(indexQuery.Query) && // we optimize for empty queries to use Raven/DocumentsByEntityName
 			    (indexQuery.SortedFields == null || indexQuery.SortedFields.Length == 0) && // and no sorting was requested
-				database.IndexDefinitionStorage.Contains("Raven/DocumentsByEntityName")) // and Raven/DocumentsByEntityName exists
+				database.IndexDefinitionStorage.Contains(Constants.DocumentsByEntityNameIndex)) // and Raven/DocumentsByEntityName exists
 			{
 				if (string.IsNullOrEmpty(entityName) == false)
 					indexQuery.Query = "Tag:" + entityName;
-				return new DynamicQueryOptimizerResult("Raven/DocumentsByEntityName", DynamicQueryMatchType.Complete);
-			}
+				return new DynamicQueryOptimizerResult(Constants.DocumentsByEntityNameIndex, DynamicQueryMatchType.Complete);
+			}			
 
 			var fieldsQueriedUpon = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery).Select(x => x.Item2).ToArray();
 			var normalizedFieldsQueriedUpon =
@@ -91,21 +83,32 @@ namespace Raven.Database.Queries
 																		});
 			}
 
-
+			//;
+			
 			// there is no reason why we can't use indexes with transform results
 			// we merely need to disable the transform results for this particular query
-			indexQuery.SkipTransformResults = true;
-			var results = database.IndexDefinitionStorage.IndexNames
-					.Select(indexName =>
+			var results = database.IndexDefinitionStorage.IndexDefinitions
+					.Select(indexDefinitionKvp =>
 					{
+						var indexName = indexDefinitionKvp.Value.Name;
+
 						var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
 					    var currentBestState = DynamicQueryMatchType.Complete;
-
 						if (abstractViewGenerator == null) // there is no matching view generator
 						{
 							explain(indexName, () => "There is no matching view generator. Maybe the index in the process of being deleted?");
 							return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
 						}
+
+						var indexingPriority = IndexingPriority.None;
+						var isInvalidIndex = false;
+						database.TransactionalStorage.Batch(accessor =>
+						{
+							var stats = accessor.Indexing.GetIndexStats(indexDefinitionKvp.Key);
+							isInvalidIndex = stats.IsInvalidIndex;
+							indexingPriority = stats.Priority;
+						});
+
 
 						if (entityName == null)
 						{
@@ -117,6 +120,14 @@ namespace Raven.Database.Queries
 						}
 						else
 						{
+							if (indexingPriority == IndexingPriority.Error ||
+							    indexingPriority == IndexingPriority.Disabled ||
+								isInvalidIndex)
+							{
+								explain(indexName, () => string.Format("Cannot do dynamic queries on disabled index or index with errors (index name = {0})",indexName));
+								return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);							
+							}
+
 							if (abstractViewGenerator.ForEntityNames.Count > 1) // we only allow indexes with a single entity name
 							{
 								explain(indexName, () => "Index contains more than a single entity name, may result in a different type being returned.");
@@ -199,7 +210,7 @@ namespace Raven.Database.Queries
 
 					    if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
 						{
-							var sortInfo = DynamicQueryMapping.GetSortInfo(s => { });
+							var sortInfo = DynamicQueryMapping.GetSortInfo(s => { }, indexQuery);
 
 							foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
 							{
@@ -278,11 +289,12 @@ namespace Raven.Database.Queries
 								return false;
 							});
 
-							if (anyFieldWithNonDefaultIndexing.Any())
+							var fieldWithNonDefaultIndexing = anyFieldWithNonDefaultIndexing.ToArray(); //prevent several enumerations
+							if (fieldWithNonDefaultIndexing.Any())
 							{
 								explain(indexName, () =>
 								{
-									var fields = anyFieldWithNonDefaultIndexing.Where(indexDefinition.Analyzers.ContainsKey);
+									var fields = fieldWithNonDefaultIndexing.Where(indexDefinition.Analyzers.ContainsKey);
 									return "The following field have aren't using default indexing: " + string.Join(", ", fields);
 								});
                                 return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
@@ -290,6 +302,14 @@ namespace Raven.Database.Queries
 						}
 					    if (currentBestState != DynamicQueryMatchType.Complete && indexDefinition.Type != "Auto")
 					        return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
+						if (currentBestState == DynamicQueryMatchType.Complete &&
+						    (indexingPriority == IndexingPriority.Idle ||
+						     indexingPriority == IndexingPriority.Abandoned))
+						{
+							currentBestState = DynamicQueryMatchType.Partial;
+							explain(indexName, () => String.Format("The index (name = {0}) is disabled or abandoned. The preference is for active indexes - making a partial match",indexName));
+						}
+
                         return new DynamicQueryOptimizerResult(indexName, currentBestState);
 					})
                     .Where(result => result.MatchType != DynamicQueryMatchType.Failure)
@@ -305,7 +325,8 @@ namespace Raven.Database.Queries
 		        {
 			        prioritizedResults = optimizerResults.OrderByDescending(result =>
 			        {
-				        var stats = accessor.Indexing.GetIndexStats(result.IndexName);
+			            var instance = this.database.IndexStorage.GetIndexInstance(result.IndexName);
+				        var stats = accessor.Indexing.GetIndexStats(instance.indexId);
 				        if (stats == null)
 							return Etag.Empty;
 
@@ -314,8 +335,7 @@ namespace Raven.Database.Queries
 				        .ThenByDescending(result =>
 				        {
 					        var abstractViewGenerator =
-						        database.IndexDefinitionStorage.GetViewGenerator(
-							        result.IndexName);
+						        database.IndexDefinitionStorage.GetViewGenerator(result.IndexName);
 					        if (abstractViewGenerator == null)
 						        return -1;
 					        return abstractViewGenerator.CountOfFields;
@@ -330,19 +350,20 @@ namespace Raven.Database.Queries
 
 		        return prioritizedResults[0];
 		    }
-
+			
 		    if (results.TryGetValue(DynamicQueryMatchType.Partial, out optimizerResults) && optimizerResults.Length > 0)
             {
                 return optimizerResults.OrderByDescending(x =>
                 {
                     var viewGenerator = database.IndexDefinitionStorage.GetViewGenerator(x.IndexName);
+					
                     if (viewGenerator == null)
                         return -1;
                     return viewGenerator.CountOfFields;
                 }).First();
             }
 
-            return new DynamicQueryOptimizerResult("<invalid index>", DynamicQueryMatchType.Failure);
+            return new DynamicQueryOptimizerResult("", DynamicQueryMatchType.Failure);
 
 		}
 	}

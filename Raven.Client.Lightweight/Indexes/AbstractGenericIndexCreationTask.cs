@@ -48,12 +48,6 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
-		/// The result translator definition
-		/// </summary>
-		[Obsolete("Use Result Transformers instead.")]
-		protected Expression<Func<IClientSideDatabase, IEnumerable<TReduceResult>, IEnumerable>> TransformResults { get; set; }
-
-		/// <summary>
 		/// The reduce definition
 		/// </summary>
 		protected Expression<Func<IEnumerable<TReduceResult>, IEnumerable>> Reduce { get; set; }

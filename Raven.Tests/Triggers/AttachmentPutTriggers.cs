@@ -11,6 +11,7 @@ using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Abstractions.Exceptions;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -24,7 +25,7 @@ namespace Raven.Tests.Triggers
 		public AttachmentPutTriggers()
 		{
 			store = NewDocumentStore(catalog:(new TypeCatalog(typeof (AuditAttachmentPutTrigger), typeof(RefuseBigAttachmentPutTrigger))));
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()
@@ -37,9 +38,9 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanModifyAttachmentPut()
 		{
-			db.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+			db.Attachments.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 
-			var attachment = db.GetStatic("ayende");
+			var attachment = db.Attachments.GetStatic("ayende");
 			Assert.Equal(new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc), attachment.Metadata.Value<DateTime>("created_at"));
 		}
 
@@ -48,7 +49,7 @@ namespace Raven.Tests.Triggers
 		public void CanVetoAttachmentPut()
 		{
 			var operationVetoedException = Assert.Throws<OperationVetoedException>(() =>
-																					   db.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6 }),
+																					   db.Attachments.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6 }),
 																									new RavenJObject()));
 
 			Assert.Equal("PUT vetoed on attachment ayende by Raven.Tests.Triggers.RefuseBigAttachmentPutTrigger because: Attachment is too big", operationVetoedException.Message);

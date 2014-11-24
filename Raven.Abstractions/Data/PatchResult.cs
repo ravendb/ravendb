@@ -23,12 +23,19 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Document was properly tested
 		/// </summary>
-		Tested
+		Tested,
+		/// <summary>
+		/// Neither document body not metadata was changed during patch operation
+		/// </summary>
+		NotModified
 	}
 
 	public class PatchResultData
 	{
 		public PatchResult PatchResult { get; set; }
+
 		public RavenJObject Document { get; set; }
+
+		public RavenJObject DebugActions { get; set; }
 	}
 }

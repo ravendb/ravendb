@@ -5,11 +5,14 @@ using Raven.Database.Impl;
 
 namespace Raven.Database.Util
 {
-	public class SequentialUuidGenerator : IUuidGenerator
+	internal class SequentialUuidGenerator : IUuidGenerator
 	{
 		private byte[] ticksAsBytes;
 		private long sequentialUuidCounterDocuments;
+
+        [Obsolete("Use RavenFS instead.")]
 		private long sequentialUuidCounterAttachments;
+
 		private long sequentialUuidCounterDocumentsTransactions;
 		private long sequentialUuidCounterMappedResults;
 		private long sequentialUuidCounterReduceResults;
@@ -17,6 +20,7 @@ namespace Raven.Database.Util
 		private long sequentialUuidCounterTasks;
 		private long sequentialUuidCounterScheduledReductions;
 		private long sequentialUuidCounterIndexing;
+		private long sequentialUuidDocumentReferences;
 
 		public long EtagBase
 		{
@@ -59,6 +63,9 @@ namespace Raven.Database.Util
 					break;
 				case UuidType.Indexing:
 					increment = Interlocked.Increment(ref sequentialUuidCounterIndexing);
+					break;
+				case UuidType.DocumentReferences:
+					increment = Interlocked.Increment(ref sequentialUuidDocumentReferences);
 					break;
 				default:
 					throw new ArgumentOutOfRangeException("type", "Cannot understand: " + type);

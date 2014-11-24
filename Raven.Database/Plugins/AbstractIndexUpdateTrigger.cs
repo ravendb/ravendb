@@ -43,7 +43,7 @@ namespace Raven.Database.Plugins
 		}
 
 
-		public abstract AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName);
+		public abstract AbstractIndexUpdateTriggerBatcher CreateBatcher(int indexId);
 
 		public DocumentDatabase Database { get; set; }
 	}

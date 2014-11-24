@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Indexes;
 using Raven.Abstractions.Indexing;
@@ -53,7 +56,7 @@ namespace Raven.Tests.Bugs.Indexing
 					Assert.Equal(results.Length, 4);
 				}
 
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.SystemDatabase.Statistics.Errors);
 			}
 		}
 	}

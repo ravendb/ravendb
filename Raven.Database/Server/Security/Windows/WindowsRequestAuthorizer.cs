@@ -1,11 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
 using System.Security.Principal;
+using System.Threading;
+using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using System.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Server.Controllers;
 
 namespace Raven.Database.Server.Security.Windows
 {
@@ -29,7 +34,7 @@ namespace Raven.Database.Server.Security.Windows
 
 		public void UpdateSettings()
 		{
-			var doc = server.SystemDatabase.Get("Raven/Authorization/WindowsSettings", null);
+			var doc = server.SystemDatabase.Documents.Get("Raven/Authorization/WindowsSettings", null);
 
 			if (doc == null)
 			{
@@ -54,98 +59,123 @@ namespace Raven.Database.Server.Security.Windows
 								: new List<WindowsAuthData>();
 		}
 
-		public bool Authorize(IHttpContext ctx, bool ignoreDb)
+        public bool TryAuthorize(RavenBaseApiController controller, bool ignoreDb, out HttpResponseMessage msg)
 		{
-			Action onRejectingRequest;
-			var databaseName = TenantId ?? Constants.SystemDatabase;
-			var userCreated = TryCreateUser(ctx, databaseName, out onRejectingRequest);
+			Func<HttpResponseMessage> onRejectingRequest;
+			var tenantId = controller.TenantName ?? Constants.SystemDatabase;
+			var userCreated = TryCreateUser(controller, tenantId, out onRejectingRequest);
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
 			{
-				onRejectingRequest();
+				msg = onRejectingRequest();
 				return false;
 			}
 
 			PrincipalWithDatabaseAccess user = null;
 			if (userCreated)
 			{
-				user = (PrincipalWithDatabaseAccess)ctx.User;
-				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
-				CurrentOperationContext.User.Value = ctx.User;
+				user = (PrincipalWithDatabaseAccess)controller.User;
+				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = controller.User.Identity.Name;
+				CurrentOperationContext.User.Value = controller.User;
 
 				// admins always go through
 				if (user.Principal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode))
+				{
+					msg = controller.GetEmptyMessage();
 					return true;
+				}
 
 				// backup operators can go through
 				if (user.Principal.IsBackupOperator(server.SystemConfiguration.AnonymousUserAccessMode))
+				{
+					msg = controller.GetEmptyMessage();
 					return true;
+				}
 			}
 
-			var httpRequest = ctx.Request;
-			bool isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
+			bool isGetRequest = IsGetRequest(controller.InnerRequest.Method.Method, controller.InnerRequest.RequestUri.AbsolutePath);
 			switch (server.SystemConfiguration.AnonymousUserAccessMode)
 			{
 				case AnonymousUserAccessMode.Admin:
 				case AnonymousUserAccessMode.All:
+					msg = controller.GetEmptyMessage();
 					return true; // if we have, doesn't matter if we have / don't have the user
 				case AnonymousUserAccessMode.Get:
 					if (isGetRequest)
+					{
+						msg = controller.GetEmptyMessage();
 						return true;
+					}
 					goto case AnonymousUserAccessMode.None;
 				case AnonymousUserAccessMode.None:
 					if (userCreated)
 					{
-						if (user.AdminDatabases.Contains(databaseName) ||
-							user.AdminDatabases.Contains("*") || ignoreDb)
-							return true;
-						if (user.ReadWriteDatabases.Contains(databaseName) ||
-							user.ReadWriteDatabases.Contains("*"))
-							return true;
-						if (isGetRequest && (user.ReadOnlyDatabases.Contains(databaseName) ||
-							user.ReadOnlyDatabases.Contains("*")))
-							return true;
+						if (string.IsNullOrEmpty(tenantId) == false && tenantId.StartsWith("fs/"))
+							tenantId = tenantId.Substring(3);
+
+						if (string.IsNullOrEmpty(tenantId) == false && tenantId.StartsWith("counters/"))
+							tenantId = tenantId.Substring(9);
+
+					    if (user.AdminDatabases.Contains(tenantId) ||
+					        user.AdminDatabases.Contains("*") || ignoreDb)
+					    {
+					        msg = controller.GetEmptyMessage();
+					        return true;
+					    }
+					    if (user.ReadWriteDatabases.Contains(tenantId) ||
+					        user.ReadWriteDatabases.Contains("*"))
+					    {
+					        msg = controller.GetEmptyMessage();
+					        return true;
+					    }
+					    if (isGetRequest && (user.ReadOnlyDatabases.Contains(tenantId) ||
+					                            user.ReadOnlyDatabases.Contains("*")))
+					    {
+					        msg = controller.GetEmptyMessage();
+					        return true;
+					    }
 					}
 
-					onRejectingRequest();
+					msg = onRejectingRequest();
 					return false;
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
 		}
 
-		private bool TryCreateUser(IHttpContext ctx, string databaseName, out Action onRejectingRequest)
+        private bool TryCreateUser(RavenBaseApiController controller, string databaseName, out Func<HttpResponseMessage> onRejectingRequest)
 		{
-			var invalidUser = (ctx.User == null || ctx.User.Identity.IsAuthenticated == false);
+			var invalidUser = (controller.User == null || controller.User.Identity.IsAuthenticated == false);
 			if (invalidUser)
 			{
 				onRejectingRequest = () =>
 				{
-					ProvideDebugAuthInfo(ctx, new
+					var msg = ProvideDebugAuthInfo(controller, new
 					{
 						Reason = "User is null or not authenticated"
 					});
-					ctx.Response.AddHeader("Raven-Required-Auth", "Windows");
-					if (string.IsNullOrEmpty(Settings.OAuthTokenServer) == false)
+					controller.AddHeader("Raven-Required-Auth", "Windows", msg);
+					if (string.IsNullOrEmpty(controller.SystemConfiguration.OAuthTokenServer) == false)
 					{
-						ctx.Response.AddHeader("OAuth-Source", Settings.OAuthTokenServer);
+						controller.AddHeader("OAuth-Source", controller.SystemConfiguration.OAuthTokenServer, msg);
 					}
-					ctx.SetStatusToUnauthorized();
+					msg.StatusCode = HttpStatusCode.Unauthorized;
+
+					return msg;
 				};
 				return false;
 			}
 
-			var dbUsersIaAllowedAccessTo = requiredUsers
-				.Where(data => ctx.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
+			var dbUsersIsAllowedAccessTo = requiredUsers
+				.Where(data => controller.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
 				.SelectMany(source => source.Databases)
-				.Concat(requiredGroups.Where(data => ctx.User.IsInRole(data.Name)).SelectMany(x => x.Databases))
+				.Concat(requiredGroups.Where(data => controller.User.IsInRole(data.Name)).SelectMany(x => x.Databases))
 				.ToList();
-			var user = UpdateUserPrincipal(ctx, dbUsersIaAllowedAccessTo);
+
+            var user = UpdateUserPrincipal(controller, dbUsersIsAllowedAccessTo);
 
 			onRejectingRequest = () =>
 			{
-				ctx.SetStatusToForbidden();
-
-				ProvideDebugAuthInfo(ctx, new
+				var msg = ProvideDebugAuthInfo(controller, new
 				{
 					user.Identity.Name,
 					user.AdminDatabases,
@@ -153,47 +183,54 @@ namespace Raven.Database.Server.Security.Windows
 					user.ReadWriteDatabases,
 					DatabaseName = databaseName
 				});
+
+				msg.StatusCode = HttpStatusCode.Forbidden;
+
+				throw new HttpResponseException(msg);
 			};
 			return true;
 		}
 
-		private static void ProvideDebugAuthInfo(IHttpContext ctx, object msg)
+        private static HttpResponseMessage ProvideDebugAuthInfo(RavenBaseApiController controller, object msg)
 		{
-			string debugAuth = ctx.Request.QueryString["debug-auth"];
+			string debugAuth = controller.GetQueryStringValue("debug-auth");
 			if (debugAuth == null)
-				return;
+				return controller.GetEmptyMessage();
 
 			bool shouldProvideDebugAuthInformation;
 			if (bool.TryParse(debugAuth, out shouldProvideDebugAuthInformation) && shouldProvideDebugAuthInformation)
 			{
-				ctx.WriteJson(msg);
-			}
-		}
-
-		private PrincipalWithDatabaseAccess UpdateUserPrincipal(IHttpContext ctx, List<DatabaseAccess> databaseAccessLists)
-		{
-			var access = ctx.User as PrincipalWithDatabaseAccess;
-			if (access != null)
-				return access;
-
-			var user = new PrincipalWithDatabaseAccess((WindowsPrincipal)ctx.User);
-
-			foreach (var databaseAccess in databaseAccessLists)
-			{
-				if (databaseAccess.Admin)
-					user.AdminDatabases.Add(databaseAccess.TenantId);
-				else if (databaseAccess.ReadOnly)
-					user.ReadOnlyDatabases.Add(databaseAccess.TenantId);
-				else
-					user.ReadWriteDatabases.Add(databaseAccess.TenantId);
+				return controller.GetMessageWithObject(msg);
 			}
 
-			ctx.User = user;
-			return user;
+			return controller.GetEmptyMessage();
 		}
 
+        private PrincipalWithDatabaseAccess UpdateUserPrincipal(RavenBaseApiController controller, List<ResourceAccess> databaseAccessLists)
+        {
+            var access = controller.User as PrincipalWithDatabaseAccess;
+            if (access != null)
+                return access;
 
-		public List<string> GetApprovedDatabases(IPrincipal user)
+            var user = new PrincipalWithDatabaseAccess((WindowsPrincipal)controller.User);
+
+            foreach (var databaseAccess in databaseAccessLists)
+            {
+                if (databaseAccess.Admin)
+                    user.AdminDatabases.Add(databaseAccess.TenantId);
+                else if (databaseAccess.ReadOnly)
+                    user.ReadOnlyDatabases.Add(databaseAccess.TenantId);
+                else
+                    user.ReadWriteDatabases.Add(databaseAccess.TenantId);
+            }
+
+            controller.User = user;
+            Thread.CurrentPrincipal = user;
+
+            return user;
+        }
+
+		public List<string> GetApprovedResources(IPrincipal user)
 		{
 			var winUser = user as PrincipalWithDatabaseAccess;
 			if (winUser == null)
@@ -212,12 +249,14 @@ namespace Raven.Database.Server.Security.Windows
 			WindowsSettingsChanged -= UpdateSettings;
 		}
 
-		public IPrincipal GetUser(IHttpContext ctx)
+		public IPrincipal GetUser(RavenDbApiController controller)
 		{
-			Action onRejectingRequest;
-			var databaseName = TenantId ?? Constants.SystemDatabase;
-			var userCreated = TryCreateUser(ctx, databaseName, out onRejectingRequest);
-			return userCreated ? ctx.User : null;
+			Func<HttpResponseMessage> onRejectingRequest;
+			var databaseName = controller.DatabaseName ?? Constants.SystemDatabase;
+			var userCreated = TryCreateUser(controller, databaseName, out onRejectingRequest);
+			if (userCreated == false)
+				onRejectingRequest();
+			return userCreated ? controller.User : null;
 		}
 	}
 }

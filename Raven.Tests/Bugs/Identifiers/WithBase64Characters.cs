@@ -4,11 +4,13 @@ using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Identifiers
 {
-	public class WithBase64Characters : RemoteClientTest
+	public class WithBase64Characters : RavenTest
 	{
 		public class Entity
 		{

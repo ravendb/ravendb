@@ -25,6 +25,8 @@ using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -39,23 +41,28 @@ namespace Raven.Database.Linq
 	public static class QueryParsingUtils
 	{
 		[CLSCompliant(false)]
-		public static string GenerateText(TypeDeclaration type, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
+		public static string GenerateText(TypeDeclaration type, 
+			OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
+			HashSet<string> namespaces = null)
 		{
 			var unit = new SyntaxTree();
 
-			var namespaces = new HashSet<string>
+			if (namespaces == null)
 			{
-				typeof (SystemTime).Namespace,
-				typeof (AbstractViewGenerator).Namespace,
-				typeof (Enumerable).Namespace,
-				typeof (IEnumerable<>).Namespace,
-				typeof (IEnumerable).Namespace,
-				typeof (int).Namespace,
-				typeof (LinqOnDynamic).Namespace,
-				typeof(Field).Namespace,
-				typeof(CultureInfo).Namespace,
-				typeof(Regex).Namespace
-			};
+				namespaces = new HashSet<string>
+				{
+					typeof (SystemTime).Namespace,
+					typeof (AbstractViewGenerator).Namespace,
+					typeof (Enumerable).Namespace,
+					typeof (IEnumerable<>).Namespace,
+					typeof (IEnumerable).Namespace,
+					typeof (int).Namespace,
+					typeof (LinqOnDynamic).Namespace,
+					typeof (Field).Namespace,
+					typeof (CultureInfo).Namespace,
+					typeof (Regex).Namespace
+				};
+			}
 
 			foreach (var extension in extensions)
 			{
@@ -70,7 +77,6 @@ namespace Raven.Database.Linq
 				unit.Members.Add(new UsingDeclaration(ns));
 			}
 
-			unit.Members.Add(new WindowsNewLine());
 			unit.Members.Add(new WindowsNewLine());
 
 			unit.Members.Add(type);
@@ -92,6 +98,7 @@ namespace Raven.Database.Linq
 			return stringWriter.GetStringBuilder().ToString();
 		}
 
+		[CLSCompliant(false)]
 		public static VariableInitializer GetVariableDeclarationForLinqQuery(string query, bool requiresSelectNewAnonymousType)
 		{
 			try
@@ -133,6 +140,7 @@ namespace Raven.Database.Linq
 				variable.AcceptVisitor(new TransformNullCoalescingOperatorTransformer(), null);
 				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
 				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
+                variable.AcceptVisitor(new TransformDynamicInvocationExpressions(), null);
 				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
 				return variable;
 			}
@@ -184,6 +192,7 @@ namespace Raven.Database.Linq
 				variable.AcceptVisitor(new TransformNullCoalescingOperatorTransformer(), null);
 				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
 				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
+                variable.AcceptVisitor(new TransformDynamicInvocationExpressions(), null);
 				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
 
 				var expressionBody = GetAnonymousCreateExpression(lambdaExpression.Body);
@@ -358,9 +367,12 @@ namespace Raven.Database.Linq
 			//    previously created and deleted, affecting both production and test environments.
 			//
 			// For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
+			var indexCacheDir = GetIndexCacheDir(configuration);
 
 			try
 			{
+				if (Directory.Exists(indexCacheDir) == false)
+					Directory.CreateDirectory(indexCacheDir);
 				type = TryGetIndexFromDisk(indexFilePath, name);
 			}
 			catch (UnauthorizedAccessException)
@@ -393,12 +405,8 @@ namespace Raven.Database.Linq
 
 		private static string GetIndexFilePath(string source, string indexCacheDir)
 		{
-			string sourceHashed;
-			using (var md5 = MD5.Create())
-			{
-				var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(source));
-				sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
-			}
+			var hash = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(source));
+			var sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
 			var indexFilePath = Path.Combine(indexCacheDir,
 				IndexingUtil.StableInvariantIgnoreCaseStringHash(source) + "." + sourceHashed + "." +
 				(Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
@@ -419,8 +427,8 @@ namespace Raven.Database.Linq
 				// we know we can write there
 				try
 				{
-                    EnsureDirectoryExists(indexCacheDir);
-
+					if (Directory.Exists(indexCacheDir) == false)
+						Directory.CreateDirectory(indexCacheDir);
 					var touchFile = Path.Combine(indexCacheDir, Guid.NewGuid() + ".temp");
 					File.WriteAllText(touchFile, "test that we can write to this path");
 					File.Delete(touchFile);
@@ -430,10 +438,11 @@ namespace Raven.Database.Linq
 				{
 				}
 
-				indexCacheDir = Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");
+                indexCacheDir = Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");
+                if (Directory.Exists(indexCacheDir) == false)
+                    Directory.CreateDirectory(indexCacheDir);
 			}
 
-            EnsureDirectoryExists(indexCacheDir);
 			return indexCacheDir;
 		}
 
@@ -441,6 +450,8 @@ namespace Raven.Database.Linq
 												string basePath, string indexFilePath)
 		{
 			var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
+			var currentAssembly = typeof(QueryParsingUtils).Assembly;
+
 			var assemblies = new HashSet<string>
 			{
 				typeof (SystemTime).Assembly.Location,
@@ -448,7 +459,7 @@ namespace Raven.Database.Linq
 				typeof (NameValueCollection).Assembly.Location,
 				typeof (Enumerable).Assembly.Location,
 				typeof (Binder).Assembly.Location,
-				typeof (Field).Assembly.Location,
+				AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(Field), currentAssembly),
 			};
 			foreach (var extension in extensions)
 			{
@@ -539,11 +550,5 @@ namespace Raven.Database.Linq
 
 			return null;
 		}
-
-        private static void EnsureDirectoryExists(string directoryPath)
-        {
-            if (Directory.Exists(directoryPath) == false)
-                Directory.CreateDirectory(directoryPath);
-        }
 	}
 }

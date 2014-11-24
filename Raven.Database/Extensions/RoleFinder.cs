@@ -221,7 +221,8 @@ namespace Raven.Database.Extensions
 
 		public static bool IsAdministrator(this IPrincipal principal, DocumentDatabase database)
 		{
-			return IsAdministrator(principal, database.Name);
+			var name = database.Name ?? "<system>";
+			return IsAdministrator(principal, name);
 		}
 
 		public static bool IsAdministrator(this IPrincipal principal, string databaseNane)

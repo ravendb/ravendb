@@ -8,6 +8,8 @@ using System.Collections.Concurrent;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Server.Controllers;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.Server.Connections
 {
@@ -26,8 +28,12 @@ namespace Raven.Database.Server.Connections
 
 		public void OnIdle()
 		{
-			ConnectionState _;
-			timeSensitiveStore.ForAllExpired(s => connections.TryRemove(s, out _));
+			timeSensitiveStore.ForAllExpired(s =>
+			{
+				ConnectionState value;
+				if(connections.TryRemove(s, out value))
+					value.Dispose();
+			});
 		}
 
 		public void Disconnect(string id)
@@ -38,7 +44,7 @@ namespace Raven.Database.Server.Connections
 				value.Dispose();
 		}
 
-		public ConnectionState Register(EventsTransport transport)
+		public ConnectionState Register(IEventsTransport transport)
 		{
 			timeSensitiveStore.Seen(transport.Id);
 			transport.Disconnected += () => TimeSensitiveStore.Missing(transport.Id);
@@ -60,6 +66,17 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
+        public event Action<object, TransformerChangeNotification> OnTransformerChangeNotification = delegate { }; 
+
+        public void Send(TransformerChangeNotification transformerChangeNotification)
+        {
+            OnTransformerChangeNotification(this, transformerChangeNotification);
+            foreach (var connectionState in connections)
+            {
+                connectionState.Value.Send(transformerChangeNotification);
+            }
+        }
+
 		public event Action<object, DocumentChangeNotification> OnDocumentChangeNotification = delegate { }; 
 
 		public void Send(DocumentChangeNotification documentChangeNotification)
@@ -68,6 +85,17 @@ namespace Raven.Database.Server.Connections
 			foreach (var connectionState in connections)
 			{
 				connectionState.Value.Send(documentChangeNotification);
+			}
+		}
+
+		public event Action<object, Notification> OnNotification = delegate { };
+
+		public void Send(Notification notification)
+		{
+			OnNotification(this, notification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.Send(notification);
 			}
 		}
 
@@ -93,14 +121,18 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
-		public ConnectionState For(string id)
+        public ConnectionState For(string id, RavenBaseApiController controller = null)
 		{
 			return connections.GetOrAdd(id, _ =>
-			                                	{
-			                                		var connectionState = new ConnectionState(null);
-			                                		TimeSensitiveStore.Missing(id);
-			                                		return connectionState;
-			                                	});
+			{
+				IEventsTransport eventsTransport = null;
+				if (controller != null)
+					eventsTransport = new ChangesPushContent(controller);
+				
+				var connectionState = new ConnectionState(eventsTransport);
+				TimeSensitiveStore.Missing(id);
+				return connectionState;
+			});
 		}
 
 	    public object[] DebugStatuses

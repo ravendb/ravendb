@@ -2,6 +2,8 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Spatial
@@ -52,27 +54,27 @@ namespace Raven.Tests.Spatial
 
 				using (IDocumentSession session = store.OpenSession())
 				{
-					var result = session.Advanced.LuceneQuery<MySpatialDocument, MySpatialIndex>()
+                    var result = session.Advanced.DocumentQuery<MySpatialDocument, MySpatialIndex>()
 						// 1.025 is for the 2.5% uncertainty at the circle circumference
 						.WithinRadiusOf(radius: 35.75 * 1.025, latitude: 48.6003516, longitude: 2.4632387000000335)
 						.SingleOrDefault();
 
 					Assert.NotNull(result); // A location should be returned.
 
-					result = session.Advanced.LuceneQuery<MySpatialDocument, MySpatialIndex>()
+                    result = session.Advanced.DocumentQuery<MySpatialDocument, MySpatialIndex>()
 						.WithinRadiusOf(radius: 30, latitude: 48.6003516, longitude: 2.4632387000000335)
 						.SingleOrDefault();
 
 					Assert.Null(result); // No result should be returned.
 
-					result = session.Advanced.LuceneQuery<MySpatialDocument, MySpatialIndex>()
+                    result = session.Advanced.DocumentQuery<MySpatialDocument, MySpatialIndex>()
 						.WithinRadiusOf(radius: 33, latitude: 48.6003516, longitude: 2.4632387000000335)
 						.SingleOrDefault();
 
 					Assert.Null(result); // No result should be returned.
 
 					var shape = SpatialIndexQuery.GetQueryShapeFromLatLon(48.6003516, 2.4632387000000335, 33);
-					result = session.Advanced.LuceneQuery<MySpatialDocument, MySpatialIndex>()
+                    result = session.Advanced.DocumentQuery<MySpatialDocument, MySpatialIndex>()
 						.RelatesToShape(Constants.DefaultSpatialFieldName, shape, SpatialRelation.Intersects, 0)
 						.SingleOrDefault();
 

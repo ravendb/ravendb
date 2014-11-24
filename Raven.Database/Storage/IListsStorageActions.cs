@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
@@ -14,7 +15,10 @@ namespace Raven.Database.Storage
 
 		ListItem Read(string name, string key);
 
+        ListItem ReadLast(string name);
+
 		void RemoveAllBefore(string name, Etag etag);
+		void RemoveAllOlderThan(string name, DateTime dateTime);
 	}
 
 	public class ListItem
@@ -22,5 +26,6 @@ namespace Raven.Database.Storage
 		public string Key;
 		public Etag Etag;
 		public RavenJObject Data;
+		public DateTime CreatedAt;
 	}
 }

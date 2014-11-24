@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Lucene.Net.Index;
 using Lucene.Net.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -14,7 +13,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
-    public static class IndexedTerms
+    internal static class IndexedTerms
     {
         public static void ReadEntriesForFieldsFromTermVectors(
             IndexSearcherHolder.IndexSearcherHoldingState state,
@@ -47,8 +46,8 @@ namespace Raven.Database.Indexing
                 IndexSearcherHolder.IndexSearcherHoldingState state,
                 HashSet<string> fieldsToRead,
                 HashSet<int> docIds,
-                Func<string, string, double> convert,
-                Action<string, string, double, int> onTermFound)
+                Func<Term, double> convert,
+                Action<Term, double, int> onTermFound)
         {
             var reader = state.IndexSearcher.IndexReader;
 
@@ -72,13 +71,13 @@ namespace Raven.Database.Indexing
                             double converted;
                             if (val.Val == null)
                             {
-                                val.Val = converted = convert(val.Term.Field, val.Term.Text);
+                                val.Val = converted = convert(val.Term);
                             }
                             else
                             {
                                 converted = val.Val.Value;
                             }
-                            onTermFound(val.Term.Field, val.Term.Text, converted, docId);
+                            onTermFound(val.Term, converted, docId);
                         }
                     }
                 }
@@ -120,7 +119,7 @@ namespace Raven.Database.Indexing
               IndexSearcherHolder.IndexSearcherHoldingState state,
               HashSet<string> fieldsToRead,
               HashSet<int> docIds,
-              Action<string, string, int> onTermFound)
+              Action<Term, int> onTermFound)
         {
             var reader = state.IndexSearcher.IndexReader;
 
@@ -135,7 +134,7 @@ namespace Raven.Database.Indexing
                     {
                         foreach (var term in state.GetTermsFromCache(field, docId))
                         {
-                            onTermFound(term.Field, term.Text, docId);
+                            onTermFound(term, docId);
                         }
                     }
                 }
@@ -210,9 +209,8 @@ namespace Raven.Database.Indexing
                                 totalDocCountIncludedDeletes -= 1;
                                 if (reader.IsDeleted(termDocs.Doc))
                                     continue;
-
-	                            if (items[termDocs.Doc] == null)
-		                            items[termDocs.Doc] = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>();
+								if(items[termDocs.Doc] == null)
+									items[termDocs.Doc] = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>();
 
 	                            items[termDocs.Doc].AddLast(new IndexSearcherHolder.IndexSearcherHoldingState.CacheVal
 	                            {

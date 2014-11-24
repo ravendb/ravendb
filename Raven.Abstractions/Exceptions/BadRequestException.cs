@@ -11,9 +11,7 @@ namespace Raven.Abstractions.Exceptions
 	/// <summary>
 	/// This exception is raised when a bad request is made to the server
     /// </summary>
-#if !SILVERLIGHT && !NETFX_CORE
     [Serializable]
-#endif
 	public class BadRequestException : Exception
 	{
 		/// <summary>
@@ -42,7 +40,6 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
         /// <summary>
 		/// Initializes a new instance of the <see cref="BadRequestException"/> class.
 		/// </summary>
@@ -56,6 +53,5 @@ namespace Raven.Abstractions.Exceptions
 			: base(info, context)
 		{
 		}
-#endif
 	}
 }

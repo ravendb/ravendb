@@ -5,11 +5,13 @@
 //-----------------------------------------------------------------------
 using System.Linq;
 using System.Threading;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
 using Raven.Database.Config;
 using Raven.Database.Queries;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 using Raven.Database;
@@ -25,7 +27,7 @@ namespace Raven.Tests.Queries
 		public ParameterizedDynamicQuery()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()
@@ -53,9 +55,9 @@ namespace Raven.Tests.Queries
 				Category = "Rhinos"
 			};
 
-			db.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
-			db.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
-			db.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
+			db.Documents.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
+			db.Documents.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
+			db.Documents.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
 
 			var results = db.ExecuteDynamicQuery(null,new IndexQuery()
 		   {
@@ -63,7 +65,7 @@ namespace Raven.Tests.Queries
 			   Start = 0,
 			   Cutoff = SystemTime.UtcNow,
 			   Query = "Title.Length:3 AND Category:Rhinos"
-		   }, CancellationToken.None);
+           }, CancellationToken.None);
 
 			Assert.Equal(1, results.Results.Count);
 			Assert.Equal("two", results.Results[0].Value<string>("Title"));
@@ -89,9 +91,9 @@ namespace Raven.Tests.Queries
 				Category = "Rhinos"
 			};
 
-			db.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
-			db.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
-			db.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
+			db.Documents.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
+			db.Documents.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
+			db.Documents.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
 
 			int initialIndexCount = db.Statistics.CountOfIndexes;
 			db.ExecuteDynamicQuery(null,new IndexQuery()
@@ -100,21 +102,21 @@ namespace Raven.Tests.Queries
 				Start = 0,
 				Cutoff = SystemTime.UtcNow,
 				Query = "Title.Length:3 AND Category:Rhinos"
-			}, CancellationToken.None);
+            }, CancellationToken.None);
 			db.ExecuteDynamicQuery(null, new IndexQuery()
 			{
 				PageSize = 128,
 				Start = 0,
 				Cutoff = SystemTime.UtcNow,
 				Query = "Title.Length:3 AND Category:Rhinos"
-			}, CancellationToken.None);
+            }, CancellationToken.None);
 			db.ExecuteDynamicQuery(null, new IndexQuery()
 			{
 				PageSize = 128,
 				Start = 0,
 				Cutoff = SystemTime.UtcNow,
 				Query = "Category:Rhinos AND Title.Length:3"
-			}, CancellationToken.None);
+            }, CancellationToken.None);
 
 			Assert.True(db.Statistics.CountOfIndexes == initialIndexCount + 1);
 						
@@ -132,7 +134,7 @@ namespace Raven.Tests.Queries
 					Start = 0,
 					Cutoff = SystemTime.UtcNow,
 					Query = "Title.Length:3 AND Category:Rhinos"
-				}, CancellationToken.None);
+                }, CancellationToken.None);
 		  
 
 			var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto")).SingleOrDefault();
@@ -158,9 +160,9 @@ namespace Raven.Tests.Queries
 				Category = "Rhinos"
 			};
 
-			db.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
-			db.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
-			db.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
+			db.Documents.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
+			db.Documents.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
+			db.Documents.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
 
 			QueryResult results = null;
 
@@ -170,7 +172,7 @@ namespace Raven.Tests.Queries
 					Start = 0,
 					Cutoff = SystemTime.UtcNow,
 					Query = "Title.Length_Range:[0x00000004 TO 0x00000009]"
-				}, CancellationToken.None);
+                }, CancellationToken.None);
 
 			Assert.Equal(1, results.TotalResults);
 		}
@@ -203,9 +205,9 @@ namespace Raven.Tests.Queries
 				},
 			};
 
-			db.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
-			db.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
-			db.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
+			db.Documents.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
+			db.Documents.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
+			db.Documents.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
 
 			var results = db.ExecuteDynamicQuery(null, new IndexQuery()
 			{
@@ -213,7 +215,7 @@ namespace Raven.Tests.Queries
 				Start = 0,
 				Cutoff = SystemTime.UtcNow,
 				Query = "Tags,Name:[[birds]]"
-			}, CancellationToken.None);
+            }, CancellationToken.None);
 
 			Assert.Equal(1, results.Results.Count);
 			Assert.Equal("one", results.Results[0].Value<string>("Title"));
@@ -242,9 +244,9 @@ namespace Raven.Tests.Queries
 				User = new User() { Name = "rob" }
 			};
 
-			db.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
-			db.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
-			db.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
+			db.Documents.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
+			db.Documents.Put("blogTwo", null, RavenJObject.FromObject(blogTwo), new RavenJObject(), null);
+			db.Documents.Put("blogThree", null, RavenJObject.FromObject(blogThree), new RavenJObject(), null);
 
 			var results = db.ExecuteDynamicQuery(null, new IndexQuery()
 			{
@@ -252,7 +254,7 @@ namespace Raven.Tests.Queries
 				Start = 0,
 				Cutoff = SystemTime.UtcNow,
 				Query = "User.Name:rob"
-			}, CancellationToken.None);
+            }, CancellationToken.None);
 
 			Assert.Equal(1, results.Results.Count);
 			Assert.Equal("three", results.Results[0].Value<string>("Title"));
@@ -271,7 +273,7 @@ namespace Raven.Tests.Queries
 				},
 			};
 
-			db.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
+			db.Documents.Put("blogOne", null, RavenJObject.FromObject(blogOne), new RavenJObject(), null);
 
 			var results = db.ExecuteDynamicQuery(null, new IndexQuery()
 			{
@@ -280,7 +282,7 @@ namespace Raven.Tests.Queries
 				Cutoff = SystemTime.UtcNow,
 				Query = "Tags,Name:[[birds]]",
 				FieldsToFetch = new string[] { "Title", "Category" }
-			}, CancellationToken.None);
+            }, CancellationToken.None);
 
 			Assert.Equal(1, results.Results.Count);
 			Assert.Equal("one", results.Results[0].Value<string>("Title"));

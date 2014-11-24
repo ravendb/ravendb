@@ -15,11 +15,13 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Json;
 using Raven.Database.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class LinqIndexesFromClient
+	public class LinqIndexesFromClient : NoDisposalNeeded
 	{
 		[Fact]
 		public void Convert_select_many_will_keep_doc_id()
@@ -29,7 +31,7 @@ namespace Raven.Tests.Indexes
 				Map = orders => from order in orders
 								from line in order.OrderLines
 								select new { line.ProductId }
-			}.ToIndexDefinition(new DocumentConvention());
+			}.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
 			var generator = new DynamicViewCompiler("test", indexDefinition,  ".")
 				.GenerateInstance();
 
@@ -70,7 +72,7 @@ namespace Raven.Tests.Indexes
 				                from role in person.Roles
 				                where role == "Student"
 				                select new { role }
-			}.ToIndexDefinition(new DocumentConvention());
+			}.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
 
 			new DynamicViewCompiler("test", indexDefinition,  ".")
 				.GenerateInstance();
@@ -91,7 +93,7 @@ namespace Raven.Tests.Indexes
 							   where user.Location == "Tel Aviv"
 							   select new { user.Name },
 				Stores = { { user => user.Name, FieldStorage.Yes } }
-			}.ToIndexDefinition(new DocumentConvention());
+			}.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
 			var original = new IndexDefinition
 			{
 				Stores = { { "Name", FieldStorage.Yes } },
@@ -112,7 +114,7 @@ namespace Raven.Tests.Indexes
 							   where user.Location == "Tel Aviv"
 							   select new { Age = user.Age - (20 - user.Age) },
 				Stores = { { user => user.Name, FieldStorage.Yes } }
-			}.ToIndexDefinition(new DocumentConvention());
+			}.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
 			var original = new IndexDefinition
 			{
 				Stores = { { "Name", FieldStorage.Yes } },
@@ -133,7 +135,7 @@ namespace Raven.Tests.Indexes
 							   where user.Location == "Tel Aviv"
 							   select new { user.Name, user.Id },
 				Stores = { { user => user.Name, FieldStorage.Yes } }
-			}.ToIndexDefinition(new DocumentConvention());
+			}.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
 			var original = new IndexDefinition
 			{
 				Stores = { { "Name", FieldStorage.Yes } },
@@ -156,7 +158,7 @@ namespace Raven.Tests.Indexes
 				               where !(user.Location == "Te(l) (A)viv")
 				               select new {user.Name},
 				Stores = {{user => user.Name, FieldStorage.Yes}}
-			}.ToIndexDefinition(new DocumentConvention());
+			}.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
 			var original = new IndexDefinition
 			{
 				Stores = {{"Name", FieldStorage.Yes}},
@@ -176,7 +178,7 @@ namespace Raven.Tests.Indexes
 				Map = users => from user in users
 							   where user.Name.Contains('C')
 							   select user
-			}.ToIndexDefinition(new DocumentConvention());
+			}.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
 			var original = new IndexDefinition {
 				Map = "docs.Users.Where(user => Enumerable.Contains(user.Name, 'C'))"
 			};
@@ -194,7 +196,7 @@ namespace Raven.Tests.Indexes
 								   group agg by agg.Location
 									   into g
 									   select new { Location = g.Key, Count = g.Sum(x => x.Count) },
-			}.ToIndexDefinition(new DocumentConvention());
+			}.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
 			var original = new IndexDefinition
 			{
 				Map = @"docs.Users.Select(user => new {
@@ -220,7 +222,7 @@ namespace Raven.Tests.Indexes
 								   group agg by agg.Location
 									   into g
 									   select new { Location = g.Key, Count = g.Sum(x => x.Count) },
-			}.ToIndexDefinition(new DocumentConvention());
+			}.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
 			var original = new IndexDefinition
 			{
 				Map = expectedIndexString,

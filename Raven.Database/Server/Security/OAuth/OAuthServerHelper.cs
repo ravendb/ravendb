@@ -9,13 +9,15 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.Security.OAuth
 {
+	using Raven.Abstractions.Util.Encryptors;
+
 	internal static class OAuthServerHelper
 	{
 		private const int RsaKeySize = 2048;
 
 		private static readonly ThreadLocal<RNGCryptoServiceProvider> rng = new ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
-		private static readonly ThreadLocal<RSACryptoServiceProvider> rsa;
-		private static readonly ThreadLocal<AesCryptoServiceProvider> aes;
+		private static readonly ThreadLocal<IAsymmetricalEncryptor> rsa;
+		private static readonly ThreadLocal<ISymmetricalEncryptor> aes;
 
 		private static readonly string rsaExponent;
 		private static readonly string rsaModulus;
@@ -24,28 +26,28 @@ namespace Raven.Database.Server.Security.OAuth
 		{
 			RSAParameters privateRsaParameters;
 			RSAParameters publicRsaParameters;
-			using (var rsaKeyGen = new RSACryptoServiceProvider(RsaKeySize))
+			using (var rsaKeyGen = Encryptor.Current.CreateAsymmetrical(RsaKeySize))
 			{
 				privateRsaParameters = rsaKeyGen.ExportParameters(true);
 				publicRsaParameters = rsaKeyGen.ExportParameters(false);
 			}
 
 			Tuple<byte[], byte[]> aesKeyAndIV;
-			using (var aesKeyGen = new AesCryptoServiceProvider())
+			using (var aesKeyGen = Encryptor.Current.CreateSymmetrical())
 			{
 				aesKeyAndIV = Tuple.Create(aesKeyGen.Key, aesKeyGen.IV);
 			}
 
-			rsa = new ThreadLocal<RSACryptoServiceProvider>(() =>
+			rsa = new ThreadLocal<IAsymmetricalEncryptor>(() =>
 			{
-				var result = new RSACryptoServiceProvider();
+				var result = Encryptor.Current.CreateAsymmetrical();
 				result.ImportParameters(privateRsaParameters);
 				return result;
 			});
 
-			aes = new ThreadLocal<AesCryptoServiceProvider>(() =>
+			aes = new ThreadLocal<ISymmetricalEncryptor>(() =>
 			{
-				var result = new AesCryptoServiceProvider();
+				var result = Encryptor.Current.CreateSymmetrical();
 				result.Key = aesKeyAndIV.Item1;
 				result.IV = aesKeyAndIV.Item2;
 				return result;
@@ -101,7 +103,7 @@ namespace Raven.Database.Server.Security.OAuth
 
 			var key = decrypted.Take(32).ToArray();
 			var iv = decrypted.Skip(32).ToArray();
-		
+
 			using (var decryptor = aes.Value.CreateDecryptor(key, iv))
 			{
 				var block = decryptor.TransformEntireBlock(bytes.Skip(256).ToArray());

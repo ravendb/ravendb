@@ -8,9 +8,6 @@
 
   <CustomAction Id="SetIISInstallFolder" Directory="INSTALLFOLDER" Value="[WEBSITE_PATH]\[WEBSITE_VD]" />
 
-  <CustomAction Id="SetupPerformanceCountersForIISUser" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="SetupPerformanceCountersForIISUser"
-                Execute="immediate" Return="check" />
-
   <CustomAction Id="SetNewWebSiteDirectory" Directory="NEW_WEB_SITE_DIRECTORY" Value="[WEBSITE_PATH]" />
 
   <CustomAction Id="RegisterAspNet_Cmd" Property="RegisterAspNet"
@@ -35,7 +32,7 @@
       <![CDATA[NOT Installed AND (&IIS=3) AND NOT(!IIS=3)]]>
     </Custom>
     <Custom Action="RegisterAspNet" After="RegisterAspNet_Cmd">
-      <![CDATA[NOT Installed AND (NOT ASPNETREGISTERED) AND ASPNETREGIIS AND (&IIS=3) AND NOT(!IIS=3)]]>
+      <![CDATA[NOT Installed AND (NOT ASPNETREGISTERED AND VersionNT < 602) AND ASPNETREGIIS AND (&IIS=3) AND NOT(!IIS=3)]]>
     </Custom>
 
     <Custom Action="FindIdOfCreatedWebSite" After="InstallFinalize">
@@ -53,8 +50,5 @@
 			<![CDATA[NOT Installed AND (&IIS=3) AND NOT(!IIS=3)]]>
 		</Custom>
 
-		<Custom Action='SetupPerformanceCountersForIISUser' After='InstallFinalize'>
-      <![CDATA[(&IIS=3) AND NOT(!IIS=3)]]>
-    </Custom>
   </InstallExecuteSequence>
 </Include>

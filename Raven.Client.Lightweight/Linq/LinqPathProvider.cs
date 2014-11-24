@@ -25,9 +25,9 @@ namespace Raven.Client.Linq
 		    public PropertyInfo MaybeProperty;
 		}
 
-		private readonly DocumentConvention conventions;
+		private readonly Convention conventions;
 
-		public LinqPathProvider(DocumentConvention conventions)
+		public LinqPathProvider(Convention conventions)
 		{
 			this.conventions = conventions;
 		}
@@ -49,8 +49,8 @@ namespace Raven.Client.Linq
 				if (callExpression.Method.Name == "Count" && callExpression.Method.DeclaringType == typeof(Enumerable))
 				{
 					if(callExpression.Arguments.Count != 1)
-						throw new ArgumentException("Invalid computation: " + callExpression +
-											". You cannot use computation (only simple member expression are allowed) in RavenDB queries.");
+						throw new ArgumentException("Not supported computation: " + callExpression +
+                                            ". You cannot use computation in RavenDB queries (only simple member expressions are allowed).");
 			
 					var target = GetPath(callExpression.Arguments[0]);
 					return new Result
@@ -332,8 +332,8 @@ namespace Raven.Client.Linq
 					case ExpressionType.Conditional:
 					case ExpressionType.ArrayIndex:
 
-						throw new ArgumentException("Invalid computation: " + memberExpression +
-													". You cannot use computation (only simple member expression are allowed) in RavenDB queries.");
+						throw new ArgumentException("Not supported computation: " + memberExpression +
+                                                    ". You cannot use computation in RavenDB queries (only simple member expressions are allowed).");
 				}
 				cur = cur.Expression as MemberExpression;
 			}

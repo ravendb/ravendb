@@ -3,47 +3,41 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.Linq;
-using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-    public class TimeSpanIndexing : IDisposable
+    public class TimeSpanIndexing : RavenTest
     {
-        private IDocumentStore Store { get; set; }
-
+	    private readonly IDocumentStore store;
         public TimeSpanIndexing()
         {
-            Store = new Raven.Client.Embedded.EmbeddableDocumentStore {RunInMemory = true}
-                .Initialize();
-            new SimpleIndex().Execute(Store);
-            var indexes = Store.DatabaseCommands.GetIndexNames(0, int.MaxValue);
+            store = NewDocumentStore();
+            new SimpleIndex().Execute(store);
+			new SimpleTransformer().Execute(store);
+            var indexes = store.DatabaseCommands.GetIndexNames(0, int.MaxValue);
             Assert.NotEmpty(indexes);
-        }
-
-        public void Dispose()
-        {
-            Store.Dispose();
         }
 
         [Fact]
         public void CanStoreAndQueryBasicValueWithIndex()
         {
-            using (var session = Store.OpenSession())
+            using (var session = store.OpenSession())
             {
                 const string id = "one";
                 const string value = "value1";
                 session.Store(new Simple {Id = id, Value = value});
                 session.SaveChanges();
 
-                var result =
-                    session.Query<Simple, SimpleIndex>()
-                           .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-                           .FirstOrDefault(x => x.Id == id);
+	            var result = session.Query<Simple, SimpleIndex>()
+									.TransformWith<SimpleTransformer, Simple>()
+	                                .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+	                                .FirstOrDefault(x => x.Id == id);
                 Assert.NotNull(result);
                 Assert.Equal(value, result.Value);
             }
@@ -52,17 +46,17 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanStoreTimeFormatInvalidValueAndQueryIndexForSameValue()
         {
-            using (var session = Store.OpenSession())
+            using (var session = store.OpenSession())
             {
                 const string id = "one";
                 const string value = "12:62";
                 session.Store(new Simple {Id = id, Value = value});
                 session.SaveChanges();
 
-                var result =
-                    session.Query<Simple, SimpleIndex>()
-                           .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-                           .FirstOrDefault(x => x.Id == id);
+	            var result = session.Query<Simple, SimpleIndex>()
+		            .TransformWith<SimpleTransformer, Simple>()
+		            .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+		            .FirstOrDefault(x => x.Id == id);
                 Assert.NotNull(result);
                 Assert.Equal(value, result.Value);
             }
@@ -71,17 +65,17 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanStoreTimeFormatValidValueAndQueryIndexForSameValue()
         {
-            using (var session = Store.OpenSession())
+            using (var session = store.OpenSession())
             {
                 const string id = "one";
                 const string value = "12:12";
                 session.Store(new Simple {Id = id, Value = value});
                 session.SaveChanges();
 
-                var result =
-                    session.Query<Simple, SimpleIndex>()
-                           .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-                           .FirstOrDefault(x => x.Id == id);
+	            var result = session.Query<Simple, SimpleIndex>()
+									.TransformWith<SimpleTransformer, Simple>()
+	                                .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+	                                .FirstOrDefault(x => x.Id == id);
                 Assert.NotNull(result);
                 Assert.Equal(value, result.Value);
             }
@@ -102,15 +96,21 @@ namespace Raven.Tests.Bugs
                              {
                                  s.Id
                              };
-                TransformResults = (db, results) => from r in results
-                                                    let s = db.Load<Simple>(r.Id)
-                                                    select new
-                                                    {
-                                                        r.Id,
-                                                        s.Value
-                                                    };
             }
         }
-    }
 
+		public class SimpleTransformer : AbstractTransformerCreationTask<Simple>
+		{
+			public SimpleTransformer()
+			{
+				TransformResults = results => from r in results
+													let s = LoadDocument<Simple>(r.Id)
+													select new
+													{
+														r.Id,
+														s.Value
+													};
+			}
+		}
+    }
 }

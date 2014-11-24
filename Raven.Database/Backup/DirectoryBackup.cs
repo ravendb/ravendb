@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -25,7 +26,7 @@ namespace Raven.Database.Backup
 
 		public const int MoveFileDelayUntilReboot = 0x4;
 
-		public event Action<string, BackupStatus.BackupMessageSeverity> Notify = delegate { };
+		public event Action<string, string, BackupStatus.BackupMessageSeverity> Notify = delegate { };
 
 		private readonly Dictionary<string, long> fileToSize = new Dictionary<string, long>();
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
@@ -41,15 +42,22 @@ namespace Raven.Database.Backup
 			this.destination = destination;
 			this.tempPath = tempPath;
 			this.allowOverwrite = allowOverwrite;
-
-			if (Directory.Exists(tempPath) == false)
-				Directory.CreateDirectory(tempPath);
 			
-			if (!allowOverwrite && Directory.Exists(destination))
-				throw new InvalidOperationException("Directory exists and overwrite was not explicitly requested by user: " + destination);
+			EnsureDirectoryExists(tempPath);
 
-			if (Directory.Exists(destination) == false)
-				Directory.CreateDirectory(destination);
+			if (!allowOverwrite && Directory.Exists(destination) && Directory.EnumerateFileSystemEntries(destination).Any())
+				throw new InvalidOperationException("Directory exists and it is not empty; overwrite was not explicitly requested by user: " + destination);
+
+			EnsureDirectoryExists(destination);
+		}
+
+		private static void EnsureDirectoryExists(string dir)
+		{
+			if (Directory.Exists(dir) == false)
+				Directory.CreateDirectory(dir);
+			var tempPath = Path.Combine(dir, Guid.NewGuid().ToString());
+			File.WriteAllText(tempPath, "testing that we can write to this directory");
+			File.Delete(tempPath);
 		}
 
 		/// <summary>
@@ -60,20 +68,21 @@ namespace Raven.Database.Backup
 		/// b) copy the hard links to the destination directory
 		/// c) delete the temp directory
 		/// </summary>
-		public void Execute()
+		public void Execute(ProgressNotifier progressNotifier)
 		{
 			if (allowOverwrite) // clean destination folder; we want to do this as close as possible to the actual backup operation
 			{
 				IOExtensions.DeleteDirectory(destination);
-				Directory.CreateDirectory(destination);
 			}
+
+			EnsureDirectoryExists(destination);
 
 			foreach (var file in Directory.EnumerateFiles(tempPath))
 			{
-				Notify("Copying " + Path.GetFileName(file), BackupStatus.BackupMessageSeverity.Informational);
+				Notify("Copying " + Path.GetFileName(file), null, BackupStatus.BackupMessageSeverity.Informational);
 				var fullName = new FileInfo(file).FullName;
-				FileCopy(file, Path.Combine(destination, Path.GetFileName(file)), fileToSize[fullName]);
-				Notify("Copied " + Path.GetFileName(file), BackupStatus.BackupMessageSeverity.Informational);
+				FileCopy(file, Path.Combine(destination, Path.GetFileName(file)), fileToSize[fullName], progressNotifier);
+				Notify("Copied " + Path.GetFileName(file), null, BackupStatus.BackupMessageSeverity.Informational);
 			}
 
 			try
@@ -82,9 +91,7 @@ namespace Raven.Database.Backup
 			}
 			catch (Exception e) //cannot delete, probably because there is a file being written there
 			{
-				logger.WarnException(
-					string.Format("Could not delete {0}, will delete those on startup", tempPath),
-					e);
+				logger.WarnException(string.Format("Could not delete {0}, will delete those on startup", tempPath), e);
 
 				foreach (var file in Directory.EnumerateFiles(tempPath))
 				{
@@ -94,18 +101,20 @@ namespace Raven.Database.Backup
 			}
 		}
 
-		private static void FileCopy(string src, string dest, long size)
+		private void FileCopy(string src, string dest, long size, ProgressNotifier notifier)
 		{
 			var buffer = new byte[16 * 1024];
+			var initialSize = size;
 			using (var srcStream = File.Open(src,FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
 			{
-				if(File.Exists(dest))
+				if (File.Exists(dest))
 					File.SetAttributes(dest,FileAttributes.Normal);
 				using (var destStream = File.Create(dest, buffer.Length))
 				{
 					while (true)
 					{
 						var read = srcStream.Read(buffer, 0, (int)Math.Min(buffer.Length, size));
+						notifier.UpdateProgress(read, Notify);
 						if (read == 0)
 							break;
 						size -= read;
@@ -116,7 +125,7 @@ namespace Raven.Database.Backup
 			}
 		}
 
-		public void Prepare()
+		public long Prepare()
 		{
 			string[] sourceFilesSnapshot;
 			try
@@ -126,7 +135,7 @@ namespace Raven.Database.Backup
 			catch (Exception e)
 			{
 				logger.WarnException("Could not get directory files, maybe it was deleted", e);
-				return;
+				return 0;
 			}
 			for (int index = 0; index < sourceFilesSnapshot.Length; index++)
 			{
@@ -140,7 +149,7 @@ namespace Raven.Database.Backup
 				if (success == false)
 				{
 					// 'The system cannot find the file specified' is explicitly ignored here
-					if (Marshal.GetLastWin32Error() != 0x80004005)
+					if (Marshal.GetLastWin32Error() != 2)
 						throw new Win32Exception();
 					sourceFilesSnapshot[index] = null;
 					continue;
@@ -163,10 +172,12 @@ namespace Raven.Database.Backup
 			// of all the files
 			foreach (var sourceFile in sourceFilesSnapshot)
 			{
-				if(sourceFile == null)
+				if (sourceFile == null)
 					continue;
-				Notify("Hard linked " + sourceFile, BackupStatus.BackupMessageSeverity.Informational);
+				Notify("Hard linked " + sourceFile, null, BackupStatus.BackupMessageSeverity.Informational);
 			}
+
+			return fileToSize.Sum(f => f.Value);
 		}
 	}
 }

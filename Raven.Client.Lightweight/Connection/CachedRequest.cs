@@ -1,9 +1,5 @@
 ﻿using System;
-#if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
 using System.Collections.Specialized;
-#endif
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -14,6 +10,7 @@ namespace Raven.Client.Connection
 		public DateTimeOffset Time;
 		public NameValueCollection Headers;
 		public string Database;
+	    public int ReadTime;
 		public bool ForceServerCheck;
 	}
 

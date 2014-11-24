@@ -4,7 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Raven.Abstractions.Data;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Reactive.Linq;
 using System;
@@ -23,8 +26,8 @@ namespace Raven.Tests.Notifications
 			using(var store = NewDocumentStore())
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
-				store.Changes()
-					.ForDocument("items/1")
+				store.Changes().Task.Result
+					.ForDocument("items/1").Task.Result
 					.Subscribe(list.Add);
 
 				using(var session = store.OpenSession())

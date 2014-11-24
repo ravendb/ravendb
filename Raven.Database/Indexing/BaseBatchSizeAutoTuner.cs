@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Concurrent;
-using System.Runtime.Remoting.Contexts;
-using Lucene.Net.Util;
-using Microsoft.VisualBasic.CompilerServices;
-using Mono.CSharp;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
@@ -11,249 +8,256 @@ using System.Collections.Generic;
 
 namespace Raven.Database.Indexing
 {
-    public abstract class BaseBatchSizeAutoTuner
-    {
-        protected readonly WorkContext context;
+	using Raven.Abstractions.Util;
 
-        private int currentNumber;
-        private readonly ConcurrentDictionary<Guid, long> currentlyUsedBatchSizes;
+	public abstract class BaseBatchSizeAutoTuner : ILowMemoryHandler
+	{
+		protected readonly WorkContext context;
 
-        private DateTime lastIncrease;
-        private readonly long memoryLimitForIndexingInBytes;
+		private int currentNumber;
 
-	    private int maximumSizeAllowedToFetchFromStorageInMb;
+		private DateTime lastIncrease;
+		private readonly ConcurrentDictionary<Guid, long> _currentlyUsedBatchSizesInBytes;
+		private readonly long memoryLimitForProcessingInBytes;
 
-	    protected BaseBatchSizeAutoTuner(WorkContext context)
-        {
-            this.context = context;
-            NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
-            currentlyUsedBatchSizes = new ConcurrentDictionary<Guid, long>();
-            memoryLimitForIndexingInBytes = context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024;
-	        FetchingDocumentsFromDiskTimeout = TimeSpan.FromSeconds(context.Configuration.FetchingDocumentsFromDiskTimeoutInSeconds);
-			maximumSizeAllowedToFetchFromStorageInMb = context.Configuration.MaximumSizeAllowedToFetchFromStorageInMb;
-        }
+	    private readonly int maximumSizeAllowedToFetchFromStorageInMb;
 
-        public int NumberOfItemsToIndexInSingleBatch
-        {
-            get { return currentNumber; }
-            set
-            {
-                CurrentNumberOfItems = currentNumber = value;
-            }
-        }
+		protected BaseBatchSizeAutoTuner(WorkContext context)
+		{
+			this.context = context;
+	        FetchingDocumentsFromDiskTimeout = TimeSpan.FromSeconds(context.Configuration.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds);
+			maximumSizeAllowedToFetchFromStorageInMb = context.Configuration.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb;
+// ReSharper disable once DoNotCallOverridableMethodsInConstructor
+			NumberOfItemsToProcessInSingleBatch = InitialNumberOfItems;
+			MemoryStatistics.RegisterLowMemoryHandler(this);
+			_currentlyUsedBatchSizesInBytes = new ConcurrentDictionary<Guid, long>();
+			memoryLimitForProcessingInBytes = context.Configuration.MemoryLimitForProcessingInMb * 1024 * 1024;
+		}
 
-        public void AutoThrottleBatchSize(int amountOfItemsToIndex, long size, TimeSpan indexingDuration)
-        {
-            try
-            {
-                if (ReduceBatchSizeIfCloseToMemoryCeiling())
-                    return;
-                if (ConsiderDecreasingBatchSize(amountOfItemsToIndex, indexingDuration))
-                    return;
-                if (ConsiderIncreasingBatchSize(amountOfItemsToIndex, size, indexingDuration))
-                    lastIncrease = SystemTime.UtcNow;
-            }
-            finally
-            {
-                RecordAmountOfItems(amountOfItemsToIndex);
-            }
-        }
+	    public void HandleLowMemory()
+		{
+			ReduceBatchSizeIfCloseToMemoryCeiling(true);
+		}
 
-        private bool ConsiderIncreasingBatchSize(int amountOfItemsToIndex, long size, TimeSpan indexingDuration)
-        {
+		public int NumberOfItemsToProcessInSingleBatch
+		{
+			get { return currentNumber; }
+			set
+			{
+				CurrentNumberOfItems = currentNumber = value;
+			}
+		}
+
+		[MethodImpl(MethodImplOptions.Synchronized)]
+		public void AutoThrottleBatchSize(int amountOfItemsToProcess, long size, TimeSpan processingDuration)
+		{
+			try
+			{
+				if (ReduceBatchSizeIfCloseToMemoryCeiling())
+					return;
+				if (ConsiderDecreasingBatchSize(amountOfItemsToProcess, processingDuration))
+					return;
+				if (ConsiderIncreasingBatchSize(amountOfItemsToProcess, size, processingDuration))
+					lastIncrease = SystemTime.UtcNow;
+			}
+			finally
+			{
+				RecordAmountOfItems(amountOfItemsToProcess);
+			}
+		}
+
+		private bool ConsiderIncreasingBatchSize(int amountOfItemsToProcess, long size, TimeSpan processingDuration)
+		{
             //if we are using too much memory for indexing, do not even consider to increase batch size
-            if (amountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch || CurrentlyUsedBatchSizes.Values.Sum() > memoryLimitForIndexingInBytes)
-            {
-                return false;
-            }
+			if (amountOfItemsToProcess < NumberOfItemsToProcessInSingleBatch || CurrentlyUsedBatchSizesInBytes.Values.Sum() > memoryLimitForProcessingInBytes)
+			{
+				return false;
+			}
 
-            if (GetLastAmountOfItems().Any(x => x < NumberOfItemsToIndexInSingleBatch))
-            {
-                // this is the first time we hit the limit, we will give another go before we increase
-                // the batch size
-                return false;
-            }
+			if (GetLastAmountOfItems().Any(x => x < NumberOfItemsToProcessInSingleBatch))
+			{
+				// this is the first time we hit the limit, we will give another go before we increase
+				// the batch size
+				return false;
+			}
 
-            // in the previous run, we also hit the current limit, we need to check if we can increase the max batch size
+			// in the previous run, we also hit the current limit, we need to check if we can increase the max batch size
 
-            // here we make the assumptions that the average size of documents are the same. We check if we doubled the amount of memory
-            // that we used for the last batch (note that this is only an estimate number, but should be close enough), would we still be
-            // within the limits that governs us
+			// here we make the assumptions that the average size of documents are the same. We check if we doubled the amount of memory
+			// that we used for the last batch (note that this is only an estimate number, but should be close enough), would we still be
+			// within the limits that governs us
 
-            var sizeInMegabytes = size / 1024 / 1024;
+			var sizeInMegabytes = size / 1024 / 1024;
 
-            // we don't actually *know* what the actual cost of indexing, because that depends on many factors (how the index
-            // is structured, is it analyzed/default/not analyzed, etc). We just assume for now that it takes 25% of the actual
-            // on disk structure per each active index. That should give us a good guesstimate about the value.
-            // Because of the way we are executing indexes, only N are running at once, where N is the parallel level, so we take
-            // that into account, you may have 10 indexes but only 2 CPUs, so we only consider the cost of executing 2 indexes,
-            // not all 10
-            var sizedPlusIndexingCost = sizeInMegabytes * (1 + (0.25 * Math.Min(context.IndexDefinitionStorage.IndexesCount, context.Configuration.MaxNumberOfParallelIndexTasks)));
+			// we don't actually *know* what the actual cost of indexing, because that depends on many factors (how the index
+			// is structured, is it analyzed/default/not analyzed, etc). We just assume for now that it takes 25% of the actual
+			// on disk structure per each active index. That should give us a good guesstimate about the value.
+			// Because of the way we are executing indexes, only N are running at once, where N is the parallel level, so we take
+			// that into account, you may have 10 indexes but only 2 CPUs, so we only consider the cost of executing 2 indexes,
+			// not all 10
+			var sizedPlusIndexingCost = sizeInMegabytes * (1 + (0.25 * Math.Min(context.IndexDefinitionStorage.IndexesCount, context.Configuration.MaxNumberOfParallelProcessingTasks)));
 
-            var remainingMemoryAfterBatchSizeIncrease = MemoryStatistics.AvailableMemory - sizedPlusIndexingCost;
+			var remainingMemoryAfterBatchSizeIncrease = MemoryStatistics.AvailableMemory - sizedPlusIndexingCost;
 
-            if (remainingMemoryAfterBatchSizeIncrease < context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
-                return false;
+			if (remainingMemoryAfterBatchSizeIncrease < context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
+				return false;
 
-            // here we assume that the next batch would be 175% as long as the current one
-            // and there is no point in trying if we are just going to blow out past our max latency
-            var timeSpan = indexingDuration.Add(TimeSpan.FromMilliseconds(indexingDuration.TotalMilliseconds * 0.75));
-            if (timeSpan > context.Configuration.MaxIndexingRunLatency)
-                return false;
+			// here we assume that the next batch would be 175% as long as the current one
+			// and there is no point in trying if we are just going to blow out past our max latency
+			var timeSpan = processingDuration.Add(TimeSpan.FromMilliseconds(processingDuration.TotalMilliseconds * 0.75));
+			if (timeSpan > context.Configuration.MaxProcessingRunLatency)
+				return false;
 
-            NumberOfItemsToIndexInSingleBatch = Math.Min(MaxNumberOfItems,
-                                                         NumberOfItemsToIndexInSingleBatch * 2);
-            return true;
-        }
+			NumberOfItemsToProcessInSingleBatch = Math.Min(MaxNumberOfItems,
+                                                         NumberOfItemsToProcessInSingleBatch * 2);
+			return true;
+		}
 
 		public TimeSpan FetchingDocumentsFromDiskTimeout { get; private set; }
 
-        public long MaximumSizeAllowedToFetchFromStorage
-        {
-            get
-            {
-                // we take just a bit more to account for indexing costs as well
-                var sizeToKeepFree = context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit * 1.33;
+		public long MaximumSizeAllowedToFetchFromStorageInBytes
+		{
+			get
+			{
+				// we take just a bit more to account for indexing costs as well
+                var sizeToKeepFree = context.Configuration.AvailableMemoryForRaisingBatchSizeLimit * 1.33;
                 // if we just loaded > 256 MB to index, that is big enough for right now
-                // remember, this value refer to just the data on disk, not including
-                // the memory to do the actual indexing
-				double sizeInMB = Math.Min(maximumSizeAllowedToFetchFromStorageInMb, Math.Max(8, MemoryStatistics.AvailableMemory - sizeToKeepFree));
-                return (long)sizeInMB * 1024 * 1024;
-            }
-        }
+				// remember, this value refer to just the data on disk, not including
+				// the memory to do the actual indexing
+				double sizeInMb = Math.Min(maximumSizeAllowedToFetchFromStorageInMb, Math.Max(8, MemoryStatistics.AvailableMemory - sizeToKeepFree));
+				return (long)sizeInMb * 1024 * 1024;
+			}
+		}
 
-        private bool ReduceBatchSizeIfCloseToMemoryCeiling()
-        {			
-            if (MemoryStatistics.AvailableMemory >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit ||
-				IsIndexingUsingTooMuchMemory)
-            {
-                // check if we are getting close to the max limit of indexing bytes in a single batch or index is using too much memory, if so,
-                // we need to reduce the batch size
+		public bool IsProcessingUsingTooMuchMemory
+		{
+			get
+			{
+				return _currentlyUsedBatchSizesInBytes.Values.Sum() * 4 > memoryLimitForProcessingInBytes;
+			}
+		}
+
+		private bool ReduceBatchSizeIfCloseToMemoryCeiling(bool forceReducing = false)
+		{
+			if (MemoryStatistics.AvailableMemory >= context.Configuration.AvailableMemoryForRaisingBatchSizeLimit && forceReducing == false &&
+				IsProcessingUsingTooMuchMemory == false)
+			{
+				// there is enough memory available for the next indexing run
 				return false;
-            }
+			}
 
-            // we are using too much memory, let us use a less next time...
-            // maybe it is us? we generate a lot of garbage when doing indexing, so we ask the GC if it would kindly try to
-            // do something about it.
-            // Note that this order for this to happen we need:
-            // * We had two full run when we were doing nothing but indexing at full throttle
-            // * The system is over the configured limit, and there is a strong likelihood that this is us causing this
-            // * By forcing a GC, we ensure that we use less memory, and it is not frequent enough to cause perf problems
+			// we are using too much memory, let us use a less next time...
+			// maybe it is us? we generate a lot of garbage when doing indexing, so we ask the GC if it would kindly try to
+			// do something about it.
+			// Note that this order for this to happen we need:
+			// * We had two full run when we were doing nothing but indexing at full throttle
+			// * The system is over the configured limit, and there is a strong likelihood that this is us causing this
+			// * By forcing a GC, we ensure that we use less memory, and it is not frequent enough to cause perf problems
 
-            GC.Collect(1, GCCollectionMode.Optimized);
+			RavenGC.CollectGarbage(compactLoh: true, afterCollect: null);
 
-            // let us check again after the GC call, do we still need to reduce the batch size?
+			// let us check again after the GC call, do we still need to reduce the batch size?
 
-            if (MemoryStatistics.AvailableMemory > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
-            {
-                // we don't want to try increasing things, we just hit the ceiling, maybe on the next try
-                return true;
-            }
+			if (MemoryStatistics.AvailableMemory > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit && forceReducing == false)
+			{
+				// we don't want to try increasing things, we just hit the ceiling, maybe on the next try
+				return true;
+			}
 
-            // we are still too high, let us reduce the size and see what is going on.
+			// we are still too high, let us reduce the size and see what is going on.
+			NumberOfItemsToProcessInSingleBatch = CalculateReductionOfItemsInSingleBatch();
 
-            NumberOfItemsToIndexInSingleBatch = Math.Max(InitialNumberOfItems,
-                                                         NumberOfItemsToIndexInSingleBatch / 2);
 
-            return true;
-        }
+			return true;
+		}
 
-        private bool ConsiderDecreasingBatchSize(int amountOfItemsToIndex, TimeSpan indexingDuration)
-        {
-	        var isIndexingUsingTooMuchMemory = IsIndexingUsingTooMuchMemory;
+		private bool ConsiderDecreasingBatchSize(int amountOfItemsToProcess, TimeSpan processingDuration)
+		{
+	        var isIndexingUsingTooMuchMemory = IsProcessingUsingTooMuchMemory;
 	        if (isIndexingUsingTooMuchMemory == false) //skip all other heuristics if indexing takes too much memory
 	        {
-		        if (
-			        // we had as much work to do as we are currently capable of handling,
-			        // we might need to increase, but certainly not decrease the batch size
-			        amountOfItemsToIndex >= NumberOfItemsToIndexInSingleBatch ||
-			        // we haven't gone over the max latency limit, no reason to decrease yet
-			        indexingDuration < context.Configuration.MaxIndexingRunLatency)
-		        {
-			        return false;
-		        }
+			if (
+				// we had as much work to do as we are currently capable of handling,
+				// we might need to increase, but certainly not decrease the batch size
+				amountOfItemsToProcess >= NumberOfItemsToProcessInSingleBatch ||
+				// we haven't gone over the max latency limit, no reason to decrease yet
+				processingDuration < context.Configuration.MaxProcessingRunLatency)
+			{
+				return false;
+			}
 
-		        if ((SystemTime.UtcNow - lastIncrease).TotalMinutes < 3)
-			        return true;
+			if ((SystemTime.UtcNow - lastIncrease).TotalMinutes < 3)
+				return true;
 
-		        // we didn't have a lot of work to do, so let us see if we can reduce the batch size
+			// we didn't have a lot of work to do, so let us see if we can reduce the batch size
 
-		        // we are at the configured minimum, nothing to do
-		        if (NumberOfItemsToIndexInSingleBatch == InitialNumberOfItems)
-			        return true;
+			// we are at the configured minimum, nothing to do
+			if (NumberOfItemsToProcessInSingleBatch == InitialNumberOfItems)
+				return true;
 
-		        // we were above the max/2 the last few times, we can't reduce the work load now
-		        if (GetLastAmountOfItems().Any(x => x > NumberOfItemsToIndexInSingleBatch/2))
-			        return true;
+			// we were above the max/2 the last few times, we can't reduce the work load now
+			if (GetLastAmountOfItems().Any(x => x > NumberOfItemsToProcessInSingleBatch/2))
+				return true;
 	        }
 
-	        var old = NumberOfItemsToIndexInSingleBatch;
+			var old = NumberOfItemsToProcessInSingleBatch;
+			NumberOfItemsToProcessInSingleBatch = CalculateReductionOfItemsInSingleBatch();
 
-            var minNumberOfItemsToIndex = InitialNumberOfItems;
-            if (isIndexingUsingTooMuchMemory)
-            {
-                minNumberOfItemsToIndex /= 4;
-            }
+			// we just reduced the batch size because we have two concurrent runs where we had
+			// less to do than the previous runs. That indicate the the busy period is over, maybe we
+			// run out of data? Or the rate of data entry into the system was just reduce?
+			// At any rate, there is a strong likelyhood of having a lot of garbage in the system
+			// let us ask the GC nicely to clean it
 
-            // we have had a couple of times were we didn't get to the current max, so we can probably
-            // reduce the max again now, this will reduce the memory consumption eventually, and will cause 
-            // faster indexing times in case we get a big batch again
-            // * if indexing is using too much memory --> probably we have very large documents in the index, so let it reduce to 1 if needed
-            NumberOfItemsToIndexInSingleBatch = Math.Max(minNumberOfItemsToIndex, NumberOfItemsToIndexInSingleBatch / 2);
+			// but we only want to do it if the change was significant 
+			if (NumberOfItemsToProcessInSingleBatch - old > 4096)
+			{
+				RavenGC.CollectGarbage(1, GCCollectionMode.Optimized);
+			}
 
-            // we just reduced the batch size because we have two concurrent runs where we had
-            // less to do than the previous runs. That indicate the the busy period is over, maybe we
-            // run out of data? Or the rate of data entry into the system was just reduce?
-            // At any rate, there is a strong likelyhood of having a lot of garbage in the system
-            // let us ask the GC nicely to clean it
+			return true;
+		}
 
-            // but we only want to do it if the change was significant 
-            if (NumberOfItemsToIndexInSingleBatch - old > 4096)
-            {				
-                GC.Collect(1, GCCollectionMode.Optimized);
-            }
+		private int CalculateReductionOfItemsInSingleBatch()
+		{
+			var minNumberOfItemsToProcess = InitialNumberOfItems;
+			if (IsProcessingUsingTooMuchMemory)
+				minNumberOfItemsToProcess /= 4;
 
-            return true;
-        }
+			// we have had a couple of times were we didn't get to the current max, so we can probably
+			// reduce the max again now, this will reduce the memory consumption eventually, and will cause 
+			// faster indexing times in case we get a big batch again
+			// * if indexing is using too much memory --> probably we have very large documents in the index, so let it reduce to 1 if needed
+			return Math.Max(minNumberOfItemsToProcess, NumberOfItemsToProcessInSingleBatch/2);
+		}
 
-	    public bool IsIndexingUsingTooMuchMemory
-	    {
-		    get
-		    {
-			    return CurrentlyUsedBatchSizes.Values.Sum() * 4 > memoryLimitForIndexingInBytes;
-		    }
-	    }
-
-	    /// <summary>
-        /// This let us know that an OOME has happened, and we need to be much more
-        /// conservative with regards to how fast we can grow memory.
-        /// </summary>
-        public void OutOfMemoryExceptionHappened()
-        {
-			var newNumberOfItemsToIndex = InitialNumberOfItems;
-			if (IsIndexingUsingTooMuchMemory) //if using too much memory, decrease number of items in each batch
-				newNumberOfItemsToIndex /= 4;
+		/// <summary>
+		/// This let us know that an OOME has happened, and we need to be much more
+		/// conservative with regards to how fast we can grow memory.
+		/// </summary>
+		public void HandleOutOfMemory()
+		{
+			var newNumberOfItemsToProcess = InitialNumberOfItems;
+			if (IsProcessingUsingTooMuchMemory) //if using too much memory, decrease number of items in each batch
+				newNumberOfItemsToProcess /= 4;
 
 
-            // first thing to do, reset the number of items per batch
-			NumberOfItemsToIndexInSingleBatch = newNumberOfItemsToIndex > 0 ? newNumberOfItemsToIndex : 1;
+			// first thing to do, reset the number of items per batch
+			NumberOfItemsToProcessInSingleBatch = newNumberOfItemsToProcess > 0 ? newNumberOfItemsToProcess : 1;
 
-            // now, we need to be more conservative about how we are increasing memory usage, so instead of increasing
-            // every time we hit the limit twice, we will increase every time we hit it three times, then 5, 9, etc
+			// now, we need to be more conservative about how we are increasing memory usage, so instead of increasing
+			// every time we hit the limit twice, we will increase every time we hit it three times, then 5, 9, etc
 
-            LastAmountOfItemsToRemember *= 2;
-        }
+			LastAmountOfItemsToRemember *= 2;
+		}
 
-        // The following methods and properties are wrappers around members of the context which are different for the different indexes
-        protected abstract int InitialNumberOfItems { get; }
-        protected abstract int MaxNumberOfItems { get; }
-        protected abstract int CurrentNumberOfItems { get; set; }
-        protected abstract int LastAmountOfItemsToRemember { get; set; }
-
-        //total size of documents in the batch - for each entry
-        public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizes { get { return currentlyUsedBatchSizes; } }
-
-        protected abstract void RecordAmountOfItems(int numberOfItems);
-        protected abstract IEnumerable<int> GetLastAmountOfItems();
-    }
+		// The following methods and properties are wrappers around members of the context which are different for the different indexes
+		protected abstract int InitialNumberOfItems { get; }
+		protected abstract int MaxNumberOfItems { get; }
+		protected abstract int CurrentNumberOfItems { get; set; }
+		protected abstract int LastAmountOfItemsToRemember { get; set; }
+		public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizesInBytes { get { return _currentlyUsedBatchSizesInBytes; } }		
+		protected abstract void RecordAmountOfItems(int numberOfItems);
+		protected abstract IEnumerable<int> GetLastAmountOfItems();
+	}
 }

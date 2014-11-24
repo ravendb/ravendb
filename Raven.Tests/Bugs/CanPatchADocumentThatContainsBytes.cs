@@ -9,6 +9,8 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -45,7 +47,7 @@ for (var i = 0; i < this.Skills.$values.length; i++) {
     this.Skills.$values[i].IsPrimary = false
 }
 "
-                    });
+                    }).WaitForCompletion();
 
                     var user = session.Load<User>(1);
                     Assert.False(user.Skills.Single().IsPrimary);

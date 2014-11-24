@@ -3,10 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Net;
+
 namespace Raven.Abstractions.Connection
 {
-	using System.Net;
-
 	public class OperationCredentials
 	{
 		public OperationCredentials(string apiKey, ICredentials credentials)

@@ -1,5 +1,4 @@
-﻿using System;
-using Raven.Abstractions.Indexing;
+﻿using Raven.Abstractions.Indexing;
 
 namespace Raven.Client.Indexes
 {
@@ -28,25 +27,26 @@ namespace Raven.Client.Indexes
 			return new IndexDefinition
 			{
 				Map = @"from doc in docs 
-let Tag = doc[""@metadata""][""Raven-Entity-Name""]
-select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""] };",
+select new 
+{ 
+	Tag = doc[""@metadata""][""Raven-Entity-Name""], 
+	LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+	LastModifiedTicks = ((DateTime)doc[""@metadata""][""Last-Modified""]).Ticks 
+};",
 				Indexes =
 					{
 						{"Tag", FieldIndexing.NotAnalyzed},
 						{"LastModified", FieldIndexing.NotAnalyzed},
+                        {"LastModifiedTicks", FieldIndexing.NotAnalyzed}
 					},
-				Stores =
-					{
-						{"Tag", FieldStorage.No},
-						{"LastModified", FieldStorage.No}
-					},
-				TermVectors =
-					{
-						{"Tag", FieldTermVector.No},
-						{"LastModified", FieldTermVector.No}
-					},
-
-				DisableInMemoryIndexing = true
+                    SortOptions =
+                    {
+                        {"LastModified",SortOptions.String},
+                        {"LastModifiedTicks", SortOptions.Long}
+                    },
+			
+				DisableInMemoryIndexing = true,
+                LockMode = IndexLockMode.LockedIgnore,
 			};
 		}
 	}

@@ -26,6 +26,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+#if !(NET20 || NET35 || SILVERLIGHT || PORTABLE40 || PORTABLE)
+using System.Numerics;
+#endif
 using System.Text;
 using System.IO;
 using System.Xml;
@@ -75,19 +78,21 @@ namespace Raven.Imports.Newtonsoft.Json
 
       _reader = reader;
       _lineNumber = 1;
-      _chars = new char[4097];
+      _chars = new char[1025];
     }
 
+#if DEBUG
     internal void SetCharBuffer(char[] chars)
     {
       _chars = chars;
     }
+#endif
 
     private StringBuffer GetBuffer()
     {
       if (_buffer == null)
       {
-        _buffer = new StringBuffer(4096);
+        _buffer = new StringBuffer(1025);
       }
       else
       {
@@ -129,7 +134,7 @@ namespace Raven.Imports.Newtonsoft.Json
         string text = _stringReference.ToString();
 
         SetToken(JsonToken.String, text);
-        QuoteChar = quote;
+        _quoteChar = quote;
       }
       else
       {
@@ -137,108 +142,26 @@ namespace Raven.Imports.Newtonsoft.Json
 
         if (_dateParseHandling != DateParseHandling.None)
         {
-          if (text.Length > 0)
+          DateParseHandling dateParseHandling;
+          if (_readType == ReadType.ReadAsDateTime)
+            dateParseHandling = DateParseHandling.DateTime;
+#if !NET20
+          else if (_readType == ReadType.ReadAsDateTimeOffset)
+            dateParseHandling = DateParseHandling.DateTimeOffset;
+#endif
+          else
+            dateParseHandling = _dateParseHandling;
+
+          object dt;
+          if (DateTimeUtils.TryParseDateTime(text, dateParseHandling, DateTimeZoneHandling, out dt))
           {
-            if (text[0] == '/')
-            {
-              if (text.StartsWith("/Date(", StringComparison.Ordinal) && text.EndsWith(")/", StringComparison.Ordinal))
-              {
-                ParseDateMicrosoft(text);
-                return;
-              }
-            }
-            else if (char.IsDigit(text[0]) && text.Length >= 19 && text.Length <= 40)
-            {
-              if (ParseDateIso(text))
-                return;
-            }
+            SetToken(JsonToken.Date, dt);
+            return;
           }
         }
 
         SetToken(JsonToken.String, text);
-        QuoteChar = quote;
-      }
-    }
-
-    private bool ParseDateIso(string text)
-    {
-      const string isoDateFormat = "yyyy-MM-ddTHH:mm:ss.FFFFFFFK";
-
-#if !NET20
-      if (_readType == ReadType.ReadAsDateTimeOffset || (_readType == ReadType.Read && _dateParseHandling == DateParseHandling.DateTimeOffset))
-      {
-        DateTimeOffset dateTimeOffset;
-        if (DateTimeOffset.TryParseExact(text, isoDateFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
-        {
-          SetToken(JsonToken.Date, dateTimeOffset);
-          return true;
-        }
-      }
-      else
-#endif
-      {
-        DateTime dateTime;
-        if (DateTime.TryParseExact(text, isoDateFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
-        {
-          dateTime = JsonConvert.EnsureDateTime(dateTime, DateTimeZoneHandling);
-
-          SetToken(JsonToken.Date, dateTime);
-          return true;
-        }
-      }
-
-      return false;
-    }
-
-    private void ParseDateMicrosoft(string text)
-    {
-      string value = text.Substring(6, text.Length - 8);
-      DateTimeKind kind = DateTimeKind.Utc;
-
-      int index = value.IndexOf('+', 1);
-
-      if (index == -1)
-        index = value.IndexOf('-', 1);
-
-      TimeSpan offset = TimeSpan.Zero;
-
-      if (index != -1)
-      {
-        kind = DateTimeKind.Local;
-        offset = ReadOffset(value.Substring(index));
-        value = value.Substring(0, index);
-      }
-
-      long javaScriptTicks = long.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
-
-      DateTime utcDateTime = JsonConvert.ConvertJavaScriptTicksToDateTime(javaScriptTicks);
-
-#if !NET20
-      if (_readType == ReadType.ReadAsDateTimeOffset || (_readType == ReadType.Read && _dateParseHandling == DateParseHandling.DateTimeOffset))
-      {
-        SetToken(JsonToken.Date, new DateTimeOffset(utcDateTime.Add(offset).Ticks, offset));
-      }
-      else
-#endif
-      {
-        DateTime dateTime;
-
-        switch (kind)
-        {
-          case DateTimeKind.Unspecified:
-            dateTime = DateTime.SpecifyKind(utcDateTime.ToLocalTime(), DateTimeKind.Unspecified);
-            break;
-          case DateTimeKind.Local:
-            dateTime = utcDateTime.ToLocalTime();
-            break;
-          default:
-            dateTime = utcDateTime;
-            break;
-        }
-
-        dateTime = JsonConvert.EnsureDateTime(dateTime, DateTimeZoneHandling);
-
-        SetToken(JsonToken.Date, dateTime);
+        _quoteChar = quote;
       }
     }
 
@@ -366,22 +289,6 @@ namespace Raven.Imports.Newtonsoft.Json
       if (totalCharsRead < charsRequired)
         return false;
       return true;
-    }
-
-    private static TimeSpan ReadOffset(string offsetText)
-    {
-      bool negative = (offsetText[0] == '-');
-
-      int hours = int.Parse(offsetText.Substring(1, 2), NumberStyles.Integer, CultureInfo.InvariantCulture);
-      int minutes = 0;
-      if (offsetText.Length >= 5)
-        minutes = int.Parse(offsetText.Substring(3, 2), NumberStyles.Integer, CultureInfo.InvariantCulture);
-
-      TimeSpan offset = TimeSpan.FromHours(hours) + TimeSpan.FromMinutes(minutes);
-      if (negative)
-        offset = offset.Negate();
-
-      return offset;
     }
 
     /// <summary>
@@ -741,6 +648,11 @@ namespace Raven.Imports.Newtonsoft.Json
               if (ReadData(true) == 0)
                 return;
             }
+            else
+            {
+              _charPos = charPos - 1;
+              return;
+            }
             break;
           case '-':
           case '+':
@@ -939,7 +851,7 @@ namespace Raven.Imports.Newtonsoft.Json
       _charPos++;
 
       SetToken(JsonToken.PropertyName, propertyName);
-      QuoteChar = quoteChar;
+      _quoteChar = quoteChar;
       ClearRecentString();
 
       return true;
@@ -1238,6 +1150,10 @@ namespace Raven.Imports.Newtonsoft.Json
 
         SetToken(JsonToken.StartConstructor, constructorName);
       }
+      else
+      {
+        throw JsonReaderException.Create(this, "Unexpected content while parsing JSON.");
+      }
     }
 
     private void ParseNumber()
@@ -1280,84 +1196,111 @@ namespace Raven.Imports.Newtonsoft.Json
         }
         else
         {
-          string number = _stringReference.ToString();
-
-          numberValue = Convert.ToInt32(number, CultureInfo.InvariantCulture);
+          numberValue = ConvertUtils.Int32Parse(_stringReference.Chars, _stringReference.StartIndex, _stringReference.Length);
         }
 
         numberType = JsonToken.Integer;
       }
-      else if (_readType == ReadType.ReadAsDecimal)
-      {
-        if (singleDigit)
-        {
-          // digit char values start at 48
-          numberValue = (decimal)firstChar - 48;
-        }
-        else if (nonBase10)
-        {
-          string number = _stringReference.ToString();
-
-          // decimal.Parse doesn't support parsing hexadecimal values
-          long integer = number.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                           ? Convert.ToInt64(number, 16)
-                           : Convert.ToInt64(number, 8);
-
-          numberValue = Convert.ToDecimal(integer);
-        }
-        else
-        {
-          string number = _stringReference.ToString();
-
-          numberValue = decimal.Parse(number, NumberStyles.Number | NumberStyles.AllowExponent, CultureInfo.InvariantCulture);
-        }
-
-        numberType = JsonToken.Float;
-      }
       else
       {
-        if (singleDigit)
-        {
-          // digit char values start at 48
-          numberValue = (long)firstChar - 48;
-          numberType = JsonToken.Integer;
-        }
-        else if (nonBase10)
-        {
-          string number = _stringReference.ToString();
+	      const NumberStyles numberStyles = NumberStyles.Number | NumberStyles.AllowExponent;
+	      if (_readType == ReadType.ReadAsDecimal)
+	      {
+		      if (singleDigit)
+		      {
+			      // digit char values start at 48
+			      numberValue = (decimal)firstChar - 48;
+		      }
+		      else if (nonBase10)
+		      {
+			      string number = _stringReference.ToString();
 
-          numberValue = number.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                          ? Convert.ToInt64(number, 16)
-                          : Convert.ToInt64(number, 8);
-          numberType = JsonToken.Integer;
-        }
-        else
-        {
-          string number = _stringReference.ToString();
+			      // decimal.Parse doesn't support parsing hexadecimal values
+			      long integer = number.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+				      ? Convert.ToInt64(number, 16)
+				      : Convert.ToInt64(number, 8);
 
-          // it's faster to do 3 indexof with single characters than an indexofany
-          if (number.IndexOf('.') != -1 || number.IndexOf('E') != -1 || number.IndexOf('e') != -1)
-          {
-            numberValue = Convert.ToDouble(number, CultureInfo.InvariantCulture);
-            numberType = JsonToken.Float;
-          }
-          else
-          {
-            try
-            {
-              numberValue = Convert.ToInt64(number, CultureInfo.InvariantCulture);
-            }
-            catch (OverflowException ex)
-            {
-              throw JsonReaderException.Create((JsonReader)this, "JSON integer {0} is too large or small for an Int64.".FormatWith(CultureInfo.InvariantCulture, number), ex);
-            }
+			      numberValue = Convert.ToDecimal(integer);
+		      }
+		      else
+		      {
+			      string number = _stringReference.ToString();
 
-            numberType = JsonToken.Integer;
-          }
-        }
+			      numberValue = decimal.Parse(number, numberStyles, CultureInfo.InvariantCulture);
+		      }
+
+		      numberType = JsonToken.Float;
+	      }
+	      else
+	      {
+		      if (singleDigit)
+		      {
+			      // digit char values start at 48
+			      numberValue = (long)firstChar - 48;
+			      numberType = JsonToken.Integer;
+		      }
+		      else if (nonBase10)
+		      {
+			      string number = _stringReference.ToString();
+
+			      numberValue = number.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+				      ? Convert.ToInt64(number, 16)
+				      : Convert.ToInt64(number, 8);
+			      numberType = JsonToken.Integer;
+		      }
+		      else
+		      {
+			      long value;
+			      ParseResult parseResult = ConvertUtils.Int64TryParse(_stringReference.Chars, _stringReference.StartIndex, _stringReference.Length, out value);
+			      if (parseResult == ParseResult.Success)
+			      {
+				      numberValue = value;
+				      numberType = JsonToken.Integer;
+			      }
+			      else if (parseResult == ParseResult.Invalid)
+			      {
+				      string number = _stringReference.ToString();
+
+				      switch (_floatParseHandling)
+				      {
+					      case FloatParseHandling.Decimal:
+						      numberValue = decimal.Parse(number, numberStyles, CultureInfo.InvariantCulture);
+						      break;
+					      case FloatParseHandling.PreferDecimalFallbackToDouble:
+						      decimal result;
+						      if (decimal.TryParse(number, numberStyles, CultureInfo.InvariantCulture, out result) == false)
+						      {
+							      goto default;
+						      }
+						      numberValue = result;
+						      break;
+					      default:
+						      numberValue = Convert.ToDouble(number, CultureInfo.InvariantCulture);
+						      break;
+				      }
+
+				      numberType = JsonToken.Float;
+			      }
+			      else if (parseResult == ParseResult.Overflow)
+			      {
+#if !(NET20 || NET35 || SILVERLIGHT || PORTABLE40 || PORTABLE)
+				      string number = _stringReference.ToString();
+				      numberValue = BigInteger.Parse(number, CultureInfo.InvariantCulture);
+				      numberType = JsonToken.Integer;
+#else
+	// todo - validate number was a valid integer to make sure overflow was the reason for failure
+            throw JsonReaderException.Create(this, "JSON integer {0} is too large or small for an Int64.".FormatWith(CultureInfo.InvariantCulture, _stringReference.ToString()));
+#endif
+			      }
+			      else
+			      {
+				      throw JsonReaderException.Create(this, "Unknown error parsing integer.");
+			      }
+		      }
+	      }
       }
 
-      ClearRecentString();
+	    ClearRecentString();
 
       SetToken(numberType, numberValue);
     }
@@ -1541,6 +1484,9 @@ namespace Raven.Imports.Newtonsoft.Json
     {
       if (MatchValueWithTrailingSeperator(JsonConvert.NegativeInfinity))
       {
+        if (_floatParseHandling == FloatParseHandling.Decimal)
+          throw new JsonReaderException("Cannot read -Infinity as a decimal.");
+
         SetToken(JsonToken.Float, double.NegativeInfinity);
       }
       else
@@ -1553,6 +1499,9 @@ namespace Raven.Imports.Newtonsoft.Json
     {
       if (MatchValueWithTrailingSeperator(JsonConvert.PositiveInfinity))
       {
+        if (_floatParseHandling == FloatParseHandling.Decimal)
+          throw new JsonReaderException("Cannot read Infinity as a decimal.");
+
         SetToken(JsonToken.Float, double.PositiveInfinity);
       }
       else
@@ -1565,6 +1514,9 @@ namespace Raven.Imports.Newtonsoft.Json
     {
       if (MatchValueWithTrailingSeperator(JsonConvert.NaN))
       {
+        if (_floatParseHandling == FloatParseHandling.Decimal)
+          throw new JsonReaderException("Cannot read NaN as a decimal.");
+
         SetToken(JsonToken.Float, double.NaN);
       }
       else
@@ -1581,7 +1533,7 @@ namespace Raven.Imports.Newtonsoft.Json
       base.Close();
 
       if (CloseInput && _reader != null)
-#if !(NETFX_CORE || PORTABLE)
+#if !(NETFX_CORE || PORTABLE40 || PORTABLE)
         _reader.Close();
 #else
         _reader.Dispose();

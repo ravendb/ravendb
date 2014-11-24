@@ -20,6 +20,8 @@ namespace Raven.Database.Bundles.SqlReplication
 		private int WriteErrorCount { get; set; }
 		private int SuccessCount { get; set; }
 
+		public Alert LastAlert { get; set; }
+
 		public void Success(int countOfItems)
 		{
 			LastErrorTime = DateTime.MinValue;
@@ -29,6 +31,17 @@ namespace Raven.Database.Bundles.SqlReplication
 		public void RecordWriteError(Exception e, DocumentDatabase database, int count = 1, DateTime? newErrorTime = null)
 		{
 			WriteErrorCount += count;
+
+
+            LastAlert = new Alert
+			{
+				AlertLevel = AlertLevel.Error,
+				CreatedAt = SystemTime.UtcNow,
+				Message = "Last SQL eplication operation for " + name + " was failed",
+				Title = "SQL replication error",
+				Exception = e.ToString(),
+				UniqueKey = "Sql Replication Error: " + name
+			};
 
 			if (WriteErrorCount < 100)
 				return;
@@ -41,7 +54,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				return;
 			}
 
-			database.AddAlert(new Alert
+			database.AddAlert(LastAlert = new Alert
 			{
 				AlertLevel = AlertLevel.Error,
 				CreatedAt = SystemTime.UtcNow,
@@ -71,7 +84,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		{
 			ScriptErrorCount = int.MaxValue;
 			LastErrorTime = DateTime.MaxValue;
-			database.AddAlert(new Alert
+			database.AddAlert(LastAlert = new Alert
 			{
 				AlertLevel = AlertLevel.Error,
 				CreatedAt = SystemTime.UtcNow,
@@ -91,7 +104,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			if (ScriptErrorCount <= ScriptSuccessCount)
 				return;
 
-			database.AddAlert(new Alert
+			database.AddAlert(LastAlert = new Alert
 			{
 				AlertLevel = AlertLevel.Error,
 				CreatedAt = SystemTime.UtcNow,
@@ -108,4 +121,41 @@ namespace Raven.Database.Bundles.SqlReplication
 			ScriptSuccessCount++;
 		}
 	}
+
+    public class SqlReplicationPerformanceStats
+    {
+        public int BatchSize { get; set; }
+        public TimeSpan Duration { get; set; }
+        public DateTime Started { get; set; }
+        public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
+
+        public override string ToString()
+        {
+            return string.Format("BatchSize: {0}, Started: {1}, Duration: {2}", BatchSize, Started, Duration);
+        }
+
+        protected bool Equals(SqlReplicationPerformanceStats other)
+        {
+            return BatchSize == other.BatchSize && Duration.Equals(other.Duration) && Started.Equals(other.Started);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((SqlReplicationPerformanceStats) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = BatchSize;
+                hashCode = (hashCode*397) ^ Duration.GetHashCode();
+                hashCode = (hashCode*397) ^ Started.GetHashCode();
+                return hashCode;
+            }
+        }
+    }
 }

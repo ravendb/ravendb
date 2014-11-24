@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.ComponentModel.Composition;
 using System.IO;
 using Raven.Database.Plugins;
@@ -13,6 +14,7 @@ namespace Raven.Bundles.Replication.Triggers
 	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10000)]
 	[InheritedExport(typeof(AbstractAttachmentReadTrigger))]
+    [Obsolete("Use RavenFS instead.")]
 	public class HideVirtuallyDeletedAttachmentsReadTrigger : AbstractAttachmentReadTrigger
 	{
 		public override ReadVetoResult AllowRead(string key, Stream data, RavenJObject metadata, ReadOperation operation)

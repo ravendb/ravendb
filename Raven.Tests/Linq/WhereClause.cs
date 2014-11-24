@@ -11,6 +11,7 @@ using Raven.Client.Embedded;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Raven.Tests.Linq
 {
@@ -18,7 +19,6 @@ namespace Raven.Tests.Linq
 	{
 		private readonly IDocumentStore documentStore;
 		private readonly IDocumentSession documentSession;
-
 
 		public WhereClause()
 		{

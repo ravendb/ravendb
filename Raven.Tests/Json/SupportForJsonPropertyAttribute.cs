@@ -6,6 +6,8 @@
 using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Json
@@ -39,6 +41,7 @@ namespace Raven.Tests.Json
 		{
 			using (var store = NewDocumentStore())
 			{
+				store.Conventions.PrettifyGeneratedLinqExpressions = false;
 				new Stations_ByLocation().Execute(store);
 				var definition = store.DatabaseCommands.GetIndex(new Stations_ByLocation().IndexName);
 

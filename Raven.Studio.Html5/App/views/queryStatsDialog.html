@@ -1,0 +1,52 @@
+﻿<div class="messageBox query-stats" tabindex="-1">
+    <div class="modal-header">
+        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+            <i class="fa fa-times"></i>
+        </button>
+        <h4 class="modal-title">Query Stats</h4>
+    </div>
+    <div class="modal-body" data-bind="with: queryStats">
+
+        
+        <div class="row">
+            <div>
+                <div class="form-group">
+                    <div class="row">
+                        <strong class="col-sm-3">Total Results:</strong>
+                        <span class="col-sm-9" data-bind="text: TotalResults"></span>
+                    </div>
+                    <div class="row">
+                        <strong class="col-sm-3">Status</strong>
+                        <span class="col-sm-9" data-bind="text: IsStale === true ? 'Stale' : 'Up to date'"></span>
+                    </div>
+                    <div class="row">
+                        <strong class="col-sm-3">Duration:</strong>
+                        <span class="col-sm-9" data-bind="text: ((typeof (DurationMilliseconds) !== 'undefined') ? DurationMilliseconds : '??? ') + 'ms'"></span>
+                    </div>
+                    <div class="row">
+                        <strong class="col-sm-3">Index:</strong>
+                        <span class="col-sm-9">
+                            <a target='_blank' data-bind="text: IndexName, attr: { href: $root.selectedIndexEditUrl}">Click Here</a>
+                        </span>
+                    </div>
+                    <div class="row" data-bind="visible:$root.didDynamicChangeIndex === true">
+                        <strong class="col-sm-3">
+                            Index Explain:
+                        </strong>
+                        <span class="col-sm-9">
+                            <a target='_blank' data-bind="attr: { href: $root.rawJsonUrl  + '&explain=true'}">Click Here</a>
+                        </span>
+                    </div>
+                    <div class="row">
+                        <strong class="col-sm-3">ETag:</strong>
+                        <span class="col-sm-9" data-bind="text: ResultEtag"></span>
+                    </div>
+                </div>
+               
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bind="click: cancel">OK</button>
+    </div>
+</div>

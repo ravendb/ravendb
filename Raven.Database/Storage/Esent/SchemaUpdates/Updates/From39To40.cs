@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Storage.Esent.StorageActions;
 
@@ -14,7 +15,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 	{
 		public string FromSchemaVersion { get { return "3.9"; } }
 
-		public void Init(IUuidGenerator generator)
+		public void Init(IUuidGenerator generator, InMemoryRavenConfiguration configuration)
 		{
 		}
 

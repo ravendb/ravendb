@@ -5,12 +5,13 @@
 //-----------------------------------------------------------------------
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Tests.Common;
 using Raven.Tests.Document;
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class SortingWithWildcardQuery : RemoteClientTest
+	public class SortingWithWildcardQuery : RavenTest
 	{
 		[Fact]
 		public void Can_sort_using_a_index()
@@ -37,13 +38,13 @@ namespace Raven.Tests.Bugs
 					session.Store(new Company {Name = "Nunc volutpat malesuada"});
 					session.SaveChanges();
 
-					session.Advanced.LuceneQuery<Company>("CompaniesByName").WaitForNonStaleResults().ToArray();
+                    session.Advanced.DocumentQuery<Company>("CompaniesByName").WaitForNonStaleResults().ToArray();
 					// wait for the index to settle down
 				}
 
 				using (var session = documentStore.OpenSession())
 				{
-					var q = session.Advanced.LuceneQuery<Company>("CompaniesByName")
+                    var q = session.Advanced.DocumentQuery<Company>("CompaniesByName")
 						.OrderBy("NameForSorting")
 						.ToArray();
 
@@ -53,7 +54,7 @@ namespace Raven.Tests.Bugs
 					Assert.Equal("Nunc volutpat malesuada", q[3].Name);
 					Assert.Equal("Quisque vulputate eros", q[4].Name);
 
-					q = session.Advanced.LuceneQuery<Company>("CompaniesByName")
+                    q = session.Advanced.DocumentQuery<Company>("CompaniesByName")
 						.Where("Name:vul*")
 						.OrderBy("NameForSorting")
 						.Take(3)

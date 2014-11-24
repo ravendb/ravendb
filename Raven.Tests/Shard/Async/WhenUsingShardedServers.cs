@@ -6,19 +6,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Client.Shard;
 using Raven.Database.Server;
 using Raven.Server;
+using Raven.Tests.Common;
 using Raven.Tests.Document;
 using Rhino.Mocks;
 using Xunit;
 
 namespace Raven.Tests.Shard.Async
 {
-	public class WhenUsingShardedServers : RemoteClientTest
+	public class WhenUsingShardedServers : RavenTest
 	{
 		readonly RavenDbServer server1;
 		readonly RavenDbServer server2;
@@ -57,7 +58,7 @@ namespace Raven.Tests.Shard.Async
 		}
 
 		[Fact]
-		public void CanOverrideTheShardIdGeneration()
+		public async Task CanOverrideTheShardIdGeneration()
 		{
 			using (var documentStore = new ShardedDocumentStore(shardStrategy))
 			{
@@ -70,10 +71,10 @@ namespace Raven.Tests.Shard.Async
 
 				using (var session = documentStore.OpenAsyncSession())
 				{
-					session.Store(company1);
-					session.Store(company2);
+					await session.StoreAsync(company1);
+					await session.StoreAsync(company2);
 
-					session.SaveChangesAsync().Wait();
+					await session.SaveChangesAsync();
 
 					Assert.Equal("Shard1/companies/1", company1.Id);
 					Assert.Equal("Shard2/companies/2", company2.Id);
@@ -82,7 +83,7 @@ namespace Raven.Tests.Shard.Async
 		}
 
 		[Fact]
-		public void CanQueryUsingInt()
+		public async Task CanQueryUsingInt()
 		{
 			shardStrategy.ShardAccessStrategy = new SequentialShardAccessStrategy();
 			using (var documentStore = new ShardedDocumentStore(shardStrategy))
@@ -91,13 +92,13 @@ namespace Raven.Tests.Shard.Async
 
 				using (var session = documentStore.OpenAsyncSession())
 				{
-					session.LoadAsync<Company>(1).Wait();
+					await session.LoadAsync<Company>(1);
 				}
 			}
 		}
 
 		[Fact]
-		public void CanInsertIntoTwoShardedServers()
+		public async Task CanInsertIntoTwoShardedServers()
 		{
 			using (var documentStore = new ShardedDocumentStore(shardStrategy))
 			{
@@ -105,26 +106,26 @@ namespace Raven.Tests.Shard.Async
 
 				using (var session = documentStore.OpenAsyncSession())
 				{
-					session.Store(company1);
-					session.Store(company2);
-					session.SaveChangesAsync().Wait();
+					await session.StoreAsync(company1);
+					await session.StoreAsync(company2);
+					await session.SaveChangesAsync();
 				}
 			}
 		}
 
 		[Fact]
-		public void CanGetSingleEntityFromCorrectShardedServer()
+		public async Task CanGetSingleEntityFromCorrectShardedServer()
 		{
 			using (var documentStore = new ShardedDocumentStore(shardStrategy).Initialize())
 			using (var session = documentStore.OpenAsyncSession())
 			{
 				//store item that goes in 2nd shard
-				session.Store(company2);
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(company2);
+				await session.SaveChangesAsync();
 
 				//get it, should automagically retrieve from 2nd shard
 				shardResolution.Stub(x => x.PotentialShardsFor(null)).IgnoreArguments().Return(new[] { "Shard2" });
-				var loadedCompany = session.LoadAsync<Company>(company2.Id).Result;
+				var loadedCompany = await session.LoadAsync<Company>(company2.Id);
 
 				Assert.NotNull(loadedCompany);
 				Assert.Equal(company2.Name, loadedCompany.Name);
@@ -132,7 +133,7 @@ namespace Raven.Tests.Shard.Async
 		}
 
 		[Fact]
-		public void CanGetSingleEntityFromCorrectShardedServerWhenLocationIsUnknown()
+		public async Task CanGetSingleEntityFromCorrectShardedServerWhenLocationIsUnknown()
 		{
 			shardStrategy.ShardAccessStrategy = new SequentialShardAccessStrategy();
 
@@ -140,13 +141,12 @@ namespace Raven.Tests.Shard.Async
 			using (var session = documentStore.OpenAsyncSession())
 			{
 				//store item that goes in 2nd shard
-				session.Store(company2);
-
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(company2);
+				await session.SaveChangesAsync();
 
 				//get it, should try all shards and find it
 				shardResolution.Stub(x => x.PotentialShardsFor(null)).IgnoreArguments().Return(null);
-				var loadedCompany = session.LoadAsync<Company>(company2.Id).Result;
+				var loadedCompany = await session.LoadAsync<Company>(company2.Id);
 
 				Assert.NotNull(loadedCompany);
 				Assert.Equal(company2.Name, loadedCompany.Name);
@@ -154,7 +154,7 @@ namespace Raven.Tests.Shard.Async
 		}
 
 		[Fact]
-		public void CanGetAllShardedEntities()
+		public async Task CanGetAllShardedEntities()
 		{
 			//get them in simple single threaded sequence for this test
 			shardStrategy.ShardAccessStrategy = new SequentialShardAccessStrategy();
@@ -163,16 +163,16 @@ namespace Raven.Tests.Shard.Async
 			using (var session = documentStore.OpenAsyncSession())
 			{
 				//store 2 items in 2 shards
-				session.Store(company1);
-				session.Store(company2);
+				await session.StoreAsync(company1);
+				await session.StoreAsync(company2);
 
-				session.SaveChangesAsync().Wait();
+				await session.SaveChangesAsync();
 
 
 				//get all, should automagically retrieve from each shard
-				var allCompanies = session.Advanced.AsyncLuceneQuery<Company>()
-					.WaitForNonStaleResults()
-					.ToListAsync().Result;
+				var allCompanies = (await session.Advanced.AsyncDocumentQuery<Company>()
+				                                 .WaitForNonStaleResults()
+				                                 .ToListAsync());
 
 				Assert.NotNull(allCompanies);
 				Assert.Equal(company1.Name, allCompanies[0].Name);

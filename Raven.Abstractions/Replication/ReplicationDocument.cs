@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 
+using Raven.Abstractions.Data;
+
 namespace Raven.Abstractions.Replication
 {
 	/// <summary>
@@ -30,11 +32,16 @@ namespace Raven.Abstractions.Replication
 		public string Source { get; set; }
 
 		/// <summary>
+		/// Configuration for clients.
+		/// </summary>
+		public ReplicationClientConfiguration ClientConfiguration { get; set; }
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="ReplicationDocument"/> class.
 		/// </summary>
 		public ReplicationDocument()
 		{
-			Id = "Raven/Replication/Destinations";
+			Id = Constants.RavenReplicationDestinations;
 			Destinations = new List<ReplicationDestination>();
 		}
 	}

@@ -1,4 +1,6 @@
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -12,7 +14,7 @@ namespace Raven.Tests.Bugs
 			{
 				var ravenDocumentsByEntityName = new RavenDocumentsByEntityName();
 				ravenDocumentsByEntityName.Execute(store);
-				store.DocumentDatabase.ResetIndex(ravenDocumentsByEntityName.IndexName);
+				store.SystemDatabase.Indexes.ResetIndex(ravenDocumentsByEntityName.IndexName);
 			}
 		}
 	}

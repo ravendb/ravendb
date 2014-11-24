@@ -4,12 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -23,7 +25,7 @@ namespace Raven.Tests.Bugs
 		public HierarchicalData()
 		{
 			store = NewDocumentStore();
-			db = store.DocumentDatabase;
+			db = store.SystemDatabase;
 		}
 
 		public override void Dispose()
@@ -35,7 +37,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanCreateHierarchicalIndexes()
 		{
-			db.PutIndex("test", new IndexDefinition
+			db.Indexes.PutIndex("test", new IndexDefinition
 			{
 				Map = @"
 from post in docs.Posts
@@ -43,7 +45,7 @@ from comment in Recurse(post, ((Func<dynamic,dynamic>)(x=>x.Comments)))
 select new { comment.Text }"
 			});
 
-			db.Put("abc", null, RavenJObject.Parse(@"
+			db.Documents.Put("abc", null, RavenJObject.Parse(@"
 {
 	'Name': 'Hello Raven',
 	'Comments': [
@@ -55,10 +57,10 @@ select new { comment.Text }"
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("test", new IndexQuery
+				queryResult = db.Queries.Query("test", new IndexQuery
 				{
 					Query = "Text:abc"
-				}, CancellationToken.None);
+                }, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Equal(1, queryResult.Results.Count);

@@ -21,7 +21,7 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var oldVersion = Database.Get(key, transactionInformation);
+				var oldVersion = Database.Documents.Get(key, transactionInformation);
 				if(oldVersion == null)
 					return;
 
@@ -35,7 +35,7 @@ namespace Raven.Bundles.Replication.Triggers
 				foreach (var prop in conflicts)
 				{
 					RavenJObject deletedMetadata;
-					Database.Delete(prop.Value<string>(), null, transactionInformation, out deletedMetadata);
+					Database.Documents.Delete(prop.Value<string>(), null, transactionInformation, out deletedMetadata);
 				}
 			}
 		}

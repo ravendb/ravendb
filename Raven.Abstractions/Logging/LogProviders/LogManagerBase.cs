@@ -2,9 +2,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Extensions;
-#if NETFX_CORE
-using Raven.Imports.Newtonsoft.Json.Utilities;
-#endif
 
 namespace Raven.Abstractions.Logging.LogProviders
 {

@@ -7,6 +7,8 @@ using Raven.Client.Connection;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -94,7 +96,7 @@ namespace Raven.Tests.Bugs
 					session
 						.Query<Doc, UnsetDocs>()
 						.Customize(x => x.WaitForNonStaleResults())
-						.AsProjection<DocSummary>()
+						.ProjectFromIndexFieldsInto<DocSummary>()
 						.ToArray();
 				}
 			}

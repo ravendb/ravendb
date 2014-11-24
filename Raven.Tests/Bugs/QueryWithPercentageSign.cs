@@ -5,11 +5,13 @@
 //-----------------------------------------------------------------------
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryWithPercentageSign : RemoteClientTest
+	public class QueryWithPercentageSign : RavenTest
 	{
 		[Fact]
 		public void CanQueryUsingPercentageSign()

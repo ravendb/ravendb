@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using ICSharpCode.NRefactory.CSharp;
@@ -25,13 +26,15 @@ namespace Raven.Database.Linq
 	/// 	Along the way we apply some minimal transformations, the end result is an instance
 	/// 	of AbstractViewGenerator, representing the map/reduce functions
 	/// </summary>
-	public class DynamicViewCompiler : DynamicCompilerBase
+	internal class DynamicViewCompiler : DynamicCompilerBase
 	{
 		private readonly IndexDefinition indexDefinition;
-	
-		private readonly CaptureSelectNewFieldNamesVisitor captureSelectNewFieldNamesVisitor = new CaptureSelectNewFieldNamesVisitor();
+
+		private readonly HashSet<string> _fieldNames = new HashSet<string>();
+		private readonly Dictionary<string, Expression> _selectExpressions = new Dictionary<string, Expression>();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForMap = new CaptureQueryParameterNamesVisitor();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForReduce = new CaptureQueryParameterNamesVisitor();
+		private readonly TransformFromClauses transformFromClauses = new TransformFromClauses();
 
 		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, string basePath)
 			: this(name, indexDefinition, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath, new RavenConfiguration())
@@ -47,7 +50,7 @@ namespace Raven.Database.Linq
 		private void TransformQueryToClass()
 		{
 
-			CSharpSafeName = "Index_" + Regex.Replace(Name, @"[^\w\d]", "_");
+            CSharpSafeName = "Index_" + Regex.Replace(Name, @"[^\w\d]", "_");  
 			var type = new TypeDeclaration
 			{
 				Modifiers = Modifiers.Public,
@@ -80,8 +83,6 @@ namespace Raven.Database.Linq
 
 			HandleMapFunctions(ctor);
 
-			HandleTransformResults(ctor);
-
 			HandleReduceDefinition(ctor);
 
 			AddAdditionalInformation(ctor);
@@ -99,10 +100,6 @@ namespace Raven.Database.Linq
 				sb.AppendLine(indexDefinition.Reduce.Replace("\"", "\"\""));
 			}
 
-			if (indexDefinition.TransformResults != null)
-			{
-				sb.AppendLine(indexDefinition.TransformResults.Replace("\"", "\"\""));
-			}
 			sb.Length = sb.Length - 2;
 
 			sb.Append("\"");
@@ -133,7 +130,11 @@ namespace Raven.Database.Linq
 		{
 			string entityName;
 
-			VariableInitializer mapDefinition = map.Trim().StartsWith("from") ?
+			bool querySyntax = map.Trim().StartsWith("from");
+
+			var captureSelectNewFieldNamesVisitor = new CaptureSelectNewFieldNamesVisitor(querySyntax == false, _fieldNames, _selectExpressions);
+
+			VariableInitializer mapDefinition = querySyntax ?
 				TransformMapDefinitionFromLinqQuerySyntax(map, out entityName) :
 				TransformMapDefinitionFromLinqMethodSyntax(map, out entityName);
 
@@ -172,7 +173,7 @@ namespace Raven.Database.Linq
 			}
 			else
 			{
-				var secondMapFieldNames = new CaptureSelectNewFieldNamesVisitor();
+				var secondMapFieldNames = new CaptureSelectNewFieldNamesVisitor(querySyntax == false, new HashSet<string>(), new Dictionary<string, Expression>());
 				mapDefinition.Initializer.AcceptVisitor(secondMapFieldNames, null);
 				if (secondMapFieldNames.FieldNames.SetEquals(captureSelectNewFieldNamesVisitor.FieldNames) == false)
 				{
@@ -196,56 +197,6 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			mapDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForMap, null);
 		}
 
-		private void HandleTransformResults(ConstructorDeclaration ctor)
-		{
-		    try
-		    {
-		        if (string.IsNullOrEmpty(indexDefinition.TransformResults))
-		            return;
-
-		        VariableInitializer translatorDeclaration;
-
-		        if (indexDefinition.TransformResults.Trim().StartsWith("from"))
-		        {
-		            translatorDeclaration =
-		                QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.TransformResults,
-		                                                                     requiresSelectNewAnonymousType: false);
-		        }
-		        else
-		        {
-		            translatorDeclaration =
-		                QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.TransformResults,
-		                                                                       requiresSelectNewAnonymousType: false);
-		        }
-
-		        translatorDeclaration.AcceptVisitor(new ThrowOnInvalidMethodCallsForTransformResults(), null);
-
-
-		        // this.Translator = (Database,results) => from doc in results ...;
-		        ctor.Body.Statements.Add(new ExpressionStatement(
-		                                     new AssignmentExpression(
-		                                         new MemberReferenceExpression(new ThisReferenceExpression(),
-		                                                                       "TransformResultsDefinition"),
-		                                         AssignmentOperatorType.Assign,
-		                                         new LambdaExpression
-		                                         {
-		                                             Parameters =
-		                                             {
-		                                                 new ParameterDeclaration(null, "Database"),
-		                                                 new ParameterDeclaration(null, "results")
-		                                             },
-		                                             Body = translatorDeclaration.Initializer.Clone()
-		                                         })));
-		    }
-		    catch (InvalidOperationException ex)
-		    {
-		        throw new IndexCompilationException(ex.Message, ex)
-		        {
-                    IndexDefinitionProperty = "TransformResults",
-                    ProblematicText = indexDefinition.TransformResults
-		        };
-		    }
-		}
 
 		private void HandleReduceDefinition(ConstructorDeclaration ctor)
 		{
@@ -258,12 +209,13 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		        AstNode groupBySource;
 		        string groupByParameter;
 		        string groupByIdentifier;
-		        if (indexDefinition.Reduce.Trim().StartsWith("from"))
+			    bool querySyntax = indexDefinition.Reduce.Trim().StartsWith("from");
+			    if (querySyntax)
 		        {
 		            reduceDefinition = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Reduce,
 		                                                                                    RequiresSelectNewAnonymousType);
 		            var queryExpression = ((QueryExpression) reduceDefinition.Initializer);
-		            var queryContinuationClause = queryExpression.Clauses.OfType<QueryContinuationClause>().FirstOrDefault();
+		            var queryContinuationClause = GetQueryContinuationClauseForGroupBy(queryExpression);
                     if (queryContinuationClause == null)
                     {
                         throw new IndexCompilationException("Reduce query must contain a 'group ... into ...' clause")
@@ -316,11 +268,12 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 					groupByIdentifier = groupByParameter;
 		        }
 
-		        var mapFields = captureSelectNewFieldNamesVisitor.FieldNames.ToList();
-		        captureSelectNewFieldNamesVisitor.Clear(); // reduce override the map fields
-		        reduceDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
+		        var mapFields = _fieldNames.ToList();
+				_fieldNames.Clear(); // reduce override the map fields
+				_selectExpressions.Clear();
+				reduceDefinition.Initializer.AcceptVisitor(new CaptureSelectNewFieldNamesVisitor(querySyntax == false, _fieldNames, _selectExpressions), null);
 		        reduceDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForReduce, null);
-		        reduceDefinition.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(groupByIdentifier), null);
+				reduceDefinition.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCallsInReduce(groupByIdentifier), null);
 
 		        ValidateMapReduceFields(mapFields);
 
@@ -355,12 +308,17 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		    }
 		    catch (InvalidOperationException ex)
 		    {
-		        throw new IndexCompilationException(ex.Message)
+		        throw new IndexCompilationException(ex.Message,ex)
 		        {
 		            ProblematicText = indexDefinition.Reduce,
                     IndexDefinitionProperty = "Reduce",
 		        };
 		    }
+		}
+
+		private static QueryContinuationClause GetQueryContinuationClauseForGroupBy(QueryExpression queryExpression)
+		{
+			return queryExpression.Descendants.OfType<QueryContinuationClause>().FirstOrDefault(q => q.PrecedingQuery.Clauses.Any(x=>x is QueryGroupClause));
 		}
 
 		private static LambdaExpression GetLambdaExpression(InvocationExpression invocation)
@@ -382,7 +340,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		private void ValidateMapReduceFields(List<string> mapFields)
 		{
 			mapFields.Remove(Constants.DocumentIdFieldName);
-			var reduceFields = captureSelectNewFieldNamesVisitor.FieldNames;
+			var reduceFields = _fieldNames;
 			if (reduceFields.SetEquals(mapFields) == false)
 			{
 				throw new InvalidOperationException(
@@ -400,7 +358,7 @@ Reduce only fields: {2}
 
 		private void AddAdditionalInformation(ConstructorDeclaration ctor)
 		{
-			AddInformation(ctor, captureSelectNewFieldNamesVisitor.FieldNames, "AddField");
+			AddInformation(ctor, _fieldNames, "AddField");
 			AddInformation(ctor, captureQueryParameterNamesVisitorForMap.QueryParameters, "AddQueryParameterForMap");
 			AddInformation(ctor, captureQueryParameterNamesVisitorForMap.QueryParameters, "AddQueryParameterForReduce");
 		}
@@ -433,7 +391,6 @@ Reduce only fields: {2}
 			return variableDeclaration;
 		}
 
-		[CLSCompliant(false)]
 		public class AddDocumentIdToLambdas : DepthFirstAstVisitor<object, object>
 		{
 			public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)
@@ -477,7 +434,122 @@ Reduce only fields: {2}
 
 				return true;
 			}
+		}
 
+		public class AddDocumentIdToQueries : DepthFirstAstVisitor<object, object>
+		{
+			public override object VisitAnonymousTypeCreateExpression(AnonymousTypeCreateExpression objectCreateExpression, object data)
+			{
+
+				var initializers = objectCreateExpression.Initializers;
+				if (initializers.OfType<NamedExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
+					return false;
+
+				// need to find the current from / group identifier
+
+				var parentQueryClause = GetRelevantClause(objectCreateExpression);
+				
+				var queryFromClause = parentQueryClause as QueryFromClause;
+				if (queryFromClause != null)
+				{
+					string identifier = queryFromClause.Identifier;
+					var prev = queryFromClause.GetPrevNode();
+					while (prev != null)
+					{
+						var fromClause = prev as QueryFromClause;
+						if (fromClause != null)
+						{
+							identifier = fromClause.Identifier;
+							break;
+						}
+						var continuationClause = prev as QueryContinuationClause;
+						if (continuationClause != null)
+						{
+							identifier = continuationClause.Identifier;
+							break;
+						}
+						prev = prev.GetPrevNode();
+					}
+
+					objectCreateExpression.Initializers.Add(new NamedExpression
+					{
+						Name = Constants.DocumentIdFieldName,
+						Expression = new MemberReferenceExpression(new IdentifierExpression(identifier), Constants.DocumentIdFieldName)
+					});
+				}
+				var queryGroupClause = parentQueryClause as QueryGroupClause;
+				if (queryGroupClause != null)
+				{
+					var projection = queryGroupClause.Projection;
+					var mre = projection as MemberReferenceExpression;
+					while (mre != null)
+					{
+						projection = mre.Target;
+						mre = projection as MemberReferenceExpression;
+					}
+					objectCreateExpression.Initializers.Add(new NamedExpression
+					{
+						Name = Constants.DocumentIdFieldName,
+						Expression = new MemberReferenceExpression(projection.Clone(), Constants.DocumentIdFieldName)
+					});
+				}
+				var queryContinuationClause = parentQueryClause as QueryContinuationClause;
+				if (queryContinuationClause != null)
+				{
+					Expression identifier = new IdentifierExpression(queryContinuationClause.Identifier);
+					if(queryContinuationClause.PrecedingQuery.Clauses.LastOrNullObject() is QueryGroupClause)
+						identifier = new MemberReferenceExpression(identifier, "Key");
+
+					objectCreateExpression.Initializers.Add(new NamedExpression
+					{
+						Name = Constants.DocumentIdFieldName,
+						Expression = new MemberReferenceExpression(identifier, Constants.DocumentIdFieldName)
+					});
+				}
+
+				return data;
+			}
+
+			private static QueryClause GetRelevantClause(AstNode node)
+			{
+				var relevantClause = node.GetParent<QueryClause>();
+				do
+				{
+					if (relevantClause == null)
+						throw new IOException("Can't figure out how to find the relevant clause for this query");
+
+					if (relevantClause is QueryGroupClause)
+						return relevantClause;
+					var queryFromClause = relevantClause as QueryFromClause;
+					if (queryFromClause != null)
+					{
+						var parentClause = GetPreviousQueryFromClause(queryFromClause);
+						
+						if (parentClause != null)
+						{
+							relevantClause = parentClause;
+							continue;
+						}
+						return relevantClause;
+					}
+					if (relevantClause is QueryContinuationClause)
+						return relevantClause;
+					relevantClause = relevantClause.GetPrevNode() as QueryClause;
+				} while (true);
+			}
+
+			private static QueryFromClause GetPreviousQueryFromClause(AstNode node)
+			{
+				while (true)
+				{
+					node = node.GetPrevNode();
+					if (node == null)
+						return null;
+					var qfc = node as QueryFromClause;
+					if (qfc != null)
+						return qfc;
+				}
+			}
 		}
 
 		private void AddEntityNameFilteringIfNeeded(VariableInitializer variableDeclaration, out string entityName)
@@ -534,36 +606,9 @@ Reduce only fields: {2}
 			entityName = null;
 			var variableDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqQuery(query, RequiresSelectNewAnonymousType);
 			var queryExpression = ((QueryExpression)variableDeclaration.Initializer);
-			var fromClause = queryExpression.Clauses.OfType<QueryFromClause>().First();
+			var fromClause = GetFromClause(queryExpression);
 			var expression = fromClause.Expression;
-			if (expression is MemberReferenceExpression) // collection
-			{
-				var mre = (MemberReferenceExpression)expression;
-				entityName = mre.MemberName;
-				fromClause.Expression = mre.Target;
-				//doc["@metadata"]["Raven-Entity-Name"]
-				var metadata = new IndexerExpression(
-					new IndexerExpression(new IdentifierExpression(fromClause.Identifier), new List<Expression> { new StringLiteralExpression("@metadata") }),
-					new List<Expression> { new StringLiteralExpression(Constants.RavenEntityName) }
-					);
-
-				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.OrdinalIgnoreCase)
-				var binaryOperatorExpression =
-					new InvocationExpression(
-						new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("string")), "Equals"),
-						new List<Expression>
-						{
-							metadata,
-							new StringLiteralExpression(mre.MemberName),
-							new MemberReferenceExpression(new TypeReferenceExpression(new SimpleType(typeof(StringComparison).FullName)),"InvariantCultureIgnoreCase")
-						});
-
-				queryExpression.Clauses.InsertAfter(fromClause,
-													 new QueryWhereClause
-													 {
-														 Condition = binaryOperatorExpression
-													 });
-			}
+			HandleCollectionName(expression, fromClause, queryExpression, ref entityName);
 			var projection = 
 				QueryParsingUtils.GetAnonymousCreateExpression(
 					queryExpression.Clauses.OfType<QuerySelectClause>().First().Expression);
@@ -580,13 +625,92 @@ Reduce only fields: {2}
 			if (objectInitializer.OfType<NamedExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 				return variableDeclaration;
 
-			objectInitializer.Add(
-				new NamedExpression
-				{
-					Name = Constants.DocumentIdFieldName,
-					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
-				});
+			variableDeclaration.AcceptVisitor(new AddDocumentIdToQueries(), null);
+
+			variableDeclaration.AcceptVisitor(this.transformFromClauses, null);
+
 			return variableDeclaration;
+		}
+
+		private static QueryFromClause GetFromClause(QueryExpression queryExpression)
+		{
+			var first = queryExpression.Clauses.First();
+			var queryFromClause = first as QueryFromClause;
+			if (queryFromClause != null)
+				return queryFromClause;
+			var queryContinuationClause = first as QueryContinuationClause;
+			if (queryContinuationClause == null)
+				throw new InvalidOperationException("Don't understand how to parse this query");
+			return GetFromClause(queryContinuationClause.PrecedingQuery);
+		}
+
+		private static void HandleCollectionName(Expression expression, QueryFromClause fromClause, QueryExpression queryExpression, ref string entityName)
+		{
+			// from d in docs.Users.SelectMany(x=>x.Roles) ...
+			// from d in docs.Users.Where(x=>x.IsActive)   ...
+			var mie = expression as InvocationExpression;
+			string methodToCall = null;
+			if (mie != null)
+			{
+				expression = mie.Target;
+
+				var target = expression as MemberReferenceExpression;
+				if (target != null)
+				{
+					methodToCall = target.MemberName;
+					expression = target.Target;
+				}
+			}
+
+			var mre = expression as MemberReferenceExpression;
+			if (mre == null) 
+				return;
+
+			string oldIdentifier = fromClause.Identifier;
+			if (mie != null)
+			{
+				fromClause.Identifier += "Item";
+			}
+
+			entityName = mre.MemberName;
+			fromClause.Expression = mre.Target;
+			//doc["@metadata"]["Raven-Entity-Name"]
+			var metadata = new IndexerExpression(
+				new IndexerExpression(new IdentifierExpression(fromClause.Identifier), new List<Expression> {new StringLiteralExpression("@metadata")}),
+				new List<Expression> {new StringLiteralExpression(Constants.RavenEntityName)}
+				);
+
+			// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.OrdinalIgnoreCase)
+			var binaryOperatorExpression =
+				new InvocationExpression(
+					new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("string")), "Equals"),
+					new List<Expression>
+					{
+						metadata,
+						new StringLiteralExpression(mre.MemberName),
+						new MemberReferenceExpression(new TypeReferenceExpression(new SimpleType(typeof (StringComparison).FullName)), "InvariantCultureIgnoreCase")
+					});
+
+			var queryWhereClause = new QueryWhereClause
+			{
+				Condition = binaryOperatorExpression
+			};
+			((QueryExpression)fromClause.Parent).Clauses.InsertAfter(fromClause,
+				queryWhereClause);
+
+			if (mie != null)
+			{
+				var newSource = new ArrayCreateExpression
+				{
+					Initializer = new ArrayInitializerExpression(new IdentifierExpression(fromClause.Identifier)),
+					AdditionalArraySpecifiers = { new ArraySpecifier(1) }
+				};
+				queryExpression.Clauses.InsertAfter(queryWhereClause, new QueryFromClause
+				{
+					Identifier = oldIdentifier,
+					Expression = new InvocationExpression(new MemberReferenceExpression(newSource, methodToCall), mie.Arguments.Select(x => x.Clone()))
+				});
+			}
 		}
 
 		public AbstractViewGenerator GenerateInstance()

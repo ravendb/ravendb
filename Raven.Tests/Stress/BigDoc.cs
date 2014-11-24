@@ -1,5 +1,8 @@
 ﻿using System;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Attributes;
+
 using Xunit;
 using Xunit.Extensions;
 

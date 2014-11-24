@@ -2,11 +2,13 @@
 using System.Linq;
 using Raven.Client.Embedded;
 using Raven.Database.Extensions;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class DocumentStoreEmbeddedGranularTests : RemoteClientTest, IDisposable
+	public class DocumentStoreEmbeddedGranularTests : RavenTest, IDisposable
 	{
 		private string path;
 
@@ -32,7 +34,7 @@ namespace Raven.Tests.Document
 
 				session1.SaveChanges();
 				var session2 = documentStore.OpenSession();
-				var companyFound = session2.Advanced.LuceneQuery<Company>()
+                var companyFound = session2.Advanced.DocumentQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 

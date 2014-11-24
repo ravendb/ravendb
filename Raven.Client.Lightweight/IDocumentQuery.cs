@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Linq;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
+using System.Threading.Tasks;
 
 namespace Raven.Client
 {
@@ -18,7 +19,6 @@ namespace Raven.Client
 	/// </summary>
 	public interface IDocumentQuery<T> : IEnumerable<T>, IDocumentQueryBase<T, IDocumentQuery<T>>
 	{
-
 		/// <summary>
 		/// Selects the specified fields directly from the index
 		/// </summary>
@@ -39,21 +39,25 @@ namespace Raven.Client
 		IDocumentQuery<TProjection> SelectFields<TProjection>();
 
 		/// <summary>
-		/// Sets user defined inputs to the query
+		/// User definied inputs that can be used in transformer
 		/// </summary>
 		/// <param name="queryInputs"></param>
+		[Obsolete("Use SetTransformerParameters instead.")]
 		void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
 
-#if !SILVERLIGHT
+		/// <summary>
+		/// User definied inputs that can be used in transformer
+		/// </summary>
+		/// <param name="transformerParameters"></param>
+		void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
+
 		/// <summary>
 		/// Gets the query result
 		/// Execute the query the first time that this is called.
 		/// </summary>
 		/// <value>The query result.</value>
 		QueryResult QueryResult { get; }
-#endif
-
-		AggregationOperation AggregationOperation { get; }
+		bool IsDistinct { get; }
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -67,6 +71,12 @@ namespace Raven.Client
 		/// Also provide a function to execute when the value is evaluated
 		/// </summary>
 		Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval);
+
+		/// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed.
+		/// </summary>
+		Lazy<int> CountLazily();
 
 		/// <summary>
 		/// Create the index query object for this query
@@ -86,5 +96,6 @@ namespace Raven.Client
 		/// Get the facets as per the specified facets with the given start and pageSize
 		/// </summary>
 		FacetResults GetFacets(List<Facet> facets, int facetStart, int? facetPageSize);
-	}
+
+    }
 }

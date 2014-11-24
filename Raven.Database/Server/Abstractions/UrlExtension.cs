@@ -10,12 +10,6 @@ namespace Raven.Database.Server.Abstractions
 {
 	public static class UrlExtension
 	{
-		public static string GetRequestUrl(this IHttpContext context)
-		{
-			var rawUrl = context.Request.RawUrl;
-			return GetRequestUrlFromRawUrl(rawUrl, context.Configuration);
-		}
-
 		public static string GetRequestUrlFromRawUrl(string rawUrl, InMemoryRavenConfiguration configuration)
 		{
 			string localPath = rawUrl;

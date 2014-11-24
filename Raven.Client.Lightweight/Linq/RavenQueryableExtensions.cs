@@ -8,7 +8,6 @@ namespace Raven.Client.Linq
 {
 	public static class RavenQueryableExtensions
 	{
-	
 		/// <summary>
 		/// Filters a sequence of values based on a predicate.
 		/// </summary>
@@ -58,6 +57,24 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
+		/// Sorts(secondary) the elements of a sequence in ascending order according to a key.
+		/// </summary>
+		public static IRavenQueryable<T> ThenBy<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector)
+		{
+			return (IRavenQueryable<T>)Queryable.ThenBy(source, keySelector);
+		}
+
+
+		/// <summary>
+		/// Sorts(secondary) the elements of a sequence in descending order according to a key.
+		/// </summary>
+		public static IRavenQueryable<T> ThenByDescending<T, TK>(this IRavenQueryable<T> source, Expression<Func<T, TK>> keySelector)
+		{
+			return (IRavenQueryable<T>)Queryable.ThenByDescending(source, keySelector);
+		}
+
+
+		/// <summary>
 		/// Projects each element of a sequence into a new form.
 		/// </summary>
 		public static IRavenQueryable<TResult> Select<TSource, TResult>(this IRavenQueryable<TSource> source, Expression<Func<TSource, TResult>> selector)
@@ -74,16 +91,15 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
-		///  implementation of In operator
+		/// Implementation of In operator
 		/// </summary>
 		public static bool In<T>(this T field, IEnumerable<T> values)
 		{
 			return values.Any(value => field.Equals(value));
 		}
 
-
 		/// <summary>
-		///  implementation of In operator
+		/// Implementation of In operator
 		/// </summary>
 		public static bool In<T>(this T field, params T[] values)
 		{
@@ -97,6 +113,24 @@ namespace Raven.Client.Linq
 		public static IRavenQueryable<TSource> Skip<TSource>(this IRavenQueryable<TSource> source, int count)
 		{
 			return (IRavenQueryable<TSource>)Queryable.Skip(source, count);
+		}
+
+		/// <summary>
+		/// Implementation of the Contains ANY operator
+		/// </summary>
+		public static bool ContainsAny<T>(this IEnumerable<T> list, IEnumerable<T> items)
+		{
+			throw new InvalidOperationException(
+				"This method isn't meant to be called directly, it just exists as a place holder, for the LINQ provider");
+		}
+
+		/// <summary>
+		/// Implementation of the Contains ALL operatior
+		/// </summary>
+		public static bool ContainsAll<T>(this IEnumerable<T> list, IEnumerable<T> items)
+		{
+			throw new InvalidOperationException(
+				"This method isn't meant to be called directly, it just exists as a place holder for the LINQ provider");
 		}
 	}
 }

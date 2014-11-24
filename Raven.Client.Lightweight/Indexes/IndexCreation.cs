@@ -4,13 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Raven.Abstractions.Exceptions;
-#if !MONODROID && !NETFX_CORE
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Exceptions;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
@@ -22,7 +22,6 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public static class IndexCreation
 	{
-#if !SILVERLIGHT
 		/// <summary>
 		/// Creates the indexes found in the specified assembly.
 		/// </summary>
@@ -54,13 +53,13 @@ namespace Raven.Client.Indexes
 
 			}
 
-		    foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
-            {
-                task.Execute(databaseCommands, conventions);
-            }
+			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+			{
+				task.Execute(databaseCommands, conventions);
+			}
 
 			if (indexCompilationExceptions.Any())
-				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.",indexCompilationExceptions);
+				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
 		}
 
 		/// <summary>
@@ -83,15 +82,14 @@ namespace Raven.Client.Indexes
 				}
 			}
 
-            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
-            {
-					task.Execute(documentStore);
+			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+			{
+				task.Execute(documentStore);
 			}
 
-			if(indexCompilationExceptions.Any())
+			if (indexCompilationExceptions.Any())
 				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
 		}
-#endif
 
 		/// <summary>
 		/// Creates the indexes found in the specified assembly.
@@ -112,7 +110,7 @@ namespace Raven.Client.Indexes
 		public static Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
 			return CreateIndexesAsync(catalogToGetnIndexingTasksFrom, documentStore.AsyncDatabaseCommands,
-			                          documentStore.Conventions);
+									  documentStore.Conventions);
 		}
 
 		/// <summary>
@@ -122,24 +120,23 @@ namespace Raven.Client.Indexes
 		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
-		    {
-			    try
-			    {
-				    await task.ExecuteAsync(asyncDatabaseCommands, conventions);
-			    }
+			{
+				try
+				{
+					await task.ExecuteAsync(asyncDatabaseCommands, conventions);
+				}
 				catch (IndexCompilationException e)
 				{
 					indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
 				}
-		    }
-            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
-            {
-                await task.ExecuteAsync(asyncDatabaseCommands, conventions);
-            }
+			}
+			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+			{
+				await task.ExecuteAsync(asyncDatabaseCommands, conventions);
+			}
 
 			if (indexCompilationExceptions.Any())
 				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
 		}
 	}
 }
-#endif

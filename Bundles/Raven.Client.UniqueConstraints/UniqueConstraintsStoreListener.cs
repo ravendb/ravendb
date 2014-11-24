@@ -1,7 +1,6 @@
 ﻿namespace Raven.Client.UniqueConstraints
 {
 	using System;
-	using System.Collections.Concurrent;
 	using System.Linq;
 	using Listeners;
 	using Json.Linq;
