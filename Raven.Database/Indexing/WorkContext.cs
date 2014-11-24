@@ -242,15 +242,24 @@ namespace Raven.Database.Indexing
 
 			indexingErrors.Enqueue(indexingError);
 
-			TransactionalStorage.Batch(accessor => accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing));
-
 			if (indexingErrors.Count <= 50)
+			{
+				TransactionalStorage.Batch(accessor => accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing));
 				return;
+			}
 
 			IndexingError ignored;
 			indexingErrors.TryDequeue(out ignored);
 
-			TransactionalStorage.Batch(accessor => accessor.Lists.Remove("Raven/Indexing/Errors/" + ignored.IndexName, ignored.Id.ToString(CultureInfo.InvariantCulture)));
+			if ((SystemTime.UtcNow - ignored.Timestamp).TotalSeconds > 10)
+			{
+				TransactionalStorage.Batch(accessor =>
+				{
+					accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing);
+					accessor.Lists.RemoveAllOlderThan("Raven/Indexing/Errors/" + ignored.IndexName, ignored.Timestamp);
+				});
+				
+			}
 		}
 
 		public void StopWorkRude()
