@@ -86,7 +86,7 @@ namespace Raven.Client.Document
 			    }
 
 				preparingEnlistment.ForceRollback(e);
-				throw;
+				return;
 			}
 			preparingEnlistment.Prepared();
 		}

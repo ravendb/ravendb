@@ -318,5 +318,8 @@ namespace Raven.Client
 		}
 
 		public abstract void InitializeProfiling();
+
+
+		public abstract bool CanEnlistInDistributedTransactions(string dbName);
 	}
 }
