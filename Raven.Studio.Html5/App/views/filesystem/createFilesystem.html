@@ -1,51 +1,37 @@
-﻿<div class="messageBox" tabindex="-1">
-    <form data-bind="submit: nextOrCreate">
-        <div class="modal-header">
-            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
-                <i class="fa fa-times"></i>
-            </button>
-            <h4 class="modal-title">Create File System</h4>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label for="databaseName">Name</label>
-                <input data-bind="value: fileSystemName, valueUpdate: 'afterkeydown', hasfocus: fileSystemNameFocus, customValidity: nameCustomValidityError" type="text" class="form-control" id="filesystemName" autocomplete="off" placeholder="File System Name">
+﻿<div class="col-md-12">
+    <div class="form-group">
+        <label for="databaseName">Name</label>
+        <input data-bind="value: fileSystemName, valueUpdate: 'afterkeydown', hasfocus: fileSystemNameFocus, customValidity: nameCustomValidityError" type="text" class="form-control" id="filesystemName" autocomplete="off" placeholder="File System Name">
+    </div>
+    <div class="panel-group" id="accordion">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#fsAdvancedOptions">
+                        Advanced Settings
+                    </a>
+                </h4>
             </div>
-            <div class="panel-group" id="accordion">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h4 class="panel-title">
-                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#advancedOptions">
-                                Advanced Settings
-                            </a>
-                        </h4>
+            <div id="fsAdvancedOptions" class="panel-collapse collapse">
+                <div class="panel-body">
+                    <div class="form-group">
+                        <label for="filesystemPath">Path</label>
+                        <input data-bind="value: fileSystemPath, customValidity: pathCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Filesystems/' + fileSystemName() }" type="text" class="form-control" id="filesystemPath" autocomplete="off">
                     </div>
-                    <div id="advancedOptions" class="panel-collapse collapse">
-                        <div class="panel-body">
-                            <div class="form-group">
-                                <label for="filesystemPath">Path</label>
-                                <input data-bind="value: fileSystemPath, customValidity: pathCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/Filesystems/' + fileSystemName() }" type="text" class="form-control" id="filesystemPath" autocomplete="off">
-                            </div>
-                            <div class="form-group">
-                                <label for="filesystemLogs">Logs</label>
-                                <input data-bind="value: fileSystemLogsPath, customValidity: logsCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: (fileSystemPath() || '~/Filesystems/' + fileSystemName()) }" type="text" class="form-control" id="filesystemLogs" autocomplete="off">
-                            </div>
-                            <div class="form-group">
-                                <label for="storageEngine">Storage Engine</label>
-                                <select data-bind="value: storageEngine" class="form-control" id="storageEngine">
-                                    <option value="">Default</option>
-                                    <option value="esent">Esent</option>
-                                    <option value="voron">Voron</option>
-                                </select>
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label for="filesystemLogs">Logs</label>
+                        <input data-bind="value: fileSystemLogsPath, customValidity: logsCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: (fileSystemPath() || '~/Filesystems/' + fileSystemName()) }" type="text" class="form-control" id="filesystemLogs" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="storageEngine">Storage Engine</label>
+                        <select data-bind="value: storageEngine" class="form-control" id="storageEngine">
+                            <option value="">Default</option>
+                            <option value="esent">Esent</option>
+                            <option value="voron">Voron</option>
+                        </select>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary">Create</button>
-        </div>
-    </form>
+    </div>
 </div>

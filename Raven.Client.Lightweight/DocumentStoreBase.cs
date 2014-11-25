@@ -16,12 +16,10 @@ using Raven.Client.Document;
 
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
+using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Client
 {
-	using System.Collections.Generic;
-
-	using Raven.Abstractions.Util.Encryptors;
 
 	/// <summary>
 	/// Contains implementation of some IDocumentStore operations shared by DocumentStore implementations
@@ -318,5 +316,8 @@ namespace Raven.Client
 		}
 
 		public abstract void InitializeProfiling();
+
+
+		public abstract bool CanEnlistInDistributedTransactions(string dbName);
 	}
 }

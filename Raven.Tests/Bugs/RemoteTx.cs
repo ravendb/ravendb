@@ -11,7 +11,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void WillNotErrorOnDocumentNotYetCommitted()
 		{
-			using(GetNewServer())
+			using(GetNewServer(requestedStorage:"esent"))
 			using(var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
 				using(new TransactionScope())

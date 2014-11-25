@@ -175,6 +175,12 @@ namespace Raven.Tests.Core.Configuration
 				propertyPathsToCheck = GetPropertyPathsToCheck(inMemoryConfiguration).Where(x => propertyPathsToIgnore.Contains(x) == false).ToList();
 			}
 
+			public void Ignore(Expression<Func<InMemoryRavenConfiguration, object>> actual)
+			{
+				var propertyPath = actual.ToPropertyPath();
+				assertedPropertyPaths.Add(propertyPath);
+			}
+
 			public void Assert<T>(Expression<Func<StronglyTypedRavenSettings, T>> expected, Expression<Func<InMemoryRavenConfiguration, T>> actual)
 			{
 				var propertyPath = actual.ToPropertyPath();

@@ -34,6 +34,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -51,7 +52,7 @@ namespace Raven.Database.Server.Tenancy
             get { return systemDatabase.Configuration; }
         }
 
-        public FileSystemsLandlord(DocumentDatabase systemDatabase)
+	    public FileSystemsLandlord(DocumentDatabase systemDatabase)
 		{
 			this.systemDatabase = systemDatabase;
 
@@ -98,32 +99,32 @@ namespace Raven.Database.Server.Tenancy
                                 string folderPropName,
                                 InMemoryRavenConfiguration parentConfiguration)
         {
-            var config = new InMemoryRavenConfiguration
-            {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
-            };
+	        var config = new InMemoryRavenConfiguration
+	        {
+		        Settings = new NameValueCollection(parentConfiguration.Settings),
+	        };
 
-            SetupTenantConfiguration(config);
+	        SetupTenantConfiguration(config);
 
-            config.CustomizeValuesForFileSystemTenant(tenantId);
-            config.Settings["Raven/FileSystem/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
+	        config.CustomizeValuesForFileSystemTenant(tenantId);
+	        config.Settings["Raven/FileSystem/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
 
-            foreach (var setting in document.Settings)
-            {
-                config.Settings[setting.Key] = setting.Value;
-            }
-            Unprotect(document);
+	        foreach (var setting in document.Settings)
+	        {
+		        config.Settings[setting.Key] = setting.Value;
+	        }
+	        Unprotect(document);
 
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
-            config.FileSystemName = tenantId;
+	        config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
+	        config.FileSystemName = tenantId;
 
-            config.Initialize();
-            config.CopyParentSettings(parentConfiguration);
-            return config;
+	        config.Initialize();
+	        config.CopyParentSettings(parentConfiguration);
+	        return config;
         }
 
-        public void Unprotect(FileSystemDocument configDocument)
+	    public void Unprotect(FileSystemDocument configDocument)
         {
             if (configDocument.SecuredSettings == null)
             {
@@ -267,29 +268,11 @@ namespace Raven.Database.Server.Tenancy
                 }
             }
 
-	        if (IsNotLicensed())
+	        if (Authentication.IsLicensedForRavenFs == false)
 	        {
 				throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
 	        }
         }
-
-		public static bool IsNotLicensed()
-	    {
-			//string ravenFsValue;
-			//var license = ValidateLicense.CurrentLicense;
-			//if (license.IsCommercial == false)
-			//{
-			//	return false; // we allow the use of ravenfs in the OSS version
-			//}
-			//if (license.Attributes.TryGetValue("ravenfs", out ravenFsValue))
-			//{
-			//	bool active;
-			//	if (bool.TryParse(ravenFsValue, out active))
-			//		return active == false;
-			//}
-			//return true;
-			return false;
-	    }
 
 	    protected override DateTime LastWork(RavenFileSystem resource)
         {

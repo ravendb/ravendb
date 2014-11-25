@@ -15,8 +15,6 @@ class disableResourceToggleConfirm extends dialogViewModelBase {
     isSettingDisabled: boolean;
     deletionText: KnockoutComputed<string>;
     confirmDeletionText: KnockoutComputed<string>;
-    resourceType: string;
-    resourcesTypeText: string;
 
     constructor(resources: Array<resource>, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
@@ -26,16 +24,13 @@ class disableResourceToggleConfirm extends dialogViewModelBase {
         }
 
         this.resourcesToDisable(resources);
-        this.resourceType = resources[0].type;
-        this.resourcesTypeText = this.resourceType == database.type ? 'databases' : this.resourceType == filesystem.type ? 'file systems' : 'counter storages';
         this.isSettingDisabled = !resources[0].disabled();
         this.deletionText = ko.computed(() => this.isSettingDisabled ? "You're disabling" : "You're enabling");
         this.confirmDeletionText = ko.computed(() => this.isSettingDisabled ? "Yep, disable" : "Yep, enable");
     }
 
     toggleDisableReources() {
-        var resourceNames = this.resourcesToDisable().map((rs: resource) => rs.name);
-        var disableToggleCommand = new disableResourceToggleCommand(resourceNames, this.isSettingDisabled, this.resourceType);
+        var disableToggleCommand = new disableResourceToggleCommand(this.resourcesToDisable(), this.isSettingDisabled);
 
         var disableToggleCommandTask = disableToggleCommand.execute();
 

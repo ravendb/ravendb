@@ -69,17 +69,14 @@ namespace Raven.Database.Storage
 
 	    private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 
-        private List<IndexMergeSuggestion> IndexMergeSuggestions { get; set; }
 
 		[CLSCompliant(false)]
 		public IndexDefinitionStorage(
             InMemoryRavenConfiguration configuration,
             ITransactionalStorage transactionalStorage,
             string path,
-            IEnumerable<AbstractViewGenerator> compiledGenerators,
             OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
         {
-            IndexMergeSuggestions = new List<IndexMergeSuggestion>();
             this.configuration = configuration;
 	        this.transactionalStorage = transactionalStorage;
 	        this.extensions = extensions; // this is used later in the ctor, so it must appears first

@@ -37,14 +37,14 @@ namespace Raven.Tests.MailingList
         public void UsingValues()
         {
             Expression<Func<Item, object>> expr = item => item.Products.Values.Select(x => x.IdRef);
-            Assert.Equal("Products,IdRef", expr.ToPropertyPath());
+            Assert.Equal("Products.$Values,IdRef", expr.ToPropertyPath());
         }
 
         [Fact]
         public void UsingValue()
         {
             Expression<Func<Item, object>> expr = item => item.Products.Select(x => x.Value.IdRef);
-            Assert.Equal("Products,IdRef", expr.ToPropertyPath());
+			Assert.Equal("Products,IdRef", expr.ToPropertyPath());
         }
     }
 

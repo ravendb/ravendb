@@ -1388,7 +1388,7 @@ namespace Raven.Client.Connection.Async
 						var response = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 						if (response == null)
 						{
-							throw new InvalidOperationException("Got null response from the server after doing a batch, something is very wrong. Probably a garbled response.");
+							throw new InvalidOperationException("Got null response from the server after doing a batch, something is very wrong. Probably a garbled response. Posted: " + jArray);
 						}
 						return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 					}

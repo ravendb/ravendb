@@ -43,7 +43,7 @@ namespace Raven.Client.Document
 		private const int DefaultNumberOfCachedRequests = 2048;
 		private int maxNumberOfCachedRequests = DefaultNumberOfCachedRequests;
 		private bool aggressiveCachingUsed;
-
+		private readonly ConcurrentDictionary<string, bool> _dtcSupport = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 		/// <summary>
 		/// Generate new instance of database commands
 		/// </summary>
@@ -433,6 +433,11 @@ namespace Raven.Client.Document
 				}
 				profilingContext.RecordAction(sender, args);
 			};
+		}
+
+		public override bool CanEnlistInDistributedTransactions(string dbName)
+		{
+			return _dtcSupport.GetOrAdd(dbName, db => DatabaseCommands.ForDatabase(db).GetStatistics().SupportsDtc);
 		}
 
 		private void RecoverPendingTransactions()

@@ -34,9 +34,6 @@ namespace Voron.Tests.Storage
                 {
                     using (var tx = env.NewTransaction(TransactionFlags.Read))
                     {
-	                    if (tx.State.Root.Read("test/1") == null)
-		                    Debugger.Launch();
-
                         Assert.NotNull(tx.State.Root.Read("test/1"));
                         Assert.NotNull(tx.State.Root.Read("test/2"));
                         tx.Commit();

@@ -1270,5 +1270,22 @@ namespace Raven.Database.Config
 			public bool UseSsl { get; set; }
 		}
 
-    }
+		public void UpdateDataDirForLegacySystemDb()
+		{
+			if (RunInMemory)
+				return;
+			var legacyPath = Settings["Raven/DataDir/Legacy"];
+			if (string.IsNullOrEmpty(legacyPath))
+				return;
+			var fullLegacyPath = FilePathTools.MakeSureEndsWithSlash(legacyPath.ToFullPath());
+
+			// if we already have a system database in the legacy path, we want to keep it.
+			// The idea is that we don't want to have the user experience "missing databases" because
+			// we change the path to make it nicer.
+			if (Directory.Exists(fullLegacyPath))
+			{
+				DataDirectory = legacyPath;
+			}
+		}
+	}
 }
