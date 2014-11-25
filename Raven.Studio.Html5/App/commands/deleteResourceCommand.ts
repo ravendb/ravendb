@@ -1,6 +1,8 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
+import resource = require("models/resource");
+import counterStorage = require("models/counter/counterStorage");
 
 class deleteDatabaseCommand extends commandBase {
     private oneDatabasePath = "/admin/databases/";
@@ -10,14 +12,14 @@ class deleteDatabaseCommand extends commandBase {
     private oneCounterStoragePath = "/admin/counterstorage/";
     private multipleCounterStoragesPath = "/admin/counterstorage/batch-delete";
 
-    constructor(private resourcesNames: Array<string>, private isHardDelete: boolean, private resourceType: string) {
+    constructor(private resources: Array<resource>, private isHardDelete: boolean) {
         super();
     }
 
     execute(): JQueryPromise<any> {
 
         var deleteTask;
-        if (this.resourcesNames.length == 1) {
+        if (this.resources.length == 1) {
             deleteTask = this.deleteOneResource();
         } else {
             deleteTask = this.deleteMultipleResources();
@@ -27,43 +29,77 @@ class deleteDatabaseCommand extends commandBase {
     }
 
     private deleteOneResource(): JQueryPromise<any> {
-        var resourceName = this.resourcesNames[0];
-        this.reportInfo("Deleting " + resourceName + "...");
+        var resource = this.resources[0];
+        this.reportInfo("Deleting " + resource.name + "...");
 
         var args = {
             "hard-delete": this.isHardDelete
         };
-
-        var disableOneResourcePath = (this.resourceType == database.type) ? this.oneDatabasePath :
-            (this.resourceType == filesystem.type) ? this.oneFileSystemPath : this.oneCounterStoragePath;
-        var url = disableOneResourcePath + encodeURIComponent(resourceName) + this.urlEncodeArgs(args);
+        
+        var disableOneResourcePath = (resource.type == database.type) ? this.oneDatabasePath :
+            (resource.type == filesystem.type) ? this.oneFileSystemPath : this.oneCounterStoragePath;
+        var url = disableOneResourcePath + encodeURIComponent(resource.name) + this.urlEncodeArgs(args);
         var deleteTask = this.del(url, null, null, { dataType: undefined });
 
-        deleteTask.done(() => this.reportSuccess("Succefully deleted " + resourceName));
-        deleteTask.fail((response: JQueryXHR) => this.reportError("Failed to delete " + resourceName, response.responseText, response.statusText));
-
+        deleteTask.done(() => this.reportSuccess("Succefully deleted " + resource.name));
+        deleteTask.fail((response: JQueryXHR) => this.reportError("Failed to delete " + resource.name, response.responseText, response.statusText));
         return deleteTask;
     }
 
     private deleteMultipleResources(): JQueryPromise<any> {
-        var resourcesType = (this.resourceType == database.type) ? "databases" : (this.resourceType == filesystem.type) ? "file systems" : "counter storages";
-        this.reportInfo("Deleting " + this.resourcesNames.length + " " + resourcesType + "...");
+        this.reportInfo("Deleting " + this.resources.length + " resources...");
 
+        var dbToDelete = this.resources.filter(r => r.type == database.type);
+        var fsToDelete = this.resources.filter(r => r.type == filesystem.type);
+        var cntToDelete = this.resources.filter(r => r.type == counterStorage.type);
+
+        var deleteTasks = [];
+
+        if (dbToDelete.length > 0) {
+            deleteTasks.push(this.deleteTask(dbToDelete, this.multipleDatabasesPath));
+        }
+
+        if (fsToDelete.length > 0) {
+            deleteTasks.push(this.deleteTask(fsToDelete, this.multipleFileSystemsPath));
+        }
+
+        if (cntToDelete.length > 0) {
+            deleteTasks.push(this.deleteTask(cntToDelete, this.multipleCounterStoragesPath));
+        }
+
+        var mergedPromise = $.Deferred();
+
+        var combinedPromise = $.when.apply(null, deleteTasks);
+        combinedPromise.done(() => {
+            var deletedResources = [].concat.apply([], arguments);
+            this.reportSuccess("Succefully deleted " + deletedResources.length + " resources!");
+            mergedPromise.resolve(deletedResources);
+        });
+
+        combinedPromise.fail((response: JQueryXHR) => {
+            this.reportError("Failed to delete resources", response.responseText, response.statusText);
+            mergedPromise.reject(response);
+        });
+        return mergedPromise;
+    }
+
+    private deleteTask(resources: Array<resource>, deletePath: string) {
         var args = {
-            ids: this.resourcesNames,
+            ids: resources.map(d => d.name),
             "hard-delete": this.isHardDelete
         };
 
-        var disableMultipleResourcesPath = (this.resourceType == database.type) ? this.multipleDatabasesPath :
-            (this.resourceType == filesystem.type) ? this.multipleFileSystemsPath : this.multipleCounterStoragesPath;
-        var url = disableMultipleResourcesPath + this.urlEncodeArgs(args);
-        var deleteTask = this.del(url, null, null, null, 9000 * this.resourcesNames.length);
+        var url = deletePath + this.urlEncodeArgs(args);
 
-        deleteTask.done((deletedResourcesNames: string[]) => this.reportSuccess("Succefully deleted " + deletedResourcesNames.length + " " + resourcesType + "!"));
-        deleteTask.fail((response: JQueryXHR) => this.reportError("Failed to delete "+ resourcesType, response.responseText, response.statusText));
-
-        return deleteTask;
+        var task = $.Deferred();
+        this.del(url, null, null, null, 9000 * resources.length)
+            .done((resourceNames: string[]) => {
+                task.resolve(resources.filter(r => resourceNames.contains(r.name)));
+            })
+            .fail(() => task.reject(arguments));
+        return task;
     }
+
 } 
 
 export = deleteDatabaseCommand;

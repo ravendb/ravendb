@@ -1,0 +1,31 @@
+﻿<div class="messageBox" tabindex="-1" style="min-width: 500px;">
+    
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"></button>
+            <h4 class="modal-title">Create Resource</h4>
+        </div>
+        <div class="modal-body" style="max-height: 600px; overflow: auto">
+            <div class="form-group">
+                <label for="resourceType">Resource type</label>
+                <select data-bind="value: resourceType" class="form-control" id="resourceType">
+                    <option value="db">Database</option>
+                    <option value="fs">File system</option>
+                </select>
+            </div>
+            <form id="createDbForm" data-bind="submit: nextOrCreate">
+                <div class="row" style="min-height: 478px;" data-bind="with: createDatabasePart, visible: resourceType() == 'db'">
+                    <div data-bind="compose: 'createDatabase.html'"></div>
+                </div>
+            </form>
+            <form id="createFsForm" data-bind="submit: nextOrCreate">
+                <div class="row" style="min-height: 478px;" data-bind="with: createFilesystemPart, visible: resourceType() == 'fs'">
+                    <div data-bind="compose: 'filesystem/createFilesystem.html'"></div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary" data-bind="click: submitForm">Create</button>
+        </div>
+    </form>
+</div>
