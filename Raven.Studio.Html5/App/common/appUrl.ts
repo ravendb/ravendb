@@ -151,8 +151,8 @@ class appUrl {
         return "#admin/settings/windowsAuth";
     }
 
-    static forBackupDatabase(): string {
-        return "#admin/settings/backupDatabase";
+    static forBackup(): string {
+        return "#admin/settings/backup";
     }
 
     static forCompactDatabase(): string {
@@ -161,10 +161,6 @@ class appUrl {
 
     static forRestoreDatabase(): string {
         return "#admin/settings/restoreDatabase";
-    }
-
-    static forBackupFilesystem(): string {
-        return "#admin/settings/backupFilesystem";
     }
 
     static forCompactFilesystem(): string {
