@@ -171,7 +171,7 @@
                             </a>
                         </li>
                         <li class="dropdown navbar-right" data-bind="visible: canShowResourcesNavbar()">
-                            <a class="dropdown-toggle resource-link" data-toggle="dropdown" href="#" data-bind="with: activeResource, css: { 'resource-link-disabled': $root.listedResources().length == 0 }">
+                            <a class="dropdown-toggle resource-link" data-toggle="dropdown" href="#" data-bind="with: lastActivatedResource, css: { 'resource-link-disabled': $root.listedResources().length == 0 }">
                                 <span data-bind="text: name"></span>
                                 <b class="caret" data-bind="visible: $root.listedResources().length > 0"></b>
                             </a>

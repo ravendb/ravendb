@@ -22,19 +22,10 @@ class viewModelBase {
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     public activeCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
-    public activeResource: KnockoutComputed<resource> = ko.computed(() => {
-
-        // we fetch all of them to register dependency tracking in knockout
-        var db = this.activeDatabase();
-        var fs = this.activeFilesystem();
-        var cnt = this.activeCounterStorage();
-
-        if (appUrl.checkIsAreaActive('databases') == false) db = null;
-        if (appUrl.checkIsAreaActive('filesystems') == false) fs = null;
-        if (appUrl.checkIsAreaActive('counterstorages') == false) cnt = null;
-
-        return <resource>(cnt || fs || db || null);
-    });
+    public lastActivatedResource = ko.observable<resource>()
+        .subscribeTo("ActivateDatabase", true)
+        .subscribeTo("ActivateFilesystem", true)
+        .subscribeTo("ActivateCounterStorage", true);
 
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181

@@ -58,18 +58,27 @@ class shell extends viewModelBase {
     systemDatabase: database;
     isSystemConnected: KnockoutComputed<boolean>;
     isActiveDatabaseDisabled: KnockoutComputed<boolean>;
-    canShowDatabaseNavbar = ko.computed(() => !!this.activeDatabase() && this.appUrls.isAreaActive('databases')());
+    canShowDatabaseNavbar = ko.computed(() =>
+        !!this.lastActivatedResource()
+        && this.lastActivatedResource().type == database.type
+        && (this.appUrls.isAreaActive('databases')() || this.appUrls.isAreaActive('resources')()));
     databasesLoadedTask: JQueryPromise<any>;
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
 
     static fileSystems = ko.observableArray<filesystem>();
     isActiveFileSystemDisabled: KnockoutComputed<boolean>;
-    canShowFileSystemNavbar = ko.computed(() => !!this.activeFilesystem() && this.appUrls.isAreaActive('filesystems')());
+    canShowFileSystemNavbar = ko.computed(() =>
+        !!this.lastActivatedResource()
+        && this.lastActivatedResource().type == filesystem.type
+        && (this.appUrls.isAreaActive('filesystems')() || this.appUrls.isAreaActive('resources')()));
 
     static counterStorages = ko.observableArray<counterStorage>();
     isCounterStorageDisabled: KnockoutComputed<boolean>;
-    canShowCountersNavbar = ko.computed(() => !!this.activeCounterStorage() && this.appUrls.isAreaActive('counterstorages')());
+    canShowCountersNavbar = ko.computed(() =>
+        !!this.lastActivatedResource()
+        && this.lastActivatedResource().type == counterStorage.type
+        && (this.appUrls.isAreaActive('counterstorages')() || this.appUrls.isAreaActive('resources')()));
 
     canShowResourcesNavbar = ko.computed(() => {
         var canDb = this.canShowDatabaseNavbar();
@@ -152,12 +161,12 @@ class shell extends viewModelBase {
         });
 
         this.isActiveResourceDisabled = ko.computed(() => {
-            var activeRs = this.activeResource();
+            var activeRs = this.lastActivatedResource();
             return !!activeRs ? activeRs.disabled() : false;
         });
 
         this.listedResources = ko.computed(() => {
-            var currentResource = this.activeResource();
+            var currentResource = this.lastActivatedResource();
             if (!!currentResource) {
                 return shell.resources().filter(rs => (rs.type != currentResource.type || (rs.type == currentResource.type && rs.name != currentResource.name)) && rs.name != '<system>');
             }
