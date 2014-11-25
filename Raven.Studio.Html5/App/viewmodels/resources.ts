@@ -63,6 +63,10 @@ class resources extends viewModelBase {
                     continue;
                 }
 
+                if (!rs.isVisible()) {
+                    continue;
+                }
+
                 if (rs.isChecked() == false) {
                     return false;
                 }
@@ -225,8 +229,9 @@ class resources extends viewModelBase {
                 rs.isChecked(false);
                 continue;
             }
-
-            rs.isChecked(check);
+            if (rs.isVisible()) {   
+                rs.isChecked(check);
+            }
         }
     }
 
