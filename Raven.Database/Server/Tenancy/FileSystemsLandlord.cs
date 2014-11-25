@@ -99,32 +99,32 @@ namespace Raven.Database.Server.Tenancy
                                 string folderPropName,
                                 InMemoryRavenConfiguration parentConfiguration)
         {
-            var config = new InMemoryRavenConfiguration
-            {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
-            };
+	        var config = new InMemoryRavenConfiguration
+	        {
+		        Settings = new NameValueCollection(parentConfiguration.Settings),
+	        };
 
-            SetupTenantConfiguration(config);
+	        SetupTenantConfiguration(config);
 
-            config.CustomizeValuesForFileSystemTenant(tenantId);
-            config.Settings["Raven/FileSystem/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
+	        config.CustomizeValuesForFileSystemTenant(tenantId);
+	        config.Settings["Raven/FileSystem/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
 
-            foreach (var setting in document.Settings)
-            {
-                config.Settings[setting.Key] = setting.Value;
-            }
-            Unprotect(document);
+	        foreach (var setting in document.Settings)
+	        {
+		        config.Settings[setting.Key] = setting.Value;
+	        }
+	        Unprotect(document);
 
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
-            config.FileSystemName = tenantId;
+	        config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
+	        config.FileSystemName = tenantId;
 
-            config.Initialize();
-            config.CopyParentSettings(parentConfiguration);
-            return config;
+	        config.Initialize();
+	        config.CopyParentSettings(parentConfiguration);
+	        return config;
         }
 
-        public void Unprotect(FileSystemDocument configDocument)
+	    public void Unprotect(FileSystemDocument configDocument)
         {
             if (configDocument.SecuredSettings == null)
             {
