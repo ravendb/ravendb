@@ -1,14 +1,12 @@
 import shell = require("viewmodels/shell");
 import database = require("models/database");
-import filesystem = require("models/filesystem/filesystem");
 
 class databaseAccess {
 
     admin = ko.observable<boolean>();
     tenantId = ko.observable<string>();
     readOnly = ko.observable<boolean>();
-    databaseNames: KnockoutComputed<string[]>;
-    fileSystemNames: KnockoutComputed<string[]>;
+    resourceNames: KnockoutComputed<string[]>;
     searchResults: KnockoutComputed<string[]>;
     tenantCustomValidityError: KnockoutComputed<string>;
 
@@ -52,25 +50,22 @@ class databaseAccess {
         this.readOnly(dto.ReadOnly);
         this.tenantId(dto.TenantId != null ? dto.TenantId : '');
 
-        this.databaseNames = ko.computed(() => shell.databases().map((db: database) => db.name));
-        this.fileSystemNames = ko.computed(() => shell.fileSystems().map((fs: filesystem) => fs.name));
+        this.resourceNames = ko.computed(() => 
+            shell.databases().map((db: database) => db.name)
+            .concat(shell.fileSystems().map(fs => fs.name)).concat("*"));
 
         this.searchResults = ko.computed(() => {
-            var newDatabaseName: string = this.tenantId();
-
-            var dbNames = this.databaseNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
-            var fsNames = this.fileSystemNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
-            return dbNames.concat(fsNames).concat("*");
+            var newResourceName: string = this.tenantId();
+            return this.resourceNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
         });
 
         this.tenantCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             var newTenantId = this.tenantId();
-            var foundDb = this.databaseNames().first(name => newTenantId == name);
-            var foundFs = this.fileSystemNames().first(name => newTenantId == name);
+            var foundResource = this.resourceNames().first(name => newTenantId == name);
 
-            if (newTenantId != "*" && !foundDb && !foundFs && newTenantId.length > 0) {
-                errorMessage = "There is no database nor file system with such name!";
+            if (!foundResource && newTenantId.length > 0) {
+                errorMessage = "There is no database nor file system with such a name!";
             }
 
             return errorMessage;

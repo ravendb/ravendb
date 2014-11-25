@@ -1053,6 +1053,12 @@ more responsive application.
 			if (hasEnlisted || Transaction.Current == null)
 				return;
 
+			var dbName = DatabaseName ?? Constants.SystemDatabase;
+			if (documentStore.CanEnlistInDistributedTransactions(dbName) == false)
+			{
+				throw new InvalidOperationException("The database " + dbName + " cannot be used with distributed transactions");
+			}
+
 			HashSet<string> registered;
 			var localIdentifier = Transaction.Current.TransactionInformation.LocalIdentifier;
 			if (RegisteredStoresInTransaction.TryGetValue(localIdentifier, out registered) == false)

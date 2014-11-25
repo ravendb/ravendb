@@ -19,7 +19,7 @@
                     </ul>
                 </div>
 
-                <div data-bind="visible: canShowDatabaseNavbar, css: { 'menu-item-disabled': isActiveDatabaseDisabled }">
+                <div data-bind="visible: canShowDatabaseNavbar(), css: { 'menu-item-disabled': isActiveResourceDisabled }">
                     <ul class="nav navbar-nav">
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
                             <a data-bind="attr: { href: appUrls.documents }">Documents</a>
@@ -170,36 +170,17 @@
                                 <img style="height: 24px" src="content/images/raven.png" />
                             </a>
                         </li>
-                        <li class="dropdown navbar-right" data-bind="visible: canShowDatabaseNavbar">
-                            <a class="dropdown-toggle resource-link" data-toggle="dropdown" href="#" data-bind="with: activeDatabase, css: { 'resource-link-disabled': $root.listedDatabases().length == 0 }">
+                        <li class="dropdown navbar-right" data-bind="visible: canShowResourcesNavbar()">
+                            <a class="dropdown-toggle resource-link" data-toggle="dropdown" href="#" data-bind="with: lastActivatedResource, css: { 'resource-link-disabled': $root.listedResources().length == 0 }">
                                 <span data-bind="text: name"></span>
-                                <b class="caret" data-bind="visible: $root.listedDatabases().length > 0"></b>
+                                <b class="caret" data-bind="visible: $root.listedResources().length > 0"></b>
                             </a>
-                            <ul class="dropdown-menu" data-bind="foreach: listedDatabases">
+                            <ul class="dropdown-menu" data-bind="foreach: listedResources">
                                 <li>
-                                    <a href="#" data-bind="text: name, click: $root.selectResource.bind($root, $data)"></a>
-                                </li>
-                            </ul>
-                        </li>
-                        <li class="dropdown navbar-right" data-bind="visible: canShowFileSystemNavbar">
-                            <a class="dropdown-toggle resource-link" data-toggle="dropdown" href="#" data-bind="with: activeFilesystem, css: { 'resource-link-disabled': $root.listedFileSystems().length == 0 }">
-                                <span data-bind="text: name"></span>
-                                <b class="caret" data-bind="visible: $root.listedFileSystems().length > 0"></b>
-                            </a>
-                            <ul class="dropdown-menu" data-bind="foreach: listedFileSystems">
-                                <li>
-                                    <a href="#" data-bind="text: name, click: $root.selectResource.bind($root, $data), visible: isVisible"></a>
-                                </li>
-                            </ul>
-                        </li>
-                        <li class="dropdown navbar-right" data-bind="visible: canShowCountersNavbar">
-                            <a class="dropdown-toggle resource-link" data-toggle="dropdown" href="#" data-bind="with: activeCounterStorage, css: { 'resource-link-disabled': $root.listedCounterStorages().length == 0 }">
-                                <span data-bind="text: name"></span>
-                                <b class="caret" data-bind="visible: $root.listedCounterStorages().length > 0"></b>
-                            </a>
-                            <ul class="dropdown-menu" data-bind="foreach: listedCounterStorages">
-                                <li>
-                                    <a href="#" data-bind="text: name, click: $root.selectResource.bind($root, $data), visible: isVisible"></a>
+                                    <a href="#" data-bind="click: $root.selectResource.bind($root, $data)">
+                                        <span data-bind="attr: { class: $root.iconName($data) }"></span>
+                                        <span data-bind="text: name"></span>
+                                    </a>
                                 </li>
                             </ul>
                         </li>
@@ -212,20 +193,14 @@
                                             <i class="fa fa-caret-right" data-bind="visible: canShowDatabaseNavbar() || canShowFileSystemNavbar() || canShowCountersNavbar()"></i>&nbsp;
                                         </a>
                                     </li>
-                                    <li class="dropdown vertical-navbar-menu-item">
+                                    <li class="dropdown vertical-navbar-menu-item" data-bind="visible: appUrls.isAreaActive('admin')()">
                                         <a class="dropdown-toggle vertical-bottom-container" data-toggle="dropdown">
                                             <i class="fa fa-caret-down"></i>
                                         </a>
                                         <ul class="dropdown-menu">
                                             <li>
-                                                <a href="#databases" data-bind="click: navigateToResourceGroup.bind($root, appUrls.databases()), visible: !appUrls.isAreaActive('databases')()">Databases</a>
+                                                <a href="#resources" data-bind="click: navigateToResources.bind($root)">Resources</a>
                                             </li>
-                                            <li>
-                                                <a href="#filesystems" data-bind="click: navigateToResourceGroup.bind($root, appUrls.filesystems()), visible: !appUrls.isAreaActive('filesystems')()">File Systems</a>
-                                            </li>
-                                            <!--<li>
-                                                    <a data-bind="click: navigateToResourceGroup.bind($root, appUrls.couterStorages()), visible: !appUrls.isAreaActive('counterstorages')()">Counter Storages</a>
-                                                </li>-->
                                         </ul>
                                     </li>
                                 </ul>

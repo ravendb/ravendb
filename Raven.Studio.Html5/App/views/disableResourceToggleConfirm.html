@@ -15,10 +15,10 @@
         <div data-bind="visible: resourcesToDisable().length > 1">
             <span data-bind="text: deletionText"></span>
             <strong data-bind="text: resourcesToDisable().length"></strong>
-            <span data-bind="text: resourcesTypeText + ':'"></span>
+            resources
             <br />
             <ul data-bind="foreach: resourcesToDisable" style="max-height: 100px; overflow-y: auto;">
-                <li data-bind="text: name"></li>
+                <li><span data-bind="text: name"></span> (<span data-bind="text: type"></span>)</li>
             </ul>
         </div>
     </div>

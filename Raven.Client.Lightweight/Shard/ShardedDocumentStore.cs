@@ -287,6 +287,11 @@ namespace Raven.Client.Shard
 			ShardStrategy.Shards.ForEach(shard => shard.Value.InitializeProfiling());
 		}
 
+		public override bool CanEnlistInDistributedTransactions(string dbName)
+		{
+			return false;// sharding & dtc don't mix
+		}
+
 		/// <summary>
 		/// Initializes this instance.
 		/// </summary>

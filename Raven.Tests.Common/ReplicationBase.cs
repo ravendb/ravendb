@@ -42,7 +42,7 @@ namespace Raven.Tests.Common
             checkPorts = true;
         }
 
-        public DocumentStore CreateStore(bool enableCompressionBundle = false, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false, string requestedStorageType = "esent", bool useFiddler = false, [CallerMemberName] string databaseName = null)
+        public DocumentStore CreateStore(bool enableCompressionBundle = false, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false, string requestedStorageType = "voron", bool useFiddler = false, [CallerMemberName] string databaseName = null)
         {
             var port = PortRangeStart - stores.Count;
             return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization, requestedStorageType, useFiddler, databaseName);
@@ -56,7 +56,8 @@ namespace Raven.Tests.Common
         }
 
         private DocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false,
-            Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false, string storeTypeName = "esent", bool useFiddler = false, string databaseName = null)
+            Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false,
+			string storeTypeName = "voron", bool useFiddler = false, string databaseName = null)
         {
             var ravenDbServer = GetNewServer(port,
                 requestedStorage: storeTypeName,

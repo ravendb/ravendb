@@ -18,6 +18,14 @@
     checkboxToggle() {
         this.isChecked.toggle();
     }
+
+    isDatabase() {
+        return this.type == "database";
+    }
+
+    isFilesystem() {
+        return this.type == 'filesystem';
+    }
 }
 
 export = resource;
