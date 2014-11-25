@@ -594,6 +594,7 @@ task PushSymbolSources -depends InitNuget {
 }
 
 task CreateSymbolSources -depends CreateNugetPackages {
+	return;
 	
 	if ($global:uploadMode -ne "Stable") {
 		return; # this takes 20 minutes to run
@@ -670,6 +671,10 @@ task CreateSymbolSources -depends CreateNugetPackages {
 					Write-Host "Include also linked files of $($projectReference.Include)" -Fore Green
 
 					$srcDirName2 = [io.path]::GetFileNameWithoutExtension($projectPath)
+
+					if ($srcDirName2 -eq "Voron") {
+						$srcDirName2 = "Raven.Voron/" + $srcDirName2
+					}
 
 					Get-ChildItem $srcDirName2\*.cs -Recurse |	ForEach-Object {
 						$indexOf = $_.FullName.IndexOf($srcDirName2)	
