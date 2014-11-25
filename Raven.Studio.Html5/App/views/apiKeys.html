@@ -79,7 +79,7 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-sm-3 control-label">Databases</label>
+                            <label class="col-sm-3 control-label">Resources</label>
                             <div class="col-sm-9">
                                 <table class="table table-striped table-hover">
                                     <thead>
@@ -94,8 +94,8 @@
                                         </tr>
                                         <tr data-bind="visible: databases().length == 0">
                                             <td>
-                                                <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase" title="Add database">
-                                                    <i class="fa fa-plus"></i> Add database
+                                                <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase" title="Add Resource">
+                                                    <i class="fa fa-plus"></i> Add Resource
                                                 </button>
                                             </td>
                                         </tr>
@@ -104,7 +104,7 @@
                                         <tr>
                                             <td>
                                                 <div class="btn-group">
-                                                    <input tabindex="2" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'databaseName' + $parentContext.$index() + $index() }" placeholder="Database name">
+                                                    <input tabindex="2" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'databaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
                                                     <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName' + $parentContext.$index() + $index(), foreach: searchResults">
                                                         <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
                                                             <a role="menuitem" tabindex="-1" href="#" class="nounderline">

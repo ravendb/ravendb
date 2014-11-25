@@ -6,7 +6,7 @@ class databaseAccess {
     admin = ko.observable<boolean>();
     tenantId = ko.observable<string>();
     readOnly = ko.observable<boolean>();
-    databaseNames: KnockoutComputed<string[]>;
+    resourceNames: KnockoutComputed<string[]>;
     searchResults: KnockoutComputed<string[]>;
     tenantCustomValidityError: KnockoutComputed<string>;
 
@@ -50,20 +50,22 @@ class databaseAccess {
         this.readOnly(dto.ReadOnly);
         this.tenantId(dto.TenantId != null ? dto.TenantId : '');
 
-        this.databaseNames = ko.computed(() => shell.databases().map((db: database) => db.name).concat("*"));
+        this.resourceNames = ko.computed(() => 
+            shell.databases().map((db: database) => db.name)
+            .concat(shell.fileSystems().map(fs => fs.name)).concat("*"));
 
         this.searchResults = ko.computed(() => {
             var newDatabaseName: string = this.tenantId();
-            return this.databaseNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
+            return this.resourceNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
         });
 
         this.tenantCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             var newTenantId = this.tenantId();
-            var foundDb = this.databaseNames().first(name => newTenantId == name);
+            var foundDb = this.resourceNames().first(name => newTenantId == name);
 
             if (!foundDb && newTenantId.length > 0) {
-                errorMessage = "Database name doesn't exist!";
+                errorMessage = "Resource name doesn't exist!";
             }
 
             return errorMessage;
