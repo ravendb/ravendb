@@ -51,6 +51,9 @@ namespace Raven.Database.FileSystem
 
 		    Name = name;
 			this.systemConfiguration = systemConfiguration;
+
+			systemConfiguration.Container.SatisfyImportsOnce(this);
+
             transportState = receivedTransportState ?? new TransportState();
 
             storage = CreateTransactionalStorage(systemConfiguration);
@@ -68,6 +71,7 @@ namespace Raven.Database.FileSystem
             metricsCounters = new MetricsCountersManager();
 
             search = new IndexStorage(name, systemConfiguration);
+
             conflictArtifactManager = new ConflictArtifactManager(storage, search);
             storageOperationsTask = new StorageOperationsTask(storage, search, notificationPublisher); 
 
@@ -84,7 +88,12 @@ namespace Raven.Database.FileSystem
             var uuidGenerator = new UuidGenerator(sequenceActions);
             historian = new Historian(storage, replicationHiLo, uuidGenerator);
 
+			InitializeIndexCodecTriggers();
+
             search.Initialize(this);
+
+			InitializeTriggersExceptIndexCodecs();
+			SecondStageInitialization();
         }
 
         public static bool IsRemoteDifferentialCompressionInstalled
@@ -117,16 +126,35 @@ namespace Raven.Database.FileSystem
             }
         }
 
+		private void InitializeIndexCodecTriggers()
+		{
+			IndexCodecs.OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+		}
+
+		private void InitializeTriggersExceptIndexCodecs()
+		{
+			FileCodecs.OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+		}
+		
+
+		private void SecondStageInitialization()
+		{
+			FileCodecs
+				.OfType<IRequiresFileSystemInitialization>()
+				.Concat(IndexCodecs.OfType<IRequiresFileSystemInitialization>())
+				.Apply(initialization => initialization.SecondStageInit());
+		}
+
 		/// <summary>
 		///     This is used to hold state associated with this instance by external extensions
 		/// </summary>
 		public AtomicDictionary<object> ExtensionsState { get; private set; }
 
 		[ImportMany]
-		public OrderedPartCollection<AbstractFileCodec> FilesCodecs { get; set; }
+		public OrderedPartCollection<AbstractFileCodec> FileCodecs { get; set; }
 
 		[ImportMany]
-		public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
+		public OrderedPartCollection<AbstractFileSystemIndexCodec> IndexCodecs { get; set; }
 
 	    public ITransactionalStorage Storage
 		{

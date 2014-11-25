@@ -171,12 +171,13 @@ namespace Raven.Tests.Helpers
 			[CallerMemberName] string fileSystemName = null, 
 			Action<RavenConfiguration> customConfig = null,
 			string activeBundles = null,
-			string dataDirectory = null)
+			string dataDirectory = null,
+			bool runInMemory = true)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
 	        var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage, activeBundles: activeBundles, customConfig: customConfig,
-				dataDirectory: dataDirectory);
+				dataDirectory: dataDirectory, runInMemory: runInMemory);
             server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
             var store = new FilesStore()

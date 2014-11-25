@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
-using Microsoft.VisualBasic;
 using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.FileSystem;
@@ -87,14 +86,14 @@ namespace Raven.Bundles.Encryption.Settings
 		/// </summary>
 		public static void VerifyEncryptionKey(RavenFileSystem fileSystem, EncryptionSettings settings)
 		{
-			RavenJObject doc = null;
+			RavenJObject config = null;
 			try
 			{
 				fileSystem.Storage.Batch(accessor =>
 				{
 					try
 					{
-						doc = accessor.GetConfig(Constants.InResourceKeyVerificationDocumentName);
+						config = accessor.GetConfig(Constants.InResourceKeyVerificationDocumentName);
 					}
 					catch (FileNotFoundException)
 					{
@@ -107,17 +106,17 @@ namespace Raven.Bundles.Encryption.Settings
 					+ "currently in the configuration file.", e);
 			}
 
-			if (doc != null)
+			if (config != null)
 			{
 				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
-				if (!ravenJTokenEqualityComparer.Equals(doc, Constants.InResourceKeyVerificationDocumentContents))
+				if (!ravenJTokenEqualityComparer.Equals(config, Constants.InResourceKeyVerificationDocumentContents))
 					throw new ConfigurationErrorsException("The file system is encrypted with a different key and/or algorithm than the ones is currently configured");
 			}
 			else
 			{
-				// This is the first time the database is loaded.
-				if (EncryptedDocumentsExist(database))
-					throw new InvalidOperationException("The database already has existing documents, you cannot start using encryption now.");
+				// This is the first time the file system is loaded.
+				if (EncryptedFileExist(fileSystem))
+					throw new InvalidOperationException("The file system already has existing files, you cannot start using encryption now.");
 
 				var clonedDoc = (RavenJObject)Constants.InResourceKeyVerificationDocumentContents.CreateSnapshot();
 				fileSystem.Storage.Batch(accessor => accessor.SetConfig(Constants.InResourceKeyVerificationDocumentName, clonedDoc));
@@ -179,6 +178,42 @@ namespace Raven.Bundles.Encryption.Settings
 				// Found a document which is encrypted
 				return true;
 			}
+		}
+
+		private static bool EncryptedFileExist(RavenFileSystem fileSystem)
+		{
+			const int pageSize = 10;
+			var start = Guid.Empty;
+
+			bool foundEncryptedDoc = false;
+
+			while (true)
+			{
+				var foundMoreDocs = false;
+
+				fileSystem.Storage.Batch(accessor =>
+				{
+					var fileHeaders = accessor.GetFilesAfter(start, pageSize);
+
+					foreach (var fileHeader in fileHeaders)
+					{
+						foundMoreDocs = true;
+
+						if (EncryptionSettings.DontEncrypt(fileHeader.Name) == false)
+						{
+							foundEncryptedDoc = true;
+							break;
+						}
+
+						start = fileHeader.Etag;
+					}
+				});
+
+				if (foundEncryptedDoc || foundMoreDocs == false)
+					break;
+			}
+
+			return foundEncryptedDoc;
 		}
 
 		private static bool GetEncryptIndexesFromString(string value, bool defaultValue)

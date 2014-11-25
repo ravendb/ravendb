@@ -1,14 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Composition;
+﻿using System.ComponentModel.Composition;
 using System.IO;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Raven.Database.Plugins;
-using Raven.Json.Linq;
 using Raven.Bundles.Encryption.Streams;
 using Raven.Bundles.Encryption.Settings;
 using Raven.Database;

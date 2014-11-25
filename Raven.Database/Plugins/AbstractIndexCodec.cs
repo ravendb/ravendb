@@ -4,12 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
-using System.IO;
 
 namespace Raven.Database.Plugins
 {
 	[InheritedExport]
-	public abstract class AbstractIndexCodec : IRequiresDocumentDatabaseInitialization
+	public abstract class AbstractIndexCodec : AbstractBaseIndexCodec, IRequiresDocumentDatabaseInitialization
 	{
 		public virtual void Initialize(DocumentDatabase database)
 		{
@@ -20,9 +19,5 @@ namespace Raven.Database.Plugins
 		{
 
 		}
-
-		public abstract Stream Encode(string key, Stream dataStream);
-
-		public abstract Stream Decode(string key, Stream dataStream);
 	}
 }

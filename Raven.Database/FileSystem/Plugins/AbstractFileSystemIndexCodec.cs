@@ -3,22 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.IO;
+using System.ComponentModel.Composition;
+using Raven.Database.Plugins;
 
 namespace Raven.Database.FileSystem.Plugins
 {
-	public abstract class AbstractFileSystemIndexCodec : IRequiresFileSystemInitialization
+	[InheritedExport]
+	public abstract class AbstractFileSystemIndexCodec : AbstractBaseIndexCodec, IRequiresFileSystemInitialization
 	{
-		public void Initialize(RavenFileSystem fileSystem)
+		public virtual void Initialize(RavenFileSystem fileSystem)
 		{
 		}
 
-		public void SecondStageInit()
+		public virtual void SecondStageInit()
 		{
 		}
-
-		public abstract Stream Encode(string key, Stream dataStream);
-
-		public abstract Stream Decode(string key, Stream dataStream);
 	}
 }

@@ -17,7 +17,7 @@ namespace Raven.Tests.FileSystem.Encryption
 
 			await client.UploadAsync("test.txt", StringToStream("Lorem ipsum"));
 
-			AssertPlainTextIsNotSavedInFileSystem("test.txt", "Lorem ipsum");
+			AssertPlainTextIsNotSavedInFileSystem("test.txt", "Lorem", "ipsum");
 		}
 	}
 }

@@ -22,7 +22,7 @@ namespace Raven.Tests.FileSystem.Encryption
 
 		protected IAsyncFilesCommands NewAsyncClient([CallerMemberName] string fileSystemName = null)
 		{
-			return NewAsyncClient(fileSystemName: fileSystemName, dataDirectory: dataPath, activeBundles: "Encryption", customConfig: configuration =>
+			return NewAsyncClient(runInMemory: false, fileSystemName: fileSystemName, dataDirectory: dataPath, activeBundles: "Encryption", customConfig: configuration =>
 			{
 				configuration.Settings["Raven/Encryption/Key"] = "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8=";
 			});

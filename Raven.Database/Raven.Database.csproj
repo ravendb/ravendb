@@ -227,9 +227,11 @@
     <Compile Include="DiskIO\DiskPerformanceTester.cs" />
     <Compile Include="DiskIO\PerformanceTestRequest.cs" />
     <Compile Include="FileSystem\Bundles\Encryption\Plugin\FileEncryption.cs" />
+    <Compile Include="FileSystem\Bundles\Encryption\Plugin\FileSystemIndexEncryption.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileCodec.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileSystemIndexCodec.cs" />
     <Compile Include="FileSystem\Plugins\IRequiresFileSystemInitialization.cs" />
+    <Compile Include="Plugins\AbstractBaseIndexCodec.cs" />
     <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
     <Compile Include="Plugins\Builtins\CheckIncrementalBackupStatus.cs" />
     <Compile Include="Plugins\Builtins\PurgeOutdatedTombstones.cs" />
