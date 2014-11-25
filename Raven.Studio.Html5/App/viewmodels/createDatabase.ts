@@ -3,11 +3,12 @@ import document = require("models/document");
 import dialog = require("plugins/dialog");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import collection = require("models/collection");
-import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/database");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
+import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
-class createDatabase extends dialogViewModelBase {
+class createDatabase extends viewModelBase {
 
     public creationTask = $.Deferred();
     creationTaskStarted = false;
@@ -37,7 +38,7 @@ class createDatabase extends dialogViewModelBase {
     alertTimeout = ko.observable("");
     alertRecurringTimeout = ko.observable("");
 
-    constructor(private databases: KnockoutObservableArray<database>, private licenseStatus: KnockoutObservable<licenseStatusDto>) {
+    constructor(private databases: KnockoutObservableArray<database>, private licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
         super();
 
         this.licenseStatus = licenseStatus;
@@ -77,7 +78,6 @@ class createDatabase extends dialogViewModelBase {
     }
 
     attached() {
-        super.attached();
         this.databaseNameFocus(true);
     }
 
@@ -87,10 +87,6 @@ class createDatabase extends dialogViewModelBase {
         if (!this.creationTaskStarted) {
             this.creationTask.reject();
         }
-    }
-
-    cancel() {
-        dialog.close(this);
     }
 
     isBundleActive(name: string): boolean {
@@ -111,7 +107,7 @@ class createDatabase extends dialogViewModelBase {
         // creating the database.
 
         this.creationTaskStarted = true;
-        dialog.close(this);
+        dialog.close(this.parent);
         this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogsPath(), this.databaseIndexesPath(), this.storageEngine(),
             this.isIncrementalBackupChecked(), this.alertTimeout(), this.alertRecurringTimeout());
     }

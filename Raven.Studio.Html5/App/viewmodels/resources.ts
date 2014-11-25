@@ -305,16 +305,9 @@ class resources extends viewModelBase {
 	}
 
     newResource() {
-        //TODO: implement me
-    }
-
-    newDatabase() {
-        // Why do an inline require here? Performance.
-        // Since the database page is the common landing page, we want it to load quickly.
-        // Since the createDatabase page isn't required up front, we pull it in on demand.
-        require(["viewmodels/createDatabase"], createDatabase => {
-            var createDatabaseViewModel = new createDatabase(this.databases, license.licenseStatus);
-            createDatabaseViewModel
+        require(["viewmodels/createResource"], createResource => {
+            var createResourceViewModel = new createResource(this.databases, this.fileSystems, license.licenseStatus);
+            createResourceViewModel.createDatabasePart
                 .creationTask
                 .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, storageEngine: string, incrementalBackup: boolean
                     , alertTimeout: string, alertRecurringTimeout: string) => {
@@ -347,7 +340,12 @@ class resources extends viewModelBase {
 
                     this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings);
                 });
-            app.showDialog(createDatabaseViewModel);
+
+            createResourceViewModel.createFilesystemPart
+                 .creationTask
+                .done((fsSettings: fileSystemSettingsDto) => this.showCreationAdvancedStepsIfNecessary(fsSettings));
+
+            app.showDialog(createResourceViewModel);
         });
     }
 
@@ -454,16 +452,6 @@ class resources extends viewModelBase {
                 fullEncryptionName = "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
         }
         return fullEncryptionName;
-    }
-
-    newFileSystem() {
-        require(["viewmodels/filesystem/createFilesystem"], createFileSystem => {
-            var createFileSystemViewModel = new createFileSystem(this.fileSystems);
-            createFileSystemViewModel
-                .creationTask
-                .done((fsSettings: fileSystemSettingsDto) => this.showCreationAdvancedStepsIfNecessary(fsSettings));
-            app.showDialog(createFileSystemViewModel);
-        });
     }
 
     showCreationAdvancedStepsIfNecessary(fsSettings: fileSystemSettingsDto) {

@@ -1,10 +1,11 @@
 ﻿import app = require("durandal/app");
 import collection = require("models/collection");
-import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import dialog = require("plugins/dialog");
 import filesystem = require("models/filesystem/filesystem");
+import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
-class createFilesystem extends dialogViewModelBase {
+class createFilesystem extends viewModelBase {
 
     public creationTask = $.Deferred<fileSystemSettingsDto>();
     creationTaskStarted = false;
@@ -19,7 +20,7 @@ class createFilesystem extends dialogViewModelBase {
     logsCustomValidityError: KnockoutComputed<string>;
     fileSystemNameFocus = ko.observable(true);
 
-    constructor(private filesystems: KnockoutObservableArray<filesystem>) {
+    constructor(private filesystems: KnockoutObservableArray<filesystem>, private parent: dialogViewModelBase) {
         super();
 
         this.nameCustomValidityError = ko.computed(() => {
@@ -47,12 +48,7 @@ class createFilesystem extends dialogViewModelBase {
         });
     }
 
-    cancel() {
-        dialog.close(this);
-    }
-
     attached() {
-        super.attached();
         this.fileSystemNameFocus(true);
     }
 
@@ -67,7 +63,7 @@ class createFilesystem extends dialogViewModelBase {
     nextOrCreate() {
         // For now we're just creating the filesystem.
         this.creationTaskStarted = true;
-        dialog.close(this);
+        dialog.close(this.parent);
         this.creationTask.resolve({
             name: this.fileSystemName(),
             path: this.fileSystemPath(),
