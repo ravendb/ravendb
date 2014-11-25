@@ -40,7 +40,7 @@
                             <ul data-bind="foreach: canDelete">
                                 <li data-bind="text: $data"></li>
                             </ul>
-                            TODO: delete button
+                            <button data-bind="click: $root.deleteIndexes.bind($root, $index())" class="btn btn-primary">Delete indexes</button>
                         </div>
                     </div>
                 </div>
