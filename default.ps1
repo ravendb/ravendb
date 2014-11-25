@@ -564,7 +564,8 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 }
 
 task PushSymbolSources -depends InitNuget {
-	
+	return;
+
 	if ($global:uploadMode -ne "Stable") {
 		return; # this takes 20 minutes to run
 	}
