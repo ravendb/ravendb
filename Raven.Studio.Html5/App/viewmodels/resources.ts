@@ -422,9 +422,9 @@ class resources extends viewModelBase {
         if (!foundDatabase) {
             var newDatabase = new database(databaseName, false, bundles);
             this.databases.unshift(newDatabase);
+            this.filterResources();
             return newDatabase;
         }
-
         return foundDatabase;
     }
 
@@ -475,9 +475,9 @@ class resources extends viewModelBase {
         if (!foundFileSystem) {
             var newFileSystem = new filesystem(fileSystemName);
             this.fileSystems.unshift(newFileSystem);
+            this.filterResources();
             return newFileSystem;
         }
-
         return foundFileSystem;
     }
 
