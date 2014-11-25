@@ -62,6 +62,7 @@ namespace Raven.Tests.Core.Configuration
 			stronglyTypedConfiguration.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
 
 			var configurationComparer = new ConfigurationComparer(inMemoryConfiguration, stronglyTypedConfiguration, propertyPathsToIgnore);
+			configurationComparer.Ignore(x => x.LegacyTenantPath);
 
 			configurationComparer.Assert(expected => expected.RejectClientsModeEnabled.Value, actual => actual.RejectClientsMode);
 			configurationComparer.Assert(expected => expected.Replication.FetchingFromDiskTimeoutInSeconds.Value, actual => actual.Replication.FetchingFromDiskTimeoutInSeconds);
@@ -173,6 +174,12 @@ namespace Raven.Tests.Core.Configuration
 
 				assertedPropertyPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 				propertyPathsToCheck = GetPropertyPathsToCheck(inMemoryConfiguration).Where(x => propertyPathsToIgnore.Contains(x) == false).ToList();
+			}
+
+			public void Ignore(Expression<Func<InMemoryRavenConfiguration, object>> actual)
+			{
+				var propertyPath = actual.ToPropertyPath();
+				assertedPropertyPaths.Add(propertyPath);
 			}
 
 			public void Assert<T>(Expression<Func<StronglyTypedRavenSettings, T>> expected, Expression<Func<InMemoryRavenConfiguration, T>> actual)
