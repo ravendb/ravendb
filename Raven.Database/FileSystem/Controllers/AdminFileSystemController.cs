@@ -12,6 +12,7 @@ using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
+using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Json.Linq;
 using System;
@@ -85,7 +86,7 @@ namespace Raven.Database.FileSystem.Controllers
 				}, fileSystemNameFormat.ErrorCode);
 			}
 
-			if (FileSystemsLandlord.IsNotLicensed())
+			if (Authentication.IsLicensedForRavenFs == false)
 	        {
 				return GetMessageWithObject(new
 				{

@@ -273,6 +273,8 @@ interface suggestionDto {
     CanMerge: string[];
     Collection: string;
     MergedIndex: indexDefinitionDto;
+    CanDelete: string[];
+    SurpassingIndex: string;
 }
 
 interface indexDefinitionContainerDto {
