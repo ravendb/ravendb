@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
 using System.IO;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins
 {

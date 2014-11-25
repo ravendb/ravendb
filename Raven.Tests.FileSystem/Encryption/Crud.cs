@@ -11,7 +11,7 @@ namespace Raven.Tests.FileSystem.Encryption
 	public class Crud : FileSystemEncryptionTest
 	{
 		[Fact]
-		public async Task Foo()
+		public async Task ShouldEncryptData()
 		{
 			var client = NewAsyncClient();
 

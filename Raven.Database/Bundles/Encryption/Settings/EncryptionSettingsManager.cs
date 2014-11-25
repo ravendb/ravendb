@@ -1,16 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.VisualBasic;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Database;
-using Raven.Database.Plugins;
+using Raven.Database.FileSystem;
+using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Bundles.Encryption.Settings
 {
@@ -18,17 +18,16 @@ namespace Raven.Bundles.Encryption.Settings
 	{
 		private static readonly string EncryptionSettingsKeyInExtensionsState = Guid.NewGuid().ToString();
 
-		public static EncryptionSettings GetEncryptionSettingsForDatabase(DocumentDatabase database)
+		public static EncryptionSettings GetEncryptionSettingsForResource(IResourceStore resource)
 		{
-			var result = (EncryptionSettings)database.ExtensionsState.GetOrAdd(EncryptionSettingsKeyInExtensionsState, _ =>
+			var result = (EncryptionSettings)resource.ExtensionsState.GetOrAdd(EncryptionSettingsKeyInExtensionsState, _ =>
 			{
-				var type = GetTypeFromName(database.Configuration.Settings[Constants.AlgorithmTypeSetting]);
-				var key = GetKeyFromBase64(database.Configuration.Settings[Constants.EncryptionKeySetting], database.Configuration.Encryption.EncryptionKeyBitsPreference);
-				var encryptIndexes = GetEncryptIndexesFromString(database.Configuration.Settings[Constants.EncryptIndexes], true);
+				var type = GetTypeFromName(resource.Configuration.Settings[Constants.AlgorithmTypeSetting]);
+				var key = GetKeyFromBase64(resource.Configuration.Settings[Constants.EncryptionKeySetting], resource.Configuration.Encryption.EncryptionKeyBitsPreference);
+				var encryptIndexes = GetEncryptIndexesFromString(resource.Configuration.Settings[Constants.EncryptIndexes], true);
 
-				return new EncryptionSettings(key, type, encryptIndexes, database.Configuration.Encryption.EncryptionKeyBitsPreference);
+				return new EncryptionSettings(key, type, encryptIndexes, resource.Configuration.Encryption.EncryptionKeyBitsPreference);
 			});
-
 
 			return result;
 		}
@@ -86,12 +85,54 @@ namespace Raven.Bundles.Encryption.Settings
 		/// <summary>
 		/// Uses an encrypted document to verify that the encryption key is correct and decodes it to the right value.
 		/// </summary>
+		public static void VerifyEncryptionKey(RavenFileSystem fileSystem, EncryptionSettings settings)
+		{
+			RavenJObject doc = null;
+			try
+			{
+				fileSystem.Storage.Batch(accessor =>
+				{
+					try
+					{
+						doc = accessor.GetConfig(Constants.InResourceKeyVerificationDocumentName);
+					}
+					catch (FileNotFoundException)
+					{
+					}
+				});
+			}
+			catch (CryptographicException e)
+			{
+				throw new ConfigurationErrorsException("The file system is encrypted with a different key and/or algorithm than the ones "
+					+ "currently in the configuration file.", e);
+			}
+
+			if (doc != null)
+			{
+				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
+				if (!ravenJTokenEqualityComparer.Equals(doc, Constants.InResourceKeyVerificationDocumentContents))
+					throw new ConfigurationErrorsException("The file system is encrypted with a different key and/or algorithm than the ones is currently configured");
+			}
+			else
+			{
+				// This is the first time the database is loaded.
+				if (EncryptedDocumentsExist(database))
+					throw new InvalidOperationException("The database already has existing documents, you cannot start using encryption now.");
+
+				var clonedDoc = (RavenJObject)Constants.InResourceKeyVerificationDocumentContents.CreateSnapshot();
+				fileSystem.Storage.Batch(accessor => accessor.SetConfig(Constants.InResourceKeyVerificationDocumentName, clonedDoc));
+			}
+		}
+
+		/// <summary>
+		/// Uses an encrypted document to verify that the encryption key is correct and decodes it to the right value.
+		/// </summary>
 		public static void VerifyEncryptionKey(DocumentDatabase database, EncryptionSettings settings)
 		{
 			JsonDocument doc;
 			try
 			{
-				doc = database.Documents.Get(Constants.InDatabaseKeyVerificationDocumentName, null);
+				doc = database.Documents.Get(Constants.InResourceKeyVerificationDocumentName, null);
 			}
 			catch (CryptographicException e)
 			{
@@ -102,7 +143,7 @@ namespace Raven.Bundles.Encryption.Settings
 			if (doc != null)
 			{
 				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
-				if (!ravenJTokenEqualityComparer.Equals(doc.DataAsJson,Constants.InDatabaseKeyVerificationDocumentContents))
+				if (!ravenJTokenEqualityComparer.Equals(doc.DataAsJson, Constants.InResourceKeyVerificationDocumentContents))
 					throw new ConfigurationErrorsException("The database is encrypted with a different key and/or algorithm than the ones "
 						+ "currently in the configuration file.");
 			}
@@ -112,8 +153,8 @@ namespace Raven.Bundles.Encryption.Settings
 				if (EncryptedDocumentsExist(database))
 					throw new InvalidOperationException("The database already has existing documents, you cannot start using encryption now.");
 
-				var clonedDoc = (RavenJObject)Constants.InDatabaseKeyVerificationDocumentContents.CreateSnapshot();
-				database.Documents.Put(Constants.InDatabaseKeyVerificationDocumentName, null, clonedDoc, new RavenJObject(), null);
+				var clonedDoc = (RavenJObject)Constants.InResourceKeyVerificationDocumentContents.CreateSnapshot();
+				database.Documents.Put(Constants.InResourceKeyVerificationDocumentName, null, clonedDoc, new RavenJObject(), null);
 			}
 		}
 

@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Runtime.CompilerServices;
 using Raven.Client.FileSystem;
 using Raven.Database.Extensions;
 using Raven.Tests.Common.Util;
@@ -19,9 +20,9 @@ namespace Raven.Tests.FileSystem.Encryption
 			dataPath = NewDataPath("RavenFS_Encryption_Test", deleteOnDispose: false);
 		}
 
-		protected IAsyncFilesCommands NewAsyncClient()
+		protected IAsyncFilesCommands NewAsyncClient([CallerMemberName] string fileSystemName = null)
 		{
-			return NewAsyncClient(dataDirectory: dataPath, activeBundles: "Encryption", customConfig: configuration =>
+			return NewAsyncClient(fileSystemName: fileSystemName, dataDirectory: dataPath, activeBundles: "Encryption", customConfig: configuration =>
 			{
 				configuration.Settings["Raven/Encryption/Key"] = "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8=";
 			});

@@ -31,7 +31,7 @@ namespace Raven.Bundles.Encryption.Settings
 		public static bool DontEncrypt(string key)
 		{
 			return key.StartsWith(Constants.DontEncryptDocumentsStartingWith, StringComparison.OrdinalIgnoreCase)
-				&& key != Constants.InDatabaseKeyVerificationDocumentName;
+				&& key != Constants.InResourceKeyVerificationDocumentName;
 		}
 
 		public byte[] EncryptionKey

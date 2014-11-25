@@ -24,7 +24,7 @@ namespace Raven.Bundles.Encryption.Plugin
 
 		public override void Initialize(DocumentDatabase database)
 		{
-			settings = EncryptionSettingsManager.GetEncryptionSettingsForDatabase(database);
+			settings = EncryptionSettingsManager.GetEncryptionSettingsForResource(database);
 		}
 
 		public override Stream Encode(string key, Stream dataStream)
