@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text;
 using Xunit;
 
-namespace Raven.Tests.Bundles
+namespace Raven.Tests.Common.Util
 {
-	public static class TestUtil
+	public static class EncryptionTestUtil
 	{
 		public static bool ContainsSequence<T>(this IList<T> haystack, IList<T> needle)
 		{

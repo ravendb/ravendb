@@ -125,6 +125,7 @@
     <Compile Include="Util\ProcessDriver.cs" />
     <Compile Include="Util\ProxyServer.cs" />
     <Compile Include="Util\RavenDBDriver.cs" />
+    <Compile Include="Util\EncryptionTestUtil.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
