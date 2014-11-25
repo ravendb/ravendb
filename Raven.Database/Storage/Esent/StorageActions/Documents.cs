@@ -263,26 +263,23 @@ namespace Raven.Storage.Esent.StorageActions
 	            var key = Api.RetrieveColumnAsString(Session, Documents, tableColumnsCache.DocumentsColumns["key"],
 	                                                 Encoding.Unicode);
                
-                var doc = DocumentByKey(key);
-                var size = doc.SerializedSizeOnDisk;
+                var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+                var size = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? -1;
                 stat.TotalSize += size;
 	            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
 	            {
-                    stat.System.Update(size, doc.Key);
+                    stat.System.Update(size, key);
 	            }
 
 
-	            var metadata =
-	                Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
-
-	            var entityName = metadata.Value<string>(Constants.RavenEntityName);
+		        var entityName = metadata.Value<string>(Constants.RavenEntityName);
 	            if (string.IsNullOrEmpty(entityName))
 	            {
-                    stat.NoCollection.Update(size, doc.Key);
+					stat.NoCollection.Update(size, key);
 	            }
 	            else
 	            {
-                    stat.IncrementCollection(entityName, size, doc.Key);
+					stat.IncrementCollection(entityName, size, key);
 	            }
 
 	            if (metadata.ContainsKey("Raven-Delete-Marker"))
