@@ -1054,7 +1054,7 @@ more responsive application.
 				return;
 
 			var dbName = DatabaseName ?? Constants.SystemDatabase;
-			if (documentStore.CanEnlistInDistributedTransactions(dbName))
+			if (documentStore.CanEnlistInDistributedTransactions(dbName) == false)
 			{
 				throw new InvalidOperationException("The database " + dbName + " cannot be used with distributed transactions");
 			}
