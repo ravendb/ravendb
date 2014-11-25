@@ -19,13 +19,15 @@ namespace Raven.Tests.Bundles.Encryption
 		public Encryption()
 		{
 			path = NewDataPath();
-			createServer();
+			CreateServer();
 			documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
 		}
 
-		private void createServer()
+		private void CreateServer()
 		{
-            ravenDbServer = GetNewServer(runInMemory: false, dataDirectory: path, activeBundles: "Encryption", configureConfig: configuration =>
+            ravenDbServer = GetNewServer(
+				runInMemory: false, dataDirectory: path, activeBundles: "Encryption",
+				configureConfig: configuration =>
 			{
 				configuration.Settings["Raven/Encryption/Key"] = "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8=";
 			});
@@ -41,7 +43,7 @@ namespace Raven.Tests.Bundles.Encryption
 		protected void RecycleServer()
 		{
 			ravenDbServer.Dispose();
-			createServer();
+			CreateServer();
 		}
 
 		protected void Close()

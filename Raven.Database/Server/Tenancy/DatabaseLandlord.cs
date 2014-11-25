@@ -198,20 +198,7 @@ namespace Raven.Database.Server.Tenancy
                 config.Settings[securedSetting.Key] = securedSetting.Value;
             }
 
-	        var originalDataDir = config.Settings[folderPropName];
-	        config.Settings[folderPropName] = originalDataDir.ToFullPath();
-
-	        if (parentConfiguration.LegacyTenantPath && 
-				parentConfiguration.RunInMemory == false && 
-				config.RunInMemory == false &&
-				string.Equals(config.Settings["Raven/RunInMemory"], "True",StringComparison.OrdinalIgnoreCase) == false)
-	        {
-		        var legacyPath = originalDataDir.ToFullPath(parentConfiguration.DataDirectory);
-		        if (Directory.Exists(legacyPath))
-		        {
-			        config.Settings[folderPropName] = legacyPath;
-		        }
-	        }
+			config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
 
             config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
             config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);

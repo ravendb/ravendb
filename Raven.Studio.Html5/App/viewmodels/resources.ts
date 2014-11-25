@@ -330,7 +330,7 @@ class resources extends viewModelBase {
                     if (alertRecurringTimeout !== "") {
                         settings["Raven/IncrementalBackup/RecurringAlertTimeoutDays"] = alertRecurringTimeout;
                     }
-                    settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/Databases/" + databaseName;
+                    settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/" + databaseName;
                     if (!this.isEmptyStringOrWhitespace(databaseLogs)) {
                         settings["Raven/Esent/LogsPath"] = databaseLogs;
                     }
