@@ -457,6 +457,11 @@ namespace Raven.Database.FileSystem.Controllers
                 {
                     ravenConfiguration.FileSystem.DataDirectory = restoreRequest.FilesystemLocation;
                 }
+				if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
+					ravenConfiguration.DefaultStorageTypeName = "Esent";
+				else
+					ravenConfiguration.DefaultStorageTypeName = "Voron";
+
 
                 using (var transactionalStorage = RavenFileSystem.CreateTransactionalStorage(ravenConfiguration))
                 {
