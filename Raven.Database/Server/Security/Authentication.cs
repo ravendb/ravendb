@@ -5,34 +5,31 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Database.Commercial;
 
 namespace Raven.Database.Server.Security
 {
 	public static class Authentication
 	{
-	    private static bool isEnabled, isEnabledRavenFsForOneMinute;
-		private static Timer timer;
+	    private static bool isEnabled;
+		private static DateTime? ravenFsEnabled;
 
         public static void EnableOnce()
         {
             isEnabled = true;
-	        isEnabledRavenFsForOneMinute = true;
-
-			timer = new Timer(o =>
-			{
-				isEnabledRavenFsForOneMinute = false;
-				timer.Dispose();
-			}, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+	        ravenFsEnabled = SystemTime.UtcNow.AddMinutes(1);
         }
 
 		public static bool IsLicensedForRavenFs
 		{
 			get
 			{
-				if (isEnabledRavenFsForOneMinute)
+				if (ravenFsEnabled != null)
 				{
-					return true;
+					if (SystemTime.UtcNow < ravenFsEnabled.Value)
+						return true;
+					ravenFsEnabled = null;
 				}
 
 				string ravenFsValue;

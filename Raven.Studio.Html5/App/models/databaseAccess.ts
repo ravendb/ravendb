@@ -55,17 +55,17 @@ class databaseAccess {
             .concat(shell.fileSystems().map(fs => fs.name)).concat("*"));
 
         this.searchResults = ko.computed(() => {
-            var newDatabaseName: string = this.tenantId();
-            return this.resourceNames().filter((name) => name.toLowerCase().indexOf(newDatabaseName.toLowerCase()) > -1);
+            var newResourceName: string = this.tenantId();
+            return this.resourceNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
         });
 
         this.tenantCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             var newTenantId = this.tenantId();
-            var foundDb = this.resourceNames().first(name => newTenantId == name);
+            var foundResource = this.resourceNames().first(name => newTenantId == name);
 
-            if (!foundDb && newTenantId.length > 0) {
-                errorMessage = "Resource name doesn't exist!";
+            if (!foundResource && newTenantId.length > 0) {
+                errorMessage = "There is no database nor file system with such a name!";
             }
 
             return errorMessage;

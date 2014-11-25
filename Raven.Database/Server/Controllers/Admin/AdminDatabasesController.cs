@@ -71,7 +71,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				if (!dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
 				    !dbDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
 				{
-					return GetMessageWithString(string.Format("Failed to create '{0}' database, becuase of not valid encryption configuration.", id), HttpStatusCode.BadRequest);
+					return GetMessageWithString(string.Format("Failed to create '{0}' database, because of not valid encryption configuration.", id), HttpStatusCode.BadRequest);
 				}
 			}
 
