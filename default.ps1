@@ -288,7 +288,17 @@ function SignFile($filePath){
 	}
     
     Write-Host "Signing the following file: $filePath"
-	Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "http://timestamp.verisign.com/scripts/timstamp.dll" "$filePath" }
+
+    $timeservers = @("http://tsa.starfieldtech.com", "http://timestamp.globalsign.com/scripts/timstamp.dll", "http://timestamp.comodoca.com/authenticode", "http://www.startssl.com/timestamp", "http://timestamp.verisign.com/scripts/timstamp.dll")
+    foreach ($time in $timeservers) {
+    	try {
+    		Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "$time" "$filePath" }
+    		return
+    	}
+    	catch {
+    		continue
+    	}
+	}
 }
 
 task SignServer {
