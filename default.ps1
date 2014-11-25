@@ -288,7 +288,8 @@ function SignFile($filePath){
 	}
     
     Write-Host "Signing the following file: $filePath"
-	Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "http://timestamp.verisign.com/scripts/timstamp.dll" "$filePath" }
+
+	Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "http://www.trustcenter.de/codesigning/timestamp" "$filePath" }
 }
 
 task SignServer {
