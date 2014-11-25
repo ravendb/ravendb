@@ -8327,3 +8327,12 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   max-height: 300px;
   overflow-x: hidden;
 }
+#resources-page .resources-container .resource.fs a {
+  color: #7109AA;
+}
+#resources-page .resources-container .resource.fs:hover {
+  box-shadow: 0 0 5px 0 #ab26f3;
+}
+#resources-page .resources-container .resource.fs.selected {
+  box-shadow: 0 0 20px 0 #7109AA;
+}
