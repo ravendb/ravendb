@@ -310,31 +310,14 @@ task SignInstaller {
 
   $installerFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
   SignFile($installerFile)
-} 
-
-task CreateDocs {
-	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-	
-	if($env:buildlabel -eq 13)
-	{
-	  return 
-	}
-
-	if ($global:uploadMode -ne "Stable"){
-		return; # this takes 8 minutes to run
-	}
-	 
-	# we expliclty allows this to fail
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$build_dir\" }
 }
 
-task CopyRootFiles -depends CreateDocs {
+task CopyRootFiles {
 	cp $base_dir\license.txt $build_dir\Output\license.txt
 	cp $base_dir\Scripts\Start.cmd $build_dir\Output\Start.cmd
 	cp $base_dir\Scripts\Raven-UpdateBundles.ps1 $build_dir\Output\Raven-UpdateBundles.ps1
 	cp $base_dir\Scripts\Raven-GetBundles.ps1 $build_dir\Output\Raven-GetBundles.ps1
 	cp $base_dir\readme.md $build_dir\Output\readme.txt
-	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
 	cp $base_dir\acknowledgments.txt $build_dir\Output\acknowledgments.txt
 	cp $base_dir\CommonAssemblyInfo.cs $build_dir\Output\CommonAssemblyInfo.cs
 	
