@@ -156,7 +156,6 @@ namespace Voron.Impl.Backup
                             numberOfBackedUpPages += pagesToCopy;
                         }
 
-                        //Debug.Assert(lastBackedUpPage != -1);
 
                         env.HeaderAccessor.Modify(header =>
                         {
@@ -184,8 +183,9 @@ namespace Voron.Impl.Backup
                             jrnl.Release();
                         }
                     }
-                    infoNotify(string.Format("Voron Incr Backup total {0} pages", numberOfBackedUpPages));
-                    return numberOfBackedUpPages;
+					infoNotify(string.Format("Voron Incr Backup total {0} pages", numberOfBackedUpPages));
+					file.Flush(true); // make sure that this is actually persisted fully to disk
+					return numberOfBackedUpPages;
                 }
             }
         }
