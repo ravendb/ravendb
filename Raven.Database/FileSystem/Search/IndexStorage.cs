@@ -111,10 +111,10 @@ namespace Raven.Database.FileSystem.Search
             bool recoveryTried = false;
             while (true)
             {
-                LuceneCodecDirectory luceneDirectory = null;
+                FSDirectory luceneDirectory = null;
                 try
                 {
-					luceneDirectory = OpenOrCreateLuceneDirectory(indexDirectory, filesystem.IndexCodecs.OfType<AbstractFileSystemIndexCodec>());
+					luceneDirectory = OpenOrCreateLuceneDirectory(indexDirectory);
 
                     if (!IsIndexStateValid(luceneDirectory))
                         throw new InvalidOperationException("Sanity check on the index failed.");
@@ -184,7 +184,7 @@ namespace Raven.Database.FileSystem.Search
             {
                 IOExtensions.DeleteDirectory(indexDirectory);
 
-				var luceneDirectory = OpenOrCreateLuceneDirectory(indexDirectory, filesystem.IndexCodecs.OfType<AbstractFileSystemIndexCodec>());
+				var luceneDirectory = OpenOrCreateLuceneDirectory(indexDirectory);
 
                 using ( var indexWriter = new IndexWriter(luceneDirectory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED) )
                 {
@@ -205,9 +205,9 @@ namespace Raven.Database.FileSystem.Search
 			}
         }
 
-		private LuceneCodecDirectory OpenOrCreateLuceneDirectory(string path, IEnumerable<AbstractFileSystemIndexCodec> codecs)
+		private FSDirectory OpenOrCreateLuceneDirectory(string path)
         {
-            var luceneDirectory = new LuceneCodecDirectory(path, codecs);
+			var luceneDirectory = FSDirectory.Open(new DirectoryInfo(path));
 
             try
             {

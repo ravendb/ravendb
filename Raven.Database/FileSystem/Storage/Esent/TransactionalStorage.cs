@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.ConstrainedExecution;
@@ -18,13 +17,11 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage.Esent.Backup;
-using Raven.Json.Linq;
-
-using Voron.Impl.Backup;
-
 using BackupOperation = Raven.Database.FileSystem.Storage.Esent.Backup.BackupOperation;
 
 namespace Raven.Database.FileSystem.Storage.Esent
@@ -33,6 +30,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 	{
 		private readonly InMemoryRavenConfiguration configuration;
 
+		private OrderedPartCollection<AbstractFileCodec> fileCodecs;
 		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
 		private readonly string database;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
@@ -118,8 +116,13 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			}
 		}
 
-		public void Initialize()
+		public void Initialize(OrderedPartCollection<AbstractFileCodec> codecs)
 		{
+			if(codecs == null)
+				throw new ArgumentException("codecs");
+
+			fileCodecs = codecs;
+
 			try
 			{
 				new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
@@ -311,7 +314,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
 			try
 			{
-				using (var storageActionsAccessor = new StorageActionsAccessor(tableColumnsCache, instance, database))
+				using (var storageActionsAccessor = new StorageActionsAccessor(tableColumnsCache, instance, database, fileCodecs))
 				{
 					current.Value = storageActionsAccessor;
 

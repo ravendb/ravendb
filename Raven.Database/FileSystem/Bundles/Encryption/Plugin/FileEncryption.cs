@@ -7,7 +7,6 @@ using System.ComponentModel.Composition;
 using System.IO;
 using Raven.Bundles.Encryption.Settings;
 using Raven.Database.FileSystem.Plugins;
-using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Bundles.Encryption.Plugin
 {
@@ -16,6 +15,8 @@ namespace Raven.Database.FileSystem.Bundles.Encryption.Plugin
 	[ExportMetadata("Bundle", "Encryption")]
 	public class FileEncryption : AbstractFileCodec
 	{
+		private const string PageEncryptionMarker = "{AE63BE19}";
+
 		private EncryptionSettings settings;
 
 		public override void Initialize()
@@ -28,20 +29,14 @@ namespace Raven.Database.FileSystem.Bundles.Encryption.Plugin
 			EncryptionSettingsManager.VerifyEncryptionKey(FileSystem, settings);
 		}
 
-		public override Stream Encode(string key, Stream data, RavenJObject metadata)
+		public override Stream EncodePage(Stream data)
 		{
-			if (EncryptionSettings.DontEncrypt(key))
-				return data;
-
-			return settings.Codec.Encode(key, data);
+			return settings.Codec.Encode(PageEncryptionMarker, data);
 		}
 
-		public override Stream Decode(string key, Stream encodedDataStream, RavenJObject metadata)
+		public override Stream DecodePage(Stream encodedDataStream)
 		{
-			if (EncryptionSettings.DontEncrypt(key))
-				return encodedDataStream;
-
-			return settings.Codec.Decode(key, encodedDataStream);
+			return settings.Codec.Decode(PageEncryptionMarker, encodedDataStream);
 		}
 	}
 }

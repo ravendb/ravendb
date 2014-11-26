@@ -8,7 +8,6 @@ using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Plugins;
-using Raven.Database.Plugins;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.FileSystem.Infrastructure;
@@ -79,16 +78,14 @@ namespace Raven.Database.FileSystem
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
 		}        
 
-        public void Initialize ()
+        public void Initialize()
         {
-            storage.Initialize();
+            storage.Initialize(FileCodecs);
 
             var replicationHiLo = new SynchronizationHiLo(storage);
             var sequenceActions = new SequenceActions(storage);
             var uuidGenerator = new UuidGenerator(sequenceActions);
             historian = new Historian(storage, replicationHiLo, uuidGenerator);
-
-			InitializeIndexCodecTriggers();
 
             search.Initialize(this);
 
@@ -126,11 +123,6 @@ namespace Raven.Database.FileSystem
             }
         }
 
-		private void InitializeIndexCodecTriggers()
-		{
-			IndexCodecs.OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
-		}
-
 		private void InitializeTriggersExceptIndexCodecs()
 		{
 			FileCodecs.OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
@@ -141,7 +133,6 @@ namespace Raven.Database.FileSystem
 		{
 			FileCodecs
 				.OfType<IRequiresFileSystemInitialization>()
-				.Concat(IndexCodecs.OfType<IRequiresFileSystemInitialization>())
 				.Apply(initialization => initialization.SecondStageInit());
 		}
 
@@ -152,9 +143,6 @@ namespace Raven.Database.FileSystem
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractFileCodec> FileCodecs { get; set; }
-
-		[ImportMany]
-		public OrderedPartCollection<AbstractFileSystemIndexCodec> IndexCodecs { get; set; }
 
 	    public ITransactionalStorage Storage
 		{

@@ -30,8 +30,8 @@ namespace Raven.Database.FileSystem.Plugins
 
 		}
 
-		public abstract Stream Encode(string key, Stream data, RavenJObject metadata);
+		public abstract Stream EncodePage(Stream data);
 
-		public abstract Stream Decode(string key, Stream encodedDataStream, RavenJObject metadata);
+		public abstract Stream DecodePage(Stream encodedDataStream);
 	}
 }

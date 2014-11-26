@@ -105,7 +105,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
 			{
-				cbMax = StorageConstants.MaxPageSize,
+				cbMax = 4 * StorageConstants.MaxPageSize, // handle possible data expansion because of codecs usage
 				coltyp = JET_coltyp.LongBinary,
 				grbit = ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);

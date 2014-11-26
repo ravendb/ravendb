@@ -453,11 +453,11 @@ namespace Raven.Database.FileSystem.Controllers
 			{
 				while (true)
 				{
-					var totalSizeRead = await inputStream.ReadAsync(buffer);
+					var read = await inputStream.ReadAsync(buffer);
 
-					TotalSizeRead += totalSizeRead;
+					TotalSizeRead += read;
 
-					if (totalSizeRead == 0) // nothing left to read
+					if (read == 0) // nothing left to read
 					{
 						storage.Batch(accessor => accessor.CompleteFileUpload(filename));
 					    FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
@@ -466,11 +466,11 @@ namespace Raven.Database.FileSystem.Controllers
 
 					ConcurrencyAwareExecutor.Execute(() => storage.Batch(accessor =>
 					{
-						var hashKey = accessor.InsertPage(buffer, totalSizeRead);
-						accessor.AssociatePage(filename, hashKey, pos, totalSizeRead);
+						var hashKey = accessor.InsertPage(buffer, read);
+						accessor.AssociatePage(filename, hashKey, pos, read);
 					}));
 
-					md5Hasher.TransformBlock(buffer, 0, totalSizeRead);
+					md5Hasher.TransformBlock(buffer, 0, read);
 
 					pos++;
 				}
