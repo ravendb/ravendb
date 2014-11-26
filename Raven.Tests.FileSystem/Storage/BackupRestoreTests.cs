@@ -78,10 +78,10 @@ namespace Raven.Tests.FileSystem.Storage
             }
         }
 
-        [Theory(Skip = "currently failing because")]
+        [Theory]
         [PropertyData("Storages")]
         public async Task CanRestoreIncrementalBackupToDifferentFilesystem(string requestedStorage)
-        {            
+        {
             using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig:config =>
             {
                 config.Settings["Raven/Esent/CircularLog"] = "false";
