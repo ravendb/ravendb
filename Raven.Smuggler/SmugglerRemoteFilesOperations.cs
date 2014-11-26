@@ -122,6 +122,18 @@ namespace Raven.Smuggler
         {
             throw new NotSupportedException();
         }
+
+	    public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+	    {
+			if (metadata != null)
+			{
+				metadata.Remove(SynchronizationConstants.RavenSynchronizationHistory);
+				metadata.Remove(SynchronizationConstants.RavenSynchronizationSource);
+				metadata.Remove(SynchronizationConstants.RavenSynchronizationVersion);
+			}
+
+			return metadata;
+	    }
     }
 
 

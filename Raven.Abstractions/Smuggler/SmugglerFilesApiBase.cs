@@ -331,6 +331,9 @@ namespace Raven.Abstractions.Smuggler
                         var entry = filesLookup[container.Key];
                         using (var dataStream = entry.Open())
                         {
+	                        if (Options.StripReplicationInformation) 
+								container.Metadata = Operations.StripReplicationInformationFromMetadata(container.Metadata);
+
                             var header = new FileHeader(container.Key, container.Metadata);
                             await Operations.PutFiles(header, dataStream, entry.Length);
                         }
@@ -420,6 +423,9 @@ namespace Raven.Abstractions.Smuggler
                         var tempLastEtag = file.Etag;
                         if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
                             break;
+
+						if (Options.StripReplicationInformation)
+							file.Metadata = Operations.StripReplicationInformationFromMetadata(file.Metadata);
 
                         var downloadedFile = await Operations.DownloadFile(file);
                         await Operations.PutFiles( file, downloadedFile, file.TotalSize.Value );
