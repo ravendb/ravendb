@@ -191,10 +191,10 @@ namespace Raven.Client.FileSystem
 
         public IFilesStore Initialize()
         {
-            return Initialize(false);
+            return Initialize(true, false);
         }
 
-        public IFilesStore Initialize(bool ensureFileSystemExists)
+        public IFilesStore Initialize(bool ensureFileSystemExists = true, bool failIfCannotCreate = true)
         {
             if (initialized)
                 return this;
@@ -209,9 +209,17 @@ namespace Raven.Client.FileSystem
 
                 if (ensureFileSystemExists && string.IsNullOrEmpty(DefaultFileSystem) == false)
                 {
-                    AsyncFilesCommands.ForFileSystem(DefaultFileSystem)
-                                      .EnsureFileSystemExistsAsync()
-                                      .Wait();
+                    try
+                    {
+                        AsyncFilesCommands.ForFileSystem(DefaultFileSystem)
+                                          .EnsureFileSystemExistsAsync()
+                                          .Wait();
+                    }
+                    catch(Exception)
+                    {
+                        if (failIfCannotCreate)
+                            throw;
+                    }
                 }
             }
             catch (Exception)
