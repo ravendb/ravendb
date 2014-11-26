@@ -106,6 +106,16 @@ namespace Raven.Database.FileSystem.Controllers
             }
 
             var fsDoc = await ReadJsonObjectAsync<FileSystemDocument>();
+
+			if (fsDoc.Settings.ContainsKey(Constants.ActiveBundles) && fsDoc.Settings[Constants.ActiveBundles].Contains("Encryption"))
+			{
+				if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
+					!fsDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
+				{
+					return GetMessageWithString(string.Format("Failed to create '{0}' file system, because of invalid encryption configuration.", id), HttpStatusCode.BadRequest);
+				}
+			}
+
 			FileSystemsLandlord.Protect(fsDoc);
 			var json = RavenJObject.FromObject(fsDoc);
             json.Remove("Id");

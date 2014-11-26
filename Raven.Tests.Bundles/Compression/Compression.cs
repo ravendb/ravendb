@@ -7,6 +7,7 @@ using System.IO;
 using Raven.Client.Document;
 using Raven.Server;
 using Raven.Tests.Common;
+using Raven.Tests.Common.Util;
 
 namespace Raven.Tests.Bundles.Compression
 {
@@ -28,7 +29,7 @@ namespace Raven.Tests.Bundles.Compression
 		{
 			documentStore.Dispose();
 			ravenDbServer.Dispose();
-			TestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, file => Path.GetExtension(file) != ".cfs");
+			EncryptionTestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, file => Path.GetExtension(file) != ".cfs");
 		}
 	}
 }

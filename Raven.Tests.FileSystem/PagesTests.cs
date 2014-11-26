@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Specialized;
-
+using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage.Esent;
 
 using Xunit;
@@ -33,7 +34,7 @@ namespace Raven.Tests.FileSystem
 
 			IOExtensions.DeleteDirectory("test");
 			storage = new TransactionalStorage(configuration);
-			storage.Initialize();
+			storage.Initialize(new OrderedPartCollection<AbstractFileCodec>());
 		}
 
 		[Fact]

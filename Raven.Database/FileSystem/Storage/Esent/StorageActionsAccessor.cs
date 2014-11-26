@@ -6,18 +6,16 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Web;
 
 using Microsoft.Isam.Esent.Interop;
-
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.MEF;
 using Raven.Database.Extensions;
-using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage.Exceptions;
 using Raven.Database.FileSystem.Synchronization.Rdc;
 using Raven.Database.FileSystem.Util;
@@ -34,7 +32,8 @@ namespace Raven.Database.FileSystem.Storage.Esent
 		private readonly JET_DBID database;
 		private readonly Session session;
 		private readonly TableColumnsCache tableColumnsCache;
-		private Table config;
+	    private readonly OrderedPartCollection<AbstractFileCodec> fileCodecs;
+	    private Table config;
 		private Table details;
 
 		private Table files;
@@ -43,10 +42,11 @@ namespace Raven.Database.FileSystem.Storage.Esent
 		private Transaction transaction;
 		private Table usage;
 
-		public StorageActionsAccessor(TableColumnsCache tableColumnsCache, JET_INSTANCE instance, string databaseName)
+		public StorageActionsAccessor(TableColumnsCache tableColumnsCache, JET_INSTANCE instance, string databaseName, OrderedPartCollection<AbstractFileCodec> fileCodecs)
 		{
             this.lastEtag = new Guid("ffffffff-ffff-ffff-ffff-ffffffffffff").TransformToValueForEsentSorting();
 			this.tableColumnsCache = tableColumnsCache;
+			this.fileCodecs = fileCodecs;
 			try
 			{
 				session = new Session(instance);
@@ -150,7 +150,16 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			{
 				Api.SetColumn(session, Pages, tableColumnsCache.PagesColumns["page_strong_hash"], key.Strong);
 				Api.SetColumn(session, Pages, tableColumnsCache.PagesColumns["page_weak_hash"], key.Weak);
-				Api.JetSetColumn(session, Pages, tableColumnsCache.PagesColumns["data"], buffer, size, SetColumnGrbit.None, null);
+
+				using (var columnStream = new ColumnStream(session, Pages, tableColumnsCache.PagesColumns["data"]))
+				{
+					using (Stream stream = new BufferedStream(columnStream))
+					using (var finalStream = fileCodecs.Aggregate(stream, (current, codec) => codec.EncodePage(current)))
+					{
+						finalStream.Write(buffer, 0, size);
+						finalStream.Flush();
+					}
+				}
 
 				try
 				{
@@ -269,10 +278,13 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			if (Api.TrySeek(session, Pages, SeekGrbit.SeekEQ) == false)
 				return -1;
 
-			int size;
-			Api.JetRetrieveColumn(session, Pages, tableColumnsCache.PagesColumns["data"], buffer, buffer.Length, out size,
-			                      RetrieveColumnGrbit.None, null);
-			return size;
+			using (Stream stream = new BufferedStream(new ColumnStream(session, Pages, tableColumnsCache.PagesColumns["data"])))
+			{
+				using (var decodedStream = fileCodecs.Aggregate(stream, (bytes, codec) => codec.DecodePage(bytes)))
+				{
+					return decodedStream.Read(buffer, 0, buffer.Length);
+				}
+			}
 		}
 
         public FileHeader ReadFile(string filename)

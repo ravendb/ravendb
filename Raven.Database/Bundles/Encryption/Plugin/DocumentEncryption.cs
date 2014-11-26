@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.Composition;
 using System.IO;
 using Raven.Bundles.Encryption.Settings;
-using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
@@ -16,7 +15,7 @@ namespace Raven.Bundles.Encryption.Plugin
 
 		public override void Initialize()
 		{
-			settings = EncryptionSettingsManager.GetEncryptionSettingsForDatabase(Database);
+			settings = EncryptionSettingsManager.GetEncryptionSettingsForResource(Database);
 		}
 
 		public override void SecondStageInit()
