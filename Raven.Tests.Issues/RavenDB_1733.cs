@@ -3,48 +3,81 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.IO;
+using System.Threading.Tasks;
+
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
+using Raven.Database.Smuggler;
+using Raven.Json.Linq;
 using Raven.Tests.Common;
+
+using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	using Raven.Abstractions.Smuggler;
-	using Raven.Json.Linq;
-    using Raven.Smuggler.Imports;
-	using Xunit;
-
-	public class RavenDB_1733 : NoDisposalNeeded
+	public class RavenDB_1733 : RavenTest
 	{
-		private const string emptyTransform = @"function(doc) {
+		private const string EmptyTransform = @"function(doc) {
                         return doc;
                     }";
 
-		private readonly SmugglerJintHelper jintHelper;
-
-		public RavenDB_1733()
-		{
-			jintHelper = new SmugglerJintHelper();
-		}
-
 		[Fact]
-		public void SmugglerTransformShouldRecognizeNumericPropertiesEvenThoughTheyHaveTheSameNames()
+		public async Task SmugglerTransformShouldRecognizeNumericPropertiesEvenThoughTheyHaveTheSameNames()
 		{
-            jintHelper.Initialize(new SmugglerDatabaseOptions
+			using (var stream = new MemoryStream())
 			{
-				TransformScript = emptyTransform
-			});
+				var testObject = new RavenJObject
+				{
+					{"Range", new RavenJArray {new RavenJObject {{"Min", 2.4}}}},
+					{"Min", 1}
+				};
 
-			var testObject = new RavenJObject
-			{
-				{"Range", new RavenJArray {new RavenJObject {{"Min", 2.4}}}},
-				{"Min", 1}
-			};
+				using (var store = NewDocumentStore())
+				{
+					store.DatabaseCommands.Put("docs/1", null, testObject, new RavenJObject());
 
-			var transformedObject = jintHelper.Transform(emptyTransform, testObject);
+					var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions
+					{
+						TransformScript = EmptyTransform
+					});
 
-			Assert.Equal(testObject["Min"].Type, transformedObject["Min"].Type);
-			Assert.Equal(((RavenJObject)((RavenJArray)testObject["Range"])[0])["Min"].Type, ((RavenJObject)((RavenJArray)transformedObject["Range"])[0])["Min"].Type);
+					await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
+					{
+						From = new EmbeddedRavenConnectionStringOptions
+								{
+									DefaultDatabase = store.DefaultDatabase
+								},
+						ToStream = stream
+					});
+				}
 
-			Assert.True(RavenJToken.DeepEquals(testObject, transformedObject));
+				stream.Position = 0;
+
+				using (var store = NewDocumentStore())
+				{
+					var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions
+					{
+						TransformScript = EmptyTransform
+					});
+
+					await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
+					{
+						FromStream = stream,
+						To = new EmbeddedRavenConnectionStringOptions
+						{
+							DefaultDatabase = store.DefaultDatabase
+						}
+					});
+
+					var doc = store.DatabaseCommands.Get("docs/1").DataAsJson;
+					Assert.NotNull(doc);
+					Assert.Equal(testObject["Min"].Type, doc["Min"].Type);
+					Assert.Equal(((RavenJObject)((RavenJArray)testObject["Range"])[0])["Min"].Type, ((RavenJObject)((RavenJArray)doc["Range"])[0])["Min"].Type);
+
+					Assert.True(RavenJToken.DeepEquals(testObject, doc));
+				}
+			}
 		}
 	}
 }

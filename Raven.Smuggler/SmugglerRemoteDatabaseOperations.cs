@@ -18,9 +18,9 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Data;
+using Raven.Database.Smuggler;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using Raven.Smuggler.Imports;
 
 namespace Raven.Smuggler
 {
