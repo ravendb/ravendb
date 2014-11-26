@@ -36,6 +36,7 @@ namespace Raven.Database.Storage
 		void UpdateDocumentReferences(int id, string key, HashSet<string> references);
 		IEnumerable<string> GetDocumentsReferencing(string key);
 		int GetCountOfDocumentsReferencing(string key);
+		Dictionary<string, int> GetDocumentReferencesStats();
 		IEnumerable<string> GetDocumentsReferencesFrom(string key);
 	}
 }

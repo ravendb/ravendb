@@ -218,7 +218,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void Can_get_partial_content_from_the_begin()
+		public async Task Can_get_partial_content_from_the_begin()
 		{
 			var ms = PrepareTextSourceStream();
 			var client = NewAsyncClient();
@@ -237,7 +237,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void Can_get_partial_content_from_the_middle()
+		public async Task Can_get_partial_content_from_the_middle()
 		{
 			var ms = PrepareTextSourceStream();
 			var client = NewAsyncClient();
@@ -255,7 +255,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void Can_get_partial_content_from_the_end_explicitely()
+		public async Task Can_get_partial_content_from_the_end_explicitely()
 		{
 			var ms = PrepareTextSourceStream();
 			var client = NewAsyncClient();
@@ -275,7 +275,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void Can_get_partial_content_from_the_end()
+		public async Task Can_get_partial_content_from_the_end()
 		{
 			var ms = PrepareTextSourceStream();
 			var client = NewAsyncClient();
@@ -293,7 +293,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void Should_modify_etag_after_upload()
+		public async Task Should_modify_etag_after_upload()
 		{
 			var content = new RandomStream(10);
 			var client = NewAsyncClient();
@@ -312,7 +312,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void Should_not_see_already_deleted_files()
+		public async Task Should_not_see_already_deleted_files()
 		{
 			var client = NewAsyncClient();
             await client.UploadAsync("visible.bin", new RandomStream(1));
@@ -360,7 +360,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void Can_back_to_previous_name()
+		public async Task Can_back_to_previous_name()
 		{
 			var client = NewAsyncClient();
             await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
@@ -373,7 +373,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void Can_upload_file_with_the_same_name_as_previously_deleted()
+		public async Task Can_upload_file_with_the_same_name_as_previously_deleted()
 		{
 			var client = NewAsyncClient();
             await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
@@ -386,7 +386,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void Can_upload_file_with_the_same_name_as_previously_renamed()
+		public async Task Can_upload_file_with_the_same_name_as_previously_renamed()
 		{
 			var client = NewAsyncClient();
             await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));

@@ -40,7 +40,7 @@ namespace Raven.Tests.MailingList
 					this.Friends += 1;
 					output(this.Friends);
 					"
-				});
+				}, new BulkOperationOptions(){ RetrieveDetails = true});
 
 				var state = (RavenJArray)op.WaitForCompletion();
 				Assert.Contains("1", state[0].Value<RavenJArray>("Debug")[0].ToString(Formatting.None));
@@ -70,7 +70,7 @@ namespace Raven.Tests.MailingList
 					this.Friends += 1;
 					output(this.Friends);
 					"
-				});
+				}, new BulkOperationOptions(){ RetrieveDetails = true});
 
 				var state = (RavenJArray)op.WaitForCompletion();
 				Assert.Contains("1", state[0].Value<RavenJArray>("Debug")[0].ToString(Formatting.None));

@@ -141,7 +141,10 @@ namespace Raven.Tests.Issues
 													{ "Raven/ActiveBundles", activeBundles },
 												}
 					}),
-					new RavenJObject());
+					new RavenJObject
+					{
+						{Constants.AllowBundlesChange, "true"}	
+					});
 		}
 
 		private static void SetupReplication(IDocumentStore store, string sourceDatabaseName, string destinationDatabaseName)

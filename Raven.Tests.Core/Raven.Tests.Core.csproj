@@ -123,7 +123,7 @@
     <Compile Include="Indexing\MultiMap.cs" />
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
-    <Compile Include="Replication\ManualConfilctResolution.cs" />
+    <Compile Include="Replication\ManualConflictResolution.cs" />
     <Compile Include="Session\Advanced.cs" />
     <Compile Include="Shard\Sharding.cs" />
     <Compile Include="Smuggler\SmugglerApiTests.cs" />

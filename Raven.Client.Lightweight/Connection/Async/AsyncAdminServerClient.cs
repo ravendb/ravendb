@@ -24,37 +24,56 @@ namespace Raven.Client.Connection.Async
 			innerAsyncServerClient = asyncServerClient;
 			adminRequest =
 				new AdminRequestCreator((url, method) => innerAsyncServerClient.ForSystemDatabase().CreateRequest(url, method),
-				                        (url, method) => innerAsyncServerClient.CreateRequest(url, method),
+										(url, method) => innerAsyncServerClient.CreateRequest(url, method),
 										(currentServerUrl, requestUrl, method) => innerAsyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method));
 		}
 
-		public Task CreateDatabaseAsync(DatabaseDocument databaseDocument)
+		public async Task CreateDatabaseAsync(DatabaseDocument databaseDocument)
 		{
 			RavenJObject doc;
-			var req = adminRequest.CreateDatabase(databaseDocument, out doc);
-
-			return req.WriteAsync(doc.ToString(Formatting.Indented));
+			using (var req = adminRequest.CreateDatabase(databaseDocument, out doc))
+			{
+				await req.WriteAsync(doc.ToString(Formatting.Indented)).ConfigureAwait(false);
+			}
 		}
 
-		public Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false)
+		public async Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false)
 		{
-			return adminRequest.DeleteDatabase(databaseName, hardDelete).ExecuteRequestAsync();
+			using (var req = adminRequest.DeleteDatabase(databaseName, hardDelete))
+			{
+				await req.ExecuteRequestAsync().ConfigureAwait(false);
+			}
 		}
 
 		public async Task<Operation> CompactDatabaseAsync(string databaseName)
 		{
-		    var jsonResponse = await adminRequest.CompactDatabase(databaseName).ReadResponseJsonAsync().ConfigureAwait(false);
-		    return new Operation(innerAsyncServerClient, jsonResponse.Value<long>("OperationId"));
+			using (var req = adminRequest.CompactDatabase(databaseName))
+			{
+				var json = await req.ReadResponseJsonAsync().ConfigureAwait(false);
+				return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), json.Value<long>("OperationId"));
+			}
 		}
 
 		public Task StopIndexingAsync()
 		{
-			return innerAsyncServerClient.ExecuteWithReplication("POST", operationMetadata => adminRequest.StopIndexing(operationMetadata.Url).ExecuteRequestAsync());
+			return innerAsyncServerClient.ExecuteWithReplication("POST", async operationMetadata =>
+			{
+				using (var req = adminRequest.StopIndexing(operationMetadata.Url))
+				{
+					await req.ExecuteRequestAsync().ConfigureAwait(false);
+				}
+			});
 		}
 
 		public Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null)
 		{
-			return innerAsyncServerClient.ExecuteWithReplication("POST", operationMetadata => adminRequest.StartIndexing(operationMetadata.Url, maxNumberOfParallelIndexTasks).ExecuteRequestAsync());
+			return innerAsyncServerClient.ExecuteWithReplication("POST", async operationMetadata =>
+			{
+				using (var req = adminRequest.StartIndexing(operationMetadata.Url, maxNumberOfParallelIndexTasks))
+				{
+					await req.ExecuteRequestAsync().ConfigureAwait(false);
+				}
+			});
 		}
 
 		public Task<BuildNumber> GetBuildNumberAsync()
@@ -64,46 +83,51 @@ namespace Raven.Client.Connection.Async
 
 		public Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0)
 		{
-            
 			return adminRequest.GetDatabaseNamesAsync(pageSize, start);
 		}
 
 		public async Task<AdminStatistics> GetStatisticsAsync()
 		{
-			var json = (RavenJObject) await adminRequest.AdminStats().ReadResponseJsonAsync();
-
-			return json.Deserialize<AdminStatistics>(innerAsyncServerClient.convention);
+			using (var req = adminRequest.AdminStats())
+			{
+				var json = (RavenJObject)await req.ReadResponseJsonAsync().ConfigureAwait(false);
+				return json.Deserialize<AdminStatistics>(innerAsyncServerClient.convention);
+			}
 		}
 
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
+		public async Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
 		{
-		    var request = adminRequest.StartBackup(backupLocation, databaseDocument, databaseName, incremental);
-
-            return request.WriteAsync(RavenJObject.FromObject(new DatabaseBackupRequest
-            {
-                BackupLocation = backupLocation,
-                DatabaseDocument = databaseDocument
-            }));
+			using (var request = adminRequest.StartBackup(backupLocation, databaseDocument, databaseName, incremental))
+			{
+				await request.WriteAsync(RavenJObject.FromObject(new DatabaseBackupRequest
+				{
+					BackupLocation = backupLocation,
+					DatabaseDocument = databaseDocument
+				})).ConfigureAwait(false);
+			}
 		}
 
 		public async Task<Operation> StartRestoreAsync(DatabaseRestoreRequest restoreRequest)
 		{
-		    var request = adminRequest.CreateRestoreRequest();
+			using (var request = adminRequest.CreateRestoreRequest())
+			{
+				await request.WriteAsync(RavenJObject.FromObject(restoreRequest));
 
-			await request.WriteAsync(RavenJObject.FromObject(restoreRequest));
+				var jsonResponse = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
-		    var jsonResponse = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-
-		    return new Operation(innerAsyncServerClient, jsonResponse.Value<long>("OperationId"));
+				return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), jsonResponse.Value<long>("OperationId"));
+			}
 		}
 
 		public Task<string> GetIndexingStatusAsync()
 		{
 			return innerAsyncServerClient.ExecuteWithReplication("GET", async operationMetadata =>
 			{
-				var result = await adminRequest.IndexingStatus(operationMetadata.Url).ReadResponseJsonAsync();
-
-				return result.Value<string>("IndexingStatus");
+				using (var request = adminRequest.IndexingStatus(operationMetadata.Url))
+				{
+					var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+					return result.Value<string>("IndexingStatus");
+				}
 			});
 		}
 
@@ -111,13 +135,16 @@ namespace Raven.Client.Connection.Async
 		{
 			return innerAsyncServerClient.ExecuteWithReplication("GET", async operationMetadata =>
 			{
-				return (RavenJObject) await adminRequest.GetDatabaseConfiguration(operationMetadata.Url).ReadResponseJsonAsync();
+				using (var request = adminRequest.GetDatabaseConfiguration(operationMetadata.Url))
+				{
+					return (RavenJObject)await request.ReadResponseJsonAsync();
+				}
 			});
 		}
 
 		public async Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false)
 		{
-			var serverClient = (AsyncServerClient) (innerAsyncServerClient.ForSystemDatabase());
+			var serverClient = (AsyncServerClient)(innerAsyncServerClient.ForSystemDatabase());
 
 			var doc = MultiDatabase.CreateDatabaseDocument(name);
 

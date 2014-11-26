@@ -232,6 +232,11 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask<RavenJObject>(document);
 		}
 
+		public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+		{
+			return metadata;
+		}
+
 		public void Initialize(SmugglerDatabaseOptions databaseOptions)
 		{
 			Options = databaseOptions;

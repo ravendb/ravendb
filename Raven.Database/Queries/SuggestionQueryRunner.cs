@@ -7,9 +7,10 @@ using System;
 using System.IO;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
-
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
@@ -61,14 +62,18 @@ namespace Raven.Database.Queries
 
 				if (indexExtension != null)
 					return indexExtension.Query(suggestionQuery, indexReader);
+				var indexInstance = database.IndexStorage.GetIndexInstance(indexName);
+				if(indexInstance == null)
+					throw new IndexDoesNotExistsException("Could not find index " + indexName);
 
 				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
+					indexInstance,
 					database.WorkContext,
 					Path.Combine(database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
-					GetStringDistance(suggestionQuery.Distance ?? StringDistanceTypes.Default),
+					GetStringDistance((StringDistanceTypes) suggestionQuery.Distance),
 					indexReader.Directory() is RAMDirectory,
 					suggestionQuery.Field,
-					suggestionQuery.Accuracy ?? 0.5f);
+					(float) suggestionQuery.Accuracy);
 
 				database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
 

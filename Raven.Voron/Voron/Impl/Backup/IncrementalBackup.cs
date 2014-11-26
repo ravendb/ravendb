@@ -33,7 +33,8 @@ namespace Voron.Impl.Backup
         }
 
         public long ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal,
-			Action<string> infoNotify = null)
+			Action<string> infoNotify = null,
+			Action backupStarted = null)
         {
 			infoNotify = infoNotify ?? (s => { });
 
@@ -67,6 +68,8 @@ namespace Voron.Impl.Backup
 
                 using (env.NewTransaction(TransactionFlags.Read))
                 {
+	                if (backupStarted != null)
+		                backupStarted();// we let call know that we have started the backup 
                     var usedJournals = new List<JournalFile>();
 
                     try
@@ -87,10 +90,25 @@ namespace Voron.Impl.Backup
                             if (journalFile == null)
                             {
                                 long journalSize;
-                                using (var pager = env.Options.OpenJournalPager(journalNum))
-                                {
-                                    journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * AbstractPager.PageSize);
-                                }
+	                            try
+	                            {
+		                            using (var pager = env.Options.OpenJournalPager(journalNum))
+		                            {
+			                            journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * AbstractPager.PageSize);
+		                            }
+	                            }
+	                            catch (Exception e)
+	                            {
+		                            if (backupInfo.LastBackedUpJournal == -1 && journalNum == 0 && e.Message.StartsWith("No such journal"))
+		                            {
+			                            throw new InvalidOperationException("The first incremental backup creation failed because the first journal file " +
+											StorageEnvironmentOptions.JournalName(journalNum) + " was not found. " +
+											"Did you turn on the incremental backup feature after initializing the storage? " +
+											"In order to create backups incrementally the storage must be created with IncrementalBackupEnabled option set to 'true'.", e);
+		                            }
+
+		                            throw;
+	                            }
 
                                 journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
                             }
@@ -138,7 +156,6 @@ namespace Voron.Impl.Backup
                             numberOfBackedUpPages += pagesToCopy;
                         }
 
-                        //Debug.Assert(lastBackedUpPage != -1);
 
                         env.HeaderAccessor.Modify(header =>
                         {
@@ -166,8 +183,9 @@ namespace Voron.Impl.Backup
                             jrnl.Release();
                         }
                     }
-                    infoNotify(string.Format("Voron Incr Backup total {0} pages", numberOfBackedUpPages));
-                    return numberOfBackedUpPages;
+					infoNotify(string.Format("Voron Incr Backup total {0} pages", numberOfBackedUpPages));
+					file.Flush(true); // make sure that this is actually persisted fully to disk
+					return numberOfBackedUpPages;
                 }
             }
         }

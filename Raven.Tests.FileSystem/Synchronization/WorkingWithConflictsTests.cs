@@ -24,7 +24,7 @@ namespace Raven.Tests.FileSystem.Synchronization
     public class WorkingWithConflictsTests : RavenFilesTestWithLogs
 	{
 		[Fact]
-		public async void Files_should_be_reindexed_when_conflict_is_applied()
+		public async Task Files_should_be_reindexed_when_conflict_is_applied()
 		{
 			var client = NewAsyncClient(0);
 
@@ -39,7 +39,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		}
 
 		[Fact]
-		public async void Should_mark_file_to_be_resolved_using_current_strategy()
+		public async Task Should_mark_file_to_be_resolved_using_current_strategy()
 		{
 			var differenceChunk = new MemoryStream();
 			var sw = new StreamWriter(differenceChunk);
@@ -94,7 +94,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		}
 
 		[Fact]
-		public async void Should_be_able_to_get_conflicts()
+		public async Task Should_be_able_to_get_conflicts()
 		{
 			var source = NewAsyncClient(0);
 			var destination = NewAsyncClient(1);
@@ -155,7 +155,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		}
 
 		[Fact]
-		public async void Should_be_possible_to_apply_conflict()
+		public async Task Should_be_possible_to_apply_conflict()
 		{
             var canonicalFilename = FileHeader.Canonize("test.bin");
 
@@ -194,7 +194,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		}
 
 		[Fact]
-		public async void Should_mark_file_as_conflicted_when_two_differnet_versions()
+		public async Task Should_mark_file_as_conflicted_when_two_differnet_versions()
 		{
 			var sourceContent = new RandomStream(10);
             var sourceMetadata = new RavenJObject
@@ -216,7 +216,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		}
 
 		[Fact]
-		public async void Should_detect_conflict_on_destination()
+		public async Task Should_detect_conflict_on_destination()
 		{
             var destination = (IAsyncFilesCommandsImpl)NewAsyncClient(1);
 
@@ -355,7 +355,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		}
 
 		[Fact]
-		public async void Should_increment_etag_on_dest_if_conflict_was_resolved_there_by_current_strategy()
+		public async Task Should_increment_etag_on_dest_if_conflict_was_resolved_there_by_current_strategy()
 		{
 			var sourceClient = NewAsyncClient(0);
 			var destinationClient = NewAsyncClient(1);
@@ -431,7 +431,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		}
 
 		[Fact]
-		public async void Conflict_item_should_have_remote_server_url()
+		public async Task Conflict_item_should_have_remote_server_url()
 		{
             var source = (IAsyncFilesCommandsImpl) NewAsyncClient(0);
 			var destination = NewAsyncClient(1);

@@ -68,8 +68,9 @@ namespace Raven.Database.Indexing.IndexMerging
         {
             get { return index; }
         }
+		public bool IsMapReduceOrMultiMap { get; set; }
 
-        public string BuildExpression(Dictionary<string, Expression> selectExpressions)
+		public string BuildExpression(Dictionary<string, Expression> selectExpressions)
         {
             var anonymousTypeCreateExpression = new AnonymousTypeCreateExpression();
             var crrv = new ChangeRootReferenceVisitor(FromIdentifier);

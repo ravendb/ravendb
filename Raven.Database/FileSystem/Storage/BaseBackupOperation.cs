@@ -62,6 +62,8 @@ namespace Raven.Database.FileSystem.Storage
                     string.Format("Started backup process. Backing up data to directory = '{0}'",
                                   backupDestinationDirectory), null, BackupStatus.BackupMessageSeverity.Informational);
 
+				EnsureBackupDestinationExists();
+
                 if (incrementalBackup)
                 {
 					var incrementalBackupState = Path.Combine(backupDestinationDirectory, Constants.IncrementalBackupState);
@@ -80,9 +82,6 @@ namespace Raven.Database.FileSystem.Storage
 							ResourceId = filesystem.Storage.Id,
 							ResourceName = filesystem.Name
 						};
-
-						if (!Directory.Exists(backupDestinationDirectory))
-							Directory.CreateDirectory(backupDestinationDirectory);
 
 						File.WriteAllText(incrementalBackupState, RavenJObject.FromObject(state).ToString());
 					}
@@ -139,11 +138,30 @@ namespace Raven.Database.FileSystem.Storage
         /// <summary>
         /// The key of this check is to determinate if incremental backup can be executed 
         /// 
-        /// For voron: first and subsequent backups are incremenetal 
+        /// For voron: first and subsequent backups are incremental 
         /// For esent: first backup can't be incremental - when user requested incremental esent backup and target directory is empty, we have to start with full backup.
         /// </summary>
         /// <returns></returns>
         protected abstract bool CanPerformIncrementalBackup();
+
+		private void EnsureBackupDestinationExists()
+		{
+			if (Directory.Exists(backupDestinationDirectory))
+			{
+				var writeTestFile = Path.Combine(backupDestinationDirectory, "write-permission-test");
+				try
+				{
+					File.Create(writeTestFile).Dispose();
+				}
+				catch (UnauthorizedAccessException)
+				{
+					throw new UnauthorizedAccessException(string.Format("You don't have write access to the path {0}", backupDestinationDirectory));
+				}
+				IOExtensions.DeleteFile(writeTestFile);
+			}
+			else
+				Directory.CreateDirectory(backupDestinationDirectory); // will throw UnauthorizedAccessException if a user doesn't have write permission
+		}
 
         protected string DirectoryForIncrementalBackup()
         {

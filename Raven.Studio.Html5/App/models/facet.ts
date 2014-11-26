@@ -29,7 +29,7 @@ class facet {
         return {
             Aggregation: this.aggregation(),
             AggregationField: this.aggregationField,
-            AggregationType: "System.Int32",
+			AggregationType: this.aggregation() < 2 ? "System.String" : "System.Int32",
             DisplayName: this.displayName,
             IncludeRemainingTerms: this.includeRemainingTerms,
             MaxResults: this.maxResults,
@@ -44,7 +44,7 @@ class facet {
         var dto: facetDto = {
             Aggregation: 0,
             AggregationField: aggregationField,
-            AggregationType: "System.Int32",
+			AggregationType: "System.String",
             DisplayName: name + "-" + aggregationField,
             IncludeRemainingTerms: false,
             MaxResults: null,

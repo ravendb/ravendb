@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -52,7 +53,13 @@ namespace Raven.Tests.Issues
                 usersByNameIndex.Execute(store);
 
                 var waits = 0;
-                SystemTime.WaitCalled = ms => waits++;
+	            var mres = new ManualResetEventSlim();
+                SystemTime.WaitCalled = ms =>
+                {
+	                waits++;
+					mres.Set();
+					Thread.Sleep(10);
+                };
 
 	            var op = store.DatabaseCommands.DeleteByIndex("Users/ByName",
 		            new IndexQuery {Query = "Name:Users*"}
@@ -62,6 +69,7 @@ namespace Raven.Tests.Issues
 			            MaxOpsPerSec = null,
 			            StaleTimeout = TimeSpan.FromSeconds(15)
 		            });
+	            mres.Wait();
 
                 store.DatabaseCommands.Admin.StartIndexing();
 

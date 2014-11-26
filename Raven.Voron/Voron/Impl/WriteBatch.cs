@@ -241,14 +241,6 @@ namespace Voron.Impl
 
 		internal class BatchOperation : IComparable<BatchOperation>
 		{
-#if DEBUG
-			private readonly StackTrace stackTrace;
-			public StackTrace StackTrace
-			{
-				get { return stackTrace; }
-			}
-#endif
-
 			private readonly long _originalStreamPosition;
 			private readonly HashSet<Type> _exceptionTypesToIgnore = new HashSet<Type>();
 
@@ -302,10 +294,6 @@ namespace Voron.Impl
 				}
 
 				ValueStream = value;
-
-#if DEBUG
-				stackTrace = new StackTrace();
-#endif
 			}
 
 			private BatchOperation(Slice key, Slice value, ushort? version, string treeName, BatchOperationType type)

@@ -6955,16 +6955,65 @@ body {
   top: 30px;
   right: 11px;
 }
+#resources-page .resources-container .resource .clients-rejected {
+  position: absolute;
+  top: 30px;
+  right: 28px;
+}
 #resources-page .resources-container .resource .btn-group {
   float: right;
   margin-left: 39.3px;
   margin-top: 50px;
 }
+#resources-page .resources-container .resource .btn-group .dropdown-menu .fa-arrow-down {
+  color: #df382c;
+}
 #resources-page .resources-container .resource .btn-group .dropdown-menu .fa-trash-o {
   color: #ec8c85;
 }
 #resources-page .resources-container .resource .btn-group .dropdown-menu .delete-resource:hover .fa-trash-o {
-  color: #df382c;
+  color: white;
+}
+#resources-page .resources-container .resource .btn-group .dropdown-submenu {
+  position: relative;
+}
+#resources-page .resources-container .resource .btn-group .dropdown-submenu > .dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  -webkit-border-radius: 0 6px 6px 6px;
+  -moz-border-radius: 0 6px 6px;
+  border-radius: 0 6px 6px 6px;
+}
+#resources-page .resources-container .resource .btn-group .dropdown-submenu:hover > .dropdown-menu {
+  display: block;
+}
+#resources-page .resources-container .resource .btn-group .dropdown-submenu > a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #ccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+#resources-page .resources-container .resource .btn-group .dropdown-submenu:hover > a:after {
+  border-left-color: #fff;
+}
+#resources-page .resources-container .resource .btn-group .dropdown-submenu.pull-left {
+  float: none;
+}
+#resources-page .resources-container .resource .btn-group .dropdown-submenu.pull-left > .dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  -webkit-border-radius: 6px 0 6px 6px;
+  -moz-border-radius: 6px 0 6px 6px;
+  border-radius: 6px 0 6px 6px;
 }
 #resources-page .resources-container .resource .btn-default {
   padding: 4px;
@@ -8272,4 +8321,18 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   -ms-word-break: break-all;
   word-break: break-all;
   white-space: pre-line;
+}
+.scrollable-menu {
+  height: auto;
+  max-height: 300px;
+  overflow-x: hidden;
+}
+#resources-page .resources-container .resource.fs a {
+  color: #7109AA;
+}
+#resources-page .resources-container .resource.fs:hover {
+  box-shadow: 0 0 5px 0 #ab26f3;
+}
+#resources-page .resources-container .resource.fs.selected {
+  box-shadow: 0 0 20px 0 #7109AA;
 }

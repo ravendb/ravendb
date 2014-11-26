@@ -34,9 +34,9 @@ interface documentChangeNotificationDto {
 }
 
 interface logNotificationDto {
-    Level :string;
-    TimeStamp :string;
-    LoggerName :string;
+    Level: string;
+    TimeStamp: string;
+    LoggerName: string;
     RequestId: number;
     HttpMethod: string;
     ElapsedMilliseconds: number;
@@ -45,6 +45,7 @@ interface logNotificationDto {
     TenantName: string;
     CustomInfo: string;
     TenantType: logTenantType;
+    InnerRequestsCount?: number;
 
 }
 interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
@@ -119,9 +120,13 @@ interface indexStatisticsDto {
 }
 
 interface indexingBatchInfoDto {
+    BatchType: string;
+    IndexesToWorkOn: string[];
     TotalDocumentCount: number;
     TotalDocumentSize: number;
-    Timestamp: string; // ISO date string.
+    StartedAt: string; // ISO date string.
+    TotalDuration: string;
+    PerformanceStats: indexPerformanceDto[];
 }
 
 interface indexPerformanceDto {
@@ -268,6 +273,8 @@ interface suggestionDto {
     CanMerge: string[];
     Collection: string;
     MergedIndex: indexDefinitionDto;
+    CanDelete: string[];
+    SurpassingIndex: string;
 }
 
 interface indexDefinitionContainerDto {
@@ -641,6 +648,7 @@ interface smugglerOptionsDto {
     IncludeTransformers: boolean;
     IncludeAttachments: boolean;
     RemoveAnalyzers: boolean;
+    NoneDefualtFileName: string;
 }
 
 interface customColumnParamsDto {
@@ -899,6 +907,7 @@ interface databaseDto {
     Disabled: boolean;
     Bundles: string[];
     IndexingDisabled: boolean;
+    RejectClientsEnabled: boolean;
 }
 
 interface customFunctionsDto {

@@ -175,6 +175,7 @@
     <Compile Include="CustomAnalyzerStartsWithFailure.cs" />
     <Compile Include="CustomIdInIndexCreationTask.cs" />
     <Compile Include="Daniel.cs" />
+    <Compile Include="DanielPilon.cs" />
     <Compile Include="DataSetIndexTest.cs" />
     <Compile Include="DateTimeOffsetIssues.cs" />
     <Compile Include="DayOfWeekTest.cs" />
@@ -225,6 +226,7 @@
     <Compile Include="HttpIdTest.cs" />
     <Compile Include="IdCasing.cs" />
     <Compile Include="IdComesBackLowerCase.cs" />
+    <Compile Include="IdentityUserDeserialization.cs" />
     <Compile Include="IdsaTest.cs" />
     <Compile Include="IisQueryLengthIssues.cs" />
     <Compile Include="IncludeOnDictionary.cs" />
@@ -233,6 +235,7 @@
     <Compile Include="IndexMetadata.cs" />
     <Compile Include="IndexTest.cs" />
     <Compile Include="IndexTest2.cs" />
+    <Compile Include="IndexTransformerTest.cs" />
     <Compile Include="IndexWhereClause .cs" />
     <Compile Include="IndexWithEnumNullableFailingUnitTest.cs" />
     <Compile Include="IndexWithUnion.cs" />

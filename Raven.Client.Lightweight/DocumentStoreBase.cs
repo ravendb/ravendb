@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Linq;
+
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -15,12 +16,10 @@ using Raven.Client.Document;
 
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
+using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Client
 {
-	using System.Collections.Generic;
-
-	using Raven.Abstractions.Util.Encryptors;
 
 	/// <summary>
 	/// Contains implementation of some IDocumentStore operations shared by DocumentStore implementations
@@ -35,7 +34,7 @@ namespace Raven.Client
 			TransactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
 		}
 
-	    public DocumentSessionListeners Listeners
+		public DocumentSessionListeners Listeners
 	    {
 	        get { return listeners; }
 	    }
@@ -317,5 +316,8 @@ namespace Raven.Client
 		}
 
 		public abstract void InitializeProfiling();
+
+
+		public abstract bool CanEnlistInDistributedTransactions(string dbName);
 	}
 }

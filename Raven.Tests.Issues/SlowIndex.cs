@@ -38,9 +38,7 @@ namespace Raven.Tests.Issues
 
 				stopwatch.Restart();
 
-				// Manually wait for the index
-				while (documentStore.DatabaseCommands.GetStatistics().StaleIndexes.Contains(ordersTotalByCustomerFor30Days.IndexName))
-					Thread.Sleep(100);
+				WaitForIndexing(documentStore);
 
 				stopwatch.Stop();
 				Debug.WriteLine("Took {0} ms to finish indexing", stopwatch.ElapsedMilliseconds);

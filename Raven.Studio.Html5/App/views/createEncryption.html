@@ -26,13 +26,13 @@
             <div class="form-group">
                 <label for="encryptionAlgorithm" class="col-sm-4 control-label">Encryption Algorithm</label>
                 <div class="col-sm-8">
-                    <!--<select class="form-control" required data-bind="options: ['DESC', 'R2C2', 'Rijndael', 'Triple DESC'], value: encryptionAlgorithm, valueAllowUnset: false, hasFocus: algorithmFocus"></select>-->
+                    <!--<select class="form-control" required data-bind="options: ['DES', 'RC2', 'Rijndael', 'Triple DES'], value: encryptionAlgorithm, valueAllowUnset: false, hasFocus: algorithmFocus"></select>-->
                     <div class="btn-group">
                         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                             <span data-bind="text: encryptionAlgorithm"></span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu" role="menu" data-bind="foreach: ['DESC', 'R2C2', 'Rijndael', 'Triple DESC']">
+                        <ul class="dropdown-menu" role="menu" data-bind="foreach: ['DES', 'RC2', 'Rijndael', 'Triple DES']">
                             <li><a href="#" style="text-decoration: none;" data-bind="text: $data, click: $root.encryptionAlgorithm.bind($root.encryptionAlgorithm, $data)"></a></li>
                         </ul>
                     </div>

@@ -35,8 +35,7 @@ namespace Raven.Database.Extensions
 				if (ctors != null)
 					return (Analyzer)Activator.CreateInstance(assembly.FullName, analyzerType.FullName).Unwrap();
 
-				var type = analyzerType.Assembly.GetType(typeof(Lucene.Net.Util.Version).FullName);
-				ctors = analyzerType.GetConstructor(new[] { type });
+                ctors = analyzerType.GetConstructor(new[] { typeof(Lucene.Net.Util.Version) });
 				if (ctors != null) 
 					return (Analyzer)Activator
 						.CreateInstance(assembly.FullName, analyzerType.FullName, false, BindingFlags.CreateInstance | BindingFlags.Public | BindingFlags.Instance, null, new object[] { Lucene.Net.Util.Version.LUCENE_30 }, CultureInfo.InvariantCulture, null)

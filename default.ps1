@@ -95,7 +95,7 @@ task Test -depends Compile {
 		"$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
 		"$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
 		"$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
-		"$base_dir\RavenFS.Tests\bin\$global:configuration\RavenFS.Tests.dll", `
+		"$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
 		"$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
 		"$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
 		"$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
@@ -159,11 +159,6 @@ task MeasurePerformance -depends Compile {
 		Write-Host "Measure performance against RavenDB Build #$_, Path: $RavenServer"
 		exec { &"$base_dir\Raven.Performance\bin\$global:configuration\Raven.Performance.exe" "--database-location=$RavenDbStableLocation --build-number=$_ --data-location=$DataLocation --logs-location=$LogsLocation" }
 	}
-}
-task Vnext3 {
-	$global:uploadCategory = "RavenDB-Unstable"
-	$global:uploadMode = "Vnext3"
-	$global:configuration = "Release"
 }
 
 task Unstable {
@@ -293,7 +288,17 @@ function SignFile($filePath){
 	}
     
     Write-Host "Signing the following file: $filePath"
-	Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "http://timestamp.verisign.com/scripts/timstamp.dll" "$filePath" }
+
+    $timeservers = @("http://tsa.starfieldtech.com", "http://timestamp.globalsign.com/scripts/timstamp.dll", "http://timestamp.comodoca.com/authenticode", "http://www.startssl.com/timestamp", "http://timestamp.verisign.com/scripts/timstamp.dll")
+    foreach ($time in $timeservers) {
+    	try {
+    		Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "$time" "$filePath" }
+    		return
+    	}
+    	catch {
+    		continue
+    	}
+	}
 }
 
 task SignServer {
@@ -315,31 +320,14 @@ task SignInstaller {
 
   $installerFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
   SignFile($installerFile)
-} 
-
-task CreateDocs {
-	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-	
-	if($env:buildlabel -eq 13)
-	{
-	  return 
-	}
-
-	if ($global:uploadMode -ne "Stable"){
-		return; # this takes 8 minutes to run
-	}
-	 
-	# we expliclty allows this to fail
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$build_dir\" }
 }
 
-task CopyRootFiles -depends CreateDocs {
+task CopyRootFiles {
 	cp $base_dir\license.txt $build_dir\Output\license.txt
 	cp $base_dir\Scripts\Start.cmd $build_dir\Output\Start.cmd
 	cp $base_dir\Scripts\Raven-UpdateBundles.ps1 $build_dir\Output\Raven-UpdateBundles.ps1
 	cp $base_dir\Scripts\Raven-GetBundles.ps1 $build_dir\Output\Raven-GetBundles.ps1
 	cp $base_dir\readme.md $build_dir\Output\readme.txt
-	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
 	cp $base_dir\acknowledgments.txt $build_dir\Output\acknowledgments.txt
 	cp $base_dir\CommonAssemblyInfo.cs $build_dir\Output\CommonAssemblyInfo.cs
 	
@@ -406,8 +394,6 @@ task DoRelease -depends DoReleasePart1, `
 task UploadStable -depends Stable, DoRelease, Upload, UploadNuget
 
 task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
-
-task UploadVnext3 -depends Vnext3, DoRelease, Upload, UploadNuget
 
 task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 
@@ -562,11 +548,6 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\content -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenTests $nuget_dir\RavenDB.Tests.Helpers\content\RavenTests -Recurse
 	
-	New-Item $nuget_dir\RavenDB.Bundles.Development\lib\net45 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Development.nuspec $nuget_dir\RavenDB.Bundles.Development\RavenDB.Bundles.Development.nuspec
-	@("Raven.Database.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Database\bin\$global:configuration\$_" $nuget_dir\RavenDB.Bundles.Development\lib\net45 }
-	@("Raven.Client.Lightweight.???") |% { Copy-Item "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\$_" $nuget_dir\RavenDB.Bundles.Development\lib\net45 }
-	
 	# Sets the package version in all the nuspec as well as any RavenDB package dependency versions
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
 	$packages |% { 
@@ -583,7 +564,8 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 }
 
 task PushSymbolSources -depends InitNuget {
-	
+	return;
+
 	if ($global:uploadMode -ne "Stable") {
 		return; # this takes 20 minutes to run
 	}
@@ -623,6 +605,7 @@ task PushSymbolSources -depends InitNuget {
 }
 
 task CreateSymbolSources -depends CreateNugetPackages {
+	return;
 	
 	if ($global:uploadMode -ne "Stable") {
 		return; # this takes 20 minutes to run
@@ -699,6 +682,10 @@ task CreateSymbolSources -depends CreateNugetPackages {
 					Write-Host "Include also linked files of $($projectReference.Include)" -Fore Green
 
 					$srcDirName2 = [io.path]::GetFileNameWithoutExtension($projectPath)
+
+					if ($srcDirName2 -eq "Voron") {
+						$srcDirName2 = "Raven.Voron/" + $srcDirName2
+					}
 
 					Get-ChildItem $srcDirName2\*.cs -Recurse |	ForEach-Object {
 						$indexOf = $_.FullName.IndexOf($srcDirName2)	

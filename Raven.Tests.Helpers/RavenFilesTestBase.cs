@@ -52,9 +52,15 @@ namespace Raven.Tests.Helpers
         public static readonly int[] Ports = { 8079, 8078, 8077 };
 
         public TimeSpan SynchronizationInterval { get; protected set; }
-
+		
+	    private static bool checkedAsyncVoid;
         protected RavenFilesTestBase()
         {
+			if (checkedAsyncVoid == false)
+			{
+				checkedAsyncVoid = true;
+				RavenTestBase.AssertNoAsyncVoidMethods(GetType().Assembly);
+			}
             this.SynchronizationInterval = TimeSpan.FromMinutes(10);
         }
 
@@ -77,9 +83,19 @@ namespace Raven.Tests.Helpers
                 RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
-#endif
+#endif                
                 DefaultStorageTypeName = storageType,
-                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, Encryption = {UseFips = SettingsHelper.UseFipsEncryptionAlgorithms}, FileSystem = {MaximumSynchronizationInterval = this.SynchronizationInterval, DataDirectory = Path.Combine(directory, "FileSystem"), DefaultStorageTypeName = storageType},
+                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
+                Encryption = 
+                { 
+                    UseFips = SettingsHelper.UseFipsEncryptionAlgorithms 
+                },
+                FileSystem = 
+                {
+                    MaximumSynchronizationInterval = this.SynchronizationInterval, 
+                    DataDirectory = Path.Combine(directory, "FileSystems"),
+                    DefaultStorageTypeName = storageType
+                },
             };
 
             if (customConfig != null)
@@ -133,7 +149,7 @@ namespace Raven.Tests.Helpers
                 ApiKey = apiKey,                 
             };
 
-            store.Initialize(true);
+            store.Initialize(ensureFileSystemExists: true, failIfCannotCreate: true);
 
             this.filesStores.Add(store);
 
@@ -321,7 +337,6 @@ namespace Raven.Tests.Helpers
                 }
             }
 
-
             if (errors.Count > 0)
                 throw new AggregateException(errors);
         }
@@ -408,8 +423,7 @@ namespace Raven.Tests.Helpers
                 {
                     if (checkError)
                     {
-                        var firstOrDefault =
-                            backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
+                        var firstOrDefault = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
                         if (firstOrDefault != null)
                             Assert.True(false, string.Format("{0}\n\nDetails: {1}", firstOrDefault.Message, firstOrDefault.Details));
                     }

@@ -88,6 +88,19 @@ namespace Raven.Database.Actions
 
         public QueryResultWithIncludes Query(string index, IndexQuery query, CancellationToken externalCancellationToken)
         {
+	        DateTime? showTimingByDefaultUntil = WorkContext.ShowTimingByDefaultUntil;
+	        if (showTimingByDefaultUntil != null)
+	        {
+		        if (showTimingByDefaultUntil < SystemTime.UtcNow) // expired, reset
+		        {
+			        WorkContext.ShowTimingByDefaultUntil = null;
+		        }
+		        else
+		        {
+			        query.ShowTimings = true;
+		        }
+	        }
+
             QueryResultWithIncludes result = null;
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(externalCancellationToken, WorkContext.CancellationToken))
             {

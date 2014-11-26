@@ -118,7 +118,7 @@ namespace Raven.Database.Indexing
 			{
 				foreach (var indexName in IndexDefinitionStorage.IndexNames)
 				{
-					storedIndexingErrors.AddRange(accessor.Lists.Read("Raven/Indexing/Errors/" + indexName, Etag.Empty, null, 50));
+					storedIndexingErrors.AddRange(accessor.Lists.Read("Raven/Indexing/Errors/" + indexName, Etag.Empty, null, 5000));
 				}
 			});
 
@@ -131,6 +131,18 @@ namespace Raven.Database.Indexing
 			{
 				indexingErrors.Enqueue(error);
 			}
+
+			TransactionalStorage.Batch(accessor =>
+			{
+				while (indexingErrors.Count > 50)
+				{
+					IndexingError error;
+					if (indexingErrors.TryDequeue(out error) == false)
+						continue;
+
+					accessor.Lists.Remove("Raven/Indexing/Errors/" + error.IndexName, error.Id.ToString(CultureInfo.InvariantCulture));
+				}
+			});
 
 			errorsCounter = errors.Max(x => x.Id);
 		}
@@ -242,15 +254,24 @@ namespace Raven.Database.Indexing
 
 			indexingErrors.Enqueue(indexingError);
 
-			TransactionalStorage.Batch(accessor => accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing));
-
 			if (indexingErrors.Count <= 50)
+			{
+				TransactionalStorage.Batch(accessor => accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing));
 				return;
+			}
 
 			IndexingError ignored;
 			indexingErrors.TryDequeue(out ignored);
 
-			TransactionalStorage.Batch(accessor => accessor.Lists.Remove("Raven/Indexing/Errors/" + ignored.IndexName, ignored.Id.ToString(CultureInfo.InvariantCulture)));
+			if ((SystemTime.UtcNow - ignored.Timestamp).TotalSeconds > 10)
+			{
+				TransactionalStorage.Batch(accessor =>
+				{
+					accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing);
+					accessor.Lists.RemoveAllOlderThan("Raven/Indexing/Errors/" + ignored.IndexName, ignored.Timestamp);
+				});
+				
+			}
 		}
 
 		public void StopWorkRude()
@@ -309,13 +330,15 @@ namespace Raven.Database.Indexing
 		[CLSCompliant(false)]
         public MetricsCountersManager MetricsCounters { get; private set; }
 
-		public void ReportIndexingBatchStarted(int documentsCount, long documentsSize)
+		public void ReportIndexingBatchStarted(int documentsCount, long documentsSize, List<string> indexesToWorkOn, out IndexingBatchInfo indexingBatchInfo)
 		{
-			var indexingBatchInfo = new IndexingBatchInfo
+			indexingBatchInfo = new IndexingBatchInfo
 			{
+				IndexesToWorkOn = indexesToWorkOn,
 				TotalDocumentCount = documentsCount,
 				TotalDocumentSize = documentsSize,
-				Timestamp = SystemTime.UtcNow
+				StartedAt = SystemTime.UtcNow,
+				PerformanceStats = new ConcurrentDictionary<string, IndexingPerformanceStats>()
 			};
 
 			lastActualIndexingBatchInfo.Add(indexingBatchInfo);
@@ -332,8 +355,9 @@ namespace Raven.Database.Indexing
 		}
 
 		public DocumentDatabase Database { get; set; }
+		public DateTime? ShowTimingByDefaultUntil { get; set; }
 
-	    public void AddFutureBatch(FutureBatchStats futureBatchStat)
+		public void AddFutureBatch(FutureBatchStats futureBatchStat)
 		{
 			futureBatchStats.Add(futureBatchStat);
 			if (futureBatchStats.Count <= 30)

@@ -131,6 +131,7 @@
     <Compile Include="Connection\OperationCredentials.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
+    <Compile Include="Counters\CountersDocument.cs" />
     <Compile Include="Counters\CounterStorageStats.cs" />
     <Compile Include="Counters\CounterChanges.cs" />
     <Compile Include="Counters\CounterStorageReplicationDestination.cs" />
@@ -139,6 +140,7 @@
     <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\AbstractRestoreRequest.cs" />
     <Compile Include="Data\BulkOperationOptions.cs" />
+    <Compile Include="Data\DatabaseOperationsStatus.cs" />
     <Compile Include="Data\FilesystemRestoreRequest.cs" />
     <Compile Include="Data\FilesystemBackupRequest.cs" />
     <Compile Include="Data\EsentStorageStats.cs" />
@@ -253,7 +255,6 @@
     <Compile Include="FileSystem\SearchResults.cs" />
     <Compile Include="Indexing\IndexLockMode.cs" />
     <Compile Include="Indexing\IndexMergeResults.cs" />
-    <Compile Include="Indexing\IndexMergeSuggestion.cs" />
     <Compile Include="Indexing\MergeSuggestions.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />

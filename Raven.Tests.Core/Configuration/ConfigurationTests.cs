@@ -25,6 +25,7 @@ namespace Raven.Tests.Core.Configuration
 		private readonly HashSet<string> propertyPathsToIgnore = new HashSet<string>
 		                                                         {
 			                                                         "DatabaseName",
+																	 "CountersDatabaseName",
 																	 "FileSystemName",
 																	 "Settings",
 																	 "Container",
@@ -62,6 +63,7 @@ namespace Raven.Tests.Core.Configuration
 
 			var configurationComparer = new ConfigurationComparer(inMemoryConfiguration, stronglyTypedConfiguration, propertyPathsToIgnore);
 
+			configurationComparer.Assert(expected => expected.RejectClientsModeEnabled.Value, actual => actual.RejectClientsMode);
 			configurationComparer.Assert(expected => expected.Replication.FetchingFromDiskTimeoutInSeconds.Value, actual => actual.Replication.FetchingFromDiskTimeoutInSeconds);
 			configurationComparer.Assert(expected => expected.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value, actual => actual.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb);
 			configurationComparer.Assert(expected => expected.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value, actual => actual.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds);
@@ -171,6 +173,12 @@ namespace Raven.Tests.Core.Configuration
 
 				assertedPropertyPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 				propertyPathsToCheck = GetPropertyPathsToCheck(inMemoryConfiguration).Where(x => propertyPathsToIgnore.Contains(x) == false).ToList();
+			}
+
+			public void Ignore(Expression<Func<InMemoryRavenConfiguration, object>> actual)
+			{
+				var propertyPath = actual.ToPropertyPath();
+				assertedPropertyPaths.Add(propertyPath);
 			}
 
 			public void Assert<T>(Expression<Func<StronglyTypedRavenSettings, T>> expected, Expression<Func<InMemoryRavenConfiguration, T>> actual)

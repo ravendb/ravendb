@@ -37,7 +37,7 @@
   <PropertyGroup>
     <IntermediateDir>$(ProjectDir)$(IntermediateOutputPath)</IntermediateDir>
     <FodySignAssembly Condition="$(FodySignAssembly) == '' Or $(FodySignAssembly) == '*Undefined*'">$(SignAssembly)</FodySignAssembly>
-    <FodyPath>$(SolutionDir)\packages\Fody.1.25.0</FodyPath>
+    <FodyPath>$(SolutionDir)\SharedLibs\Fody</FodyPath>
   </PropertyGroup>
   <UsingTask
       TaskName="Fody.WeavingTask"

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.AccessControl;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -14,8 +15,6 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Backup;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
-
-using Voron.Impl.Backup;
 
 namespace Raven.Database.Storage
 {
@@ -47,10 +46,10 @@ namespace Raven.Database.Storage
 
         protected abstract void ExecuteBackup(string backupPath, bool isIncrementalBackup);
 
-         protected virtual void OperationFinished()
-         {
+        protected virtual void OperationFinished()
+        {
              
-         }
+        }
 
         public void Execute()
         {
@@ -61,7 +60,9 @@ namespace Raven.Database.Storage
                     string.Format("Started backup process. Backing up data to directory = '{0}'",
                                   backupDestinationDirectory), null, BackupStatus.BackupMessageSeverity.Informational);
 
-                if (incrementalBackup)
+	            EnsureBackupDestinationExists();
+
+	            if (incrementalBackup)
                 {
 	                var incrementalBackupState = Path.Combine(backupDestinationDirectory, Constants.IncrementalBackupState);
 
@@ -79,9 +80,6 @@ namespace Raven.Database.Storage
 			                ResourceId = database.TransactionalStorage.Id,
 							ResourceName = database.Name ?? Constants.SystemDatabase
 		                };
-
-						if (!Directory.Exists(backupDestinationDirectory))
-							Directory.CreateDirectory(backupDestinationDirectory);
 
 						File.WriteAllText(incrementalBackupState, RavenJObject.FromObject(state).ToString());
 	                }
@@ -155,10 +153,29 @@ namespace Raven.Database.Storage
             }
         }
 
-        /// <summary>
+	    private void EnsureBackupDestinationExists()
+	    {
+		    if (Directory.Exists(backupDestinationDirectory))
+		    {
+			    var writeTestFile = Path.Combine(backupDestinationDirectory, "write-permission-test");
+			    try
+			    {
+				    File.Create(writeTestFile).Dispose();
+			    }
+			    catch (UnauthorizedAccessException)
+			    {
+				    throw new UnauthorizedAccessException(string.Format("You don't have write access to the path {0}", backupDestinationDirectory));
+			    }
+			    IOExtensions.DeleteFile(writeTestFile);
+		    }
+		    else
+			    Directory.CreateDirectory(backupDestinationDirectory); // will throw UnauthorizedAccessException if a user doesn't have write permission
+	    }
+
+	    /// <summary>
         /// The key of this check is to determinate if incremental backup can be executed 
         /// 
-        /// For voron: first and subsequent backups are incremenetal 
+        /// For voron: first and subsequent backups are incremental 
         /// For esent: first backup can't be incremental - when user requested incremental esent backup and target directory is empty, we have to start with full backup.
         /// </summary>
         /// <returns></returns>
@@ -194,6 +211,7 @@ namespace Raven.Database.Storage
                 database.Documents.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
                              jsonDocument.Metadata,
                              null);
+                database.RaiseBackupComplete();
             }
             catch (Exception e)
             {

@@ -129,7 +129,9 @@ namespace Raven.Database.Impl
 								batchCount++;
 							    operations++;
 								var result = batchOperation(enumerator.Current, transactionInformation);
-								array.Add(RavenJObject.FromObject(result));
+
+								if(options.RetrieveDetails)
+									array.Add(RavenJObject.FromObject(result));
 
 							    if (operations >= maxOpsPerSec && duration.ElapsedMilliseconds < 1000)
 							    {

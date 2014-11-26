@@ -115,6 +115,9 @@ class visualizer extends viewModelBase {
     }
 
     attached() {
+        var that = this;
+        this.createKeyboardShortcut("esc", () => that.tooltipClose(), "body");
+
         this.resetChart();
         var svg = d3.select("#visualizer");
         this.diagonal = d3.svg.diagonal()

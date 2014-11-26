@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
 using Voron.Impl;
 using Voron.Trees;
@@ -128,11 +129,14 @@ namespace Voron
 			if (Options != SliceOptions.Key)
 				return Options.ToString();
 
-			if (Size == sizeof (long))
+			if (Size == sizeof(long) && Debugger.IsAttached)
 			{
-				if (Array != null && Array[0] == 0)
-					return "I64 = " +  EndianBitConverter.Big.ToInt64(Array,0);
-				if (*Pointer == 0)
+				if (Array != null)
+				{
+					if(Array[0] == 0)
+						return "I64 = " +  EndianBitConverter.Big.ToInt64(Array,0);
+				}
+				else if (*Pointer == 0)
 				{
 					var bytes = new byte[sizeof(long)];
 					CopyTo(bytes);

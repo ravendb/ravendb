@@ -20,9 +20,16 @@ namespace Raven.Tests.Common.Attributes
 		private static string _lastTestName;
 		public static void AssertPortsNotInUse(string test, params int[] ports)
 		{
-			IPGlobalProperties ipProperties = IPGlobalProperties.GetIPGlobalProperties();
-			IPEndPoint[] ipEndPoints = ipProperties.GetActiveTcpListeners();
-
+			IPEndPoint[] ipEndPoints;
+			try
+			{
+				IPGlobalProperties ipProperties = IPGlobalProperties.GetIPGlobalProperties();
+				ipEndPoints = ipProperties.GetActiveTcpListeners();
+			}
+			catch (Exception )
+			{
+				return;
+			}
 			var sb = new StringBuilder();
 
 			foreach (IPEndPoint endPoint in ipEndPoints.Where(x => ports.Contains(x.Port)))

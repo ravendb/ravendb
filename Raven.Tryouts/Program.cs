@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Threading;
+using Raven.Client;
 using Raven.Database.DiskIO;
 using Raven.Json.Linq;
 using System.Linq;
 using Raven.Database.Extensions;
+using Raven.SlowTests.Issues;
+using Raven.Tests.FileSystem.ClientApi;
+using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
 {
@@ -11,25 +15,16 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-            var performanceRequest = new PerformanceTestRequest
-            {
-                FileSize = (long) 1024 * 1024 * 1024,
-                OperationType = OperationType.Read,
-                BufferingType = BufferingType.ReadAndWrite,
-                Path = "c:\\temp\\data.ravendb-io-test",
-                Sequential = true,
-                ThreadCount = 4,
-                TimeToRunInSeconds = 100,
-                ChunkSize = 4 * 1024
-            };
+			for (int i = 0; i < 100; i++)
+			{
+				using (var a = new RavenDB_1359())
+				{
+					Console.WriteLine(i);
+					a.IndexThatLoadAttachmentsShouldIndexAllDocuments();
+				}
+			
+			}
 
-            var tester = new DiskPerformanceTester(performanceRequest, Console.WriteLine, CancellationToken.None);
-            tester.TestDiskIO();
-
-		    var r = tester.Result;
-
-            Console.WriteLine(RavenJObject.FromObject(r));
-		    Console.ReadKey();
 		}
 	}
 

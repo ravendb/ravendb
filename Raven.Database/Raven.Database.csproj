@@ -227,6 +227,7 @@
     <Compile Include="DiskIO\DiskPerformanceTester.cs" />
     <Compile Include="DiskIO\PerformanceTestRequest.cs" />
     <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
+    <Compile Include="Plugins\Builtins\CheckIncrementalBackupStatus.cs" />
     <Compile Include="Plugins\Builtins\PurgeOutdatedTombstones.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Bundles\Replication\Data\ReplicationTopologyNode.cs" />
@@ -241,6 +242,8 @@
     <Compile Include="Plugins\IServerStartupTask.cs" />
     <Compile Include="Server\Abstractions\IResourceStore.cs" />
     <Compile Include="Server\Connections\HttpTracePushContent.cs" />
+    <Compile Include="Server\Connections\WebSocketsRequestParser.cs" />
+    <Compile Include="Server\Connections\WebSocketRequest.cs" />
     <Compile Include="Server\Controllers\HttpTraceController.cs" />
     <Compile Include="Server\Connections\ILogsTransport.cs" />
     <Compile Include="Server\Connections\LogPushContent.cs" />

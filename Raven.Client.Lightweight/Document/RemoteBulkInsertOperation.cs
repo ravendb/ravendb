@@ -108,36 +108,36 @@ namespace Raven.Client.Document
                     throw new InvalidOperationException("Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
                 }
 
-                operationRequest = CreateOperationRequest(operationUrl, token);
+	            using (operationRequest = CreateOperationRequest(operationUrl, token))
+	            {
+		            var cancellationToken = CreateCancellationToken();
+		            var response = await operationRequest.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
+		            {
+			            try
+			            {
+				            WriteQueueToServer(stream, options, cancellationToken);
+				            var x = source.TrySetResult(null);
+			            }
+			            catch (Exception e)
+			            {
+				            source.TrySetException(e);
+			            }
+		            }, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
-                var cancellationToken = CreateCancellationToken();
-                var response = await operationRequest.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
-                {
-                    try
-                    {
-                        WriteQueueToServer(stream, options, cancellationToken);
-                        var x = source.TrySetResult(null);
-                    }
-                    catch (Exception e)
-                    {
-                        source.TrySetException(e);
-                    }
-                }, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
+		            await response.AssertNotFailingResponse();
 
-                await response.AssertNotFailingResponse();
+		            long operationId;
 
-                long operationId;
+		            using (response)
+		            using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+		            using (var streamReader = new StreamReader(stream))
+		            {
+			            var result = RavenJObject.Load(new JsonTextReader(streamReader));
+			            operationId = result.Value<long>("OperationId");
+		            }
 
-                using (response)
-                using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                using (var streamReader = new StreamReader(stream))
-                {
-                    var result = RavenJObject.Load(new JsonTextReader(streamReader));
-                    operationId = result.Value<long>("OperationId");
-                }
-
-                if (await IsOperationCompleted(operationId).ConfigureAwait(false))
-                    responseOperationId = operationId;
+		            if (await IsOperationCompleted(operationId).ConfigureAwait(false)) responseOperationId = operationId;
+	            }
             }
         }
 
@@ -155,32 +155,28 @@ namespace Raven.Client.Document
             return jsonToken.Value<string>("Token");
         }
 
-        private Task<RavenJToken> GetAuthToken()
+        private async Task<RavenJToken> GetAuthToken()
         {
-
-            var request = operationClient.CreateRequest("/singleAuthToken", "GET",
-                                                        disableRequestCompression: true);
-
-            return request.ReadResponseJsonAsync();
+	        using (var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true))
+			{
+				return await request.ReadResponseJsonAsync().ConfigureAwait(false);
+	        }
         }
 
         private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
         {
-            var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
-
-            request.DisableAuthentication();
-            request.AddOperationHeader("Single-Use-Auth-Token", token);
-            var result = await request.ReadResponseJsonAsync();
-            return result.Value<string>("Token");
+	        using (var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true, disableAuthentication: true))
+	        {
+		        request.AddOperationHeader("Single-Use-Auth-Token", token);
+		        var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+		        return result.Value<string>("Token");
+	        }
         }
 
         private HttpJsonRequest CreateOperationRequest(string operationUrl, string token)
         {
-            var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
-
-            request.DisableAuthentication();
-            // the request may take a long time to process, so we need to set a large timeout value
-            request.PrepareForLongRequest();
+			// the request may take a long time to process, so we need to set a large timeout value
+			var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true, disableAuthentication: true, timeout: TimeSpan.FromHours(6));
             request.AddOperationHeader("Single-Use-Auth-Token", token);
 
             return request;

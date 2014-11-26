@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq.Expressions;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using Voron.Util;
 using Xunit;
 
 namespace Voron.Tests.Bugs

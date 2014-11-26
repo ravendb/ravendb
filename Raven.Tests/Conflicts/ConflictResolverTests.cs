@@ -245,5 +245,167 @@ namespace Raven.Tests.Conflicts
 	]/*<<<< auto merged array end*/
 }", conflictsResolver.Resolve().Document);
 		}
+
+		[Fact]
+		public void CanResolveEmptyWithMetadata()
+		{
+			var conflictsResolver = new ConflictsResolver(new List<RavenJObject>
+			{
+				new RavenJObject()
+				{
+					{
+						"@metadata", new RavenJObject()
+					}
+				},
+				new RavenJObject()
+				{
+					{
+						"@metadata", new RavenJObject()
+					}
+				}
+			});
+			Assert.Equal("{}", conflictsResolver.Resolve().Metadata);
+		}
+
+		[Fact]
+		public void CanResolveIdenticalMetadata()
+		{
+			var conflictsResolver = new ConflictsResolver(new List<RavenJObject>
+			{
+				new RavenJObject()
+				{
+					{
+						"@metadata", new RavenJObject()
+						{
+							{
+								"Foo", "Bar"
+							}
+						}
+					}
+				},
+				new RavenJObject()
+				{
+					{
+						"@metadata", new RavenJObject()
+						{
+							{
+								"Foo", "Bar"
+							}
+						}
+
+					}
+				}
+			});
+			Assert.Equal(@"{
+	""Foo"": ""Bar""
+}", conflictsResolver.Resolve().Metadata);
+		}
+
+		[Fact]
+		public void CanResolveTwoEmptyArraysInMetadata()
+		{
+			var conflictsResolver = new ConflictsResolver(
+								new List<RavenJObject> {
+										new RavenJObject
+										{
+											{"@metadata", new RavenJObject()
+											{
+												{"Bar", new RavenJArray()}
+											}}
+										}, 
+										new RavenJObject
+										{
+											{"@metadata", new RavenJObject()
+											{
+												{"Bar", new RavenJArray()}
+											}}
+										}, 
+								});
+			Assert.Equal(@"{
+	""Bar"": []
+}", conflictsResolver.Resolve().Metadata);
+		}
+
+		[Fact]
+		public void CanResolveOneEmptyArraysAndOneWithValueInMetadata()
+		{
+			var conflictsResolver = new ConflictsResolver(
+								new List<RavenJObject> {
+										new RavenJObject
+										{
+											{"@metadata", new RavenJObject()
+											{
+												{"Bar", new RavenJArray(1)}
+											}}
+										}, 
+										new RavenJObject
+										{
+											{"@metadata", new RavenJObject()
+											{
+												{"Bar", new RavenJArray()}
+											}}
+										}, 
+								});
+			Assert.Equal(@"{
+	""Bar"": /*>>>> auto merged array start*/ [
+		1
+	]/*<<<< auto merged array end*/
+}", conflictsResolver.Resolve().Metadata);
+		}
+
+
+		[Fact]
+		public void CanMergeAdditionalMetadata()
+		{
+			var conflictsResolver = new ConflictsResolver(
+								new List<RavenJObject> {
+										new RavenJObject
+										{
+											{"@metadata", new RavenJObject()
+											{
+												{"Name", "Oren"}
+											}}
+										}, 
+										new RavenJObject
+										{
+											{"@metadata", new RavenJObject()
+											{
+												{"Age", 2}
+											}}
+										}, 
+								});
+			Assert.Equal(@"{
+	""Name"": ""Oren"",
+	""Age"": 2
+}", conflictsResolver.Resolve().Metadata);
+		}
+
+		[Fact]
+		public void CanDetectAndSuggestOptionsForConflict_SimpleMetadata()
+		{
+			var conflictsResolver = new ConflictsResolver(
+								new List<RavenJObject> {
+										new RavenJObject
+										{
+											{"@metadata", new RavenJObject()
+											{
+												{"Name", "Oren"}
+											}}
+										}, 
+										new RavenJObject
+										{
+											{"@metadata", new RavenJObject()
+											{
+												{"Name", "Ayende"}
+											}}
+										}, 
+								});
+			Assert.Equal(@"{
+	""Name"": /*>>>> conflict start*/ [
+		""Oren"",
+		""Ayende""
+	]/*<<<< conflict end*/
+}", conflictsResolver.Resolve().Metadata);
+		}
 	}
 }

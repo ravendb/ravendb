@@ -32,7 +32,8 @@ namespace Raven.Tests.Core
 
 			Server = new RavenDbServer(configuration)
 			{
-				UseEmbeddedHttpServer = true
+				UseEmbeddedHttpServer = true,
+				RunInMemory = true
 			}.Initialize();
 		}
 

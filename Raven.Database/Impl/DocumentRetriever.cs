@@ -343,12 +343,18 @@ namespace Raven.Database.Impl
 		public dynamic Load(string id)
 		{
 			var document = GetDocumentWithCaching(id);
+			document = ProcessReadVetoes(document, null, ReadOperation.Load);
 			if (document == null)
 			{
 			    Etag = Etag.HashWith(Etag.Empty);
 			    return new DynamicNullObject();
 			}
-		    Etag = Etag.HashWith(document.Etag);
+			Etag = Etag.HashWith(document.Etag);
+			if (document.Metadata.ContainsKey("Raven-Read-Veto"))
+			{
+				return new DynamicNullObject();
+			}
+
 			return new DynamicJsonObject(document.ToJson());
 		}
 

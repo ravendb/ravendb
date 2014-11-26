@@ -22,7 +22,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		[Theory]
 		[InlineData(1)]
 		[InlineData(5000)]
-		public async void Synchronize_file_with_different_beginning(int size)
+		public async Task Synchronize_file_with_different_beginning(int size)
 		{
 			var differenceChunk = new MemoryStream();
 			var sw = new StreamWriter(differenceChunk);
@@ -71,7 +71,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		[Theory]
 		[InlineData(1)]
 		[InlineData(5000)]
-		public async void Synchronize_file_with_appended_data(int size)
+		public async Task Synchronize_file_with_appended_data(int size)
 		{
 			var differenceChunk = new MemoryStream();
 			var sw = new StreamWriter(differenceChunk);
@@ -107,7 +107,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 		[Theory]
 		[InlineData(5000)]
-		public async void Should_have_the_same_content(int size)
+		public async Task Should_have_the_same_content(int size)
 		{
 			var sourceContent = SyncTestUtils.PrepareSourceStream(size);
 			sourceContent.Position = 0;
@@ -138,7 +138,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		[Theory]
 		[InlineData(1024*1024, 1)] // this pair of parameters helped to discover storage reading issue 
 		[InlineData(1024*1024, null)]
-		public async void Synchronization_of_already_synchronized_file_should_detect_that_no_work_is_needed(int size, int? seed)
+		public async Task Synchronization_of_already_synchronized_file_should_detect_that_no_work_is_needed(int size, int? seed)
 		{
 			Random r;
 
@@ -220,7 +220,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
 		[Theory]
 		[InlineData(1024*1024*10)]
-		public async void Big_character_file_test(long size)
+		public async Task Big_character_file_test(long size)
 		{
 			var sourceContent = new RandomCharacterStream(size);
 			var destinationContent = new RandomlyModifiedStream(new RandomCharacterStream(size), 0.01);
@@ -321,7 +321,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		}
 
 		[Fact]
-		public async void Should_change_history_after_upload()
+		public async Task Should_change_history_after_upload()
 		{
 			var sourceContent1 = new RandomStream(10);
 			var sourceClient = NewAsyncClient(1);

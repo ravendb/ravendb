@@ -39,8 +39,8 @@ namespace Raven.Tests.Issues
             IOExtensions.DeleteDirectory("Databases/" + primaryDbName);
             IOExtensions.DeleteDirectory("Databases/" + secondaryDbName);
 
-            PrimaryDocumentStore = CreateStore();
-            SecondaryDocumentStore = CreateStore();
+            PrimaryDocumentStore = CreateStore(requestedStorageType: "esent");
+			SecondaryDocumentStore = CreateStore(requestedStorageType: "esent");
         }
 
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
@@ -105,7 +105,10 @@ namespace Raven.Tests.Issues
 
                 var deleteExistingDocsIndexQuery = new IndexQuery { Query = deleteExistingDocsQuery.ToString() };
 
-                var deleteByIndex = databaseCommands.DeleteByIndex(new DocsIndex().IndexName, deleteExistingDocsIndexQuery, null);
+                var deleteByIndex = databaseCommands.DeleteByIndex(new DocsIndex().IndexName, deleteExistingDocsIndexQuery, new BulkOperationOptions()
+                {
+	                RetrieveDetails = true
+                });
                 var array = deleteByIndex.WaitForCompletion() as RavenJArray;
 
                 Assert.Equal(1, array.Length);

@@ -405,6 +405,15 @@ namespace Raven.Database.Server.Controllers
 	        sb.Append("\tIndex: ")
 	            .AppendLine(result.IndexName);
 	        sb.Append("\t").AppendFormat("Results: {0:#,#;;0} returned out of {1:#,#;;0} total.", result.Results.Count, result.TotalResults).AppendLine();
+
+			if (result.TimingsInMilliseconds != null)
+			{
+				sb.Append("\tTiming:").AppendLine();
+			    foreach (var timing in result.TimingsInMilliseconds)
+			    {
+				    sb.Append("\t").Append(timing.Key).Append(": ").Append(timing.Value).AppendLine();
+			    }
+		    }
 	    }
 
 	    private QueryResultWithIncludes PerformQueryAgainstExistingIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg, CancellationToken token)
@@ -603,7 +612,7 @@ namespace Raven.Database.Server.Controllers
 			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
 			var reduceKeysArray = GetQueryStringValue("reduceKeys");
 
-			if (string.IsNullOrEmpty(indexQuery.Query) == false && string.IsNullOrEmpty(reduceKeysArray))
+			if (string.IsNullOrEmpty(indexQuery.Query) == false && string.IsNullOrEmpty(reduceKeysArray) == false)
 			{
 				return GetMessageWithObject(new
 				{
@@ -613,7 +622,7 @@ namespace Raven.Database.Server.Controllers
 
 			List<string> reduceKeys = null;
 
-			if (reduceKeysArray != null)
+			if (string.IsNullOrEmpty(reduceKeysArray) == false)
 			{
                 reduceKeys = reduceKeysArray.Split(',').Select(x => x.Trim()).ToList();
                 // overwrite indexQueryPagining as __reduce_key field is not indexed, and we don't have simple method to obtain column alias

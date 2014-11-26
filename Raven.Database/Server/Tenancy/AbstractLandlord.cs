@@ -29,7 +29,7 @@ namespace Raven.Database.Server.Tenancy
 	    protected static string DisposingLock = Guid.NewGuid().ToString();
 
         protected static readonly ILog Logger = LogManager.GetCurrentClassLogger();
-        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
+        
         protected readonly ConcurrentSet<string> Locks = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
         public readonly AtomicDictionary<Task<TResource>> ResourcesStoresCache =
                 new AtomicDictionary<Task<TResource>>(StringComparer.OrdinalIgnoreCase);
@@ -115,7 +115,10 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public void Cleanup(string resource, bool skipIfActive, Func<TResource,bool> shouldSkip = null, DocumentChangeTypes notificationType = DocumentChangeTypes.None)
+        public void Cleanup(string resource, 
+			TimeSpan? skipIfActiveInDuration, 
+			Func<TResource,bool> shouldSkip = null,
+			DocumentChangeTypes notificationType = DocumentChangeTypes.None)
         {
             using (ResourcesStoresCache.WithAllLocks())
             {
@@ -124,7 +127,7 @@ namespace Raven.Database.Server.Tenancy
 				if (ResourcesStoresCache.TryGetValue(resource, out resourceTask) == false)
                 {
 					LastRecentlyUsed.TryRemove(resource, out time);
-                    return;
+                    return;	
                 }
 				if (resourceTask.Status == TaskStatus.Faulted || resourceTask.Status == TaskStatus.Canceled)
                 {
@@ -138,8 +141,7 @@ namespace Raven.Database.Server.Tenancy
                 }
 
 				var database = resourceTask.Result;
-                if ((skipIfActive &&
-					(SystemTime.UtcNow - LastWork(database)).TotalMinutes < 10) || 
+                if ((skipIfActiveInDuration != null && (SystemTime.UtcNow - LastWork(database)) < skipIfActiveInDuration) || 
 					(shouldSkip != null && shouldSkip(database)))
                 {
                     // this document might not be actively working with user, but it is actively doing indexes, we will 
@@ -178,75 +180,13 @@ namespace Raven.Database.Server.Tenancy
 
         protected abstract DateTime LastWork(TResource resource);
 
-        public void Protect(DatabaseDocument databaseDocument)
-        {
-            if (databaseDocument.SecuredSettings == null)
-            {
-                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                return;
-            }
-
-            foreach (var prop in databaseDocument.SecuredSettings.ToList())
-            {
-                if (prop.Value == null)
-                    continue;
-                var bytes = Encoding.UTF8.GetBytes(prop.Value);
-                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-                var protectedValue = ProtectedData.Protect(bytes, entrophy, DataProtectionScope.CurrentUser);
-                databaseDocument.SecuredSettings[prop.Key] = Convert.ToBase64String(protectedValue);
-            }
-        }
-
-        protected InMemoryRavenConfiguration CreateConfiguration(
-            string tenantId, 
-            DatabaseDocument document, 
-            string folderPropName,
-            InMemoryRavenConfiguration parentConfiguration)
-        {
-            var config = new InMemoryRavenConfiguration
-            {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
-            };
-
-            SetupTenantConfiguration(config);
-
-            config.CustomizeValuesForTenant(tenantId);
-
-            config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
-            config.Settings["Raven/FileSystem/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
-
-            foreach (var setting in document.Settings)
-            {
-                config.Settings[setting.Key] = setting.Value;
-            }
-            Unprotect(document);
-
-            foreach (var securedSetting in document.SecuredSettings)
-            {
-                config.Settings[securedSetting.Key] = securedSetting.Value;
-            }
-
-	        config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
-            config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
-            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);
-            
-            config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
-
-            config.DatabaseName = tenantId;
-            config.IsTenantDatabase = true;
-
-            config.Initialize();
-            config.CopyParentSettings(parentConfiguration);
-            return config;
-        }
-
         public void Lock(string tenantId, Action actionToTake)
         {
             if (Locks.TryAdd(tenantId) == false)
                 throw new InvalidOperationException(tenantId + "' is currently locked and cannot be accessed");
             try
             {
-                Cleanup(tenantId, false);
+				Cleanup(tenantId, skipIfActiveInDuration: null);
                 actionToTake();
             }
             finally

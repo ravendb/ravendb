@@ -147,6 +147,9 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/TaskScheduler"], (string) null);
 			AllowLocalAccessWithoutAuthorization =
 				new BooleanSetting(settings["Raven/AllowLocalAccessWithoutAuthorization"], false);
+		    RejectClientsModeEnabled =
+                new BooleanSetting(settings[Constants.RejectClientsModeEnabled], false);
+
 			MaxIndexCommitPointStoreTimeInterval =
 				new TimeSpanSetting(settings["Raven/MaxIndexCommitPointStoreTimeInterval"], TimeSpan.FromMinutes(5),
 				                    TimeSpanArgumentType.FromParse);
@@ -188,15 +191,15 @@ namespace Raven.Database.Config
 			Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
 
             FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings["Raven/FileSystem/MaximumSynchronizationInterval"], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
-			FileSystem.IndexStoragePath = new StringSetting(settings["Raven/FileSystem/IndexStoragePath"], (string)null);
-			FileSystem.DataDir = new StringSetting(settings["Raven/FileSystem/DataDir"], @"~\Data\FileSystem");
-			FileSystem.DefaultStorageTypeName = new StringSetting(settings["Raven/FileSystem/Storage"], InMemoryRavenConfiguration.VoronTypeName);
+			FileSystem.IndexStoragePath = new StringSetting(settings["Raven/FileSystem/IndexStoragePath"], string.Empty);
+			FileSystem.DataDir = new StringSetting(settings["Raven/FileSystem/DataDir"], @"~\FileSystems");
+			FileSystem.DefaultStorageTypeName = new StringSetting(settings["Raven/FileSystem/Storage"], string.Empty);
 
 			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
 			Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
 
-			DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], InMemoryRavenConfiguration.VoronTypeName);
+			DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], string.Empty);
 
 			FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
 			JournalsStoragePath = new StringSetting(settings["Raven/Esent/LogsPath"] ?? settings[Constants.RavenTxJournalPath], (string)null);
@@ -309,6 +312,9 @@ namespace Raven.Database.Config
 		public StringSetting TaskScheduler { get; private set; }
 
 		public BooleanSetting AllowLocalAccessWithoutAuthorization { get; private set; }
+
+
+        public BooleanSetting RejectClientsModeEnabled { get; private set; }
 
 		public TimeSpanSetting MaxIndexCommitPointStoreTimeInterval { get; private set; }
 

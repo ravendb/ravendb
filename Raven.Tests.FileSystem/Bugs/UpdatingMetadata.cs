@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Data;
+﻿using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using System.Collections.Specialized;
 using System.IO;
@@ -10,7 +11,7 @@ namespace Raven.Tests.FileSystem.Bugs
     public class UpdatingMetadata : RavenFilesTestWithLogs
 	{
 		[Fact]
-		public async void CanUpdateMetadata()
+		public async Task CanUpdateMetadata()
 		{
 			var client = NewAsyncClient(); 
 			var ms = new MemoryStream();
@@ -38,7 +39,7 @@ namespace Raven.Tests.FileSystem.Bugs
 
 		 
         [Fact]
-        public async void PreserveSystemKeysWhenUpdatingMetadata()
+		public async Task PreserveSystemKeysWhenUpdatingMetadata()
         {
             var client = NewAsyncClient();
             var ms = new MemoryStream();

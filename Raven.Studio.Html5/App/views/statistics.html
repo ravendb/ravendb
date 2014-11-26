@@ -1,6 +1,11 @@
 ﻿<section data-bind="if: stats, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <form class="form-horizontal" role="form">
-        <div class="form-group">
+		<div class="form-group">
+			<label class="col-md-2 control-label">Storage Engine</label>
+			<div class="col-md-10">
+				<p class="form-control-static" data-bind="text: stats().StorageEngine"></p>
+			</div>
+		</div><div class="form-group">
             <label class="col-md-2 control-label">Last document Etag</label>
             <div class="col-md-10">
                 <p class="form-control-static" data-bind="text: stats().LastDocEtag"></p>

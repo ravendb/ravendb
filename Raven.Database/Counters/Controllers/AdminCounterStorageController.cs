@@ -3,15 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Net;
-using System.Net.Http;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using System.Web.Http;
-using Raven.Abstractions.Data;
+using Raven.Abstractions.Counters;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Json.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Web.Http;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -29,7 +28,7 @@ namespace Raven.Database.Counters.Controllers
 				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", id), HttpStatusCode.Conflict);
             }
 
-            var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
+            var dbDoc = await ReadJsonObjectAsync<CountersDocument>();
             CountersLandlord.Protect(dbDoc);
             var json = RavenJObject.FromObject(dbDoc);
             json.Remove("Id");

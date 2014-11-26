@@ -380,6 +380,24 @@ namespace Raven.Database.FileSystem.Storage.Voron
             storage.Files.Add(writeBatch.Value, key, file, version);
         }
 
+        public Etag GetLastEtag()
+        {
+            var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+
+            using (var it = filesByEtag.Iterate(Snapshot, writeBatch.Value))
+            {
+                if (it.Seek(Slice.AfterAllKeys) == false)
+                    return Etag.Empty;
+
+                Etag result = null;
+                var maxKey = it.CurrentKey.ToString();
+                if (!Etag.TryParse(maxKey, out result))
+                    return Etag.Empty;
+
+                return result;           
+            }
+        }
+
         public int GetFileCount()
         {
             var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
@@ -868,6 +886,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
             return sb.ToString();
         }
+
 
     }
 }

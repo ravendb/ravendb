@@ -261,7 +261,19 @@ namespace Raven.Smuggler
 			return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
 		}
 
-		public void Initialize(SmugglerDatabaseOptions databaseOptions)
+	    public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+	    {
+			if (metadata != null)
+			{
+				metadata.Remove(Constants.RavenReplicationHistory);
+				metadata.Remove(Constants.RavenReplicationSource);
+				metadata.Remove(Constants.RavenReplicationVersion);
+			}
+
+		    return metadata;
+	    }
+
+	    public void Initialize(SmugglerDatabaseOptions databaseOptions)
 		{
 			Options = databaseOptions;
 			jintHelper.Initialize(databaseOptions);
@@ -273,15 +285,17 @@ namespace Raven.Smuggler
 				return;
 
 			var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/config";
-			var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions));
-			var configuration = (RavenJObject)request.ReadResponseJson();
+			using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
+			{
+				var configuration = (RavenJObject)request.ReadResponseJson();
 
-			var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
-			if (maxNumberOfItemsToProcessInSingleBatch <= 0)
-				return;
+				var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
+				if (maxNumberOfItemsToProcessInSingleBatch <= 0) 
+					return;
 
-			var current = databaseOptions.BatchSize;
-			databaseOptions.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
+				var current = databaseOptions.BatchSize;
+				databaseOptions.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
+			}
 		}
 
 		public async Task<List<KeyValuePair<string, long>>> GetIdentities()
@@ -294,18 +308,18 @@ namespace Raven.Smuggler
 			do
 			{
 				var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/identities?start=" + start + "&pageSize=" + pageSize;
-				var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions));
-
-				var identitiesInfo = (RavenJObject)await request.ReadResponseJsonAsync();
-				totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");
-
-				foreach (var identity in identitiesInfo.Value<RavenJArray>("Identities"))
+				using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
 				{
-					identities.Add(new KeyValuePair<string, long>(identity.Value<string>("Key"), identity.Value<long>("Value")));
+					var identitiesInfo = (RavenJObject)await request.ReadResponseJsonAsync();
+					totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");
+
+					foreach (var identity in identitiesInfo.Value<RavenJArray>("Identities"))
+					{
+						identities.Add(new KeyValuePair<string, long>(identity.Value<string>("Key"), identity.Value<long>("Value")));
+					}
+
+					start += pageSize;
 				}
-
-				start += pageSize;
-
 			} while (identities.Count < totalIdentitiesCount);
 
 			return identities;

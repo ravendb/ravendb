@@ -1,15 +1,21 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Connections;
+using Raven.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -17,6 +23,8 @@ namespace Raven.Database.Server.Tenancy
     {
         private readonly InMemoryRavenConfiguration systemConfiguration;
         private readonly DocumentDatabase systemDatabase;
+
+        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
 
 	    private bool initialized;
         private const string DATABASES_PREFIX = "Raven/Databases/";
@@ -90,6 +98,23 @@ namespace Raven.Database.Server.Tenancy
             return null;
         }
 
+        public bool TryGetDatabase(string tenantId, out Task<DocumentDatabase> database)
+        {
+            if (Locks.Contains(DisposingLock))
+                throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
+
+            if (!ResourcesStoresCache.TryGetValue(tenantId, out database)) 
+                return false;
+
+            if (!database.IsFaulted && !database.IsCanceled) 
+                return true;
+
+            ResourcesStoresCache.TryRemove(tenantId, out database);
+            DateTime time;
+            LastRecentlyUsed.TryRemove(tenantId, out time);
+            return false;
+        }
+
         public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
 			if (Locks.Contains(DisposingLock))
@@ -128,6 +153,8 @@ namespace Raven.Database.Server.Tenancy
 				documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
 				documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
 	            documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
+                // register only DB that has incremental backup set.
+                documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
@@ -141,6 +168,114 @@ namespace Raven.Database.Server.Tenancy
                 return task;
             }).Unwrap());
             return true;
+        }
+
+        protected InMemoryRavenConfiguration CreateConfiguration(
+                        string tenantId,
+                        DatabaseDocument document,
+                        string folderPropName,
+                        InMemoryRavenConfiguration parentConfiguration)
+        {
+            var config = new InMemoryRavenConfiguration
+            {
+                Settings = new NameValueCollection(parentConfiguration.Settings),
+            };
+
+            SetupTenantConfiguration(config);
+
+            config.CustomizeValuesForDatabaseTenant(tenantId);
+
+            config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;           
+
+            foreach (var setting in document.Settings)
+            {
+                config.Settings[setting.Key] = setting.Value;
+            }
+            Unprotect(document);
+
+            foreach (var securedSetting in document.SecuredSettings)
+            {
+                config.Settings[securedSetting.Key] = securedSetting.Value;
+            }
+
+			config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
+
+            config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
+            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);
+
+            config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+
+            config.DatabaseName = tenantId;
+            config.IsTenantDatabase = true;
+
+            config.Initialize();
+            config.CopyParentSettings(parentConfiguration);
+            return config;
+        }
+
+        public void Unprotect(DatabaseDocument databaseDocument)
+        {
+            if (databaseDocument.SecuredSettings == null)
+            {
+                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                return;
+            }
+
+            foreach (var prop in databaseDocument.SecuredSettings.ToList())
+            {
+                if (prop.Value == null)
+                    continue;
+                var bytes = Convert.FromBase64String(prop.Value);
+                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
+                try
+                {
+                    var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
+                    databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
+                }
+                catch (Exception e)
+                {
+                    Logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
+                    databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
+                }
+            }
+        }
+
+        public void Protect(DatabaseDocument databaseDocument)
+        {
+            if (databaseDocument.SecuredSettings == null)
+            {
+                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                return;
+            }
+
+            foreach (var prop in databaseDocument.SecuredSettings.ToList())
+            {
+                if (prop.Value == null)
+                    continue;
+                var bytes = Encoding.UTF8.GetBytes(prop.Value);
+                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
+                var protectedValue = ProtectedData.Protect(bytes, entrophy, DataProtectionScope.CurrentUser);
+                databaseDocument.SecuredSettings[prop.Key] = Convert.ToBase64String(protectedValue);
+            }
+        }
+
+        private void OnDatabaseBackupCompleted(DocumentDatabase db)
+        {
+            var dbStatusKey = "Raven/BackupStatus/" + db.Name;
+            var statusDocument = db.Documents.Get(dbStatusKey, null);
+            DatabaseOperationsStatus status;
+            if (statusDocument == null)
+            {
+                status = new DatabaseOperationsStatus();
+            }
+            else
+            {
+                status = statusDocument.DataAsJson.JsonDeserialization<DatabaseOperationsStatus>();
+            }
+            status.LastBackup = SystemTime.UtcNow;
+            var json = RavenJObject.FromObject(status);
+            json.Remove("Id");
+            systemDatabase.Documents.Put(dbStatusKey, null, json, new RavenJObject(), null);
         }
 
         private void AssertLicenseParameters(InMemoryRavenConfiguration config)
@@ -173,9 +308,9 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public void ForAllDatabases(Action<DocumentDatabase> action)
+        public void ForAllDatabases(Action<DocumentDatabase> action, bool excludeSystemDatabase = false)
         {
-            action(systemDatabase);
+            if (!excludeSystemDatabase) action(systemDatabase);
             foreach (var value in ResourcesStoresCache
                 .Select(db => db.Value)
                 .Where(value => value.Status == TaskStatus.RanToCompletion))
@@ -203,7 +338,7 @@ namespace Raven.Database.Server.Tenancy
                     return;
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
                 Logger.Info("Shutting down database {0} because the tenant database has been updated or removed", dbName);
-				Cleanup(dbName, skipIfActive: false, notificationType: notification.Type);
+				Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
             };
         }
 
@@ -277,7 +412,7 @@ namespace Raven.Database.Server.Tenancy
 
 					Logger.Warn("Shutting down database {0} because its storage has become inaccessible", database.Name);
 
-					Cleanup(database.Name, skipIfActive: false, shouldSkip: x => false);
+					Cleanup(database.Name, skipIfActiveInDuration: null, shouldSkip: x => false);
 				});
 
 			}

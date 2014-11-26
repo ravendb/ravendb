@@ -411,6 +411,24 @@ namespace Raven.Storage.Esent.StorageActions
 			return records;
 		}
 
+		public Dictionary<string, int> GetDocumentReferencesStats()
+		{
+			var results = new Dictionary<string, int>();
+			Api.JetSetCurrentIndex(Session, IndexedDocumentsReferences, "by_ref");
+			if (Api.TryMoveFirst(Session, IndexedDocumentsReferences) == false)
+				return results;
+			do
+			{
+				var key = Api.RetrieveColumnAsString(Session, IndexedDocumentsReferences,
+					tableColumnsCache.IndexedDocumentsReferencesColumns["by_ref"]);
+				int value;
+				results.TryGetValue(key, out value);
+				results[key] = value + 1;
+
+			} while (Api.TryMoveNext(Session, IndexedDocumentsReferences));
+			return results;
+		}
+
 		public IEnumerable<string> GetDocumentsReferencesFrom(string key)
 		{
 			return QueryReferences(key, "by_key", "ref");

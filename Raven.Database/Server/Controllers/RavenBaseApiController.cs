@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -11,6 +12,7 @@ using System.Net.Http.Headers;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
@@ -30,6 +32,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -48,6 +51,15 @@ namespace Raven.Database.Server.Controllers
 				return Request ?? request;
 			}
 		}
+
+        public bool IsInternalRequest
+        {
+            get
+            {
+                var internalHeader = GetHeader("Raven-internal-request");
+                return internalHeader != null && internalHeader == "true";
+            }
+        }
 
 		public HttpHeaders InnerHeaders
 		{
@@ -83,8 +95,13 @@ namespace Raven.Database.Server.Controllers
 
 		protected virtual void InnerInitialization(HttpControllerContext controllerContext)
 		{
-			request = controllerContext.Request;
-			User = controllerContext.RequestContext.Principal;
+			this.request = controllerContext.Request;
+			this.User = controllerContext.RequestContext.Principal;
+
+            this.landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
+            this.fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
+            this.countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
+            this.requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
 		}
 
 		public async Task<T> ReadJsonObjectAsync<T>()
@@ -496,7 +513,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
 			var currentFileEtag = EmbeddedLastChangedDate + docPath;
-			if (etagValue == currentFileEtag)
+			if (etagValue == "\"" + currentFileEtag + "\"")
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			var fileStream = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -553,7 +570,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
 			var currentFileEtag = EmbeddedLastChangedDate + docPath;
-			if (etagValue == currentFileEtag)
+			if (etagValue == "\"" + currentFileEtag + "\"")
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			byte[] bytes;
@@ -617,15 +634,14 @@ namespace Raven.Database.Server.Controllers
 					return "image/png";
 				case ".xap":
 					return "application/x-silverlight-2";
+				case ".json":
+					return "application/json";
 				default:
 					return "text/plain";
 			}
 		}
 
-		public class Headers : HttpHeaders
-		{
-
-		}
+        protected class Headers : HttpHeaders {}
 
 		public JsonContent JsonContent(RavenJToken data = null)
 		{
@@ -652,19 +668,80 @@ namespace Raven.Database.Server.Controllers
 
         public abstract string TenantName { get; }
 
-        public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
+        private int innerRequestsCount;
 
-        public void AddRequestTraceInfo(Action<StringBuilder> info)
+        public int InnerRequestsCount { get { return innerRequestsCount;  } }
+
+		public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
+
+		public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
+
+		public void AddRequestTraceInfo(Action<StringBuilder> info)
+		{
+			if (info == null)
+				return;
+
+			if (CustomRequestTraceInfo == null)
+				CustomRequestTraceInfo = new List<Action<StringBuilder>>();
+
+			CustomRequestTraceInfo.Add(info);
+		}
+
+        public void IncrementInnerRequestsCount()
         {
-            if (info == null)
-                return;
-
-            if (CustomRequestTraceInfo == null)
-                CustomRequestTraceInfo = new List<Action<StringBuilder>>();
-            
-            CustomRequestTraceInfo.Add(info);
+            Interlocked.Increment(ref innerRequestsCount);
         }
 
+
 	    public abstract void MarkRequestDuration(long duration);
-	}
+
+
+        #region Landlords
+
+        private DatabasesLandlord landlord;
+        public DatabasesLandlord DatabasesLandlord
+        {
+            get
+            {
+                if (Configuration == null)
+                    return landlord;
+                return (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
+            }
+        }
+
+        private CountersLandlord countersLandlord;
+        public CountersLandlord CountersLandlord
+        {
+            get
+            {
+                if (Configuration == null)
+                    return countersLandlord;
+                return (CountersLandlord)Configuration.Properties[typeof(CountersLandlord)];
+            }
+        }
+
+        private FileSystemsLandlord fileSystemsLandlord;
+        public FileSystemsLandlord FileSystemsLandlord
+        {
+            get
+            {
+                if (Configuration == null)
+                    return fileSystemsLandlord;
+                return (FileSystemsLandlord)Configuration.Properties[typeof(FileSystemsLandlord)];
+            }
+        }
+
+        private RequestManager requestManager;
+        public RequestManager RequestManager
+        {
+            get
+            {
+                if (Configuration == null)
+                    return requestManager;
+                return (RequestManager)Configuration.Properties[typeof(RequestManager)];
+            }
+        }
+
+        #endregion
+    }
 }

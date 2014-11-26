@@ -13,13 +13,23 @@ namespace Raven.Abstractions.Util.Encryptors
 	{
 		public DefaultEncryptor()
 		{
-			Hash = new DefaultHashEncryptor();
+			Hash = new DefaultHashEncryptor(allowNonThreadSafeMethods: false);
 		}
 
 		public override IHashEncryptor Hash { get; protected set; }
 
 		public class DefaultHashEncryptor : HashEncryptorBase, IHashEncryptor
 		{
+			public DefaultHashEncryptor()
+				: this(true)
+			{
+			}
+
+			public DefaultHashEncryptor(bool allowNonThreadSafeMethods)
+				: base(allowNonThreadSafeMethods)
+			{
+			}
+
 			public int StorageHashSize
 			{
 				get
@@ -28,40 +38,44 @@ namespace Raven.Abstractions.Util.Encryptors
 				}
 			}
 
-		    private MD5 md5;
+			private MD5 md5;
 
-		    public void TransformBlock(byte[] bytes, int offset, int length)
-		    {
-                if (md5 == null)
-                    md5 = MD5.Create();
+			public void TransformBlock(byte[] bytes, int offset, int length)
+			{
+				ThrowNotSupportedExceptionForNonThreadSafeMethod();
 
-		        md5.TransformBlock(bytes, offset, length, null, 0);
-		    }
+				if (md5 == null)
+					md5 = MD5.Create();
 
-		    public byte[] TransformFinalBlock()
-		    {
-                if (md5 == null)
-                    md5 = MD5.Create();
+				md5.TransformBlock(bytes, offset, length, null, 0);
+			}
 
-		        md5.TransformFinalBlock(new byte[0], 0, 0);
-			    return md5.Hash;
-		    }
+			public byte[] TransformFinalBlock()
+			{
+				ThrowNotSupportedExceptionForNonThreadSafeMethod();
 
-		    public void Dispose()
-		    {
-                if (md5 != null)
-                    md5.Dispose();
-		    }
+				if (md5 == null)
+					md5 = MD5.Create();
 
-		    public byte[] ComputeForStorage(byte[] bytes)
+				md5.TransformFinalBlock(new byte[0], 0, 0);
+				return md5.Hash;
+			}
+
+			public void Dispose()
+			{
+				if (md5 != null)
+					md5.Dispose();
+			}
+
+			public byte[] ComputeForStorage(byte[] bytes)
 			{
 				return ComputeHash(SHA256.Create(), bytes);
 			}
 
-            public byte[] ComputeForStorage(byte[] bytes, int offset, int length)
-            {
-                return ComputeHash(SHA256.Create(), bytes, offset, length);
-            }
+			public byte[] ComputeForStorage(byte[] bytes, int offset, int length)
+			{
+				return ComputeHash(SHA256.Create(), bytes, offset, length);
+			}
 
 			public byte[] ComputeForOAuth(byte[] bytes)
 			{
@@ -73,28 +87,28 @@ namespace Raven.Abstractions.Util.Encryptors
 				return ComputeHash(MD5.Create(), bytes);
 			}
 
-		    public byte[] Compute16(Stream stream)
-		    {
-		        using (var hasher = MD5.Create())
-		        {
-                    return hasher.ComputeHash(stream);
-		        }
-		    }
+			public byte[] Compute16(Stream stream)
+			{
+				using (var hasher = MD5.Create())
+				{
+					return hasher.ComputeHash(stream);
+				}
+			}
 
-		    public byte[] Compute16(byte[] bytes, int offset, int length)
-            {
-                return ComputeHash(MD5.Create(), bytes, offset, length);
-            }
+			public byte[] Compute16(byte[] bytes, int offset, int length)
+			{
+				return ComputeHash(MD5.Create(), bytes, offset, length);
+			}
 
 			public byte[] Compute20(byte[] bytes)
 			{
 				return ComputeHash(SHA1.Create(), bytes);
 			}
 
-            public byte[] Compute20(byte[] bytes, int offset, int length)
-            {
-                return ComputeHash(SHA1.Create(), bytes, offset, length);
-            }
+			public byte[] Compute20(byte[] bytes, int offset, int length)
+			{
+				return ComputeHash(SHA1.Create(), bytes, offset, length);
+			}
 		}
 	}
 }

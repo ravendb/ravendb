@@ -22,11 +22,28 @@ namespace Raven.Tests.Common.Util
         private long totalWrite;
         private bool isRunning;
 
-        public ProxyServer(int from, int to)
+        public ProxyServer(ref int port, int to)
         {
             this.to = to;
-            listener = new TcpListener(IPAddress.Loopback, @from);
-            listener.Start();
+	        var originPort = port;
+	        while (port > 0)
+	        {
+		        try
+		        {
+					listener = new TcpListener(IPAddress.Loopback, port);
+					listener.Start();
+			        break;
+		        }
+		        catch (SocketException)
+		        {
+			        port--;
+			        listener = null;
+		        }
+	        }
+
+	        if (listener == null)
+		        throw new InvalidOperationException("Couldn't find an open port in the range " + port + " - " + originPort);
+
             totalRead = 0;
             totalWrite = 0;
             isRunning = true;

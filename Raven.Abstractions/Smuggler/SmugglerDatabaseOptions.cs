@@ -18,9 +18,8 @@ namespace Raven.Abstractions.Smuggler
 {
     public class SmugglerDatabaseOptions : SmugglerOptions<RavenConnectionStringOptions>
 	{
-        public const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
+        public new const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
 	    private int chunkSize;
-
 	   
 	    private long? totalDocumentSizeInChunkLimitInBytes;
 
@@ -91,7 +90,6 @@ namespace Raven.Abstractions.Smuggler
         public Etag StartAttachmentsDeletionEtag { get; set; }
 
 
-
 		/// <summary>
         /// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.
         /// Default is all items.
@@ -138,6 +136,11 @@ namespace Raven.Abstractions.Smuggler
 		/// </summary>
 		public bool ShouldExcludeExpired { get; set; }
 
+        /// <summary>
+        /// When set ovverides the default document name.
+        /// </summary>
+        public string NoneDefualtFileName { get; set; }
+
 		public virtual bool ExcludeExpired(RavenJToken item, DateTime now)
 		{
 			var metadata = item.Value<RavenJObject>("@metadata");
@@ -174,6 +177,8 @@ namespace Raven.Abstractions.Smuggler
         public int MaxStepsForTransformScript { get; set; }
 
         public bool WaitForIndexing { get; set; }
+
+		public bool StripReplicationInformation { get; set; }
     }
 
  

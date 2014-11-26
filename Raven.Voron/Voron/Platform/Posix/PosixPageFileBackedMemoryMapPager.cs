@@ -1,13 +1,12 @@
 using System;
-using Voron.Impl.Paging;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Mono.Unix.Native;
-using Voron.Platform.Posix;
 using Voron.Impl;
-using System.Runtime.InteropServices;
+using Voron.Impl.Paging;
 using Voron.Trees;
 
-namespace Voron
+namespace Voron.Platform.Posix
 {
 	public unsafe class PosixPageFileBackedMemoryMapPager : AbstractPager
 	{

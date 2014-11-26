@@ -3,6 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Client.Extensions;
+using Raven.Database.Actions;
+using Raven.Database.Config;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Controllers.Admin;
+using Raven.Database.Server.Security;
+using Raven.Database.Server.Tenancy;
+using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,22 +26,6 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
-
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.FileSystem;
-using Raven.Client.Extensions;
-using Raven.Database.Actions;
-using Raven.Database.Commercial;
-using Raven.Database.Config;
-using Raven.Database.Extensions;
-using Raven.Database.Server.Controllers.Admin;
-using Raven.Database.FileSystem.Extensions;
-using Raven.Database.Server.Tenancy;
-using Raven.Database.Storage;
-using Raven.Json.Linq;
-
 using Voron.Impl.Backup;
 
 
@@ -90,7 +86,7 @@ namespace Raven.Database.FileSystem.Controllers
 				}, fileSystemNameFormat.ErrorCode);
 			}
 
-			if (FileSystemsLandlord.IsNotLicensed())
+			if (Authentication.IsLicensedForRavenFs == false)
 	        {
 				return GetMessageWithObject(new
 				{
@@ -109,7 +105,7 @@ namespace Raven.Database.FileSystem.Controllers
                     return GetEmptyMessage(HttpStatusCode.Conflict);
             }
 
-			var fsDoc = await ReadJsonObjectAsync<DatabaseDocument>();
+            var fsDoc = await ReadJsonObjectAsync<FileSystemDocument>();
 			FileSystemsLandlord.Protect(fsDoc);
 			var json = RavenJObject.FromObject(fsDoc);
             json.Remove("Id");
@@ -364,9 +360,7 @@ namespace Raven.Database.FileSystem.Controllers
             var restoreStatus = new RestoreStatus { Messages = new List<string>() };
 
             var restoreRequest = await ReadJsonObjectAsync<FilesystemRestoreRequest>();
-
-            FileSystemDocument filesystemDocument = null;
-
+       
             var fileSystemDocumentPath = FindFilesystemDocument(restoreRequest.BackupLocation);
 
             if (!File.Exists(fileSystemDocumentPath))
@@ -375,7 +369,7 @@ namespace Raven.Database.FileSystem.Controllers
             }
 
             var filesystemDocumentText = File.ReadAllText(fileSystemDocumentPath);
-            filesystemDocument = RavenJObject.Parse(filesystemDocumentText).JsonDeserialization<FileSystemDocument>();
+            FileSystemDocument filesystemDocument = RavenJObject.Parse(filesystemDocumentText).JsonDeserialization<FileSystemDocument>();
 
             var filesystemName = !string.IsNullOrWhiteSpace(restoreRequest.FilesystemName) ? restoreRequest.FilesystemName
                                    : filesystemDocument == null ? null : filesystemDocument.Id;
@@ -394,8 +388,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             var ravenConfiguration = new RavenConfiguration
             {
-                DatabaseName = filesystemName,
-                IsTenantDatabase = true
+                FileSystemName = filesystemName,
             };
 
             if (filesystemDocument != null)
@@ -406,17 +399,18 @@ namespace Raven.Database.FileSystem.Controllers
                 }
             }
 
-            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename)))
-                ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.VoronTypeName;
-            else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
+            if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
                 ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.EsentTypeName;
-            
-            ravenConfiguration.CustomizeValuesForTenant(filesystemName);
+            else
+                ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.VoronTypeName;
+
+            ravenConfiguration.CustomizeValuesForFileSystemTenant(filesystemName);
             ravenConfiguration.Initialize();
 
             string documentDataDir;
             ravenConfiguration.FileSystem.DataDirectory = ResolveTenantDataDirectory(restoreRequest.FilesystemLocation, filesystemName, out documentDataDir);
             restoreRequest.FilesystemLocation = ravenConfiguration.FileSystem.DataDirectory;
+
 
             string anotherRestoreResourceName;
             if (IsAnotherRestoreInProgress(out anotherRestoreResourceName))
@@ -460,9 +454,7 @@ namespace Raven.Database.FileSystem.Controllers
             var task = Task.Factory.StartNew(() =>
             {
                 if (!string.IsNullOrWhiteSpace(restoreRequest.FilesystemLocation))
-                {
                     ravenConfiguration.FileSystem.DataDirectory = restoreRequest.FilesystemLocation;
-                }
 
                 using (var transactionalStorage = RavenFileSystem.CreateTransactionalStorage(ravenConfiguration))
                 {
@@ -478,17 +470,17 @@ namespace Raven.Database.FileSystem.Controllers
                     return;
 
                 filesystemDocument.Settings["Raven/FileSystem/DataDir"] = documentDataDir;
+
                 if (restoreRequest.IndexesLocation != null)
                     filesystemDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
                 if (restoreRequest.JournalsLocation != null)
                     filesystemDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
                 filesystemDocument.Id = filesystemName;
-                DatabasesLandlord.SystemDatabase.Documents.Put("Raven/FileSystems/" + filesystemName, null, RavenJObject.FromObject(filesystemDocument),
-                    new RavenJObject(), null);
+                DatabasesLandlord.SystemDatabase.Documents.Put("Raven/FileSystems/" + filesystemName, null, RavenJObject.FromObject(filesystemDocument), new RavenJObject(), null);
 
                 restoreStatus.Messages.Add("The new filesystem was created");
-                DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null,
-                    RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+                DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+
                 Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
             }, TaskCreationOptions.LongRunning);
 
@@ -509,7 +501,6 @@ namespace Raven.Database.FileSystem.Controllers
         private string FindFilesystemDocument(string rootBackupPath)
         {
             // try to find newest filesystem document in incremental backups first - to have the most recent version (if available)
-
             var backupPath = Directory.GetDirectories(rootBackupPath, "Inc*")
                                        .OrderByDescending(dir => dir)
                                        .Select(dir => Path.Combine(dir, Constants.FilesystemDocumentFilename))
@@ -523,17 +514,17 @@ namespace Raven.Database.FileSystem.Controllers
             if (Path.IsPathRooted(filesystemLocation))
             {
                 documentDataDir = filesystemLocation;
-                return filesystemLocation;
+                return documentDataDir;
             }
 
-            var baseDataPath = Path.GetDirectoryName(DatabasesLandlord.SystemDatabase.Configuration.DataDirectory);
+            var baseDataPath = Path.GetDirectoryName(this.FileSystemsLandlord.SystemConfiguration.FileSystem.DataDirectory);
             if (baseDataPath == null)
                 throw new InvalidOperationException("Could not find root data path");
 
             if (string.IsNullOrWhiteSpace(filesystemLocation))
             {
-                documentDataDir = Path.Combine("~\\Filesystems", filesystemName);
-                return Raven.Database.Extensions.IOExtensions.ToFullPath(documentDataDir, baseDataPath);
+                documentDataDir = Path.Combine("~\\FileSystems", filesystemName);
+                return IOExtensions.ToFullPath(documentDataDir, baseDataPath);
             }
 
             documentDataDir = filesystemLocation;
@@ -547,7 +538,7 @@ namespace Raven.Database.FileSystem.Controllers
                 documentDataDir = "~\\" + documentDataDir.Substring(2);
             }
 
-            return Raven.Database.Extensions.IOExtensions.ToFullPath(documentDataDir, baseDataPath);
+            return IOExtensions.ToFullPath(documentDataDir, baseDataPath);
         }
     }
 }

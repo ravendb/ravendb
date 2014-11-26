@@ -19,7 +19,7 @@ namespace Raven.Abstractions.Data
 		public int IndexingErrors { get; set; }
 		public Etag LastIndexedEtag { get; set; }
 		public int? IndexingLag { get; set; }
-		public DateTime LastIndexedTimestamp { get; set; }
+        public DateTime LastIndexedTimestamp { get; set; }
 		public DateTime? LastQueryTimestamp { get; set; }
 		public int TouchCount { get; set; }
         public IndexingPriority Priority { get; set; }
@@ -102,7 +102,9 @@ namespace Raven.Abstractions.Data
 		    }
 	    }
 
-	    public string Operation { get; set; }
+		public int LoadDocumentCount { get; set; }
+		public long LoadDocumentDurationMs { get; set; }
+		public string Operation { get; set; }
 		public int OutputCount { get; set; }
 		public int InputCount { get; set; }
 		public int ItemsCount { get; set; }

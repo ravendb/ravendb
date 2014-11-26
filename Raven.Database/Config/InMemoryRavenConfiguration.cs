@@ -70,9 +70,11 @@ namespace Raven.Database.Config
 			Catalog.Changed += (sender, args) => ResetContainer();
 		}
 
-		public string DatabaseName { get; set; }
+        public string DatabaseName { get; set; }
 
-        public string FileSystemName { get { return DatabaseName; } }
+        public string FileSystemName { get; set; }
+
+        public string CountersDatabaseName { get; set; }
 
 		public void PostInit()
 		{
@@ -252,6 +254,7 @@ namespace Raven.Database.Config
 			}
 
 			AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
+		    RejectClientsMode = ravenSettings.RejectClientsModeEnabled.Value;
 
 		    Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
 			Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
@@ -655,6 +658,13 @@ namespace Raven.Database.Config
 		/// </summary>
 		public bool AllowLocalAccessWithoutAuthorization { get; set; }
 
+        /// <summary>
+        /// If set all client request to the server will be rejected with 
+        /// the http 503 response.
+        /// Other servers or the studio could still access the server.
+        /// </summary>
+        public bool RejectClientsMode { get; set; }
+
 		/// <summary>
 		/// The certificate to use when verifying access token signatures for OAuth
 		/// </summary>
@@ -968,6 +978,7 @@ namespace Raven.Database.Config
 			{
 				Container.Dispose();
 				Container = null;
+				containerExternallySet = false;
 			}
 		}
 
@@ -1023,7 +1034,6 @@ namespace Raven.Database.Config
 		}
 
 
-        //TODO : perhaps refactor with enums?
 	    public static string StorageEngineAssemblyNameByTypeName(string typeName)
 		{
 	        switch (typeName.ToLowerInvariant())
@@ -1035,7 +1045,7 @@ namespace Raven.Database.Config
 	                typeName = typeof (Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
 	                break;
                 default:
-                    throw new ArgumentException("Invalid storage engine type name");
+					throw new ArgumentException("Invalid storage engine type name: " + typeName);
 	        }
 	        return typeName;
 	    }	  
@@ -1044,10 +1054,9 @@ namespace Raven.Database.Config
 		{
 			if (RunInMemory)
 			{
-			    if (!string.IsNullOrWhiteSpace(DefaultStorageTypeName) &&
-			        DefaultStorageTypeName.Equals(EsentTypeName, StringComparison.InvariantCultureIgnoreCase))
-			        return EsentTypeName;
-
+				if (!string.IsNullOrWhiteSpace(DefaultStorageTypeName) &&
+				    DefaultStorageTypeName.Equals(EsentTypeName, StringComparison.InvariantCultureIgnoreCase))
+					return EsentTypeName;
                 return VoronTypeName;                
 			}
 
@@ -1061,7 +1070,9 @@ namespace Raven.Database.Config
 					return EsentTypeName;
 			}
 
-	        return DefaultStorageTypeName ?? VoronTypeName;
+		    if (string.IsNullOrEmpty(DefaultStorageTypeName))
+			    return EsentTypeName;
+			return DefaultStorageTypeName;
 		}
 
 		public void Dispose()
@@ -1098,17 +1109,23 @@ namespace Raven.Database.Config
 			return types.Select(GetExtensionsFor).Where(extensionsLog => extensionsLog != null);
 		}
 
-		public void CustomizeValuesForTenant(string tenantId)
-		{
-			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
-				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Databases", tenantId);
+        public void CustomizeValuesForDatabaseTenant(string tenantId)
+        {
+            if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
+                Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Databases", tenantId);
 
-			if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
-				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Databases", tenantId);
+            if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
+                Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Databases", tenantId);
 
-			if(string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
-				Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "Databases", tenantId);
-		}
+            if (string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
+                Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "Databases", tenantId);
+        }
+
+        public void CustomizeValuesForFileSystemTenant(string tenantId)
+        {                                             
+            if (string.IsNullOrEmpty(Settings["Raven/FileSystem/DataDir"]) == false)
+                Settings["Raven/FileSystem/DataDir"] = Path.Combine(Settings["Raven/FileSystem/DataDir"], "FileSystems", tenantId);  
+        }
 
 		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
 		{
@@ -1132,7 +1149,7 @@ namespace Raven.Database.Config
 			public StorageConfiguration()
 			{
 				Voron = new VoronConfiguration();
-	}
+	        }
 
 			public VoronConfiguration Voron { get; private set; }
 
@@ -1251,6 +1268,24 @@ namespace Raven.Database.Config
 			/// Whatever we should use SSL for this connection
 			/// </summary>
 			public bool UseSsl { get; set; }
+		}
+
+		public void UpdateDataDirForLegacySystemDb()
+		{
+			if (RunInMemory)
+				return;
+			var legacyPath = Settings["Raven/DataDir/Legacy"];
+			if (string.IsNullOrEmpty(legacyPath))
+				return;
+			var fullLegacyPath = FilePathTools.MakeSureEndsWithSlash(legacyPath.ToFullPath());
+
+			// if we already have a system database in the legacy path, we want to keep it.
+			// The idea is that we don't want to have the user experience "missing databases" because
+			// we change the path to make it nicer.
+			if (Directory.Exists(fullLegacyPath))
+			{
+				DataDirectory = legacyPath;
+			}
 		}
 	}
 }

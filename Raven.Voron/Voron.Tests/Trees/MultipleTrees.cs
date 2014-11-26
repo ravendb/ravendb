@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using Voron.Util;
+using Xunit;
 
 namespace Voron.Tests.Trees
 {
