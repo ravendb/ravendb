@@ -121,6 +121,7 @@
     <Compile Include="RavenDB-2913.cs" />
     <Compile Include="RavenDB2854.cs" />
     <Compile Include="RavenDB_1344 .cs" />
+    <Compile Include="RavenDB_1733.cs" />
     <Compile Include="RavenDB_2115.cs" />
     <Compile Include="RavenDB_2699.cs" />
     <Compile Include="DatabaseConfiguration.cs" />
@@ -250,7 +251,6 @@
     <Compile Include="RavenDB_1666.cs" />
     <Compile Include="RavenDB_1716.cs" />
     <Compile Include="RavenDB_1717.cs" />
-    <Compile Include="RavenDB_1733.cs" />
     <Compile Include="RavenDB_1735.cs" />
     <Compile Include="RavenDB_1749.cs" />
     <Compile Include="RavenDB_1760.cs" />

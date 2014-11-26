@@ -64,6 +64,9 @@
     <Compile Include="..\Raven.Database\Json\JintOperationScope.cs">
       <Link>Imports\JintOperationScope.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Smuggler\SmugglerJintHelper.cs">
+      <Link>Imports\SmugglerJintHelper.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
@@ -72,7 +75,6 @@
     <Compile Include="Client\ChunkedRemoteBulkInsertOperation.cs" />
     <Compile Include="SmugglerDatabaseOperationDispatcher.cs" />
     <Compile Include="SmugglerFilesOperationDispatcher.cs" />
-    <Compile Include="Imports\SmugglerJintHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="SmugglerDatabaseBetweenOperation.cs" />
     <Compile Include="ServerSupportedFeatures.cs" />

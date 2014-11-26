@@ -140,6 +140,8 @@ namespace Raven.Smuggler
 			    {"domain2:", "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)databaseOptions.Destination.Credentials).Domain = value },
 			    {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => databaseOptions.Source.ApiKey = value },
 			    {"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => databaseOptions.Destination.ApiKey = value },
+
+				{"strip-replication-information", "Remove all replication information from metadata (import only)", _ => databaseOptions.StripReplicationInformation = true},
 		    };
 
             filesystemOptionSet = new OptionSet

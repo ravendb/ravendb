@@ -266,6 +266,7 @@
     <Compile Include="Server\IgnoreSslCertificateErrorsMode.cs" />
     <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
+    <Compile Include="Smuggler\SmugglerJintHelper.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
