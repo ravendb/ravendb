@@ -17,9 +17,8 @@ class adminSettings extends viewModelBase {
         var apiKeyRoute = { route: ['admin/settings', 'admin/settings/apiKeys'], moduleId: 'viewmodels/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };
         var windowsAuthRoute = { route: 'admin/settings/windowsAuth', moduleId: 'viewmodels/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth() };
         var backupRoute = { route: 'admin/settings/backup', moduleId: 'viewmodels/backup', title: 'Backup', nav: true, hash: appUrl.forBackup() };
-        var compactDatabaseRoute = { route: 'admin/settings/compactDatabase', moduleId: 'viewmodels/compactDatabase', title: 'Compact Database', nav: true, hash: appUrl.forCompactDatabase() };
+        var compactRoute = { route: 'admin/settings/compact', moduleId: 'viewmodels/compact', title: 'Compact', nav: true, hash: appUrl.forCompact() };
         var restoreDatabaseRoute = { route: 'admin/settings/restoreDatabase', moduleId: 'viewmodels/restoreDatabase', title: 'Restore Database', nav: true, hash: appUrl.forRestoreDatabase() };
-        var compactFilesystemRoute = { route: 'admin/settings/compactFilesystem', moduleId: 'viewmodels/filesystem/compactFilesystem', title: 'Compact Filesystem', nav: true, hash: appUrl.forCompactFilesystem() };
         var restoreFilesystemRoute = { route: 'admin/settings/restoreFilesystem', moduleId: 'viewmodels/filesystem/restoreFilesystem', title: 'Restore Filesystem', nav: true, hash: appUrl.forRestoreFilesystem() };
         var adminLogsRoute = { route: 'admin/settings/adminLogs', moduleId: 'viewmodels/adminLogs', title: 'Admin Logs', nav: true, hash: appUrl.forAdminLogs() };
         var trafficWatchRoute = { route: 'admin/settings/trafficWatch', moduleId: 'viewmodels/trafficWatch', title: 'Traffic Watch', nav: true, hash: appUrl.forTrafficWatch() };
@@ -32,9 +31,8 @@ class adminSettings extends viewModelBase {
                 apiKeyRoute,
                 windowsAuthRoute,
                 backupRoute,
-                compactDatabaseRoute,
+                compactRoute,
                 restoreDatabaseRoute,
-                compactFilesystemRoute, 
                 restoreFilesystemRoute,
                 adminLogsRoute,
                 trafficWatchRoute,

@@ -155,16 +155,12 @@ class appUrl {
         return "#admin/settings/backup";
     }
 
-    static forCompactDatabase(): string {
-        return "#admin/settings/compactDatabase";
+    static forCompact(): string {
+        return "#admin/settings/compact";
     }
 
     static forRestoreDatabase(): string {
         return "#admin/settings/restoreDatabase";
-    }
-
-    static forCompactFilesystem(): string {
-        return "#admin/settings/compactFilesystem";
     }
 
     static forRestoreFilesystem(): string {

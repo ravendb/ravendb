@@ -15,7 +15,7 @@ class resourceBackup {
     nameCustomValidityError: KnockoutComputed<string>;
 
     constructor(private type: string, private resources: KnockoutObservableArray<resource>) {
-        this.resourcesNames = ko.computed(() => resources().map((db: database) => db.name));
+        this.resourcesNames = ko.computed(() => resources().map((rs: resource) => rs.name));
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
             return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
@@ -24,7 +24,7 @@ class resourceBackup {
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             var newResourceName = this.resourceName();
-            var foundRs = shell.resources().first((rs: resource) => newResourceName == rs.name && rs.type == this.type);
+            var foundRs = this.resources().first((rs: resource) => newResourceName == rs.name && rs.type == this.type);
 
             if (!foundRs && newResourceName.length > 0) {
                 errorMessage = (this.type == database.type ? "Database" : "File system") + " name doesn't exist!";
