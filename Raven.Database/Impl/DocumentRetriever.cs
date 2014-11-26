@@ -188,6 +188,8 @@ namespace Raven.Database.Impl
 
 			var metadata = GetMetadata(doc);
 			metadata.Remove("@id");
+		    if (fieldsToFetch.IsDistinctQuery)
+		        queryResult.Projection[Constants.DocumentIdFieldName] = queryResult.Key;
 			metadata[Constants.TemporaryScoreValue] = queryScore;
 			return new JsonDocument
 			{
