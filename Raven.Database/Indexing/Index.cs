@@ -1026,7 +1026,7 @@ namespace Raven.Database.Indexing
 			private readonly IndexQuery indexQuery;
 			private readonly Index parent;
 			private readonly Func<IndexQueryResult, bool> shouldIncludeInResults;
-			private readonly HashSet<int> alreadySeenProjections;
+			private readonly HashSet<RavenJObject> alreadySeenProjections;
 			private readonly FieldsToFetch fieldsToFetch;
 			private readonly HashSet<string> alreadySeenDocumentKeysInPreviousPage = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			private readonly OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers;
@@ -1044,7 +1044,7 @@ namespace Raven.Database.Indexing
 				this.reduceKeys = reduceKeys;
 
 				if (fieldsToFetch.IsDistinctQuery)
-					alreadySeenProjections = new HashSet<int>();
+					alreadySeenProjections = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
 			}
 
 			public IEnumerable<RavenJObject> IndexEntries(Reference<int> totalResults)
@@ -1223,7 +1223,7 @@ namespace Raven.Database.Indexing
 
 						if (indexQueryResult.Projection.Count > 0) // we don't consider empty projections to be relevant for distinct operations
 						{
-							alreadySeenProjections.Add(RavenJToken.GetDeepHashCode(indexQueryResult.Projection));
+							alreadySeenProjections.Add(indexQueryResult.Projection);
 						}
 					}
 				}
@@ -1406,7 +1406,7 @@ namespace Raven.Database.Indexing
 					return false;
 				}
 
-                if (fieldsToFetch.IsDistinctQuery && alreadySeenProjections.Add(RavenJToken.GetDeepHashCode(indexQueryResult.Projection)) == false)
+                if (fieldsToFetch.IsDistinctQuery && alreadySeenProjections.Add(indexQueryResult.Projection) == false)
 					return false;
 
 				return true;
