@@ -66,6 +66,8 @@ namespace Raven.Abstractions.Smuggler
 
 		Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript);
 
+		RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata);
+
         void Initialize(SmugglerDatabaseOptions options);
 
         void Configure(SmugglerDatabaseOptions options);

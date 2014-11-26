@@ -838,6 +838,9 @@ namespace Raven.Abstractions.Smuggler
 
 				Operations.ShowProgress("Importing attachment {0}", attachmentExportInfo.Key);
 
+				if (Options.StripReplicationInformation) 
+					attachmentExportInfo.Metadata = Operations.StripReplicationInformationFromMetadata(attachmentExportInfo.Metadata);
+
 				await Operations.PutAttachment(dst, attachmentExportInfo);
 
 				count++;
@@ -875,6 +878,9 @@ namespace Raven.Abstractions.Smuggler
 
                 if (!string.IsNullOrEmpty(Options.TransformScript))
                     document = await Operations.TransformDocument(document, Options.TransformScript);
+
+				if (Options.StripReplicationInformation) 
+					document["@metadata"] = Operations.StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
 
 				if (document == null)
 					continue;

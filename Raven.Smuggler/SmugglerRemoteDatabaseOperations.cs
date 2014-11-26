@@ -261,7 +261,19 @@ namespace Raven.Smuggler
 			return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
 		}
 
-		public void Initialize(SmugglerDatabaseOptions databaseOptions)
+	    public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+	    {
+			if (metadata != null)
+			{
+				metadata.Remove(Constants.RavenReplicationHistory);
+				metadata.Remove(Constants.RavenReplicationSource);
+				metadata.Remove(Constants.RavenReplicationVersion);
+			}
+
+		    return metadata;
+	    }
+
+	    public void Initialize(SmugglerDatabaseOptions databaseOptions)
 		{
 			Options = databaseOptions;
 			jintHelper.Initialize(databaseOptions);
