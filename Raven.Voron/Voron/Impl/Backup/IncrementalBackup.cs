@@ -33,7 +33,8 @@ namespace Voron.Impl.Backup
         }
 
         public long ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal,
-			Action<string> infoNotify = null)
+			Action<string> infoNotify = null,
+			Action backupStarted = null)
         {
 			infoNotify = infoNotify ?? (s => { });
 
@@ -67,6 +68,8 @@ namespace Voron.Impl.Backup
 
                 using (env.NewTransaction(TransactionFlags.Read))
                 {
+	                if (backupStarted != null)
+		                backupStarted();// we let call know that we have started the backup 
                     var usedJournals = new List<JournalFile>();
 
                     try
