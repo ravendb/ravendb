@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
@@ -19,12 +20,69 @@ namespace Raven.Tests.Bugs.Queries
 		[Fact]
 		public void IncludeWithDistinct()
 		{
-			using (var store = NewRemoteDocumentStore(fiddler: true))
+			using (var store = NewDocumentStore())
 			{
 				new MyCustIndex().Execute(store);
 
 				using (var session = store.OpenSession())
 				{
+					session.Store(new Customer
+					{
+						Location = "PT CT",
+						Occupation = "Marketing",
+						CustomerId = "1",
+						HeadingId = "2"
+					}, "Customers/1");
+
+
+					session.Store(new Customer
+					{
+						Location = "PT CT",
+						Occupation = "Marketing",
+						CustomerId = "1",
+						HeadingId = "2"
+					}, "Customers/2");
+					session.SaveChanges();
+				}
+
+				WaitForIndexing(store);
+				using (var session = store.OpenSession())
+				{
+
+					RavenQueryStatistics qs;
+					var qRes = session.Advanced.DocumentQuery<Customer>("MyCustIndex")
+						.Statistics(out qs).Where("Occupation:Marketing")
+						.Distinct()
+						.SelectFields<CustomerHeader>("CustomerId")
+						.Take(20)
+						.Include("__document_id")
+						.ToList();
+					
+					Assert.Equal(1, qRes.Count);
+					var cust = session.Load<Customer>(qRes[0].Id);
+					Assert.Equal(1, session.Advanced.NumberOfRequests);
+				}
+			}
+		}
+
+		[Fact]
+		public void IncludeWithDistinctAndTransformer()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new MyCustIndex().Execute(store);
+				new IdentityTransformer().Execute(store);
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Customer
+					{
+						Location = "PT CT",
+						Occupation = "Marketing",
+						CustomerId = "1",
+						HeadingId = "2"
+					}, "Customers/1");
+
+
 					session.Store(new Customer
 					{
 						Location = "PT CT",
@@ -45,20 +103,42 @@ namespace Raven.Tests.Bugs.Queries
 						.Distinct()
 						.SelectFields<Customer>("CustomerId")
 						.Take(20)
-						.Include("__document_id")
+						.SetResultTransformer(new IdentityTransformer().TransformerName)
 						.ToList();
-					var cust = session.Load<Customer>("Customers/2");
-					Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+					WaitForUserToContinueTheTest(store);
+
+					Assert.Equal(1, qRes.Count);
+					Assert.Equal("Customers/1", qRes[0].Id);
+					Assert.Equal("PT CT", qRes[0].Location);
 				}
 			}
 		}
 
+
+		public class CustomerHeader
+		{
+			public string CustomerId { get; set; }
+			public string Id { get; set; }
+		}
+
 		public class Customer
 		{
+			public string Id { get; set; }
 			public string Location { get; set; }
 			public string Occupation { get; set; }
 			public string CustomerId { get; set; }
 			public string HeadingId { get; set; }
+		}
+
+		public class IdentityTransformer : AbstractTransformerCreationTask<Customer>
+		{
+			public IdentityTransformer()
+			{
+				TransformResults = customers =>
+					from customer in customers
+					select LoadDocument<Customer>(customer.Id);
+			}
 		}
 
 		public class MyCustIndex : AbstractIndexCreationTask<Customer>
