@@ -13,7 +13,7 @@ namespace Raven.Tests.FileSystem.Encryption
 {
 	public class FileSystemEncryptionTest : RavenFilesTestBase
 	{
-		private readonly string dataPath;
+		protected readonly string dataPath;
 
 		public FileSystemEncryptionTest()
 		{

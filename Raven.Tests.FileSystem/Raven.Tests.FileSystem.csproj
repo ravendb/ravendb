@@ -110,6 +110,7 @@
     <Compile Include="CompleteUsage.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="Encryption\Crud.cs" />
+    <Compile Include="Encryption\EncryptedFileSystemBackupRestore.cs" />
     <Compile Include="Encryption\FileSystemEncryptionTest.cs" />
     <Compile Include="Encryption\ShouldErrorOnMissingConfiguration.cs" />
     <Compile Include="FileHandling.cs" />
