@@ -228,7 +228,6 @@
     <TypeScriptCompile Include="App\viewmodels\licensingStatus.ts" />
     <TypeScriptCompile Include="App\viewmodels\queryStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
-    <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\createDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\createSampleData.ts" />
@@ -407,15 +406,16 @@
     <TypeScriptCompile Include="App\viewmodels\createResource.ts" />
     <TypeScriptCompile Include="App\viewmodels\backup.ts" />
     <TypeScriptCompile Include="App\viewmodels\compact.ts" />
+    <TypeScriptCompile Include="App\viewmodels\restore.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\restoreFilesystem.ts" />
     <Content Include="App\views\adminSettings.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
+    <Content Include="App\views\restore.html" />
     <Content Include="App\views\createResource.html" />
     <Content Include="App\views\statusDebugWebSocket.html" />
     <Content Include="App\views\sqlReplicationPerfStats.html" />
@@ -423,7 +423,6 @@
     <Content Include="App\views\ioTest.html" />
     <Content Include="App\views\indexStats.html" />
     <Content Include="App\views\copyTransformerDialog.html" />
-    <Content Include="App\views\filesystem\restoreFilesystem.html" />
     <Content Include="App\views\indexMergeSuggestions.html" />
     <Content Include="App\views\adminLogs.html" />
     <Content Include="App\views\upgrade.html" />
@@ -530,7 +529,6 @@
     <Content Include="App\views\scriptedIndexes.html" />
     <Content Include="App\views\resetIndexConfirm.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
-    <Content Include="App\views\restoreDatabase.html" />
     <Content Include="App\views\deleteTransformerConfirm.html" />
     <Content Include="App\views\saveTransformerWithNewNameConfirm.html" />
     <Content Include="App\views\sqlReplications.html" />

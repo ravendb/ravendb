@@ -18,8 +18,7 @@ class adminSettings extends viewModelBase {
         var windowsAuthRoute = { route: 'admin/settings/windowsAuth', moduleId: 'viewmodels/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth() };
         var backupRoute = { route: 'admin/settings/backup', moduleId: 'viewmodels/backup', title: 'Backup', nav: true, hash: appUrl.forBackup() };
         var compactRoute = { route: 'admin/settings/compact', moduleId: 'viewmodels/compact', title: 'Compact', nav: true, hash: appUrl.forCompact() };
-        var restoreDatabaseRoute = { route: 'admin/settings/restoreDatabase', moduleId: 'viewmodels/restoreDatabase', title: 'Restore Database', nav: true, hash: appUrl.forRestoreDatabase() };
-        var restoreFilesystemRoute = { route: 'admin/settings/restoreFilesystem', moduleId: 'viewmodels/filesystem/restoreFilesystem', title: 'Restore Filesystem', nav: true, hash: appUrl.forRestoreFilesystem() };
+        var restoreRoute = { route: 'admin/settings/restore', moduleId: 'viewmodels/restore', title: 'Restore', nav: true, hash: appUrl.forRestore() };
         var adminLogsRoute = { route: 'admin/settings/adminLogs', moduleId: 'viewmodels/adminLogs', title: 'Admin Logs', nav: true, hash: appUrl.forAdminLogs() };
         var trafficWatchRoute = { route: 'admin/settings/trafficWatch', moduleId: 'viewmodels/trafficWatch', title: 'Traffic Watch', nav: true, hash: appUrl.forTrafficWatch() };
         var debugInfoRoute = { route: 'admin/settings/debugInfo', moduleId: 'viewmodels/infoPackage', title: 'Gather Debug Info', nav: true, hash: appUrl.forDebugInfo() };
@@ -32,8 +31,7 @@ class adminSettings extends viewModelBase {
                 windowsAuthRoute,
                 backupRoute,
                 compactRoute,
-                restoreDatabaseRoute,
-                restoreFilesystemRoute,
+                restoreRoute,
                 adminLogsRoute,
                 trafficWatchRoute,
                 debugInfoRoute,

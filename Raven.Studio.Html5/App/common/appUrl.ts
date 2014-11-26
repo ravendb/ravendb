@@ -159,12 +159,8 @@ class appUrl {
         return "#admin/settings/compact";
     }
 
-    static forRestoreDatabase(): string {
-        return "#admin/settings/restoreDatabase";
-    }
-
-    static forRestoreFilesystem(): string {
-        return "#admin/settings/restoreFilesystem";
+    static forRestore(): string {
+        return "#admin/settings/restore";
     }
 
     static forAdminLogs(): string {
