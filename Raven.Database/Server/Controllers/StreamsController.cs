@@ -285,7 +285,7 @@ namespace Raven.Database.Server.Controllers
                         {
                             if (metadata.TryGetValue("@id", out token))
                             {
-                                OutputCsvValue(token.ToString(Formatting.None));                               
+                                OutputCsvValue(token.Value<string>());                               
                             }
                             writer.Write(',');
                         }
@@ -308,7 +308,7 @@ namespace Raven.Database.Server.Controllers
 								break;
 
 							default:
-								OutputCsvValue(token.Value<string>());
+                                OutputCsvValue(token.Value<string>());
 								break;
 						}
 					}
