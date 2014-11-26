@@ -11,7 +11,7 @@ namespace Raven.Bundles.Encryption.Plugin
 	{
 		public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
 		{
-			if (key == Constants.InDatabaseKeyVerificationDocumentName)
+			if (key == Constants.InResourceKeyVerificationDocumentName)
 				return VetoResult.Deny("Cannot delete the encryption verification document.");
 
 			return base.AllowDelete(key, transactionInformation);

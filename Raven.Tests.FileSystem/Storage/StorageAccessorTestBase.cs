@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
-
+using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
 
 namespace Raven.Tests.FileSystem.Storage
@@ -75,7 +76,7 @@ namespace Raven.Tests.FileSystem.Storage
             }
 
             storages.Add(storage);
-            storage.Initialize();
+			storage.Initialize(new OrderedPartCollection<AbstractFileCodec>());
 
             return storage;
         }

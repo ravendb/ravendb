@@ -229,7 +229,7 @@ namespace Raven.Database.Server.Tenancy
             {
 				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
-				AssertLicenseParameters();
+				AssertLicenseParameters(config);
 				var fs = new RavenFileSystem(config, tenantId, transportState);
                 fs.Initialize();
 
@@ -247,7 +247,7 @@ namespace Raven.Database.Server.Tenancy
             return true;
         }
 
-        private void AssertLicenseParameters()
+        private void AssertLicenseParameters(InMemoryRavenConfiguration config)
         {
 			string maxFileSystmes;
 			if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfFileSystems", out maxFileSystmes))
@@ -272,6 +272,17 @@ namespace Raven.Database.Server.Tenancy
 	        {
 				throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
 	        }
+
+			foreach (var bundle in config.ActiveBundles.Where(bundle => bundle != "PeriodicExport"))
+			{
+				string value;
+				if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))
+				{
+					bool active;
+					if (bool.TryParse(value, out active) && active == false)
+						throw new InvalidOperationException("Your license does not allow the use of the " + bundle + " bundle.");
+				}
+			}
         }
 
 	    protected override DateTime LastWork(RavenFileSystem resource)

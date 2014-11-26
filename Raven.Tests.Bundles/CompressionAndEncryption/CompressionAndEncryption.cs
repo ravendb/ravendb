@@ -8,6 +8,7 @@ using System.IO;
 using System.Reflection;
 using Raven.Client.Document;
 using Raven.Server;
+using Raven.Tests.Common.Util;
 
 namespace Raven.Tests.Bundles.CompressionAndEncryption
 {
@@ -56,7 +57,7 @@ namespace Raven.Tests.Bundles.CompressionAndEncryption
 		protected void AssertPlainTextIsNotSavedInDatabase(params string[] plaintext)
 		{
 			Close();
-			TestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, s => true);
+			EncryptionTestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, s => true);
 		}
 
 		protected void RecycleServer()
