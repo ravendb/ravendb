@@ -229,6 +229,8 @@
     <Compile Include="FileSystem\Bundles\Encryption\Plugin\FileEncryption.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileCodec.cs" />
     <Compile Include="FileSystem\Plugins\IRequiresFileSystemInitialization.cs" />
+    <Compile Include="FileSystem\Storage\Esent\Schema\IFileSystemSchemaUpdate.cs" />
+    <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From03To04.cs" />
     <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
     <Compile Include="Plugins\Builtins\CheckIncrementalBackupStatus.cs" />
     <Compile Include="Plugins\Builtins\PurgeOutdatedTombstones.cs" />

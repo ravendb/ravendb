@@ -7,7 +7,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 {
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "0.3";
+		public const string SchemaVersion = "0.4";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -321,6 +321,21 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			indexDef = "+name\0\0";
 			Api.JetCreateIndex(session, tableid, "by_name", CreateIndexGrbit.IndexUnique, indexDef, indexDef.Length,
 							   80);
+		}
+
+		public static void UpdateVersion(Session session, JET_DBID dbid, string newVersion)
+		{
+			using (var table = new Table(session, dbid, "details", OpenTableGrbit.None))
+			{
+				if (Api.TryMoveFirst(session, table) == false)
+					throw new InvalidOperationException("Could not find details row");
+				using (var update = new Update(session, table, JET_prep.Replace))
+				{
+					var schemaVersion = Api.GetTableColumnid(session, table, "schema_version");
+					Api.SetColumn(session, table, schemaVersion, newVersion, Encoding.Unicode);
+					update.Save();
+				}
+			}
 		}
 	}
 }
