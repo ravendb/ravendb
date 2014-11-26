@@ -70,7 +70,7 @@ namespace Raven.Tests.FileSystem.Encryption
 				Assert.Equal(md5Sums, restoredClientComputedMd5Sums);
 			}
 
-			AssertPlainTextIsNotSavedInFileSystem("Secret records /");
+			AssertPlainTextIsNotSavedInFileSystem("Secret", "records");
 		}
 
 		private async Task CreateSampleData(IAsyncFilesCommands commands, int startIndex = 1, int count = 2)
