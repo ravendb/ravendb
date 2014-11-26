@@ -155,7 +155,7 @@ namespace Raven.Tests.Helpers
                 ApiKey = apiKey,                 
             };
 
-            store.Initialize(true);
+            store.Initialize(ensureFileSystemExists: true, failIfCannotCreate: true);
 
             this.filesStores.Add(store);
 

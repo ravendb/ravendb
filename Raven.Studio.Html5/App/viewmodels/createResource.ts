@@ -16,18 +16,31 @@ class createResource extends dialogViewModelBase {
         super();
         this.createDatabasePart = new createDatabase(databases, licenseStatus, this);
         this.createFilesystemPart = new createFilesystem(filesystems, this);
+        this.resourceType.subscribe(v => v == "db" ? this.enableDbTab() : this.enableFsTab());
     }
+
+    compositionComplete() {
+        this.enableDbTab();
+    }
+
+    private enableDbTab() {
+        this.alterFormControls("#dbContainer", false);
+        this.alterFormControls("#fsContainer", true);
+    }
+
+    private enableFsTab() {
+        this.alterFormControls("#dbContainer", true);
+        this.alterFormControls("#fsContainer", false);
+    }
+
+    private alterFormControls(formSelector: string, disabled: boolean) {
+        $(formSelector + " input").prop('disabled', disabled);
+        $(formSelector + " select").prop('disabled', disabled);
+    }
+
 
     cancel() {
         dialog.close(this);
-    }
-
-    submitForm() {
-        if (this.resourceType() == 'db') {
-            $("#createDbForm").submit();
-        } else {
-            $("#createFsForm").submit();
-        }
     }
 
     nextOrCreate() {

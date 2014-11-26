@@ -23,7 +23,8 @@ namespace Voron.Impl.Backup
 	{
   
 		public void ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal,
-			Action<string> infoNotify = null)
+			Action<string> infoNotify = null,
+			Action backupStarted = null)
 		{
 			infoNotify = infoNotify ?? (s => { });
 
@@ -84,6 +85,9 @@ namespace Voron.Impl.Backup
 						// txw.Commit(); intentionally not committing
 					}
 
+					if (backupStarted != null)
+						backupStarted();
+
 					// data file backup
 					var dataPart = package.CreateEntry(Constants.DatabaseFilename, compression);
 					Debug.Assert(dataPart != null);
@@ -126,6 +130,7 @@ namespace Voron.Impl.Backup
 							journalFile.Release();
 						}
 					}
+					file.Flush(true); // make sure that we fully flushed to disk
 				}
 			}
 			finally

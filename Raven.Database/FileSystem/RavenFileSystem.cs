@@ -113,13 +113,20 @@ namespace Raven.Database.FileSystem
 
         internal static ITransactionalStorage CreateTransactionalStorage(InMemoryRavenConfiguration configuration)
         {
+            // We select the most specific.
             var storageType = configuration.FileSystem.DefaultStorageTypeName;
+            if (storageType == null) // We choose the system wide if not defined.
+                storageType = configuration.DefaultStorageTypeName;
+
             switch (storageType)
             {
                 case InMemoryRavenConfiguration.VoronTypeName:
-					return new Storage.Voron.TransactionalStorage(configuration);
-                default:
-					return new Storage.Esent.TransactionalStorage(configuration);
+                    return new Storage.Voron.TransactionalStorage(configuration);
+                case InMemoryRavenConfiguration.EsentTypeName:
+                    return new Storage.Esent.TransactionalStorage(configuration);
+                
+                default: // We choose esent by default.
+                    return new Storage.Esent.TransactionalStorage(configuration);
             }
         }
 

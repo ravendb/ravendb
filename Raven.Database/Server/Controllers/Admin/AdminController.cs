@@ -331,7 +331,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			if (string.IsNullOrWhiteSpace(databaseLocation))
 			{
-				documentDataDir = Path.Combine("~\\Databases", databaseName);
+				documentDataDir = Path.Combine("~/", databaseName);
 				return documentDataDir.ToFullPath(baseDataPath);
 			}
 

@@ -859,7 +859,7 @@ class shell extends viewModelBase {
         if (rs.type === database.type) {
             return "fa fa-database";
         } else if (rs.type === filesystem.type) {
-            return "fa fa-file";
+            return "fa fa-file-image-o";
         } else {
             return "fa fa-calculator";
         }

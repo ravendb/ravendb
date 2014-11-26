@@ -1284,11 +1284,8 @@ namespace Raven.Database.Config
 			// we change the path to make it nicer.
 			if (Directory.Exists(fullLegacyPath))
 			{
-				LegacyTenantPath = true;
 				DataDirectory = legacyPath;
 			}
 		}
-
-		public bool LegacyTenantPath { get; private set; }
 	}
 }
