@@ -240,6 +240,9 @@ namespace Raven.Database.Server.Controllers.Admin
 				DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
 					RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
 
+				if (restoreRequest.GenerateNewDatabaseId) 
+					GenerateNewDatabaseId(databaseName);
+
 				if (replicationBundleRemoved)
 					AddReplicationBundleAndDisableReplicationDestinations(databaseName);
 
@@ -259,6 +262,16 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				OperationId = id
 			});
+		}
+
+		private void GenerateNewDatabaseId(string databaseName)
+		{
+			Task<DocumentDatabase> databaseTask;
+			if (DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, out databaseTask) == false)
+				return;
+
+			var database = databaseTask.Result;
+			database.TransactionalStorage.ChangeId();
 		}
 
 		private static bool TryRemoveReplicationBundle(DatabaseDocument databaseDocument)

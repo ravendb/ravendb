@@ -93,7 +93,7 @@ namespace Raven.Smuggler
                 DefaultFileSystem = options.DefaultFileSystem,
             };
 
-            store.Initialize();
+            store.Initialize(false);
 
             await ValidateThatServerIsUpAndFilesystemExists(options, store);
 

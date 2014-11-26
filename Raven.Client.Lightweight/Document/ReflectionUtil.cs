@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Linq;
 using Raven.Client.Linq;
@@ -76,6 +77,10 @@ namespace Raven.Client.Document
 		{
 			foreach (var field in type.GetFields(bindingFlags))
 			{
+				var compilerGeneratedField = field.CustomAttributes.Any(x => x.AttributeType == typeof(CompilerGeneratedAttribute));
+				if (compilerGeneratedField)
+					continue;
+
 				yield return field;
 			}
 

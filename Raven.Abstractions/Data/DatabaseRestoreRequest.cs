@@ -12,5 +12,7 @@ namespace Raven.Abstractions.Data
         public string DatabaseLocation { get; set; }
 
 		public bool DisableReplicationDestinations { get; set; }
+
+		public bool GenerateNewDatabaseId { get; set; }
 	}
 }

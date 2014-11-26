@@ -1,0 +1,122 @@
+﻿<div data-bind="visible: anotherRestoreInProgres()" class="badge pull-right"><span class="fa fa-spinner fa-spin"></span>Another restore in progress</div>
+<div role="tabpanel">
+
+    <ul class="nav nav-tabs" role="tablist">
+        <li role="presentation" class="active"><a href="#restoreDb" aria-controls="restoreDb" role="tab" data-toggle="tab">Database</a></li>
+        <li role="presentation"><a href="#restoreFs" aria-controls="restoreFs" role="tab" data-toggle="tab">File system</a></li>
+    </ul>
+    <div class="tab-content">
+        <div role="tabpanel" class="tab-pane active" id="restoreDb">
+            <form class="form-horizontal" role="form" data-bind="submit: startDbRestore">
+                <div class="panel panel-default" data-bind="with: dbRestoreOptions">
+                    <div class="panel-heading panel-info">
+                        <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
+                            <i class="fa fa-cloud-download"></i>
+                            <span>Restore Database</span>
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
+
+                    </div>
+                    <div class="panel-body">
+                        <div>
+                            <div class="form-group">
+                                <label for="backupLocation" class="col-sm-2 control-label">Backup Location</label>
+                                <div class="col-sm-5">
+                                    <input data-bind="value: backupLocation, disable: $parent.isBusy" type="text" required class="form-control" id="backupLocation" placeholder="C:&#92;path-to-your-backup-folder">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="databaseLocation" class="col-sm-2 control-label">Database Location</label>
+                                <div class="col-sm-5">
+                                    <input data-bind="value: resourceLocation, disable: $parent.isBusy" type="text" class="form-control" id="databaseLocation" placeholder="C:&#92;path-to-your-restored-database-folder">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="databaseName" class="col-sm-2 control-label">Database Name</label>
+                                <div class="col-sm-3">
+                                    <input data-bind="value: resourceName, disable: $parent.isBusy, customValidity: nameCustomValidityError" type="text" required class="form-control" id="databaseName" placeholder="Restored database name" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="col-sm-offset-2 col-sm-5">
+                                    <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox" data-bind="checked: defrag, disable: $parent.isBusy">
+                                            Defrag
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="col-sm-offset-2 col-sm-5">
+                                    <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox" data-bind="checked: $parent.disableReplicationDestinations, disable: $parent.isBusy">
+                                            Disable replication destinations
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="databaseRestoreLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+                    <pre data-bind="visible: dbRestoreOptions.restoreStatusMessages().length > 0" id="databaseRestoreLogPre" style="word-wrap: normal; overflow: auto; height: 97%">
+<!-- ko foreach: dbRestoreOptions.restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
+        </pre>
+                </div>
+            </form>
+        </div>
+        <div role="tabpanel" class="tab-pane" id="restoreFs">
+            <form class="form-horizontal" role="form" data-bind="submit: startFsRestore">
+                <div class="panel panel-default" data-bind="with: fsRestoreOptions">
+                    <div class="panel-heading panel-info">
+                        <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
+                            <i class="fa fa-cloud-download"></i>
+                            <span>Restore Filesystem</span>
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
+                    </div>
+                    <div class="panel-body">
+                        <div>
+                            <div class="form-group">
+                                <label for="backupLocation" class="col-sm-2 control-label">Backup Location</label>
+                                <div class="col-sm-5">
+                                    <input data-bind="value: backupLocation, disable: $parent.isBusy" type="text" required class="form-control" id="Text1" placeholder="C:&#92;path-to-your-backup-folder">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="filesystemLocation" class="col-sm-2 control-label">Filesystem Location</label>
+                                <div class="col-sm-5">
+                                    <input data-bind="value: resourceLocation, disable: $parent.isBusy" type="text" class="form-control" id="filesystemLocation" placeholder="C:&#92;path-to-your-restored-filesystem-folder">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="filesystemName" class="col-sm-2 control-label">Filesystem Name</label>
+                                <div class="col-sm-3">
+                                    <input data-bind="value: resourceName, disable: $parent.isBusy, customValidity: nameCustomValidityError" type="text" required class="form-control" id="filesystemName" placeholder="Restored filesystem name" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="col-sm-offset-2 col-sm-5">
+                                    <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox" data-bind="checked: defrag, disable: $parent.isBusy">
+                                            Defrag
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="filesystemRestoreLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+                    <pre data-bind="visible: fsRestoreOptions.restoreStatusMessages().length > 0" id="filesystemRestoreLogPre" style="word-wrap: normal; overflow: auto; height: 97%">
+<!-- ko foreach: fsRestoreOptions.restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
+        </pre>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>

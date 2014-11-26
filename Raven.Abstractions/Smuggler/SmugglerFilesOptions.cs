@@ -6,11 +6,13 @@ namespace Raven.Abstractions.Smuggler
     {
         public SmugglerFilesOptions()
         {
-            this.StartFilesEtag = Etag.Empty;
-            this.StartFilesDeletionEtag = Etag.Empty;
+            StartFilesEtag = Etag.Empty;
+            StartFilesDeletionEtag = Etag.Empty;
         }
 
         public Etag StartFilesEtag { get; set; }
         public Etag StartFilesDeletionEtag { get; set; }
+
+		public bool StripReplicationInformation { get; set; }
     }
 }
