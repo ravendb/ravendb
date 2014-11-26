@@ -365,7 +365,15 @@ namespace Raven.Database.Actions
 
 	        if (transformFunc == null)
 	        {
-		        var resultsWithoutTransformer = results.Select(x => x.ToJson());
+		        var resultsWithoutTransformer = results.Select(x =>
+		        {
+                    
+		            if (query.IsDistinct)
+		            {
+		                x.DataAsJson[Constants.DocumentIdFieldName] = x.Key;
+		            }
+		            return x.ToJson();
+		        });
 				return showTimings ? new TimedEnumerable<RavenJObject>(resultsWithoutTransformer, loadingDocumentsFinish) : resultsWithoutTransformer;
 	        }
                 
