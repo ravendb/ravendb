@@ -26,63 +26,63 @@ namespace Voron.Impl.Backup
 			var tempDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())).FullName;
 			if (infoNotify == null)
 				infoNotify = str => { };
-			var recoveryPagers = new List<Win32MemoryMapPager>();
+			var inMemoryRecoveryPagers = new List<Win32PageFileBackedMemoryMappedPager>();
 			try
 			{
 				ImmutableAppendOnlyList<JournalFile> journalFiles;
 				using (env.NewTransaction(TransactionFlags.ReadWrite)) //tx here serves as "lock" 
-					journalFiles = env.Journal.Files;
-				using (env.Journal.Applicator.TakeFlushingLock())
-				{					
-					infoNotify("Voron - reading storage journals for snapshot pages");
-					foreach (var file in journalFiles)
-					{
-						var recoveryPager = new Win32MemoryMapPager(Path.Combine(tempDir, StorageEnvironmentOptions.JournalRecoveryName(file.Number)));
-						recoveryPagers.Add(recoveryPager);
-						using (var filePager = env.Options.OpenJournalPager(file.Number))
-						{
-							TransactionHeader* lastTxHeader;
-							var journalReader = ReadJournalFile(env, filePager, recoveryPager, out lastTxHeader);
+					journalFiles = ImmutableAppendOnlyList<JournalFile>.CreateFrom(env.Journal.Files);
+				
+				infoNotify("Voron - reading storage journals for snapshot pages");
+				//make sure we go over journal files in an ordered fashion
+				foreach (var file in journalFiles.OrderBy(x => x.Number))
+				{
+					var recoveryPager = new Win32PageFileBackedMemoryMappedPager(StorageEnvironmentOptions.JournalRecoveryName(file.Number));
+					inMemoryRecoveryPagers.Add(recoveryPager);
 
-							foreach (var pagePosition in journalReader.TransactionPageTranslation)
-							{
-								int totalPageCount;
-								ReadPageToWrite(pagePosition, recoveryPager, pagesToWrite, out totalPageCount);
-							}
+					using (var filePager = env.Options.OpenJournalPager(file.Number))
+					{
+						TransactionHeader* lastTxHeader;
+						var journalReader = ReadJournalFile(env, filePager, recoveryPager, out lastTxHeader);
+
+						foreach (var pagePosition in journalReader.TransactionPageTranslation)
+						{
+							int totalPageCount;
+							ReadPageToWrite(pagePosition, recoveryPager, pagesToWrite, out totalPageCount);
 						}
 					}
 				}
 
 				infoNotify("Voron - started writing snapshot file.");
-				using (var tempEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+
+				//using in-memory only StorageEnvironment allows to reproduce both AccessViolationException and
+				//garbage in header of the exported tempEnv
+				//using (var tempEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+				using (var tempEnv = new StorageEnvironment(StorageEnvironmentOptions.ForPath(tempDir)))
 				{
 					tempEnv.Options.IncrementalBackupEnabled = true;
-					using (tempEnv.Journal.Applicator.TakeFlushingLock())
+					using (var tempTx = tempEnv.NewTransaction(TransactionFlags.ReadWrite))
 					{
-						using (var tempTx = tempEnv.NewTransaction(TransactionFlags.ReadWrite))
-						{
-							var pages = pagesToWrite.Select(x => x.Value).ToArray();
-							var maxPageNumber = pagesToWrite.Max(x => x.Value.PageNumber);
-							tempTx.WriteDirect(pages, maxPageNumber + 1);
-							tempTx.Commit();
-						}
-
-						var backup = new IncrementalBackup();
-						backup.ToFile(tempEnv, filename, compression);
+						var pages = pagesToWrite.Select(x => x.Value).ToArray();
+						var maxPageNumber = pagesToWrite.Max(x => x.Value.PageNumber);
+						tempTx.WriteDirect(pages, maxPageNumber + 1);
+						tempTx.Commit();
 					}
-				}
 
+					var backup = new IncrementalBackup();
+					backup.ToFile(tempEnv, filename, compression);
+				}
 			}
 			finally
 			{
-				foreach (var pager in recoveryPagers)
+				foreach (var pager in inMemoryRecoveryPagers)
 					pager.Dispose();
 
 				Directory.Delete(tempDir, true);
 			}
 		}
 
-		private static int ReadPageToWrite(KeyValuePair<long, JournalReader.RecoveryPagePosition> translation, Win32MemoryMapPager recoveryPager, Dictionary<long, Page> pagesToWrite, out int totalPageCount)
+		private static int ReadPageToWrite(KeyValuePair<long, JournalReader.RecoveryPagePosition> translation, IVirtualPager recoveryPager, Dictionary<long, Page> pagesToWrite, out int totalPageCount)
 		{
 			int size = 0;
 			totalPageCount = 1;
