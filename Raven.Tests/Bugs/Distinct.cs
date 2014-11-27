@@ -156,7 +156,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void IncludeWithDistinct()
         {
-            using (var store = NewRemoteDocumentStore(fiddler: true))
+            using (var store = NewDocumentStore())
             {
                 new CustomersIndex().Execute(store);
 
@@ -193,7 +193,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void DistinctWithMapReduce()
         {
-            using (var store = NewRemoteDocumentStore(fiddler: true))
+            using (var store = NewDocumentStore())
             {
                 new CustomersIndex().Execute(store);
 
