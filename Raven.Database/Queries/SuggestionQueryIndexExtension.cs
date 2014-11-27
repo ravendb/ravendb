@@ -123,7 +123,7 @@ namespace Raven.Database.Queries
 		public void OnDocumentsIndexed(IEnumerable<Document> documents, Analyzer searchAnalyzer)
 		{
 			var indexingPerformanceStats = new IndexingPerformanceStats {Operation = _operationText, Started = SystemTime.UtcNow};
-			_indexInstance.AddindexingPerformanceStat(indexingPerformanceStats);
+			_indexInstance.AddIndexingPerformanceStats(indexingPerformanceStats);
 			
 			var sp = Stopwatch.StartNew();
 			var enumerableDictionary = new EnumerableDictionary(documents, field, searchAnalyzer);
