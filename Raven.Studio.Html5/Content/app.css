@@ -7598,6 +7598,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   -webkit-box-sizing: border-box;
   box-sizing: border-box;
   overflow: hidden;
+  white-space: nowrap;
 }
 .ko-grid .ko-grid-row.even {
   background-color: white;
