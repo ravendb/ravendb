@@ -84,8 +84,6 @@ namespace Raven.Database.Indexing
 		{
 			var count = 0;
 			var sourceCount = 0;
-			var sw = Stopwatch.StartNew();
-			var start = SystemTime.UtcNow;
 			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
 			var indexPerfStats = RecordCurrentBatch("Current Map", batch.Docs.Count);
 			batch.SetIndexingPerformance(indexPerfStats);
@@ -188,18 +186,8 @@ namespace Raven.Database.Indexing
 
 
 			UpdateIndexingStats(context, stats);
-			AddindexingPerformanceStat(new IndexingPerformanceStats
-			{
-				OutputCount = count,
-				ItemsCount = sourceCount,
-				InputCount = documentsWrapped.Count,
-				Operation = "Map",
-				Duration = sw.Elapsed,
-				Started = start,
-				LoadDocumentCount = loadDocumentCount,
-				LoadDocumentDurationMs = loadDocumentDuration 
-			});
-			BatchCompleted("Current Map");
+
+			BatchCompleted("Current Map", "Map", sourceCount, count, loadDocumentCount, loadDocumentDuration);
 			logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
 		}
 
@@ -532,8 +520,6 @@ namespace Raven.Database.Indexing
 			{
 				var count = 0;
 				var sourceCount = 0;
-				var sw = Stopwatch.StartNew();
-				var start = SystemTime.UtcNow;
 
 				parent.Write((indexWriter, analyzer, stats) =>
 				{
@@ -600,7 +586,7 @@ namespace Raven.Database.Indexing
 								},
 								x => x.Dispose());
 						}
-						parent.BatchCompleted("Current Reduce #" + Level);
+						parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count, -1, -1);
 					}
 
 					return new IndexedItemsInfo(null)
@@ -608,15 +594,7 @@ namespace Raven.Database.Indexing
 						ChangedDocs = count + ReduceKeys.Count
 					};
 				});
-				parent.AddindexingPerformanceStat(new IndexingPerformanceStats
-				{
-					OutputCount = count,
-					ItemsCount = sourceCount,
-					InputCount = inputCount,
-					Duration = sw.Elapsed,
-					Operation = "Reduce Level " + Level,
-					Started = start
-				});
+
 				logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, indexId, string.Join(", ", ReduceKeys)));
 			}
 

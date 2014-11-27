@@ -159,11 +159,11 @@ namespace Raven.Database.Indexing
 		[CLSCompliant(false)]
 		public volatile bool IsMapIndexingInProgress;
 
-		protected IndexingPerformanceStats RecordCurrentBatch(string indexingStep, int size)
+		protected IndexingPerformanceStats RecordCurrentBatch(string indexingStep, int itemsCount)
 		{
 			var performanceStats = new IndexingPerformanceStats
 			{
-				InputCount = size,
+				ItemsCount = itemsCount,
 				Operation = indexingStep,
 				Started = SystemTime.UtcNow,
 			};
@@ -172,16 +172,25 @@ namespace Raven.Database.Indexing
 			return performanceStats;
 		}
 
-		protected void BatchCompleted(string indexingStep)
+		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, int loadDocumentCount, long loadDocumentDurationInMs)
 		{
-			IndexingPerformanceStats performanceStats;
-			currentlyIndexing.TryRemove(indexingStep, out performanceStats);
+			IndexingPerformanceStats stats;
+			if (currentlyIndexing.TryRemove(indexingStep, out stats))
+			{
+				stats.Duration = SystemTime.UtcNow - stats.Started;
+				stats.Operation = operation;
 
-			if (performanceStats != null)
-				performanceStats.Duration = SystemTime.UtcNow - performanceStats.Started;
+				stats.InputCount = inputCount;
+				stats.OutputCount = outputCount;
+
+				stats.LoadDocumentCount = loadDocumentCount;
+				stats.LoadDocumentDurationMs = loadDocumentDurationInMs;
+
+				AddIndexingPerformanceStats(stats);
+			}
 		}
 
-		public void AddindexingPerformanceStat(IndexingPerformanceStats stats)
+		public void AddIndexingPerformanceStats(IndexingPerformanceStats stats)
 		{
 			indexingPerformanceStats.Enqueue(stats);
 			while (indexingPerformanceStats.Count > 25)

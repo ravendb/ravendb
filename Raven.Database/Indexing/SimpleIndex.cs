@@ -44,16 +44,16 @@ namespace Raven.Database.Indexing
 		{
 			var count = 0;
 			var sourceCount = 0;
-			var sw = Stopwatch.StartNew();
-			var start = SystemTime.UtcNow;
 			int loadDocumentCount = 0;
 			long loadDocumentDuration = 0;
+
 			Write((indexWriter, analyzer, stats) =>
 			{
 				var processedKeys = new HashSet<string>();
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
 					.Where(x => x != null)
 					.ToList();
+
 				try
 				{
 					var indexingPerfStats = RecordCurrentBatch("Current", batch.Docs.Count);
@@ -189,7 +189,8 @@ namespace Raven.Database.Indexing
 							context.AddError(indexId, null, e.Message, "Dispose Trigger");
 						},
 						x => x.Dispose());
-					BatchCompleted("Current");
+
+					BatchCompleted("Current", "Index", sourceCount, count, loadDocumentCount, loadDocumentDuration);
 				}
 				return new IndexedItemsInfo(batch.HighestEtagBeforeFiltering)
 				{
@@ -197,17 +198,6 @@ namespace Raven.Database.Indexing
 				};
 			});
 
-			AddindexingPerformanceStat(new IndexingPerformanceStats
-			{
-				OutputCount = count,
-				ItemsCount = sourceCount,
-				InputCount = batch.Docs.Count,
-				Duration = sw.Elapsed,
-				Operation = "Index",
-				Started = start,
-				LoadDocumentCount = loadDocumentCount,
-				LoadDocumentDurationMs = loadDocumentDuration 
-			});
 			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
 		}
 
