@@ -115,6 +115,10 @@ namespace Raven.Database.Server.Tenancy
 	        }
 	        Unprotect(document);
 
+			foreach (var securedSetting in document.SecuredSettings)
+			{
+				config.Settings[securedSetting.Key] = securedSetting.Value;
+			}
 
 	        config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
 	        config.FileSystemName = tenantId;

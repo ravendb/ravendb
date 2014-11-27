@@ -269,6 +269,7 @@ namespace Raven.Database.FileSystem.Controllers
                 if (jsonDocument != null)
                 {
                     backupRequest.FileSystemDocument = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
+					FileSystemsLandlord.Unprotect(backupRequest.FileSystemDocument);
                     backupRequest.FileSystemDocument.Id = FileSystem.Name;
                 }
             }
@@ -486,6 +487,9 @@ namespace Raven.Database.FileSystem.Controllers
                 if (restoreRequest.JournalsLocation != null)
                     filesystemDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
                 filesystemDocument.Id = filesystemName;
+
+				FileSystemsLandlord.Protect(filesystemDocument);
+
                 DatabasesLandlord.SystemDatabase.Documents.Put("Raven/FileSystems/" + filesystemName, null, RavenJObject.FromObject(filesystemDocument), new RavenJObject(), null);
 
                 restoreStatus.Messages.Add("The new filesystem was created");

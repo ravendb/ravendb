@@ -17,7 +17,7 @@ namespace Raven.Tests.FileSystem.Encryption
 		[PropertyData("Storages")]
 		public async Task CanUploadAndDownload(string storageEngine)
 		{
-			var client = NewAsyncClient(storageEngine);
+			var client = NewAsyncClientForEncryptedFs(storageEngine);
 
 			await client.UploadAsync("test.txt", StringToStream("Lorem ipsum dolor sitea amet"));
 
@@ -32,7 +32,7 @@ namespace Raven.Tests.FileSystem.Encryption
 		[PropertyData("Storages")]
 		public async Task CanUploadUpdateAndDownload(string storageEngine)
 		{
-			var client = NewAsyncClient(storageEngine);
+			var client = NewAsyncClientForEncryptedFs(storageEngine);
 
 			await client.UploadAsync("test.txt", StringToStream("Lorem ipsum dolor sitea amet"));
 
@@ -49,7 +49,7 @@ namespace Raven.Tests.FileSystem.Encryption
 		[PropertyData("Storages")]
 		public async Task CanHandleBigFile(string storageEngine)
 		{
-			var client = NewAsyncClient(storageEngine);
+			var client = NewAsyncClientForEncryptedFs(storageEngine);
 
 			const int size = 5*1024*1024;
 
