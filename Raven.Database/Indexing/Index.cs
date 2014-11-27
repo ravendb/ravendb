@@ -1242,23 +1242,23 @@ namespace Raven.Database.Indexing
 					return;
 
 				var highlightings =
-					from highlightedField in this.indexQuery.HighlightedFields
-					select new
-					{
-						highlightedField.Field,
-						highlightedField.FragmentsField,
-						Fragments = highlighter.GetBestFragments(
-							fieldQuery,
-							indexSearcher.IndexReader,
-							scoreDoc.Doc,
+					(from highlightedField in this.indexQuery.HighlightedFields
+						select new
+						{
 							highlightedField.Field,
-							highlightedField.FragmentLength,
-							highlightedField.FragmentCount)
-					}
+							highlightedField.FragmentsField,
+							Fragments = highlighter.GetBestFragments(
+								fieldQuery,
+								indexSearcher.IndexReader,
+								scoreDoc.Doc,
+								highlightedField.Field,
+								highlightedField.FragmentLength,
+								highlightedField.FragmentCount)
+						}
 						into fieldHighlitings
 						where fieldHighlitings.Fragments != null &&
-							  fieldHighlitings.Fragments.Length > 0
-						select fieldHighlitings;
+						      fieldHighlitings.Fragments.Length > 0
+						select fieldHighlitings).ToList();
 
 				if (fieldsToFetch.IsProjection || parent.IsMapReduce)
 				{
@@ -1270,7 +1270,7 @@ namespace Raven.Database.Indexing
 						}
 					}
 				}
-				else
+				if(parent.IsMapReduce == false)
 				{
 					indexQueryResult.Highligtings = highlightings.ToDictionary(x => x.Field, x => x.Fragments);
 				}

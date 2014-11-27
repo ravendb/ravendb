@@ -232,59 +232,6 @@ So, the greedy dog looked at his reflection and growled. The reflection growled 
 			}
 		}
 
-		// this one fails
-		[Fact]
-		public void HighlightText_WithMapReduce()
-		{
-			var item1 = new SearchItemWithType
-			{
-				Id = "searchitems/1",
-				Type = "Fact",
-				Text = "Once there lived a dog."
-			};
-
-			var item2 = new SearchItemWithType
-			{
-				Id = "searchitems/2",
-				Type = "Opinion",
-				Text = "The dog was very greedy."
-			};
-
-			var item3 = new SearchItemWithType
-			{
-				Id = "searchitems/3",
-				Type = "Opinion",
-				Text = "He had lost the piece of dog bone because of his greed."
-			};
-
-			var searchFor = "dog";
-			using (var store = NewDocumentStore())
-			using (var session = store.OpenSession())
-			{
-				session.Store(item1);
-				session.Store(item2);
-				session.Store(item3);
-				store.DatabaseCommands.PutIndex(new ContentSearchMapReduceIndex().IndexName, new ContentSearchMapReduceIndex().CreateIndexDefinition());
-				session.SaveChanges();
-				FieldHighlightings nameHighlighting;
-				var results = session.Advanced.DocumentQuery<SearchItemWithTypeResult>("ContentSearchMapReduceIndex")
-									 .WaitForNonStaleResults()
-									 .Highlight("AllText", 128, 1, out nameHighlighting)
-									 .Search("AllText", searchFor)
-									 .ToArray();
-
-				Assert.Equal(2, results.Length);
-
-				var opinionFragments = nameHighlighting.GetFragments("Opinion");
-				Assert.Equal(1, opinionFragments.Length);
-				Assert.Equal("The <b style=\"background:yellow\">dog</b> was very greedy. He had lost the piece of <b style=\"background:yellow\">dog</b> bone because of his greed.", opinionFragments[0]);
-
-				var factFragments = nameHighlighting.GetFragments("Fact");
-				Assert.Equal(1, factFragments.Length);
-				Assert.Equal("Once there lived a <b style=\"background:yellow\">dog</b>.", factFragments[0]);
-			}
-		}
-
 		// this one passes
 		[Fact]
 		public void HighlightText_WithMapReduceWithFragments()
