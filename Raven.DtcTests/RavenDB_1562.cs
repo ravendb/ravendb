@@ -39,8 +39,8 @@ namespace Raven.Tests.Issues
             IOExtensions.DeleteDirectory("Databases/" + primaryDbName);
             IOExtensions.DeleteDirectory("Databases/" + secondaryDbName);
 
-            PrimaryDocumentStore = CreateStore();
-            SecondaryDocumentStore = CreateStore();
+            PrimaryDocumentStore = CreateStore(requestedStorageType: "esent");
+			SecondaryDocumentStore = CreateStore(requestedStorageType: "esent");
         }
 
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)

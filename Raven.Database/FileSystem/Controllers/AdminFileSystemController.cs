@@ -106,6 +106,16 @@ namespace Raven.Database.FileSystem.Controllers
             }
 
             var fsDoc = await ReadJsonObjectAsync<FileSystemDocument>();
+
+			if (fsDoc.Settings.ContainsKey(Constants.ActiveBundles) && fsDoc.Settings[Constants.ActiveBundles].Contains("Encryption"))
+			{
+				if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
+					!fsDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
+				{
+					return GetMessageWithString(string.Format("Failed to create '{0}' file system, because of invalid encryption configuration.", id), HttpStatusCode.BadRequest);
+				}
+			}
+
 			FileSystemsLandlord.Protect(fsDoc);
 			var json = RavenJObject.FromObject(fsDoc);
             json.Remove("Id");
@@ -259,6 +269,7 @@ namespace Raven.Database.FileSystem.Controllers
                 if (jsonDocument != null)
                 {
                     backupRequest.FileSystemDocument = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
+					FileSystemsLandlord.Unprotect(backupRequest.FileSystemDocument);
                     backupRequest.FileSystemDocument.Id = FileSystem.Name;
                 }
             }
@@ -399,10 +410,10 @@ namespace Raven.Database.FileSystem.Controllers
                 }
             }
 
-            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename)))
-                ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.VoronTypeName;
-            else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
+            if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
                 ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.EsentTypeName;
+            else
+                ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.VoronTypeName;
 
             ravenConfiguration.CustomizeValuesForFileSystemTenant(filesystemName);
             ravenConfiguration.Initialize();
@@ -454,9 +465,7 @@ namespace Raven.Database.FileSystem.Controllers
             var task = Task.Factory.StartNew(() =>
             {
                 if (!string.IsNullOrWhiteSpace(restoreRequest.FilesystemLocation))
-                {
                     ravenConfiguration.FileSystem.DataDirectory = restoreRequest.FilesystemLocation;
-                }
 
                 using (var transactionalStorage = RavenFileSystem.CreateTransactionalStorage(ravenConfiguration))
                 {
@@ -478,6 +487,9 @@ namespace Raven.Database.FileSystem.Controllers
                 if (restoreRequest.JournalsLocation != null)
                     filesystemDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
                 filesystemDocument.Id = filesystemName;
+
+				FileSystemsLandlord.Protect(filesystemDocument);
+
                 DatabasesLandlord.SystemDatabase.Documents.Put("Raven/FileSystems/" + filesystemName, null, RavenJObject.FromObject(filesystemDocument), new RavenJObject(), null);
 
                 restoreStatus.Messages.Add("The new filesystem was created");

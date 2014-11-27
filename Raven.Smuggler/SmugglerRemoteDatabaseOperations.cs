@@ -18,9 +18,9 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Data;
+using Raven.Database.Smuggler;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using Raven.Smuggler.Imports;
 
 namespace Raven.Smuggler
 {
@@ -261,7 +261,19 @@ namespace Raven.Smuggler
 			return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
 		}
 
-		public void Initialize(SmugglerDatabaseOptions databaseOptions)
+	    public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+	    {
+			if (metadata != null)
+			{
+				metadata.Remove(Constants.RavenReplicationHistory);
+				metadata.Remove(Constants.RavenReplicationSource);
+				metadata.Remove(Constants.RavenReplicationVersion);
+			}
+
+		    return metadata;
+	    }
+
+	    public void Initialize(SmugglerDatabaseOptions databaseOptions)
 		{
 			Options = databaseOptions;
 			jintHelper.Initialize(databaseOptions);

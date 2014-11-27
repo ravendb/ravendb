@@ -154,7 +154,6 @@ namespace Raven.Client.Document
 				rootTypes = {typeof(T)},
 				defaultField = defaultField,
 				beforeQueryExecutionAction = beforeQueryExecutionAction,
-				afterQueryExecutedCallback = afterQueryExecutedCallback,
 				highlightedFields = new List<HighlightedField>(highlightedFields),
 				highlighterPreTags = highlighterPreTags,
 				highlighterPostTags = highlighterPostTags,
@@ -167,6 +166,7 @@ namespace Raven.Client.Document
                 defaultOperator = defaultOperator,
 				shouldExplainScores = shouldExplainScores
 			};
+			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
 		}
 

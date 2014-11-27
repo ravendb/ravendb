@@ -520,6 +520,7 @@ interface restoreRequestDto {
 interface databaseRestoreRequestDto extends restoreRequestDto {
     DatabaseName: string;
     DatabaseLocation: string;
+    DisableReplicationDestinations: boolean;
 }
 
 interface filesystemRestoreRequestDto extends restoreRequestDto {

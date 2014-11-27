@@ -78,7 +78,10 @@ namespace Raven.Tests.Core
             string url = documentStore.Url;
             using (server)
             {
-                Process.Start(url); // start the server
+                var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase ?? Constants.SystemDatabase);
+                var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+
+                Process.Start(documentsPage); // start the server
 
                 do
                 {

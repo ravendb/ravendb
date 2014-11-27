@@ -1268,6 +1268,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         -webkit-box-sizing: border-box;
         box-sizing: border-box;
         overflow: hidden;
+        white-space: nowrap;
 
         &.even {
             background-color: white;
@@ -2124,4 +2125,17 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     height: auto;
     max-height: 300px;
     overflow-x: hidden;
+}
+
+#resources-page .resources-container .resource.fs {
+    a {
+        color: #7109AA;
+    }
+
+    &:hover {
+        box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
+    }
+    &.selected {
+         box-shadow: 0 0 20px 0 #7109AA;
+    }
 }

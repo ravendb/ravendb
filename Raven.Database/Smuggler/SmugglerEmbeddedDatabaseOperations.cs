@@ -17,6 +17,7 @@ using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Database.Data;
+using Raven.Database.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -27,6 +28,8 @@ namespace Raven.Database.Smuggler
 		private readonly DocumentDatabase database;
 
 		private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
+
+		private SmugglerJintHelper scriptedJsonPatcher = new SmugglerJintHelper();
 
 		public SmugglerEmbeddedDatabaseOperations(DocumentDatabase database)
 		{
@@ -229,12 +232,25 @@ namespace Raven.Database.Smuggler
 
 		public Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
 		{
-			return new CompletedTask<RavenJObject>(document);
+			return new CompletedTask<RavenJObject>(scriptedJsonPatcher.Transform(transformScript, document));
+		}
+
+		public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+		{
+			if (metadata != null)
+			{
+				metadata.Remove(Constants.RavenReplicationHistory);
+				metadata.Remove(Constants.RavenReplicationSource);
+				metadata.Remove(Constants.RavenReplicationVersion);
+			}
+
+			return metadata;
 		}
 
 		public void Initialize(SmugglerDatabaseOptions databaseOptions)
 		{
 			Options = databaseOptions;
+			scriptedJsonPatcher.Initialize(databaseOptions);
 		}
 
 		public void Configure(SmugglerDatabaseOptions databaseOptions)

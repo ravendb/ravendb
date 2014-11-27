@@ -124,21 +124,18 @@ namespace Raven.Database.Server.Controllers
 
 			try
 			{
-				var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts);
+				var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts);                  
 				queryOp.Init();
-				msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout,
-					mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) {CharSet = "utf-8"});
 
+                msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout, mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
 				msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
 				msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
 				msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
 				msg.Headers.Add("Raven-Index", queryOp.Header.Index);
 				msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
-				msg.Headers.Add(
-					"Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+				msg.Headers.Add("Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
 
-
-				if (IsCsvDownloadRequest(InnerRequest))
+                if ( IsCsvDownloadRequest(InnerRequest))
 				{
 					msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
 				}
@@ -244,6 +241,7 @@ namespace Raven.Database.Server.Controllers
 
 			private readonly Stream stream;
 			private StreamWriter writer;
+            private bool doIncludeId;
 
 			public ExcelOutputWriter(Stream stream)
 			{
@@ -273,9 +271,26 @@ namespace Raven.Database.Server.Controllers
 			{
 				if (properties == null)
 				{
-					GetPropertiesAndWriteCsvHeader(result);
+					GetPropertiesAndWriteCsvHeader(result, out doIncludeId);
 					Debug.Assert(properties != null);
 				}
+
+                if ( doIncludeId )
+                {
+                    RavenJToken token;
+                    if (result.TryGetValue("@metadata", out token))
+                    {
+                        var metadata = token as RavenJObject;
+                        if (metadata != null)
+                        {
+                            if (metadata.TryGetValue("@id", out token))
+                            {
+                                OutputCsvValue(token.Value<string>());                               
+                            }
+                            writer.Write(',');
+                        }
+                    }
+                }
 
 				foreach (var property in properties)
 				{
@@ -289,11 +304,11 @@ namespace Raven.Database.Server.Controllers
 
 							case JTokenType.Array:
 							case JTokenType.Object:
-								OutputCsvValue(token.ToString(Formatting.None));
+                                OutputCsvValue(token.ToString(Formatting.None));
 								break;
 
 							default:
-								OutputCsvValue(token.Value<string>());
+                                OutputCsvValue(token.Value<string>());
 								break;
 						}
 					}
@@ -311,18 +326,35 @@ namespace Raven.Database.Server.Controllers
 		        writer.WriteLine(exception.ToString());
 		    }
 
-		    private void GetPropertiesAndWriteCsvHeader(RavenJObject result)
+            private void GetPropertiesAndWriteCsvHeader(RavenJObject result, out bool includeId)
 			{
+                includeId = false;
 				properties = DocumentHelpers.GetPropertiesFromJObject(result,
 					parentPropertyPath: "",
 					includeNestedProperties: true,
 					includeMetadata: false,
 					excludeParentPropertyNames: true).ToList();
 
+                RavenJToken token;
+                if (result.TryGetValue("@metadata", out token))
+                {
+                    var metadata = token as RavenJObject;
+                    if (metadata != null)
+                    {
+                        if (metadata.TryGetValue("@id", out token))
+                        {
+                            OutputCsvValue("@id");
+                            writer.Write(',');
+
+                            includeId = true;
+                        }
+                    }
+                }
+
 				foreach (var property in properties)
 				{
-					OutputCsvValue(property);
-					writer.Write(',');
+                    OutputCsvValue(property);
+                    writer.Write(',');
 				}
 				writer.WriteLine();
 			}

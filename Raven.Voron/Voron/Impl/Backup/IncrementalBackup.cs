@@ -33,7 +33,8 @@ namespace Voron.Impl.Backup
         }
 
         public long ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal,
-			Action<string> infoNotify = null)
+			Action<string> infoNotify = null,
+			Action backupStarted = null)
         {
 			infoNotify = infoNotify ?? (s => { });
 
@@ -67,6 +68,8 @@ namespace Voron.Impl.Backup
 
                 using (env.NewTransaction(TransactionFlags.Read))
                 {
+	                if (backupStarted != null)
+		                backupStarted();// we let call know that we have started the backup 
                     var usedJournals = new List<JournalFile>();
 
                     try
@@ -153,7 +156,6 @@ namespace Voron.Impl.Backup
                             numberOfBackedUpPages += pagesToCopy;
                         }
 
-                        //Debug.Assert(lastBackedUpPage != -1);
 
                         env.HeaderAccessor.Modify(header =>
                         {
@@ -181,8 +183,9 @@ namespace Voron.Impl.Backup
                             jrnl.Release();
                         }
                     }
-                    infoNotify(string.Format("Voron Incr Backup total {0} pages", numberOfBackedUpPages));
-                    return numberOfBackedUpPages;
+					infoNotify(string.Format("Voron Incr Backup total {0} pages", numberOfBackedUpPages));
+					file.Flush(true); // make sure that this is actually persisted fully to disk
+					return numberOfBackedUpPages;
                 }
             }
         }

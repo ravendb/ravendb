@@ -4,7 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -14,6 +17,140 @@ namespace Raven.Tests.Bugs.Queries
 {
 	public class Includes : RavenTest
 	{
+		[Fact]
+		public void IncludeWithDistinct()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new MyCustIndex().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Customer
+					{
+						Location = "PT CT",
+						Occupation = "Marketing",
+						CustomerId = "1",
+						HeadingId = "2"
+					}, "Customers/1");
+
+
+					session.Store(new Customer
+					{
+						Location = "PT CT",
+						Occupation = "Marketing",
+						CustomerId = "1",
+						HeadingId = "2"
+					}, "Customers/2");
+					session.SaveChanges();
+				}
+
+				WaitForIndexing(store);
+				using (var session = store.OpenSession())
+				{
+
+					RavenQueryStatistics qs;
+					var qRes = session.Advanced.DocumentQuery<Customer>("MyCustIndex")
+						.Statistics(out qs).Where("Occupation:Marketing")
+						.Distinct()
+						.SelectFields<CustomerHeader>("CustomerId")
+						.Take(20)
+						.Include("__document_id")
+						.ToList();
+					
+					Assert.Equal(1, qRes.Count);
+					var cust = session.Load<Customer>(qRes[0].Id);
+					Assert.Equal(1, session.Advanced.NumberOfRequests);
+				}
+			}
+		}
+
+		[Fact]
+		public void IncludeWithDistinctAndTransformer()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new MyCustIndex().Execute(store);
+				new IdentityTransformer().Execute(store);
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Customer
+					{
+						Location = "PT CT",
+						Occupation = "Marketing",
+						CustomerId = "1",
+						HeadingId = "2"
+					}, "Customers/1");
+
+
+					session.Store(new Customer
+					{
+						Location = "PT CT",
+						Occupation = "Marketing",
+						CustomerId = "1",
+						HeadingId = "2"
+					}, "Customers/2");
+					session.SaveChanges();
+				}
+
+				WaitForIndexing(store);
+				using (var session = store.OpenSession())
+				{
+
+					RavenQueryStatistics qs;
+					var qRes = session.Advanced.DocumentQuery<Customer>("MyCustIndex")
+						.Statistics(out qs).Where("Occupation:Marketing")
+						.Distinct()
+						.SelectFields<Customer>("CustomerId")
+						.Take(20)
+						.SetResultTransformer(new IdentityTransformer().TransformerName)
+						.ToList();
+
+					WaitForUserToContinueTheTest(store);
+
+					Assert.Equal(1, qRes.Count);
+					Assert.Equal("Customers/1", qRes[0].Id);
+					Assert.Equal("PT CT", qRes[0].Location);
+				}
+			}
+		}
+
+
+		public class CustomerHeader
+		{
+			public string CustomerId { get; set; }
+			public string Id { get; set; }
+		}
+
+		public class Customer
+		{
+			public string Id { get; set; }
+			public string Location { get; set; }
+			public string Occupation { get; set; }
+			public string CustomerId { get; set; }
+			public string HeadingId { get; set; }
+		}
+
+		public class IdentityTransformer : AbstractTransformerCreationTask<Customer>
+		{
+			public IdentityTransformer()
+			{
+				TransformResults = customers =>
+					from customer in customers
+					select LoadDocument<Customer>(customer.Id);
+			}
+		}
+
+		public class MyCustIndex : AbstractIndexCreationTask<Customer>
+		{
+			public MyCustIndex()
+			{
+				Map = customers => from customer in customers
+								   select new { customer.Occupation, customer.CustomerId };
+				Store(x => x.Occupation, FieldStorage.Yes);
+				Store(x => x.CustomerId, FieldStorage.Yes);
+			}
+		}
 		[Fact]
 		public void CanIncludeViaNestedPath()
 		{

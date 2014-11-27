@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
 using System.IO;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins
 {
@@ -19,7 +18,6 @@ namespace Raven.Database.Plugins
 
 		public virtual void SecondStageInit()
 		{
-
 		}
 
 		public abstract Stream Encode(string key, Stream dataStream);

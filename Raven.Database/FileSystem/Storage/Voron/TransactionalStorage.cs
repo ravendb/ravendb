@@ -15,9 +15,11 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage.Voron.Backup;
 using Raven.Database.FileSystem.Storage.Voron.Impl;
 using Raven.Database.FileSystem.Storage.Voron.Schema;
@@ -53,8 +55,9 @@ namespace Raven.Database.FileSystem.Storage.Voron
         private TableStorage tableStorage;
 
         private IdGenerator idGenerator;
+	    private OrderedPartCollection<AbstractFileCodec> fileCodecs;
 
-        public TransactionalStorage(InMemoryRavenConfiguration configuration)
+	    public TransactionalStorage(InMemoryRavenConfiguration configuration)
         {
 	        this.configuration = configuration;
 	        path = configuration.FileSystem.DataDirectory.ToFullPath();
@@ -110,8 +113,13 @@ namespace Raven.Database.FileSystem.Storage.Voron
             return options;
         }
 
-        public void Initialize()
+		public void Initialize(OrderedPartCollection<AbstractFileCodec> codecs)
         {
+			if (codecs == null)
+				throw new ArgumentNullException("codecs");
+
+			fileCodecs = codecs;
+
             bool runInMemory;
             bool.TryParse(settings["Raven/RunInMemory"], out runInMemory);
 
@@ -189,7 +197,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
                 try
                 {
                     writeBatchRef.Value = new WriteBatch { DisposeAfterWrite = false };
-                    using (var storageActionsAccessor = new StorageActionsAccessor(tableStorage, writeBatchRef, snapshot, idGenerator, bufferPool))
+                    using (var storageActionsAccessor = new StorageActionsAccessor(tableStorage, writeBatchRef, snapshot, idGenerator, bufferPool, fileCodecs))
                     {
                         current.Value = storageActionsAccessor;
 

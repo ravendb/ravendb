@@ -70,6 +70,7 @@ namespace Raven.Tests.Helpers
                                                     string requestedStorage = null,
                                                     bool enableAuthentication = false,
                                                     string fileSystemName = null,
+													string activeBundles = null,
                                                     Action<RavenConfiguration> customConfig = null)
         {
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
@@ -97,6 +98,11 @@ namespace Raven.Tests.Helpers
                     DefaultStorageTypeName = storageType
                 },
             };
+
+			if (activeBundles != null)
+			{
+				ravenConfiguration.Settings[Constants.ActiveBundles] = activeBundles;
+			}
 
             if (customConfig != null)
             {
@@ -149,19 +155,29 @@ namespace Raven.Tests.Helpers
                 ApiKey = apiKey,                 
             };
 
-            store.Initialize(true);
+            store.Initialize(ensureFileSystemExists: true, failIfCannotCreate: true);
 
             this.filesStores.Add(store);
 
             return store;                        
         }
 
-        protected virtual IAsyncFilesCommands NewAsyncClient(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
-                                                             ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null)
+        protected virtual IAsyncFilesCommands NewAsyncClient(int index = 0, 
+			bool fiddler = false, 
+			bool enableAuthentication = false, 
+			string apiKey = null, 
+			ICredentials credentials = null, 
+            string requestedStorage = null, 
+			[CallerMemberName] string fileSystemName = null, 
+			Action<RavenConfiguration> customConfig = null,
+			string activeBundles = null,
+			string dataDirectory = null,
+			bool runInMemory = true)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage);
+	        var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage, activeBundles: activeBundles, customConfig: customConfig,
+				dataDirectory: dataDirectory, runInMemory: runInMemory);
             server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
             var store = new FilesStore()
@@ -174,7 +190,7 @@ namespace Raven.Tests.Helpers
 
             store.Initialize(true);
 
-            this.filesStores.Add(store);
+            filesStores.Add(store);
 
             var client = store.AsyncFilesCommands;
             asyncCommandClients.Add(client);
@@ -209,7 +225,7 @@ namespace Raven.Tests.Helpers
         {
         }
 
-        protected string NewDataPath(string prefix = null)
+		protected string NewDataPath(string prefix = null, bool deleteOnDispose = true)
         {
             // Federico: With a filesystem name too large, we can easily pass the filesystem path limit. 
             // The truncation of the Guid to 8 still provides enough entropy to avoid collisions.
@@ -217,7 +233,9 @@ namespace Raven.Tests.Helpers
 
             var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "RavenFS_Test", suffix));
             Directory.CreateDirectory(newDataDir);
-            pathsToDelete.Add(newDataDir);
+
+			if(deleteOnDispose)
+				pathsToDelete.Add(newDataDir);
             return newDataDir;
         }
 
@@ -257,6 +275,12 @@ namespace Raven.Tests.Helpers
                 return reader.ReadToEnd();
             }
         }
+
+		public static Stream StringToStream(string src)
+		{
+			byte[] byteArray = Encoding.UTF8.GetBytes(src);
+			return new MemoryStream(byteArray);
+		}
 
         public static void EnableAuthentication(DocumentDatabase database)
         {

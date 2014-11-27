@@ -10,7 +10,7 @@ class luceneField {
     
     fieldNameAutocompletes = ko.observableArray<string>();
 
-    constructor(name: string, stores: string = "No", indexing: string = "Default", sort: string = "None", analyzer: string = null, suggestionDistance: string = "None", suggestionAccuracy: number = 0.5, termVector: string = "No", public indexFieldNames?:string[]) {
+    constructor(name: string, stores: string = "No", indexing: string = "Default", sort: string = "None", analyzer: string = 'StandardAnalyzer', suggestionDistance: string = "None", suggestionAccuracy: number = 0.5, termVector: string = "No", public indexFieldNames?:string[]) {
         this.name(name);
         this.stores(stores);
         this.indexing(indexing);

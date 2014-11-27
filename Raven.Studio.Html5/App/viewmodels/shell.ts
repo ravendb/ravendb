@@ -53,6 +53,9 @@ import serverBuildReminder = require("common/serverBuildReminder");
 class shell extends viewModelBase {
     private router = router;
 
+    
+    showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
+
     static databases = ko.observableArray<database>();
     listedResources: KnockoutComputed<resource[]>;
     systemDatabase: database;
@@ -859,7 +862,7 @@ class shell extends viewModelBase {
         if (rs.type === database.type) {
             return "fa fa-database";
         } else if (rs.type === filesystem.type) {
-            return "fa fa-file";
+            return "fa fa-file-image-o";
         } else {
             return "fa fa-calculator";
         }

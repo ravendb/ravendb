@@ -7,11 +7,11 @@ namespace Raven.Abstractions.Data
 	{
 		static Constants()
 		{
-			InDatabaseKeyVerificationDocumentContents = new RavenJObject
+			InResourceKeyVerificationDocumentContents = new RavenJObject
 			{
 				{"Text", "The encryption is correct."}
 			};
-			InDatabaseKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
+			InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
 
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
@@ -84,8 +84,8 @@ namespace Raven.Abstractions.Data
 		public const string EncryptionKeyBitsPreferenceSetting = "Raven/Encryption/KeyBitsPreference";
 		public const string EncryptIndexes = "Raven/Encryption/EncryptIndexes";
 
-		public const string InDatabaseKeyVerificationDocumentName = "Raven/Encryption/Verification";
-		public static readonly RavenJObject InDatabaseKeyVerificationDocumentContents;
+		public const string InResourceKeyVerificationDocumentName = "Raven/Encryption/Verification";
+		public static readonly RavenJObject InResourceKeyVerificationDocumentContents;
 
 		public const int DefaultGeneratedEncryptionKeyLength = 256/8;
 		public const int MinimumAcceptableEncryptionKeyLength = 64/8;

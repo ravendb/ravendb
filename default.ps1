@@ -288,7 +288,17 @@ function SignFile($filePath){
 	}
     
     Write-Host "Signing the following file: $filePath"
-	Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "http://timestamp.verisign.com/scripts/timstamp.dll" "$filePath" }
+
+    $timeservers = @("http://tsa.starfieldtech.com", "http://timestamp.globalsign.com/scripts/timstamp.dll", "http://timestamp.comodoca.com/authenticode", "http://www.startssl.com/timestamp", "http://timestamp.verisign.com/scripts/timstamp.dll")
+    foreach ($time in $timeservers) {
+    	try {
+    		Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "$time" "$filePath" }
+    		return
+    	}
+    	catch {
+    		continue
+    	}
+	}
 }
 
 task SignServer {
@@ -538,11 +548,6 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\content -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenTests $nuget_dir\RavenDB.Tests.Helpers\content\RavenTests -Recurse
 	
-	New-Item $nuget_dir\RavenDB.Bundles.Development\lib\net45 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Development.nuspec $nuget_dir\RavenDB.Bundles.Development\RavenDB.Bundles.Development.nuspec
-	@("Raven.Database.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Database\bin\$global:configuration\$_" $nuget_dir\RavenDB.Bundles.Development\lib\net45 }
-	@("Raven.Client.Lightweight.???") |% { Copy-Item "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\$_" $nuget_dir\RavenDB.Bundles.Development\lib\net45 }
-	
 	# Sets the package version in all the nuspec as well as any RavenDB package dependency versions
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
 	$packages |% { 
@@ -559,7 +564,8 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 }
 
 task PushSymbolSources -depends InitNuget {
-	
+	return;
+
 	if ($global:uploadMode -ne "Stable") {
 		return; # this takes 20 minutes to run
 	}
@@ -599,6 +605,7 @@ task PushSymbolSources -depends InitNuget {
 }
 
 task CreateSymbolSources -depends CreateNugetPackages {
+	return;
 	
 	if ($global:uploadMode -ne "Stable") {
 		return; # this takes 20 minutes to run
@@ -675,6 +682,10 @@ task CreateSymbolSources -depends CreateNugetPackages {
 					Write-Host "Include also linked files of $($projectReference.Include)" -Fore Green
 
 					$srcDirName2 = [io.path]::GetFileNameWithoutExtension($projectPath)
+
+					if ($srcDirName2 -eq "Voron") {
+						$srcDirName2 = "Raven.Voron/" + $srcDirName2
+					}
 
 					Get-ChildItem $srcDirName2\*.cs -Recurse |	ForEach-Object {
 						$indexOf = $_.FullName.IndexOf($srcDirName2)	

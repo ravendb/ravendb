@@ -63,6 +63,10 @@ class resources extends viewModelBase {
                     continue;
                 }
 
+                if (!rs.isVisible()) {
+                    continue;
+                }
+
                 if (rs.isChecked() == false) {
                     return false;
                 }
@@ -102,6 +106,7 @@ class resources extends viewModelBase {
         });
         this.fetchAlerts();
         this.visibleResources.subscribe(() => this.filterResources());
+        this.filterResources();
     }
 
     private fetchAlerts() {
@@ -225,8 +230,9 @@ class resources extends viewModelBase {
                 rs.isChecked(false);
                 continue;
             }
-
-            rs.isChecked(check);
+            if (rs.isVisible()) {   
+                rs.isChecked(check);
+            }
         }
     }
 
@@ -417,9 +423,9 @@ class resources extends viewModelBase {
         if (!foundDatabase) {
             var newDatabase = new database(databaseName, false, bundles);
             this.databases.unshift(newDatabase);
+            this.filterResources();
             return newDatabase;
         }
-
         return foundDatabase;
     }
 
@@ -470,9 +476,9 @@ class resources extends viewModelBase {
         if (!foundFileSystem) {
             var newFileSystem = new filesystem(fileSystemName);
             this.fileSystems.unshift(newFileSystem);
+            this.filterResources();
             return newFileSystem;
         }
-
         return foundFileSystem;
     }
 

@@ -151,28 +151,16 @@ class appUrl {
         return "#admin/settings/windowsAuth";
     }
 
-    static forBackupDatabase(): string {
-        return "#admin/settings/backupDatabase";
+    static forBackup(): string {
+        return "#admin/settings/backup";
     }
 
-    static forCompactDatabase(): string {
-        return "#admin/settings/compactDatabase";
+    static forCompact(): string {
+        return "#admin/settings/compact";
     }
 
-    static forRestoreDatabase(): string {
-        return "#admin/settings/restoreDatabase";
-    }
-
-    static forBackupFilesystem(): string {
-        return "#admin/settings/backupFilesystem";
-    }
-
-    static forCompactFilesystem(): string {
-        return "#admin/settings/compactFilesystem";
-    }
-
-    static forRestoreFilesystem(): string {
-        return "#admin/settings/restoreFilesystem";
+    static forRestore(): string {
+        return "#admin/settings/restore";
     }
 
     static forAdminLogs(): string {

@@ -105,7 +105,9 @@ class documents extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        if (args.withStop) {
+            shell.hasContinueTestOption(true);
+        }
         this.fetchCustomFunctions();
 
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"

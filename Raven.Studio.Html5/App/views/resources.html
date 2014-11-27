@@ -5,7 +5,7 @@
     <ul class="breadcrumb" data-bind="visible: resources().length > 1">
         <li>
             <h3>
-                <a href="#databases">
+                <a href="#resources">
                     Databases &amp; File Systems
                 </a>
             </h3>
@@ -66,10 +66,10 @@
                 <h4>
                     
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                    <a class="resource-name" data-bind="attr: { href: $root.getDocumentsUrl($data) }"><i class="fa fa-database"></i> <span data-bind="text: name"></span></a>
+                    <a class="resource-name" data-bind="attr: { href: $root.getDocumentsUrl($data) }"><i class="fa fa-database"></i> db/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled() || !$data.isLicensed() -->
-                    <a class="resource-name"><i class="fa fa-database"></i> <span data-bind="text: name"></span></a>
+                    <a class="resource-name"><i class="fa fa-database"></i> db/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                 </h4>
                 <br />                              
@@ -132,7 +132,7 @@
         </div>
         <!-- /ko -->
         <!-- ko if: $data.isFilesystem() -->
-        <div class="resource" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
+        <div class="resource fs" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
             <div class="checkbox" data-bind="click: function () { checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
                 <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
             </div>
@@ -140,10 +140,10 @@
             <div class="details">
                 <h4>
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                    <a class="resource-name" data-bind="attr: { href: $root.getFilesystemFilesUrl($data) }"><i class="fa fa-file"></i> <span data-bind="text: name"></span></a>
+                    <a class="resource-name" data-bind="attr: { href: $root.getFilesystemFilesUrl($data) }"><i class="fa fa-file-image-o"></i> fs/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled() || !$data.isLicensed() -->
-                    <a class="resource-name"><i class="fa fa-file"></i> <span data-bind="    text: name"></span></a>
+                    <a class="resource-name"><i class="fa fa-file-image-o"></i> fs/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                 </h4>
                 <br />

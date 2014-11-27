@@ -1,8 +1,9 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenJint.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="SmugglerJintHelper.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 
 using Jint;
@@ -12,7 +13,7 @@ using Raven.Abstractions.Smuggler;
 using Raven.Database.Json;
 using Raven.Json.Linq;
 
-namespace Raven.Smuggler.Imports
+namespace Raven.Database.Smuggler
 {
 	public class SmugglerJintHelper
 	{

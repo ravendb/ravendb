@@ -18,7 +18,7 @@ namespace Raven.Bundles.Encryption.Plugin
 	{
 		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			if (key == Constants.InDatabaseKeyVerificationDocumentName)
+			if (key == Constants.InResourceKeyVerificationDocumentName)
 			{
 				if (Database == null) // we haven't been initialized yet
 					return VetoResult.Allowed;
