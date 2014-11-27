@@ -106,6 +106,7 @@ class resources extends viewModelBase {
         });
         this.fetchAlerts();
         this.visibleResources.subscribe(() => this.filterResources());
+        this.filterResources();
     }
 
     private fetchAlerts() {
