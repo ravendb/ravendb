@@ -14,7 +14,7 @@ namespace Voron.Tests.Backups
 {
 	public class Incremental : StorageTest
 	{
-		private Func<int, string> _incrementalBackupFile = n => string.Format("voron-test.{0}-incremental-backup.zip", n);
+		private readonly Func<int, string> _incrementalBackupFile = n => string.Format("voron-test.{0}-incremental-backup.zip", n);
 		private const string _restoredStoragePath = "incremental-backup-test.data";
 
 		protected override void Configure(StorageEnvironmentOptions options)
