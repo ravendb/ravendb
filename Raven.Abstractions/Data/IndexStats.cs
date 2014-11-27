@@ -84,41 +84,55 @@ namespace Raven.Abstractions.Data
 
     public class IndexingPerformanceStats
 	{
-	    protected bool Equals(IndexingPerformanceStats other)
-	    {
-		    return string.Equals(Operation, other.Operation) && OutputCount == other.OutputCount && InputCount == other.InputCount && Duration.Equals(other.Duration) && Started.Equals(other.Started);
-	    }
-
-	    public override int GetHashCode()
-	    {
-		    unchecked
-		    {
-			    var hashCode = (Operation != null ? Operation.GetHashCode() : 0);
-			    hashCode = (hashCode*397) ^ OutputCount;
-			    hashCode = (hashCode*397) ^ InputCount;
-			    hashCode = (hashCode*397) ^ Duration.GetHashCode();
-			    hashCode = (hashCode*397) ^ Started.GetHashCode();
-			    return hashCode;
-		    }
-	    }
-
-		public int LoadDocumentCount { get; set; }
+	    public int LoadDocumentCount { get; set; }
 		public long LoadDocumentDurationMs { get; set; }
+		public long WritingDocumentsToLuceneDurationMs { get; set; }
+		public long LinqExecutionDurationMs { get; set; }
+		public long FlushToDiskDurationMs { get; set; }
 		public string Operation { get; set; }
 		public int OutputCount { get; set; }
 		public int InputCount { get; set; }
 		public int ItemsCount { get; set; }
 		public TimeSpan Duration { get; set; }
 		public DateTime Started { get; set; }
+		public DateTime Completed { get; set; }
+		public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
 		public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
 
 		public override bool Equals(object obj)
 		{
 			if (ReferenceEquals(null, obj)) return false;
 			if (ReferenceEquals(this, obj)) return true;
-			if (obj.GetType() != this.GetType()) return false;
+			if (obj.GetType() != GetType()) return false;
 			return Equals((IndexingPerformanceStats) obj);
 		}
+
+		protected bool Equals(IndexingPerformanceStats other)
+		{
+			return LoadDocumentCount == other.LoadDocumentCount && LoadDocumentDurationMs == other.LoadDocumentDurationMs && WritingDocumentsToLuceneDurationMs == other.WritingDocumentsToLuceneDurationMs && LinqExecutionDurationMs == other.LinqExecutionDurationMs && FlushToDiskDurationMs == other.FlushToDiskDurationMs && string.Equals(Operation, other.Operation) && OutputCount == other.OutputCount && InputCount == other.InputCount && ItemsCount == other.ItemsCount && Duration.Equals(other.Duration) && Started.Equals(other.Started) && Completed.Equals(other.Completed) && WaitingTimeSinceLastBatchCompleted.Equals(other.WaitingTimeSinceLastBatchCompleted);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				int hashCode = LoadDocumentCount;
+				hashCode = (hashCode * 397) ^ LoadDocumentDurationMs.GetHashCode();
+				hashCode = (hashCode * 397) ^ WritingDocumentsToLuceneDurationMs.GetHashCode();
+				hashCode = (hashCode * 397) ^ LinqExecutionDurationMs.GetHashCode();
+				hashCode = (hashCode * 397) ^ FlushToDiskDurationMs.GetHashCode();
+				hashCode = (hashCode * 397) ^ (Operation != null ? Operation.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ OutputCount;
+				hashCode = (hashCode * 397) ^ InputCount;
+				hashCode = (hashCode * 397) ^ ItemsCount;
+				hashCode = (hashCode * 397) ^ Duration.GetHashCode();
+				hashCode = (hashCode * 397) ^ Started.GetHashCode();
+				hashCode = (hashCode * 397) ^ Completed.GetHashCode();
+				hashCode = (hashCode * 397) ^ WaitingTimeSinceLastBatchCompleted.GetHashCode();
+				return hashCode;
+			}
+		}
+
 
 	    public override string ToString()
 	    {

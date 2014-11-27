@@ -46,8 +46,10 @@ namespace Raven.Database.Indexing
 			var sourceCount = 0;
 			int loadDocumentCount = 0;
 			long loadDocumentDuration = 0;
+			long linqExecutionDutation = 0;
+			var addDocumentTotalDutation = new Stopwatch();
 
-			Write((indexWriter, analyzer, stats) =>
+			var writeStats = Write((indexWriter, analyzer, stats) =>
 			{
 				var processedKeys = new HashSet<string>();
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
@@ -98,7 +100,8 @@ namespace Raven.Database.Indexing
 							int outputPerDocId = 0;
 							Action<Exception, object> onErrorFunc;
 							bool skipDocument = false;
-							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats, out onErrorFunc))
+							Stopwatch linqExecution;
+							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats, out onErrorFunc, out linqExecution))
 							{
 								float boost;
 								IndexingResult indexingResult;
@@ -156,7 +159,10 @@ namespace Raven.Database.Indexing
 									},
 									trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
 								LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
+
+								addDocumentTotalDutation.Start();
 								AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+								addDocumentTotalDutation.Stop();
 
 								Interlocked.Increment(ref stats.IndexingSuccesses);
 							}
@@ -165,6 +171,7 @@ namespace Raven.Database.Indexing
 
 							Interlocked.Add(ref loadDocumentCount, CurrentIndexingScope.Current.LoadDocumentCount);
 							Interlocked.Add(ref loadDocumentDuration, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds);
+							Interlocked.Add(ref linqExecutionDutation, linqExecution.ElapsedMilliseconds);
 						}
 					});
 					UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
@@ -189,8 +196,6 @@ namespace Raven.Database.Indexing
 							context.AddError(indexId, null, e.Message, "Dispose Trigger");
 						},
 						x => x.Dispose());
-
-					BatchCompleted("Current", "Index", sourceCount, count, loadDocumentCount, loadDocumentDuration);
 				}
 				return new IndexedItemsInfo(batch.HighestEtagBeforeFiltering)
 				{
@@ -198,6 +203,8 @@ namespace Raven.Database.Indexing
 				};
 			});
 
+			BatchCompleted("Current", "Index", sourceCount, count, loadDocumentCount, loadDocumentDuration,
+						addDocumentTotalDutation.ElapsedMilliseconds, linqExecutionDutation, writeStats.FlushToDiskDurationMs);
 			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
 		}
 
