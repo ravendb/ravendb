@@ -1,8 +1,10 @@
 ﻿using System.Linq;
 using System.Text.RegularExpressions;
+using Mono.CSharp.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -198,6 +200,145 @@ So, the greedy dog looked at his reflection and growled. The reflection growled 
 				Assert.Equal(14, counter);
 			}
 		}
+
+		// this one fails
+		[Fact]
+		public void HighlightText_WithProjection()
+		{
+			var item = new SearchItem
+			{
+				Id = "searchitems/1",
+				Name = "This is a sample about a dog and his owner"
+			};
+
+			var searchFor = "about";
+			using (var store = NewDocumentStore())
+			using (var session = store.OpenSession())
+			{
+				session.Store(item);
+				store.DatabaseCommands.PutIndex(new ContentSearchIndex().IndexName, new ContentSearchIndex().CreateIndexDefinition());
+				session.SaveChanges();
+				FieldHighlightings nameHighlighting;
+				var results = session.Advanced.DocumentQuery<SearchItem>("ContentSearchIndex")
+									 .SelectFields<SearchItemProjection>()
+									 .WaitForNonStaleResults()
+									 .Highlight("Name", 128, 1, out nameHighlighting)
+									 .Search("Name", searchFor)
+									 .ToArray();
+				Assert.Equal(1, results.Length);
+				Assert.NotEmpty(nameHighlighting.GetFragments("searchitems/1"));
+				Assert.Equal("This is a sample <b style=\"background:yellow\">about</b> a dog and his owner",
+							 nameHighlighting.GetFragments("searchitems/1").First());
+			}
+		}
+
+		// this one fails
+		[Fact]
+		public void HighlightText_WithMapReduce()
+		{
+			var item1 = new SearchItemWithType
+			{
+				Id = "searchitems/1",
+				Type = "Fact",
+				Text = "Once there lived a dog."
+			};
+
+			var item2 = new SearchItemWithType
+			{
+				Id = "searchitems/2",
+				Type = "Opinion",
+				Text = "The dog was very greedy."
+			};
+
+			var item3 = new SearchItemWithType
+			{
+				Id = "searchitems/3",
+				Type = "Opinion",
+				Text = "He had lost the piece of dog bone because of his greed."
+			};
+
+			var searchFor = "dog";
+			using (var store = NewDocumentStore())
+			using (var session = store.OpenSession())
+			{
+				session.Store(item1);
+				session.Store(item2);
+				session.Store(item3);
+				store.DatabaseCommands.PutIndex(new ContentSearchMapReduceIndex().IndexName, new ContentSearchMapReduceIndex().CreateIndexDefinition());
+				session.SaveChanges();
+				FieldHighlightings nameHighlighting;
+				var results = session.Advanced.DocumentQuery<SearchItemWithTypeResult>("ContentSearchMapReduceIndex")
+									 .WaitForNonStaleResults()
+									 .Highlight("AllText", 128, 1, out nameHighlighting)
+									 .Search("AllText", searchFor)
+									 .ToArray();
+
+				Assert.Equal(2, results.Length);
+
+				var opinionFragments = nameHighlighting.GetFragments("Opinion");
+				Assert.Equal(1, opinionFragments.Length);
+				Assert.Equal("The <b style=\"background:yellow\">dog</b> was very greedy. He had lost the piece of <b style=\"background:yellow\">dog</b> bone because of his greed.", opinionFragments[0]);
+
+				var factFragments = nameHighlighting.GetFragments("Fact");
+				Assert.Equal(1, factFragments.Length);
+				Assert.Equal("Once there lived a <b style=\"background:yellow\">dog</b>.", factFragments[0]);
+			}
+		}
+
+		// this one passes
+		[Fact]
+		public void HighlightText_WithMapReduceWithFragments()
+		{
+			var item1 = new SearchItemWithType
+			{
+				Id = "searchitems/1",
+				Type = "Fact",
+				Text = "Once there lived a dog."
+			};
+
+			var item2 = new SearchItemWithType
+			{
+				Id = "searchitems/2",
+				Type = "Opinion",
+				Text = "The dog was very greedy."
+			};
+
+			var item3 = new SearchItemWithType
+			{
+				Id = "searchitems/3",
+				Type = "Opinion",
+				Text = "He had lost the piece of dog bone because of his greed."
+			};
+
+			var searchFor = "dog";
+			using (var store = NewDocumentStore())
+			using (var session = store.OpenSession())
+			{
+				session.Store(item1);
+				session.Store(item2);
+				session.Store(item3);
+				store.DatabaseCommands.PutIndex(new ContentSearchMapReduceIndex().IndexName, new ContentSearchMapReduceIndex().CreateIndexDefinition());
+				session.SaveChanges();
+
+				var results = session.Advanced.DocumentQuery<SearchItemWithTypeResultWithFragments>("ContentSearchMapReduceIndex")
+									 .WaitForNonStaleResults()
+									 .Highlight("AllText", 128, 1, "Fragments")
+									 .Search("AllText", searchFor)
+									 .ToArray();
+
+				Assert.Equal(2, results.Length);
+
+				var opinionResult = results.First(r => r.Type == "Opinion");
+				var opinionFragments = opinionResult.Fragments;
+				Assert.Equal(1, opinionFragments.Length);
+				Assert.Equal("The <b style=\"background:yellow\">dog</b> was very greedy. He had lost the piece of <b style=\"background:yellow\">dog</b> bone because of his greed.", opinionFragments[0]);
+
+				var factResult = results.First(r => r.Type == "Fact");
+				var factFragments = factResult.Fragments;
+				Assert.Equal(1, factFragments.Length);
+				Assert.Equal("Once there lived a <b style=\"background:yellow\">dog</b>.", factFragments[0]);
+			}
+		}
 	}
 
 	public class ContentSearchIndex : AbstractIndexCreationTask<SearchItem>
@@ -217,5 +358,49 @@ So, the greedy dog looked at his reflection and growled. The reflection growled 
 	{
 		public string Name { get; set; }
 		public string Id { get; set; }
+	}
+
+	public class SearchItemProjection
+	{
+		public string Name { get; set; }
+		public string Id { get; set; }
+	}
+
+	public class ContentSearchMapReduceIndex : AbstractIndexCreationTask<SearchItemWithType, SearchItemWithTypeResult>
+	{
+		public ContentSearchMapReduceIndex()
+		{
+			Map = (docs => from doc in docs
+						   select new { doc.Type, AllText = doc.Text, Count = 1 });
+
+			Reduce = (results => from result in results
+									group result by result.Type
+									into g
+									select new { Type = g.Key, AllText = string.Join(" ", g.Select(r => r.AllText)), Count = g.Sum(r => r.Count) });
+
+			Index(x => x.AllText, FieldIndexing.Analyzed);
+			Store(x => x.AllText, FieldStorage.Yes);
+			Store(x => x.Type, FieldStorage.Yes);
+			TermVector(x => x.AllText, FieldTermVector.WithPositionsAndOffsets);
+		}
+	}
+
+	public class SearchItemWithType
+	{
+		public string Type { get; set; }
+		public string Text { get; set; }
+		public string Id { get; set; }
+	}
+
+	public class SearchItemWithTypeResult
+	{
+		public string Type { get; set; }
+		public string AllText { get; set; }
+		public int Count { get; set; }
+	}
+
+	public class SearchItemWithTypeResultWithFragments : SearchItemWithTypeResult
+	{
+		public string[] Fragments { get; set; }
 	}
 }
