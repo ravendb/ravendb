@@ -332,7 +332,7 @@ class query extends viewModelBase {
 
             var useAndOperator = this.isDefaultOperatorOr() === false;
 
-            var queryCommand = new queryIndexCommand(selectedIndex, database, 0, 1024, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
+            var queryCommand = new queryIndexCommand(selectedIndex, database, 0, 25, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
 
             var db = this.activeDatabase();
             this.rawJsonUrl(appUrl.forResourceQuery(db) + queryCommand.getUrl());
