@@ -53,6 +53,9 @@ import serverBuildReminder = require("common/serverBuildReminder");
 class shell extends viewModelBase {
     private router = router;
 
+    
+    showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
+
     static databases = ko.observableArray<database>();
     listedResources: KnockoutComputed<resource[]>;
     systemDatabase: database;

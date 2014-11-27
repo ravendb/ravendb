@@ -170,6 +170,11 @@
                                 <img style="height: 24px" src="content/images/raven.png" />
                             </a>
                         </li>
+                        <!-- ko if:showContinueTestButton() -->
+                        <li class="navbar-right" style="padding-left: 5px; padding-top: 5px">
+                            <button data-bind="click: continueTest" class="btn btn-danger"><i class="fa fa-play"></i> Continue test</button>
+                        </li>
+                        <!-- /ko -->
                         <li class="dropdown navbar-right" data-bind="visible: canShowResourcesNavbar()">
                             <a class="dropdown-toggle resource-link" data-toggle="dropdown" href="#" data-bind="with: lastActivatedResource, css: { 'resource-link-disabled': $root.listedResources().length == 0 }">
                                 <span data-bind="text: name"></span>

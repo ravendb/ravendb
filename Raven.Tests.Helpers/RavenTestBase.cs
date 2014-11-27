@@ -588,11 +588,14 @@ namespace Raven.Tests.Helpers
 			if (debug && Debugger.IsAttached == false)
 				return;
 
+		    var databaseName = Constants.SystemDatabase;
+
 			var embeddableDocumentStore = documentStore as EmbeddableDocumentStore;
 			OwinHttpServer server = null;
 			string url = documentStore.Url;
 			if (embeddableDocumentStore != null)
 			{
+			    databaseName = embeddableDocumentStore.DefaultDatabase;
 				embeddableDocumentStore.Configuration.Port = port;
 				SetStudioConfigToAllowSingleDb(embeddableDocumentStore);
 				embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
@@ -601,11 +604,19 @@ namespace Raven.Tests.Helpers
 				url = embeddableDocumentStore.Configuration.ServerUrl;
 			}
 
+		    var remoteDocumentStore = documentStore as DocumentStore;
+            if (remoteDocumentStore != null)
+            {
+                databaseName = remoteDocumentStore.DefaultDatabase;
+            }
+
 			using (server)
 			{
 				try
 				{
-					Process.Start(url); // start the server
+                    var databaseNameEncoded = Uri.EscapeDataString(databaseName ?? Constants.SystemDatabase);
+                    var documentsPage = url + "studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+                    Process.Start(documentsPage); // start the server
 				}
 				catch (Win32Exception e)
 				{
@@ -654,8 +665,9 @@ namespace Raven.Tests.Helpers
 				Url = url ?? "http://localhost:8079"
 			}.Initialize())
 			{
-
-				Process.Start(documentStore.Url); // start the server
+                var databaseNameEncoded = Uri.EscapeDataString(Constants.SystemDatabase);
+                var documentsPage = documentStore.Url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+                Process.Start(documentsPage); // start the server
 
 				do
 				{
