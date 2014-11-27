@@ -4,16 +4,17 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem;
 using Raven.Database.Extensions;
 using Raven.Tests.Common.Util;
-using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit.Extensions;
 using Xunit;
 
@@ -22,6 +23,7 @@ namespace Raven.Tests.FileSystem.Encryption
 	public class EncryptedFileSystemBackupRestore : FileSystemEncryptionTest
 	{
         private readonly string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BackupRestoreTests.Backup");
+		private string dataPath;
 
 		public EncryptedFileSystemBackupRestore()
         {
@@ -30,15 +32,19 @@ namespace Raven.Tests.FileSystem.Encryption
 
         public override void Dispose()
         {
+			base.Dispose();
+
             IOExtensions.DeleteDirectory(backupDir);
-            base.Dispose();
+
+			if(dataPath != null)
+				IOExtensions.DeleteDirectory(dataPath);
         }
 
 		[Theory]
 		[PropertyData("Storages")]
-		public async Task CanRestoreBackupIfEncryptionEnabled(string requestedStorage)
+		public async Task CanRestoreBackupIfEncryptionEnabledOnServer(string requestedStorage)
 		{
-			using (var client = NewAsyncClient(requestedStorage))
+			using (var client = NewAsyncClientForEncryptedFs(requestedStorage))
 			{
 				var server = GetServer();
 
@@ -71,6 +77,85 @@ namespace Raven.Tests.FileSystem.Encryption
 			}
 
 			AssertPlainTextIsNotSavedInFileSystem("Secret", "records");
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task CanRestoreBackupOfEncryptedFileSystem(string requestedStorage)
+		{
+			dataPath = NewDataPath("CanRestoreBackupOfEncryptedFileSystem", false);
+
+			using (var server = CreateServer(Ports[0], requestedStorage: requestedStorage, runInMemory: false, dataDirectory: dataPath))
+			{
+				var store = server.FilesStore;
+				var fs1Doc = new FileSystemDocument()
+				{
+					Id = "FS1",
+					Settings =
+					{
+						{"Raven/FileSystem/DataDir", Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS1")},
+						{Constants.ActiveBundles, "Encryption"}
+					},
+					SecuredSettings = new Dictionary<string, string>
+					{
+						{
+							"Raven/Encryption/Key", "arHd5ENxwieUCAGkf4Rns8oPWx3f6npDgAowtIAPox0="
+						},
+						{
+							"Raven/Encryption/Algorithm", "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib"
+						},
+					},
+				};
+				await store.AsyncFilesCommands.Admin.CreateFileSystemAsync(fs1Doc, "FS1");
+
+				using (var session = store.OpenAsyncSession("FS1"))
+				{
+					session.RegisterUpload("test1.txt", StringToStream("Secret password"));
+					session.RegisterUpload("test2.txt", StringToStream("Security guard"));
+					await session.SaveChangesAsync();
+				}
+
+				await store.AsyncFilesCommands.ForFileSystem("FS1").Admin.StartBackup(backupDir, null, false, "FS1");
+				WaitForBackup(store.AsyncFilesCommands.ForFileSystem("FS1"), true);
+
+				string filesystemDir = Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS2");
+
+				await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
+				{
+					BackupLocation = backupDir,
+					FilesystemName = "FS2",
+					FilesystemLocation = filesystemDir
+				});
+
+				SpinWait.SpinUntil(() => store.AsyncFilesCommands.Admin.GetNamesAsync().Result.Contains("FS2"),
+							Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(1));
+
+				using (var session = server.DocumentStore.OpenAsyncSession(Constants.SystemDatabase))
+				{
+					var fs2Doc = await session.LoadAsync<FileSystemDocument>("Raven/FileSystems/FS2");
+
+					Assert.NotEqual(fs1Doc.SecuredSettings["Raven/Encryption/Key"], fs2Doc.SecuredSettings["Raven/Encryption/Key"]);
+					Assert.NotEqual(fs1Doc.SecuredSettings["Raven/Encryption/Algorithm"], fs2Doc.SecuredSettings["Raven/Encryption/Algorithm"]);
+				}
+
+				using (var session = store.OpenAsyncSession("FS2"))
+				{
+					var test1 = StreamToString(await session.DownloadAsync("test1.txt"));
+
+					Assert.Equal("Secret password", test1);
+
+					var test2 = StreamToString(await session.DownloadAsync("test2.txt"));
+
+					Assert.Equal("Security guard", test2);
+				}
+			}
+
+			Close();
+
+			EncryptionTestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(new[]
+			{
+				"Secret password", "Security guard"
+			}, dataPath, s => true);
 		}
 
 		private async Task CreateSampleData(IAsyncFilesCommands commands, int startIndex = 1, int count = 2)
