@@ -20,7 +20,7 @@ namespace Raven.Tests.FileSystem.Encryption
 			dataPath = NewDataPath("RavenFS_Encryption_Test", deleteOnDispose: false);
 		}
 
-		protected IAsyncFilesCommands NewAsyncClient(string requestedStorage, [CallerMemberName] string fileSystemName = null)
+		protected IAsyncFilesCommands NewAsyncClientForEncryptedFs(string requestedStorage, [CallerMemberName] string fileSystemName = null)
 		{
 			return NewAsyncClient(requestedStorage: requestedStorage, runInMemory: false, fileSystemName: fileSystemName, dataDirectory: dataPath, activeBundles: "Encryption", customConfig: configuration =>
 			{
@@ -28,7 +28,7 @@ namespace Raven.Tests.FileSystem.Encryption
 			});
 		}
 
-		private void Close()
+		protected void Close()
 		{
 			base.Dispose();
 		}
