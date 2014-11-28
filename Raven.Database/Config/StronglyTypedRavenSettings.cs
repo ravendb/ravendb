@@ -20,6 +20,8 @@ namespace Raven.Database.Config
 
 		public VoronConfiguration Voron { get; private set; }
 
+		public EsentConfiguration Esent { get; private set; }
+
 		public PrefetcherConfiguration Prefetcher { get; private set; }
 
 		public FileSystemConfiguration FileSystem { get; private set; }
@@ -32,6 +34,7 @@ namespace Raven.Database.Config
 		{
 			Replication = new ReplicationConfiguration();
 			Voron = new VoronConfiguration();
+			Esent = new EsentConfiguration();
 			Prefetcher = new PrefetcherConfiguration();
 			FileSystem = new FileSystemConfiguration();
 			Encryption = new EncryptionConfiguration();
@@ -190,6 +193,13 @@ namespace Raven.Database.Config
 			Voron.AllowIncrementalBackups = new BooleanSetting(settings["Raven/Voron/AllowIncrementalBackups"], false);
 			Voron.TempPath = new StringSetting(settings["Raven/Voron/TempPath"], (string)null);
 
+			var txJournalPath = settings[Constants.RavenTxJournalPath];
+			var esentLogsPath = settings[Constants.RavenEsentLogsPath];
+
+			Voron.JournalsStoragePath = new StringSetting(string.IsNullOrEmpty(txJournalPath) ? esentLogsPath : txJournalPath, (string)null);
+
+			Esent.JournalsStoragePath = new StringSetting(string.IsNullOrEmpty(esentLogsPath) ? txJournalPath : esentLogsPath, (string)null);
+
 			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
 			Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
 
@@ -207,7 +217,6 @@ namespace Raven.Database.Config
 			DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], string.Empty);
 
 			FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
-			JournalsStoragePath = new StringSetting(settings["Raven/Esent/LogsPath"] ?? settings[Constants.RavenTxJournalPath], (string)null);
 
 			TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
 		}
@@ -352,8 +361,6 @@ namespace Raven.Database.Config
 
 		public IntegerSetting FlushIndexToDiskSizeInMb { get; set; }
 
-		public StringSetting JournalsStoragePath { get; private set; }
-
 		public TimeSpanSetting TombstoneRetentionTime { get; private set; }
 
 		public class VoronConfiguration
@@ -367,6 +374,13 @@ namespace Raven.Database.Config
 			public BooleanSetting AllowIncrementalBackups { get; set; }
 
 			public StringSetting TempPath { get; set; }
+
+			public StringSetting JournalsStoragePath { get; set; }
+		}
+
+		public class EsentConfiguration
+		{
+			public StringSetting JournalsStoragePath { get; set; }
 		}
 
 		public class IndexingConfiguration
