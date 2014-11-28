@@ -673,6 +673,7 @@ class appUrl {
     static getSystemDatabase(): database {
         var db = new database("<system>");
         db.isSystem = true;
+        db.isVisible(false);
         return db;
     }
 

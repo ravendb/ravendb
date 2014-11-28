@@ -12,7 +12,7 @@ class adminSettings extends viewModelBase {
     constructor() {
         super();
 
-        this.docsForSystemUrl = appUrl.forDocuments(null, new database("<system>"));
+        this.docsForSystemUrl = appUrl.forDocuments(null, appUrl.getSystemDatabase());
 
         var apiKeyRoute = { route: ['admin/settings', 'admin/settings/apiKeys'], moduleId: 'viewmodels/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };
         var windowsAuthRoute = { route: 'admin/settings/windowsAuth', moduleId: 'viewmodels/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth() };
