@@ -479,6 +479,7 @@ class shell extends viewModelBase {
     }
 
     private databasesLoaded(databases: database[]) {
+        // we can't use appUrl.getSystemDatabase() here as it isn't loaded yet!
         this.systemDatabase = new database("<system>");
         this.systemDatabase.isSystem = true;
         this.systemDatabase.isVisible(false);
