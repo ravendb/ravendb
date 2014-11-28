@@ -3,18 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Mono.Posix;
-using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
-using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Trees;
 using Voron.Util;
-using FileMode = System.IO.FileMode;
 
 namespace Voron.Impl.Backup
 {
@@ -23,6 +16,7 @@ namespace Voron.Impl.Backup
 		public void ToFile(StorageEnvironment env, string filename, CompressionLevel compression = CompressionLevel.Optimal,Action<string> infoNotify = null)
 		{
 			var pagesToWrite = new Dictionary<long, Page>();
+			//todo: use the user's define temp path, instead
 			var tempDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())).FullName;
 			if (infoNotify == null)
 				infoNotify = str => { };
@@ -30,6 +24,9 @@ namespace Voron.Impl.Backup
 			try
 			{
 				ImmutableAppendOnlyList<JournalFile> journalFiles;
+				//todo: you are locking to get the journal files, but you are NOT getting the correct transaction header at the same time, 
+				//todo: thereby opening yourself for a race condition. In particular, you may be reading a partial transaction from the 
+				//todo: journal file, because you don't know when to stop
 				using (env.NewTransaction(TransactionFlags.ReadWrite)) //tx here serves as "lock" 
 					journalFiles = ImmutableAppendOnlyList<JournalFile>.CreateFrom(env.Journal.Files);
 				
@@ -42,18 +39,31 @@ namespace Voron.Impl.Backup
 
 					using (var filePager = env.Options.OpenJournalPager(file.Number))
 					{
-						TransactionHeader* lastTxHeader;
-						var journalReader = ReadJournalFile(env, filePager, recoveryPager, out lastTxHeader);
-
-						foreach (var pagePosition in journalReader.TransactionPageTranslation)
+						var reader = new JournalReader(filePager, recoveryPager, 0, null);
+						while (reader.ReadOneTransaction(env.Options))
 						{
-							int totalPageCount;
-							ReadPageToWrite(pagePosition, recoveryPager, pagesToWrite, out totalPageCount);
+							// read to end? 
+						}
+
+						foreach (var pagePosition in reader.TransactionPageTranslation)
+						{
+							var pageInJournal = pagePosition.Value.JournalPos;
+							var page = recoveryPager.Read(pageInJournal);
+							pagesToWrite[pagePosition.Key] = page;
+							if (page.IsOverflow)
+							{				
+								var numberOfOverflowPages = recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
+								for (int i = 1; i < numberOfOverflowPages; i++)
+									pagesToWrite.Remove(pagePosition.Key + i);
+							}
 						}
 					}
 				}
 
 				infoNotify("Voron - started writing snapshot file.");
+
+				//todo: there is no need to do this, we can do it directly, we already have the data
+				//todo: also, you aren't creating a merged transaction, also, you are going to be rejected on tx number as well.
 
 				//using in-memory only StorageEnvironment allows to reproduce both AccessViolationException and
 				//garbage in header of the exported tempEnv
@@ -80,36 +90,6 @@ namespace Voron.Impl.Backup
 
 				Directory.Delete(tempDir, true);
 			}
-		}
-
-		private static int ReadPageToWrite(KeyValuePair<long, JournalReader.RecoveryPagePosition> translation, IVirtualPager recoveryPager, Dictionary<long, Page> pagesToWrite, out int totalPageCount)
-		{
-			int size = 0;
-			totalPageCount = 1;
-			var pageInJournal = translation.Value.JournalPos;
-			var page = recoveryPager.Read(pageInJournal);
-			pagesToWrite[translation.Key] = page;
-			size += AbstractPager.PageSize;
-			if (page.IsOverflow)
-			{				
-				var numberOfOverflowPages = recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
-				var overflowPagesCount = numberOfOverflowPages - 1;
-				size += (AbstractPager.PageSize * overflowPagesCount);
-				totalPageCount += overflowPagesCount;
-				for (int i = 1; i < numberOfOverflowPages; i++)
-					pagesToWrite.Remove(translation.Key + i);
-			}
-
-			return size;
-		}
-
-		private static JournalReader ReadJournalFile(StorageEnvironment env, IVirtualPager filePager, IVirtualPager recoveryPager,out TransactionHeader* lastTxHeader)
-		{
-			lastTxHeader = null;
-			var reader = new JournalReader(filePager, recoveryPager, 0, null);
-			while (reader.ReadOneTransaction(env.Options))
-				lastTxHeader = reader.LastTransactionHeader;
-			return reader;
 		}
 	}
 }
