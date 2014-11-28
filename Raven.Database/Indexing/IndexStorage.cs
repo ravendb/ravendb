@@ -1116,6 +1116,9 @@ namespace Raven.Database.Indexing
 
 				isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
 
+				if (indexInstance != null && indexInstance.IsTestIndex)
+					isStale = false;
+
 				if (isStale && actions.Staleness.IsIndexStaleByTask(indexId, null) == false && actions.Staleness.IsReduceStale(indexId) == false)
 				{
 					var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexId);

@@ -154,6 +154,14 @@ namespace Raven.Database.Indexing
 
 		public string PublicName { get { return indexDefinition.Name; } }
 
+		public bool IsTestIndex
+		{
+			get
+			{
+				return PublicName.StartsWith(Constants.TestIndexPrefix, StringComparison.OrdinalIgnoreCase);
+			}
+		}
+
 		public int? MaxIndexOutputsPerDocument { get { return indexDefinition.MaxIndexOutputsPerDocument; } }
 
 		[CLSCompliant(false)]
