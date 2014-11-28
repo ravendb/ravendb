@@ -33,23 +33,28 @@ namespace Voron.Impl.Journal
             get { return _readingPage; }
         }
 
-        public JournalReader(IVirtualPager pager, IVirtualPager recoveryPager, long lastSyncedTransactionId, TransactionHeader* previous)
+        public JournalReader(IVirtualPager pager, IVirtualPager recoveryPager, long lastSyncedTransactionId, TransactionHeader* previous, int recoverPage =0)
         {
             RequireHeaderUpdate = false;
             _pager = pager;
             _recoveryPager = recoveryPager;
             _lastSyncedTransactionId = lastSyncedTransactionId;
             _readingPage = 0;
-            _recoveryPage = 0;
+			_recoveryPage = recoverPage;
             LastTransactionHeader = previous;
         }
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
 
+		public long? MaxPageToRead { get; set; }
+
         public bool ReadOneTransaction(StorageEnvironmentOptions options,bool checkCrc = true)
         {
             if (_readingPage >= _pager.NumberOfAllocatedPages)
                 return false;
+
+	        if (MaxPageToRead != null && _readingPage >= MaxPageToRead.Value)
+		        return false;
 
             TransactionHeader* current;
             if (!TryReadAndValidateHeader(options, out current))
@@ -148,8 +153,14 @@ namespace Voron.Impl.Journal
         {
             get { return _transactionPageTranslation; }
         }
+	    public int RecoveryPage { get { return _recoveryPage; }}
 
-        private bool TryReadAndValidateHeader(StorageEnvironmentOptions options,out TransactionHeader* current)
+	    public void SetStartPage(long value)
+	    {
+		    _readingPage = value;
+	    }
+
+	    private bool TryReadAndValidateHeader(StorageEnvironmentOptions options,out TransactionHeader* current)
         {
             current = (TransactionHeader*)_pager.Read(_readingPage).Base;
 

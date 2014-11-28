@@ -13,37 +13,80 @@ namespace Voron.Impl.Backup
 {
 	public unsafe class MinimalIncrementalBackup
 	{
-		public void ToFile(StorageEnvironment env, string filename, CompressionLevel compression = CompressionLevel.Optimal,Action<string> infoNotify = null)
+		public void ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal, Action<string> infoNotify = null,
+			Action backupStarted = null)
 		{
 			var pagesToWrite = new Dictionary<long, Page>();
-			//todo: use the user's define temp path, instead
-			var tempDir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())).FullName;
 			if (infoNotify == null)
 				infoNotify = str => { };
-			var inMemoryRecoveryPagers = new List<Win32PageFileBackedMemoryMappedPager>();
+			var toDispose = new List<IDisposable>();
 			try
 			{
-				ImmutableAppendOnlyList<JournalFile> journalFiles;
-				//todo: you are locking to get the journal files, but you are NOT getting the correct transaction header at the same time, 
-				//todo: thereby opening yourself for a race condition. In particular, you may be reading a partial transaction from the 
-				//todo: journal file, because you don't know when to stop
-				using (env.NewTransaction(TransactionFlags.ReadWrite)) //tx here serves as "lock" 
-					journalFiles = ImmutableAppendOnlyList<JournalFile>.CreateFrom(env.Journal.Files);
-				
-				infoNotify("Voron - reading storage journals for snapshot pages");
-				//make sure we go over journal files in an ordered fashion
-				foreach (var file in journalFiles.OrderBy(x => x.Number))
-				{
-					var recoveryPager = new Win32PageFileBackedMemoryMappedPager(StorageEnvironmentOptions.JournalRecoveryName(file.Number));
-					inMemoryRecoveryPagers.Add(recoveryPager);
+				IncrementalBackupInfo backupInfo;
+				long lastWrittenLogPage = -1;
+				long lastWrittenLogFile = -1;
 
-					using (var filePager = env.Options.OpenJournalPager(file.Number))
+				using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
+
+					if (env.Journal.CurrentFile != null)
 					{
-						var reader = new JournalReader(filePager, recoveryPager, 0, null);
+						lastWrittenLogFile = env.Journal.CurrentFile.Number;
+						lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition;
+					}
+
+					//txw.Commit(); - intentionally not committing
+				}
+
+				if (backupStarted != null)
+					backupStarted();
+
+				infoNotify("Voron - reading storage journals for snapshot pages");
+
+				var lastBackedUpFile = backupInfo.LastBackedUpJournal;
+				var lastBackedUpPage = backupInfo.LastBackedUpJournalPage;
+				var firstJournalToBackup = backupInfo.LastBackedUpJournal;
+
+				if (firstJournalToBackup == -1)
+					firstJournalToBackup = 0; // first time that we do incremental backup
+
+				var lastTransaction = new TransactionHeader { TransactionId = -1 };
+
+				var recoveryPager = env.Options.CreateScratchPager("min-inc-backup.scratch");
+				toDispose.Add(recoveryPager);
+				int recoveryPage = 0;
+				for (var journalNum = firstJournalToBackup; journalNum <= backupInfo.LastCreatedJournal; journalNum++)
+				{
+					lastBackedUpFile = journalNum;
+					using (var journalFile = IncrementalBackup.GetJournalFile(env, journalNum, backupInfo))
+					using (var filePager = env.Options.OpenJournalPager(journalNum))
+					{
+						var reader = new JournalReader(filePager, recoveryPager, 0, null, recoveryPage);
+						reader.MaxPageToRead = lastBackedUpPage = journalFile.JournalWriter.NumberOfAllocatedPages;
+						if (journalNum == lastWrittenLogFile) // set the last part of the log file we'll be reading
+							reader.MaxPageToRead = lastBackedUpPage = lastWrittenLogPage;
+
+						if (lastBackedUpPage == journalFile.JournalWriter.NumberOfAllocatedPages) // past the file size
+						{
+							// move to the next
+							lastBackedUpPage = -1;
+							lastBackedUpFile++;
+						}
+
+						if (journalNum == backupInfo.LastBackedUpJournal) // continue from last backup
+							reader.SetStartPage(backupInfo.LastBackedUpJournalPage + 1);
+						TransactionHeader* lastJournalTxHeader = null;
 						while (reader.ReadOneTransaction(env.Options))
 						{
-							// read to end? 
+							// read all transactions here 
+							lastJournalTxHeader = reader.LastTransactionHeader;
 						}
+
+						if (lastJournalTxHeader != null)
+							lastTransaction = *lastJournalTxHeader;
+
+						recoveryPage = reader.RecoveryPage;
 
 						foreach (var pagePosition in reader.TransactionPageTranslation)
 						{
@@ -51,44 +94,91 @@ namespace Voron.Impl.Backup
 							var page = recoveryPager.Read(pageInJournal);
 							pagesToWrite[pagePosition.Key] = page;
 							if (page.IsOverflow)
-							{				
+							{
 								var numberOfOverflowPages = recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
 								for (int i = 1; i < numberOfOverflowPages; i++)
 									pagesToWrite.Remove(pagePosition.Key + i);
 							}
 						}
+
 					}
+				}
+
+				if (pagesToWrite.Count == 0)
+				{
+					infoNotify("Voron - no changes since last backup, nothing to do");
+					return;
 				}
 
 				infoNotify("Voron - started writing snapshot file.");
 
-				//todo: there is no need to do this, we can do it directly, we already have the data
-				//todo: also, you aren't creating a merged transaction, also, you are going to be rejected on tx number as well.
+				if (lastTransaction.TransactionId == -1)
+					throw new InvalidOperationException("Could not find any transactions in the journals, but found pages to write? That ain't right.");
 
-				//using in-memory only StorageEnvironment allows to reproduce both AccessViolationException and
-				//garbage in header of the exported tempEnv
-				//using (var tempEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
-				using (var tempEnv = new StorageEnvironment(StorageEnvironmentOptions.ForPath(tempDir)))
+				int totalNumberOfPages = pagesToWrite.Values.Sum(p =>
 				{
-					tempEnv.Options.IncrementalBackupEnabled = true;
-					using (var tempTx = tempEnv.NewTransaction(TransactionFlags.ReadWrite))
-					{
-						var pages = pagesToWrite.Select(x => x.Value).ToArray();
-						var maxPageNumber = pagesToWrite.Max(x => x.Value.PageNumber);
-						tempTx.WriteDirect(pages, maxPageNumber + 1);
-						tempTx.Commit();
-					}
+					if (p.IsOverflow == false)
+						return 1;
+					return recoveryPager.GetNumberOfOverflowPages(p.OverflowSize);
+				});
 
-					var backup = new IncrementalBackup();
-					backup.ToFile(tempEnv, filename, compression);
+				//TODO: what happens when we have enough transactions here that handle more than 4GB? 
+				//TODO: in this case, we need to split this into multiple merged transactions, of up to 2GB 
+				//TODO: each
+
+
+				var uncompressedSize = totalNumberOfPages * AbstractPager.PageSize;
+				var outputBufferSize = LZ4.MaximumOutputLength(uncompressedSize);
+
+				var compressionPager = env.Options.CreateScratchPager("min-inc-backup.compression-buffer");
+
+				toDispose.Add(compressionPager);
+
+				compressionPager.EnsureContinuous(null, 0, compressionPager.GetNumberOfOverflowPages(outputBufferSize) + 1/* tx header */);
+
+				var txPage = compressionPager.GetWritable(0);
+				StdLib.memset(txPage.Base, 0, AbstractPager.PageSize);
+				var txHeader = (TransactionHeader*)txPage.Base;
+				txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
+
+				txHeader->TransactionId = lastTransaction.TransactionId;
+				txHeader->NextPageNumber = lastTransaction.NextPageNumber;
+				txHeader->LastPageNumber = -lastTransaction.LastPageNumber;
+				txHeader->PageCount = totalNumberOfPages;
+				txHeader->TxMarker = TransactionMarker.Commit | TransactionMarker.Merged;
+				txHeader->Compressed = true; txHeader->UncompressedSize = uncompressedSize;
+
+				using (var lz4 = new LZ4())
+				{
+					txHeader->CompressedSize = lz4.Encode64(recoveryPager.AcquirePagePointer(0), compressionPager.AcquirePagePointer(1), txHeader->UncompressedSize, outputBufferSize);
 				}
+
+				txHeader->Crc = Crc.Value(compressionPager.AcquirePagePointer(1), 0, txHeader->CompressedSize);
+
+				using (var file = new FileStream(backupPath, FileMode.Create))
+				{
+					using (var package = new ZipArchive(file, ZipArchiveMode.Create))
+					{
+						var entry = package.CreateEntry(string.Format("merged-{0:D19}.journal", lastBackedUpFile));
+						using (var stream = entry.Open())
+						{
+							var copier = new DataCopier(AbstractPager.PageSize * 16);
+							copier.ToStream(compressionPager.AcquirePagePointer(1), (totalNumberOfPages + 1), stream);
+						}
+					}
+					file.Flush(true);// make sure we hit the disk and stay there
+				}
+
+				env.HeaderAccessor.Modify(header =>
+				{
+					header->IncrementalBackup.LastBackedUpJournal = lastBackedUpFile;
+					header->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
+				});
 			}
 			finally
 			{
-				foreach (var pager in inMemoryRecoveryPagers)
-					pager.Dispose();
-
-				Directory.Delete(tempDir, true);
+				foreach (var disposable in toDispose)
+					disposable.Dispose();
 			}
 		}
 	}
