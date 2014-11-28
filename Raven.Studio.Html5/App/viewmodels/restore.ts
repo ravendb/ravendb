@@ -55,6 +55,7 @@ class restore extends viewModelBase {
     private fsRestoreOptions = new resourceRestore(this, filesystem.type, shell.fileSystems);
 
     disableReplicationDestinations = ko.observable<boolean>(false);
+    generateNewDatabaseId = ko.observable<boolean>(false);
 
     isBusy = ko.observable<boolean>();
     anotherRestoreInProgres = ko.observable<boolean>(false);
@@ -99,7 +100,8 @@ class restore extends viewModelBase {
             BackupLocation: this.dbRestoreOptions.backupLocation(),
             DatabaseLocation: this.dbRestoreOptions.resourceLocation(),
             DatabaseName: this.dbRestoreOptions.resourceName(),
-            DisableReplicationDestinations: this.disableReplicationDestinations()
+            DisableReplicationDestinations: this.disableReplicationDestinations(),
+            GenerateNewDatabaseId: this.generateNewDatabaseId(),
         };
 
         require(["commands/startRestoreCommand"], startRestoreCommand => {
