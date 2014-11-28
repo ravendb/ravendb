@@ -48,6 +48,8 @@ namespace Raven.Database.Config
 
 		public EncryptionConfiguration Encryption { get; private set; }
 
+		public IndexingConfiguration Indexing { get; set; }
+
 		public InMemoryRavenConfiguration()
 		{
 			Replication = new ReplicationConfiguration();
@@ -55,6 +57,7 @@ namespace Raven.Database.Config
 			Storage = new StorageConfiguration();
             FileSystem = new FileSystemConfiguration();
 			Encryption = new EncryptionConfiguration();
+			Indexing = new IndexingConfiguration();
 
 			Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -276,6 +279,8 @@ namespace Raven.Database.Config
 				FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
 
 			Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
+
+			Indexing.MaxNumberOfItemsToProcessInTestIndexes = ravenSettings.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value;
 
 			TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
 
@@ -958,7 +963,7 @@ namespace Raven.Database.Config
 		/// </summary>
 		public long FlushIndexToDiskSizeInMb { get; set; }
 
-	    [Browsable(false)]
+		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()
 		{
@@ -1268,6 +1273,11 @@ namespace Raven.Database.Config
 			/// Whatever we should use SSL for this connection
 			/// </summary>
 			public bool UseSsl { get; set; }
+		}
+
+		public class IndexingConfiguration
+		{
+			public int MaxNumberOfItemsToProcessInTestIndexes { get; set; }
 		}
 
 		public void UpdateDataDirForLegacySystemDb()
