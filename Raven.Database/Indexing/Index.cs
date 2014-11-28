@@ -1270,7 +1270,8 @@ namespace Raven.Database.Indexing
 						}
 					}
 				}
-				else
+
+				if (!parent.IsMapReduce)
 				{
 					indexQueryResult.Highligtings = highlightings.ToDictionary(x => x.Field, x => x.Fragments);
 				}
