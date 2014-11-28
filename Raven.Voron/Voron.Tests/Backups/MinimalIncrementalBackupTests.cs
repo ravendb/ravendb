@@ -33,14 +33,18 @@ namespace Voron.Tests.Backups
 			_tempDir = Guid.NewGuid().ToString();
 			using (var envToSnapshot = new StorageEnvironment(StorageEnvironmentOptions.ForPath(_tempDir)))
 			{
+				int index = 0;
 				for (int xi = 0; xi < 10; xi++)
 				{
 					using (var tx = envToSnapshot.NewTransaction(TransactionFlags.ReadWrite))
 					{
 						var tree = envToSnapshot.CreateTree(tx, "test");
 
-						for (int i = 1; i < UserCount/10; i++)
-							tree.Add("users/" + i, "john doe/" + i);
+						for (int i = 0; i < UserCount/10; i++)
+						{
+							tree.Add("users/" + index, "john doe/" + index);
+							index++;
+						}
 
 						tx.Commit();
 					}
@@ -62,8 +66,12 @@ namespace Voron.Tests.Backups
 					var tree = tx.ReadTree("test");
 					Assert.NotNull(tree);
 
-					for(int i = 1; i<UserCount; i++)
-						Assert.Equal("john doe/" + i, tree.Read("users/" + i).Reader.ToStringValue());
+					for(int i = 0; i<UserCount; i++)
+					{
+						var readResult = tree.Read("users/" + i);
+						Assert.NotNull(readResult);
+						Assert.Equal("john doe/" + i, readResult.Reader.ToStringValue());
+					}
 				}
 			}
 		}

@@ -123,6 +123,7 @@ namespace Voron.Impl.Backup
 				toDispose.Add(compressionPager);
 
 				int totalNumberOfPages = 0;
+				int overflowPages = 0;
 				int start = 0;
 				foreach (var pageNum in pageNumberToPageInScratch.Values)
 				{
@@ -131,6 +132,7 @@ namespace Voron.Impl.Backup
 					if (p.IsOverflow)
 					{
 						size = recoveryPager.GetNumberOfOverflowPages(p.OverflowSize);
+						overflowPages += (size - 1);
 					}
 					totalNumberOfPages += size;
 					compressionPager.EnsureContinuous(null, start, size); //maybe increase size
@@ -157,7 +159,10 @@ namespace Voron.Impl.Backup
 				StdLib.memset(txPage.Base, 0, AbstractPager.PageSize);
 				var txHeader = (TransactionHeader*)txPage.Base;
 				txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
-
+				txHeader->FreeSpace = lastTransaction.FreeSpace;
+				txHeader->Root = lastTransaction.Root;
+				txHeader->OverflowPageCount = overflowPages;
+				txHeader->PreviousTransactionCrc = lastTransaction.PreviousTransactionCrc;
 				txHeader->TransactionId = lastTransaction.TransactionId;
 				txHeader->NextPageNumber = lastTransaction.NextPageNumber;
 				txHeader->LastPageNumber = lastTransaction.LastPageNumber;
@@ -174,7 +179,9 @@ namespace Voron.Impl.Backup
 						outputBufferSize);
 				}
 
-				txHeader->Crc = Crc.Value(compressionPager.AcquirePagePointer(start), 0, txHeader->CompressedSize);
+				var compressedPages = (txHeader->CompressedSize / AbstractPager.PageSize) + (txHeader->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
+;
+				txHeader->Crc = Crc.Value(compressionPager.AcquirePagePointer(start), 0, compressedPages * AbstractPager.PageSize);
 
 				using (var file = new FileStream(backupPath, FileMode.Create))
 				{
@@ -184,7 +191,7 @@ namespace Voron.Impl.Backup
 						using (var stream = entry.Open())
 						{
 							var copier = new DataCopier(AbstractPager.PageSize * 16);
-							copier.ToStream(compressionPager.AcquirePagePointer(txHeaderPage), (totalNumberOfPages + 1), stream);
+							copier.ToStream(compressionPager.AcquirePagePointer(txHeaderPage), (totalNumberOfPages + 1) * AbstractPager.PageSize, stream);
 						}
 					}
 					file.Flush(true);// make sure we hit the disk and stay there
