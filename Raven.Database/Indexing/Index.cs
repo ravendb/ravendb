@@ -1359,7 +1359,7 @@ namespace Raven.Database.Indexing
 			{
 				documentQuery = indexQueryTriggers.Aggregate(documentQuery,
 														   (current, indexQueryTrigger) =>
-														   indexQueryTrigger.Value.ProcessQuery(parent.indexId.ToString(), current, indexQuery));
+														   indexQueryTrigger.Value.ProcessQuery(parent.PublicName, current, indexQuery));
 				return documentQuery;
 			}
 

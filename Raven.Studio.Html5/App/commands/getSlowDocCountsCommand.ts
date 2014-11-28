@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import debugDocumentStats = require("models/debugDocumentStats");
 
-class getStatusDebugSlowDocCountsCommand extends commandBase {
+class getSlowDocCountsCommand extends commandBase {
 
     constructor(private db: database) {
         super();
@@ -15,4 +15,4 @@ class getStatusDebugSlowDocCountsCommand extends commandBase {
     }
 }
 
-export = getStatusDebugSlowDocCountsCommand;
+export = getSlowDocCountsCommand;

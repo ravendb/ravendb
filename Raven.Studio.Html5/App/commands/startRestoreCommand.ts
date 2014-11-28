@@ -3,9 +3,10 @@ import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import monitorRestoreCommand = require("commands/monitorRestoreCommand");
+import appUrl = require("common/appUrl");
 
 class startRestoreCommand extends commandBase {
-    private db: database = new database("<system>");
+    private db: database = appUrl.getSystemDatabase();
 
     constructor(private defrag: boolean, private restoreRequest: databaseRestoreRequestDto, private updateRestoreStatus: (restoreStatusDto) => void) {
         super();

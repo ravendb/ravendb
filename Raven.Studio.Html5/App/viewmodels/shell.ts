@@ -93,7 +93,7 @@ class shell extends viewModelBase {
     isActiveResourceDisabled: KnockoutComputed<boolean>;
 
     static resources = ko.computed(() => {
-        var result = [].concat(shell.fileSystems(), shell.databases());
+        var result = [].concat(shell.databases(), shell.fileSystems());
         return result.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1);
     });
 
@@ -315,6 +315,24 @@ class shell extends viewModelBase {
         }
     }
 
+    static reloadDatabases(active: database): JQueryPromise<database[]> {
+        return new getDatabasesCommand()
+            .execute()
+            .done((results: database[]) => shell.updateResourceObservableArray(shell.databases, results, active));
+    }
+
+    static reloadFilesystems(active: filesystem): JQueryPromise<filesystem[]> {
+        return new getFileSystemsCommand()
+            .execute()
+            .done((results: filesystem[]) => shell.updateResourceObservableArray(shell.fileSystems, results, active));
+    }
+
+    static reloadCounterStorages(active: counterStorage): JQueryPromise<counterStorage[]> {
+        return new getCounterStoragesCommand()
+            .execute()
+            .done((results: counterStorage[]) => shell.updateResourceObservableArray(shell.counterStorages, results, active));
+    }
+
     private reloadDataAfterReconnection(rs: resource) {
         if (rs.name === "<system>") {
             this.fetchStudioConfig();
@@ -322,15 +340,9 @@ class shell extends viewModelBase {
             this.fetchClientBuildVersion();
             this.fetchLicenseStatus();
 
-            var databasesLoadTask = new getDatabasesCommand()
-                .execute()
-                .done((results: database[]) => this.updateResourceObservableArray(shell.databases, results, this.activeDatabase));
-            var fileSystemsLoadTask = new getFileSystemsCommand()
-                .execute()
-                .done((results: filesystem[]) => this.updateResourceObservableArray(shell.fileSystems, results, this.activeFilesystem));
-            var counterStoragesLoadTask = new getCounterStoragesCommand()
-                .execute()
-                .done((results: counterStorage[]) => this.updateResourceObservableArray(shell.counterStorages, results, this.activeCounterStorage));
+            var databasesLoadTask = shell.reloadDatabases(this.activeDatabase());
+            var fileSystemsLoadTask = shell.reloadFilesystems(this.activeFilesystem());
+            var counterStoragesLoadTask = shell.reloadCounterStorages(this.activeCounterStorage());
 
             $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask)
                 .done(() => {
@@ -342,7 +354,7 @@ class shell extends viewModelBase {
         }
     }
 
-    private updateResourceObservableArray(resourceObservableArray: KnockoutObservableArray<any>,
+    private static updateResourceObservableArray(resourceObservableArray: KnockoutObservableArray<any>,
         recievedResourceArray: Array<any>, activeResourceObservable: any) {
 
         var deletedResources = [];
@@ -479,6 +491,7 @@ class shell extends viewModelBase {
     }
 
     private databasesLoaded(databases: database[]) {
+        // we can't use appUrl.getSystemDatabase() here as it isn't loaded yet!
         this.systemDatabase = new database("<system>");
         this.systemDatabase.isSystem = true;
         this.systemDatabase.isVisible(false);

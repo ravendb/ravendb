@@ -49,7 +49,8 @@ namespace Raven.Database.Plugins.Builtins
 			server.Options.DatabaseLandlord.ForAllDatabases(database =>
 			{
 				pathsToCheck.Add(database.Configuration.IndexStoragePath);
-				pathsToCheck.Add(database.Configuration.JournalsStoragePath);
+				pathsToCheck.Add(database.Configuration.Storage.Esent.JournalsStoragePath);
+				pathsToCheck.Add(database.Configuration.Storage.Voron.JournalsStoragePath);
 				pathsToCheck.Add(database.Configuration.DataDirectory);
 			});
 
@@ -57,7 +58,8 @@ namespace Raven.Database.Plugins.Builtins
 			{
 				pathsToCheck.Add(filesystem.Configuration.FileSystem.DataDirectory);
 				pathsToCheck.Add(filesystem.Configuration.FileSystem.IndexStoragePath);
-				pathsToCheck.Add(filesystem.Configuration.JournalsStoragePath);
+				pathsToCheck.Add(filesystem.Configuration.Storage.Esent.JournalsStoragePath);
+				pathsToCheck.Add(filesystem.Configuration.Storage.Voron.JournalsStoragePath);
 			});
 
 			var roots = pathsToCheck.Where(path => path != null && Path.IsPathRooted(path) && path.StartsWith("\\\\") == false).Select(Path.GetPathRoot).ToList();

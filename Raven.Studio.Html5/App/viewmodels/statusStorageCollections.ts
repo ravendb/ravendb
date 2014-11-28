@@ -1,11 +1,11 @@
-import getStatusDebugSlowDocCountsCommand = require("commands/getStatusDebugSlowDocCountsCommand");
+import getSlowDocCountsCommand = require("commands/getSlowDocCountsCommand");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import debugDocumentStats = require("models/debugDocumentStats");
 import genUtils = require("common/generalUtils");
 
-class statusDebugSlowDocCounts extends viewModelBase {
+class statusStorageCollections extends viewModelBase {
     data = ko.observable<debugDocumentStats>();
     canSearch = ko.observable(true);
 
@@ -21,27 +21,26 @@ class statusDebugSlowDocCounts extends viewModelBase {
         this.data(null);
         this.canSearch(true);
     }
-   
-    formatTimeSpan(input:string) {
+
+    formatTimeSpan(input: string) {
         var timeParts = input.split(":");
-        var miliPart ;
-        var sec=0, milisec=0;
+        var miliPart;
+        var sec = 0, milisec = 0;
         if (timeParts.length == 3) {
             miliPart = timeParts[2].split(".");
             sec = parseInt(miliPart[0]);
             var tmpMili;
             if (miliPart[1][0] == '0') {
                 tmpMili = miliPart[1].substring(1, 3);
-            } else
-            {
-                tmpMili = miliPart[1].substring(0, 3); 
+            } else {
+                tmpMili = miliPart[1].substring(0, 3);
             }
             milisec = parseInt(tmpMili);
         }
         var hours = parseInt(timeParts[0]);
         var min = parseInt(timeParts[1]);
 
-        var timeStr="";
+        var timeStr = "";
         if (hours > 0) {
             timeStr = hours + " Hours ";
         }
@@ -51,13 +50,12 @@ class statusDebugSlowDocCounts extends viewModelBase {
         if (sec > 0) {
             timeStr += sec + " Sec ";
         }
-        if ((timeStr == "") && (milisec > 0))
-        {
+        if ((timeStr == "") && (milisec > 0)) {
             timeStr = milisec + " Ms ";
         }
         return timeStr;
     }
-    formatBytesToSize(bytes: number){
+    formatBytesToSize(bytes: number) {
         var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
         if (bytes == 0) return 'n/a';
         var i = Math.floor(Math.log(bytes) / Math.log(1024));
@@ -68,23 +66,23 @@ class statusDebugSlowDocCounts extends viewModelBase {
         }
 
         var res = bytes / Math.pow(1024, i);
-        var newRes = genUtils.formatAsCommaSeperatedString(res, 2);   
-       
+        var newRes = genUtils.formatAsCommaSeperatedString(res, 2);
+
         return newRes + ' ' + sizes[i];
-    }  
-   
-      
-   
+    }
+
+
+
     fetchDocCounts(): JQueryPromise<debugDocumentStats> {
         var db = this.activeDatabase();
         if (db) {
             this.canSearch(false);
-            return new getStatusDebugSlowDocCountsCommand(db)
+            return new getSlowDocCountsCommand(db)
                 .execute()
-                .done((results: debugDocumentStats)=> {
+                .done((results: debugDocumentStats) => {
                     this.data(results);
                 })
-                   
+
                 .always(() => this.canSearch(true));
 
         }
@@ -93,4 +91,4 @@ class statusDebugSlowDocCounts extends viewModelBase {
     }
 }
 
-export = statusDebugSlowDocCounts;
+export = statusStorageCollections;
