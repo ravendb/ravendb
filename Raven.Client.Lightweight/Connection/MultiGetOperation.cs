@@ -135,9 +135,6 @@ namespace Raven.Client.Connection
 
 		public async Task TryResolveConflictOrCreateConcurrencyException(GetResponse[] responses, Func<string, RavenJObject, Etag, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException)
 		{
-			if (responses == null)
-				return;
-
 			foreach (var response in responses)
 			{
 				if(response == null)
