@@ -132,9 +132,16 @@ class patch extends viewModelBase {
             .execute()
             .always(() => NProgress.done())
             .done((colls: collection[]) => {
+                var currentlySelectedCollection:collection = null;
+
+                if (this.patchDocument().selectedItem()) {
+                    var selected = this.patchDocument().selectedItem();
+                    currentlySelectedCollection = this.collections.first(c => c.name === selected);
+                }
+
                 this.collections(colls);
                 if (this.collections().length > 0) {
-                    this.setSelectedCollection(this.collections().first());
+                    this.setSelectedCollection(currentlySelectedCollection || this.collections().first());
                 }
             });
     }
