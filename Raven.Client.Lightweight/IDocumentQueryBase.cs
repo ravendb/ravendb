@@ -421,7 +421,23 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name="fieldName">The field name to highlight.</param>
 		/// <param name="fragmentLength">The fragment length.</param>
 		/// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+		/// <param name="highlightings">Field highlightings for all results.</param>
 		TSelf Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
+
+		/// <summary>
+		///   Adds matches highlighting for the specified field on a Map/Reduce Index.
+		/// </summary>
+		/// <remarks>
+		///   This is only valid for Map/Reduce Index querys.
+		///   The specified field and key should be analysed and stored for highlighter to work.
+		///   For each match it creates a fragment that contains matched text surrounded by highlighter tags.
+		/// </remarks>
+		/// <param name="fieldName">The field name to highlight.</param>
+		/// <param name="fieldKeyName">The field key name to associate highlights with.</param>
+		/// <param name="fragmentLength">The fragment length.</param>
+		/// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+		/// <param name="highlightings">Field highlightings for all results.</param>
+		TSelf Highlight(string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
 
 		/// <summary>
 		///   Adds matches highlighting for the specified field.
@@ -450,8 +466,29 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name="propertySelector">The property to highlight.</param>
 		/// <param name="fragmentLength">The fragment length.</param>
 		/// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+		/// <param name="highlightings">Field highlightings for all results.</param>
 		TSelf Highlight<TValue>(
 			Expression<Func<T, TValue>> propertySelector, 
+			int fragmentLength, 
+			int fragmentCount,
+			out FieldHighlightings highlightings);
+
+		/// <summary>
+		///   Adds matches highlighting for the specified field on a Map/Reduce Index.
+		/// </summary>
+		/// <remarks>
+		///   This is only valid for Map/Reduce Index querys.
+		///   The specified fields should be analysed and stored for highlighter to work.
+		///   For each match it creates a fragment that contains matched text surrounded by highlighter tags.
+		/// </remarks>
+		/// <param name="propertySelector">The property to highlight.</param>
+		/// <param name="keyPropertySelector">The key property to associate highlights with.</param>
+		/// <param name="fragmentLength">The fragment length.</param>
+		/// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+		/// <param name="highlightings">Field highlightings for all results.</param>
+		TSelf Highlight<TValue>(
+			Expression<Func<T, TValue>> propertySelector,
+			Expression<Func<T, TValue>> keyPropertySelector, 
 			int fragmentLength, 
 			int fragmentCount,
 			out FieldHighlightings highlightings);

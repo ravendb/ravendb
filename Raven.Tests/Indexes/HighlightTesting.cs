@@ -298,7 +298,7 @@ So, the greedy dog looked at his reflection and growled. The reflection growled 
 				FieldHighlightings nameHighlighting;
 				var results = session.Advanced.DocumentQuery<SearchItemWithTypeResult>("ContentSearchMapReduceIndex")
 									 .WaitForNonStaleResults()
-									 .Highlight("AllText", 128, 1, out nameHighlighting)
+									 .Highlight("AllText", "Type", 128, 1, out nameHighlighting)
 									 .Search("AllText", searchFor)
 									 .ToArray();
 
