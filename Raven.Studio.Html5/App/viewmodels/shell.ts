@@ -93,7 +93,7 @@ class shell extends viewModelBase {
     isActiveResourceDisabled: KnockoutComputed<boolean>;
 
     static resources = ko.computed(() => {
-        var result = [].concat(shell.fileSystems(), shell.databases());
+        var result = [].concat(shell.databases(), shell.fileSystems());
         return result.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1);
     });
 
