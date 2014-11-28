@@ -676,6 +676,17 @@ interface patchDto extends documentDto {
     Values: Array<patchValueDto>;
 }
 
+interface statusStorageOnDiskDto {
+    TransactionalStorageAllocatedSize: number;
+    TransactionalStorageAllocatedSizeHumaneSize: string;
+    TransactionalStorageUsedSize: number;
+    TransactionalStorageUsedSizeHumaneSize: string;
+    IndexStorageSize: number;
+    IndexStorageSizeHumane: string;
+    TotalDatabaseSize: number;
+    TotalDatabaseSizeHumane: string;
+}
+
 interface statusDebugChangesDto {
     Id: string;
     Connected: boolean;
