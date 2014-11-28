@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using Mono.Unix.Native;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Platform.Win32;
@@ -16,7 +17,7 @@ namespace Voron.Impl.Backup
 		public void ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal, Action<string> infoNotify = null,
 			Action backupStarted = null)
 		{
-			var pagesToWrite = new Dictionary<long, Page>();
+			var pageNumberToPageInScratch = new Dictionary<long, long>();
 			if (infoNotify == null)
 				infoNotify = str => { };
 			var toDispose = new List<IDisposable>();
@@ -92,19 +93,19 @@ namespace Voron.Impl.Backup
 						{
 							var pageInJournal = pagePosition.Value.JournalPos;
 							var page = recoveryPager.Read(pageInJournal);
-							pagesToWrite[pagePosition.Key] = page;
+							pageNumberToPageInScratch[pagePosition.Key] = pageInJournal;
 							if (page.IsOverflow)
 							{
 								var numberOfOverflowPages = recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
 								for (int i = 1; i < numberOfOverflowPages; i++)
-									pagesToWrite.Remove(pagePosition.Key + i);
+									pageNumberToPageInScratch.Remove(pagePosition.Key + i);
 							}
 						}
 
 					}
 				}
 
-				if (pagesToWrite.Count == 0)
+				if (pageNumberToPageInScratch.Count == 0)
 				{
 					infoNotify("Voron - no changes since last backup, nothing to do");
 					return;
@@ -115,55 +116,75 @@ namespace Voron.Impl.Backup
 				if (lastTransaction.TransactionId == -1)
 					throw new InvalidOperationException("Could not find any transactions in the journals, but found pages to write? That ain't right.");
 
-				int totalNumberOfPages = pagesToWrite.Values.Sum(p =>
+
+
+
+				var compressionPager = env.Options.CreateScratchPager("min-inc-backup.compression-buffer");
+				toDispose.Add(compressionPager);
+
+				int totalNumberOfPages = 0;
+				int start = 0;
+				foreach (var pageNum in pageNumberToPageInScratch.Values)
 				{
-					if (p.IsOverflow == false)
-						return 1;
-					return recoveryPager.GetNumberOfOverflowPages(p.OverflowSize);
-				});
+					var p = recoveryPager.Read(pageNum);
+					var size = 1;
+					if (p.IsOverflow)
+					{
+						size = recoveryPager.GetNumberOfOverflowPages(p.OverflowSize);
+					}
+					totalNumberOfPages += size;
+					compressionPager.EnsureContinuous(null, start, size); //maybe increase size
+
+					StdLib.memcpy(compressionPager.AcquirePagePointer(start), p.Base, size * AbstractPager.PageSize);
+
+					start += size;
+				}
+				var txHeaderPage = start;
+				compressionPager.EnsureContinuous(null, txHeaderPage, 1);//tx header
+				start++;
 
 				//TODO: what happens when we have enough transactions here that handle more than 4GB? 
 				//TODO: in this case, we need to split this into multiple merged transactions, of up to 2GB 
 				//TODO: each
 
-
 				var uncompressedSize = totalNumberOfPages * AbstractPager.PageSize;
 				var outputBufferSize = LZ4.MaximumOutputLength(uncompressedSize);
 
-				var compressionPager = env.Options.CreateScratchPager("min-inc-backup.compression-buffer");
+				compressionPager.EnsureContinuous(null, start,
+					compressionPager.GetNumberOfOverflowPages(outputBufferSize));
 
-				toDispose.Add(compressionPager);
-
-				compressionPager.EnsureContinuous(null, 0, compressionPager.GetNumberOfOverflowPages(outputBufferSize) + 1/* tx header */);
-
-				var txPage = compressionPager.GetWritable(0);
+				var txPage = compressionPager.GetWritable(txHeaderPage);
 				StdLib.memset(txPage.Base, 0, AbstractPager.PageSize);
 				var txHeader = (TransactionHeader*)txPage.Base;
 				txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 
 				txHeader->TransactionId = lastTransaction.TransactionId;
 				txHeader->NextPageNumber = lastTransaction.NextPageNumber;
-				txHeader->LastPageNumber = -lastTransaction.LastPageNumber;
+				txHeader->LastPageNumber = lastTransaction.LastPageNumber;
 				txHeader->PageCount = totalNumberOfPages;
 				txHeader->TxMarker = TransactionMarker.Commit | TransactionMarker.Merged;
-				txHeader->Compressed = true; txHeader->UncompressedSize = uncompressedSize;
+				txHeader->Compressed = true;
+				txHeader->UncompressedSize = uncompressedSize;
 
 				using (var lz4 = new LZ4())
 				{
-					txHeader->CompressedSize = lz4.Encode64(recoveryPager.AcquirePagePointer(0), compressionPager.AcquirePagePointer(1), txHeader->UncompressedSize, outputBufferSize);
+					txHeader->CompressedSize = lz4.Encode64(compressionPager.AcquirePagePointer(0),
+						compressionPager.AcquirePagePointer(start),
+						txHeader->UncompressedSize,
+						outputBufferSize);
 				}
 
-				txHeader->Crc = Crc.Value(compressionPager.AcquirePagePointer(1), 0, txHeader->CompressedSize);
+				txHeader->Crc = Crc.Value(compressionPager.AcquirePagePointer(start), 0, txHeader->CompressedSize);
 
 				using (var file = new FileStream(backupPath, FileMode.Create))
 				{
-					using (var package = new ZipArchive(file, ZipArchiveMode.Create))
+					using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
 					{
-						var entry = package.CreateEntry(string.Format("merged-{0:D19}.journal", lastBackedUpFile));
+						var entry = package.CreateEntry(string.Format("{0:D19}.journal", lastBackedUpFile));
 						using (var stream = entry.Open())
 						{
 							var copier = new DataCopier(AbstractPager.PageSize * 16);
-							copier.ToStream(compressionPager.AcquirePagePointer(1), (totalNumberOfPages + 1), stream);
+							copier.ToStream(compressionPager.AcquirePagePointer(txHeaderPage), (totalNumberOfPages + 1), stream);
 						}
 					}
 					file.Flush(true);// make sure we hit the disk and stay there

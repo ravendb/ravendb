@@ -50,7 +50,7 @@ namespace Voron.Impl.Backup
 
 			using (var file = new FileStream(backupPath, FileMode.Create))
 			{
-				using (var package = new ZipArchive(file, ZipArchiveMode.Create))
+				using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen:true))
 				{
 					IncrementalBackupInfo backupInfo;
 					using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))

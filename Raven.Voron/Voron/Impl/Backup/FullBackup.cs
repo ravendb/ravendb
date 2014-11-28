@@ -38,7 +38,7 @@ namespace Voron.Impl.Backup
 
 				using (var file = new FileStream(backupPath, FileMode.Create))
 				{
-					using (var package = new ZipArchive(file, ZipArchiveMode.Create))
+					using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen:true))
 					{
 						long allocatedPages;
 
