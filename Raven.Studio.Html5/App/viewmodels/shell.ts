@@ -66,7 +66,7 @@ class shell extends viewModelBase {
         && this.lastActivatedResource().type == database.type
         && (this.appUrls.isAreaActive('databases')() || this.appUrls.isAreaActive('resources')()));
     databasesLoadedTask: JQueryPromise<any>;
-    goToDocumentSearch = ko.observable<string>();
+    goToDocumentSearch: KnockoutObservable<string>;
     goToDocumentSearchResults = ko.observableArray<string>();
 
     static fileSystems = ko.observableArray<filesystem>();
@@ -138,6 +138,7 @@ class shell extends viewModelBase {
         this.currentConnectedResource = appUrl.getSystemDatabase();
         this.appUrls = appUrl.forCurrentDatabase();
 
+        this.goToDocumentSearch = ko.observable<string>();
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
