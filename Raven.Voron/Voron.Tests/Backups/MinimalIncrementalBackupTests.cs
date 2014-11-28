@@ -33,14 +33,17 @@ namespace Voron.Tests.Backups
 			_tempDir = Guid.NewGuid().ToString();
 			using (var envToSnapshot = new StorageEnvironment(StorageEnvironmentOptions.ForPath(_tempDir)))
 			{
-				using (var tx = envToSnapshot.NewTransaction(TransactionFlags.ReadWrite))
+				for (int xi = 0; xi < 10; xi++)
 				{
-					var tree = envToSnapshot.CreateTree(tx, "test");
+					using (var tx = envToSnapshot.NewTransaction(TransactionFlags.ReadWrite))
+					{
+						var tree = envToSnapshot.CreateTree(tx, "test");
 
-					for(int i = 1; i<UserCount; i++)
-						tree.Add("users/" + i, "john doe/" + i);
+						for (int i = 1; i < UserCount/10; i++)
+							tree.Add("users/" + i, "john doe/" + i);
 
-					tx.Commit();					
+						tx.Commit();
+					}
 				}
 
 				var snapshotWriter = new MinimalIncrementalBackup();
