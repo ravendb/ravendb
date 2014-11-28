@@ -81,7 +81,7 @@ for(var customFunction in customFunctions) {{
 		[HttpPost]
 		[Route("studio-tasks/import")]
 		[Route("databases/{databaseName}/studio-tasks/import")]
-		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
+		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
 		{
 			if (!Request.Content.IsMimeMultipartContent())
 			{
@@ -120,6 +120,7 @@ for(var customFunction in customFunctions) {{
                         var smugglerOptions = dataDumper.Options;
 						smugglerOptions.BatchSize = batchSize;
 						smugglerOptions.ShouldExcludeExpired = !includeExpiredDocuments;
+					    smugglerOptions.StripReplicationInformation = stripReplicationInformation;
 						smugglerOptions.OperateOnTypes = operateOnTypes;
 						smugglerOptions.TransformScript = transformScript;
 						smugglerOptions.CancelToken = cts;
