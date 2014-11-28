@@ -213,7 +213,6 @@ namespace Raven.Database.Config
 			}
 
 			MaxRecentTouchesToRemember = ravenSettings.MaxRecentTouchesToRemember.Value;
-			JournalsStoragePath = ravenSettings.JournalsStoragePath.Value;
 
 			// HTTP settings
 			HostName = ravenSettings.HostName.Value;
@@ -264,6 +263,13 @@ namespace Raven.Database.Config
 			Storage.Voron.MaxScratchBufferSize = ravenSettings.Voron.MaxScratchBufferSize.Value;
 			Storage.Voron.AllowIncrementalBackups = ravenSettings.Voron.AllowIncrementalBackups.Value;
 			Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
+			Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
+			if (string.IsNullOrEmpty(Storage.Voron.JournalsStoragePath)) 
+				Storage.Voron.JournalsStoragePath = DataDirectory;
+
+			Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;
+			if (string.IsNullOrEmpty(Storage.Esent.JournalsStoragePath))
+				Storage.Esent.JournalsStoragePath = DataDirectory;
 
 			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
@@ -310,6 +316,7 @@ namespace Raven.Database.Config
 		/// Note that this plays with the max number of requests allowed as well as the max number
 		/// of sessions
 		/// </summary>
+		[JsonIgnore]
 		public SemaphoreSlim ConcurrentMultiGetRequests;
 
 		/// <summary>
@@ -878,18 +885,6 @@ namespace Raven.Database.Config
 			set { indexStoragePath = value.ToFullPath(); }
 		}
 
-		public string JournalsStoragePath
-		{
-			get
-			{
-				return journalStoragePath;
-			}
-			set
-			{
-				journalStoragePath = value != null ? value.ToFullPath() : null;
-			}
-		}
-
 		public int AvailableMemoryForRaisingBatchSizeLimit { get; set; }
 
 		public TimeSpan MaxProcessingRunLatency { get; set; }
@@ -1153,9 +1148,17 @@ namespace Raven.Database.Config
 			public StorageConfiguration()
 			{
 				Voron = new VoronConfiguration();
+				Esent = new EsentConfiguration();
 			}
 
 			public VoronConfiguration Voron { get; private set; }
+
+			public EsentConfiguration Esent { get; private set; }
+
+			public class EsentConfiguration
+			{
+				public string JournalsStoragePath { get; set; }
+			}
 
 			public class VoronConfiguration
 			{
@@ -1187,6 +1190,8 @@ namespace Raven.Database.Config
 				/// You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.
 				/// </summary>
 				public string TempPath { get; set; }
+
+				public string JournalsStoragePath { get; set; }
 			}
 		}
 
