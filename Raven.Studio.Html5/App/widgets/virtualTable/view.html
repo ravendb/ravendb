@@ -43,7 +43,7 @@
 </div>
 
 <script id="defaultTemplate" type="text/template">
-    <span data-bind="text: $parent.cellMap[binding].data"></span>
+    <span data-bind="text: $parent.getCellData(binding)"></span>
 </script>
 
 <script id="nullTemplate" type="text/template">
@@ -62,7 +62,7 @@
 <script id="externalIdTemplate" type="text/template">
     <span class="collection-color-strip" data-bind="css: $parent.calculateExternalIdCellColor($parent.cellMap[binding].data())"></span>
     <a href="#" data-bind="attr: { href: $parents[1].getDocumentHref($parent.cellMap[binding].data()) }">
-        <span data-bind="text: $parent.cellMap[binding].data"></span>
+        <span data-bind="text: $parent.getCellData(binding)"></span>
     </a>
 </script>
 
