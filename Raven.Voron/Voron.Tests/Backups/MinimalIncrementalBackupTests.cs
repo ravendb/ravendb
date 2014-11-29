@@ -83,6 +83,82 @@ namespace Voron.Tests.Backups
 		}
 
 		[Fact]
+		public void Can_use_full_back_then_full_min_backup()
+		{
+			_tempDir = Guid.NewGuid().ToString();
+			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(_tempDir);
+			storageEnvironmentOptions.IncrementalBackupEnabled = true;
+			using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
+			{
+				using (var tx = envToSnapshot.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = envToSnapshot.CreateTree(tx, "test");
+
+					for (int i = 0; i < 1000; i++)
+					{
+						tree.Add("users/" + i, "first/" + i);
+					}
+
+					tx.Commit();
+				}
+
+				new FullBackup().ToFile(envToSnapshot, Path.Combine(_tempDir, "full.backup"));
+
+				using (var tx = envToSnapshot.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = envToSnapshot.CreateTree(tx, "test");
+
+					for (int i = 0; i < 500; i++)
+					{
+						tree.Add("users/" + i, "second/" + (i * 2));
+					}
+
+					for (int i = 0; i < 500; i++)
+					{
+						tree.Add("users/" + (i + 10000), "third/" + i);
+					}
+
+					tx.Commit();
+				}
+				new MinimalIncrementalBackup().ToFile(envToSnapshot, Path.Combine(_tempDir, "1.backup"));
+			}
+
+
+			new FullBackup().Restore(Path.Combine(_tempDir, "full.backup"), Path.Combine(_tempDir, "restored"));
+			var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(_tempDir, "restored"));
+			new IncrementalBackup().Restore(restoredOptions, new[] { Path.Combine(_tempDir, "1.backup") });
+
+			using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions))
+			{
+				using (var tx = snapshotRestoreEnv.NewTransaction(TransactionFlags.Read))
+				{
+					var tree = tx.ReadTree("test");
+					Assert.NotNull(tree);
+
+					for (int i = 0; i < 500; i++)
+					{
+						var readResult = tree.Read("users/" + i);
+						Assert.NotNull(readResult);
+						Assert.Equal("second/" + (i * 2), readResult.Reader.ToStringValue());
+					}
+					for (int i = 0; i < 500; i++)
+					{
+						var readResult = tree.Read("users/" + (i + 10000));
+						Assert.NotNull(readResult);
+						Assert.Equal("third/" + i, readResult.Reader.ToStringValue());
+					}
+
+					for (int i = 0; i < 500; i++)
+					{
+						var readResult = tree.Read("users/" + (i + 500));
+						Assert.NotNull(readResult);
+						Assert.Equal("first/" + (i+500), readResult.Reader.ToStringValue());
+					}
+				}
+			}
+		}
+
+		[Fact]
 		public void Can_make_multiple_min_inc_backups_and_then_restore()
 		{
 			const int UserCount = 5000;
@@ -208,7 +284,7 @@ namespace Voron.Tests.Backups
 				var backupPath = Path.Combine(_tempDir, "1.snapshot");
 				snapshotWriter.ToFile(envToSnapshot, backupPath);
 
-				using(var stream = File.OpenRead(backupPath))
+				using (var stream = File.OpenRead(backupPath))
 				using (var zip = new ZipArchive(stream, ZipArchiveMode.Read))
 				{
 					Assert.True(zip.Entries.Count > 1);
