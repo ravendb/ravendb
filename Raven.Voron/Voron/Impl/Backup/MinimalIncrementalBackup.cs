@@ -13,7 +13,6 @@ namespace Voron.Impl.Backup
 		public void ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal, Action<string> infoNotify = null,
 			Action backupStarted = null)
 		{
-
 			if (env.Options.IncrementalBackupEnabled == false)
 				throw new InvalidOperationException("Incremental backup is disabled for this storage");
 
@@ -60,48 +59,54 @@ namespace Voron.Impl.Backup
 				for (var journalNum = firstJournalToBackup; journalNum <= backupInfo.LastCreatedJournal; journalNum++)
 				{
 					lastBackedUpFile = journalNum;
-					using (var journalFile = IncrementalBackup.GetJournalFile(env, journalNum, backupInfo))
-					using (var filePager = env.Options.OpenJournalPager(journalNum))
+					var journalFile = IncrementalBackup.GetJournalFile(env, journalNum, backupInfo);
+					try
 					{
-						var reader = new JournalReader(filePager, recoveryPager, 0, null, recoveryPage);
-						reader.MaxPageToRead = lastBackedUpPage = journalFile.JournalWriter.NumberOfAllocatedPages;
-						if (journalNum == lastWrittenLogFile) // set the last part of the log file we'll be reading
-							reader.MaxPageToRead = lastBackedUpPage = lastWrittenLogPage;
-
-						if (lastBackedUpPage == journalFile.JournalWriter.NumberOfAllocatedPages) // past the file size
+						using (var filePager = env.Options.OpenJournalPager(journalNum))
 						{
-							// move to the next
-							lastBackedUpPage = -1;
-							lastBackedUpFile++;
-						}
+							var reader = new JournalReader(filePager, recoveryPager, 0, null, recoveryPage);
+							reader.MaxPageToRead = lastBackedUpPage = journalFile.JournalWriter.NumberOfAllocatedPages;
+							if (journalNum == lastWrittenLogFile) // set the last part of the log file we'll be reading
+								reader.MaxPageToRead = lastBackedUpPage = lastWrittenLogPage;
 
-						if (journalNum == backupInfo.LastBackedUpJournal) // continue from last backup
-							reader.SetStartPage(backupInfo.LastBackedUpJournalPage + 1);
-						TransactionHeader* lastJournalTxHeader = null;
-						while (reader.ReadOneTransaction(env.Options))
-						{
-							// read all transactions here 
-							lastJournalTxHeader = reader.LastTransactionHeader;
-						}
-
-						if (lastJournalTxHeader != null)
-							lastTransaction = *lastJournalTxHeader;
-
-						recoveryPage = reader.RecoveryPage;
-
-						foreach (var pagePosition in reader.TransactionPageTranslation)
-						{
-							var pageInJournal = pagePosition.Value.JournalPos;
-							var page = recoveryPager.Read(pageInJournal);
-							pageNumberToPageInScratch[pagePosition.Key] = pageInJournal;
-							if (page.IsOverflow)
+							if (lastBackedUpPage == journalFile.JournalWriter.NumberOfAllocatedPages) // past the file size
 							{
-								var numberOfOverflowPages = recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
-								for (int i = 1; i < numberOfOverflowPages; i++)
-									pageNumberToPageInScratch.Remove(page.PageNumber + i);
+								// move to the next
+								lastBackedUpPage = -1;
+								lastBackedUpFile++;
+							}
+
+							if (journalNum == backupInfo.LastBackedUpJournal) // continue from last backup
+								reader.SetStartPage(backupInfo.LastBackedUpJournalPage + 1);
+							TransactionHeader* lastJournalTxHeader = null;
+							while (reader.ReadOneTransaction(env.Options))
+							{
+								// read all transactions here 
+								lastJournalTxHeader = reader.LastTransactionHeader;
+							}
+
+							if (lastJournalTxHeader != null)
+								lastTransaction = *lastJournalTxHeader;
+
+							recoveryPage = reader.RecoveryPage;
+
+							foreach (var pagePosition in reader.TransactionPageTranslation)
+							{
+								var pageInJournal = pagePosition.Value.JournalPos;
+								var page = recoveryPager.Read(pageInJournal);
+								pageNumberToPageInScratch[pagePosition.Key] = pageInJournal;
+								if (page.IsOverflow)
+								{
+									var numberOfOverflowPages = recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
+									for (int i = 1; i < numberOfOverflowPages; i++)
+										pageNumberToPageInScratch.Remove(page.PageNumber + i);
+								}
 							}
 						}
-
+					}
+					finally
+					{
+						journalFile.Release();	
 					}
 				}
 

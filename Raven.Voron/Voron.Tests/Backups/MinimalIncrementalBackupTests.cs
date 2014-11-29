@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Voron.Impl.Backup;
 using Voron.Impl.Paging;
@@ -10,9 +11,7 @@ namespace Voron.Tests.Backups
 	public class MinimalIncrementalBackupTests : StorageTest
 	{
 		private string _tempDir;
-		private const string SnapshotFilename = "data.snapshot";
-		private const string IncBackupFilename = "data.inc-backup";
-
+		
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
 			options.IncrementalBackupEnabled = true;
@@ -23,10 +22,10 @@ namespace Voron.Tests.Backups
 		{
 			base.Dispose();
 
-			File.Delete(SnapshotFilename);
-			File.Delete(IncBackupFilename);
-			if(_tempDir != null)
-				Directory.Delete(_tempDir, true);			
+			if (_tempDir == null)
+				return;
+
+			Directory.Delete(_tempDir, true);
 		}
 
 		[Fact]
@@ -56,13 +55,13 @@ namespace Voron.Tests.Backups
 				}
 
 				var snapshotWriter = new MinimalIncrementalBackup();
-				snapshotWriter.ToFile(envToSnapshot, SnapshotFilename);
+				snapshotWriter.ToFile(envToSnapshot, Path.Combine(_tempDir, "1.snapshot"));
 			}
 
 			var incremental = new IncrementalBackup();
 
 			var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(_tempDir, "restored"));
-			incremental.Restore(restoredOptions, new[] { SnapshotFilename });
+			incremental.Restore(restoredOptions, new[] { Path.Combine(_tempDir, "1.snapshot") });
 
 			using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions))
 			{
@@ -72,6 +71,60 @@ namespace Voron.Tests.Backups
 					Assert.NotNull(tree);
 
 					for(int i = 0; i<UserCount; i++)
+					{
+						var readResult = tree.Read("users/" + i);
+						Assert.NotNull(readResult);
+						Assert.Equal("john doe/" + i, readResult.Reader.ToStringValue());
+					}
+				}
+			}
+		}
+
+		[Fact(Skip = "Not working currently")]
+		public void Can_make_multiple_min_inc_backups_and_then_restore()
+		{
+			const int UserCount = 5000;
+			_tempDir = Guid.NewGuid().ToString();
+			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(_tempDir);
+			storageEnvironmentOptions.IncrementalBackupEnabled = true;
+			using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
+			{
+				int index = 0;
+				for (int xi = 0; xi < 5; xi++)
+				{
+					for (int yi = 0; yi < 2; yi++)
+					{
+						using (var tx = envToSnapshot.NewTransaction(TransactionFlags.ReadWrite))
+						{
+							var tree = envToSnapshot.CreateTree(tx, "test");
+
+							for (int i = 0; i < UserCount / 10; i++)
+							{
+								tree.Add("users/" + index, "john doe/" + index);
+								index++;
+							}
+
+							tx.Commit();
+						}
+					}
+					var snapshotWriter = new MinimalIncrementalBackup();
+					snapshotWriter.ToFile(envToSnapshot, Path.Combine(_tempDir, xi + ".snapshot"));
+				}
+			}
+
+			var incremental = new IncrementalBackup();
+
+			var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(_tempDir, "restored"));
+			incremental.Restore(restoredOptions, Enumerable.Range(0, 5).Select(i => Path.Combine(_tempDir, i + ".snapshot")));
+
+			using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions))
+			{
+				using (var tx = snapshotRestoreEnv.NewTransaction(TransactionFlags.Read))
+				{
+					var tree = tx.ReadTree("test");
+					Assert.NotNull(tree);
+
+					for (int i = 0; i < UserCount; i++)
 					{
 						var readResult = tree.Read("users/" + i);
 						Assert.NotNull(readResult);
@@ -108,17 +161,17 @@ namespace Voron.Tests.Backups
 				var incrementalBackupInfo = envToSnapshot.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
 
 				var snapshotWriter = new MinimalIncrementalBackup();
-				snapshotWriter.ToFile(envToSnapshot, SnapshotFilename);
+				snapshotWriter.ToFile(envToSnapshot, Path.Combine(_tempDir, "1.snapshot"));
 
 				// reset the incremental backup stuff
 
 				envToSnapshot.HeaderAccessor.Modify(ptr => ptr->IncrementalBackup = incrementalBackupInfo);
 
 				var incBackup = new IncrementalBackup();
-				incBackup.ToFile(envToSnapshot, IncBackupFilename);
+				incBackup.ToFile(envToSnapshot, Path.Combine(_tempDir, "2.snapshot"));
 
-				var incLen = new FileInfo(IncBackupFilename).Length;
-				var minInLen = new FileInfo(SnapshotFilename).Length;
+				var incLen = new FileInfo(Path.Combine(_tempDir, "2.snapshot")).Length;
+				var minInLen = new FileInfo(Path.Combine(_tempDir, "1.snapshot")).Length;
 
 				Assert.True(incLen > minInLen);
 			}
@@ -152,10 +205,10 @@ namespace Voron.Tests.Backups
 				}
 
 				var snapshotWriter = new MinimalIncrementalBackup();
-				snapshotWriter.ToFile(envToSnapshot, SnapshotFilename);
+				snapshotWriter.ToFile(envToSnapshot, Path.Combine(_tempDir, "1.snapshot"));
 
 				var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(_tempDir, "restored"));
-				new IncrementalBackup().Restore(restoredOptions, new[] { SnapshotFilename });
+				new IncrementalBackup().Restore(restoredOptions, new[] { Path.Combine(_tempDir, "1.snapshot") });
 
 				using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions))
 				{
@@ -176,20 +229,13 @@ namespace Voron.Tests.Backups
 		[Fact]
 		public void Can_write_minimal_incremental_backup()
 		{
-			try
-			{
-				var snapshotWriter = new MinimalIncrementalBackup();
-				snapshotWriter.ToFile(Env, SnapshotFilename);
+			var snapshotWriter = new MinimalIncrementalBackup();
+			snapshotWriter.ToFile(Env, Path.Combine(_tempDir, "1.snapshot"));
 
-				Assert.True(File.Exists(SnapshotFilename), " Even empty minimal backup should create a file");
+			Assert.True(File.Exists(Path.Combine(_tempDir, "1.snapshot")), " Even empty minimal backup should create a file");
 
-				var snapshotFileInfo = new FileInfo(SnapshotFilename);
-				Assert.True(snapshotFileInfo.Length > 0, " Even empty minimal backup should create a file with some information");
-			}
-			finally
-			{
-				File.Delete(SnapshotFilename);
-			}
+			var snapshotFileInfo = new FileInfo(Path.Combine(_tempDir, "1.snapshot"));
+			Assert.True(snapshotFileInfo.Length > 0, " Even empty minimal backup should create a file with some information");
 		}
 	}
 }
