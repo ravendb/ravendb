@@ -135,10 +135,13 @@ namespace Raven.Client.Connection
 			return responses;
 		}
 
-		public async Task TryResolveConflictOrCreateConcurrencyException(IEnumerable<GetResponse> responses, Func<string, RavenJObject, Etag, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException)
+		public async Task TryResolveConflictOrCreateConcurrencyException(GetResponse[] responses, Func<string, RavenJObject, Etag, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException)
 		{
-			foreach (var response in responses)
+			// ReSharper disable once ForCanBeConvertedToForeach
+			// see: http://ayende.com/blog/169377/the-bug-that-ruined-my-weekend
+			for (int index = 0; index < responses.Length; index++)
 			{
+				var response = responses[index];
 				if (response == null)
 					continue;
 				if (response.RequestHasErrors() && response.Status != 409)
