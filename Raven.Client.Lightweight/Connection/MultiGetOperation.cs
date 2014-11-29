@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -133,11 +135,11 @@ namespace Raven.Client.Connection
 			return responses;
 		}
 
-		public async Task TryResolveConflictOrCreateConcurrencyException(GetResponse[] responses, Func<string, RavenJObject, Etag, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException)
+		public async Task TryResolveConflictOrCreateConcurrencyException(IEnumerable<GetResponse> responses, Func<string, RavenJObject, Etag, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException)
 		{
 			foreach (var response in responses)
 			{
-				if(response == null)
+				if (response == null)
 					continue;
 				if (response.RequestHasErrors() && response.Status != 409)
 					continue;
@@ -184,11 +186,11 @@ namespace Raven.Client.Connection
 					var etag = response.GetEtagHeader();
 
 					await TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
-							tryResolveConflictOrCreateConcurrencyException,
-							id,
-							etag,
-							result,
-							response);
+						tryResolveConflictOrCreateConcurrencyException,
+						id,
+						etag,
+						result,
+						response);
 				}
 			}
 		}
