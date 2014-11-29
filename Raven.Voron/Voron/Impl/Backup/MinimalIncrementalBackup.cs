@@ -2,12 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using Mono.Unix.Native;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
-using Voron.Platform.Win32;
-using Voron.Trees;
 using Voron.Util;
 
 namespace Voron.Impl.Backup
@@ -17,6 +13,10 @@ namespace Voron.Impl.Backup
 		public void ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal, Action<string> infoNotify = null,
 			Action backupStarted = null)
 		{
+
+			if (env.Options.IncrementalBackupEnabled == false)
+				throw new InvalidOperationException("Incremental backup is disabled for this storage");
+
 			var pageNumberToPageInScratch = new Dictionary<long, long>();
 			if (infoNotify == null)
 				infoNotify = str => { };
@@ -98,7 +98,7 @@ namespace Voron.Impl.Backup
 							{
 								var numberOfOverflowPages = recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
 								for (int i = 1; i < numberOfOverflowPages; i++)
-									pageNumberToPageInScratch.Remove(pagePosition.Key + i);
+									pageNumberToPageInScratch.Remove(page.PageNumber + i);
 							}
 						}
 
@@ -117,14 +117,12 @@ namespace Voron.Impl.Backup
 					throw new InvalidOperationException("Could not find any transactions in the journals, but found pages to write? That ain't right.");
 
 
-
-
-				var compressionPager = env.Options.CreateScratchPager("min-inc-backup.compression-buffer");
-				toDispose.Add(compressionPager);
-
+				var finalPager = env.Options.CreateScratchPager("min-inc-backup-final.scratch");
+				toDispose.Add(finalPager);
+				finalPager.EnsureContinuous(null, 0,1);//txHeader
 				int totalNumberOfPages = 0;
 				int overflowPages = 0;
-				int start = 0;
+				int start = 1;
 				foreach (var pageNum in pageNumberToPageInScratch.Values)
 				{
 					var p = recoveryPager.Read(pageNum);
@@ -135,15 +133,12 @@ namespace Voron.Impl.Backup
 						overflowPages += (size - 1);
 					}
 					totalNumberOfPages += size;
-					compressionPager.EnsureContinuous(null, start, size); //maybe increase size
+					finalPager.EnsureContinuous(null, start, size); //maybe increase size
 
-					StdLib.memcpy(compressionPager.AcquirePagePointer(start), p.Base, size * AbstractPager.PageSize);
+					StdLib.memcpy(finalPager.AcquirePagePointer(start), p.Base, size * AbstractPager.PageSize);
 
 					start += size;
 				}
-				var txHeaderPage = start;
-				compressionPager.EnsureContinuous(null, txHeaderPage, 1);//tx header
-				start++;
 
 				//TODO: what happens when we have enough transactions here that handle more than 4GB? 
 				//TODO: in this case, we need to split this into multiple merged transactions, of up to 2GB 
@@ -152,46 +147,36 @@ namespace Voron.Impl.Backup
 				var uncompressedSize = totalNumberOfPages * AbstractPager.PageSize;
 				var outputBufferSize = LZ4.MaximumOutputLength(uncompressedSize);
 
-				compressionPager.EnsureContinuous(null, start,
-					compressionPager.GetNumberOfOverflowPages(outputBufferSize));
+				finalPager.EnsureContinuous(null, start,
+					finalPager.GetNumberOfOverflowPages(outputBufferSize));
 
-				var txPage = compressionPager.GetWritable(txHeaderPage);
-				StdLib.memset(txPage.Base, 0, AbstractPager.PageSize);
-				var txHeader = (TransactionHeader*)txPage.Base;
+				var txPage = finalPager.AcquirePagePointer(0);
+				StdLib.memset(txPage, 0, AbstractPager.PageSize);
+				var txHeader = (TransactionHeader*)txPage;
 				txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 				txHeader->FreeSpace = lastTransaction.FreeSpace;
 				txHeader->Root = lastTransaction.Root;
 				txHeader->OverflowPageCount = overflowPages;
+				txHeader->PageCount = totalNumberOfPages - overflowPages;
 				txHeader->PreviousTransactionCrc = lastTransaction.PreviousTransactionCrc;
 				txHeader->TransactionId = lastTransaction.TransactionId;
 				txHeader->NextPageNumber = lastTransaction.NextPageNumber;
 				txHeader->LastPageNumber = lastTransaction.LastPageNumber;
-				txHeader->PageCount = totalNumberOfPages;
 				txHeader->TxMarker = TransactionMarker.Commit | TransactionMarker.Merged;
-				txHeader->Compressed = true;
-				txHeader->UncompressedSize = uncompressedSize;
+				txHeader->Compressed = false;
+				txHeader->UncompressedSize = txHeader->CompressedSize = uncompressedSize;
 
-				using (var lz4 = new LZ4())
-				{
-					txHeader->CompressedSize = lz4.Encode64(compressionPager.AcquirePagePointer(0),
-						compressionPager.AcquirePagePointer(start),
-						txHeader->UncompressedSize,
-						outputBufferSize);
-				}
-
-				var compressedPages = (txHeader->CompressedSize / AbstractPager.PageSize) + (txHeader->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
-;
-				txHeader->Crc = Crc.Value(compressionPager.AcquirePagePointer(start), 0, compressedPages * AbstractPager.PageSize);
+				txHeader->Crc = Crc.Value(finalPager.AcquirePagePointer(1), 0, totalNumberOfPages * AbstractPager.PageSize);
 
 				using (var file = new FileStream(backupPath, FileMode.Create))
 				{
 					using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
 					{
-						var entry = package.CreateEntry(string.Format("{0:D19}.journal", lastBackedUpFile));
+						var entry = package.CreateEntry(string.Format("{0:D19}.journal", lastBackedUpFile), compression);
 						using (var stream = entry.Open())
 						{
 							var copier = new DataCopier(AbstractPager.PageSize * 16);
-							copier.ToStream(compressionPager.AcquirePagePointer(txHeaderPage), (totalNumberOfPages + 1) * AbstractPager.PageSize, stream);
+							copier.ToStream(finalPager.AcquirePagePointer(0), (totalNumberOfPages + 1) * AbstractPager.PageSize, stream);
 						}
 					}
 					file.Flush(true);// make sure we hit the disk and stay there

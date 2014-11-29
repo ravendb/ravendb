@@ -60,32 +60,30 @@ namespace Voron.Impl.Journal
 			if (!TryReadAndValidateHeader(options, out current))
 				return false;
 
-			var compressedPages = (current->CompressedSize / AbstractPager.PageSize) + (current->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
+			var transactionSize = GetNumberOfPagesFromSize(current->Compressed ? current->CompressedSize : current->UncompressedSize);
 
 			if (current->TransactionId <= _lastSyncedTransactionId)
 			{
 				LastTransactionHeader = current;
-				_readingPage += compressedPages;
+				_readingPage += transactionSize;
 				return true; // skipping
 			}
 
-			if (checkCrc && !ValidatePagesCrc(options, compressedPages, current))
+			if (checkCrc && !ValidatePagesCrc(options, transactionSize, current))
 				return false;
 
 			_recoveryPager.EnsureContinuous(null, _recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
 			var dataPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
 
 			StdLib.memset(dataPage, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
-			try
+			if (current->Compressed)
 			{
-				LZ4.Decode64(_pager.AcquirePagePointer(_readingPage), current->CompressedSize, dataPage, current->UncompressedSize, true);
+				if (TryDecompressTransactionPages(options, current, dataPage) == false)
+					return false;
 			}
-			catch (Exception e)
+			else
 			{
-				options.InvokeRecoveryError(this, "Could not de-compress, invalid data", e);
-				RequireHeaderUpdate = true;
-
-				return false;
+				StdLib.memcpy(dataPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
 			}
 
 			var tempTransactionPageTranslaction = new Dictionary<long, RecoveryPagePosition>();
@@ -120,7 +118,7 @@ namespace Voron.Impl.Journal
 				tempTransactionPageTranslaction[page.PageNumber] = pagePosition;
 			}
 
-			_readingPage += compressedPages;
+			_readingPage += transactionSize;
 
 			LastTransactionHeader = current;
 
@@ -140,6 +138,27 @@ namespace Voron.Impl.Journal
 			}
 
 			return true;
+		}
+
+		private unsafe bool TryDecompressTransactionPages(StorageEnvironmentOptions options, TransactionHeader* current, byte* dataPage)
+		{
+			try
+			{
+				LZ4.Decode64(_pager.AcquirePagePointer(_readingPage), current->CompressedSize, dataPage, current->UncompressedSize, true);
+			}
+			catch (Exception e)
+			{
+				options.InvokeRecoveryError(this, "Could not de-compress, invalid data", e);
+				RequireHeaderUpdate = true;
+
+				return false;
+			}
+			return true;
+		}
+
+		internal static int GetNumberOfPagesFromSize(int size)
+		{
+			return (size / AbstractPager.PageSize) + (size % AbstractPager.PageSize == 0 ? 0 : 1);
 		}
 
 		public void RecoverAndValidate(StorageEnvironmentOptions options)
@@ -211,10 +230,6 @@ namespace Voron.Impl.Journal
 			{
 				if (current->CompressedSize <= 0)
 					throw new InvalidDataException("Compression error in transaction.");
-			}
-			else
-			{
-				throw new InvalidDataException("Uncompressed transactions are not supported.");
 			}
 
 			if (previous == null)
