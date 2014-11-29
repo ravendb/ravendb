@@ -49,7 +49,16 @@ namespace Voron.Platform.Posix
 				Syscall.close(_fdReads);
 			Syscall.close(_fd);
 			if (DeleteOnClose)
-				File.Delete(_filename);
+			{
+				try
+				{
+					File.Delete(_filename);
+				}
+				catch (Exception)
+				{
+					// nothing to do here
+				}
+			}
 		}
 
 		~PosixJournalWriter()
