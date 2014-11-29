@@ -180,7 +180,6 @@ namespace Voron.Tests.Backups
 		[Fact]
 		public void Mixed_small_and_overflow_changes()
 		{
-			const int UserCount = 5000;
 			_tempDir = Guid.NewGuid().ToString();
 			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(_tempDir);
 			storageEnvironmentOptions.IncrementalBackupEnabled = true;
@@ -225,10 +224,12 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-		//sanity check
 		[Fact]
 		public void Can_write_minimal_incremental_backup()
 		{
+			_tempDir = Guid.NewGuid().ToString();
+			Directory.CreateDirectory(_tempDir);
+
 			var snapshotWriter = new MinimalIncrementalBackup();
 			snapshotWriter.ToFile(Env, Path.Combine(_tempDir, "1.snapshot"));
 
