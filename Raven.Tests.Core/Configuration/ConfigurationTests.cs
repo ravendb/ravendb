@@ -155,8 +155,8 @@ namespace Raven.Tests.Core.Configuration
 			Assert.True(inMemoryConfiguration.Port >= 8080);
 			Assert.True(inMemoryConfiguration.CreateAnalyzersDirectoryIfNotExisting);
 			Assert.True(inMemoryConfiguration.CreatePluginsDirectoryIfNotExisting);
-			Assert.Equal(inMemoryConfiguration.DataDirectory, inMemoryConfiguration.Storage.Esent.JournalsStoragePath);
-			Assert.Equal(inMemoryConfiguration.DataDirectory, inMemoryConfiguration.Storage.Voron.JournalsStoragePath);
+			Assert.Equal(null, inMemoryConfiguration.Storage.Esent.JournalsStoragePath);
+			Assert.Equal(null, inMemoryConfiguration.Storage.Voron.JournalsStoragePath);
 
 			configurationComparer.Validate();
 		}

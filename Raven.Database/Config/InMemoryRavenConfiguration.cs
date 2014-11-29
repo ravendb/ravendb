@@ -264,12 +264,8 @@ namespace Raven.Database.Config
 			Storage.Voron.AllowIncrementalBackups = ravenSettings.Voron.AllowIncrementalBackups.Value;
 			Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
 			Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
-			if (string.IsNullOrEmpty(Storage.Voron.JournalsStoragePath)) 
-				Storage.Voron.JournalsStoragePath = DataDirectory;
 
 			Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;
-			if (string.IsNullOrEmpty(Storage.Esent.JournalsStoragePath))
-				Storage.Esent.JournalsStoragePath = DataDirectory;
 
 			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
