@@ -58,6 +58,8 @@ namespace Voron
 
 		public long MaxScratchBufferSize { get; set; }
 
+		public long MaxNumberOfPagesInMergedTransaction { get; set; }
+
 		public bool OwnsPagers { get; set; }
 
 		public bool ManualFlushing { get; set; }
@@ -92,6 +94,8 @@ namespace Voron
 			MaxScratchBufferSize = 512 * 1024 * 1024;
 
 			ScratchBufferOverflowTimeout = 5000;
+
+			MaxNumberOfPagesInMergedTransaction = 1024*128;// Ends up being 512 MB
 
 			OwnsPagers = true;
 			IncrementalBackupEnabled = false;

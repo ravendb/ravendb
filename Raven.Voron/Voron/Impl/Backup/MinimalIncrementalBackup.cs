@@ -106,7 +106,7 @@ namespace Voron.Impl.Backup
 					}
 					finally
 					{
-						journalFile.Release();	
+						journalFile.Release();
 					}
 				}
 
@@ -122,67 +122,76 @@ namespace Voron.Impl.Backup
 					throw new InvalidOperationException("Could not find any transactions in the journals, but found pages to write? That ain't right.");
 
 
-				var finalPager = env.Options.CreateScratchPager("min-inc-backup-final.scratch");
-				toDispose.Add(finalPager);
-				finalPager.EnsureContinuous(null, 0,1);//txHeader
-				int totalNumberOfPages = 0;
-				int overflowPages = 0;
-				int start = 1;
-				foreach (var pageNum in pageNumberToPageInScratch.Values)
-				{
-					var p = recoveryPager.Read(pageNum);
-					var size = 1;
-					if (p.IsOverflow)
-					{
-						size = recoveryPager.GetNumberOfOverflowPages(p.OverflowSize);
-						overflowPages += (size - 1);
-					}
-					totalNumberOfPages += size;
-					finalPager.EnsureContinuous(null, start, size); //maybe increase size
+				// it is possible that we merged enough transactions so the _merged_ output is too large for us.
+				// Voron limit transactions to about 4GB each. That means that we can't just merge all transactions
+				// blindly, for fear of hitting this limit. So we need to split things.
+				// We are also limited to about 8 TB of data in general before we literally can't fit the number of pages into 
+				// pageNumberToPageInScratch even theoretically.
+				// We're fine with saying that you need to run min inc backup before you hit 8 TB in your increment, so that works for now.
+				// We are also going to use env.Options.MaxScratchBufferSize to set the actual transaction limit here, to avoid issues 
+				// down the road and to limit how big a single transaction can be before the theoretical 4GB limit.
 
-					StdLib.memcpy(finalPager.AcquirePagePointer(start), p.Base, size * AbstractPager.PageSize);
-
-					start += size;
-				}
-
-				//TODO: what happens when we have enough transactions here that handle more than 4GB? 
-				//TODO: in this case, we need to split this into multiple merged transactions, of up to 2GB 
-				//TODO: each
-
-				var uncompressedSize = totalNumberOfPages * AbstractPager.PageSize;
-				var outputBufferSize = LZ4.MaximumOutputLength(uncompressedSize);
-
-				finalPager.EnsureContinuous(null, start,
-					finalPager.GetNumberOfOverflowPages(outputBufferSize));
-
-				var txPage = finalPager.AcquirePagePointer(0);
-				StdLib.memset(txPage, 0, AbstractPager.PageSize);
-				var txHeader = (TransactionHeader*)txPage;
-				txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
-				txHeader->FreeSpace = lastTransaction.FreeSpace;
-				txHeader->Root = lastTransaction.Root;
-				txHeader->OverflowPageCount = overflowPages;
-				txHeader->PageCount = totalNumberOfPages - overflowPages;
-				txHeader->PreviousTransactionCrc = lastTransaction.PreviousTransactionCrc;
-				txHeader->TransactionId = lastTransaction.TransactionId;
-				txHeader->NextPageNumber = lastTransaction.NextPageNumber;
-				txHeader->LastPageNumber = lastTransaction.LastPageNumber;
-				txHeader->TxMarker = TransactionMarker.Commit | TransactionMarker.Merged;
-				txHeader->Compressed = false;
-				txHeader->UncompressedSize = txHeader->CompressedSize = uncompressedSize;
-
-				txHeader->Crc = Crc.Value(finalPager.AcquirePagePointer(1), 0, totalNumberOfPages * AbstractPager.PageSize);
-
+				var nextJournalNum = lastBackedUpFile;
 				using (var file = new FileStream(backupPath, FileMode.Create))
 				{
 					using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
 					{
-						var entry = package.CreateEntry(string.Format("{0:D19}.journal", lastBackedUpFile), compression);
-						using (var stream = entry.Open())
+						var copier = new DataCopier(AbstractPager.PageSize * 16);
+
+						var finalPager = env.Options.CreateScratchPager("min-inc-backup-final.scratch");
+						toDispose.Add(finalPager);
+						finalPager.EnsureContinuous(null, 0, 1);//txHeader
+
+						foreach (var partition in Partition(pageNumberToPageInScratch.Values, env.Options.MaxNumberOfPagesInMergedTransaction))
 						{
-							var copier = new DataCopier(AbstractPager.PageSize * 16);
-							copier.ToStream(finalPager.AcquirePagePointer(0), (totalNumberOfPages + 1) * AbstractPager.PageSize, stream);
+							int totalNumberOfPages = 0;
+							int overflowPages = 0;
+							int start = 1;
+							foreach (var pageNum in partition)
+							{
+								var p = recoveryPager.Read(pageNum);
+								var size = 1;
+								if (p.IsOverflow)
+								{
+									size = recoveryPager.GetNumberOfOverflowPages(p.OverflowSize);
+									overflowPages += (size - 1);
+								}
+								totalNumberOfPages += size;
+								finalPager.EnsureContinuous(null, start, size); //maybe increase size
+
+								StdLib.memcpy(finalPager.AcquirePagePointer(start), p.Base, size * AbstractPager.PageSize);
+
+								start += size;
+							}
+
+
+							var txPage = finalPager.AcquirePagePointer(0);
+							StdLib.memset(txPage, 0, AbstractPager.PageSize);
+							var txHeader = (TransactionHeader*)txPage;
+							txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
+							txHeader->FreeSpace = lastTransaction.FreeSpace;
+							txHeader->Root = lastTransaction.Root;
+							txHeader->OverflowPageCount = overflowPages;
+							txHeader->PageCount = totalNumberOfPages - overflowPages;
+							txHeader->PreviousTransactionCrc = lastTransaction.PreviousTransactionCrc;
+							txHeader->TransactionId = lastTransaction.TransactionId;
+							txHeader->NextPageNumber = lastTransaction.NextPageNumber;
+							txHeader->LastPageNumber = lastTransaction.LastPageNumber;
+							txHeader->TxMarker = TransactionMarker.Commit | TransactionMarker.Merged;
+							txHeader->Compressed = false;
+							txHeader->UncompressedSize = txHeader->CompressedSize = totalNumberOfPages * AbstractPager.PageSize;
+
+							txHeader->Crc = Crc.Value(finalPager.AcquirePagePointer(1), 0, totalNumberOfPages * AbstractPager.PageSize);
+
+
+							var entry = package.CreateEntry(string.Format("{0:D19}.merged-journal", nextJournalNum), compression);
+							nextJournalNum++;
+							using (var stream = entry.Open())
+							{
+								copier.ToStream(finalPager.AcquirePagePointer(0), (totalNumberOfPages + 1) * AbstractPager.PageSize, stream);
+							}
 						}
+
 					}
 					file.Flush(true);// make sure we hit the disk and stay there
 				}
@@ -199,5 +208,24 @@ namespace Voron.Impl.Backup
 					disposable.Dispose();
 			}
 		}
+
+		private IEnumerable<IEnumerable<long>> Partition(IEnumerable<long> src, long max)
+		{
+			using(var enumerator = src.GetEnumerator())
+			{
+				while (enumerator.MoveNext())
+				{
+					yield return Partition(enumerator, max);
+				}
+			}
+		}
+
+		private IEnumerable<long> Partition(IEnumerator<long> src, long max)
+		{
+			do
+			{
+				yield return src.Current;
+			} while (src.MoveNext() && max-- > 0);
+		} 
 	}
 }

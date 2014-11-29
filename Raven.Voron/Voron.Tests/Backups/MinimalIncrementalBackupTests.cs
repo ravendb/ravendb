@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.IO.Compression;
+using System.IO.Packaging;
 using System.Linq;
 using System.Text;
 using Voron.Impl.Backup;
@@ -11,11 +13,11 @@ namespace Voron.Tests.Backups
 	public class MinimalIncrementalBackupTests : StorageTest
 	{
 		private string _tempDir;
-		
+
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
 			options.IncrementalBackupEnabled = true;
-			options.MaxLogFileSize = 1000 * AbstractPager.PageSize;		
+			options.MaxLogFileSize = 1000 * AbstractPager.PageSize;
 		}
 
 		public override void Dispose()
@@ -44,7 +46,7 @@ namespace Voron.Tests.Backups
 					{
 						var tree = envToSnapshot.CreateTree(tx, "test");
 
-						for (int i = 0; i < UserCount/10; i++)
+						for (int i = 0; i < UserCount / 10; i++)
 						{
 							tree.Add("users/" + index, "john doe/" + index);
 							index++;
@@ -70,7 +72,7 @@ namespace Voron.Tests.Backups
 					var tree = tx.ReadTree("test");
 					Assert.NotNull(tree);
 
-					for(int i = 0; i<UserCount; i++)
+					for (int i = 0; i < UserCount; i++)
 					{
 						var readResult = tree.Read("users/" + i);
 						Assert.NotNull(readResult);
@@ -149,7 +151,7 @@ namespace Voron.Tests.Backups
 					{
 						var tree = envToSnapshot.CreateTree(tx, "test");
 
-						for (int i = 0; i < UserCount/10; i++)
+						for (int i = 0; i < UserCount / 10; i++)
 						{
 							tree.Add("users/" + i, "john doe/" + i);
 						}
@@ -174,6 +176,43 @@ namespace Voron.Tests.Backups
 				var minInLen = new FileInfo(Path.Combine(_tempDir, "1.snapshot")).Length;
 
 				Assert.True(incLen > minInLen);
+			}
+		}
+
+
+		[Fact]
+		public void Can_split_merged_transaction_to_multiple_tx()
+		{
+			_tempDir = Guid.NewGuid().ToString();
+			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(_tempDir);
+			storageEnvironmentOptions.IncrementalBackupEnabled = true;
+			storageEnvironmentOptions.MaxNumberOfPagesInMergedTransaction = 8;
+			using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
+			{
+				for (int xi = 0; xi < 100; xi++)
+				{
+					using (var tx = envToSnapshot.NewTransaction(TransactionFlags.ReadWrite))
+					{
+						var tree = envToSnapshot.CreateTree(tx, "test");
+
+						for (int i = 0; i < 1000; i++)
+						{
+							tree.Add("users/" + i, "john doe/" + i);
+						}
+
+						tx.Commit();
+					}
+				}
+
+				var snapshotWriter = new MinimalIncrementalBackup();
+				var backupPath = Path.Combine(_tempDir, "1.snapshot");
+				snapshotWriter.ToFile(envToSnapshot, backupPath);
+
+				using(var stream = File.OpenRead(backupPath))
+				using (var zip = new ZipArchive(stream, ZipArchiveMode.Read))
+				{
+					Assert.True(zip.Entries.Count > 1);
+				}
 			}
 		}
 

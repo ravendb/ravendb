@@ -243,6 +243,7 @@ namespace Voron.Impl.Backup
 							{
 								switch (Path.GetExtension(entry.Name))
 								{
+									case".merged-journal":
 									case ".journal":
 
 										var jounalFileName = Path.Combine(tempDir, entry.Name);
