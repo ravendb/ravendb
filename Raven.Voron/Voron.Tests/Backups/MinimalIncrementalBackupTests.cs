@@ -80,7 +80,7 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-		[Fact(Skip = "Not working currently")]
+		[Fact]
 		public void Can_make_multiple_min_inc_backups_and_then_restore()
 		{
 			const int UserCount = 5000;
