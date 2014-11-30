@@ -301,7 +301,7 @@ namespace Raven.Database.Indexing
 			}
 			catch (InvalidShapeException e)
 			{
-				throw new InvalidSpatialShapeException(e, newDocId);
+				throw new InvalidSpatialShapException(e, newDocId);
 			}
 
 			return new IndexingResult
@@ -326,7 +326,7 @@ namespace Raven.Database.Indexing
 			}
 			catch (InvalidShapeException e)
 			{
-				throw new InvalidSpatialShapeException(e, newDocId);
+				throw new InvalidSpatialShapException(e, newDocId);
 			}
 
 			return new IndexingResult

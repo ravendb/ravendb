@@ -4,27 +4,44 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Exceptions
 {
-    public class IndexCompilationException : Exception
-    {
-        public IndexCompilationException(string message) : base(message)
-        {
-        }
 
-        public IndexCompilationException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
+	[Serializable]
+	public class IndexCompilationException : Exception
+	{
+		//
+		// For guidelines regarding the creation of new exception types, see
+		//    http://msdn.microsoft.com/library/default.asp?url=/library/en-us/cpgenref/html/cpconerrorraisinghandlingguidelines.asp
+		// and
+		//    http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dncscol/html/csharp07192001.asp
+		//
 
-        public override string ToString()
-        {
-            return this.ExceptionToString(description =>
-                                          description.AppendFormat(
-                                              ", IndexDefinitionProperty='{0}', ProblematicText='{1}'",
-                                              IndexDefinitionProperty,
-                                              ProblematicText));
-        }
+		public IndexCompilationException()
+		{
+		}
 
-        public string IndexDefinitionProperty { get; set; }
+		public IndexCompilationException(string message) : base(message)
+		{
+		}
 
-        public string ProblematicText { get; set; }
-    }
+		public IndexCompilationException(string message, Exception inner) : base(message, inner)
+		{
+		}
+
+		public string IndexDefinitionProperty { get; set; }
+
+		public string ProblematicText { get; set; }
+		protected IndexCompilationException(
+			SerializationInfo info,
+			StreamingContext context) : base(info, context)
+		{
+		}
+		public override string ToString()
+		{
+			return this.ExceptionToString(description =>
+										  description.AppendFormat(
+											  ", IndexDefinitionProperty='{0}', ProblematicText='{1}'",
+											  IndexDefinitionProperty,
+											  ProblematicText));
+		}
+	}
 }
