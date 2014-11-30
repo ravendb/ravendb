@@ -269,6 +269,10 @@ namespace Raven.Abstractions.Indexing
 		/// Prevent index from being kept in memory. Default: false
 		/// </summary>
 		public bool DisableInMemoryIndexing { get; set; }
+		/// <summary>
+		/// Whatever this is a temporary test only index
+		/// </summary>
+		public bool IsTestIndex { get; set; }
 
 		/// <summary>
 		/// Remove the default values that we don't actually need

@@ -419,7 +419,7 @@ namespace Raven.Database.Storage
             var indexDefinition = GetIndexDefinition(indexDef.Name);
             if (indexDefinition != null)
             {
-				if (indexDefinition.Name.StartsWith(Constants.TestIndexPrefix, StringComparison.InvariantCultureIgnoreCase)) // always update test indexes
+				if (indexDefinition.IsTestIndex) // always update test indexes
 					return IndexCreationOptions.Update;
 
                 indexDef.IndexId = indexDefinition.IndexId;

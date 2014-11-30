@@ -16,7 +16,7 @@ namespace Raven.Database.Tasks
 	public class CleanupTestIndexesTask : IStartupTask, IDisposable
 	{
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
-
+		private bool _disposed;
 		private Timer checkTimer;
 
 		private DocumentDatabase database;
@@ -29,12 +29,18 @@ namespace Raven.Database.Tasks
 
 		private void ExecuteCleanup(object state)
 		{
+			if (_disposed)
+			{
+				Dispose();
+				return;
+			}
 			var indexNames = database.IndexDefinitionStorage.IndexNames;
 			foreach (var indexName in indexNames)
 			{
 				try
 				{
-					if (indexName.StartsWith(Constants.TestIndexPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
+					var indexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
+					if (indexDefinition.IsTestIndex == false)
 						continue;
 
 					var lastQueryTime = database.IndexStorage.GetLastQueryTime(indexName);
@@ -52,6 +58,7 @@ namespace Raven.Database.Tasks
 
 		public void Dispose()
 		{
+			_disposed = true;
 			if (checkTimer != null)
 				checkTimer.Dispose();
 		}

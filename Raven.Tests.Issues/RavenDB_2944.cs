@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Tests.Common;
@@ -44,6 +45,13 @@ namespace Raven.Tests.Issues
 			{
 				Map = orders => from order in orders select new { order.Company };
 			}
+
+			public override IndexDefinition CreateIndexDefinition()
+			{
+				var indexDefinition = base.CreateIndexDefinition();
+				indexDefinition.IsTestIndex = true;
+				return indexDefinition;
+			}
 		}
 
 		private class Test_Orders_Count : AbstractIndexCreationTask<Order, Test_Orders_Count.Result>
@@ -53,6 +61,13 @@ namespace Raven.Tests.Issues
 				public string Company { get; set; }
 
 				public int Count { get; set; }
+			}
+
+			public override IndexDefinition CreateIndexDefinition()
+			{
+				var indexDefinition = base.CreateIndexDefinition();
+				indexDefinition.IsTestIndex = true;
+				return indexDefinition;
 			}
 
 			public Test_Orders_Count()

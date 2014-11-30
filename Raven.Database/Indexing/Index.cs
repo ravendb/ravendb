@@ -157,10 +157,7 @@ namespace Raven.Database.Indexing
 
 		public bool IsTestIndex
 		{
-			get
-			{
-				return PublicName.StartsWith(Constants.TestIndexPrefix, StringComparison.OrdinalIgnoreCase);
-			}
+			get { return indexDefinition.IsTestIndex; }
 		}
 
 		public int? MaxIndexOutputsPerDocument { get { return indexDefinition.MaxIndexOutputsPerDocument; } }
@@ -513,7 +510,7 @@ namespace Raven.Database.Indexing
 						}
 						catch (Exception e)
 						{
-							var invalidSpatialShapeException = e as InvalidSpatialShapeException;
+							var invalidSpatialShapeException = e as InvalidSpatialShapException;
 							var invalidDocId = (invalidSpatialShapeException == null) ?
 														null :
 														invalidSpatialShapeException.InvalidDocumentId;
@@ -750,7 +747,7 @@ namespace Raven.Database.Indexing
 			onErrorFunc = (exception, o) =>
 				{
 					string docId = null;
-					var invalidSpatialException = exception as InvalidSpatialShapeException;
+					var invalidSpatialException = exception as InvalidSpatialShapException;
 					if (invalidSpatialException != null)
 						docId = invalidSpatialException.InvalidDocumentId;
 

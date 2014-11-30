@@ -63,7 +63,6 @@ namespace Raven.Abstractions.Data
 		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";
 		public const int BulkImportDefaultTimeoutInMs = 60000;
 	    public const string IndexingDisabled = "Raven/IndexingDisabled";
-		public const string TestIndexPrefix = "Test/";
 		public const string MaxNumberOfItemsToProcessInTestIndexes = "Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes";
 
 		//Paths
