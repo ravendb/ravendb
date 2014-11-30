@@ -89,7 +89,7 @@ namespace Raven.Tests.Issues
 
 				new Test_Orders_ByCompany().Execute(store);
 
-				for (var i = 0; i < 10; i++)
+				for (var i = 0; i < 100; i++)
 				{
 					using (var session = store.OpenSession())
 					{
@@ -101,7 +101,7 @@ namespace Raven.Tests.Issues
 							return;
 					}
 
-					Thread.Sleep(1000);
+					Thread.Sleep(100);
 				}
 
 				throw new InvalidOperationException("Should not happen.");
@@ -119,7 +119,7 @@ namespace Raven.Tests.Issues
 
 				new Test_Orders_Count().Execute(store);
 
-				for (var i = 0; i < 10; i++)
+				for (var i = 0; i < 100; i++)
 				{
 					using (var session = store.OpenSession())
 					{
@@ -133,7 +133,7 @@ namespace Raven.Tests.Issues
 							return;
 					}
 
-					Thread.Sleep(1000);
+					Thread.Sleep(100);
 				}
 
 				throw new InvalidOperationException("Should not happen.");
