@@ -1142,6 +1142,10 @@ namespace Raven.Database.Indexing
 								var scoreDoc = search.ScoreDocs[position];
 								var document = indexSearcher.Doc(scoreDoc.Doc);
 								var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc);
+								if (indexQueryResult.Key == null && !string.IsNullOrEmpty(indexQuery.HighlighterKeyName))
+								{
+									indexQueryResult.HighlighterKey = document.Get(indexQuery.HighlighterKeyName);
+								}
 								
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
@@ -1270,10 +1274,8 @@ namespace Raven.Database.Indexing
 						}
 					}
 				}
-				else
-				{
-					indexQueryResult.Highligtings = highlightings.ToDictionary(x => x.Field, x => x.Fragments);
-				}
+
+				indexQueryResult.Highligtings = highlightings.ToDictionary(x => x.Field, x => x.Fragments);
 			}
 
 			private void SetupHighlighter(Query documentQuery)

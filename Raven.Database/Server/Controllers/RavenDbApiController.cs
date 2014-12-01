@@ -242,6 +242,7 @@ namespace Raven.Database.Server.Controllers
 				HighlightedFields = GetHighlightedFields().ToArray(),
 				HighlighterPreTags = GetQueryStringValues("preTags"),
 				HighlighterPostTags = GetQueryStringValues("postTags"),
+				HighlighterKeyName = GetQueryStringValue("highlighterKeyName"),
 				ResultsTransformer = GetQueryStringValue("resultsTransformer"),
 				TransformerParameters = ExtractTransformerParameters(),
 				ExplainScores = GetExplainScores(),
