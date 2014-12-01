@@ -154,9 +154,7 @@ namespace Raven.Abstractions.Data
 		/// if no encoding information in headers of incoming request, this encoding is assumed
 		/// </summary>
 		public const string DefaultRequestEncoding = "UTF-8";
-
-	    public const string AssembliesDirectoryName = "Assemblies";
-
+        
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 		
 		//Counters

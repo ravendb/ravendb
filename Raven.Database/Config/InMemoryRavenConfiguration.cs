@@ -244,6 +244,8 @@ namespace Raven.Database.Config
 
 			PluginsDirectory = ravenSettings.PluginsDirectory.Value.ToFullPath();
 
+		    AssembliesDirectory = ravenSettings.AssembliesDirectory.Value.ToFullPath();
+
 			CompiledIndexCacheDirectory = ravenSettings.CompiledIndexCacheDirectory.Value.ToFullPath();
 
 			var taskSchedulerType = ravenSettings.TaskScheduler.Value;
@@ -788,6 +790,12 @@ namespace Raven.Database.Config
 				}
 			}
 		}
+
+        /// <summary>
+        /// Where the internal assemblies will be extracted to.
+        /// Default: ~\Assemblies
+        /// </summary>
+        public string AssembliesDirectory { get; set; }
 
 		public bool CreatePluginsDirectoryIfNotExisting { get; set; }
 		public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
