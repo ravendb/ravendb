@@ -48,11 +48,11 @@ namespace Raven.Database.Bundles.PeriodicExports
 					PeriodicExportStatus.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false)
 					return;
 
-				if (incrementalBackupTimer != null)
-					incrementalBackupTimer.Dispose();
+				if (incrementalBackupTimer != null) 
+					Database.TimerManager.ReleaseTimer(incrementalBackupTimer);
 
 				if (fullBackupTimer != null)
-					fullBackupTimer.Dispose();
+					Database.TimerManager.ReleaseTimer(fullBackupTimer);
 
 				ReadSetupValuesFromDocument();
 			};
@@ -93,7 +93,8 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 						var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastBackup;
 						var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
-						incrementalBackupTimer = new Timer(state => TimerCallback(false), null, nextBackup, interval);
+
+						incrementalBackupTimer = Database.TimerManager.GetTimer(state => TimerCallback(false), nextBackup, interval);
 					}
 					else
 					{
@@ -107,14 +108,13 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 						var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastFullBackup;
 						var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
-						fullBackupTimer = new Timer(state => TimerCallback(true), null, nextBackup, interval);
+
+						fullBackupTimer = Database.TimerManager.GetTimer(state => TimerCallback(true), nextBackup, interval);
 					}
 					else
 					{
 						logger.Warn("Full periodic export interval is set to zero or less, full periodic export is now disabled");
 					}
-
-
 				}
 				catch (Exception ex)
 				{

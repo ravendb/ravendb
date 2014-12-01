@@ -892,17 +892,19 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				var debugInfo = new List<string>();
 
-				var diskIo = new DiskPerformanceTester(ioTestRequest, debugInfo.Add, killTaskCts.Token);
-				diskIo.TestDiskIO();
-
-				var diskIoRequestAndResponse = new
+				using (var diskIo = new DiskPerformanceTester(ioTestRequest, debugInfo.Add, killTaskCts.Token))
 				{
-					Request = ioTestRequest,
-					Result = diskIo.Result,
-					DebugMsgs = debugInfo
-				};
+					diskIo.TestDiskIO();
 
-				Database.Documents.Put(DiskPerformanceTester.PerformanceResultDocumentKey, null, RavenJObject.FromObject(diskIoRequestAndResponse), new RavenJObject(), null);
+					var diskIoRequestAndResponse = new
+					{
+						Request = ioTestRequest,
+						Result = diskIo.Result,
+						DebugMsgs = debugInfo
+					};
+
+					Database.Documents.Put(DiskPerformanceTester.PerformanceResultDocumentKey, null, RavenJObject.FromObject(diskIoRequestAndResponse), new RavenJObject(), null);
+				}
 			});
 
 			long id;
@@ -917,53 +919,6 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				OperationId = id
 			});
-			/*
-
-           
-
-			var task = Task.Factory.StartNew(() =>
-			{
-				MaintenanceActions.Restore(ravenConfiguration,restoreRequest,
-					msg =>
-					{
-						restoreStatus.Messages.Add(msg);
-						DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-							RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
-					});
-
-				if (databaseDocument == null)
-					return;
-
-				databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
-				if (restoreRequest.IndexesLocation != null)
-					databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
-				if (restoreRequest.JournalsLocation != null)
-					databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
-				databaseDocument.Id = databaseName;
-				DatabasesLandlord.Protect(databaseDocument);
-				DatabasesLandlord.SystemDatabase.Documents.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
-					new RavenJObject(), null);
-
-				restoreStatus.Messages.Add("The new database was created");
-				DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-					RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
-
-				Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
-			}, TaskCreationOptions.LongRunning);
-
-			long id;
-			Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
-			{
-				StartTime = SystemTime.UtcNow,
-				TaskType = TaskActions.PendingTaskType.RestoreDatabase,
-				Payload = "Restoring database " + databaseName + " from " + restoreRequest.BackupLocation
-			}, out id);
-
-
-			return GetMessageWithObject(new
-			{
-				OperationId = id
-			});*/
 		}
 	}
 }

@@ -26,7 +26,6 @@ namespace Raven.Bundles.Expiration
 	{
 		public const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
-		private Timer timer;
 		public DocumentDatabase Database { get; set; }
 
 		private volatile bool executing;
@@ -55,8 +54,8 @@ namespace Raven.Bundles.Expiration
 			var deleteFrequencyInSeconds = database.Configuration.GetConfigurationValue<int>("Raven/Expiration/DeleteFrequencySeconds") ?? 300;
 			logger.Info("Initialized expired document cleaner, will check for expired documents every {0} seconds",
 						deleteFrequencyInSeconds);
-			timer = new Timer(TimerCallback, null, TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
-
+			
+			database.TimerManager.ExecuteTimer(TimerCallback, TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
 		}
 
 		private void TimerCallback(object state)
@@ -132,8 +131,6 @@ namespace Raven.Bundles.Expiration
 		/// <filterpriority>2</filterpriority>
 		public void Dispose()
 		{
-			if (timer != null)
-				timer.Dispose();
 		}
 	}
 }

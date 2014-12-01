@@ -279,6 +279,7 @@
     <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
+    <Compile Include="Util\ResourceTimerManager.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />

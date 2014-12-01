@@ -21,33 +21,29 @@ namespace Raven.Bundles.LiveTest
 {
 	public class LiveTestResourceCleanerStartupTask : IServerStartupTask
 	{
-		private ILog log = LogManager.GetCurrentClassLogger();
-
-		private Timer checkTimer;
+		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private RavenDbServer server;
 
 		private TimeSpan maxTimeResourceCanBeIdle;
 
-		public void Execute(RavenDbServer server)
+		public void Execute(RavenDbServer ravenDbServer)
 		{
-			this.server = server;
+			server = ravenDbServer;
 
 			int val;
 			if (int.TryParse(ConfigurationManager.AppSettings["Raven/Bundles/LiveTest/Tenants/MaxIdleTimeForTenantResource"], out val) == false)
 				val = 900;
 
-			maxTimeResourceCanBeIdle = TimeSpan.FromSeconds(val); ;
+			maxTimeResourceCanBeIdle = TimeSpan.FromSeconds(val);
 
 			log.Info("LiveTestResourceCleanerStartupTask started. MaxTimeResourceCanBeIdle: " + maxTimeResourceCanBeIdle.TotalSeconds + " seconds.");
 
-			checkTimer = new Timer(ExecuteCleanup, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
+			server.Options.SystemDatabase.TimerManager.ExecuteTimer(ExecuteCleanup, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
 		}
 
 		public void Dispose()
 		{
-			if (checkTimer != null)
-				checkTimer.Dispose();
 		}
 
 		public void ExecuteCleanup(object state)

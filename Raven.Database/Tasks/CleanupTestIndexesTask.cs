@@ -4,10 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Threading;
 
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Plugins;
 
@@ -17,14 +15,13 @@ namespace Raven.Database.Tasks
 	{
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 		private bool _disposed;
-		private Timer checkTimer;
 
 		private DocumentDatabase database;
 
 		public void Execute(DocumentDatabase db)
 		{
 			database = db;
-			checkTimer = new Timer(ExecuteCleanup, null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(5));
+			database.TimerManager.ExecuteTimer(ExecuteCleanup, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(5));
 		}
 
 		private void ExecuteCleanup(object state)
@@ -59,8 +56,6 @@ namespace Raven.Database.Tasks
 		public void Dispose()
 		{
 			_disposed = true;
-			if (checkTimer != null)
-				checkTimer.Dispose();
 		}
 	}
 }
