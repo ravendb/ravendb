@@ -312,6 +312,10 @@ namespace Raven.Storage.Esent.StorageActions
 				yield break;
 			do
 			{
+				var keyFromDb = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
+				if (keyFromDb.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
+					yield break;
+
 				yield return ReadCurrentDocument();
 				take--;
 			} while (Api.TryMoveNext(session, Documents) && take > 0);
