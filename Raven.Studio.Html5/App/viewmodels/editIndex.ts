@@ -24,6 +24,8 @@ import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 
 class editIndex extends viewModelBase { 
 
+    static TestIndexPrefix = "Test/";
+
     isEditingExistingIndex = ko.observable<boolean>(false);
     mergeSuggestion = ko.observable<indexMergeSuggestion>(null);
     priority = ko.observable<indexPriority>().extend({ required: true });
@@ -236,33 +238,7 @@ class editIndex extends viewModelBase {
     save() {
         if (this.editedIndex().name()) {
             var index = this.editedIndex().toDto();
-
-            require(["commands/saveIndexDefinitionCommand", "commands/saveScriptedIndexesCommand"], (saveIndexDefinitionCommand, saveScriptedIndexesCommand) => {
-                var commands = [];
-
-                commands.push(new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase()).execute());
-                if (this.scriptedIndex() !== null) {
-                    commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
-                }
-
-                $.when.apply($, commands).done(() => {
-                    this.initializeDirtyFlag();
-                    this.editedIndex().name.valueHasMutated();
-                    var isSavingMergedIndex = this.mergeSuggestion() != null;
-
-                    if (!this.isEditingExistingIndex()) {
-                        this.isEditingExistingIndex(true);
-                        this.editExistingIndex(index.Name);
-                    }
-                    if (isSavingMergedIndex) {
-                        var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
-                        this.deleteMergedIndexes(indexesToDelete);
-                        this.mergeSuggestion(null);
-                    }
-
-                    this.updateUrl(index.Name, isSavingMergedIndex);
-                });
-            }); 
+            this.saveIndex(index);
         }
     }
 
@@ -482,6 +458,67 @@ class editIndex extends viewModelBase {
             .map(entry => { return { name: entry.name, value: entry.name, score: 100, meta: entry.args} });
 
         callback(null, result);
+    }
+
+    makePermenant() {
+        if (this.editedIndex().name() && this.editedIndex().isTestIndex()) {
+            this.editedIndex().isTestIndex(false);
+            // trim Test prefix
+            this.editedIndex().name(this.editedIndex().name().substr(editIndex.TestIndexPrefix.length));
+            var index = this.editedIndex().toDto();
+            if (this.scriptedIndex() !== null) {
+                // reset etag as we save different document
+                delete this.scriptedIndex().__metadata.etag;
+            }
+
+            this.saveIndex(index);
+        }
+    }
+
+    tryIndex() {
+        if (this.editedIndex().name()) {
+            if (!this.editedIndex().isTestIndex()) {
+                this.editedIndex().isTestIndex(true);
+                this.editedIndex().name(editIndex.TestIndexPrefix + this.editedIndex().name());
+            }
+            var index = this.editedIndex().toDto();
+
+            if (this.scriptedIndex() !== null) {
+                // reset etag as we save different document
+                delete this.scriptedIndex().__metadata.etag;
+            }
+            
+            this.saveIndex(index);
+        }
+    }
+
+    private saveIndex(index: indexDefinitionDto) {
+        require(["commands/saveIndexDefinitionCommand", "commands/saveScriptedIndexesCommand"], (saveIndexDefinitionCommand, saveScriptedIndexesCommand) => {
+            var commands = [];
+
+            commands.push(new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase()).execute());
+            if (this.scriptedIndex() !== null) {
+                commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
+            }
+
+            $.when.apply($, commands).done(() => {
+                this.initializeDirtyFlag();
+                this.editedIndex().name.valueHasMutated();
+                var isSavingMergedIndex = this.mergeSuggestion() != null;
+
+                if (!this.isEditingExistingIndex()) {
+                    this.isEditingExistingIndex(true);
+                    this.editExistingIndex(index.Name);
+                }
+                if (isSavingMergedIndex) {
+                    var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
+                    this.deleteMergedIndexes(indexesToDelete);
+                    this.mergeSuggestion(null);
+                }
+
+                this.updateUrl(index.Name, isSavingMergedIndex);
+            });
+        }); 
     }
 }
 
