@@ -81,6 +81,15 @@
                 <i class="fa fa-trash-o"></i>
             </button>
         </div>
+        
+        <div class="btn-group">
+            <button class="btn btn-default" title="Create test index based on limited data set" data-bind="visible: editedIndex().isTestIndex() == false, click: tryIndex">
+                Try index
+            </button>
+            <button class="btn btn-default" title="Saves test index as persistent" data-bind="visible: editedIndex().isTestIndex(), click: makePermenant">
+                <i class="fa fa-save"></i> Make permenant
+            </button>
+        </div>
     </div>
 
     <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
