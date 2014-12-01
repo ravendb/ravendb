@@ -28,7 +28,7 @@ namespace Raven.Database.Plugins.Builtins
 		public void Execute(RavenDbServer server)
 		{
 			this.server = server;
-			server.SystemDatabase.TimerManager.ExecuteTimer(ExecuteCheck, TimeSpan.Zero, frequency);
+			server.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.Zero, frequency);
 		}
 
 		private void ExecuteCheck(object state)

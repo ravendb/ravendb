@@ -54,8 +54,8 @@ namespace Raven.Bundles.Expiration
 			var deleteFrequencyInSeconds = database.Configuration.GetConfigurationValue<int>("Raven/Expiration/DeleteFrequencySeconds") ?? 300;
 			logger.Info("Initialized expired document cleaner, will check for expired documents every {0} seconds",
 						deleteFrequencyInSeconds);
-			
-			database.TimerManager.ExecuteTimer(TimerCallback, TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
+
+			database.TimerManager.NewTimer(TimerCallback, TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
 		}
 
 		private void TimerCallback(object state)

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
@@ -31,7 +32,7 @@ namespace Raven.Database.Plugins.Builtins
 		public void Execute(RavenDbServer ravenDbServer)
 		{
 			server = ravenDbServer;
-			server.SystemDatabase.TimerManager.ExecuteTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(30));
+			server.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(30));
 		}
 
 		private void ExecuteCheck(object state)

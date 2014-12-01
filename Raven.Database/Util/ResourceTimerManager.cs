@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Threading;
 
 using Raven.Abstractions.Logging;
@@ -16,14 +15,9 @@ namespace Raven.Database.Util
 	{
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		private readonly IList<Timer> timers = new List<Timer>();
+		private readonly ConcurrentSet<Timer> timers = new ConcurrentSet<Timer>();
 
-		public void ExecuteTimer(TimerCallback callback, TimeSpan dueTime, TimeSpan period)
-		{
-			GetTimer(callback, dueTime, period);
-		}
-
-		public Timer GetTimer(TimerCallback callback, TimeSpan dueTime, TimeSpan period)
+		public Timer NewTimer(TimerCallback callback, TimeSpan dueTime, TimeSpan period)
 		{
 			var timer = new Timer(callback, null, dueTime, period);
 			timers.Add(timer);
@@ -37,10 +31,11 @@ namespace Raven.Database.Util
 
 			foreach (var timer in timers)
 			{
+				var t = timer;
 				aggregator.Execute(() =>
 				{
-					if (timer != null)
-						timer.Dispose();
+					if (t != null)
+						t.Dispose();
 				});
 			}
 
@@ -52,7 +47,7 @@ namespace Raven.Database.Util
 			if (timer == null)
 				throw new ArgumentNullException("timer");
 
-			if (timers.Remove(timer) == false)
+			if (timers.TryRemove(timer) == false)
 				throw new InvalidOperationException("Unknown timer.");
 
 			try

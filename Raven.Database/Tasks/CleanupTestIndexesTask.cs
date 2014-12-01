@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Plugins;
@@ -21,7 +21,7 @@ namespace Raven.Database.Tasks
 		public void Execute(DocumentDatabase db)
 		{
 			database = db;
-			database.TimerManager.ExecuteTimer(ExecuteCleanup, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(5));
+			database.TimerManager.NewTimer(ExecuteCleanup, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(5));
 		}
 
 		private void ExecuteCleanup(object state)

@@ -39,7 +39,7 @@ namespace Raven.Bundles.LiveTest
 
 			log.Info("LiveTestResourceCleanerStartupTask started. MaxTimeResourceCanBeIdle: " + maxTimeResourceCanBeIdle.TotalSeconds + " seconds.");
 
-			server.Options.SystemDatabase.TimerManager.ExecuteTimer(ExecuteCleanup, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
+			server.Options.SystemDatabase.TimerManager.NewTimer(ExecuteCleanup, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
 		}
 
 		public void Dispose()
