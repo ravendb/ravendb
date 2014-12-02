@@ -1310,7 +1310,7 @@ namespace Raven.Database.Indexing
 						      fieldHighlitings.Fragments.Length > 0
 						select fieldHighlitings).ToList();
 
-				if (fieldsToFetch.IsProjection || parent.IsMapReduce)
+				if (indexQueryResult.Projection != null)
 				{
 					foreach (var highlighting in highlightings)
 					{
@@ -1320,10 +1320,7 @@ namespace Raven.Database.Indexing
 						}
 					}
 				}
-				else
-				{
-					indexQueryResult.Highligtings = highlightings.ToDictionary(x => x.Field, x => x.Fragments);
-				}
+				indexQueryResult.Highligtings = highlightings.ToDictionary(x => x.Field, x => x.Fragments);
 			}
 
 			private void SetupHighlighter(Query documentQuery)
