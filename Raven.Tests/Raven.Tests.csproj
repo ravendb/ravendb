@@ -214,6 +214,7 @@
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogManagerLoggingDisabedTests.cs" />
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogProviderLoggingEnabledTests.cs" />
     <Compile Include="Abstractions\Logging\LogManagerTests.cs" />
+    <Compile Include="AllExceptionsAreSerializaable.cs" />
     <Compile Include="Bugs\AccessingHostPropertyOnUri.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AdHocProjections.cs" />

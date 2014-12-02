@@ -4,29 +4,45 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Runtime.Serialization;
 using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Exceptions
 {
-    public class SmugglerExportException : Exception
-    {
-        public SmugglerExportException()
-        {
-        }
 
-        public SmugglerExportException(string message) : base(message)
-        {
-        }
+	[Serializable]
+	public class SmugglerExportException : System.Exception
+	{
+		//
+		// For guidelines regarding the creation of new exception types, see
+		//    http://msdn.microsoft.com/library/default.asp?url=/library/en-us/cpgenref/html/cpconerrorraisinghandlingguidelines.asp
+		// and
+		//    http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dncscol/html/csharp07192001.asp
+		//
 
-        public SmugglerExportException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
+		public SmugglerExportException()
+		{
+		}
 
+		public SmugglerExportException(string message) : base(message)
+		{
+		}
+
+		public SmugglerExportException(string message, System.Exception inner) : base(message, inner)
+		{
+		}
+
+		
         public Etag LastEtag { get; set; }
 
         public string File { get; set; }
 
 
-    }
+		protected SmugglerExportException(
+			SerializationInfo info,
+			StreamingContext context) : base(info, context)
+		{
+		}
+	}
 
 }

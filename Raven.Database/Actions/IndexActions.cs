@@ -341,7 +341,7 @@ namespace Raven.Database.Actions
         private void TryApplyPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
         {
             var generator = IndexDefinitionStorage.GetViewGenerator(definition.IndexId);
-            if (generator.ForEntityNames.Count == 0)
+            if (generator.ForEntityNames.Count == 0 && index.IsTestIndex == false)
             {
                 // we don't optimize if we don't have what to optimize _on_, we know this is going to return all docs.
                 // no need to try to optimize that, then
@@ -351,19 +351,19 @@ namespace Raven.Database.Actions
 
             try
             {
-                Task.Factory.StartNew(() => ApplyPrecomputedBatchForNewIndex(index, generator),
-                    TaskCreationOptions.LongRunning)
-                    .ContinueWith(t =>
-                    {
-                        if (t.IsFaulted)
-                        {
-                            Log.Warn("Could not apply precomputed batch for index " + index, t.Exception);
-                        }
-                        index.IsMapIndexingInProgress = false;
-                        WorkContext.ShouldNotifyAboutWork(() => "Precomputed indexing batch for " + index.PublicName + " is completed");
-                        WorkContext.NotifyAboutWork();
+				Task.Factory.StartNew(() => ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes),
+				TaskCreationOptions.LongRunning)
+				.ContinueWith(t =>
+				{
+					if (t.IsFaulted)
+					{
+						Log.Warn("Could not apply precomputed batch for index " + index, t.Exception);
+					}
+					index.IsMapIndexingInProgress = false;
+					WorkContext.ShouldNotifyAboutWork(() => "Precomputed indexing batch for " + index.PublicName + " is completed");
+					WorkContext.NotifyAboutWork();
 
-                    });
+				});
             }
             catch (Exception)
             {
@@ -372,8 +372,7 @@ namespace Raven.Database.Actions
             }
         }
 
-
-        private void ApplyPrecomputedBatchForNewIndex(Index index, AbstractViewGenerator generator)
+	    private void ApplyPrecomputedBatchForNewIndex(Index index, AbstractViewGenerator generator, int pageSize)
         {
             PrecomputedIndexingBatch result = null;
 
@@ -389,7 +388,7 @@ namespace Raven.Database.Actions
 				using (var op = new QueryActions.DatabaseQueryOperation(Database, Constants.DocumentsByEntityNameIndex, new IndexQuery
                 {
                     Query = query,
-					PageSize = Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch
+					PageSize = pageSize
                 }, actions, linked)
                 {
                     ShouldSkipDuplicateChecking = true
@@ -452,8 +451,13 @@ namespace Raven.Database.Actions
                 };
             });
 
-            if (result != null && result.Documents != null && result.Documents.Count > 0)
-                Database.IndexingExecuter.IndexPrecomputedBatch(result);
+			if (result != null && result.Documents != null && result.Documents.Count > 0)
+			{
+				Database.IndexingExecuter.IndexPrecomputedBatch(result);
+
+				if (index.IsTestIndex)
+					TransactionalStorage.Batch(accessor => accessor.Indexing.TouchIndexEtag(index.IndexId));
+			}
 
         }
 

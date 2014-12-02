@@ -55,6 +55,7 @@ class restore extends viewModelBase {
     private fsRestoreOptions = new resourceRestore(this, filesystem.type, shell.fileSystems);
 
     disableReplicationDestinations = ko.observable<boolean>(false);
+    generateNewDatabaseId = ko.observable<boolean>(false);
 
     isBusy = ko.observable<boolean>();
     anotherRestoreInProgres = ko.observable<boolean>(false);
@@ -99,12 +100,14 @@ class restore extends viewModelBase {
             BackupLocation: this.dbRestoreOptions.backupLocation(),
             DatabaseLocation: this.dbRestoreOptions.resourceLocation(),
             DatabaseName: this.dbRestoreOptions.resourceName(),
-            DisableReplicationDestinations: this.disableReplicationDestinations()
+            DisableReplicationDestinations: this.disableReplicationDestinations(),
+            GenerateNewDatabaseId: this.generateNewDatabaseId(),
         };
 
         require(["commands/startRestoreCommand"], startRestoreCommand => {
             new startRestoreCommand(this.dbRestoreOptions.defrag(), restoreDatabaseDto, self.dbRestoreOptions.updateRestoreStatus.bind(self.dbRestoreOptions))
-                .execute();
+                .execute()
+                .done(() => shell.reloadDatabases(this.activeDatabase()));
         });
     }
 
@@ -120,7 +123,8 @@ class restore extends viewModelBase {
 
         require(["commands/filesystem/startRestoreCommand"], startRestoreCommand => {
             new startRestoreCommand(this.fsRestoreOptions.defrag(), restoreFilesystemDto, self.fsRestoreOptions.updateRestoreStatus.bind(self.fsRestoreOptions))
-                .execute();
+                .execute()
+                .done(() => shell.reloadFilesystems(this.activeFilesystem()));
         });
     }
 }

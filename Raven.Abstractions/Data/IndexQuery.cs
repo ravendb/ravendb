@@ -175,6 +175,11 @@ namespace Raven.Abstractions.Data
 	    public string[] HighlighterPostTags { get; set; }
 
         /// <summary>
+        /// Gets or sets the highlighter key
+        /// </summary>
+	    public string HighlighterKeyName { get; set; }
+
+        /// <summary>
         /// Gets or sets the results transformer
         /// </summary>
 	    public string ResultsTransformer { get; set; }
@@ -290,6 +295,11 @@ namespace Raven.Abstractions.Data
             HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
             HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
 
+			if (string.IsNullOrEmpty(HighlighterKeyName) == false)
+			{
+				path.AppendFormat("&highlighterKeyName={0}", Uri.EscapeDataString(HighlighterKeyName));
+			}
+
 			if(DebugOptionGetIndexEntries)
 				path.Append("&debug=entries");
 
@@ -359,7 +369,8 @@ namespace Raven.Abstractions.Data
                    DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) && 
                    Equals(HighlightedFields, other.HighlightedFields) && 
                    Equals(HighlighterPreTags, other.HighlighterPreTags) && 
-                   Equals(HighlighterPostTags, other.HighlighterPostTags) && 
+                   Equals(HighlighterPostTags, other.HighlighterPostTags) &&
+				   Equals(HighlighterKeyName, other.HighlighterKeyName) && 
                    String.Equals(ResultsTransformer, other.ResultsTransformer) && 
 				   ShowTimings == other.ShowTimings &&
                    DisableCaching.Equals(other.DisableCaching);
@@ -394,6 +405,7 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (HighlightedFields != null ? HighlightedFields.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPreTags != null ? HighlighterPreTags.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPostTags != null ? HighlighterPostTags.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (HighlighterKeyName != null ? HighlighterKeyName.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (ResultsTransformer != null ? ResultsTransformer.GetHashCode() : 0);
 				hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
                 hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();

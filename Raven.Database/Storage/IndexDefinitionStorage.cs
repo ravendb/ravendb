@@ -419,6 +419,9 @@ namespace Raven.Database.Storage
             var indexDefinition = GetIndexDefinition(indexDef.Name);
             if (indexDefinition != null)
             {
+				if (indexDefinition.IsTestIndex) // always update test indexes
+					return IndexCreationOptions.Update;
+
                 indexDef.IndexId = indexDefinition.IndexId;
                 bool result = indexDefinition.Equals(indexDef);
                 return result

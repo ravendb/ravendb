@@ -117,6 +117,7 @@ interface indexStatisticsDto {
     Performance: indexPerformanceDto[];
     DocsCount: number;
     IsInvalidIndex: boolean;
+    IsTestIndex: boolean;
 }
 
 interface indexingBatchInfoDto {
@@ -287,6 +288,7 @@ interface indexDefinitionDto {
     Map: string;
     Maps: string[];
     Reduce: string;
+    IsTestIndex: boolean;
     IsMapReduce: boolean;
     IsCompiled: boolean;
     Stores: any;
@@ -674,6 +676,17 @@ interface patchDto extends documentDto {
     Script: string;
     SelectedItem: string;
     Values: Array<patchValueDto>;
+}
+
+interface statusStorageOnDiskDto {
+    TransactionalStorageAllocatedSize: number;
+    TransactionalStorageAllocatedSizeHumaneSize: string;
+    TransactionalStorageUsedSize: number;
+    TransactionalStorageUsedSizeHumaneSize: string;
+    IndexStorageSize: number;
+    IndexStorageSizeHumane: string;
+    TotalDatabaseSize: number;
+    TotalDatabaseSizeHumane: string;
 }
 
 interface statusDebugChangesDto {

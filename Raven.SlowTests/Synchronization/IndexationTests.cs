@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
@@ -15,6 +16,11 @@ namespace Raven.SlowTests.Synchronization
 {
 	public class IndexationTests : RavenTest
 	{
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+		{
+			configuration.EnableResponseLoggingForEmbeddedDatabases = true;
+		}
+
 		private class Person
 		{
 			public string FirstName { get; set; }
@@ -89,7 +95,7 @@ namespace Raven.SlowTests.Synchronization
 		[Fact]
 		public void ReducerTest()
 		{
-			using (var store = NewDocumentStore(requestedStorage:"esent"))
+			using (var store = NewDocumentStore(requestedStorage:"esent", configureStore: documentStore => documentStore.Conventions.AcceptGzipContent = false))
 			{
 				var index1 = new RavenDocumentsByEntityName();
 				index1.Execute(store);

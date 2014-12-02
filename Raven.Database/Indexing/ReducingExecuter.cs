@@ -88,6 +88,11 @@ namespace Raven.Database.Indexing
 	        context.MetricsCounters.StaleIndexReduces.Update(staleCount);
 	    }
 
+		protected override bool ShouldSkipIndex(Index index)
+		{
+			return false;
+		}
+
 		private void MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete)
 		{
 			var needToMoveToMultiStep = new HashSet<string>();

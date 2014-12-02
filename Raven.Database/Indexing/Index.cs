@@ -155,6 +155,11 @@ namespace Raven.Database.Indexing
 
 		public string PublicName { get { return indexDefinition.Name; } }
 
+		public bool IsTestIndex
+		{
+			get { return indexDefinition.IsTestIndex; }
+		}
+
 		public int? MaxIndexOutputsPerDocument { get { return indexDefinition.MaxIndexOutputsPerDocument; } }
 
 		[CLSCompliant(false)]
@@ -505,7 +510,7 @@ namespace Raven.Database.Indexing
 						}
 						catch (Exception e)
 						{
-							var invalidSpatialShapeException = e as InvalidSpatialShapeException;
+							var invalidSpatialShapeException = e as InvalidSpatialShapException;
 							var invalidDocId = (invalidSpatialShapeException == null) ?
 														null :
 														invalidSpatialShapeException.InvalidDocumentId;
@@ -742,7 +747,7 @@ namespace Raven.Database.Indexing
 			onErrorFunc = (exception, o) =>
 				{
 					string docId = null;
-					var invalidSpatialException = exception as InvalidSpatialShapeException;
+					var invalidSpatialException = exception as InvalidSpatialShapException;
 					if (invalidSpatialException != null)
 						docId = invalidSpatialException.InvalidDocumentId;
 
@@ -1183,6 +1188,10 @@ namespace Raven.Database.Indexing
 								var scoreDoc = search.ScoreDocs[position];
 								var document = indexSearcher.Doc(scoreDoc.Doc);
 								var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc);
+								if (indexQueryResult.Key == null && !string.IsNullOrEmpty(indexQuery.HighlighterKeyName))
+								{
+									indexQueryResult.HighlighterKey = document.Get(indexQuery.HighlighterKeyName);
+								}
 								
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
@@ -1301,7 +1310,7 @@ namespace Raven.Database.Indexing
 						      fieldHighlitings.Fragments.Length > 0
 						select fieldHighlitings).ToList();
 
-				if (fieldsToFetch.IsProjection || parent.IsMapReduce)
+				if (indexQueryResult.Projection != null)
 				{
 					foreach (var highlighting in highlightings)
 					{
@@ -1311,10 +1320,7 @@ namespace Raven.Database.Indexing
 						}
 					}
 				}
-				if(parent.IsMapReduce == false)
-				{
-					indexQueryResult.Highligtings = highlightings.ToDictionary(x => x.Field, x => x.Fragments);
-				}
+				indexQueryResult.Highligtings = highlightings.ToDictionary(x => x.Field, x => x.Fragments);
 			}
 
 			private void SetupHighlighter(Query documentQuery)
@@ -1351,7 +1357,7 @@ namespace Raven.Database.Indexing
 			{
 				documentQuery = indexQueryTriggers.Aggregate(documentQuery,
 														   (current, indexQueryTrigger) =>
-														   indexQueryTrigger.Value.ProcessQuery(parent.indexId.ToString(), current, indexQuery));
+														   indexQueryTrigger.Value.ProcessQuery(parent.PublicName, current, indexQuery));
 				return documentQuery;
 			}
 

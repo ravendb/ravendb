@@ -850,6 +850,17 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
+			string fieldName,
+			string fieldKeyName, 
+			int fragmentLength, 
+			int fragmentCount, 
+			out FieldHighlightings highlightings)
+		{
+			this.Highlight(fieldName, fieldKeyName, fragmentLength, fragmentCount, out highlightings);
+			return this;
+		}
+
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
 			Expression<Func<T, TValue>> propertySelector, 
 			int fragmentLength, 
@@ -869,6 +880,17 @@ namespace Raven.Client.Document
 			out FieldHighlightings fieldHighlightings)
 		{
 			this.Highlight(this.GetMemberQueryPath(propertySelector), fragmentLength, fragmentCount, out fieldHighlightings);
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
+			Expression<Func<T, TValue>> propertySelector,
+			Expression<Func<T, TValue>> keyPropertySelector, 
+			int fragmentLength, 
+			int fragmentCount,
+			out FieldHighlightings fieldHighlightings)
+		{
+			this.Highlight(this.GetMemberQueryPath(propertySelector), this.GetMemberQueryPath(keyPropertySelector), fragmentLength, fragmentCount, out fieldHighlightings);
 			return this;
 		}
 

@@ -21,11 +21,14 @@ namespace Raven.Database.Embedded
     {
         private readonly Func<IDictionary<string, object>, Task> _next;
 
-        /// <summary>
-        /// Create a new handler.
-        /// </summary>
-        /// <param name="next">The OWIN pipeline entry point.</param>
-        public OwinClientHandler(Func<IDictionary<string, object>, Task> next)
+		private readonly bool _enableLogging;
+
+	    /// <summary>
+	    /// Create a new handler.
+	    /// </summary>
+	    /// <param name="next">The OWIN pipeline entry point.</param>
+	    /// <param name="enableLogging"></param>
+	    public OwinClientHandler(Func<IDictionary<string, object>, Task> next, bool enableLogging)
         {
             if (next == null)
             {
@@ -33,6 +36,7 @@ namespace Raven.Database.Embedded
             }
 
             _next = next;
+		    _enableLogging = enableLogging;
         }
 
         /// <summary>
@@ -51,7 +55,7 @@ namespace Raven.Database.Embedded
                 throw new ArgumentNullException("request");
             }
 
-            var state = new RequestState(request, cancellationToken);
+			var state = new RequestState(request, cancellationToken, _enableLogging && request.Headers.AcceptEncoding.Any(x => x.Value == "gzip") == false);
             HttpContent requestContent = request.Content ?? new StreamContent(Stream.Null);
             Stream body = await requestContent.ReadAsStreamAsync().ConfigureAwait(false);
             if (body.CanSeek)
@@ -91,7 +95,7 @@ namespace Raven.Database.Embedded
             private TaskCompletionSource<HttpResponseMessage> _responseTcs;
             private ResponseStream _responseStream;
 
-            internal RequestState(HttpRequestMessage request, CancellationToken cancellationToken)
+            internal RequestState(HttpRequestMessage request, CancellationToken cancellationToken, bool enableLogging)
             {
                 _request = request;
                 _responseTcs = new TaskCompletionSource<HttpResponseMessage>();
@@ -139,7 +143,7 @@ namespace Raven.Database.Embedded
                     }
                 }
 
-                _responseStream = new ResponseStream(CompleteResponse);
+				_responseStream = new ResponseStream(CompleteResponse, enableLogging);
                 OwinContext.Response.Body = _responseStream;
                 OwinContext.Response.StatusCode = 500;
             }

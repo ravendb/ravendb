@@ -90,6 +90,7 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
 		{
+			TimerManager = new ResourceTimerManager();
 			DocumentLock = new PutSerialLock();
 			Name = configuration.DatabaseName;
 			Configuration = configuration;
@@ -343,6 +344,8 @@ namespace Raven.Database
 		[CLSCompliant(false)]
 		public ReducingExecuter ReducingExecuter { get; private set; }
 
+		public ResourceTimerManager TimerManager { get; private set; }
+
 		public string ServerUrl
 		{
 			get
@@ -473,6 +476,7 @@ namespace Raven.Database
 							IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
 							index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
 							index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
+						    index.IsTestIndex = indexDefinition.IsTestIndex;
 							index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
 							if (indexDefinition != null)
 								index.LockMode = indexDefinition.LockMode;
@@ -733,6 +737,9 @@ namespace Raven.Database
 
 			if (workContext != null)
 				exceptionAggregator.Execute(workContext.Dispose);
+
+			if (TimerManager != null)
+				exceptionAggregator.Execute(TimerManager.Dispose);
 
 			try
 			{

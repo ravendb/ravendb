@@ -21,7 +21,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.DiskIO
 {
-    public class DiskPerformanceTester
+    public class DiskPerformanceTester : IDisposable
     {
         public const string PerformanceResultDocumentKey = "Raven/Disk/Performance";
 
@@ -156,7 +156,7 @@ namespace Raven.Database.DiskIO
             if (statCounter >= testRequest.TimeToRunInSeconds)
             {
                 testTimerCts.Cancel();
-                secondTimer.Dispose();
+				DisposeTimer();
             }
         }
 
@@ -428,6 +428,20 @@ namespace Raven.Database.DiskIO
                 testRequest.Sequential ? "sequential" : "random", testRequest.TimeToRunInSeconds,
                 testRequest.Path, testRequest.FileSize / 1024 / 1024, testRequest.ChunkSize / 1024);
         }
+
+	    public void Dispose()
+	    {
+		    DisposeTimer();
+	    }
+
+	    private void DisposeTimer()
+	    {
+			if (secondTimer == null)
+				return;
+
+			secondTimer.Dispose();
+			secondTimer = null;
+	    }
     }
 
     public class DiskPerformanceStorage

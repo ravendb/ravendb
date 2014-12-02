@@ -36,6 +36,7 @@ namespace Raven.Abstractions.Data
 
 		public IndexingPerformanceStats[] Performance { get; set; }
 		public int DocsCount { get; set; }
+        public bool IsTestIndex { get; set; }
 
 	    public bool IsInvalidIndex
 	    {
@@ -84,22 +85,22 @@ namespace Raven.Abstractions.Data
 
     public class IndexingPerformanceStats
 	{
-	    public int LoadDocumentCount { get; set; }
-		public long LoadDocumentDurationMs { get; set; }
-		public long WritingDocumentsToLuceneDurationMs { get; set; }
-		public long LinqExecutionDurationMs { get; set; }
-		public long FlushToDiskDurationMs { get; set; }
-		public string Operation { get; set; }
-		public int OutputCount { get; set; }
-		public int InputCount { get; set; }
-		public int ItemsCount { get; set; }
-		public TimeSpan Duration { get; set; }
+	    public string Operation { get; set; }
+	    public int ItemsCount { get; set; }
+	    public int InputCount { get; set; }
+	    public int OutputCount { get; set; }
 		public DateTime Started { get; set; }
 		public DateTime Completed { get; set; }
-		public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
-		public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
+	    public TimeSpan Duration { get; set; }
+	    public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
+	    public int LoadDocumentCount { get; set; }
+	    public long LoadDocumentDurationMs { get; set; }
+	    public long WritingDocumentsToLuceneDurationMs { get; set; }
+	    public long LinqExecutionDurationMs { get; set; }
+	    public long FlushToDiskDurationMs { get; set; }
+	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
 
-		public override bool Equals(object obj)
+	    public override bool Equals(object obj)
 		{
 			if (ReferenceEquals(null, obj)) return false;
 			if (ReferenceEquals(this, obj)) return true;

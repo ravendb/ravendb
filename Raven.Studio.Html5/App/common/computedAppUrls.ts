@@ -56,10 +56,13 @@ interface computedAppUrls {
     statusDebugRequestTracing: KnockoutComputed<string>;
     statusDebugSqlReplication: KnockoutComputed<string>;
     statusDebugIndexFields: KnockoutComputed<string>;
-    statusDebugSlowDocCounts: KnockoutComputed<string>;
     statusDebugIdentities: KnockoutComputed<string>;
     statusDebugWebSocket: KnockoutComputed<string>;
     infoPackage: KnockoutComputed<string>;
+
+    statusStorageOnDisk: KnockoutComputed<string>;
+    statusStorageBreakdown: KnockoutComputed<string>;
+    statusStorageCollections: KnockoutComputed<string>;
 
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;

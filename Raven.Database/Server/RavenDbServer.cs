@@ -106,11 +106,11 @@ namespace Raven.Server
 			owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
 			options = owinHttpServer.Options;
 			serverThingsForTests = new ServerThingsForTests(options);
-			documentStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke);
+			documentStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases);
 			documentStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
 			documentStore.Initialize();
 
-			filesStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke);
+			filesStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases);
 			filesStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
 			filesStore.Initialize();
 

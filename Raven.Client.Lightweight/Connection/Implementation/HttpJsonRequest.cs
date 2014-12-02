@@ -77,74 +77,60 @@ namespace Raven.Client.Connection
 			CreateHttpJsonRequestParams requestParams,
 			HttpJsonRequestFactory factory)
 		{
-			try
+			_credentials = requestParams.DisableAuthentication == false ? requestParams.Credentials : null;
+			disabledAuthRetries = requestParams.DisableAuthentication;
+
+			Url = requestParams.Url;
+			Method = requestParams.Method;
+
+			if (requestParams.Timeout.HasValue)
 			{
-				_credentials = requestParams.DisableAuthentication == false ? requestParams.Credentials : null;
-				disabledAuthRetries = requestParams.DisableAuthentication;
-
-				Url = requestParams.Url;
-				Method = requestParams.Method;
-
-				if (requestParams.Timeout.HasValue)
-				{
-					Timeout = requestParams.Timeout.Value;
-				}
-				else
-				{
-					Timeout = TimeSpan.FromSeconds(100); // default HttpClient timeout
+				Timeout = requestParams.Timeout.Value;
+			}
+			else
+			{
+				Timeout = TimeSpan.FromSeconds(100); // default HttpClient timeout
 #if DEBUG
-					if (Debugger.IsAttached)
-					{
-						Timeout = TimeSpan.FromMinutes(5);
-					}
+				if (Debugger.IsAttached)
+				{
+					Timeout = TimeSpan.FromMinutes(5);
+				}
 #endif
-				}
-
-				this.factory = factory;
-				owner = requestParams.Owner;
-				conventions = requestParams.Convention;
-
-				if (factory.httpMessageHandler != null) 
-					recreateHandler = () => factory.httpMessageHandler;
-				else
-				{
-					recreateHandler = () => new WebRequestHandler
-					{
-						UseDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false,
-						Credentials = _credentials != null ? _credentials.Credentials : null,
-					};
-				}
-
-				httpClient = factory.httpClientCache.GetClient(Timeout, _credentials, recreateHandler);
-
-				if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
-				{
-					if (Method == "POST" || Method == "PUT" || Method == "PATCH" || Method == "EVAL")
-					{
-						httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
-						httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
-					}
-
-					httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
-				}
-
-				headers.Add("Raven-Client-Version", ClientVersion);
-				WriteMetadata(requestParams.Metadata);
-				requestParams.UpdateHeaders(headers);
 			}
-			catch (Exception)
+
+			this.factory = factory;
+			owner = requestParams.Owner;
+			conventions = requestParams.Convention;
+
+			if (factory.httpMessageHandler != null) 
+				recreateHandler = () => factory.httpMessageHandler;
+			else
 			{
-				throw;
+				recreateHandler = () => new WebRequestHandler
+				{
+					UseDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false,
+					Credentials = _credentials != null ? _credentials.Credentials : null,
+				};
 			}
+
+			httpClient = factory.httpClientCache.GetClient(Timeout, _credentials, recreateHandler);
+
+			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
+			{
+				if (Method == "POST" || Method == "PUT" || Method == "PATCH" || Method == "EVAL")
+				{
+					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
+					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
+				}
+
+				if (factory.acceptGzipContent)
+					httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+			}
+
+			headers.Add("Raven-Client-Version", ClientVersion);
+			WriteMetadata(requestParams.Metadata);
+			requestParams.UpdateHeaders(headers);
 		}
-
-		//public void DisableAuthentication()
-		//{
-		//	throw new NotImplementedException();
-
-		//	disableAuthentication();
-		//	disabledAuthRetries = true;
-		//}
 
 		public void RemoveAuthorizationHeader()
 		{

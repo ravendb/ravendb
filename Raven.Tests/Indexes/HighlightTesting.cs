@@ -1,10 +1,8 @@
 ﻿using System.Linq;
 using System.Text.RegularExpressions;
-using Mono.CSharp.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -201,7 +199,7 @@ So, the greedy dog looked at his reflection and growled. The reflection growled 
 			}
 		}
 
-		// this one fails
+		// this one passes now
 		[Fact]
 		public void HighlightText_WithProjection()
 		{
@@ -220,15 +218,99 @@ So, the greedy dog looked at his reflection and growled. The reflection growled 
 				session.SaveChanges();
 				FieldHighlightings nameHighlighting;
 				var results = session.Advanced.DocumentQuery<SearchItem>("ContentSearchIndex")
-									 .SelectFields<SearchItemProjection>()
 									 .WaitForNonStaleResults()
 									 .Highlight("Name", 128, 1, out nameHighlighting)
 									 .Search("Name", searchFor)
+									 .SelectFields<SearchItemProjection>()
 									 .ToArray();
 				Assert.Equal(1, results.Length);
 				Assert.NotEmpty(nameHighlighting.GetFragments("searchitems/1"));
 				Assert.Equal("This is a sample <b style=\"background:yellow\">about</b> a dog and his owner",
 							 nameHighlighting.GetFragments("searchitems/1").First());
+			}
+		}
+
+		// this one passes now as well
+		[Fact]
+		public void HighlightText_WithProjectionQuery()
+		{
+			var item = new SearchItem
+			{
+				Id = "searchitems/1",
+				Name = "This is a sample about a dog and his owner"
+			};
+
+			var searchFor = "about";
+			using (var store = NewDocumentStore())
+			using (var session = store.OpenSession())
+			{
+				session.Store(item);
+				store.DatabaseCommands.PutIndex(new ContentSearchIndex().IndexName, new ContentSearchIndex().CreateIndexDefinition());
+				session.SaveChanges();
+				FieldHighlightings nameHighlighting = null;
+				var results = session.Query<SearchItem>("ContentSearchIndex")
+									 .ProjectFromIndexFieldsInto<SearchItemProjection>()
+									 .Customize(x => x.WaitForNonStaleResults()
+													  .Highlight("Name", 128, 1, out nameHighlighting))
+									 .Search(x => x.Name, searchFor)
+									 .ToArray();
+				Assert.Equal(1, results.Length);
+				Assert.NotEmpty(nameHighlighting.GetFragments("searchitems/1"));
+				Assert.Equal("This is a sample <b style=\"background:yellow\">about</b> a dog and his owner",
+							 nameHighlighting.GetFragments("searchitems/1").First());
+			}
+		}
+
+		// this one fails
+		[Fact]
+		public void HighlightText_WithMapReduce()
+		{
+			var item1 = new SearchItemWithType
+			{
+				Id = "searchitems/1",
+				Type = "Fact",
+				Text = "Once there lived a dog."
+			};
+
+			var item2 = new SearchItemWithType
+			{
+				Id = "searchitems/2",
+				Type = "Opinion",
+				Text = "The dog was very greedy."
+			};
+
+			var item3 = new SearchItemWithType
+			{
+				Id = "searchitems/3",
+				Type = "Opinion",
+				Text = "He had lost the piece of dog bone because of his greed."
+			};
+
+			var searchFor = "dog";
+			using (var store = NewDocumentStore())
+			using (var session = store.OpenSession())
+			{
+				session.Store(item1);
+				session.Store(item2);
+				session.Store(item3);
+				store.DatabaseCommands.PutIndex(new ContentSearchMapReduceIndex().IndexName, new ContentSearchMapReduceIndex().CreateIndexDefinition());
+				session.SaveChanges();
+				FieldHighlightings nameHighlighting;
+				var results = session.Advanced.DocumentQuery<SearchItemWithTypeResult>("ContentSearchMapReduceIndex")
+									 .WaitForNonStaleResults()
+									 .Highlight("AllText", "Type", 128, 1, out nameHighlighting)
+									 .Search("AllText", searchFor)
+									 .ToArray();
+
+				Assert.Equal(2, results.Length);
+
+				var opinionFragments = nameHighlighting.GetFragments("Opinion");
+				Assert.Equal(1, opinionFragments.Length);
+				Assert.Equal("The <b style=\"background:yellow\">dog</b> was very greedy. He had lost the piece of <b style=\"background:yellow\">dog</b> bone because of his greed.", opinionFragments[0]);
+
+				var factFragments = nameHighlighting.GetFragments("Fact");
+				Assert.Equal(1, factFragments.Length);
+				Assert.Equal("Once there lived a <b style=\"background:yellow\">dog</b>.", factFragments[0]);
 			}
 		}
 

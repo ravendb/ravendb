@@ -11,6 +11,7 @@ class importDatabase extends viewModelBase {
     filters = ko.observableArray<filterSettingDto>();
     batchSize = ko.observable(1024);
     includeExpiredDocuments = ko.observable(true);
+    stripReplicationInformation = ko.observable(false);
     transformScript = ko.observable<string>();
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
@@ -113,7 +114,7 @@ class importDatabase extends viewModelBase {
             importItemTypes.push(ImportItemType.RemoveAnalyzers);
         }
                 
-        new importDatabaseCommand(formData, this.batchSize(), this.includeExpiredDocuments(), importItemTypes, this.filters(), this.transformScript(), this.activeDatabase())
+        new importDatabaseCommand(formData, this.batchSize(), this.includeExpiredDocuments(), this.stripReplicationInformation(), importItemTypes, this.filters(), this.transformScript(), this.activeDatabase())
             .execute()
             .done((result: operationIdDto) => {
                 var operationId = result.OperationId;

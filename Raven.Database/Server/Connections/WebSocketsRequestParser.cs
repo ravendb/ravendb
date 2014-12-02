@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Runtime.Serialization;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Web;
@@ -150,14 +151,28 @@ namespace Raven.Database.Server.Connections
 			return localPath;
 		}
 
-		public class WebSocketRequestValidationException : Exception
+		[Serializable]
+		public class  WebSocketRequestValidationException : Exception
 		{
-			public HttpStatusCode StatusCode { get; private set; }
+			public HttpStatusCode StatusCode { get; set; }
 
-			public WebSocketRequestValidationException(HttpStatusCode statusCode, string errorMessage)
-				: base(errorMessage)
+			public  WebSocketRequestValidationException()
+			{
+			}
+
+			public  WebSocketRequestValidationException(HttpStatusCode statusCode, string message) : base(message)
 			{
 				StatusCode = statusCode;
+			}
+
+			public  WebSocketRequestValidationException(string message, Exception inner) : base(message, inner)
+			{
+			}
+
+			protected  WebSocketRequestValidationException(
+				SerializationInfo info,
+				StreamingContext context) : base(info, context)
+			{
 			}
 		}
 	}
