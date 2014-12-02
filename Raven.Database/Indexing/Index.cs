@@ -1320,9 +1320,11 @@ namespace Raven.Database.Indexing
 						}
 					}
 				}
+				else
 				{
 					indexQueryResult.Highligtings = highlightings.ToDictionary(x => x.Field, x => x.Fragments);
 				}
+			}
 
 			private void SetupHighlighter(Query documentQuery)
 			{
