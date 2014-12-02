@@ -117,6 +117,7 @@ interface indexStatisticsDto {
     Performance: indexPerformanceDto[];
     DocsCount: number;
     IsInvalidIndex: boolean;
+    IsTestIndex: boolean;
 }
 
 interface indexingBatchInfoDto {

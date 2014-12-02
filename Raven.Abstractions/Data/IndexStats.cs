@@ -36,6 +36,7 @@ namespace Raven.Abstractions.Data
 
 		public IndexingPerformanceStats[] Performance { get; set; }
 		public int DocsCount { get; set; }
+        public bool IsTestIndex { get; set; }
 
 	    public bool IsInvalidIndex
 	    {

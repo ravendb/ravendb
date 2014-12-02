@@ -476,6 +476,7 @@ namespace Raven.Database
 							IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
 							index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
 							index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
+						    index.IsTestIndex = indexDefinition.IsTestIndex;
 							index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
 							if (indexDefinition != null)
 								index.LockMode = indexDefinition.LockMode;

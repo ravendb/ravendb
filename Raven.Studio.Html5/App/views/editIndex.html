@@ -86,8 +86,8 @@
             <button class="btn btn-default" title="Create test index based on limited data set" data-bind="visible: editedIndex().isTestIndex() == false, click: tryIndex">
                 Try index
             </button>
-            <button class="btn btn-default" title="Saves test index as persistent" data-bind="visible: editedIndex().isTestIndex(), click: makePermenant">
-                <i class="fa fa-save"></i> Make permenant
+            <button class="btn btn-primary" title="Saves test index as persistent" data-bind="visible: editedIndex().isTestIndex(), click: makePermanent">
+                <i class="fa fa-save"></i> Make permanent
             </button>
         </div>
     </div>
@@ -95,6 +95,9 @@
     <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
         <br />
         <form class="form-horizontal" role="form" data-bind="with: editedIndex">
+            
+            <div class="alert alert-warning" data-bind="visible: isTestIndex()" role="alert">This is test index which operates on limited data set. Press &quot;Make permanent&quot; to override the original index.</div>
+
             <div class="form-group">
                 <label for="indexName" class="col-md-1 control-label"  title=" index name (Alt+I)">Name</label>
                 <div class="col-md-11">

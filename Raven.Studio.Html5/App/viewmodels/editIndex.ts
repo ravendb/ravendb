@@ -460,7 +460,7 @@ class editIndex extends viewModelBase {
         callback(null, result);
     }
 
-    makePermenant() {
+    makePermanent() {
         if (this.editedIndex().name() && this.editedIndex().isTestIndex()) {
             this.editedIndex().isTestIndex(false);
             // trim Test prefix
