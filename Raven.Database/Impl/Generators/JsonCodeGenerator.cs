@@ -24,12 +24,21 @@ namespace Raven.Database.Impl.Generators
 
             public FieldType(Type type, bool isArray = false)
             {
-                if (type == typeof(long))
+                // There should be a better way to do this.
+                if (type == typeof(bool))
+                    this.Name = "bool";
+                else if (type == typeof(long))
                     this.Name = "long";
                 else if (type == typeof(int))
                     this.Name = "int";
                 else if (type == typeof(string))
                     this.Name = "string";
+                else if (type == typeof(float))
+                    this.Name = "float";
+                else if (type == typeof(double))
+                    this.Name = "double";
+                else if (type == typeof(object))
+                    this.Name = "object";
                 else
                     this.Name = type.Name;
 
@@ -37,10 +46,10 @@ namespace Raven.Database.Impl.Generators
                 this.IsArray = isArray;
             }
 
-            public FieldType(string type, bool isArray = false)
+            public FieldType(string type, bool isArray = false, bool isPrimitive = false)
             {
                 this.Name = type;
-                this.IsPrimitive = false;
+                this.IsPrimitive = isPrimitive;
                 this.IsArray = isArray;
             }
         }
@@ -105,7 +114,7 @@ namespace Raven.Database.Impl.Generators
                         }
                         else
                         {
-                            fields[pair.Key] = new FieldType(guessedType.Name, true);
+                            fields[pair.Key] = new FieldType(guessedType.Name, true, true);
                         }
                         break;
 
@@ -127,13 +136,10 @@ namespace Raven.Database.Impl.Generators
             {
                 case JTokenType.Object:
                     return GenerateClassTypesFromObject(name, (RavenJObject)token).First();
-                    break;
                 case JTokenType.Array:
                     return GuessTokenTypeFromArray(name, (RavenJArray)token);
-                    break;
                 default:
                     return GetTokenTypeFromPrimitiveType(token);
-                    break;
             }
 
             throw new NotSupportedException("We shouldn't have hit this.");
@@ -144,26 +150,24 @@ namespace Raven.Database.Impl.Generators
             switch (token.Type)
             {
                 // Base types.
-                case JTokenType.Boolean: return new FieldType(typeof(bool)); break;
-                case JTokenType.Bytes: return new FieldType(typeof(byte[])); break;
-                case JTokenType.Date: return new FieldType(typeof(DateTimeOffset)); break;
+                case JTokenType.Boolean: return new FieldType(typeof(bool));
+                case JTokenType.Bytes: return new FieldType("byte", true, true);
 
-                case JTokenType.Guid: return new FieldType(typeof(Guid)); break;
-                case JTokenType.TimeSpan: return new FieldType(typeof(TimeSpan)); break;
-                case JTokenType.Uri: return new FieldType(typeof(Uri)); break;
-                    break;
+                case JTokenType.Date: return new FieldType(typeof(DateTimeOffset));
 
-                case JTokenType.Integer: // Could be integer or long.
-                case JTokenType.Float:  // Could be float or double.
+                case JTokenType.Guid: return new FieldType(typeof(Guid));
+                case JTokenType.TimeSpan: return new FieldType(typeof(TimeSpan));
+                case JTokenType.Uri: return new FieldType(typeof(Uri));
+                case JTokenType.Float: return new FieldType(typeof(float));
+
+                case JTokenType.Integer: // Could be integer or long.                
                 case JTokenType.String: // Could be anything.
+                case JTokenType.Undefined:
                     return GuessTokenTypeFromContent(token);
-                    break;
 
                 // Could be anything.
                 case JTokenType.Null:
-                case JTokenType.Undefined:
                     return new FieldType(typeof(object));
-                    break;
 
                 default:
                     throw new NotSupportedException("We shouldn't have hit this. This is a bug in the caller routine.");
