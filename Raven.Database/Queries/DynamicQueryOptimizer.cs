@@ -100,6 +100,12 @@ namespace Raven.Database.Queries
 							return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
 						}
 
+						if (indexDefinitionKvp.Value.IsTestIndex)
+						{
+							explain(indexName, () => "Cannot select a test index for dynamic query");
+							return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
+						}
+
 						var indexingPriority = IndexingPriority.None;
 						var isInvalidIndex = false;
 						database.TransactionalStorage.Batch(accessor =>
