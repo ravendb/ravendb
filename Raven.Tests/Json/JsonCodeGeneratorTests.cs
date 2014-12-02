@@ -1,6 +1,7 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Impl.Generators;
+using Raven.Json.Linq;
 using Raven.Tests.Common;
 using System;
 using System.Collections.Generic;
@@ -74,10 +75,10 @@ namespace Raven.Tests.Json
         [Fact]
         public void JsonCodeGenerator_SimpleObjectWithStrings()
         {
-            var root = new WithStrings() 
+            var root = new WithStrings()
             {
                 Title = "test",
-                Category = "category" 
+                Category = "category"
             };
 
             var generator = new JsonCodeGenerator("csharp");
@@ -99,13 +100,40 @@ namespace Raven.Tests.Json
         }
 
         [Fact]
+        public void JsonCodeGenerator_SimpleObjectGenerator()
+        {
+            var root = new WithStrings()
+            {
+                Title = "test",
+                Category = "category"
+            };
+
+            var document = new JsonDocument()
+            {
+                DataAsJson = JsonExtensions.ToJObject(root)
+            };
+
+            // "Raven-Clr-Type": "Namespace.ClassName, AssemblyName"            
+            document.Metadata["Raven-Clr-Type"] = new RavenJValue("NamespaceName.ClassName, AssemblyName");
+
+            var generator = new JsonCodeGenerator("csharp");
+            var code = generator.Execute(document);
+
+            Assert.Contains("namespace NamespaceName", code);
+            Assert.Contains("public class ClassName", code);
+            Assert.Contains("public string Title { get; set; }", code);
+            Assert.Contains("public string Category { get; set; }", code);
+        }
+
+
+        [Fact]
         public void JsonCodeGenerator_SimpleObjectWithNumericsAndDateTime()
         {
-            var root = new WithIntsAndDateTimes() 
-            { 
-                Integer = int.MaxValue, 
-                Long = long.MaxValue,                 
-                Date = DateTime.Now 
+            var root = new WithIntsAndDateTimes()
+            {
+                Integer = int.MaxValue,
+                Long = long.MaxValue,
+                Date = DateTime.Now
             };
 
             var generator = new JsonCodeGenerator("csharp");
@@ -128,6 +156,33 @@ namespace Raven.Tests.Json
             Assert.Equal("DateTimeOffset", clazz.Properties["Date"].Name);
             Assert.False(clazz.Properties["Date"].IsArray);
             Assert.True(clazz.Properties["Date"].IsPrimitive);
+        }
+
+        [Fact]
+        public void JsonCodeGenerator_SimpleObjectWithNumericsAndDateTimeGenerator()
+        {
+            var root = new WithIntsAndDateTimes()
+            {
+                Integer = int.MaxValue,
+                Long = long.MaxValue,
+                Date = DateTime.Now
+            };
+            var document = new JsonDocument()
+            {
+                DataAsJson = JsonExtensions.ToJObject(root)
+            };
+
+            // "Raven-Clr-Type": "Namespace.ClassName, AssemblyName"            
+            document.Metadata["Raven-Clr-Type"] = new RavenJValue("NamespaceName.ClassName, AssemblyName");
+
+            var generator = new JsonCodeGenerator("csharp");
+            var code = generator.Execute(document);
+
+            Assert.Contains("namespace NamespaceName", code);
+            Assert.Contains("public class ClassName", code);
+            Assert.Contains("public DateTimeOffset Date { get; set; }", code);
+            Assert.Contains("public long Long { get; set; }", code);
+            Assert.Contains("public int Integer { get; set; }", code);
         }
 
         [Fact]
@@ -248,6 +303,42 @@ namespace Raven.Tests.Json
         }
 
         [Fact]
+        public void JsonCodeGenerator_ContentResolutionForTheRestGenerator()
+        {
+            var root = new WithTheRest()
+            {
+                Boolean = false,
+                Bytes = new byte[4] { 1, 2, 3, 4 },
+                Guid = Guid.NewGuid(),
+                Date = DateTime.Now,
+                DateOffset = DateTimeOffset.Now,
+                Time = TimeSpan.FromMinutes(100),
+                Null = null
+            };
+
+            var document = new JsonDocument()
+            {
+                DataAsJson = JsonExtensions.ToJObject(root)
+            };
+
+            // "Raven-Clr-Type": "Namespace.ClassName, AssemblyName"            
+            document.Metadata["Raven-Clr-Type"] = new RavenJValue("Code.Generated.WithTheRest, AssemblyName");
+
+            var generator = new JsonCodeGenerator("csharp");
+            var code = generator.Execute(document);
+
+            Assert.Contains("namespace Code.Generated", code);
+            Assert.Contains("public class WithTheRest", code);
+            Assert.Contains("public bool Boolean { get; set; }", code);
+            Assert.Contains("public Guid Guid { get; set; }", code);
+            Assert.Contains("public DateTimeOffset Date { get; set; }", code);
+            Assert.Contains("public DateTimeOffset DateOffset { get; set; }", code);
+            Assert.Contains("public TimeSpan Time { get; set; }", code);
+            Assert.Contains("public object Null { get; set; }", code);
+            Assert.Contains("public byte[] Bytes { get; set; }", code);
+        }
+
+        [Fact]
         public void JsonCodeGenerator_WithDistinctInnerObject()
         {
             var obj = new WithInnerObject()
@@ -343,6 +434,35 @@ namespace Raven.Tests.Json
         }
 
         [Fact]
+        public void JsonCodeGenerator_WithArrayOfObjectsGenerator()
+        {
+            var root = new WithArrayOfObjects()
+            {
+                Objects = new List<WithStrings> 
+                {
+                     new WithStrings() { Title = "test", Category = "category" },
+                     new WithStrings() { Title = "test", Category = "category" },
+                }
+            };
+
+            var document = new JsonDocument()
+            {
+                DataAsJson = JsonExtensions.ToJObject(root)
+            };
+
+            var generator = new JsonCodeGenerator("csharp");
+            var code = generator.Execute(document);
+
+            Assert.Contains("public class Class", code);
+            Assert.Contains("public Objects[] Objects { get; set; }", code);
+
+
+            Assert.Contains("public class Objects", code);
+            Assert.Contains("public string Title { get; set; }", code);
+            Assert.Contains("public string Category { get; set; }", code);
+        }
+
+        [Fact]
         public void JsonCodeGenerator_WithArrayOfFloats()
         {
             var root = new WithArrayOfFloats()
@@ -366,6 +486,30 @@ namespace Raven.Tests.Json
             Assert.Equal("float", clazz.Properties["Floats"].Name);
             Assert.True(clazz.Properties["Floats"].IsArray);
             Assert.True(clazz.Properties["Floats"].IsPrimitive);
+        }
+
+        [Fact]
+        public void JsonCodeGenerator_WithArrayOfFloatsGenerator()
+        {
+            var root = new WithArrayOfFloats()
+            {
+                Floats = new List<float> 
+                {
+                     -1.0f,
+                     +1.0f,
+                }
+            };
+
+            var document = new JsonDocument()
+            {
+                DataAsJson = JsonExtensions.ToJObject(root)
+            };
+
+            var generator = new JsonCodeGenerator("csharp");
+            var code = generator.Execute(document);
+
+            Assert.Contains("public class Class", code);
+            Assert.Contains("public float[] Floats { get; set; }", code);
         }
     }
 }

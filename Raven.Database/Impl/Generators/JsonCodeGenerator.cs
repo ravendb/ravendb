@@ -95,11 +95,67 @@ namespace Raven.Database.Impl.Generators
             if (document == null)
                 throw new ArgumentNullException("document");
 
-            var classes = GenerateClassTypesFromObject("Class", document.DataAsJson);
+            var @class = "Class";
+            var @namespace = "Unknown"; 
 
-            var list = classes.ToList();
+            var metadata = document.Metadata;
+            if ( metadata != null )
+            {
+                // Retrieve the class and metadata if available.
+                // "Raven-Clr-Type": "Namespace.ClassName, AssemblyName"
+                RavenJToken typeToken;
+                if ( metadata.TryGetValue( "Raven-Clr-Type", out typeToken ) )
+                {
+                    var values = typeToken.Value<string>().Split(',');
+                    if ( values.Length == 2 )
+                    {
+                        var data = values[0];
+                        int index = data.LastIndexOf('.');
+                        if ( index > 0 )
+                        {
+                            var potentialClass = data.Substring(index + 1);
+                            if (potentialClass.Length > 0)
+                                @class = potentialClass;
 
-            throw new NotImplementedException();
+                            var potentialNamespace = data.Substring(0, index);
+                            if (potentialNamespace.Length > 0)
+                                @namespace = potentialNamespace;
+                        }                        
+                    }
+                }
+            }
+
+            var classes = GenerateClassTypesFromObject(@class, document.DataAsJson);
+
+            string classCode = GenerateClassCodeFromSpec(classes);
+
+            var code = codeLayout.Replace("##namespace", @namespace)
+                                 .Replace("##code", classCode);
+
+            return code;
+        }
+
+        private string GenerateClassCodeFromSpec(IEnumerable<ClassType> classes)
+        {
+            var codeBuilder = new StringBuilder();
+            
+            foreach( var @class in classes )
+            {
+                codeBuilder.Append("public class " + @class.Name + Environment.NewLine );
+                codeBuilder.Append("{" + Environment.NewLine);
+
+                foreach ( var @field in @class.Properties )
+                {
+                    codeBuilder.Append("public " + field.Value.Name);
+                    codeBuilder.Append(field.Value.IsArray ? "[] " : " ");
+                    codeBuilder.Append(field.Key + " { get; set; } ");
+                    codeBuilder.Append(Environment.NewLine);
+                }
+
+                codeBuilder.Append("}" + Environment.NewLine);
+            }
+
+            return codeBuilder.ToString();
         }
 
         internal IEnumerable<ClassType> GenerateClassTypesFromObject(string name, RavenJObject @object)
@@ -235,7 +291,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-##namespace
+namespace ##namespace
 {
 ##code
 }
