@@ -194,6 +194,21 @@ namespace Raven.Client
 		IDocumentQueryCustomization Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
 
 		/// <summary>
+		///   Adds matches highlighting for the specified field on a Map/Reduce Index.
+		/// </summary>
+		/// <remarks>
+		///   This is only valid for Map/Reduce Index querys.
+		///   The specified field and key should be analysed and stored for highlighter to work.
+		///   For each match it creates a fragment that contains matched text surrounded by highlighter tags.
+		/// </remarks>
+		/// <param name="fieldName">The field name to highlight.</param>
+		/// <param name="fieldKeyName">The field key to associate highlights with.</param>
+		/// <param name="fragmentLength">The fragment length.</param>
+		/// <param name="fragmentCount">The maximum number of fragments for the field.</param>
+		/// <param name="highlightings">Field highlightings for all results.</param>
+		IDocumentQueryCustomization Highlight(string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
+
+		/// <summary>
 		///   Sets the tags to highlight matches with.
 		/// </summary>
 		/// <param name="preTag">Prefix tag.</param>

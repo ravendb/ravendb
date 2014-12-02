@@ -79,6 +79,7 @@ namespace Raven.Database.Impl
 				HighlighterPostTags = indexQuery.HighlighterPostTags,
 				HighlightedFields = indexQuery.HighlightedFields,
 				SortHints = indexQuery.SortHints,
+				HighlighterKeyName = indexQuery.HighlighterKeyName,
 				TransformerParameters = indexQuery.TransformerParameters,
 				ResultsTransformer = indexQuery.ResultsTransformer
 			};
