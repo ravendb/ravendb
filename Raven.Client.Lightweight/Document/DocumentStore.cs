@@ -409,7 +409,7 @@ namespace Raven.Client.Document
 
 		private HttpJsonRequestFactory InitializeJsonRequestFactory()
 		{
-			return new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandler);
+			return new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandler, Conventions.AcceptGzipContent);
 		}
 
 		public override void InitializeProfiling()

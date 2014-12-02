@@ -953,6 +953,8 @@ namespace Raven.Database.Config
 		/// </summary>
 		public long FlushIndexToDiskSizeInMb { get; set; }
 
+		public bool EnableResponseLoggingForEmbeddedDatabases { get; set; }
+
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()
