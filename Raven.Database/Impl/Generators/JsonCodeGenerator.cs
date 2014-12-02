@@ -16,6 +16,36 @@ namespace Raven.Database.Impl.Generators
     {
         private string language;
 
+
+        private Lazy<IDictionary<Type, FieldType>> _knownTypes = new Lazy<IDictionary<Type, FieldType>>(InitializeKnownTypes, true);
+
+        internal IDictionary<Type, FieldType> KnownTypes
+        {
+            get { return _knownTypes.Value; }
+        }
+
+        private static IDictionary<Type, FieldType> InitializeKnownTypes()
+        {
+            var types = new Dictionary<Type, FieldType>();
+            types[typeof(bool)] = new FieldType("bool", false, true);
+            types[typeof(long)] = new FieldType("long", false, true);
+            types[typeof(int)] = new FieldType("int", false, true);
+            types[typeof(string)] = new FieldType("string", false, true);
+            types[typeof(float)] = new FieldType("float", false, true);
+            types[typeof(double)] = new FieldType("double", false, true);
+            types[typeof(object)] = new FieldType("object", false, true);
+            types[typeof(byte[])] = new FieldType("byte", true, true);
+            types[typeof(int[])] = new FieldType("int", true, true);
+            types[typeof(Guid)] = new FieldType(typeof(Guid));
+            types[typeof(DateTime)] = new FieldType(typeof(DateTimeOffset).Name, false, true);
+            types[typeof(DateTimeOffset)] = new FieldType(typeof(DateTimeOffset));
+            types[typeof(TimeSpan)] = new FieldType(typeof(TimeSpan));
+            types[typeof(Uri)] = new FieldType(typeof(Uri));
+
+            return types;
+        }
+
+
         internal class FieldType
         {
             public readonly string Name;
@@ -23,24 +53,8 @@ namespace Raven.Database.Impl.Generators
             public readonly bool IsArray;
 
             public FieldType(Type type, bool isArray = false)
-            {
-                // There should be a better way to do this.
-                if (type == typeof(bool))
-                    this.Name = "bool";
-                else if (type == typeof(long))
-                    this.Name = "long";
-                else if (type == typeof(int))
-                    this.Name = "int";
-                else if (type == typeof(string))
-                    this.Name = "string";
-                else if (type == typeof(float))
-                    this.Name = "float";
-                else if (type == typeof(double))
-                    this.Name = "double";
-                else if (type == typeof(object))
-                    this.Name = "object";
-                else
-                    this.Name = type.Name;
+            { 
+                this.Name = type.Name;
 
                 this.IsPrimitive = true;
                 this.IsArray = isArray;
@@ -150,15 +164,15 @@ namespace Raven.Database.Impl.Generators
             switch (token.Type)
             {
                 // Base types.
-                case JTokenType.Boolean: return new FieldType(typeof(bool));
-                case JTokenType.Bytes: return new FieldType("byte", true, true);
+                case JTokenType.Boolean: return this.KnownTypes[typeof(bool)];
+                case JTokenType.Bytes: return this.KnownTypes[typeof(byte[])];
 
-                case JTokenType.Date: return new FieldType(typeof(DateTimeOffset));
+                case JTokenType.Date: return this.KnownTypes[typeof(DateTimeOffset)];
 
-                case JTokenType.Guid: return new FieldType(typeof(Guid));
-                case JTokenType.TimeSpan: return new FieldType(typeof(TimeSpan));
-                case JTokenType.Uri: return new FieldType(typeof(Uri));
-                case JTokenType.Float: return new FieldType(typeof(float));
+                case JTokenType.Guid: return this.KnownTypes[typeof(Guid)];
+                case JTokenType.TimeSpan: return this.KnownTypes[typeof(TimeSpan)];
+                case JTokenType.Uri: return this.KnownTypes[typeof(Uri)];
+                case JTokenType.Float: return this.KnownTypes[typeof(float)];
 
                 case JTokenType.Integer: // Could be integer or long.                
                 case JTokenType.String: // Could be anything.
@@ -167,7 +181,7 @@ namespace Raven.Database.Impl.Generators
 
                 // Could be anything.
                 case JTokenType.Null:
-                    return new FieldType(typeof(object));
+                    return this.KnownTypes[typeof(object)];
 
                 default:
                     throw new NotSupportedException("We shouldn't have hit this. This is a bug in the caller routine.");
@@ -179,29 +193,29 @@ namespace Raven.Database.Impl.Generators
             var content = token.Value<string>();
 
             if (ParseHelper.TryAction<bool>(x => bool.TryParse(content, out x)))
-                return new FieldType(typeof(bool));
+                return KnownTypes[typeof(bool)];
             if (ParseHelper.TryAction<int>(x => int.TryParse(content, out x)))
-                return new FieldType(typeof(int));
+                return KnownTypes[typeof(int)];
             if (ParseHelper.TryAction<long>(x => long.TryParse(content, out x)))
-                return new FieldType(typeof(long));
+                return KnownTypes[typeof(long)];
 
             if (ParseHelper.TryAction<float>(x => float.TryParse(content, out x)))
-                return new FieldType(typeof(float));
+                return KnownTypes[typeof(float)];
             if (ParseHelper.TryAction<double>(x => double.TryParse(content, out x)))
-                return new FieldType(typeof(double));
+                return KnownTypes[typeof(double)];
 
             if (ParseHelper.TryAction<Guid>(x => Guid.TryParse(content, out x)))
-                return new FieldType(typeof(Guid));
+                return KnownTypes[typeof(Guid)];
             if (ParseHelper.TryAction<TimeSpan>(x => TimeSpan.TryParse(content, out x)))
-                return new FieldType(typeof(TimeSpan));
+                return KnownTypes[typeof(TimeSpan)];
             if (ParseHelper.TryAction<DateTimeOffset>(x => DateTimeOffset.TryParse(content, out x)))
-                return new FieldType(typeof(DateTimeOffset));
+                return KnownTypes[typeof(DateTimeOffset)];
 
             
             if (Uri.IsWellFormedUriString(content, UriKind.Absolute))
-                return new FieldType(typeof(Uri));
+                return KnownTypes[typeof(Uri)];
 
-            return new FieldType(typeof(string));
+            return KnownTypes[typeof(string)];
         }
 
         private static class ParseHelper
