@@ -82,7 +82,7 @@ namespace Raven.Tests.Json
             };
 
             var generator = new JsonCodeGenerator("csharp");
-            var classTypes = generator.GenerateClassTypesFromObject("Root", JsonExtensions.ToJObject(root))
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(root))
                                       .ToLookup(x => x.Name);
 
             Assert.Equal(1, classTypes.Count());
@@ -137,7 +137,7 @@ namespace Raven.Tests.Json
             };
 
             var generator = new JsonCodeGenerator("csharp");
-            var classTypes = generator.GenerateClassTypesFromObject("Root", JsonExtensions.ToJObject(root))
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(root))
                                       .ToLookup(x => x.Name);
 
             Assert.Equal(1, classTypes.Count());
@@ -197,7 +197,7 @@ namespace Raven.Tests.Json
             };
 
             var generator = new JsonCodeGenerator("csharp");
-            var classTypes = generator.GenerateClassTypesFromObject("Root", JsonExtensions.ToJObject(root))
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(root))
                                       .ToLookup(x => x.Name);
 
             Assert.Equal(1, classTypes.Count());
@@ -230,7 +230,7 @@ namespace Raven.Tests.Json
             };
 
             var generator = new JsonCodeGenerator("csharp");
-            var classTypes = generator.GenerateClassTypesFromObject("Root", JsonExtensions.ToJObject(root))
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(root))
                                       .ToLookup(x => x.Name);
 
             Assert.Equal(1, classTypes.Count());
@@ -264,7 +264,7 @@ namespace Raven.Tests.Json
             };
 
             var generator = new JsonCodeGenerator("csharp");
-            var classTypes = generator.GenerateClassTypesFromObject("Root", JsonExtensions.ToJObject(root))
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(root))
                                       .ToLookup(x => x.Name);
 
             Assert.Equal(1, classTypes.Count());
@@ -348,7 +348,7 @@ namespace Raven.Tests.Json
             };
 
             var generator = new JsonCodeGenerator("csharp");
-            var classTypes = generator.GenerateClassTypesFromObject("Root", JsonExtensions.ToJObject(obj))
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(obj))
                                       .ToLookup(x => x.Name);
 
             Assert.Equal(3, classTypes.Count());
@@ -386,7 +386,7 @@ namespace Raven.Tests.Json
             };
 
             var generator = new JsonCodeGenerator("csharp");
-            var classTypes = generator.GenerateClassTypesFromObject("Root", JsonExtensions.ToJObject(obj))
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(obj))
                                       .ToLookup(x => x.Name);
 
             Assert.Equal(1, classTypes.Count());
@@ -417,7 +417,7 @@ namespace Raven.Tests.Json
             };
 
             var generator = new JsonCodeGenerator("csharp");
-            var classTypes = generator.GenerateClassTypesFromObject("Root", JsonExtensions.ToJObject(root))
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(root))
                                       .ToLookup(x => x.Name);
 
             Assert.Equal(2, classTypes.Count());
@@ -475,7 +475,7 @@ namespace Raven.Tests.Json
             };
 
             var generator = new JsonCodeGenerator("csharp");
-            var classTypes = generator.GenerateClassTypesFromObject("Root", JsonExtensions.ToJObject(root))
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(root))
                                       .ToLookup(x => x.Name);
 
             Assert.Equal(1, classTypes.Count());
@@ -511,5 +511,151 @@ namespace Raven.Tests.Json
             Assert.Contains("public class Class", code);
             Assert.Contains("public float[] Floats { get; set; }", code);
         }
+
+
+        public class WithRecursive
+        {
+            public string Name { get; set; }
+            public WithRecursive Recursive { get; set; }
+        }
+
+        [Fact]
+        public void JsonCodeGenerator_WithRecursive1Level()
+        {
+            var root = new WithRecursive
+            {
+                Name = "Root",
+                Recursive = new WithRecursive // No sharing happens
+                {
+                    Name = "First",
+                }
+            };
+
+            var document = new JsonDocument()
+            {
+                DataAsJson = JsonExtensions.ToJObject(root)
+            };
+
+            var generator = new JsonCodeGenerator("csharp");
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(root))
+                                      .ToLookup(x => x.Name);
+
+            Assert.Equal(2, classTypes.Count());
+
+            var clazz = classTypes["Root"].Single() as JsonCodeGenerator.ClassType;
+            Assert.NotNull(clazz);
+
+            var first = classTypes["RecursiveClass"].Single() as JsonCodeGenerator.ClassType;
+            Assert.NotNull(clazz);
+
+            Assert.Equal("string", clazz.Properties["Name"].Name);
+            Assert.False(clazz.Properties["Name"].IsArray);
+            Assert.True(clazz.Properties["Name"].IsPrimitive);
+
+            Assert.Equal("string", first.Properties["Name"].Name);
+            Assert.False(clazz.Properties["Name"].IsArray);
+            Assert.True(clazz.Properties["Name"].IsPrimitive);
+
+            Assert.Equal("RecursiveClass", clazz.Properties["Recursive"].Name);
+            Assert.False(clazz.Properties["Recursive"].IsArray);
+            Assert.False(clazz.Properties["Recursive"].IsPrimitive);
+        }
+
+        [Fact]
+        public void JsonCodeGenerator_WithRecursive2Levels()
+        {
+            var root = new WithRecursive
+            {
+                Name = "Root",
+                Recursive = new WithRecursive // This one must be shared with the root.
+                {
+                    Name = "First",
+                    Recursive = new WithRecursive // This will be created anyways with a different name (no way to know).
+                    {
+                        Name = "Second",
+                    }
+                }
+            };
+
+            var document = new JsonDocument()
+            {
+                DataAsJson = JsonExtensions.ToJObject(root)
+            };
+
+            var generator = new JsonCodeGenerator("csharp");
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(root))
+                                      .ToLookup(x => x.Name);
+
+            Assert.Equal(2, classTypes.Count());
+
+            var clazz = classTypes["RecursiveClass1"].Single() as JsonCodeGenerator.ClassType;
+            Assert.NotNull(clazz);
+
+            var clazzLast = classTypes["RecursiveClass"].Single() as JsonCodeGenerator.ClassType;
+            Assert.NotNull(clazzLast);
+
+            Assert.Equal("string", clazz.Properties["Name"].Name);
+            Assert.False(clazz.Properties["Name"].IsArray);
+            Assert.True(clazz.Properties["Name"].IsPrimitive);
+
+            Assert.Equal("RecursiveClass", clazz.Properties["Recursive"].Name);
+            Assert.False(clazz.Properties["Recursive"].IsArray);
+            Assert.False(clazz.Properties["Recursive"].IsPrimitive);
+
+            Assert.Equal("string", clazzLast.Properties["Name"].Name);
+            Assert.False(clazzLast.Properties["Name"].IsArray);
+            Assert.True(clazzLast.Properties["Name"].IsPrimitive);
+
+            Assert.Equal("object", clazzLast.Properties["Recursive"].Name);
+            Assert.False(clazzLast.Properties["Recursive"].IsArray);
+            Assert.True(clazzLast.Properties["Recursive"].IsPrimitive);
+
+        }
+
+
+        public class WithCrossRecursiveA
+        {
+            public string NameA { get; set; }
+            public WithCrossRecursiveB Recursive { get; set; }
+        }
+
+        public class WithCrossRecursiveB
+        {
+            public string NameB { get; set; }
+            public WithCrossRecursiveA Recursive { get; set; }
+        }
+
+        [Fact]
+        public void JsonCodeGenerator_WithCrossRecursive2Levels()
+        {
+            var root = new WithCrossRecursiveA
+            {
+                NameA = "Root",
+                Recursive = new WithCrossRecursiveB
+                {
+                    NameB = "First",
+                    Recursive = new WithCrossRecursiveA // This one must be shared with the root.
+                    {
+                        NameA = "Second",
+                        Recursive = new WithCrossRecursiveB // This will be created anyways with a different name (no way to know).
+                        {
+                            NameB = "Null",
+                        }
+                    }
+                }
+            };
+
+            var document = new JsonDocument()
+            {
+                DataAsJson = JsonExtensions.ToJObject(root)
+            };
+
+            var generator = new JsonCodeGenerator("csharp");
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(root))
+                                      .ToLookup(x => x.Name);
+
+            Assert.Equal(3, classTypes.Count());
+        }
+
     }
 }

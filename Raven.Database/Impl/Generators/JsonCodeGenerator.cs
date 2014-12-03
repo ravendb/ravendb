@@ -4,6 +4,7 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Linq;
 using System.Net.Http;
@@ -23,6 +24,9 @@ namespace Raven.Database.Impl.Generators
         {
             get { return _knownTypes.Value; }
         }
+
+        private readonly IDictionary<string, ClassType> _generatedTypes = new Dictionary<string, ClassType>();
+
 
         private static IDictionary<Type, FieldType> InitializeKnownTypes()
         {
@@ -66,6 +70,59 @@ namespace Raven.Database.Impl.Generators
                 this.IsPrimitive = isPrimitive;
                 this.IsArray = isArray;
             }
+
+            public override bool Equals(object obj)
+            {
+                // If parameter cannot be cast to FieldType return false:
+                FieldType p = obj as FieldType;
+                if (p == null)
+                    return false;
+
+                // Return true if the fields match:
+                return this == p;
+            }
+
+            public bool Equals(FieldType p)
+            {
+                // Return true if the fields match:
+                return this == p;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked // Overflow is fine, just wrap
+                {
+                    int hash = 17;
+                    // Suitable nullity checks etc, of course :)
+                    hash = hash * 23 + Name.GetHashCode();
+                    hash = hash * 23 + IsPrimitive.GetHashCode();
+                    hash = hash * 23 + IsArray.GetHashCode();
+                    return hash;
+                }
+            }
+
+            public static bool operator ==(FieldType a, FieldType b)
+            {
+                // If both are null, or both are same instance, return true.
+                if (Object.ReferenceEquals(a, b))
+                {
+                    return true;
+                }
+
+                // If one is null, but not both, return false.
+                if (((object)a == null) || ((object)b == null))
+                {
+                    return false;
+                }
+
+                // Return true if the fields match:
+                return a.Name == b.Name && a.IsPrimitive == b.IsPrimitive && a.IsArray == b.IsArray;
+            }
+
+            public static bool operator !=(FieldType a, FieldType b)
+            {
+                return !(a == b);
+            }
         }
 
         internal class ClassType : FieldType
@@ -76,9 +133,75 @@ namespace Raven.Database.Impl.Generators
             
             public ClassType( string name, IDictionary<string, FieldType> properties = null ) : base ( name, false )
             {
-                this.Properties = properties;
+                this.Properties = new ReadOnlyDictionary<string, FieldType>(properties);
                 if (this.Properties == null)
                     this.Properties = NoProperties;
+            }
+
+            public static bool operator ==(ClassType a, ClassType b)
+            {
+                // If both are null, or both are same instance, return true.
+                if (Object.ReferenceEquals(a, b))
+                    return true;
+
+                // If one is null, but not both, return false.
+                if (((object)a == null) || ((object)b == null))
+                {
+                    return false;
+                }
+
+                return Compare<string, FieldType>(a.Properties, b.Properties);
+            }
+
+            public static bool operator !=(ClassType a, ClassType b)
+            {
+                return !(a == b);
+            }
+
+            public override bool Equals(object obj)
+            {
+                // If parameter cannot be cast to FieldType return false:
+                ClassType p = obj as ClassType;
+                if (p == null)
+                    return false;
+
+                // Return true if the fields match:
+                return this == p;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked // Overflow is fine, just wrap
+                {
+                    int hash = 17;
+
+                    // Suitable nullity checks etc, of course :)
+                    hash = hash * 23 + IsPrimitive.GetHashCode();
+                    hash = hash * 23 + IsArray.GetHashCode();
+                    hash = hash * 23 + Properties.GetHashCode();
+
+                    return hash;
+                }
+            }
+
+            private static bool Compare<TKey, TValue>(IDictionary<TKey, TValue> dict1, IDictionary<TKey, TValue> dict2)
+            {
+                if (dict1 == dict2) return true;
+                if ((dict1 == null) || (dict2 == null)) return false;
+                if (dict1.Count != dict2.Count) return false;
+
+                var comparer = EqualityComparer<TValue>.Default;
+
+                foreach (KeyValuePair<TKey, TValue> kvp in dict1)
+                {
+                    TValue value2;
+                    if (!dict2.TryGetValue(kvp.Key, out value2)) 
+                        return false;                    
+
+                    if (!comparer.Equals(kvp.Value, value2)) 
+                        return false;
+                }
+                return true;
             }
         }
 
@@ -125,7 +248,7 @@ namespace Raven.Database.Impl.Generators
                 }
             }
 
-            var classes = GenerateClassTypesFromObject(@class, document.DataAsJson);
+            var classes = GenerateClassesTypesFromObject(@class, document.DataAsJson);
 
             string classCode = GenerateClassCodeFromSpec(classes);
 
@@ -158,7 +281,19 @@ namespace Raven.Database.Impl.Generators
             return codeBuilder.ToString();
         }
 
-        internal IEnumerable<ClassType> GenerateClassTypesFromObject(string name, RavenJObject @object)
+        internal IEnumerable<ClassType> GenerateClassesTypesFromObject(string name, RavenJObject @object)
+        {
+            // We need to clear the generated types;
+            this._generatedTypes.Clear();
+
+            // Repopulate the generated types after working on the object.
+            GenerateClassTypesFromObject(name, @object);
+
+            // Return all the potential classes found.
+            return this._generatedTypes.Select(x => x.Value).ToList();
+        }
+
+        internal ClassType GenerateClassTypesFromObject(string name, RavenJObject @object)
         {
             var fields = new Dictionary<string, FieldType>();
 
@@ -168,9 +303,8 @@ namespace Raven.Database.Impl.Generators
                 {
                     // Inner objects.
                     case JTokenType.Object:
-                        var type = GenerateClassTypesFromObject(pair.Key + "Class", (RavenJObject)pair.Value).Single();                        
-                        fields[pair.Key] = new FieldType( type.Name, type.IsArray );
-                        yield return type;
+                        var type = GenerateClassTypesFromObject(pair.Key + "Class", (RavenJObject)pair.Value);                        
+                        fields[pair.Key] = new FieldType(type.Name, type.IsArray);
                         break;
                     case JTokenType.Array:
                         var guessedType = GuessTokenTypeFromArray(pair.Key, (RavenJArray)(pair.Value));
@@ -178,9 +312,6 @@ namespace Raven.Database.Impl.Generators
                         {
                             // We will defer the analysis and create a new name;
                             fields[pair.Key] = new FieldType(guessedType.Name, true);
-
-                            // Add the token to be inspected individually.                            
-                            yield return (ClassType)guessedType;
                         }
                         else
                         {
@@ -195,7 +326,44 @@ namespace Raven.Database.Impl.Generators
             }  
 
             // Check if we can get the name from the metadata. 
-            yield return new ClassType(name, fields);
+            var clazz = new ClassType(name, fields);
+            clazz = IncludeGeneratedClass(clazz);
+            return clazz;            
+        }
+
+        private ClassType IncludeGeneratedClass(ClassType clazz)
+        {
+            foreach (var pair in _generatedTypes)
+            {
+                if (pair.Value == clazz)
+                {
+                    Console.WriteLine(pair.Value.Name);
+                    foreach (var kv in pair.Value.Properties)
+                        Console.WriteLine(kv.Key);
+                    Console.WriteLine();
+
+                    Console.WriteLine(clazz.Name);
+                    foreach (var kv in clazz.Properties)
+                        Console.WriteLine(kv.Key);
+                    Console.WriteLine();
+
+                    return pair.Value;
+                }
+                    
+            }
+
+            var key = clazz.Name;
+
+            ClassType dummy;
+            int i = 1;
+            while (_generatedTypes.TryGetValue(key, out dummy))
+            {
+                key = clazz.Name + i;
+                i++;
+            }
+
+            _generatedTypes[key] = new ClassType(key, clazz.Properties);
+            return clazz;
         }
 
         private FieldType GuessTokenTypeFromArray(string name, RavenJArray array)
@@ -205,7 +373,7 @@ namespace Raven.Database.Impl.Generators
             switch (token.Type)
             {
                 case JTokenType.Object:
-                    return GenerateClassTypesFromObject(name, (RavenJObject)token).First();
+                    return GenerateClassTypesFromObject(name, (RavenJObject)token);
                 case JTokenType.Array:
                     return GuessTokenTypeFromArray(name, (RavenJArray)token);
                 default:
