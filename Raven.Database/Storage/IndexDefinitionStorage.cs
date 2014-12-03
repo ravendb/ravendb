@@ -223,11 +223,11 @@ namespace Raven.Database.Storage
                                            .ToArray();
             }
         }
+
         public ConcurrentDictionary<int, IndexDefinition> IndexDefinitions
         {
             get { return indexDefinitions; }
         }
-
 
         public string CreateAndPersistIndex(IndexDefinition indexDefinition)
         {
@@ -524,6 +524,29 @@ namespace Raven.Database.Storage
                 return transformCache[id];
             return null;
         }
+
+		internal bool SwapIndex(string indexName, string indexToSwapName)
+		{
+			var index = GetIndexDefinition(indexName);
+			var indexToSwap = GetIndexDefinition(indexToSwapName);
+
+			if (index == null) 
+				return false;
+
+			int _;
+			indexNameToId.TryRemove(index.Name, out _);
+
+			index.Name = indexToSwap != null ? indexToSwap.Name : indexToSwapName;
+
+			CreateAndPersistIndex(index);
+
+			if (indexToSwap != null)
+				RemoveIndex(indexToSwap.IndexId);
+			
+			AddIndex(index.IndexId, index);
+
+			return true;
+		}
 
         private void UpdateIndexMappingFile()
         {
