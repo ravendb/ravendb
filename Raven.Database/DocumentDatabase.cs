@@ -850,6 +850,7 @@ namespace Raven.Database
 
 				TransportState.OnIdle();
 				IndexStorage.RunIdleOperations();
+				IndexReplacer.ReplaceIndexes(IndexDefinitionStorage.Indexes);
 				Tasks.ClearCompletedPendingTasks();
 			}
 			finally

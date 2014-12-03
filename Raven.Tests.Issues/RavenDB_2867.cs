@@ -5,7 +5,9 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
+using System.Threading;
 
+using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
@@ -45,12 +47,18 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void T1()
+		public void ReplaceOfNonStaleIndex()
 		{
 			using (var store = NewDocumentStore(runInMemory: false))
 			{
 				new OldIndex().Execute(store);
 				new NewIndex().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Person { FirstName = "John", LastName = "Doe" });
+					session.SaveChanges();
+				}
 
 				store
 					.DatabaseCommands
@@ -68,6 +76,48 @@ namespace Raven.Tests.Issues
 				Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
 
 				WaitForIndexing(store);
+
+				store.SystemDatabase.IndexReplacer.ReplaceIndexes(store.SystemDatabase.IndexStorage.Indexes);
+
+				using (var session = store.OpenSession())
+				{
+					var count = session.Query<Person, OldIndex>()
+						.Count(x => x.LastName == "Doe");
+
+					Assert.Equal(1, count);
+				}
+			}
+		}
+
+		[Fact]
+		public void ReplaceAfterSomeTime()
+		{
+			using (var store = NewDocumentStore(runInMemory: false))
+			{
+				new OldIndex().Execute(store);
+				new NewIndex().Execute(store);
+
+				store
+					.DatabaseCommands
+					.Admin
+					.StopIndexing();
+
+				store
+					.DatabaseCommands
+					.Put(Prefix + new NewIndex().IndexName, null, RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = new OldIndex().IndexName, ReplaceTimeUtc = SystemTime.UtcNow.AddMinutes(10) }), new RavenJObject());
+
+				var e = Assert.Throws<InvalidOperationException>(() =>
+				{
+					using (var session = store.OpenSession())
+					{
+						var count = session.Query<Person, OldIndex>()
+							.Count(x => x.LastName == "Doe");
+					}
+				});
+
+				Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
+
+				SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(11);
 
 				store.SystemDatabase.IndexReplacer.ReplaceIndexes(store.SystemDatabase.IndexStorage.Indexes);
 
