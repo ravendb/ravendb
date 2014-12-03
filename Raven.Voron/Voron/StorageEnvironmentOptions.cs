@@ -13,6 +13,7 @@ using Voron.Impl.Paging;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
+using Mono.Unix.Native;
 
 namespace Voron
 {
@@ -89,7 +90,10 @@ namespace Voron
 
 			MaxLogFileSize = 64 * 1024 * 1024;
 
-			InitialLogFileSize = 64 * 1024;
+			if (!RunningOnPosix)
+				InitialLogFileSize = 64 * 1024;
+			else
+				InitialLogFileSize = Syscall.sysconf (SysconfName._SC_PAGESIZE) * 16;
 
 			MaxScratchBufferSize = 512 * 1024 * 1024;
 
