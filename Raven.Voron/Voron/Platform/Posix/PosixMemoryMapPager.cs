@@ -92,7 +92,9 @@ namespace Voron.Platform.Posix
 
 			Syscall.ftruncate(_fd, (_totalAllocationSize + allocationSize));
 
-			if (TryAllocateMoreContinuousPages(allocationSize) == false)
+			//disabled until http://issues.hibernatingrhinos.com/issue/RavenDB-3012 is fixed
+			//this will prevent usage of mremap - preventing segmentation faults
+			//if (TryAllocateMoreContinuousPages(allocationSize) == false)
 			{
 				PagerState newPagerState = CreatePagerState();
 				if (newPagerState == null)

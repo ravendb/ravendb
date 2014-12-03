@@ -2,8 +2,7 @@
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
   <MonoDevelop.Ide.Workbench ActiveDocument="Voron.Tryout/Program.cs">
     <Files>
-      <File FileName="Voron.Tryout/Program.cs" Line="13" Column="22" />
-      <File FileName="Voron/Platform/Posix/NativeMethods.cs" Line="1" Column="1" />
+      <File FileName="Voron.Tryout/Program.cs" Line="19" Column="25" />
       <File FileName="Voron/Platform/Posix/PosixPageFileBackedMemoryMapPager.cs" Line="1" Column="1" />
       <File FileName="Voron/Platform/Posix/PosixMemoryMapPager.cs" Line="1" Column="1" />
       <File FileName="Voron/StorageEnvironmentOptions.cs" Line="1" Column="1" />
