@@ -34,9 +34,9 @@ interface documentChangeNotificationDto {
 }
 
 interface logNotificationDto {
-    Level :string;
-    TimeStamp :string;
-    LoggerName :string;
+    Level: string;
+    TimeStamp: string;
+    LoggerName: string;
     RequestId: number;
     HttpMethod: string;
     ElapsedMilliseconds: number;
@@ -45,6 +45,7 @@ interface logNotificationDto {
     TenantName: string;
     CustomInfo: string;
     TenantType: logTenantType;
+    InnerRequestsCount?: number;
 
 }
 interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
@@ -116,12 +117,17 @@ interface indexStatisticsDto {
     Performance: indexPerformanceDto[];
     DocsCount: number;
     IsInvalidIndex: boolean;
+    IsTestIndex: boolean;
 }
 
 interface indexingBatchInfoDto {
+    BatchType: string;
+    IndexesToWorkOn: string[];
     TotalDocumentCount: number;
     TotalDocumentSize: number;
-    Timestamp: string; // ISO date string.
+    StartedAt: string; // ISO date string.
+    TotalDuration: string;
+    PerformanceStats: indexPerformanceDto[];
 }
 
 interface indexPerformanceDto {
@@ -268,6 +274,8 @@ interface suggestionDto {
     CanMerge: string[];
     Collection: string;
     MergedIndex: indexDefinitionDto;
+    CanDelete: string[];
+    SurpassingIndex: string;
 }
 
 interface indexDefinitionContainerDto {
@@ -280,6 +288,7 @@ interface indexDefinitionDto {
     Map: string;
     Maps: string[];
     Reduce: string;
+    IsTestIndex: boolean;
     IsMapReduce: boolean;
     IsCompiled: boolean;
     Stores: any;
@@ -513,6 +522,7 @@ interface restoreRequestDto {
 interface databaseRestoreRequestDto extends restoreRequestDto {
     DatabaseName: string;
     DatabaseLocation: string;
+    DisableReplicationDestinations: boolean;
 }
 
 interface filesystemRestoreRequestDto extends restoreRequestDto {
@@ -666,6 +676,17 @@ interface patchDto extends documentDto {
     Script: string;
     SelectedItem: string;
     Values: Array<patchValueDto>;
+}
+
+interface statusStorageOnDiskDto {
+    TransactionalStorageAllocatedSize: number;
+    TransactionalStorageAllocatedSizeHumaneSize: string;
+    TransactionalStorageUsedSize: number;
+    TransactionalStorageUsedSizeHumaneSize: string;
+    IndexStorageSize: number;
+    IndexStorageSizeHumane: string;
+    TotalDatabaseSize: number;
+    TotalDatabaseSizeHumane: string;
 }
 
 interface statusDebugChangesDto {

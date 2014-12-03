@@ -54,6 +54,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -71,9 +72,11 @@
   <ItemGroup>
     <Compile Include="Backups\Full.cs" />
     <Compile Include="Backups\Incremental.cs" />
+    <Compile Include="Backups\MinimalIncrementalBackupTests.cs" />
     <Compile Include="Backups\RavenDB_2939.cs" />
     <Compile Include="Bugs\AccessViolationWithIteratorUsage.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
+    <Compile Include="Bugs\DeleteCurrentAndMoveNextShouldWorkWithKeysWithNulls.cs" />
     <Compile Include="Bugs\MemoryAccess.cs" />
     <Compile Include="Bugs\FlushingToDataFile.cs" />
     <Compile Include="Bugs\PageAllocation.cs" />

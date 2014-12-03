@@ -13,11 +13,12 @@ namespace Raven.Abstractions.FileSystem
         /// </summary>
         public string Id { get; set; }
         public Dictionary<string, string> Settings { get; set; }
+        public Dictionary<string, string> SecuredSettings { get; set; }
         public bool Disabled { get; set; }
 
         public FileSystemDocument()
         {
-            Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);           
+            Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
     }
 }

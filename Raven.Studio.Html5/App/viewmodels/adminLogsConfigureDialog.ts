@@ -78,7 +78,7 @@ class adminLogsConfigureDialog extends dialogViewModelBase {
             });
     }
 
-    insertNewRow() {
+    addCategory() {
         this.logConfig.entries.push(new adminLogsConfigEntry("", "Info"));
 
         if (!this.isScrollNeeded()) {

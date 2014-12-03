@@ -1,58 +1,313 @@
-﻿using System;
+﻿using Lucene.Net.Documents;
+using Lucene.Net.Index;
+using Lucene.Net.Search;
+using Lucene.Net.Store;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
+using Raven.Database.Config;
+using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Plugins;
+using Raven.Database.FileSystem.Util;
+using Raven.Database.Impl;
+using Raven.Database.Indexing;
+using Raven.Json.Linq;
+using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Lucene.Net.Documents;
-using Lucene.Net.Index;
-using Lucene.Net.Search;
-using Lucene.Net.Store;
-
-using Raven.Abstractions.Logging;
-using Raven.Database.Indexing;
-using Raven.Json.Linq;
-using Raven.Database.FileSystem.Extensions;
-using Lucene.Net.QueryParsers;
-using Raven.Database.FileSystem.Util;
+using System.Runtime.ConstrainedExecution;
+using Directory = System.IO.Directory;
 
 namespace Raven.Database.FileSystem.Search
 {
-	public class IndexStorage : IDisposable
+    /// <summary>
+    /// 	Thread safe, single instance for the entire application
+    /// </summary>
+    public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
-	    protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+        private const string IndexVersion = "1.0.0.0";
+
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog StartupLog = LogManager.GetLogger(typeof(IndexStorage).FullName + ".Startup");
 
 		private const string DateIndexFormat = "yyyy-MM-dd_HH-mm-ss";
-		private static readonly string[] NumericIndexFields = new[] { "__size_numeric" };
+		private static readonly string[] NumericIndexFields = { "__size_numeric" };
 
-		private readonly string path;
+        private readonly string name;
+        private readonly InMemoryRavenConfiguration configuration; 
+        private readonly object writerLock = new object();
+        private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
+
+		private string indexDirectory;
 		private FSDirectory directory;
-		private LowerCaseKeywordAnalyzer analyzer;
-		private IndexWriter writer;
+        private RavenFileSystem filesystem;
+        
+		private LowerCaseKeywordAnalyzer analyzer;		
         private SnapshotDeletionPolicy snapshotter;
-		private readonly object writerLock = new object();
-		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
+        private IndexWriter writer;
+		
+        private FileStream crashMarker;
+        private bool resetIndexOnUncleanShutdown = false;
 
-		public IndexStorage(string path, NameValueCollection _)
+        public IndexStorage(string name, InMemoryRavenConfiguration configuration)
 		{
-			this.path = path;
+            if (configuration == null)
+                throw new ArgumentNullException("configuration");
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("name");
+
+            this.name = name;
+            this.configuration = configuration;   
 		}
 
-		public void Initialize()
-		{
-			if (System.IO.Directory.Exists(path) == false)
-				System.IO.Directory.CreateDirectory(path);
-			directory = FSDirectory.Open(new DirectoryInfo(path));
-			if (IndexWriter.IsLocked(directory))
-				IndexWriter.Unlock(directory);
 
-			analyzer = new LowerCaseKeywordAnalyzer();
-            snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-			writer = new IndexWriter(directory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
-			writer.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
-			currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
-		}
+        public void Initialize(RavenFileSystem filesystem)
+        {
+            try
+            {
+                this.filesystem = filesystem;                                
+                indexDirectory = configuration.FileSystem.IndexStoragePath;                
+
+                if (Directory.Exists(indexDirectory) == false)
+                    Directory.CreateDirectory(indexDirectory);
+
+                var filesystemDirectory = configuration.FileSystem.DataDirectory;
+                var crashMarkerPath = Path.Combine(filesystemDirectory, "indexing.crash-marker");
+
+                if (File.Exists(crashMarkerPath))
+                {
+                    // the only way this can happen is if we crashed because of a power outage
+                    // in this case, we consider open indexes to be corrupt and force them
+                    // to be reset. This is because to get better perf, we don't flush the files to disk,
+                    // so in the case of a power outage, we can't be sure that there wasn't still stuff in
+                    // the OS buffer that wasn't written yet.
+
+                    resetIndexOnUncleanShutdown = true;
+                }
+
+                // The delete on close ensures that the only way this file will exists is if there was
+                // a power outage while the server was running.
+                crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
+                                
+                OpenIndexOnStartup();
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }           
+        }
+
+        private void OpenIndexOnStartup()
+        {            
+            analyzer = new LowerCaseKeywordAnalyzer();
+            snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());          
+
+            bool resetTried = false;
+            bool recoveryTried = false;
+            while (true)
+            {
+                FSDirectory luceneDirectory = null;
+                try
+                {
+					luceneDirectory = OpenOrCreateLuceneDirectory(indexDirectory);
+
+                    if (!IsIndexStateValid(luceneDirectory))
+                        throw new InvalidOperationException("Sanity check on the index failed.");
+
+                    directory = luceneDirectory;
+                    writer = new IndexWriter(directory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
+                    writer.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+
+                    currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
+
+                    break;
+                }
+                catch (Exception e)
+                {
+                    if (resetTried)
+                        throw new InvalidOperationException("Could not open / create index for file system '" + name + "', reset already tried", e);
+
+                    if (recoveryTried == false && luceneDirectory != null)
+                    {
+                        recoveryTried = true;
+                        StartupLog.WarnException("Could not open index for file system '" + name + "'. Trying to recover index", e);
+                        StartupLog.Info("Recover functionality is still not implemented. Skipping.");
+                    }
+                    else
+                    {
+                        resetTried = true;
+                        StartupLog.WarnException("Could not open index for file system '" + name + "'. Recovery operation failed, forcibly resetting index", e);
+
+                        TryResettingIndex();                        
+                    }
+                }
+            }          
+        }
+
+        private bool IsIndexStateValid(FSDirectory luceneDirectory)
+        {
+            // 1. If commitData is null it means that there were no commits, so just in case we are resetting to Etag.Empty
+            // 2. If no 'LastEtag' in commitData then we consider it an invalid index
+            // 3. If 'LastEtag' is present (and valid), then resetting to it (if it is lower than lastStoredEtag)
+
+            var commitData = IndexReader.GetCommitUserData(luceneDirectory);            
+
+            string value;
+            Etag lastEtag = null;
+            if (commitData != null && commitData.TryGetValue("LastEtag", out value))
+                Etag.TryParse(value, out lastEtag); // etag will be null if parsing will fail
+
+            var lastStoredEtag = GetLastEtagForIndex() ?? Etag.Empty;
+            lastEtag = lastEtag ?? Etag.Empty;
+
+            if (EtagUtil.IsGreaterThan(lastEtag, lastStoredEtag))
+                return false;
+
+            return true;
+        }
+
+        protected Etag GetLastEtagForIndex()
+        {
+            Etag etag = null;
+            filesystem.Storage.Batch(accessor => etag = accessor.GetLastEtag());
+            return etag != null ? etag : Etag.Empty;
+        }
+
+        internal void TryResettingIndex()
+        {
+            try
+            {
+                IOExtensions.DeleteDirectory(indexDirectory);
+
+				var luceneDirectory = OpenOrCreateLuceneDirectory(indexDirectory);
+
+                using ( var indexWriter = new IndexWriter(luceneDirectory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED) )
+                {
+                    indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+
+                    filesystem.Storage.Batch(accessor =>
+                    {
+                        foreach (var file in accessor.GetFilesAfter(Etag.Empty, int.MaxValue))
+                            Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata);
+                    });
+
+                    indexWriter.Flush(true, true, true);
+                }
+			}
+			catch (Exception exception)
+			{
+				throw new InvalidOperationException("Could not reset index for file system: " + name, exception);
+			}
+        }
+
+		private FSDirectory OpenOrCreateLuceneDirectory(string path)
+        {
+			var luceneDirectory = FSDirectory.Open(new DirectoryInfo(path));
+
+            try
+            {
+                // We check if the directory already exists
+                if (!IndexReader.IndexExists(luceneDirectory))
+                {
+                    WriteIndexVersion(luceneDirectory);
+
+                    //creating index structure if we need to
+                    new IndexWriter(luceneDirectory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
+                }
+                else
+                {
+                    // We prepare in case we have to change the index definition to have a proper upgrade path.
+                    EnsureIndexVersionMatches(luceneDirectory);
+
+                    if (luceneDirectory.FileExists("write.lock")) // force lock release, because it was still open when we shut down
+                    {
+                        IndexWriter.Unlock(luceneDirectory);
+
+                        // for some reason, just calling unlock doesn't remove this file
+                        luceneDirectory.DeleteFile("write.lock");
+                    }
+
+                    if (luceneDirectory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
+                    {
+                        if (resetIndexOnUncleanShutdown)
+                            throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", name, path));
+
+                        CheckIndexAndTryToFix(luceneDirectory);
+                        luceneDirectory.DeleteFile("writing-to-index.lock");
+                    }
+                }
+
+                return luceneDirectory;
+            }
+            catch
+            {
+                luceneDirectory.Dispose();
+                throw;
+            }
+        }
+
+        private const string IndexVersionFilename = "index.version";
+
+        private void EnsureIndexVersionMatches(FSDirectory directory)
+        {
+            if (directory.FileExists(IndexVersionFilename) == false)
+                throw new InvalidOperationException("Could not find " + IndexVersionFilename + " for '" + name + "', resetting index");
+            
+            using (var indexInput = directory.OpenInput(IndexVersionFilename))
+            {
+                var versionToCheck = IndexVersion;
+                var versionFromDisk = indexInput.ReadString();
+                if (versionFromDisk != versionToCheck)
+                    throw new InvalidOperationException("Index for " + name + " is of version " + versionFromDisk +
+                                                        " which is not compatible with " + versionToCheck + ", resetting index");
+            }
+        }
+
+        private void WriteIndexVersion(FSDirectory directory)
+        {
+            using (var indexOutput = directory.CreateOutput(IndexVersionFilename))
+            {
+                indexOutput.WriteString(IndexVersion);
+                indexOutput.Flush();
+            }
+        }
+
+        private void CheckIndexAndTryToFix(FSDirectory directory)
+        {
+            StartupLog.Warn(string.Format("Unclean shutdown detected on file system '{0}', checking the index for errors. This may take a while.", name));
+
+            var memoryStream = new MemoryStream();
+            var stringWriter = new StreamWriter(memoryStream);
+            var checkIndex = new CheckIndex(directory);
+
+            if (StartupLog.IsWarnEnabled)
+                checkIndex.SetInfoStream(stringWriter);
+
+            var sp = Stopwatch.StartNew();
+            var status = checkIndex.CheckIndex_Renamed_Method();
+            sp.Stop();
+
+            if (StartupLog.IsWarnEnabled)
+            {
+                StartupLog.Warn("Checking index for file system '{0}' took: {1}, clean: {2}", name, sp.Elapsed, status.clean);
+                memoryStream.Position = 0;
+
+                Log.Warn(new StreamReader(memoryStream).ReadToEnd());
+            }
+
+            if (status.clean)
+                return;
+
+            StartupLog.Warn("Attempting to fix index of file system: '{0}'", name);
+            sp.Restart();
+            checkIndex.FixIndex(status);
+            StartupLog.Warn("Fixed index of file system '{0}' in {1}", name, sp.Elapsed);
+        }
 
 		public string[] Query(string query, string[] sortFields, int start, int pageSize, out int totalResults)
 		{
@@ -105,7 +360,7 @@ namespace Raven.Database.FileSystem.Search
 			return topDocs;
 		}
 
-        public virtual void Index(string key, RavenJObject metadata)
+        private void Index(IndexWriter writer, string key, RavenJObject metadata)
         {
             lock (writerLock)
             {
@@ -115,27 +370,38 @@ namespace Raven.Database.FileSystem.Search
 
                 // REVIEW: Check if there is more straight-forward/efficient pattern out there to work with RavenJObjects.
                 var lookup = metadata.ToLookup(x => x.Key);
-                foreach ( var metadataKey in lookup )
+                foreach (var metadataKey in lookup)
                 {
-                    foreach ( var metadataHolder in metadataKey )
+                    foreach (var metadataHolder in metadataKey)
                     {
                         var array = metadataHolder.Value as RavenJArray;
                         if (array != null)
                         {
                             // Object is an array. Therefore, we index each token. 
                             foreach (var item in array)
-                                doc.Add(new Field(metadataHolder.Key, item.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));                         
+                                doc.Add(new Field(metadataHolder.Key, item.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
                         }
-                        else doc.Add(new Field(metadataHolder.Key, metadataHolder.Value.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+                        else
+                        {
+                            doc.Add(new Field(metadataHolder.Key, metadataHolder.Value.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+                        }                            
                     }
                 }
 
                 writer.DeleteDocuments(new Term("__key", lowerKey));
                 writer.AddDocument(doc);
+
                 // yes, this is slow, but we aren't expecting high writes count
-                writer.Commit();
-                ReplaceSearcher();
+                var etag = lookup["ETag"].First();
+                var customCommitData = new Dictionary<string, string>() { { "LastETag", etag.Value.ToString() } };
+                writer.Commit(customCommitData);
+                ReplaceSearcher(writer);
             }
+        }
+
+        public virtual void Index(string key, RavenJObject metadata)
+        {
+            Index(writer, key, metadata);
         }
 
         private static Document CreateDocument(string lowerKey, RavenJObject metadata)
@@ -194,20 +460,29 @@ namespace Raven.Database.FileSystem.Search
             return doc;
         }
 
-		internal IDisposable GetSearcher(out IndexSearcher searcher)
+        internal IDisposable GetSearcher(out IndexSearcher searcher)
 		{
 			return currentIndexSearcherHolder.GetSearcher(out searcher);
 		}
 
+
+        private void SafeDispose ( IDisposable disposable )
+        {
+            if (disposable != null)
+                disposable.Dispose();
+        }
+
 		public void Dispose()
 		{
-			analyzer.Close();
-			if (currentIndexSearcherHolder != null)
-			{
-				currentIndexSearcherHolder.SetIndexSearcher(null);
-			}
-			writer.Dispose();
-			directory.Dispose();
+            var exceptionAggregator = new ExceptionAggregator(Log, string.Format("Could not properly close index storage for file system '{0}'", name));
+
+            exceptionAggregator.Execute(() => { if (analyzer != null) analyzer.Close(); });
+            exceptionAggregator.Execute(() => { if (currentIndexSearcherHolder != null)  currentIndexSearcherHolder.SetIndexSearcher(null); });
+            exceptionAggregator.Execute(() => SafeDispose(crashMarker) );
+            exceptionAggregator.Execute(() => SafeDispose(writer) );
+            exceptionAggregator.Execute(() => SafeDispose(directory) );
+
+            exceptionAggregator.ThrowIfNeeded();
 		}
 
 		public void Delete(string key)
@@ -219,11 +494,11 @@ namespace Raven.Database.FileSystem.Search
 				writer.DeleteDocuments(new Term("__key", lowerKey));
 				writer.Optimize();
 				writer.Commit();
-				ReplaceSearcher();
+                ReplaceSearcher(writer);
 			}
 		}
 
-		private void ReplaceSearcher()
+        private void ReplaceSearcher(IndexWriter writer)
 		{
 			currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(writer.GetReader()));
 		}
@@ -273,7 +548,7 @@ namespace Raven.Database.FileSystem.Search
                 var existingFiles = new HashSet<string>();
                 var allFilesPath = Path.Combine(backupDirectory, "index-files.all-existing-index-files");
                 var saveToFolder = Path.Combine(backupDirectory, "Indexes");
-                System.IO.Directory.CreateDirectory(saveToFolder);
+                Directory.CreateDirectory(saveToFolder);
                 if (File.Exists(allFilesPath))
                 {
                     foreach (var file in File.ReadLines(allFilesPath))
@@ -287,16 +562,24 @@ namespace Raven.Database.FileSystem.Search
                 using (var neededFilesWriter = File.CreateText(neededFilePath))
                 {
                     var segmentsFileName = "segments.gen";
-                    var segmentsFullPath = Path.Combine(path, segmentsFileName);
+                    var segmentsFullPath = Path.Combine(indexDirectory, segmentsFileName);
                     File.Copy(segmentsFullPath, Path.Combine(saveToFolder, segmentsFileName));
+
                     allFilesWriter.WriteLine(segmentsFileName);
                     neededFilesWriter.WriteLine(segmentsFileName);
+
+                    var versionFileName = "index.version";
+                    var versionFullPath = Path.Combine(indexDirectory, versionFileName);
+                    File.Copy(versionFullPath, Path.Combine(saveToFolder, versionFileName));
+
+                    allFilesWriter.WriteLine(versionFileName);
+                    neededFilesWriter.WriteLine(versionFileName);                    
 
                     var commit = snapshotter.Snapshot();
                     hasSnapshot = true;
                     foreach (var fileName in commit.FileNames)
                     {
-                        var fullPath = Path.Combine(path, fileName);
+                        var fullPath = Path.Combine(indexDirectory, fileName);
 
                         if (".lock".Equals(Path.GetExtension(fullPath), StringComparison.InvariantCultureIgnoreCase))
                             continue;
@@ -313,7 +596,7 @@ namespace Raven.Database.FileSystem.Search
                             }
                             catch (Exception e)
                             {
-                                log.WarnException(
+                                Log.WarnException(
                                     "Could not backup RavenFS index" + 
                                     " because failed to copy file : " + fullPath + ". Skipping the index, will force index reset on restore", e); //TODO: is it also true for RavenFS?
                                 neededFilesWriter.Dispose();
@@ -361,5 +644,6 @@ namespace Raven.Database.FileSystem.Search
             {
             }
         }
-	}
+
+    }
 }

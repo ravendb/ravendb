@@ -28,7 +28,7 @@ class appUrl {
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
         adminSettings: ko.computed(() => appUrl.forAdminSettings()),
-        databases: ko.computed(() => appUrl.forDatabases()),
+        resources: ko.computed(() => appUrl.forResources()),
         documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.computed(() => appUrl.forPatch(appUrl.currentDatabase())),
@@ -83,16 +83,18 @@ class appUrl {
         statusDebugRequestTracing: ko.computed(() => appUrl.forStatusDebugRequestTracing(appUrl.currentDatabase())),
         statusDebugSqlReplication: ko.computed(() => appUrl.forStatusDebugSqlReplication(appUrl.currentDatabase())),
         statusDebugIndexFields: ko.computed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
-        statusDebugSlowDocCounts: ko.computed(() => appUrl.forStatusDebugSlowDocCounts(appUrl.currentDatabase())),
         statusDebugIdentities: ko.computed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
+        statusDebugWebSocket: ko.computed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
         infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
+
+        statusStorageOnDisk: ko.computed(() => appUrl.forStatusStorageOnDisk(appUrl.currentDatabase())),
+        statusStorageBreakdown: ko.computed(() => appUrl.forStatusStorageBreakdown(appUrl.currentDatabase())),
+        statusStorageCollections: ko.computed(() => appUrl.forStatusStorageCollections(appUrl.currentDatabase())),
 
         isAreaActive: (routeRoot: string) => ko.computed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
-        databasesManagement: ko.computed(() => appUrl.forDatabases() + "?" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
+        resourcesManagement: ko.computed(() => appUrl.forResources()),
 
-        filesystems: ko.computed(() => appUrl.forFilesystems()),
-        filesystemsManagement: ko.computed(() => appUrl.forFilesystems() + "?" + appUrl.getEncodedFsPart(appUrl.currentFilesystem())),
         filesystemFiles: ko.computed(() => appUrl.forFilesystemFiles(appUrl.currentFilesystem())),
         filesystemSearch: ko.computed(() => appUrl.forFilesystemSearch(appUrl.currentFilesystem())),
         filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
@@ -101,7 +103,6 @@ class appUrl {
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
 
         couterStorages: ko.computed(() => appUrl.forCounterStorages()),
-        counterStorageManagement: ko.computed(() => appUrl.forCounterStorages() + "?" + appUrl.getEncodedCounterStoragePart(appUrl.currentCounterStorage())),
         counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(appUrl.currentCounterStorage())),
         counterStorageReplication: ko.computed(() => appUrl.forCounterStorageReplication(appUrl.currentCounterStorage())),
         counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
@@ -153,28 +154,16 @@ class appUrl {
         return "#admin/settings/windowsAuth";
     }
 
-    static forBackupDatabase(): string {
-        return "#admin/settings/backupDatabase";
+    static forBackup(): string {
+        return "#admin/settings/backup";
     }
 
-    static forCompactDatabase(): string {
-        return "#admin/settings/compactDatabase";
+    static forCompact(): string {
+        return "#admin/settings/compact";
     }
 
-    static forRestoreDatabase(): string {
-        return "#admin/settings/restoreDatabase";
-    }
-
-    static forBackupFilesystem(): string {
-        return "#admin/settings/backupFilesystem";
-    }
-
-    static forCompactFilesystem(): string {
-        return "#admin/settings/compactFilesystem";
-    }
-
-    static forRestoreFilesystem(): string {
-        return "#admin/settings/restoreFilesystem";
+    static forRestore(): string {
+        return "#admin/settings/restore";
     }
 
     static forAdminLogs(): string {
@@ -197,12 +186,8 @@ class appUrl {
         return "#admin/settings/studioConfig";
     }
 
-    static forDatabases(): string {
-        return "#databases";
-    }
-
-    static forFilesystems(): string {
-        return "#filesystems";
+    static forResources(): string {
+        return "#resources";
     }
 
     static forCounterStorages(): string {
@@ -336,16 +321,28 @@ class appUrl {
         return "#databases/status/debug/indexFields?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forStatusDebugSlowDocCounts(db: database): string {
-        return "#databases/status/debug/slowDocCounts?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forStatusDebugIdentities(db: database): string {
         return "#databases/status/debug/identities?" + appUrl.getEncodedDbPart(db);
     }
 
+    static forStatusDebugWebSocket(db: database): string {
+        return "#databases/status/debug/webSocket?" + appUrl.getEncodedDbPart(db);
+    }
+
     static forInfoPackage(db: database): string {
         return '#databases/status/infoPackage?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusStorageOnDisk(db: database): string {
+        return '#databases/status/storage?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusStorageBreakdown(db: database): string {
+        return '#databases/status/storage/storageBreakdown?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusStorageCollections(db: database): string {
+        return '#databases/status/storage/collections?' + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {
@@ -687,6 +684,7 @@ class appUrl {
     static getSystemDatabase(): database {
         var db = new database("<system>");
         db.isSystem = true;
+        db.isVisible(false);
         return db;
     }
 
@@ -766,11 +764,35 @@ class appUrl {
     static forCurrentPage(rs: resource) {
         var routerInstruction = router.activeInstruction();
         if (routerInstruction) {
-            var resourceNameInAddress = routerInstruction.queryParams ? routerInstruction.queryParams[rs.type] : null;
-            var isDifferentDbInAddress = !resourceNameInAddress || resourceNameInAddress !== rs.name.toLowerCase();
+
+            var currentResourceName = null;
+            var currentResourceType = null;
+            var dbInUrl = routerInstruction.queryParams[database.type];
+            if (dbInUrl) {
+                currentResourceName = dbInUrl;
+                currentResourceType = database.type;
+            } else {
+                var fsInUrl = routerInstruction.queryParams[filesystem.type];
+                if (fsInUrl) {
+                    currentResourceName = fsInUrl;
+                    currentResourceType = filesystem.type;
+                } else {
+                    var cntInUrl = routerInstruction.queryParams[counterStorage.type];
+                    if (cntInUrl) {
+                        currentResourceName = cntInUrl;
+                        currentResourceType = counterStorage.type;
+                    }
+                }
+            }
+
+            if (currentResourceType && currentResourceType != rs.type) {
+                // user changed resource type - navigate to resources page and preselect resource
+                return appUrl.forResources() + "?" + rs.type + "=" + encodeURIComponent(rs.name);
+            }
+            var isDifferentDbInAddress = !currentResourceName || currentResourceName !== rs.name.toLowerCase();
             if (isDifferentDbInAddress) {
                 var existingAddress = window.location.hash;
-                var existingDbQueryString = resourceNameInAddress ? rs.type + "=" + encodeURIComponent(resourceNameInAddress) : null;
+                var existingDbQueryString = currentResourceName ? rs.type + "=" + encodeURIComponent(currentResourceName) : null;
                 var newDbQueryString = rs.type + "=" + encodeURIComponent(rs.name);
                 var newUrlWithDatabase = existingDbQueryString ?
                     existingAddress.replace(existingDbQueryString, newDbQueryString) :
@@ -825,17 +847,10 @@ class appUrl {
             var fragment = instruction.fragment;
             var appUrls: computedAppUrls = appUrl.currentDbComputeds;
             var newLoationHref;
-            if (fragment.indexOf("filesystems/") == 0) { //file systems section
-                newLoationHref = appUrls.filesystemsManagement();
-            }
-            else if (fragment.indexOf("counterstorages/") == 0) { //counter storages section
-                newLoationHref = appUrls.counterStorageManagement();
-            }
-            else if (fragment.indexOf("admin/settings") == 0) { //admin settings section
+            if (fragment.indexOf("admin/settings") == 0) { //admin settings section
                 newLoationHref = appUrls.adminSettings();
-            }
-            else { // databases section
-                newLoationHref = appUrls.databasesManagement();
+            } else {
+                newLoationHref = appUrls.resourcesManagement();
             }
             location.href = newLoationHref;
         });

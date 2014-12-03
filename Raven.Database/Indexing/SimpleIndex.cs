@@ -12,7 +12,6 @@ using System.Linq;
 using System.Threading;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
-using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -45,17 +44,23 @@ namespace Raven.Database.Indexing
 		{
 			var count = 0;
 			var sourceCount = 0;
-			var sw = Stopwatch.StartNew();
-			var start = SystemTime.UtcNow;
-			Write((indexWriter, analyzer, stats) =>
+			int loadDocumentCount = 0;
+			long loadDocumentDuration = 0;
+			long linqExecutionDutation = 0;
+			var addDocumentTotalDutation = new Stopwatch();
+
+			var writeStats = Write((indexWriter, analyzer, stats) =>
 			{
 				var processedKeys = new HashSet<string>();
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
 					.Where(x => x != null)
 					.ToList();
+
 				try
 				{
-					RecordCurrentBatch("Current", batch.Docs.Count);
+					var indexingPerfStats = RecordCurrentBatch("Current", batch.Docs.Count);
+					batch.SetIndexingPerformance(indexingPerfStats);
+
 					var docIdTerm = new Term(Constants.DocumentIdFieldName);
 					var documentsWrapped = batch.Docs.Select((doc, i) =>
 					{
@@ -95,7 +100,8 @@ namespace Raven.Database.Indexing
 							int outputPerDocId = 0;
 							Action<Exception, object> onErrorFunc;
 							bool skipDocument = false;
-							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats, out onErrorFunc))
+							Stopwatch linqExecution;
+							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats, out onErrorFunc, out linqExecution))
 							{
 								float boost;
 								IndexingResult indexingResult;
@@ -153,12 +159,19 @@ namespace Raven.Database.Indexing
 									},
 									trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
 								LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
+
+								addDocumentTotalDutation.Start();
 								AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+								addDocumentTotalDutation.Stop();
 
 								Interlocked.Increment(ref stats.IndexingSuccesses);
 							}
 							allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
 							allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
+
+							Interlocked.Add(ref loadDocumentCount, CurrentIndexingScope.Current.LoadDocumentCount);
+							Interlocked.Add(ref loadDocumentDuration, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds);
+							Interlocked.Add(ref linqExecutionDutation, linqExecution.ElapsedMilliseconds);
 						}
 					});
 					UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
@@ -183,7 +196,6 @@ namespace Raven.Database.Indexing
 							context.AddError(indexId, null, e.Message, "Dispose Trigger");
 						},
 						x => x.Dispose());
-					BatchCompleted("Current");
 				}
 				return new IndexedItemsInfo(batch.HighestEtagBeforeFiltering)
 				{
@@ -191,15 +203,8 @@ namespace Raven.Database.Indexing
 				};
 			});
 
-			AddindexingPerformanceStat(new IndexingPerformanceStats
-			{
-				OutputCount = count,
-				ItemsCount = sourceCount,
-				InputCount = batch.Docs.Count,
-				Duration = sw.Elapsed,
-				Operation = "Index",
-				Started = start
-			});
+			BatchCompleted("Current", "Index", sourceCount, count, loadDocumentCount, loadDocumentDuration,
+						addDocumentTotalDutation.ElapsedMilliseconds, linqExecutionDutation, writeStats.FlushToDiskDurationMs);
 			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
 		}
 
@@ -296,7 +301,7 @@ namespace Raven.Database.Indexing
 			}
 			catch (InvalidShapeException e)
 			{
-				throw new InvalidSpatialShapeException(e, newDocId);
+				throw new InvalidSpatialShapException(e, newDocId);
 			}
 
 			return new IndexingResult
@@ -321,7 +326,7 @@ namespace Raven.Database.Indexing
 			}
 			catch (InvalidShapeException e)
 			{
-				throw new InvalidSpatialShapeException(e, newDocId);
+				throw new InvalidSpatialShapException(e, newDocId);
 			}
 
 			return new IndexingResult

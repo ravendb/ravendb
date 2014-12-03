@@ -170,10 +170,10 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 		private int maybePulseCount;
-		public void MaybePulseTransaction()
+		public bool MaybePulseTransaction()
 		{
-			if (++maybePulseCount % 1000 != 0)
-				return;
+			if (++maybePulseCount%1000 != 0)
+				return false;
 
 			var sizeInBytes = transactionalStorage.GetDatabaseTransactionVersionSizeInBytes();
 			const int maxNumberOfCallsBeforePulsingIsForced = 50 * 1000;
@@ -184,14 +184,15 @@ namespace Raven.Storage.Esent.StorageActions
 					logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
 					PulseTransaction();
 				}
-				return;
+				return true;
 			}
 			var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
 			if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
 			{
 				logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
 				PulseTransaction();
-		}
+			}
+			return true;
 		}
 
 		public bool UsingLazyCommit { get; set; }

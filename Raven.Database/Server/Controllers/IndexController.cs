@@ -405,6 +405,15 @@ namespace Raven.Database.Server.Controllers
 	        sb.Append("\tIndex: ")
 	            .AppendLine(result.IndexName);
 	        sb.Append("\t").AppendFormat("Results: {0:#,#;;0} returned out of {1:#,#;;0} total.", result.Results.Count, result.TotalResults).AppendLine();
+
+			if (result.TimingsInMilliseconds != null)
+			{
+				sb.Append("\tTiming:").AppendLine();
+			    foreach (var timing in result.TimingsInMilliseconds)
+			    {
+				    sb.Append("\t").Append(timing.Key).Append(": ").Append(timing.Value).AppendLine();
+			    }
+		    }
 	    }
 
 	    private QueryResultWithIncludes PerformQueryAgainstExistingIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg, CancellationToken token)

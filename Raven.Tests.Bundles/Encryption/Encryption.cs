@@ -6,6 +6,7 @@
 using Raven.Client.Document;
 using Raven.Server;
 using Raven.Tests.Common;
+using Raven.Tests.Common.Util;
 
 namespace Raven.Tests.Bundles.Encryption
 {
@@ -19,13 +20,15 @@ namespace Raven.Tests.Bundles.Encryption
 		public Encryption()
 		{
 			path = NewDataPath();
-			createServer();
+			CreateServer();
 			documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
 		}
 
-		private void createServer()
+		private void CreateServer()
 		{
-            ravenDbServer = GetNewServer(runInMemory: false, dataDirectory: path, activeBundles: "Encryption", configureConfig: configuration =>
+            ravenDbServer = GetNewServer(
+				runInMemory: false, dataDirectory: path, activeBundles: "Encryption",
+				configureConfig: configuration =>
 			{
 				configuration.Settings["Raven/Encryption/Key"] = "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8=";
 			});
@@ -35,13 +38,13 @@ namespace Raven.Tests.Bundles.Encryption
 		protected void AssertPlainTextIsNotSavedInDatabase(params string[] plaintext)
 		{
 			Close();
-			TestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, s => true);
+			EncryptionTestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, s => true);
 		}
 
 		protected void RecycleServer()
 		{
 			ravenDbServer.Dispose();
-			createServer();
+			CreateServer();
 		}
 
 		protected void Close()

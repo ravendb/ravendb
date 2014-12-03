@@ -41,7 +41,7 @@ namespace Raven.Database.Impl.DTC
 			_database = database;
 			this.storage = storage;
 			this.txMode = txMode;
-			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+			timer = database.TimerManager.NewTimer(CleanupOldTransactions, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 		}
 
 		public EsentTransactionContext CreateEsentTransactionContext()
@@ -255,7 +255,7 @@ namespace Raven.Database.Impl.DTC
 
 		public void Dispose()
 		{
-			timer.Dispose();
+			_database.TimerManager.ReleaseTimer(timer);
 			foreach (var context in transactionContexts)
 			{
 				using (context.Value.Session)

@@ -1,5 +1,6 @@
 import appUrl = require("common/appUrl");
 import database = require("models/database");
+import resource = require("models/resource");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import router = require("plugins/router");
@@ -13,6 +14,8 @@ import uploadItem = require("models/uploadItem");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
 import confirmationDialog = require("viewmodels/confirmationDialog");
+import saveDocumentCommand = require("commands/saveDocumentCommand");
+import document = require("models/document");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -21,6 +24,10 @@ class viewModelBase {
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     public activeCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
+    public lastActivatedResource = ko.observable<resource>()
+        .subscribeTo("ActivateDatabase", true)
+        .subscribeTo("ActivateFilesystem", true)
+        .subscribeTo("ActivateCounterStorage", true);
 
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
@@ -29,6 +36,8 @@ class viewModelBase {
     public static isConfirmedUsingSystemDatabase: boolean = false;
     dirtyFlag = new ko.DirtyFlag([]);
 
+
+    static hasContinueTestOption = ko.observable<boolean>(false);
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
      * Possible return values: boolean, promise<boolean>, {redirect: 'some/other/route'}, promise<{redirect: 'some/other/route'}>
@@ -44,14 +53,14 @@ class viewModelBase {
 
             if (!!fs && fs.disabled()) {
                 messagePublisher.reportError("File system '" + fs.name + "' is disabled!", "You can't access any section of the file system while it's disabled.");
-                return { redirect: appUrl.forFilesystems() };
+                return { redirect: appUrl.forResources() };
             }
         } else if (resource instanceof counterStorage) {
             var cs = this.activeCounterStorage();
 
             if (!!cs && cs.disabled()) {
                 messagePublisher.reportError("Counter Storage '" + cs.name + "' is disabled!", "You can't access any section of the counter storage while it's disabled.");
-                return { redirect: appUrl.forFilesystems() };
+                return { redirect: appUrl.forResources() };
             }
         } else { //it's a database
             var db = this.activeDatabase();
@@ -62,7 +71,7 @@ class viewModelBase {
             }
             else if (!!db && db.disabled()) {
                 messagePublisher.reportError("Database '" + db.name + "' is disabled!", "You can't access any section of the database while it's disabled.");
-                return { redirect: appUrl.forDatabases() };
+                return { redirect: appUrl.forResources() };
             }
 
             viewModelBase.isConfirmedUsingSystemDatabase = false;
@@ -258,7 +267,7 @@ class viewModelBase {
         } else {
             var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
             systemDbConfirm.viewTask
-                .fail(() => forceRejectWithResolve == false ? canNavTask.resolve({ redirect: appUrl.forDatabases() }) : canNavTask.reject())
+                .fail(() => forceRejectWithResolve == false ? canNavTask.resolve({ redirect: appUrl.forResources() }) : canNavTask.reject())
                 .done(() => {
                     viewModelBase.isConfirmedUsingSystemDatabase = true;
                     canNavTask.resolve({ can: true });
@@ -291,6 +300,13 @@ class viewModelBase {
 
     public RemoveNotification(subscription: changeSubscription) {
         this.notifications.remove(subscription);
+    }
+
+    public continueTest() {
+        var doc = document.empty();
+        new saveDocumentCommand("Debug/Done", doc, this.activeDatabase(), false)
+            .execute()
+            .done(() => viewModelBase.hasContinueTestOption(false));
     }
 }
 

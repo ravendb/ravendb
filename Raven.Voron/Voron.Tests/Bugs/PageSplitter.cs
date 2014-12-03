@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using Voron.Debugging;
+using Voron.Util;
 
 namespace Voron.Tests.Bugs
 {

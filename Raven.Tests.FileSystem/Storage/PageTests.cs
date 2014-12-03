@@ -91,8 +91,8 @@ namespace Raven.Tests.FileSystem.Storage
                     length1 = accessor.ReadPage(pageId1, b1);
                     length2 = accessor.ReadPage(pageId2, b2);
 
-                    Assert.Equal(buffer1.Length, length1);
-                    Assert.Equal(buffer2.Length, length2);
+                    Assert.Equal(3, length1);
+                    Assert.Equal(3, length2);
                 });
             }
         }

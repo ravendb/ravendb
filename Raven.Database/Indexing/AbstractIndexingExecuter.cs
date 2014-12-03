@@ -95,10 +95,6 @@ namespace Raven.Database.Indexing
                     catch (Exception e)
                     {
                         foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
-#if DEBUG
-                        if (Debugger.IsAttached)
-                            Debugger.Break();
-#endif
                         Log.ErrorException("Failed to execute indexing", e);
                         if (IsEsentOutOfMemory(e))
                         {
@@ -232,6 +228,9 @@ namespace Raven.Database.Indexing
                     if (index == null) // not there
                         continue;
 
+					if (ShouldSkipIndex(index))
+						continue;
+
 					if(context.IndexDefinitionStorage.GetViewGenerator(indexesStat.Id) == null)
 						continue; // an index that is in the process of being added, ignoring it, we'll check again on the next run
 
@@ -240,6 +239,7 @@ namespace Raven.Database.Indexing
 
 					var indexToWorkOn = GetIndexToWorkOn(indexesStat);
                     indexToWorkOn.Index = index;
+
                     indexesToWorkOn.Add(indexToWorkOn);
                 }
             });
@@ -261,7 +261,9 @@ namespace Raven.Database.Indexing
             return true;
         }
 
-        public Index[] GetCurrentlyProcessingIndexes()
+	    protected abstract bool ShouldSkipIndex(Index index);
+
+	    public Index[] GetCurrentlyProcessingIndexes()
         {
             return currentlyProcessedIndexes.Values.ToArray();
         }

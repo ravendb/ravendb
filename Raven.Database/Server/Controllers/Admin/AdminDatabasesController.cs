@@ -66,12 +66,12 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 
 			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
-			if (dbDoc.Settings.ContainsKey("Bundles") && dbDoc.Settings["Bundles"].Contains("Encryption"))
+			if (dbDoc.Settings.ContainsKey(Constants.ActiveBundles) && dbDoc.Settings[Constants.ActiveBundles].Contains("Encryption"))
 			{
-				if (!dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
+				if (dbDoc.SecuredSettings == null || !dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
 				    !dbDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
 				{
-					return GetMessageWithString(string.Format("Failed to create '{0}' database, becuase of not valid encryption configuration.", id), HttpStatusCode.BadRequest);
+					return GetMessageWithString(string.Format("Failed to create '{0}' database, because of invalid encryption configuration.", id), HttpStatusCode.BadRequest);
 				}
 			}
 
@@ -215,8 +215,12 @@ namespace Raven.Database.Server.Controllers.Admin
 				IOExtensions.DeleteDirectory(configuration.DataDirectory);
 				if (configuration.IndexStoragePath != null)
 					IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
-				if (configuration.JournalsStoragePath != null)
-					IOExtensions.DeleteDirectory(configuration.JournalsStoragePath);
+
+				if (configuration.Storage.Esent.JournalsStoragePath != null)
+					IOExtensions.DeleteDirectory(configuration.Storage.Esent.JournalsStoragePath);
+
+				if (configuration.Storage.Voron.JournalsStoragePath != null)
+					IOExtensions.DeleteDirectory(configuration.Storage.Voron.JournalsStoragePath);
 			}
 
 			return new MessageWithStatusCode();

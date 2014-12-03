@@ -14,6 +14,7 @@ using System.IO;
 using Voron;
 using Voron.Debugging;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Raven.Database.FileSystem.Storage.Voron.Impl
 {

@@ -214,6 +214,7 @@
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogManagerLoggingDisabedTests.cs" />
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogProviderLoggingEnabledTests.cs" />
     <Compile Include="Abstractions\Logging\LogManagerTests.cs" />
+    <Compile Include="AllExceptionsAreSerializaable.cs" />
     <Compile Include="Bugs\AccessingHostPropertyOnUri.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AdHocProjections.cs" />
@@ -244,6 +245,8 @@
     <Compile Include="Bugs\EntityWithStack.cs" />
     <Compile Include="Bugs\NoTracking.cs" />
     <Compile Include="Bugs\SortingAsMaxInt.cs" />
+    <Compile Include="DistinctFacets\DistinctAndFacets.cs" />
+    <Compile Include="DistinctFacets\FromUser.cs" />
     <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Embedded\EmbeddedTests.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />

@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Voron
+namespace Voron.Impl
 {
 	public unsafe class StdLib
 	{

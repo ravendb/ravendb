@@ -33,7 +33,7 @@ namespace Raven.Database.Storage.Esent
 		{
 			path = Path.GetFullPath(path);
 			var logsPath = path;
-			var configuredLogsPath = Configuration.Settings["Raven/Esent/LogsPath"] ?? Configuration.Settings[Constants.RavenTxJournalPath] ?? Configuration.JournalsStoragePath;
+			var configuredLogsPath = Configuration.Storage.Esent.JournalsStoragePath;
 			if (string.IsNullOrEmpty(configuredLogsPath) == false)
 			{
 				logsPath = configuredLogsPath.ToFullPath();

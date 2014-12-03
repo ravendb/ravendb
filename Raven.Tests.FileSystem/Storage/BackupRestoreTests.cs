@@ -26,7 +26,6 @@ namespace Raven.Tests.FileSystem.Storage
     public class BackupRestoreTests : RavenFilesTestWithLogs
     {
         private readonly string DataDir;
-
         private readonly string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BackupRestoreTests.Backup");
 
         public BackupRestoreTests()
@@ -37,8 +36,8 @@ namespace Raven.Tests.FileSystem.Storage
 
         public override void Dispose()
         {
-            base.Dispose();
             IOExtensions.DeleteDirectory(backupDir);
+            base.Dispose();
         }
 
         [Theory]
@@ -47,6 +46,10 @@ namespace Raven.Tests.FileSystem.Storage
         {
             using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false))
             {
+                var server = this.GetServer();
+
+                string filesystemDir = Path.Combine(server.Configuration.FileSystem.DataDirectory, "NewFS");
+
                 await CreateSampleData(store);
 
                 // fetch md5 sums for later verification
@@ -61,11 +64,11 @@ namespace Raven.Tests.FileSystem.Storage
                 {
                     BackupLocation = backupDir,
                     FilesystemName = "NewFS",
-                    FilesystemLocation = DataDir
+                    FilesystemLocation = filesystemDir
                 });
 
                 SpinWait.SpinUntil(() => store.AsyncFilesCommands.Admin.GetNamesAsync().Result.Contains("NewFS"),
-                    Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(1));
+                            Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(1));
 
                 var restoredMd5Sums = FetchMd5Sums(store.AsyncFilesCommands.ForFileSystem("NewFS"));
                 Assert.Equal(md5Sums, restoredMd5Sums);
@@ -73,7 +76,6 @@ namespace Raven.Tests.FileSystem.Storage
                 var restoredClientComputedMd5Sums = ComputeMd5Sums(store.AsyncFilesCommands.ForFileSystem("NewFS"));
                 Assert.Equal(md5Sums, restoredClientComputedMd5Sums);
             }
-
         }
 
         [Theory]
@@ -123,7 +125,7 @@ namespace Raven.Tests.FileSystem.Storage
 
 		[Theory]
 		[PropertyData("Storages")]
-		public async Task RavenDB_2824_ShouldThrowWhenTryingToUseTheSameIncrementalBackupLocationForDifferentFS(string requestedStorage)
+        public async Task RavenDB_2824_ShouldThrowWhenTryingToUseTheSameIncrementalBackupLocationForDifferentFS(string requestedStorage)
 	    {
 			using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
 			{
@@ -143,7 +145,7 @@ namespace Raven.Tests.FileSystem.Storage
 				WaitForBackup(store.AsyncFilesCommands, true);
 			}
 
-			using (var store = (FilesStore)NewStore(index: 1, requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
+            using (var store = (FilesStore)NewStore(index: 1, requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
 			{
 				config.Settings["Raven/Esent/CircularLog"] = "false";
 				config.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
@@ -162,6 +164,47 @@ namespace Raven.Tests.FileSystem.Storage
 				Assert.Contains("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different file system. Existing incremental data origins from 'RavenDB_2824_one' file system.", errorMessage.Message);
 			}
 	    }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task RavenDB_2950_EvenIfTheIndexIsCorruptedItShouldDisposeCorrectly(string requestedStorage)
+        {
+            using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false))
+            {
+                var server = this.GetServer();
+
+                string filesystemDir = Path.Combine(server.Configuration.FileSystem.DataDirectory, "NewFS");
+
+                await CreateSampleData(store);
+
+                // fetch md5 sums for later verification
+                var md5Sums = FetchMd5Sums(store.AsyncFilesCommands);
+
+                // create backup
+                await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, false, store.DefaultFileSystem);
+                WaitForBackup(store.AsyncFilesCommands, true);
+
+                // restore newly created backup
+                await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
+                {
+                    BackupLocation = backupDir,
+                    FilesystemName = "NewFS",
+                    FilesystemLocation = filesystemDir
+                });
+
+                SpinWait.SpinUntil(() => store.AsyncFilesCommands.Admin.GetNamesAsync().Result.Contains("NewFS"),
+                            Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(1));
+
+                // Corrupt the index on purpose.
+                File.Delete(Path.Combine(filesystemDir, "Indexes", "index.version"));
+
+                var restoredMd5Sums = FetchMd5Sums(store.AsyncFilesCommands.ForFileSystem("NewFS"));
+                Assert.Equal(md5Sums, restoredMd5Sums);
+
+                var restoredClientComputedMd5Sums = ComputeMd5Sums(store.AsyncFilesCommands.ForFileSystem("NewFS"));
+                Assert.Equal(md5Sums, restoredClientComputedMd5Sums);
+            }
+        }
 
         private string[] ComputeMd5Sums(IAsyncFilesCommands filesCommands, int filesCount = 2)
         {

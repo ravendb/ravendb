@@ -3,9 +3,8 @@ using System.Runtime.Serialization;
 
 namespace Rhino.Licensing
 {
-	/// <summary>
-	/// 
-	/// </summary>
+
+	[Serializable]
 	public class FloatingLicenseNotAvailableException : RhinoLicensingException
 	{
 		/// <summary>

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -15,6 +16,9 @@ using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using ICSharpCode.NRefactory.CSharp;
+
+using Lucene.Net.Messages;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
@@ -22,8 +26,9 @@ using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
-using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Connections;
+using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using IOExtensions = Raven.Database.Extensions.IOExtensions;
@@ -33,6 +38,25 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class DebugController : RavenDbApiController
 	{
+		[HttpGet]
+		[Route("debug/enable-query-timing")]
+		[Route("databases/{databaseName}/debug/enable-query-timing")]
+		public HttpResponseMessage EnableQueryTiming()
+		{
+			var time = SystemTime.UtcNow + TimeSpan.FromMinutes(5);
+			Database.WorkContext.ShowTimingByDefaultUntil = time;
+			return GetMessageWithObject(new {Enabled = true, Until = time});
+		}
+
+		[HttpGet]
+		[Route("debug/disable-query-timing")]
+		[Route("databases/{databaseName}/debug/disable-query-timing")]
+		public HttpResponseMessage DisableQueryTiming()
+		{
+			Database.WorkContext.ShowTimingByDefaultUntil = null;
+			return GetMessageWithObject(new { Enabled = false});
+		}
+
 		[HttpGet]
 		[Route("debug/prefetch-status")]
 		[Route("databases/{databaseName}/debug/prefetch-status")]
@@ -217,6 +241,16 @@ namespace Raven.Database.Server.Controllers
 
 
 		[HttpGet]
+		[Route("debug/indexing-batch-stats")]
+		[Route("databases/{databaseName}/debug/indexing-batch-stats")]
+		public HttpResponseMessage IndexingBatchStats()
+		{
+			var indexingBatchInfos = Database.Statistics.IndexingBatchInfo;
+
+			return GetMessageWithObject(indexingBatchInfos);
+		}
+
+		[HttpGet]
 		[Route("debug/plugins")]
 		[Route("databases/{databaseName}/debug/plugins")]
 		public HttpResponseMessage Plugins()
@@ -282,7 +316,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet]
 		[Route("debug/docrefs")]
 		[Route("databases/{databaseName}/debug/docrefs")]
-		public HttpResponseMessage Docrefs(string id)
+		public HttpResponseMessage DocRefs(string id)
 		{
 			var op = GetQueryStringValue("op") == "from" ? "from" : "to";
 
@@ -302,6 +336,27 @@ namespace Raven.Database.Server.Controllers
 			{
 				TotalCountReferencing = totalCountReferencing,
 				Results = results
+			});
+		}
+
+		[HttpGet]
+		[Route("debug/d0crefs-t0ps")]
+		[Route("databases/{databaseName}/debug/d0crefs-t0ps")]
+		public HttpResponseMessage DocRefsTops()
+		{
+			var sp = Stopwatch.StartNew();
+			Dictionary<string, int> documentReferencesStats = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				documentReferencesStats = accessor.Indexing.GetDocumentReferencesStats();
+			});
+
+			return GetMessageWithObject(new
+			{
+				TotalReferences = documentReferencesStats.Count,
+				GenerationCost = sp.Elapsed,
+				Results = documentReferencesStats.OrderByDescending(x => x.Value)
+					.Select(x => new {Document = x.Key, Count = x.Value})
 			});
 		}
 

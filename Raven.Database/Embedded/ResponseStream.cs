@@ -5,8 +5,11 @@ using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Embedded
 {
@@ -14,6 +17,8 @@ namespace Raven.Database.Embedded
     // when requested by the client.
     internal class ResponseStream : Stream
     {
+	    private readonly ILog log = LogManager.GetCurrentClassLogger();
+
         private bool _disposed;
         private bool _aborted;
         private Exception _abortException;
@@ -25,16 +30,23 @@ namespace Raven.Database.Embedded
         private object _signalReadLock;
 
         private Action _onFirstWrite;
-        private bool _firstWrite;
 
-        internal ResponseStream(Action onFirstWrite)
+	    private readonly bool _enableLogging;
+
+	    private bool _firstWrite;
+
+	    private Guid _id;
+
+	    internal ResponseStream(Action onFirstWrite, bool enableLogging)
         {
             if (onFirstWrite == null)
             {
                 throw new ArgumentNullException("onFirstWrite");
             }
             _onFirstWrite = onFirstWrite;
-            _firstWrite = true;
+			_enableLogging = enableLogging;
+	        _firstWrite = true;
+	        _id = Guid.NewGuid();
 
             _readLock = new SemaphoreSlim(1, 1);
             _writeLock = new SemaphoreSlim(1, 1);
@@ -248,6 +260,10 @@ namespace Raven.Database.Embedded
                 // Copies are necessary because we don't know what the caller is going to do with the buffer afterwards.
                 byte[] internalBuffer = new byte[count];
                 Buffer.BlockCopy(buffer, offset, internalBuffer, 0, count);
+
+				if (_enableLogging)
+					log.Info("ResponseStream ({0}). Write. Content: {1}", _id, Encoding.UTF8.GetString(internalBuffer));
+
                 _bufferedData.Enqueue(internalBuffer);
 
                 SignalDataAvailable();

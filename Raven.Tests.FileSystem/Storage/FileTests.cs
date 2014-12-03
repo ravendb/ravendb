@@ -392,6 +392,46 @@ namespace Raven.Tests.FileSystem.Storage
 
         [Theory]
         [PropertyData("Storages")]
+        public void GetLastEtag(string requestedStorage)
+        {
+            var etag1 = Etag.Parse("00000000-0000-0000-0000-000000000001");
+            var etag2 = Etag.Parse("00000000-0000-0000-0000-000000000002");
+            var etag3 = Etag.Parse("00000000-0000-0000-0000-000000000003");
+            var etag4 = Etag.Parse("00000000-0000-0000-0000-000000000004");
+            var etag5 = Etag.Parse("00000000-0000-0000-0000-000000000005");
+            var etag6 = Etag.Parse("00000000-0000-0000-0000-000000000006");
+            var etag7 = Etag.Parse("00000000-0000-0000-0000-000000000007");
+            var etag8 = Etag.Parse("00000000-0000-0000-0000-000000000008");
+            var etag9 = Etag.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
+
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+
+                Etag etag = null;
+                storage.Batch(accessor => etag = accessor.GetLastEtag());
+                Assert.Equal(Etag.Empty, etag);
+
+                storage.Batch(accessor => accessor.PutFile("/file1", null, new RavenJObject().WithETag(etag1)));
+
+                storage.Batch(accessor => etag = accessor.GetLastEtag());
+                Assert.Equal(etag1, etag);
+                
+                storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject().WithETag(etag3)));
+                storage.Batch(accessor => etag = accessor.GetLastEtag());
+                Assert.Equal(etag3, etag);
+
+                storage.Batch(accessor => accessor.PutFile("/file2", 10, new RavenJObject().WithETag(etag2)));
+                storage.Batch(accessor => etag = accessor.GetLastEtag());
+                Assert.Equal(etag3, etag);
+
+                storage.Batch(accessor => accessor.PutFile("/file9", 10, new RavenJObject().WithETag(etag9)));
+                storage.Batch(accessor => etag = accessor.GetLastEtag());
+                Assert.Equal(etag9, etag);
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
         public void UpdateFileMetadata(string requestedStorage)
         {
             var etag1 = Guid.NewGuid();

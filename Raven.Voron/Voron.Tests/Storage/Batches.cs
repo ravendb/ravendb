@@ -1,4 +1,6 @@
-﻿namespace Voron.Tests.Storage
+﻿using Voron.Util;
+
+namespace Voron.Tests.Storage
 {
     using System;
     using System.Globalization;

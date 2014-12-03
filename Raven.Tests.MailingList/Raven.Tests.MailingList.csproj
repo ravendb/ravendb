@@ -175,6 +175,7 @@
     <Compile Include="CustomAnalyzerStartsWithFailure.cs" />
     <Compile Include="CustomIdInIndexCreationTask.cs" />
     <Compile Include="Daniel.cs" />
+    <Compile Include="DanielPilon.cs" />
     <Compile Include="DataSetIndexTest.cs" />
     <Compile Include="DateTimeOffsetIssues.cs" />
     <Compile Include="DayOfWeekTest.cs" />
@@ -225,6 +226,7 @@
     <Compile Include="HttpIdTest.cs" />
     <Compile Include="IdCasing.cs" />
     <Compile Include="IdComesBackLowerCase.cs" />
+    <Compile Include="IdentityUserDeserialization.cs" />
     <Compile Include="IdsaTest.cs" />
     <Compile Include="IisQueryLengthIssues.cs" />
     <Compile Include="IncludeOnDictionary.cs" />
@@ -329,6 +331,7 @@
     <Compile Include="PhilJones\PhilJones.cs" />
     <Compile Include="PhilJones\PhilJones88.cs" />
     <Compile Include="PhilJones\Projections.cs" />
+    <Compile Include="RavenArrayQueryInputTests.cs" />
     <Compile Include="RavenDB252.cs" />
     <Compile Include="RavenDB669.cs" />
     <Compile Include="RavenDbBugs.cs" />

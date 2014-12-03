@@ -109,9 +109,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\NetTopologySuite.dll</HintPath>
     </Reference>
-    <Reference Include="NLog">
-      <HintPath>..\packages\NLog.3.1.0.0\lib\net45\NLog.dll</HintPath>
-    </Reference>
     <Reference Include="NLog, Version=2.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\NLog.3.1.0.0\lib\net45\NLog.dll</HintPath>
@@ -212,9 +209,17 @@
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.SlowTests\Raven.SlowTests.csproj">
+      <Project>{46152256-7443-426C-A20D-B2F354B51810}</Project>
+      <Name>Raven.SlowTests</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
       <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
       <Name>Raven.Tests.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Core\Raven.Tests.Core.csproj">
+      <Project>{93287FBA-732A-4603-9BBE-9CFDC82FC8BE}</Project>
+      <Name>Raven.Tests.Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
       <Project>{1B88473F-743B-4F6B-8E5E-97BB816E6C68}</Project>
@@ -231,6 +236,10 @@
     <ProjectReference Include="..\Raven.Tests.FileSystem\Raven.Tests.FileSystem.csproj">
       <Project>{01ca67f3-1e46-455c-8713-86fccf2efbc7}</Project>
       <Name>Raven.Tests.FileSystem</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
+      <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
+      <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

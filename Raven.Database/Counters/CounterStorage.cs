@@ -8,6 +8,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Extensions;
@@ -61,6 +62,8 @@ namespace Raven.Database.Counters
 
             metricsCounters = new CountersMetricsManager();
 			transportState = recievedTransportState ?? new TransportState();
+			Configuration = configuration;
+			ExtensionsState = new AtomicDictionary<object>();
             Initialize();
 		}
 
@@ -74,8 +77,11 @@ namespace Raven.Database.Counters
 		{
 			get { return transportState; }
 		}
+		public AtomicDictionary<object> ExtensionsState { get; private set; }
 
-	    public CounterStorageStats CreateStats()
+		public InMemoryRavenConfiguration Configuration { get; private set; }
+
+		public CounterStorageStats CreateStats()
 	    {
 	        using (var reader = CreateReader())
 	        {

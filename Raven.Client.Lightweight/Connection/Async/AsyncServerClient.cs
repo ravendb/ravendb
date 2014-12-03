@@ -348,7 +348,8 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("DELETE", async operationMetadata =>
 			{
 				var notNullOptions = options ?? new BulkOperationOptions();
-				string path = queryToDelete.GetIndexQueryUrl(operationMetadata.Url, indexName, "bulk_docs") + "&allowStale=" + notNullOptions.AllowStale;
+				string path = queryToDelete.GetIndexQueryUrl(operationMetadata.Url, indexName, "bulk_docs") + "&allowStale=" + notNullOptions.AllowStale
+					 + "&details=" + notNullOptions.RetrieveDetails;
 				if (notNullOptions.MaxOpsPerSec != null)
 					path += "&maxOpsPerSec=" + notNullOptions.MaxOpsPerSec;
 				if (notNullOptions.StaleTimeout != null)
@@ -993,7 +994,7 @@ namespace Raven.Client.Connection.Async
 			{
 				var notNullOptions = options ?? new BulkOperationOptions();
 				string path = queryToUpdate.GetIndexQueryUrl(operationMetadata.Url, indexName, "bulk_docs") + "&allowStale=" + notNullOptions.AllowStale
-					+ "&maxOpsPerSec=" + notNullOptions.MaxOpsPerSec;
+					+ "&maxOpsPerSec=" + notNullOptions.MaxOpsPerSec + "&details=" + notNullOptions.RetrieveDetails;
 				if (notNullOptions.StaleTimeout != null)
 					path += "&staleTimeout=" + notNullOptions.StaleTimeout;
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention)))
@@ -1084,7 +1085,7 @@ namespace Raven.Client.Connection.Async
 			{
 				var requestUri = operationMetadata.Url + string.Format("/facets/{0}?{1}&facetStart={2}&facetPageSize={3}",
 																Uri.EscapeUriString(index),
-																query.GetMinimalQueryString(),
+																query.GetQueryString(),
 																start,
 																pageSize);
 
@@ -1387,7 +1388,7 @@ namespace Raven.Client.Connection.Async
 						var response = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 						if (response == null)
 						{
-							throw new InvalidOperationException("Got null response from the server after doing a batch, something is very wrong. Probably a garbled response.");
+							throw new InvalidOperationException("Got null response from the server after doing a batch, something is very wrong. Probably a garbled response. Posted: " + jArray);
 						}
 						return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 					}
@@ -1475,7 +1476,7 @@ namespace Raven.Client.Connection.Async
 		[Obsolete("Use RavenFS instead.")]
 		public Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata)
 		{
-			return ExecuteWithReplication("PUT", operationMetadata =>
+			return ExecuteWithReplication("PUT", async operationMetadata =>
 			{
 				if (metadata == null)
 					metadata = new RavenJObject();
@@ -1488,7 +1489,7 @@ namespace Raven.Client.Connection.Async
 					request.AddOperationHeaders(OperationsHeaders);
 					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-					return request.WriteAsync(data);
+					await request.WriteAsync(data).ConfigureAwait(false);
 				}
 			});
 		}

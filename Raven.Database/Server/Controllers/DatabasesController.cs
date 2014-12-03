@@ -69,14 +69,19 @@ namespace Raven.Database.Server.Controllers
 			List<string> approvedDatabases = null;
 			if (DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
-				var user = User;
+                var authorizer = (MixedModeRequestAuthorizer)this.ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+
+                HttpResponseMessage authMsg;
+                if (authorizer.TryAuthorize(this, out authMsg) == false)
+                    return authMsg;
+
+			    var user = authorizer.GetUser(this);
+
 				if (user == null)
 					return null;
 
 				if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
-					var authorizer = (MixedModeRequestAuthorizer)this.ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
-
 					approvedDatabases = authorizer.GetApprovedResources(user, this, databasesNames);
 				}
 			}

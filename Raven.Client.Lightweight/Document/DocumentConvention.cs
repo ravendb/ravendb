@@ -62,6 +62,7 @@ namespace Raven.Client.Document
 				new Int32Converter(),
 				new Int64Converter(),
 			};
+			PreserveDocumentPropertiesNotFoundOnModel = true;
 			PrettifyGeneratedLinqExpressions = true;
 			DisableProfiling = true;
 			EnlistInDistributedTransactions = true;
@@ -93,6 +94,7 @@ namespace Raven.Client.Document
 			ShouldAggressiveCacheTrackChanges = true;
 			ShouldSaveChangesForceAggressiveCacheCheck = true;
 			IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
+			AcceptGzipContent = true;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
@@ -636,6 +638,15 @@ namespace Raven.Client.Document
 		/// Defaults to <see cref="Document.IndexAndTransformerReplicationMode.All"/>.
 		/// </summary>
 		public IndexAndTransformerReplicationMode IndexAndTransformerReplicationMode { get; set; }
+
+		/// <summary>
+		/// Controls whatever properties on the object that weren't de-serialized to object properties 
+		/// will be preserved when saving the document again. If false, those properties will be removed
+		/// when the document will be saved.
+		/// </summary>
+		public bool PreserveDocumentPropertiesNotFoundOnModel { get; set; }
+
+		public bool AcceptGzipContent { get; set; }
 
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 

@@ -18,9 +18,8 @@ namespace Raven.Abstractions.Smuggler
 {
     public class SmugglerDatabaseOptions : SmugglerOptions<RavenConnectionStringOptions>
 	{
-        public const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
+        public new const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
 	    private int chunkSize;
-
 	   
 	    private long? totalDocumentSizeInChunkLimitInBytes;
 
@@ -89,7 +88,6 @@ namespace Raven.Abstractions.Smuggler
         /// </summary>
         [Obsolete("Use RavenFS instead.")]
         public Etag StartAttachmentsDeletionEtag { get; set; }
-
 
 
 		/// <summary>
@@ -179,6 +177,8 @@ namespace Raven.Abstractions.Smuggler
         public int MaxStepsForTransformScript { get; set; }
 
         public bool WaitForIndexing { get; set; }
+
+		public bool StripReplicationInformation { get; set; }
     }
 
  

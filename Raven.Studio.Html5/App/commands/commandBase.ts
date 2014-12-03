@@ -130,7 +130,6 @@ class commandBase {
             "text/plain; charset=utf-8" :
             "application/json; charset=utf-8";
         var defaultOptions = {
-            cache: false,
             url: appUrl.forResourceQuery(resource) + relativeUrl,
             data: args,
             dataType: "json",

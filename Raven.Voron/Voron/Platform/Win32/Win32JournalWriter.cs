@@ -178,7 +178,14 @@ namespace Voron.Platform.Win32
 
 			if (DeleteOnClose)
 			{
-				File.Delete(_filename);
+				try
+				{
+					File.Delete(_filename);
+				}
+				catch (Exception)
+				{
+					// if we can't delete, nothing that we can do here.
+				}
 			}
 		}
 

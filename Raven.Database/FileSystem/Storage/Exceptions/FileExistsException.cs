@@ -4,19 +4,29 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Runtime.Serialization;
 
 namespace Raven.Database.FileSystem.Storage.Exceptions
 {
-    public class FileExistsException : Exception
-    {
-        public FileExistsException(string message)
-            : base(message)
-        {
-        }
+	[Serializable]
+	public class FileExistsException : Exception
+	{
+		public FileExistsException()
+		{
+		}
 
-        public FileExistsException(string message, Exception inner)
-            : base(message, inner)
-        {
-        }
-    }
+		public FileExistsException(string message) : base(message)
+		{
+		}
+
+		public FileExistsException(string message, Exception inner) : base(message, inner)
+		{
+		}
+
+		protected FileExistsException(
+			SerializationInfo info,
+			StreamingContext context) : base(info, context)
+		{
+		}
+	}
 }

@@ -353,7 +353,7 @@ namespace Raven.Json.Linq
 			Properties.EnsureSnapshot(msg);
 		}
 
-		public override IEnumerable<RavenJToken> Values()
+	    public override IEnumerable<RavenJToken> Values()
 		{
 			return Properties.Values;
 		}

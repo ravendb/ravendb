@@ -20,16 +20,15 @@ using Raven.Json.Linq;
 using Raven.Server;
 namespace Raven.Database.Plugins.Builtins
 {
-    public class CheckIncrementalBackupStatus : IServerStartupTask, IDisposable
+    public class CheckIncrementalBackupStatus : IServerStartupTask
     {
-		private Timer checkTimer;
 		private RavenDbServer server;
         private TimeSpan frequency = TimeSpan.FromMinutes(30);
 
 		public void Execute(RavenDbServer server)
 		{
 			this.server = server;
-            checkTimer = new Timer(ExecuteCheck, null, TimeSpan.Zero, frequency);
+			server.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.Zero, frequency);
 		}
 
 		private void ExecuteCheck(object state)
@@ -154,8 +153,6 @@ namespace Raven.Database.Plugins.Builtins
         }
 		public void Dispose()
 		{
-			if (checkTimer != null)
-				checkTimer.Dispose();
 		}
 	}
 } 

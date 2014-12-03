@@ -93,7 +93,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		}
 
 		[Fact]
-		public async void Should_refuse_to_synchronize_file_while_sync_configuration_exists()
+		public async Task Should_refuse_to_synchronize_file_while_sync_configuration_exists()
 		{
             IAsyncFilesCommands destinationClient;
             IAsyncFilesCommands sourceClient;
@@ -152,7 +152,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 		}
 
 		[Fact]
-		public async void Should_successfully_synchronize_if_last_synchronization_timeout_exceeded()
+		public async Task Should_successfully_synchronize_if_last_synchronization_timeout_exceeded()
 		{
             IAsyncFilesCommands destinationClient;
             IAsyncFilesCommands sourceClient;

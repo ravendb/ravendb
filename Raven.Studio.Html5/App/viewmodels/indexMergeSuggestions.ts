@@ -117,6 +117,18 @@ class indexMergeSuggestions extends viewModelBase {
         return true;
     }
 
+    deleteIndexes(index: number) {
+        var mergeSuggestion = this.suggestions()[index];
+        var indexesToDelete = mergeSuggestion.canDelete;
+        require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
+            var db = this.activeDatabase();
+            var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db);
+            deleteViewModel.deleteTask.always(() => this.reload());
+            dialog.show(deleteViewModel);
+        });
+    }
+
+
     deleteIndex(name: string) {
         require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {
             var db = this.activeDatabase();

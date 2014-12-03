@@ -13,5 +13,6 @@ namespace Voron.Impl.Journal
 	{
 		None = 0x0,
 		Commit = 0x4,
+		Merged = 0x8
 	}
 }

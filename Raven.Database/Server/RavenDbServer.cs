@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -30,7 +31,10 @@ namespace Raven.Server
 		private FilesStore filesStore;
 	    private string url;
 
-	    public RavenDbServer()
+		private IList<IDisposable> toDispose = new List<IDisposable>();
+		private IEnumerable<IServerStartupTask> serverStartupTasks;
+
+		public RavenDbServer()
 			: this(new RavenConfiguration())
 		{}
 
@@ -102,21 +106,29 @@ namespace Raven.Server
 			owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
 			options = owinHttpServer.Options;
 			serverThingsForTests = new ServerThingsForTests(options);
-			documentStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke);
+			documentStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases);
 			documentStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
 			documentStore.Initialize();
 
-			filesStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke);
+			filesStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases);
 			filesStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
 			filesStore.Initialize();
 
-			foreach (var task in configuration.Container.GetExportedValues<IServerStartupTask>())
+			serverStartupTasks = configuration.Container.GetExportedValues<IServerStartupTask>();
+
+			foreach (var task in serverStartupTasks)
 			{
+				toDispose.Add(task);
 				task.Execute(this);
 			}
 
 	        return this;
 	    }
+
+		public IEnumerable<IServerStartupTask> ServerStartupTasks
+		{
+			get { return serverStartupTasks; }
+		}
 
 		public void EnableHttpServer()
 		{
@@ -148,7 +160,11 @@ namespace Raven.Server
 
 	    public void Dispose()
 	    {
+			if (Disposed)
+				return;
+
 		    Disposed = true;
+
 		    if (documentStore != null)
 			    documentStore.Dispose();
 
@@ -157,6 +173,12 @@ namespace Raven.Server
 
 		    if (owinHttpServer != null)
 			    owinHttpServer.Dispose();
+
+		    foreach (var disposable in toDispose)
+				disposable.Dispose();
+
+			if (configuration != null)
+				configuration.Dispose();
 	    }
 
 		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
@@ -178,6 +200,7 @@ namespace Raven.Server
 			{
 				get { return options.RequestManager.NumberOfRequests; }
 			}
+			public RavenDBOptions Options { get{return options;}}
 
 			public void ResetNumberOfRequests()
 			{
@@ -203,6 +226,7 @@ namespace Raven.Server
 	{
 		bool HasPendingRequests { get; }
 		int NumberOfRequests { get; }
+		RavenDBOptions Options { get; }
 		void ResetNumberOfRequests();
 		Task<DocumentDatabase> GetDatabaseInternal(string databaseName);
 	    Task<RavenFileSystem> GetRavenFileSystemInternal(string fileSystemName);

@@ -60,14 +60,14 @@ namespace Raven.Tests.Bugs
 			public WorkflowSubTasksTransformer()
 			{
 				TransformResults = items => from item in items
-														let startTask = LoadDocument<WorkflowItem>(item.InResponseToId ?? item.Id)
-														select new
-														{
-															item.DisplayOrder,
-															item.WorkflowId,
-															startTask.Text,
-															item.Id,
-														};
+					let startTask = LoadDocument<WorkflowItem>(item.InResponseToId ?? item.Id)
+					select new
+					{
+						item.DisplayOrder,
+						item.WorkflowId,
+						startTask.Text,
+						item.Id,
+					};
 
 			}
 		}

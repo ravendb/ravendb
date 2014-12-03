@@ -16,7 +16,7 @@ namespace Raven.Database.Linq
 	public class VerbatimStringLiteralExpression : PrimitiveExpression
 	{
 		public VerbatimStringLiteralExpression(string value)
-			: base(value, "@" + '"' + value + '"')
+			: base(value, "@" + '"' + value.Replace("\"", "\"\"") + '"')
 		{
 		}
 	}

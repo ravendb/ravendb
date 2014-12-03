@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition.Primitives;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -36,9 +37,11 @@ using Raven.Database.FileSystem.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers.Util;
+using Xunit;
 
 
 namespace Raven.Tests.Helpers
@@ -53,8 +56,16 @@ namespace Raven.Tests.Helpers
 
 		private static int pathCount;
 
+	    private static bool checkedAsyncVoid;
+
 		protected RavenTestBase()
 		{
+			if (checkedAsyncVoid == false)
+			{
+				checkedAsyncVoid = true;
+				AssertNoAsyncVoidMethods(GetType().Assembly);
+			}
+
 			Environment.SetEnvironmentVariable(Constants.RavenDefaultQueryTimeout, "30");
 			CommonInitializationUtil.Initialize();
 
@@ -62,6 +73,45 @@ namespace Raven.Tests.Helpers
 			var dataFolder = FilePathTools.MakeSureEndsWithSlash(@"~\Data".ToFullPath());
 			ClearDatabaseDirectory(dataFolder);
 			pathsToDelete.Add(dataFolder);
+		}
+
+
+	    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+		{
+			if (assembly == null) throw new ArgumentNullException("assembly");
+			try
+			{
+				return assembly.GetTypes();
+			}
+			catch (ReflectionTypeLoadException e)
+			{
+				return e.Types.Where(t => t != null);
+			}
+		}
+
+	    private static IEnumerable<MethodInfo> GetAsyncVoidMethods(Assembly assembly)
+		{
+			return GetLoadableTypes(assembly)
+			  .SelectMany(type => type.GetMethods(
+				BindingFlags.NonPublic
+				| BindingFlags.Public
+				| BindingFlags.Instance
+				| BindingFlags.Static
+				| BindingFlags.DeclaredOnly))
+			  .Where(method => method.GetCustomAttribute<AsyncStateMachineAttribute>() != null)
+			  .Where(method => method.ReturnType == typeof(void));
+		}
+
+		public static void AssertNoAsyncVoidMethods(Assembly assembly)
+		{
+			var messages = GetAsyncVoidMethods(assembly)
+				.Select(method =>
+					String.Format("'{0}.{1}' is an async Task method.",
+						method.DeclaringType.Name,
+						method.Name))
+				.ToList();
+			if(messages.Any())
+				throw new InvalidConstraintException("async Task methods found!" + Environment.NewLine + String.Join(Environment.NewLine, messages));
 		}
 
 		~RavenTestBase()
@@ -360,10 +410,13 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-			bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(20)));
+			timeout = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(20));
+			bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout.Value);
 			if (!spinUntil)
 			{
-				throw new TimeoutException("The indexes stayed stale for more than " + timeout);
+				var statistics = databaseCommands.GetStatistics();
+				var stats = RavenJObject.FromObject(statistics).ToString(Formatting.Indented);
+				throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + Environment.NewLine + stats);
 			}
 		}
 
@@ -535,11 +588,14 @@ namespace Raven.Tests.Helpers
 			if (debug && Debugger.IsAttached == false)
 				return;
 
+		    var databaseName = Constants.SystemDatabase;
+
 			var embeddableDocumentStore = documentStore as EmbeddableDocumentStore;
 			OwinHttpServer server = null;
 			string url = documentStore.Url;
 			if (embeddableDocumentStore != null)
 			{
+			    databaseName = embeddableDocumentStore.DefaultDatabase;
 				embeddableDocumentStore.Configuration.Port = port;
 				SetStudioConfigToAllowSingleDb(embeddableDocumentStore);
 				embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
@@ -548,11 +604,19 @@ namespace Raven.Tests.Helpers
 				url = embeddableDocumentStore.Configuration.ServerUrl;
 			}
 
+		    var remoteDocumentStore = documentStore as DocumentStore;
+            if (remoteDocumentStore != null)
+            {
+                databaseName = remoteDocumentStore.DefaultDatabase;
+            }
+
 			using (server)
 			{
 				try
 				{
-					Process.Start(url); // start the server
+                    var databaseNameEncoded = Uri.EscapeDataString(databaseName ?? Constants.SystemDatabase);
+                    var documentsPage = url + "studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+                    Process.Start(documentsPage); // start the server
 				}
 				catch (Win32Exception e)
 				{
@@ -601,8 +665,9 @@ namespace Raven.Tests.Helpers
 				Url = url ?? "http://localhost:8079"
 			}.Initialize())
 			{
-
-				Process.Start(documentStore.Url); // start the server
+                var databaseNameEncoded = Uri.EscapeDataString(Constants.SystemDatabase);
+                var documentsPage = documentStore.Url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+                Process.Start(documentsPage); // start the server
 
 				do
 				{

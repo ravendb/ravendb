@@ -69,17 +69,14 @@ namespace Raven.Database.Storage
 
 	    private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 
-        private List<IndexMergeSuggestion> IndexMergeSuggestions { get; set; }
 
 		[CLSCompliant(false)]
 		public IndexDefinitionStorage(
             InMemoryRavenConfiguration configuration,
             ITransactionalStorage transactionalStorage,
             string path,
-            IEnumerable<AbstractViewGenerator> compiledGenerators,
             OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
         {
-            IndexMergeSuggestions = new List<IndexMergeSuggestion>();
             this.configuration = configuration;
 	        this.transactionalStorage = transactionalStorage;
 	        this.extensions = extensions; // this is used later in the ctor, so it must appears first
@@ -422,6 +419,9 @@ namespace Raven.Database.Storage
             var indexDefinition = GetIndexDefinition(indexDef.Name);
             if (indexDefinition != null)
             {
+				if (indexDefinition.IsTestIndex) // always update test indexes
+					return IndexCreationOptions.Update;
+
                 indexDef.IndexId = indexDefinition.IndexId;
                 bool result = indexDefinition.Equals(indexDef);
                 return result

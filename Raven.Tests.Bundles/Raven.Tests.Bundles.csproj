@@ -129,6 +129,8 @@
     <Compile Include="Encryption\WithoutEncryption.cs" />
     <Compile Include="Expiration\Expiration.cs" />
     <Compile Include="Expiration\WithCascade.cs" />
+    <Compile Include="LiveTest\PutTriggerTests.cs" />
+    <Compile Include="LiveTest\StartupTaskTests.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisMultiTenant.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisQueryParametersTests.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisShouldSupportMapReduceIndexes.cs" />
@@ -172,7 +174,6 @@
     <Compile Include="ScriptedIndexResults\AnimalType.cs" />
     <Compile Include="ScriptedIndexResults\ScriptedIndexResultsTest.cs" />
     <Compile Include="SqlReplication\CanReplicate.cs" />
-    <Compile Include="TestUtil.cs" />
     <Compile Include="UniqueConstraints\Bugs\CaseInsensitive.cs" />
     <Compile Include="UniqueConstraints\Bugs\Concurrency.cs" />
     <Compile Include="UniqueConstraints\Bugs\JimBolla.cs" />
@@ -209,6 +210,10 @@
     <ProjectReference Include="..\Bundles\Raven.Bundles.Encryption.IndexFileCodec\Raven.Bundles.Encryption.IndexFileCodec.csproj">
       <Project>{1bb3d982-9675-400d-a247-547c071fbe35}</Project>
       <Name>Raven.Bundles.Encryption.IndexFileCodec</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Bundles\Raven.Bundles.LiveTest\Raven.Bundles.LiveTest.csproj">
+      <Project>{108260d1-12ed-4ec5-8c6b-1ded1d73271f}</Project>
+      <Name>Raven.Bundles.LiveTest</Name>
     </ProjectReference>
     <ProjectReference Include="..\Bundles\Raven.Bundles.UniqueConstraints\Raven.Bundles.UniqueConstraints.csproj">
       <Project>{4c026f8a-fb36-4a30-82e9-324d207f6b48}</Project>

@@ -152,6 +152,7 @@ namespace Raven.Server
 			string restoreLocation = null;
 			string restoreDatabaseName = null;
 		    string restoreFilesystemName = null;
+		    bool restoreDisableReplication = false;
 			bool defrag = false;
             var requiresRestoreAction = new HashSet<string>();
 		    bool isRestoreAction = false;
@@ -239,7 +240,7 @@ namespace Raven.Server
 					            throw new OptionException("specified destination server url is not valid", "restore-database");
 					        }
 
-					        RunRemoteDatabaseRestoreOperation(backupLocation, restoreLocation, restoreDatabaseName, defrag, uri, waitForRestore, restoreStartTimeout);
+					        RunRemoteDatabaseRestoreOperation(backupLocation, restoreLocation, restoreDatabaseName, defrag, restoreDisableReplication, uri, waitForRestore, restoreStartTimeout);
 					        Environment.Exit(0);
 					    };
 					    isRestoreAction = true;
@@ -267,6 +268,13 @@ namespace Raven.Server
                         isRestoreAction = true;
                     }
                 },
+			    {
+			      "restore-disable-replication", "Disables replication destinations in newly restored database", value =>
+			      {
+			          restoreDisableReplication = true;
+			          requiresRestoreAction.Add("restore-disable-replication");
+			      }
+			    },
 				{
 				    "restore-no-wait", "Return immediately without waiting for a restore to complete", value =>
 				    {
@@ -471,7 +479,7 @@ namespace Raven.Server
 
 		}
 
-        private static void RunRemoteDatabaseRestoreOperation(string backupLocation, string restoreLocation, string restoreDatabaseName, bool defrag, Uri uri, bool waitForRestore, int? timeout)
+        private static void RunRemoteDatabaseRestoreOperation(string backupLocation, string restoreLocation, string restoreDatabaseName, bool defrag, bool disableReplicationDestionations, Uri uri, bool waitForRestore, int? timeout)
 		{
             using (var store = new DocumentStore
                                {
@@ -484,7 +492,8 @@ namespace Raven.Server
                                                                     DatabaseLocation = restoreLocation,
                                                                     DatabaseName = restoreDatabaseName,
                                                                     Defrag = defrag,
-                                                                    RestoreStartTimeout = timeout
+                                                                    RestoreStartTimeout = timeout,
+                                                                    DisableReplicationDestinations = disableReplicationDestionations
                                                                 });
                 Console.WriteLine("Started restore operation from {0} on {1} server.", backupLocation, uri.AbsoluteUri);
 
@@ -536,10 +545,14 @@ namespace Raven.Server
 
         public static void IoTest(PerformanceTestRequest request)
         {
-            var tester = new DiskPerformanceTester(request, Console.WriteLine);
-            tester.DescribeTestParameters();
-            tester.TestDiskIO();
-            var result = tester.Result;
+	        DiskPerformanceResult result;
+
+	        using (var tester = new DiskPerformanceTester(request, Console.WriteLine))
+	        {
+				tester.DescribeTestParameters();
+				tester.TestDiskIO();
+				result = tester.Result;
+	        }
 
             var hasReads = request.OperationType == OperationType.Read || request.OperationType == OperationType.Mix;
             var hasWrites = request.OperationType == OperationType.Write || request.OperationType == OperationType.Mix;

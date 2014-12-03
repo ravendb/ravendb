@@ -1,21 +1,10 @@
-﻿using Mono.Unix.Native;
-using System;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Compression;
-using System.IO.MemoryMappedFiles;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Xml;
-using Voron.Debugging;
-using Voron.Impl;
-using Voron.Platform.Win32;
+﻿using System;
+using System.Threading;
 using Voron.Tests.Backups;
-using Voron.Tests.Bugs;
-using Voron.Tests.Storage;
-using Voron.Trees;
-using Snapshots = Voron.Tests.Bugs.Snapshots;
+using System.IO;
+using Voron.Platform.Posix;
+using Mono.Unix.Native;
+using System.Runtime.InteropServices;
 
 namespace Voron.Tryout
 {
@@ -23,9 +12,17 @@ namespace Voron.Tryout
 	{
 		public static void Main()
 		{
-			var b = new MultiTransactions ();
-				b.ShouldWork ();
-			Console.WriteLine ("done");
+			if(File.Exists("test.p"))
+				File.Delete("test.p");
+			var pager = new PosixMemoryMapPager ("test.p");
+			pager.EnsureContinuous (null, 0, 150);
+
+			var p = pager.AcquirePagePointer (0);
+			for (int i = 0; i < 4096*150; i++) {
+				*(p + i) = 1;
+			}
+
+			Console.WriteLine ("don");
 		}
 	}
 }

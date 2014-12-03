@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 
 using Voron.Impl;
+using Voron.Util;
 using Voron.Util.Conversion;
 
 namespace Voron.Debugging

@@ -128,24 +128,46 @@ namespace Voron.Impl
 			        _overflowPagesInTransaction += (numberOfPages - 1);
 		        }
 
-			    var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
-			   
-				var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
-				StdLib.memcpy(dest, page.Base, numberOfPages*AbstractPager.PageSize);
+			    WritePageDirect(page, numberOfPages);
 
-			    _allocatedPagesInTransaction++;
-				
-				_dirtyPages.Add(page.PageNumber);
-                page.Dirty = true;
-
-				if (numberOfPages > 1)
-					_dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPages - 1);
-			    
-			    _scratchPagesTable[page.PageNumber] = pageFromScratchBuffer;
-				_transactionPages.Add(pageFromScratchBuffer);
-			
-				_state.NextPageNumber = transactionHeader->NextPageNumber;
+			    _state.NextPageNumber = transactionHeader->NextPageNumber;
 			}
+		}
+
+		internal void WriteDirect(Page[] pages, long nextPageNumber)
+		{
+			for (int i = 0; i < pages.Length; i++)
+			{
+				int numberOfPages = 1;
+				var page = pages[i];
+				if (page.IsOverflow)
+				{
+					numberOfPages = (page.OverflowSize / AbstractPager.PageSize) + (page.OverflowSize % AbstractPager.PageSize == 0 ? 0 : 1);
+					i += numberOfPages;
+					_overflowPagesInTransaction += (numberOfPages - 1);
+				}
+
+				WritePageDirect(page, numberOfPages);				
+			}
+		}
+
+		private void WritePageDirect(Page page, int numberOfPagesIncludingOverflow)
+		{
+			var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPagesIncludingOverflow);
+
+			var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
+			StdLib.memcpy(dest, page.Base, numberOfPagesIncludingOverflow * AbstractPager.PageSize);
+
+			_allocatedPagesInTransaction++;
+
+			_dirtyPages.Add(page.PageNumber);
+			page.Dirty = true;
+
+			if (numberOfPagesIncludingOverflow > 1)
+				_dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPagesIncludingOverflow - 1);
+
+			_scratchPagesTable[page.PageNumber] = pageFromScratchBuffer;
+			_transactionPages.Add(pageFromScratchBuffer);
 		}
 
 		private void InitTransactionHeader()

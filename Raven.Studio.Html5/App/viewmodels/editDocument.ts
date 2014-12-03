@@ -74,7 +74,8 @@ class editDocument extends viewModelBase {
         this.metadata = ko.computed(() => this.document() ? this.document().__metadata : null);
         this.isConflictDocument = ko.computed(() => {
             var metadata = this.metadata();
-            return metadata != null && !!metadata["Raven-Replication-Conflict"];
+
+            return metadata != null && !!metadata["Raven-Replication-Conflict"] && !metadata.id.contains("/conflicts/");
         });
 
         this.document.subscribe(doc => {

@@ -86,9 +86,7 @@ namespace Raven.SlowTests.MailingList
 					var index = 0;
 					while (enumerator.MoveNext())
 					{
-						if (enumerator.Current.Document.CreatedDate != orderedList[index].CreatedDate)
-							Debugger.Break();
-
+						
 						Assert.True(enumerator.Current.Document.CreatedDate == orderedList[index].CreatedDate,
 							"Failed at: " + index
 							+ ", " + enumerator.Current.Document.CreatedDate.ToString("yyyy-MM-dd hh:mm:ss.sssssss")

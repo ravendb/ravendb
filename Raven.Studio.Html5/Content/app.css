@@ -7598,6 +7598,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   -webkit-box-sizing: border-box;
   box-sizing: border-box;
   overflow: hidden;
+  white-space: nowrap;
 }
 .ko-grid .ko-grid-row.even {
   background-color: white;
@@ -8321,4 +8322,18 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   -ms-word-break: break-all;
   word-break: break-all;
   white-space: pre-line;
+}
+.scrollable-menu {
+  height: auto;
+  max-height: 300px;
+  overflow-x: hidden;
+}
+#resources-page .resources-container .resource.fs a {
+  color: #7109AA;
+}
+#resources-page .resources-container .resource.fs:hover {
+  box-shadow: 0 0 5px 0 #ab26f3;
+}
+#resources-page .resources-container .resource.fs.selected {
+  box-shadow: 0 0 20px 0 #7109AA;
 }

@@ -12,16 +12,13 @@ class adminSettings extends viewModelBase {
     constructor() {
         super();
 
-        this.docsForSystemUrl = appUrl.forDocuments(null, new database("<system>"));
+        this.docsForSystemUrl = appUrl.forDocuments(null, appUrl.getSystemDatabase());
 
         var apiKeyRoute = { route: ['admin/settings', 'admin/settings/apiKeys'], moduleId: 'viewmodels/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };
         var windowsAuthRoute = { route: 'admin/settings/windowsAuth', moduleId: 'viewmodels/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth() };
-        var backupDatabaseRoute = { route: 'admin/settings/backupDatabase', moduleId: 'viewmodels/backupDatabase', title: 'Backup Database', nav: true, hash: appUrl.forBackupDatabase() };
-        var compactDatabaseRoute = { route: 'admin/settings/compactDatabase', moduleId: 'viewmodels/compactDatabase', title: 'Compact Database', nav: true, hash: appUrl.forCompactDatabase() };
-        var restoreDatabaseRoute = { route: 'admin/settings/restoreDatabase', moduleId: 'viewmodels/restoreDatabase', title: 'Restore Database', nav: true, hash: appUrl.forRestoreDatabase() };
-        var backupFilesystemRoute = { route: 'admin/settings/backupFilesystem', moduleId: 'viewmodels/filesystem/backupFilesystem', title: 'Backup Filesystem', nav: true, hash: appUrl.forBackupFilesystem() };
-        var compactFilesystemRoute = { route: 'admin/settings/compactFilesystem', moduleId: 'viewmodels/filesystem/compactFilesystem', title: 'Compact Filesystem', nav: true, hash: appUrl.forCompactFilesystem() };
-        var restoreFilesystemRoute = { route: 'admin/settings/restoreFilesystem', moduleId: 'viewmodels/filesystem/restoreFilesystem', title: 'Restore Filesystem', nav: true, hash: appUrl.forRestoreFilesystem() };
+        var backupRoute = { route: 'admin/settings/backup', moduleId: 'viewmodels/backup', title: 'Backup', nav: true, hash: appUrl.forBackup() };
+        var compactRoute = { route: 'admin/settings/compact', moduleId: 'viewmodels/compact', title: 'Compact', nav: true, hash: appUrl.forCompact() };
+        var restoreRoute = { route: 'admin/settings/restore', moduleId: 'viewmodels/restore', title: 'Restore', nav: true, hash: appUrl.forRestore() };
         var adminLogsRoute = { route: 'admin/settings/adminLogs', moduleId: 'viewmodels/adminLogs', title: 'Admin Logs', nav: true, hash: appUrl.forAdminLogs() };
         var trafficWatchRoute = { route: 'admin/settings/trafficWatch', moduleId: 'viewmodels/trafficWatch', title: 'Traffic Watch', nav: true, hash: appUrl.forTrafficWatch() };
         var debugInfoRoute = { route: 'admin/settings/debugInfo', moduleId: 'viewmodels/infoPackage', title: 'Gather Debug Info', nav: true, hash: appUrl.forDebugInfo() };
@@ -32,12 +29,9 @@ class adminSettings extends viewModelBase {
             .map([
                 apiKeyRoute,
                 windowsAuthRoute,
-                backupDatabaseRoute,
-                compactDatabaseRoute,
-                restoreDatabaseRoute,
-                backupFilesystemRoute,
-                compactFilesystemRoute, 
-                restoreFilesystemRoute,
+                backupRoute,
+                compactRoute,
+                restoreRoute,
                 adminLogsRoute,
                 trafficWatchRoute,
                 debugInfoRoute,

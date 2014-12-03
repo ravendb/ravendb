@@ -9,8 +9,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Raven.Database.Linq;
-using Raven.Database.Storage;
-using System.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -19,6 +17,7 @@ namespace Raven.Database.Indexing
 		public Action BeforeMoveNext = delegate { };
 		public Action CancelMoveNext = delegate { };
 		public Action<Exception, object> OnError = delegate { };
+		public Stopwatch MoveNextDutation = new Stopwatch();
 		private readonly CancellationToken cancellationToken;
 		private readonly int numberOfConsecutiveErrors;
 
@@ -154,6 +153,7 @@ namespace Raven.Database.Indexing
 
 		private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator)
 		{
+			MoveNextDutation.Start();
 			try
 			{
 				BeforeMoveNext();
@@ -162,12 +162,18 @@ namespace Raven.Database.Indexing
 				{
 					CancelMoveNext();
 				}
+
 				return moveNext;
 			}
 			catch (Exception e)
 			{
 				OnError(e, innerEnumerator.Current);
 			}
+			finally
+			{
+				MoveNextDutation.Stop();
+			}
+
 			return null;
 		}
 	}

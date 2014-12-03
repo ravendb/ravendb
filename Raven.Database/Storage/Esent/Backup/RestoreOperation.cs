@@ -50,13 +50,11 @@ namespace Raven.Database.Storage.Esent.Backup
 			TransactionalStorage.CreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
-                Configuration.Settings["Raven/Esent/LogsPath"] = journalLocation;
+				Configuration.Storage.Esent.JournalsStoragePath = journalLocation;
 				new TransactionalStorageConfigurator(Configuration, null).ConfigureInstance(instance, databaseLocation);
 				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, RestoreStatusCallback);
-				var fileThatGetsCreatedButDoesntSeemLikeItShould =
-					new FileInfo(
-						Path.Combine(
-							new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name + "Data"));
+				var fileName = Path.Combine(new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name, "Data");
+				var fileThatGetsCreatedButDoesntSeemLikeItShould = new FileInfo(fileName);
 
 				TransactionalStorage.DisableIndexChecking(instance);
 

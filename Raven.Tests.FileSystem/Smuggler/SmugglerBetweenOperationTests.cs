@@ -55,12 +55,14 @@ namespace Raven.Tests.FileSystem.Smuggler
         [Fact, Trait("Category", "Smuggler")]
         public async Task BetweenOperation_BehaviorWhenServerIsDown()
         {
-            using (var store = NewStore())
-            {
-                var server = GetServer();
+            string dataDirectory = null;
 
-                try
+            try
+            {
+                using (var store = NewStore())
                 {
+                    var server = GetServer();
+
                     var smugglerApi = new SmugglerFilesApi();
 
                     var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
@@ -88,23 +90,29 @@ namespace Raven.Tests.FileSystem.Smuggler
 
                     e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.Between(options));
                     Assert.Contains("Smuggler encountered a connection problem:", e.Message);
+
+                    server.Dispose();
                 }
-                finally
-                {
-                    IOExtensions.DeleteDirectory(server.Configuration.DataDirectory);
-                }
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(dataDirectory))
+                    IOExtensions.DeleteDirectory(dataDirectory);
             }
         }
 
         [Fact, Trait("Category", "Smuggler")]
         public async Task BetweenOperation_CanDumpEmptyFileSystem()
         {
-            using (var store = NewStore())
-            {
-                var server = GetServer();
+            string dataDirectory = null;
 
-                try
+            try
+            {
+                using (var store = NewStore())
                 {
+                    var server = GetServer();
+                    dataDirectory = server.Configuration.DataDirectory;
+
                     var smugglerApi = new SmugglerFilesApi();
 
                     var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
@@ -131,11 +139,14 @@ namespace Raven.Tests.FileSystem.Smuggler
                         var files = await session.Commands.BrowseAsync();
                         Assert.Equal(0, files.Count());
                     }
+
+                    server.Dispose();
                 }
-                finally
-                {
-                    IOExtensions.DeleteDirectory(server.Configuration.DataDirectory);
-                }
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(dataDirectory))
+                    IOExtensions.DeleteDirectory(dataDirectory);
             }
         }
 
@@ -149,7 +160,8 @@ namespace Raven.Tests.FileSystem.Smuggler
                 var server = GetServer();
 
                 var alreadyReset = false;
-                var forwarder = new ProxyServer(8070, server.Configuration.Port)
+	            var port = 8070;
+	            var forwarder = new ProxyServer(ref port, server.Configuration.Port)
                 {
                     VetoTransfer = (totalRead, buffer) =>
                     {
@@ -162,49 +174,57 @@ namespace Raven.Tests.FileSystem.Smuggler
                     }
                 };
 
-                var smugglerApi = new SmugglerFilesApi();
+	            try
+	            {
+					var smugglerApi = new SmugglerFilesApi();
 
-                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
-                {
-                    From = new FilesConnectionStringOptions
-                    {
-                        Url = "http://localhost:8070",
-                        DefaultFileSystem = SourceFilesystem
-                    },
-                    To = new FilesConnectionStringOptions
-                    {
-                        Url = store.Url,
-                        DefaultFileSystem = DestinationFilesystem
-                    }
-                };
+					var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
+					{
+						From = new FilesConnectionStringOptions
+						{
+							Url = "http://localhost:" + port,
+							DefaultFileSystem = SourceFilesystem
+						},
+						To = new FilesConnectionStringOptions
+						{
+							Url = store.Url,
+							DefaultFileSystem = DestinationFilesystem
+						}
+					};
 
-                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
-                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
+					await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
+					await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
 
-                ReseedRandom(100); // Force a random distribution.
+					ReseedRandom(100); // Force a random distribution.
 
-                await InitializeWithRandomFiles(store, 20, 30);
+					await InitializeWithRandomFiles(store, 20, 30);
 
 
-                Etag lastEtag = Etag.InvalidEtag;
-                try
-                {
-                    await smugglerApi.Between(options);
-                }
-                catch (SmugglerExportException inner)
-                {
-                    lastEtag = inner.LastEtag;
-                }
+					Etag lastEtag = Etag.InvalidEtag;
+					try
+					{
+						await smugglerApi.Between(options);
+					}
+					catch (SmugglerExportException inner)
+					{
+						lastEtag = inner.LastEtag;
+					}
 
-                Assert.NotEqual(Etag.InvalidEtag, lastEtag);
+					Assert.NotEqual(Etag.InvalidEtag, lastEtag);
 
-                await smugglerApi.Between(options);
+					await smugglerApi.Between(options);
 
-                using (var session = store.OpenAsyncSession(DestinationFilesystem))
-                {
-                    var files = await session.Commands.BrowseAsync();
-                    Assert.Equal(20, files.Count());
-                }
+					using (var session = store.OpenAsyncSession(DestinationFilesystem))
+					{
+						var files = await session.Commands.BrowseAsync();
+						Assert.Equal(20, files.Count());
+					}
+	            }
+	            finally
+	            {
+		            forwarder.Dispose();
+					server.Dispose();
+	            }
             }
         }
 

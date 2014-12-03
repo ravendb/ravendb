@@ -78,7 +78,10 @@ namespace Raven.Database.Impl
 				HighlighterPreTags = indexQuery.HighlighterPreTags,
 				HighlighterPostTags = indexQuery.HighlighterPostTags,
 				HighlightedFields = indexQuery.HighlightedFields,
-				SortHints = indexQuery.SortHints
+				SortHints = indexQuery.SortHints,
+				HighlighterKeyName = indexQuery.HighlighterKeyName,
+				TransformerParameters = indexQuery.TransformerParameters,
+				ResultsTransformer = indexQuery.ResultsTransformer
 			};
 
 			bool stale;
@@ -129,7 +132,9 @@ namespace Raven.Database.Impl
 								batchCount++;
 							    operations++;
 								var result = batchOperation(enumerator.Current, transactionInformation);
-								array.Add(RavenJObject.FromObject(result));
+
+								if(options.RetrieveDetails)
+									array.Add(RavenJObject.FromObject(result));
 
 							    if (operations >= maxOpsPerSec && duration.ElapsedMilliseconds < 1000)
 							    {

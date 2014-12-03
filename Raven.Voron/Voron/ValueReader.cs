@@ -88,7 +88,7 @@ namespace Voron
 		{
 			count = Math.Min(count, _len - _pos);
 
-			if (count == 0)
+			if (count <= 0)
 				return 0;
 
 			if (_val == null)

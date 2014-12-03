@@ -22,7 +22,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void WillNotGetNestedFolders()
+		public async Task WillNotGetNestedFolders()
 		{
 			var client = NewAsyncClient();
 			var ms = new MemoryStream();
@@ -40,7 +40,7 @@ namespace Raven.Tests.FileSystem
 		}
 
         [Fact]
-        public async void WillWorkWithTrailingSlash()
+        public async Task WillWorkWithTrailingSlash()
         {
             var client = NewAsyncClient();
             var ms = new MemoryStream();
@@ -53,7 +53,7 @@ namespace Raven.Tests.FileSystem
         }
 
         [Fact]
-        public async void WillUploadFileInNestedFolders()
+        public async Task WillUploadFileInNestedFolders()
         {
             var client = NewAsyncClient();
             var ms = new MemoryStream();
@@ -74,7 +74,7 @@ namespace Raven.Tests.FileSystem
         }
 
         [Fact]
-        public async void WillUploadFileInNestedFolders_InverseOrder()
+        public async Task WillUploadFileInNestedFolders_InverseOrder()
         {
             var client = NewAsyncClient();
             var ms = new MemoryStream();
@@ -108,7 +108,7 @@ namespace Raven.Tests.FileSystem
 
 
 		[Fact]
-		public async void CanRename()
+		public async Task CanRename()
 		{
 			var client = NewAsyncClient();
 			var ms = new MemoryStream();
@@ -122,7 +122,7 @@ namespace Raven.Tests.FileSystem
 
 
 		[Fact]
-		public async void AfterRename_OldFolderIsGoneAndWeHaveNewOne()
+		public async Task AfterRename_OldFolderIsGoneAndWeHaveNewOne()
 		{
 			var client = NewAsyncClient();
 			var ms = new MemoryStream();
@@ -155,7 +155,7 @@ namespace Raven.Tests.FileSystem
 
 
 		[Fact]
-		public async void CanGetListOfFilesInFolder_Sorted_Size()
+		public async Task CanGetListOfFilesInFolder_Sorted_Size()
 		{
 			var client = NewAsyncClient();
             await client.UploadAsync("test/abc.txt", new MemoryStream(new byte[4]));
@@ -167,7 +167,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void CanGetListOfFilesInFolder_Sorted_Name()
+		public async Task CanGetListOfFilesInFolder_Sorted_Name()
 		{
 			var client = NewAsyncClient();
             await client.UploadAsync("test/abc.txt", new MemoryStream(new byte[4]));
@@ -194,7 +194,7 @@ namespace Raven.Tests.FileSystem
 
 
 		[Fact]
-		public async void CanGetListOfFilesInFolder2()
+		public async Task CanGetListOfFilesInFolder2()
 		{
 			var client = NewAsyncClient();
 			var ms = new MemoryStream();
@@ -281,7 +281,7 @@ namespace Raven.Tests.FileSystem
         }
 
 		[Fact]
-		public async void CanPage()
+		public async Task CanPage()
 		{
 			var client = NewAsyncClient();
 			var ms = new MemoryStream();
@@ -311,7 +311,7 @@ namespace Raven.Tests.FileSystem
 		}
 
 		[Fact]
-		public async void Should_not_see_already_deleted_files()
+		public async Task Should_not_see_already_deleted_files()
 		{
 			var client = NewAsyncClient();
 			var ms = new MemoryStream();

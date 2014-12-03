@@ -49,29 +49,32 @@ namespace Raven.Database.FileSystem.Search
 
 			public IndexSearcherHoldingState(IndexSearcher indexSearcher)
 			{
-				IndexSearcher = indexSearcher;
+                this.IndexSearcher = indexSearcher;
 			}
 
 			public void MarkForDisposal()
 			{
-				ShouldDispose = true;
+                this.ShouldDispose = true;
 			}
 
 			public void Dispose()
 			{
 				if (Interlocked.Decrement(ref Usage) > 0)
 					return;
-				if (ShouldDispose == false)
+                if (this.ShouldDispose == false)
 					return;
-				DisposeRudely();
+                this.DisposeRudely();
 			}
 
 			private void DisposeRudely()
 			{
-				var indexReader = IndexSearcher.IndexReader;
-				if (indexReader != null)
-					indexReader.Dispose();
-				IndexSearcher.Dispose();
+                if (this.IndexSearcher != null)
+                {
+                    var indexReader = this.IndexSearcher.IndexReader;
+                    if (indexReader != null)
+                        indexReader.Dispose();
+                    this.IndexSearcher.Dispose();
+                }
 			}
 		}
 	}

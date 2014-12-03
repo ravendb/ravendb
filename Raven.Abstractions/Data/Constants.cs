@@ -7,11 +7,11 @@ namespace Raven.Abstractions.Data
 	{
 		static Constants()
 		{
-			InDatabaseKeyVerificationDocumentContents = new RavenJObject
+			InResourceKeyVerificationDocumentContents = new RavenJObject
 			{
 				{"Text", "The encryption is correct."}
 			};
-			InDatabaseKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
+			InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
 
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
@@ -63,10 +63,11 @@ namespace Raven.Abstractions.Data
 		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";
 		public const int BulkImportDefaultTimeoutInMs = 60000;
 	    public const string IndexingDisabled = "Raven/IndexingDisabled";
+		public const string MaxNumberOfItemsToProcessInTestIndexes = "Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes";
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
-		public const string RavenLogsPath = "Raven/Esent/LogsPath";
+		public const string RavenEsentLogsPath = "Raven/Esent/LogsPath";
         public const string RavenTxJournalPath = "Raven/TransactionJournalsPath";
 		public const string RavenIndexPath = "Raven/IndexStoragePath";
 
@@ -84,8 +85,8 @@ namespace Raven.Abstractions.Data
 		public const string EncryptionKeyBitsPreferenceSetting = "Raven/Encryption/KeyBitsPreference";
 		public const string EncryptIndexes = "Raven/Encryption/EncryptIndexes";
 
-		public const string InDatabaseKeyVerificationDocumentName = "Raven/Encryption/Verification";
-		public static readonly RavenJObject InDatabaseKeyVerificationDocumentContents;
+		public const string InResourceKeyVerificationDocumentName = "Raven/Encryption/Verification";
+		public static readonly RavenJObject InResourceKeyVerificationDocumentContents;
 
 		public const int DefaultGeneratedEncryptionKeyLength = 256/8;
 		public const int MinimumAcceptableEncryptionKeyLength = 64/8;
@@ -178,5 +179,10 @@ namespace Raven.Abstractions.Data
         public const string IncrementalBackupRecurringAlertTimeout = "Raven/IncrementalBackup/RecurringAlertTimeoutDays";
 		public const string IncrementalBackupState = "IncrementalBackupState.Document";
 
+
+		// General
+
+		public const string RavenDatabasesPrefix = "Raven/Databases/";
+		public const string RavenFileSystemsPrefix = "Raven/FileSystems/";
 	}
 }

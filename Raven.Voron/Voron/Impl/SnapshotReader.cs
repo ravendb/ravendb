@@ -1,4 +1,6 @@
-﻿namespace Voron.Impl
+﻿using Voron.Util;
+
+namespace Voron.Impl
 {
 	using System;
 	using System.IO;

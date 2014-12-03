@@ -269,7 +269,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 						Log.Debug("Conflict automatically resolved by choosing current version of the file {0}", fileName);
 
-						throw new ConflictResolvedInFavourOfCurrentVersion();
+						throw new ConflictResolvedInFavourOfCurrentVersionException();
 				}
 			}
 
@@ -554,7 +554,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 		private static bool ShouldAddExceptionToReport(Exception ex)
 		{
-			return ex is ConflictResolvedInFavourOfCurrentVersion == false;
+			return ex is ConflictResolvedInFavourOfCurrentVersionException == false;
 		}
 
 		[HttpPost]

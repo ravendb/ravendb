@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 
 using Raven.Database.FileSystem.Synchronization.Rdc;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.FileSystem.Storage
 {
@@ -69,5 +69,7 @@ namespace Raven.Database.FileSystem.Storage
         IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take);
 
         IList<string> GetConfigNamesStartingWithPrefix(string prefix, int start, int take, out int total);
+
+        Etag GetLastEtag();
     }
 }

@@ -2,9 +2,10 @@ import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import appUrl = require("common/appUrl");
 
 class monitorRestoreCommand extends commandBase {
-    private db: database = new database("<system>");
+    private db: database = appUrl.getSystemDatabase();
 
     constructor(private parentPromise: JQueryDeferred<any>, private filesystemName: string, private updateRestoreStatus: (restoreStatusDto) => void) {
         super();
