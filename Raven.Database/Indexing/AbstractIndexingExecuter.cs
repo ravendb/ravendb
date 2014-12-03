@@ -19,7 +19,7 @@ namespace Raven.Database.Indexing
     {
         protected WorkContext context;
 
-	    private readonly IndexSwapper indexSwapper;
+	    private readonly IndexReplacer indexReplacer;
 
 	    protected TaskScheduler scheduler;
         protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
@@ -29,11 +29,11 @@ namespace Raven.Database.Indexing
         protected BaseBatchSizeAutoTuner autoTuner;
         protected ConcurrentDictionary<int, Index> currentlyProcessedIndexes = new ConcurrentDictionary<int, Index>();
 
-        protected AbstractIndexingExecuter(WorkContext context, IndexSwapper indexSwapper)
+        protected AbstractIndexingExecuter(WorkContext context, IndexReplacer indexReplacer)
         {
             this.transactionalStorage = context.TransactionalStorage;
             this.context = context;
-	        this.indexSwapper = indexSwapper;
+	        this.indexReplacer = indexReplacer;
 	        this.scheduler = context.TaskScheduler;
         }
 
@@ -262,7 +262,7 @@ namespace Raven.Database.Indexing
                ExecuteIndexingWork(indexesToWorkOn);
             }
 
-			indexSwapper.SwapIndexes(indexesToWorkOn.Select(x => x.IndexId).ToList());
+			indexReplacer.ReplaceIndexes(indexesToWorkOn.Select(x => x.IndexId).ToList());
 
             return true;
         }

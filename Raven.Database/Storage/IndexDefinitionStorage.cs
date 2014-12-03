@@ -332,11 +332,11 @@ namespace Raven.Database.Storage
             UpdateTransformerMappingFile();
         }
 
-        public void RemoveIndex(int id)
+        public void RemoveIndex(int id, bool removeByNameMapping = true)
         {
             AbstractViewGenerator ignoredViewGenerator;
             int ignoredId;
-            if (indexCache.TryRemove(id, out ignoredViewGenerator))
+            if (indexCache.TryRemove(id, out ignoredViewGenerator) && removeByNameMapping)
                 indexNameToId.TryRemove(ignoredViewGenerator.Name, out ignoredId);
             IndexDefinition ignoredIndexDefinition;
             IndexDefinitions.TryRemove(id, out ignoredIndexDefinition);
@@ -525,7 +525,7 @@ namespace Raven.Database.Storage
             return null;
         }
 
-		internal bool SwapIndex(string indexName, string indexToSwapName)
+		internal bool ReplaceIndex(string indexName, string indexToSwapName)
 		{
 			var index = GetIndexDefinition(indexName);
 			var indexToSwap = GetIndexDefinition(indexToSwapName);
@@ -537,12 +537,7 @@ namespace Raven.Database.Storage
 			indexNameToId.TryRemove(index.Name, out _);
 
 			index.Name = indexToSwap != null ? indexToSwap.Name : indexToSwapName;
-
 			CreateAndPersistIndex(index);
-
-			if (indexToSwap != null)
-				RemoveIndex(indexToSwap.IndexId);
-			
 			AddIndex(index.IndexId, index);
 
 			return true;

@@ -1438,16 +1438,19 @@ namespace Raven.Database.Indexing
 			GetIndexByName(index).ForceWriteToDisk();
 		}
 
-		internal bool SwapIndex(string indexName, string indexToSwapName)
+		internal bool ReplaceIndex(string indexName, string indexToReplaceName)
 		{
-			var indexToSwap = indexDefinitionStorage.GetIndexDefinition(indexToSwapName);
+			var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
 
-			var success = indexDefinitionStorage.SwapIndex(indexName, indexToSwapName);
+			var success = indexDefinitionStorage.ReplaceIndex(indexName, indexToReplaceName);
 			if (success == false) 
 				return false;
 
-			if (indexToSwap != null)
-				DeleteIndex(indexToSwap.IndexId);
+			if (indexToReplace == null)
+				return true;
+
+			DeleteIndex(indexToReplace.IndexId);
+			indexDefinitionStorage.RemoveIndex(indexToReplace.IndexId, removeByNameMapping: false);
 
 			return true;
 		}

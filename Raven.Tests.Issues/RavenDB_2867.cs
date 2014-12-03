@@ -5,10 +5,9 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
-using System.Threading;
 
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Database.Indexing;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
@@ -18,6 +17,8 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_2867 : RavenTest
 	{
+		private const string Prefix = "Raven/Indexes/Replace/";
+
 		private class Person
 		{
 			public string Id { get; set; }
@@ -53,7 +54,7 @@ namespace Raven.Tests.Issues
 
 				store
 					.DatabaseCommands
-					.Put("Raven/Indexes/Swap/" + new NewIndex().IndexName, null, RavenJObject.FromObject(new IndexSwapDocument { IndexToReplace = new OldIndex().IndexName, MinimumSwapEtag = null }), new RavenJObject());
+					.Put(Prefix + new NewIndex().IndexName, null, RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = new OldIndex().IndexName, MinimumEtagBeforeReplace = null }), new RavenJObject());
 
 				var e = Assert.Throws<InvalidOperationException>(() =>
 				{
@@ -68,7 +69,7 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
-				store.SystemDatabase.IndexSwapper.SwapIndexes(store.SystemDatabase.IndexStorage.Indexes);
+				store.SystemDatabase.IndexReplacer.ReplaceIndexes(store.SystemDatabase.IndexStorage.Indexes);
 
 				using (var session = store.OpenSession())
 				{
