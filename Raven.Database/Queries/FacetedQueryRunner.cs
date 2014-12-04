@@ -616,7 +616,7 @@ namespace Raven.Database.Queries
 			        if (ReferenceEquals(this, obj)) return true;
 			        var other = obj as StringCollectionValue;
 			        if (other == null) return false;
-
+					 
 			        if (other._values.Count != _values.Count)
 				        return false;
 
