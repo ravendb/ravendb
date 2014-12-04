@@ -1,6 +1,6 @@
 /// <reference path="../../Scripts/typings/nprogress/nprogress.d.ts" />
 /// <reference path="../../Scripts/typings/bootstrap/bootstrap.d.ts" />
-
+/// <reference path="../../Scripts/typings/jquery.blockUI/jquery.blockUI.d.ts" />
 import router = require("plugins/router");
 import app = require("durandal/app");
 import sys = require("durandal/system");
@@ -610,7 +610,8 @@ class shell extends viewModelBase {
         } else {
             NProgress.done();
             NProgress.configure({ showSpinner: false });
-            this.showAlert(new alertArgs(alertType.danger, "Load time is too long", "The server might not be responding."));
+            //this.showAlert(new alertArgs(alertType.danger, "Load time is too long", "The server might not be responding."));
+            $.blockUI({ message: '<div id="longTimeoutMessage"><span> This is taking longer than usual</span><br/><span>(Waiting for server to respond)</span></div>' });
         }
     }
 

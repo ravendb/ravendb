@@ -322,6 +322,7 @@ class commandBase {
 
     private static hideSpin() {
         ko.postbox.publish("LoadProgress", null);
+        $.unblockUI();
     }
 
     reportInfo(title: string, details?: string) {

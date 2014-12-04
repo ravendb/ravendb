@@ -1,4 +1,4 @@
-@font-face {
+﻿@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -6620,6 +6620,11 @@ body {
   left: 0;
   right: 0;
 }
+#longTimeoutMessage {
+  background: yellow;
+  font-size: 1em;
+  text-align: center;
+}
 .alert-warning h2 {
   color: white;
 }
@@ -8337,3 +8342,4 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 #resources-page .resources-container .resource.fs.selected {
   box-shadow: 0 0 20px 0 #7109AA;
 }
+/*# sourceMappingURL=app.css.map */
