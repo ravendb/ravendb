@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
 			var containerName = "testContainer";
 			var blobKey = "testKey";
 
-			using (var client = new RavenAzureClient("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==", true))
+			using (var client = new RavenAzureClient("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="))
 			{
 				client.PutContainer(containerName);
 				client.PutBlob(containerName, blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>

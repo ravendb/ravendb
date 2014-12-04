@@ -231,6 +231,7 @@
     <Compile Include="FileSystem\Plugins\IRequiresFileSystemInitialization.cs" />
     <Compile Include="FileSystem\Storage\Esent\Schema\IFileSystemSchemaUpdate.cs" />
     <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From03To04.cs" />
+    <Compile Include="Indexing\IndexReplacer.cs" />
     <Compile Include="Indexing\WriteIndexStats.cs" />
     <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
     <Compile Include="Plugins\Builtins\CheckIncrementalBackupStatus.cs" />

@@ -62,12 +62,10 @@ namespace Voron.Platform.Posix
 		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
 			ThrowObjectDisposedIfNeeded();
+
 			var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
 
-			if (newLengthAfterAdjustment < _totalAllocationSize)
-				throw new ArgumentException("Cannot set the length to less than the current length");
-
-			if (newLengthAfterAdjustment == _totalAllocationSize)
+			if (newLengthAfterAdjustment <= _totalAllocationSize) //nothing to do
 				return;
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
@@ -100,7 +98,6 @@ namespace Voron.Platform.Posix
 			NumberOfAllocatedPages = _totalAllocationSize / PageSize;
 		}
 
-		
 		private PagerState CreatePagerState()
 		{
 			var startingBaseAddressPtr = Syscall.mmap(IntPtr.Zero, (ulong)_totalAllocationSize,
