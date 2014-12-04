@@ -554,7 +554,8 @@ namespace Raven.Client.Document
 						new JsonNumericConverter<double>(double.TryParse),
 						new JsonNumericConverter<short>(short.TryParse),
 						new JsonMultiDimensionalArrayConverter(),
-						new JsonDynamicConverter()
+						new JsonDynamicConverter(),
+						new JsonLinqEnumerableConverter()
 					}
 			};
 

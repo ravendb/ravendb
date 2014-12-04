@@ -170,44 +170,43 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     public bool IgnoreSerializableAttribute { get; set; }
 #endif
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultContractResolver"/> class.
-    /// </summary>
-    public DefaultContractResolver()
-      : this(false)
-    {
-    }
+	  /// <summary>
+	  /// Initializes a new instance of the <see cref="DefaultContractResolver"/> class.
+	  /// </summary>
+	  public DefaultContractResolver()
+		  : this(false)
+	  {
+	  }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultContractResolver"/> class.
-    /// </summary>
-    /// <param name="shareCache">
-    /// If set to <c>true</c> the <see cref="DefaultContractResolver"/> will use a cached shared with other resolvers of the same type.
-    /// Sharing the cache will significantly performance because expensive reflection will only happen once but could cause unexpected
-    /// behavior if different instances of the resolver are suppose to produce different results. When set to false it is highly
-    /// recommended to reuse <see cref="DefaultContractResolver"/> instances with the <see cref="JsonSerializer"/>.
-    /// </param>
-    public DefaultContractResolver(bool shareCache)
-    {
+	  /// <summary>
+	  /// Initializes a new instance of the <see cref="DefaultContractResolver"/> class.
+	  /// </summary>
+	  /// <param name="shareCache">
+	  /// If set to <c>true</c> the <see cref="DefaultContractResolver"/> will use a cached shared with other resolvers of the same type.
+	  /// Sharing the cache will significantly performance because expensive reflection will only happen once but could cause unexpected
+	  /// behavior if different instances of the resolver are suppose to produce different results. When set to false it is highly
+	  /// recommended to reuse <see cref="DefaultContractResolver"/> instances with the <see cref="JsonSerializer"/>.
+	  /// </param>
+	  public DefaultContractResolver(bool shareCache)
+	  {
 #if !NETFX_CORE
-      DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.Instance;
+		  DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.Instance;
 #endif
 #if !(SILVERLIGHT || NETFX_CORE || PORTABLE || PORTABLE40)
-      IgnoreSerializableAttribute = true;
+		  IgnoreSerializableAttribute = true;
 #endif
 
-      _sharedCache = shareCache;
-    }
+		  _sharedCache = shareCache;
+	  }
 
-    private Dictionary<ResolverContractKey, JsonContract> GetCache()
-    {
-      if (_sharedCache)
-        return _sharedContractCache;
-      else
-        return _instanceContractCache;
-    }
+	  private Dictionary<ResolverContractKey, JsonContract> GetCache()
+	  {
+		  if (_sharedCache)
+			  return _sharedContractCache;
+		  return _instanceContractCache;
+	  }
 
-    private void UpdateCache(Dictionary<ResolverContractKey, JsonContract> cache)
+	  private void UpdateCache(Dictionary<ResolverContractKey, JsonContract> cache)
     {
       if (_sharedCache)
         _sharedContractCache = cache;
@@ -225,9 +224,11 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       if (type == null)
         throw new ArgumentNullException("type");
 
+	    var name = type.Name;
+
       JsonContract contract;
-      ResolverContractKey key = new ResolverContractKey(GetType(), type);
-      Dictionary<ResolverContractKey, JsonContract> cache = GetCache();
+      var key = new ResolverContractKey(GetType(), type);
+      var cache = GetCache();
       if (cache == null || !cache.TryGetValue(key, out contract))
       {
         contract = CreateContract(type);
@@ -236,7 +237,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         lock (_typeContractCacheLock)
         {
           cache = GetCache();
-          Dictionary<ResolverContractKey, JsonContract> updatedCache =
+          var updatedCache =
             (cache != null)
               ? new Dictionary<ResolverContractKey, JsonContract>(cache)
               : new Dictionary<ResolverContractKey, JsonContract>();
@@ -862,7 +863,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       if (CollectionUtils.IsDictionaryType(t))
         return CreateDictionaryContract(objectType);
 
-      if (typeof(IEnumerable).IsAssignableFrom(t))
+      if (typeof(IEnumerable).IsAssignableFrom(t) || ReflectionUtils.ImplementsGenericDefinition(t,typeof(IEnumerable<>)))
         return CreateArrayContract(objectType);
 
       if (CanConvertToString(t))
