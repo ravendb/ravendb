@@ -17,19 +17,19 @@ namespace Raven.Abstractions.Data
 
 		public DateTime StartedAt { get; set; }
 
-		public TimeSpan TotalDuration { get; set; }
+        public double TotalDurationMs { get; set; }
 
-		public TimeSpan TimeSinceFirstIndexInBatchCompleted { get; set; }
+		public double TimeSinceFirstIndexInBatchCompletedMs { get; set; }
 
 		public ConcurrentDictionary<string, IndexingPerformanceStats> PerformanceStats { get; set; }
 
 		public void BatchCompleted()
 		{
 			var now = SystemTime.UtcNow;
-			TotalDuration = now - StartedAt;
+            TotalDurationMs = (now - StartedAt).TotalMilliseconds;
 
 			if (PerformanceStats.Count > 0)
-				TimeSinceFirstIndexInBatchCompleted = now - PerformanceStats.Min(x => x.Value.Completed);
+				TimeSinceFirstIndexInBatchCompletedMs = (now - PerformanceStats.Min(x => x.Value.Completed)).TotalMilliseconds;
 		}
 
 		public override bool Equals(object obj)
@@ -46,7 +46,7 @@ namespace Raven.Abstractions.Data
 				return false;
 			if (ReferenceEquals(this, other))
 				return true;
-			return BatchType == other.BatchType && Equals(IndexesToWorkOn, other.IndexesToWorkOn) && TotalDocumentCount == other.TotalDocumentCount && TotalDocumentSize == other.TotalDocumentSize && StartedAt.Equals(other.StartedAt) && TotalDuration.Equals(other.TotalDuration) && TimeSinceFirstIndexInBatchCompleted.Equals(other.TimeSinceFirstIndexInBatchCompleted) && Equals(PerformanceStats, other.PerformanceStats);
+			return BatchType == other.BatchType && Equals(IndexesToWorkOn, other.IndexesToWorkOn) && TotalDocumentCount == other.TotalDocumentCount && TotalDocumentSize == other.TotalDocumentSize && StartedAt.Equals(other.StartedAt) && TotalDurationMs.Equals(other.TotalDurationMs) && TimeSinceFirstIndexInBatchCompletedMs.Equals(other.TimeSinceFirstIndexInBatchCompletedMs) && Equals(PerformanceStats, other.PerformanceStats);
 		}
 
 		public override int GetHashCode()
@@ -58,8 +58,8 @@ namespace Raven.Abstractions.Data
 				hashCode = (hashCode * 397) ^ TotalDocumentCount;
 				hashCode = (hashCode * 397) ^ TotalDocumentSize.GetHashCode();
 				hashCode = (hashCode * 397) ^ StartedAt.GetHashCode();
-				hashCode = (hashCode * 397) ^ TotalDuration.GetHashCode();
-				hashCode = (hashCode * 397) ^ TimeSinceFirstIndexInBatchCompleted.GetHashCode();
+				hashCode = (hashCode * 397) ^ TotalDurationMs.GetHashCode();
+				hashCode = (hashCode * 397) ^ TimeSinceFirstIndexInBatchCompletedMs.GetHashCode();
 				hashCode = (hashCode * 397) ^ (PerformanceStats != null ? PerformanceStats.GetHashCode() : 0);
 				return hashCode;
 			}

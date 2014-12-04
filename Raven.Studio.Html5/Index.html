@@ -17,6 +17,7 @@
         <!-- BEGIN CSS BLOCK -->
         <link rel="stylesheet" href="Content/bootstrap.css" />
         <link rel="stylesheet" href="Content/bootstrap-datetimepicker.css" />
+        <link rel="stylesheet" href="Content/bootstrap-multiselect.css" />
         <link rel="stylesheet" href="Content/font-awesome.css" />
         <link rel="stylesheet" href="Content/durandal.css" />
         <link rel="stylesheet" href="Content/nprogress.css" />
@@ -36,40 +37,41 @@
             }
         </script>
     </head>
-<body>
-    <div id="applicationHost">
-        <div class="splash">
-            <div class="message">
-                <img alt="RavenDB" src="Content/images/logo.png" />
+    <body>
+        <div id="applicationHost">
+            <div class="splash">
+                <div class="message">
+                    <img alt="RavenDB" src="Content/images/logo.png" />
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Note: do not remove the "BEGIN VENDOR SCRIPTS" comment below. It is used by the optimized build to determine which scripts to inline. -->
-    <!-- BEGIN VENDOR SCRIPTS -->
-    <script type="text/javascript" src="Scripts/jquery-2.1.0.js"></script>
-    <script type="text/javascript" src="Scripts/nprogress.js"></script>
-    <script type="text/javascript" src="Scripts/knockout-3.2.0.js"></script>
-    <script type="text/javascript" src="Scripts/knockout.dirtyFlag.js"></script>
-    <script type="text/javascript" src="Scripts/knockout.mapping-2.4.1.js"></script>
-    <script type="text/javascript" src="Scripts/knockout-delegatedEvents.min.js"></script>
-    <script type="text/javascript" src="Scripts/knockout-postbox.min.js"></script>
-    <script type="text/javascript" src="Scripts/moment.min.js"></script>
-    <script type="text/javascript" src="Scripts/bootstrap.min.js"></script>
-    <script type="text/javascript" src="Scripts/bootstrap-datetimepicker.min.js"></script>
-    <script type="text/javascript" src="Scripts/bootstrap-contextmenu-2.1.js"></script>
-    <script type="text/javascript" src="Scripts/jquery-ui-1.10.4.custom.min.js"></script>
-    <script type="text/javascript" src="Scripts/jquery.dynatree.js"></script>
-    <script type="text/javascript" src="Scripts/jwerty-0.3.js"></script>
-    <script type="text/javascript" src="Scripts/jquery.fullscreen.js"></script>
-    <!-- END VENDOR SCRIPTS -->
+        <!-- Note: do not remove the "BEGIN VENDOR SCRIPTS" comment below. It is used by the optimized build to determine which scripts to inline. -->
+        <!-- BEGIN VENDOR SCRIPTS -->
+        <script type="text/javascript" src="Scripts/jquery-2.1.0.js"></script>
+        <script type="text/javascript" src="Scripts/nprogress.js"></script>
+        <script type="text/javascript" src="Scripts/knockout-3.2.0.js"></script>
+        <script type="text/javascript" src="Scripts/knockout.dirtyFlag.js"></script>
+        <script type="text/javascript" src="Scripts/knockout.mapping-2.4.1.js"></script>
+        <script type="text/javascript" src="Scripts/knockout-delegatedEvents.min.js"></script>
+        <script type="text/javascript" src="Scripts/knockout-postbox.min.js"></script>
+        <script type="text/javascript" src="Scripts/moment.min.js"></script>
+        <script type="text/javascript" src="Scripts/bootstrap.min.js"></script>
+        <script type="text/javascript" src="Scripts/bootstrap-datetimepicker.min.js"></script>
+        <script type="text/javascript" src="Scripts/bootstrap-contextmenu-2.1.js"></script>
+        <script type="text/javascript" src="Scripts/bootstrap-multiselect.js"></script>
+        <script type="text/javascript" src="Scripts/jquery-ui-1.10.4.custom.min.js"></script>
+        <script type="text/javascript" src="Scripts/jquery.dynatree.js"></script>
+        <script type="text/javascript" src="Scripts/jwerty-0.3.js"></script>
+        <script type="text/javascript" src="Scripts/jquery.fullscreen.js"></script>
+        <!-- END VENDOR SCRIPTS -->
 
-    <script type="text/javascript">
+        <script type="text/javascript">
         // Must pull down jQuery and nprogress before we show the progress indicator.
-        NProgress.start();
-    </script>
-    <script type="text/javascript" src="Scripts/require.js" data-main="App/main"></script>
+            NProgress.start();
+        </script>
+        <script type="text/javascript" src="Scripts/require.js" data-main="App/main"></script>
 
-</body>
+    </body>
 
 </html>
