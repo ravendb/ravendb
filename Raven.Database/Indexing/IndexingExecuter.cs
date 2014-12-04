@@ -28,8 +28,8 @@ namespace Raven.Database.Indexing
 		private readonly Prefetcher prefetcher;
 		private readonly PrefetchingBehavior defaultPrefetchingBehavior;
 
-		public IndexingExecuter(WorkContext context, Prefetcher prefetcher)
-			: base(context)
+		public IndexingExecuter(WorkContext context, Prefetcher prefetcher, IndexReplacer indexReplacer)
+			: base(context, indexReplacer)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			this.prefetcher = prefetcher;
