@@ -16,10 +16,7 @@ namespace Voron.Tests.Journal
 		// all tests here relay on the fact than one log file can contains max 10 pages
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
-			if (StorageEnvironmentOptions.RunningOnPosix == false)
-				options.MaxLogFileSize = 10 * AbstractPager.PageSize;
-			else
-				options.MaxLogFileSize = 10 * options.InitialLogFileSize;
+			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
 		}
 
 		[Fact]

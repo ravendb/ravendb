@@ -90,10 +90,7 @@ namespace Voron
 
 			MaxLogFileSize = 64 * 1024 * 1024;
 
-			if (!RunningOnPosix)
-				InitialLogFileSize = 64 * 1024;
-			else
-				InitialLogFileSize = Syscall.sysconf (SysconfName._SC_PAGESIZE) * 16;
+			InitialLogFileSize = 64 * 1024;
 
 			MaxScratchBufferSize = 512 * 1024 * 1024;
 

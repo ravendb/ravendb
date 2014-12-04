@@ -64,11 +64,9 @@ namespace Voron.Platform.Posix
 			ThrowObjectDisposedIfNeeded();
 
 			var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
-			if (newLengthAfterAdjustment == _totalAllocationSize) //nothing to do
-				return;
 
-			if (newLengthAfterAdjustment < _totalAllocationSize)
-				throw new ArgumentException("Cannot set the length to less than the current length");
+			if (newLengthAfterAdjustment <= _totalAllocationSize) //nothing to do
+				return;
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 

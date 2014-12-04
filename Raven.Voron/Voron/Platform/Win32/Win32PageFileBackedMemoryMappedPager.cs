@@ -71,10 +71,7 @@ namespace Voron.Platform.Win32
 			ThrowObjectDisposedIfNeeded();
 			var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
 
-			if (newLengthAfterAdjustment < _totalAllocationSize)
-				throw new ArgumentException("Cannot set the length to less than the current length");
-
-			if (newLengthAfterAdjustment == _totalAllocationSize)
+			if (newLengthAfterAdjustment <= _totalAllocationSize)
 				return;
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
