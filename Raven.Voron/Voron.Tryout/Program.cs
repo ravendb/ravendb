@@ -9,6 +9,10 @@ using System.Diagnostics;
 using Voron.Tests.ScratchBuffer;
 using Voron.Impl.Paging;
 using Voron.Tests.Journal;
+using System.Linq;
+using Voron.Tests;
+using Xunit;
+using System.Threading.Tasks;
 using Voron.Tests.Bugs;
 
 namespace Voron.Tryout
@@ -18,16 +22,75 @@ namespace Voron.Tryout
 		public static void Main()
 		{
 			Console.WriteLine ("pid = " + Process.GetCurrentProcess ().Id);
-			using (var test = new LargeValues ()) {
-				test.ShouldProperlyRecover ();
+	
+			Console.WriteLine ("done..");
+			Console.WriteLine ("press any key");
+			Console.ReadKey ();
+
+		    RunAllTests ();
+
+		}
+
+		static void RunAllTests ()
+		{
+			using (var fileWriter = new StreamWriter ("unit-tests.txt", append: false)) {
+				var testAssembly = typeof(StorageTest).Assembly;
+				var allTestClassTypes = testAssembly.GetTypes ().Where (t => t.IsSubclassOf (typeof(StorageTest))).ToList ();
+				var allTestMethods = allTestClassTypes.SelectMany (t => t.GetMethods ().Where (mt => mt.GetCustomAttributes (true).OfType<FactAttribute> ().Any ())).ToList ();
+				var total = allTestMethods.Count;
+				var failed = 0;
+				Console.Clear ();
+				fileWriter.WriteLine ("found " + total + " tests to run..");
+				Console.WriteLine ("found " + total + " tests to run..");
+				foreach (var classType in allTestClassTypes) {
+					foreach (var testMethod in classType.GetMethods ()
+					         							.Where (mt => 
+					        								mt.GetCustomAttributes (true).OfType<FactAttribute> ().Any())
+					         							.ToList())
+					{
+						Console.Write ("Running test: " + testMethod.Name + "...");
+						bool isFailed = false;
+						//create new test class instance for each unit test method - just like unit test runner does
+						var testClassInstance = classType.GetConstructor (Type.EmptyTypes).Invoke (null);
+						try{
+						var sw = Stopwatch.StartNew ();
+						fileWriter.Write ("Running test: " + testMethod.Name + "...");
+						try {
+								var testMethodTask = Task.Run (() => testMethod.Invoke (testClassInstance, null));
+							if (!testMethodTask.Wait (10000)) {
+								throw new TimeoutException ("The test " + testMethod + " has timed-out. Aborting execution");
+							}
+						} catch (Exception e) {
+							fileWriter.WriteLine ("Test failed. \n Reason: " + e);
+							failed++;
+								isFailed = true;
+						}
+						fileWriter.WriteLine ("done. " + sw.ElapsedMilliseconds + "ms");
+						fileWriter.WriteLine ("-----------------------------------------------------------");
+						}
+						finally{
+							classType.GetMethod ("Dispose").Invoke (testClassInstance, null);
+						}
+						if (isFailed)
+							Console.WriteLine ("failed");
+						else
+							Console.WriteLine ("succeeded");
+					}
+				}
+				fileWriter.WriteLine ("------------------------------------------------");
+				fileWriter.WriteLine ("------------------------------------------------");
+				fileWriter.WriteLine ("Out of total " + total + ", failed: " + failed);
+				fileWriter.Close ();
+			}
+			Console.WriteLine ("done");
+		}
+
+		static void TestEdgeCases ()
+		{
+			using (var test = new EdgeCases ()) {
+				test.TransactionCommitShouldSetCurrentLogFileToNullIfItIsFull ();
 			}
 			Console.WriteLine ("done..");
-
-			//ScratchBufferGrowthTest ();
-
-			//TestMemoryPager ();
-			//TestPageFileBacked ();
-
 		}
 
 		static void TestPageFileBacked ()
