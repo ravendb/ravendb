@@ -17,8 +17,8 @@ namespace Raven.Database.Indexing
 {
 	public class ReducingExecuter : AbstractIndexingExecuter
 	{
-		public ReducingExecuter(WorkContext context)
-			: base(context)
+		public ReducingExecuter(WorkContext context, IndexReplacer indexReplacer)
+			: base(context, indexReplacer)
 		{
 			autoTuner = new ReduceBatchSizeAutoTuner(context);
 		}

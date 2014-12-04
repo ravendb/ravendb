@@ -255,6 +255,7 @@
     <Compile Include="FileSystem\SearchResults.cs" />
     <Compile Include="Indexing\IndexLockMode.cs" />
     <Compile Include="Indexing\IndexMergeResults.cs" />
+    <Compile Include="Indexing\IndexReplaceDocument.cs" />
     <Compile Include="Indexing\MergeSuggestions.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
