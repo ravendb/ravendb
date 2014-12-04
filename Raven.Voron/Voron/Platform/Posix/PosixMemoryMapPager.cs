@@ -82,17 +82,16 @@ namespace Voron.Platform.Posix
 			ThrowObjectDisposedIfNeeded();
 			var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
 
-			if (newLengthAfterAdjustment < _totalAllocationSize)
-				throw new ArgumentException("Cannot set the length to less than the current length");
-
-			if (newLengthAfterAdjustment == _totalAllocationSize)
+			if (newLengthAfterAdjustment <= _totalAllocationSize)
 				return;
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
 			Syscall.ftruncate(_fd, (_totalAllocationSize + allocationSize));
 
-			if (TryAllocateMoreContinuousPages(allocationSize) == false)
+			//disabled until http://issues.hibernatingrhinos.com/issue/RavenDB-3012 is fixed
+			//this will prevent usage of mremap - preventing segmentation faults
+			//if (TryAllocateMoreContinuousPages(allocationSize) == false)
 			{
 				PagerState newPagerState = CreatePagerState();
 				if (newPagerState == null)
