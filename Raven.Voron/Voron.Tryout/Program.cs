@@ -9,6 +9,7 @@ using System.Diagnostics;
 using Voron.Tests.ScratchBuffer;
 using Voron.Impl.Paging;
 using Voron.Tests.Journal;
+using Voron.Tests.Bugs;
 
 namespace Voron.Tryout
 {
@@ -17,10 +18,8 @@ namespace Voron.Tryout
 		public static void Main()
 		{
 			Console.WriteLine ("pid = " + Process.GetCurrentProcess ().Id);
-			Console.WriteLine ("press any key");
-			Console.ReadKey ();
-			using (var test = new EdgeCases ()) {
-				test.TransactionCommitShouldSetCurrentLogFileToNullIfItIsFull ();
+			using (var test = new LargeValues ()) {
+				test.ShouldProperlyRecover ();
 			}
 			Console.WriteLine ("done..");
 
