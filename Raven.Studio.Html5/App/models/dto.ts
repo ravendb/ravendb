@@ -126,18 +126,31 @@ interface indexingBatchInfoDto {
     TotalDocumentCount: number;
     TotalDocumentSize: number;
     StartedAt: string; // ISO date string.
-    TotalDuration: string;
-    PerformanceStats: indexPerformanceDto[];
+    StartedAtDate?: Date;
+    TotalDurationMs: number;
+    PerfStats: indexNameAndPerformanceStats[];  
+}
+
+interface indexNameAndPerformanceStats {
+    indexName: string;
+    stats: indexPerformanceDto;
 }
 
 interface indexPerformanceDto {
     Operation: string;
-    OutputCount: number;
-    InputCount: number;
     ItemsCount: number;
-    Duration: string;
+    InputCount: number;
+    OutputCount: number;
     Started: string; // Date
+    Completed: string; // Date
+    Duration: string;
     DurationMilliseconds: number;
+    LoadDocumentCount: number;
+    LoadDocumentDurationMs: number;
+    WritingDocumentsToLuceneDurationMs: number;
+    LinqExecutionDurationMs: number;
+    FlushToDiskDurationMs: number;
+    WaitingTimeSinceLastBatchCompleted: string;
 }
 
 interface apiKeyDto extends documentDto {

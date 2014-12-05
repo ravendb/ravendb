@@ -338,6 +338,7 @@
     <TypeScriptCompile Include="App\commands\getReplicationPerfStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusStorageOnDiskCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusStorageBreakdownCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getIndexingBatchStatsCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
@@ -830,6 +831,7 @@
     <Content Include="Scripts\almond-custom.js" />
     <Content Include="Scripts\bootstrap-datetimepicker.js" />
     <Content Include="Scripts\bootstrap-datetimepicker.min.js" />
+    <Content Include="Scripts\bootstrap-multiselect.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
     <Content Include="Scripts\durandal\activator.js" />
@@ -895,14 +897,11 @@
     <Content Include="Scripts\moment.js" />
     <Content Include="Scripts\moment.min.js" />
     <Content Include="Scripts\nprogress.js" />
-    <Content Include="Scripts\nvd3\models\timelines.js" />
-    <Content Include="Scripts\nvd3\models\timelinesChart.js" />
     <Content Include="Scripts\nvd3\nv.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
+    <Content Include="Scripts\typings\bootstrap.multiselect\bootstrap.multiselect.d.ts" />
     <Content Include="Scripts\typings\d3\d3.d.ts" />
-    <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
-    <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\forge\forge.d.ts" />
     <Content Include="Scripts\typings\d3\nvd3.d.ts" />
     <Content Include="Scripts\typings\jquery.fullscreen\jquery.fullscreen.d.ts" />
@@ -1001,7 +1000,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>54895</DevelopmentServerPort>
+          <DevelopmentServerPort>49940</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
