@@ -118,7 +118,7 @@ namespace Raven.Database.Indexing
                 objectCreateExpression.Initializer.Elements.Add(new NamedExpression("SpatialIndexes", CreateSpatialIndexesExpression(_indexDefinition)));
             }
 
-            var createIndexDefintion = new MethodDeclaration
+            var createIndexDefinition = new MethodDeclaration
             {
                 Name = "CreateIndexDefinition",
                 Modifiers = Modifiers.Public | Modifiers.Override,
@@ -128,7 +128,7 @@ namespace Raven.Database.Indexing
 					new ReturnStatement(objectCreateExpression)
 				}
             };
-            indexDeclaration.Members.Add(createIndexDefintion);
+            indexDeclaration.Members.Add(createIndexDefinition);
 
             var namespaces = new HashSet<string>
 				{
