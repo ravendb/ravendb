@@ -34,7 +34,8 @@ namespace Voron.Platform.Posix
 			{
 				_totalAllocationSize = NearestSizeToPageSize(initialFileSize.Value);
 			}
-			if (_totalAllocationSize == 0 || _totalAllocationSize % SysPageSize != 0) 
+			if (_totalAllocationSize == 0 || _totalAllocationSize % SysPageSize != 0 || 
+			    _totalAllocationSize != GetFileSize()) 
 			{
 				_totalAllocationSize = NearestSizeToPageSize(_totalAllocationSize);
 				var result = Syscall.ftruncate (_fd, _totalAllocationSize);
@@ -81,17 +82,16 @@ namespace Voron.Platform.Posix
 			ThrowObjectDisposedIfNeeded();
 			var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
 
-			if (newLengthAfterAdjustment < _totalAllocationSize)
-				throw new ArgumentException("Cannot set the length to less than the current length");
-
-			if (newLengthAfterAdjustment == _totalAllocationSize)
+			if (newLengthAfterAdjustment <= _totalAllocationSize)
 				return;
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
 			Syscall.ftruncate(_fd, (_totalAllocationSize + allocationSize));
 
-			if (TryAllocateMoreContinuousPages(allocationSize) == false)
+			//disabled until http://issues.hibernatingrhinos.com/issue/RavenDB-3012 is fixed
+			//this will prevent usage of mremap - preventing segmentation faults
+			//if (TryAllocateMoreContinuousPages(allocationSize) == false)
 			{
 				PagerState newPagerState = CreatePagerState();
 				if (newPagerState == null)
@@ -123,39 +123,22 @@ namespace Voron.Platform.Posix
 	
 		private bool TryAllocateMoreContinuousPages(long allocationSize)
 		{
-			//TODO: Maybe we can use mremap here?
+			if (PagerState == null || PagerState.AllocationInfos == null || 
+			    PagerState.AllocationInfos.Length != 1)
+				throw new InvalidOperationException ("Assertion, this shouldn't be happening");
 
-			Debug.Assert(PagerState != null);
-			Debug.Assert(PagerState.AllocationInfos != null);
-			Debug.Assert(PagerState.Files != null && PagerState.Files.Any());
-
-			var allocationInfo = RemapViewOfFileAtAddress(allocationSize, _totalAllocationSize, PagerState.MapBase + _totalAllocationSize);
-
-			if (allocationInfo == null)
-				return false;
-
-			// we don't use memory mapped files directly here, not need for this
-			//PagerState.Files = PagerState.Files.Concat(allocationInfo.MappedFile);
-			PagerState.AllocationInfos = PagerState.AllocationInfos.Concat(allocationInfo);
-
-			return true;
-		}
-
-		private PagerState.AllocationInfo RemapViewOfFileAtAddress(long allocationSize, long offsetInFile, byte* baseAddress)
-		{
-			var intPtr = Syscall.mmap(new IntPtr(baseAddress), (ulong)allocationSize, 
-			                          MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-			                          MmapFlags.MAP_FIXED | MmapFlags.MAP_SHARED, _fd, offsetInFile);
-			if (intPtr.ToInt64() == -1)
+			var result = Syscall.mremap (new IntPtr(PagerState.MapBase), 
+			                             (ulong)PagerState.AllocationInfos [0].Size, 
+			                             (ulong)allocationSize, 
+			                             (MremapFlags)0);
+			if (result.ToInt64 () == -1) 
 			{
-				return null; // couldn't map to the right place
+				if (Marshal.GetLastWin32Error () == (int)Errno.ENOMEM)
+					return false;
+				PosixHelper.ThrowLastError (Marshal.GetLastWin32Error ());
 			}
 
-			return new PagerState.AllocationInfo
-			{
-				BaseAddress = baseAddress,
-				Size = allocationSize,
-			};
+			return true;
 		}
 
 		private PagerState CreatePagerState()

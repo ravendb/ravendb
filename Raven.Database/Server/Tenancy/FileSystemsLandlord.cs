@@ -311,5 +311,14 @@ namespace Raven.Database.Server.Tenancy
                 action(value.Result);
             }
         }
+
+	    public bool IsFileSystemLoaded(string tenantName)
+	    {
+			Task<RavenFileSystem> dbTask;
+			if (ResourcesStoresCache.TryGetValue(tenantName, out dbTask) == false)
+				return false;
+
+			return dbTask != null && dbTask.Status == TaskStatus.RanToCompletion;
+	    }
     }
 }

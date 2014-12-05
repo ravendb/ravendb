@@ -313,7 +313,7 @@
     <TypeScriptCompile Include="App\commands\getStatusDebugRequestTracingCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugIndexFieldsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getStatusDebugSlowDocCountsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getSlowDocCountsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIdentitiesCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexDebugMapCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryIndexDebugReduceCommand.ts" />
@@ -336,6 +336,9 @@
     <TypeScriptCompile Include="App\commands\dismissAlertCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSqlReplicationPerfStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationPerfStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusStorageOnDiskCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusStorageBreakdownCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getIndexingBatchStatsCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
@@ -407,6 +410,10 @@
     <TypeScriptCompile Include="App\viewmodels\backup.ts" />
     <TypeScriptCompile Include="App\viewmodels\compact.ts" />
     <TypeScriptCompile Include="App\viewmodels\restore.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusStorage.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusStorageOnDisk.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusStorageBreakdown.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusStorageCollections.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\adminSettings.html" />
@@ -415,6 +422,10 @@
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
+    <Content Include="App\views\statusStorageCollections.html" />
+    <Content Include="App\views\statusStorageBreakdown.html" />
+    <Content Include="App\views\statusStorageOnDisk.html" />
+    <Content Include="App\views\statusStorage.html" />
     <Content Include="App\views\restore.html" />
     <Content Include="App\views\createResource.html" />
     <Content Include="App\views\statusDebugWebSocket.html" />
@@ -463,7 +474,6 @@
     <TypeScriptCompile Include="App\viewmodels\statusDebugSqlReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugIndexFields.ts" />
     <TypeScriptCompile Include="App\models\debugDocumentStats.ts" />
-    <TypeScriptCompile Include="App\viewmodels\statusDebugSlowDocCounts.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugIdentities.ts" />
     <Content Include="App\views\filesystem\createFolderInFilesystem.html" />
     <Content Include="App\views\filesystem\status.html" />
@@ -475,7 +485,6 @@
     <Content Include="App\views\statusDebugIdentities.html" />
     <Content Include="App\views\filesystem\createConfigurationKey.html" />
     <Content Include="App\views\filesystem\deleteConfigurationKeys.html" />
-    <Content Include="App\views\statusDebugSlowDocCounts.html" />
     <Content Include="App\views\statusDebugIndexFields.html" />
     <Content Include="App\views\statusDebugSqlReplication.html" />
     <Content Include="App\views\statusDebugRequestTracing.html" />
@@ -822,6 +831,7 @@
     <Content Include="Scripts\almond-custom.js" />
     <Content Include="Scripts\bootstrap-datetimepicker.js" />
     <Content Include="Scripts\bootstrap-datetimepicker.min.js" />
+    <Content Include="Scripts\bootstrap-multiselect.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
     <Content Include="Scripts\durandal\activator.js" />
@@ -839,6 +849,7 @@
     <Content Include="Scripts\durandal\system.js" />
     <Content Include="Scripts\durandal\viewEngine.js" />
     <Content Include="Scripts\durandal\viewLocator.js" />
+    <Content Include="Scripts\jquery.blockUI.js" />
     <Content Include="Scripts\jquery.fullscreen.js" />
     <Content Include="Scripts\jszip\jszip-utils.min.js" />
     <Content Include="Scripts\jszip\jszip.js" />
@@ -871,6 +882,7 @@
     <TypeScriptCompile Include="Scripts\typings\bootstrap.v3.datetimepicker\bootstrap.v3.datetimepicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\es6shim\es6shim.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\jquery.blockUI\jquery.blockUI.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery.dynatree\jquery.dynatree.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jqueryui\jqueryui.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
@@ -885,14 +897,11 @@
     <Content Include="Scripts\moment.js" />
     <Content Include="Scripts\moment.min.js" />
     <Content Include="Scripts\nprogress.js" />
-    <Content Include="Scripts\nvd3\models\timelines.js" />
-    <Content Include="Scripts\nvd3\models\timelinesChart.js" />
     <Content Include="Scripts\nvd3\nv.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
+    <Content Include="Scripts\typings\bootstrap.multiselect\bootstrap.multiselect.d.ts" />
     <Content Include="Scripts\typings\d3\d3.d.ts" />
-    <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
-    <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\forge\forge.d.ts" />
     <Content Include="Scripts\typings\d3\nvd3.d.ts" />
     <Content Include="Scripts\typings\jquery.fullscreen\jquery.fullscreen.d.ts" />
@@ -991,7 +1000,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>54895</DevelopmentServerPort>
+          <DevelopmentServerPort>49940</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>

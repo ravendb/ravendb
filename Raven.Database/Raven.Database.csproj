@@ -231,6 +231,8 @@
     <Compile Include="FileSystem\Plugins\IRequiresFileSystemInitialization.cs" />
     <Compile Include="FileSystem\Storage\Esent\Schema\IFileSystemSchemaUpdate.cs" />
     <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From03To04.cs" />
+    <Compile Include="Indexing\IndexReplacer.cs" />
+    <Compile Include="Indexing\WriteIndexStats.cs" />
     <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
     <Compile Include="Plugins\Builtins\CheckIncrementalBackupStatus.cs" />
     <Compile Include="Plugins\Builtins\PurgeOutdatedTombstones.cs" />
@@ -276,7 +278,9 @@
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
+    <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
+    <Compile Include="Util\ResourceTimerManager.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />

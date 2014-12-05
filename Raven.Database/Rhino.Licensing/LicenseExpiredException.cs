@@ -6,6 +6,7 @@ namespace Rhino.Licensing
 	///<summary>
 	/// Thrown when license is found but is past it's expiration date
 	///</summary>
+	[Serializable]
 	public class LicenseExpiredException : RhinoLicensingException
 	{
 		/// <summary>

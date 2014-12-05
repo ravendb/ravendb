@@ -117,6 +117,7 @@ interface indexStatisticsDto {
     Performance: indexPerformanceDto[];
     DocsCount: number;
     IsInvalidIndex: boolean;
+    IsTestIndex: boolean;
 }
 
 interface indexingBatchInfoDto {
@@ -125,18 +126,31 @@ interface indexingBatchInfoDto {
     TotalDocumentCount: number;
     TotalDocumentSize: number;
     StartedAt: string; // ISO date string.
-    TotalDuration: string;
-    PerformanceStats: indexPerformanceDto[];
+    StartedAtDate?: Date;
+    TotalDurationMs: number;
+    PerfStats: indexNameAndPerformanceStats[];  
+}
+
+interface indexNameAndPerformanceStats {
+    indexName: string;
+    stats: indexPerformanceDto;
 }
 
 interface indexPerformanceDto {
     Operation: string;
-    OutputCount: number;
-    InputCount: number;
     ItemsCount: number;
-    Duration: string;
+    InputCount: number;
+    OutputCount: number;
     Started: string; // Date
+    Completed: string; // Date
+    Duration: string;
     DurationMilliseconds: number;
+    LoadDocumentCount: number;
+    LoadDocumentDurationMs: number;
+    WritingDocumentsToLuceneDurationMs: number;
+    LinqExecutionDurationMs: number;
+    FlushToDiskDurationMs: number;
+    WaitingTimeSinceLastBatchCompleted: string;
 }
 
 interface apiKeyDto extends documentDto {
@@ -287,6 +301,7 @@ interface indexDefinitionDto {
     Map: string;
     Maps: string[];
     Reduce: string;
+    IsTestIndex: boolean;
     IsMapReduce: boolean;
     IsCompiled: boolean;
     Stores: any;
@@ -674,6 +689,17 @@ interface patchDto extends documentDto {
     Script: string;
     SelectedItem: string;
     Values: Array<patchValueDto>;
+}
+
+interface statusStorageOnDiskDto {
+    TransactionalStorageAllocatedSize: number;
+    TransactionalStorageAllocatedSizeHumaneSize: string;
+    TransactionalStorageUsedSize: number;
+    TransactionalStorageUsedSizeHumaneSize: string;
+    IndexStorageSize: number;
+    IndexStorageSizeHumane: string;
+    TotalDatabaseSize: number;
+    TotalDatabaseSizeHumane: string;
 }
 
 interface statusDebugChangesDto {

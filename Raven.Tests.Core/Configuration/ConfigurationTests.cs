@@ -62,7 +62,7 @@ namespace Raven.Tests.Core.Configuration
 			stronglyTypedConfiguration.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
 
 			var configurationComparer = new ConfigurationComparer(inMemoryConfiguration, stronglyTypedConfiguration, propertyPathsToIgnore);
-
+			configurationComparer.Ignore(x=>x.EnableResponseLoggingForEmbeddedDatabases);
 			configurationComparer.Assert(expected => expected.RejectClientsModeEnabled.Value, actual => actual.RejectClientsMode);
 			configurationComparer.Assert(expected => expected.Replication.FetchingFromDiskTimeoutInSeconds.Value, actual => actual.Replication.FetchingFromDiskTimeoutInSeconds);
 			configurationComparer.Assert(expected => expected.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value, actual => actual.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb);
@@ -134,10 +134,13 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.DataDir.Value.ToFullPath(null)) + @"Indexes", actual => actual.IndexStoragePath);
 			configurationComparer.Assert(expected => expected.DefaultStorageTypeName.Value, actual => actual.DefaultStorageTypeName);
 			configurationComparer.Assert(expected => expected.CompiledIndexCacheDirectory.Value.ToFullPath(null), actual => actual.CompiledIndexCacheDirectory);
-			configurationComparer.Assert(expected => expected.JournalsStoragePath.Value, actual => actual.JournalsStoragePath);
 			configurationComparer.Assert(expected => expected.FlushIndexToDiskSizeInMb.Value, actual => actual.FlushIndexToDiskSizeInMb);
 			configurationComparer.Assert(expected => expected.TombstoneRetentionTime.Value, actual => actual.TombstoneRetentionTime);
 			configurationComparer.Assert(expected => expected.Replication.ReplicationRequestTimeoutInMilliseconds.Value, actual => actual.Replication.ReplicationRequestTimeoutInMilliseconds);
+			configurationComparer.Assert(expected => expected.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value, actual => actual.Indexing.MaxNumberOfItemsToProcessInTestIndexes);
+
+			configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
+			configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
 
 			Assert.NotNull(inMemoryConfiguration.OAuthTokenKey);
 			Assert.Equal("/", inMemoryConfiguration.VirtualDirectory);
@@ -152,6 +155,8 @@ namespace Raven.Tests.Core.Configuration
 			Assert.True(inMemoryConfiguration.Port >= 8080);
 			Assert.True(inMemoryConfiguration.CreateAnalyzersDirectoryIfNotExisting);
 			Assert.True(inMemoryConfiguration.CreatePluginsDirectoryIfNotExisting);
+			Assert.Equal(null, inMemoryConfiguration.Storage.Esent.JournalsStoragePath);
+			Assert.Equal(null, inMemoryConfiguration.Storage.Voron.JournalsStoragePath);
 
 			configurationComparer.Validate();
 		}

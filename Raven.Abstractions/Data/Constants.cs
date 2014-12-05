@@ -56,6 +56,7 @@ namespace Raven.Abstractions.Data
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
 		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
 	    public const string RejectClientsModeEnabled = "Raven/RejectClientsModeEnabled";
+	    public const string RavenServerBuild = "Raven-Server-Build";
 
 		// Indexing
 		public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
@@ -63,10 +64,11 @@ namespace Raven.Abstractions.Data
 		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";
 		public const int BulkImportDefaultTimeoutInMs = 60000;
 	    public const string IndexingDisabled = "Raven/IndexingDisabled";
+		public const string MaxNumberOfItemsToProcessInTestIndexes = "Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes";
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
-		public const string RavenLogsPath = "Raven/Esent/LogsPath";
+		public const string RavenEsentLogsPath = "Raven/Esent/LogsPath";
         public const string RavenTxJournalPath = "Raven/TransactionJournalsPath";
 		public const string RavenIndexPath = "Raven/IndexStoragePath";
 
@@ -182,5 +184,6 @@ namespace Raven.Abstractions.Data
 		// General
 
 		public const string RavenDatabasesPrefix = "Raven/Databases/";
+		public const string RavenFileSystemsPrefix = "Raven/FileSystems/";
 	}
 }

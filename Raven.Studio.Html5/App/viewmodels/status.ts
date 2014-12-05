@@ -29,6 +29,7 @@ class status extends viewModelBase {
                 { route: 'databases/status/userInfo', moduleId: 'viewmodels/userInfo', title: 'User Info', nav: true, hash: appUrl.forCurrentDatabase().userInfo },
                 { route: 'databases/status/visualizer', moduleId: 'viewmodels/visualizer', title: 'Map/Reduce Visualizer', nav: true, hash: appUrl.forCurrentDatabase().visualizer },
                 { route: 'databases/status/debug*details', moduleId: 'viewmodels/statusDebug', title: 'Debug', nav: true, hash: appUrl.forCurrentDatabase().statusDebug },
+                { route: 'databases/status/storage*details', moduleId: 'viewmodels/statusStorage', title: 'Storage', nav: true, hash: appUrl.forCurrentDatabase().statusStorageOnDisk },
                 { route: 'databases/status/infoPackage', moduleId: 'viewmodels/infoPackage', title: 'Gather Debug Info', nav: true, hash: appUrl.forCurrentDatabase().infoPackage }
 			])
             .buildNavigationModel();

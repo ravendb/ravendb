@@ -14,6 +14,8 @@ import uploadItem = require("models/uploadItem");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
 import confirmationDialog = require("viewmodels/confirmationDialog");
+import saveDocumentCommand = require("commands/saveDocumentCommand");
+import document = require("models/document");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -34,6 +36,8 @@ class viewModelBase {
     public static isConfirmedUsingSystemDatabase: boolean = false;
     dirtyFlag = new ko.DirtyFlag([]);
 
+
+    static hasContinueTestOption = ko.observable<boolean>(false);
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
      * Possible return values: boolean, promise<boolean>, {redirect: 'some/other/route'}, promise<{redirect: 'some/other/route'}>
@@ -296,6 +300,13 @@ class viewModelBase {
 
     public RemoveNotification(subscription: changeSubscription) {
         this.notifications.remove(subscription);
+    }
+
+    public continueTest() {
+        var doc = document.empty();
+        new saveDocumentCommand("Debug/Done", doc, this.activeDatabase(), false)
+            .execute()
+            .done(() => viewModelBase.hasContinueTestOption(false));
     }
 }
 

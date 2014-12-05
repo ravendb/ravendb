@@ -49,7 +49,7 @@
     <Compile Include="..\..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="LiveTestDatabaseCleanerStartupTask.cs" />
+    <Compile Include="LiveTestResourceCleanerStartupTask.cs" />
     <Compile Include="LiveTestDatabaseDocumentPutTrigger.cs" />
   </ItemGroup>
   <ItemGroup>

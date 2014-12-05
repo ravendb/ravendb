@@ -11,6 +11,7 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
 {
+	[Serializable]
 	public class Etag : IEquatable<Etag>, IComparable<Etag>
 	{
 	

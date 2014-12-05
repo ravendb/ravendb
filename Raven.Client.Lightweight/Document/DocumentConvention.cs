@@ -94,6 +94,7 @@ namespace Raven.Client.Document
 			ShouldAggressiveCacheTrackChanges = true;
 			ShouldSaveChangesForceAggressiveCacheCheck = true;
 			IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
+			AcceptGzipContent = true;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
@@ -553,7 +554,8 @@ namespace Raven.Client.Document
 						new JsonNumericConverter<double>(double.TryParse),
 						new JsonNumericConverter<short>(short.TryParse),
 						new JsonMultiDimensionalArrayConverter(),
-						new JsonDynamicConverter()
+						new JsonDynamicConverter(),
+						new JsonLinqEnumerableConverter()
 					}
 			};
 
@@ -644,6 +646,8 @@ namespace Raven.Client.Document
 		/// when the document will be saved.
 		/// </summary>
 		public bool PreserveDocumentPropertiesNotFoundOnModel { get; set; }
+
+		public bool AcceptGzipContent { get; set; }
 
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 

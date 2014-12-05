@@ -51,7 +51,6 @@ namespace Voron.Tests.ScratchBuffer
 				}
 
 				Thread.Sleep(10);
-
 				size += 1024;
 			}
 		}

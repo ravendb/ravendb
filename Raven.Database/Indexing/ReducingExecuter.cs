@@ -17,8 +17,8 @@ namespace Raven.Database.Indexing
 {
 	public class ReducingExecuter : AbstractIndexingExecuter
 	{
-		public ReducingExecuter(WorkContext context)
-			: base(context)
+		public ReducingExecuter(WorkContext context, IndexReplacer indexReplacer)
+			: base(context, indexReplacer)
 		{
 			autoTuner = new ReduceBatchSizeAutoTuner(context);
 		}
@@ -87,6 +87,11 @@ namespace Raven.Database.Indexing
 	    {
 	        context.MetricsCounters.StaleIndexReduces.Update(staleCount);
 	    }
+
+		protected override bool ShouldSkipIndex(Index index)
+		{
+			return false;
+		}
 
 		private void MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete)
 		{

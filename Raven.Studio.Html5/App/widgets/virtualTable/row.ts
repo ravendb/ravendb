@@ -113,7 +113,7 @@ class row {
             this.cellMap[propertyName] = new cell(data, this.getCellTemplateName(propertyName, data));            
         } else {
             var cellVal: cell = this.cellMap[propertyName];
-            cellVal.data(data);
+            cellVal.update(data);
         }
     }
 

@@ -33,7 +33,7 @@ class selectColumns extends dialogViewModelBase {
         this.generateCompletionBase();
         this.regenerateBindingSubscriptions();
         this.monitorForNewRows();
-        this.autoCompleterSupport = new autoCompleterSupport(this.autoCompleteBase, this.autoCompleteResults);
+        this.autoCompleterSupport = new autoCompleterSupport(this.autoCompleteBase, this.autoCompleteResults,true);
 
         this.maxTableHeight(Math.floor($(window).height() * 0.43));
         
@@ -214,7 +214,14 @@ class selectColumns extends dialogViewModelBase {
         }
         return true;
     }
-
+    consumeClick(columnParams, event: KeyboardEvent): boolean {
+        if (columnParams.binding().length === 0) {
+            columnParams.binding.valueHasMutated();
+            event.preventDefault();
+            return false;
+        }
+        return true;
+    }
     searchForCompletions() {
         this.activeInput = $("[id ^= 'binding-']:focus");
         this.autoCompleterSupport.searchForCompletions(this.activeInput);

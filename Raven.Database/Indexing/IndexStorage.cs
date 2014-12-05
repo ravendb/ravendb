@@ -1116,6 +1116,9 @@ namespace Raven.Database.Indexing
 
 				isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
 
+				if (indexInstance != null && indexInstance.IsTestIndex)
+					isStale = false;
+
 				if (isStale && actions.Staleness.IsIndexStaleByTask(indexId, null) == false && actions.Staleness.IsReduceStale(indexId) == false)
 				{
 					var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexId);
@@ -1433,6 +1436,23 @@ namespace Raven.Database.Indexing
 		public void ForceWriteToDisk(string index)
 		{
 			GetIndexByName(index).ForceWriteToDisk();
+		}
+
+		internal bool ReplaceIndex(string indexName, string indexToReplaceName)
+		{
+			var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
+
+			var success = indexDefinitionStorage.ReplaceIndex(indexName, indexToReplaceName);
+			if (success == false) 
+				return false;
+
+			if (indexToReplace == null)
+				return true;
+
+			DeleteIndex(indexToReplace.IndexId);
+			indexDefinitionStorage.RemoveIndex(indexToReplace.IndexId, removeByNameMapping: false);
+
+			return true;
 		}
 	}
 }

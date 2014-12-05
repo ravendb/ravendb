@@ -10,6 +10,7 @@ using Mono.Unix.Native;
 using Voron.Impl;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
+using System.Collections.Generic;
 
 namespace Voron.Platform.Posix
 {
@@ -33,13 +34,11 @@ namespace Voron.Platform.Posix
 			}
 
 			var result = Syscall.posix_fallocate(_fd, 0, (ulong)journalSize);
-			if(result != 0)
+			if (result != 0)
 				PosixHelper.ThrowLastError(result);
 
 			NumberOfAllocatedPages = journalSize / AbstractPager.PageSize;
 		}
-
-		
 
 		public void Dispose()
 		{
@@ -49,7 +48,16 @@ namespace Voron.Platform.Posix
 				Syscall.close(_fdReads);
 			Syscall.close(_fd);
 			if (DeleteOnClose)
-				File.Delete(_filename);
+			{
+				try
+				{
+					File.Delete(_filename);
+				}
+				catch (Exception)
+				{
+					// nothing to do here
+				}
+			}
 		}
 
 		~PosixJournalWriter()
@@ -59,19 +67,53 @@ namespace Voron.Platform.Posix
 
 		public unsafe void WriteGather(long position, byte*[] pages)
 		{
-			var locs = new Iovec[pages.Length];
-			for (int i = 0; i < locs.Length; i++)
+			if (pages.Length == 0)
+				return; // nothing to do
+
+			var start = 0;
+			const int IOV_MAX = 1024;
+			while (start < pages.Length)
 			{
-				locs[i].iov_base = new IntPtr(pages[i]);
-				locs[i].iov_len = AbstractPager.PageSize;
+				start++;
+				var byteLen = 0L;
+				var locs = new List<Iovec>
+				{
+					new Iovec
+					{
+						iov_base = new IntPtr(pages[start]),
+						iov_len = AbstractPager.PageSize
+					}
+				};
+				byteLen += AbstractPager.PageSize;
+				for (int i = 1; i < pages.Length && locs.Count < IOV_MAX; i++, start++)
+				{
+					byteLen += AbstractPager.PageSize;
+					var cur = locs[locs.Count - 1];
+					if (((byte*)cur.iov_base.ToPointer() + cur.iov_len) == pages[i])
+					{
+						cur.iov_len = cur.iov_len + AbstractPager.PageSize;
+						locs[locs.Count - 1] = cur;
+					} 
+					else
+					{
+						locs.Add(new Iovec
+						{
+							iov_base = new IntPtr( pages[i]),
+							iov_len = AbstractPager.PageSize
+						});
+					}
+				}
+				var result = Syscall.pwritev(_fd, locs.ToArray(), position);
+				position += byteLen;
+				if (result == -1)
+					PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
 			}
-			var result = Syscall.pwritev(_fd, locs, position);
-			if(result == -1)
-				PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
 		}
 
 		public long NumberOfAllocatedPages { get; private set; }
+
 		public bool Disposed { get; private set; }
+
 		public bool DeleteOnClose { get; set; }
 
 		public IVirtualPager CreatePager()
@@ -94,7 +136,7 @@ namespace Voron.Platform.Posix
 				var result = Syscall.pread(_fdReads, buffer, (ulong)count, position);
 				if (result == 0) //eof
 					return false;
-				count -= (int) result;
+				count -= (int)result;
 				buffer += result;
 				position += result;
 			}

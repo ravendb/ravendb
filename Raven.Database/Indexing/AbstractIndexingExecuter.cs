@@ -18,7 +18,10 @@ namespace Raven.Database.Indexing
     public abstract class AbstractIndexingExecuter
     {
         protected WorkContext context;
-        protected TaskScheduler scheduler;
+
+	    private readonly IndexReplacer indexReplacer;
+
+	    protected TaskScheduler scheduler;
         protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
         protected ITransactionalStorage transactionalStorage;
         protected int workCounter;
@@ -26,11 +29,12 @@ namespace Raven.Database.Indexing
         protected BaseBatchSizeAutoTuner autoTuner;
         protected ConcurrentDictionary<int, Index> currentlyProcessedIndexes = new ConcurrentDictionary<int, Index>();
 
-        protected AbstractIndexingExecuter(WorkContext context)
+        protected AbstractIndexingExecuter(WorkContext context, IndexReplacer indexReplacer)
         {
             this.transactionalStorage = context.TransactionalStorage;
             this.context = context;
-            this.scheduler = context.TaskScheduler;
+	        this.indexReplacer = indexReplacer;
+	        this.scheduler = context.TaskScheduler;
         }
 
         public void Execute()
@@ -228,6 +232,9 @@ namespace Raven.Database.Indexing
                     if (index == null) // not there
                         continue;
 
+					if (ShouldSkipIndex(index))
+						continue;
+
 					if(context.IndexDefinitionStorage.GetViewGenerator(indexesStat.Id) == null)
 						continue; // an index that is in the process of being added, ignoring it, we'll check again on the next run
 
@@ -236,6 +243,7 @@ namespace Raven.Database.Indexing
 
 					var indexToWorkOn = GetIndexToWorkOn(indexesStat);
                     indexToWorkOn.Index = index;
+
                     indexesToWorkOn.Add(indexToWorkOn);
                 }
             });
@@ -254,10 +262,14 @@ namespace Raven.Database.Indexing
                ExecuteIndexingWork(indexesToWorkOn);
             }
 
+			indexReplacer.ReplaceIndexes(indexesToWorkOn.Select(x => x.IndexId).ToList());
+
             return true;
         }
 
-        public Index[] GetCurrentlyProcessingIndexes()
+	    protected abstract bool ShouldSkipIndex(Index index);
+
+	    public Index[] GetCurrentlyProcessingIndexes()
         {
             return currentlyProcessedIndexes.Values.ToArray();
         }

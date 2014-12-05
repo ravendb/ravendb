@@ -133,6 +133,11 @@ namespace Raven.Client.Document
 		protected string[] highlighterPostTags = new string[0];
 
 		/// <summary>
+		///   Highlighter key
+		/// </summary>
+		protected string highlighterKeyName;
+
+		/// <summary>
 		///   The types to sort the fields by (NULL if not specified)
 		/// </summary>
 		protected HashSet<KeyValuePair<string, Type>> sortByHints = new HashSet<KeyValuePair<string, Type>>();
@@ -831,6 +836,13 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(
+			string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
+		{
+			this.Highlight(fieldName, fieldKeyName, fragmentLength, fragmentCount, out fieldHighlightings);
+			return this;
+		}
+
 	    IDocumentQueryCustomization IDocumentQueryCustomization.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
 	    {
 	        this.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
@@ -906,6 +918,13 @@ namespace Raven.Client.Document
 
 		public void Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
 		{
+			highlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
+			fieldHighlightings = highlightings.AddField(fieldName);
+		}
+
+		public void Highlight(string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
+		{
+			highlighterKeyName = fieldKeyName;
 			highlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
 			fieldHighlightings = highlightings.AddField(fieldName);
 		}
@@ -1839,6 +1858,7 @@ If you really want to do in memory filtering on the data returned from the query
 					HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 					HighlighterPreTags = highlighterPreTags.ToArray(),
 					HighlighterPostTags = highlighterPostTags.ToArray(),
+					HighlighterKeyName = highlighterKeyName,
                     ResultsTransformer = resultsTransformer,
                     AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
                     TransformerParameters  = transformerParameters,
@@ -1864,6 +1884,7 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 				HighlighterPreTags = highlighterPreTags.ToArray(),
 				HighlighterPostTags = highlighterPostTags.ToArray(),
+				HighlighterKeyName = highlighterKeyName,
                 ResultsTransformer = this.resultsTransformer,
                 TransformerParameters = transformerParameters,
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,

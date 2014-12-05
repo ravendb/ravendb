@@ -83,10 +83,13 @@ class appUrl {
         statusDebugRequestTracing: ko.computed(() => appUrl.forStatusDebugRequestTracing(appUrl.currentDatabase())),
         statusDebugSqlReplication: ko.computed(() => appUrl.forStatusDebugSqlReplication(appUrl.currentDatabase())),
         statusDebugIndexFields: ko.computed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
-        statusDebugSlowDocCounts: ko.computed(() => appUrl.forStatusDebugSlowDocCounts(appUrl.currentDatabase())),
         statusDebugIdentities: ko.computed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
         statusDebugWebSocket: ko.computed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
         infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
+
+        statusStorageOnDisk: ko.computed(() => appUrl.forStatusStorageOnDisk(appUrl.currentDatabase())),
+        statusStorageBreakdown: ko.computed(() => appUrl.forStatusStorageBreakdown(appUrl.currentDatabase())),
+        statusStorageCollections: ko.computed(() => appUrl.forStatusStorageCollections(appUrl.currentDatabase())),
 
         isAreaActive: (routeRoot: string) => ko.computed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
@@ -318,10 +321,6 @@ class appUrl {
         return "#databases/status/debug/indexFields?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forStatusDebugSlowDocCounts(db: database): string {
-        return "#databases/status/debug/slowDocCounts?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forStatusDebugIdentities(db: database): string {
         return "#databases/status/debug/identities?" + appUrl.getEncodedDbPart(db);
     }
@@ -332,6 +331,18 @@ class appUrl {
 
     static forInfoPackage(db: database): string {
         return '#databases/status/infoPackage?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusStorageOnDisk(db: database): string {
+        return '#databases/status/storage?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusStorageBreakdown(db: database): string {
+        return '#databases/status/storage/storageBreakdown?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusStorageCollections(db: database): string {
+        return '#databases/status/storage/collections?' + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {
@@ -673,6 +684,7 @@ class appUrl {
     static getSystemDatabase(): database {
         var db = new database("<system>");
         db.isSystem = true;
+        db.isVisible(false);
         return db;
     }
 

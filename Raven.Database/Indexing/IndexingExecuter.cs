@@ -28,8 +28,8 @@ namespace Raven.Database.Indexing
 		private readonly Prefetcher prefetcher;
 		private readonly PrefetchingBehavior defaultPrefetchingBehavior;
 
-		public IndexingExecuter(WorkContext context, Prefetcher prefetcher)
-			: base(context)
+		public IndexingExecuter(WorkContext context, Prefetcher prefetcher, IndexReplacer indexReplacer)
+			: base(context, indexReplacer)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			this.prefetcher = prefetcher;
@@ -83,7 +83,12 @@ namespace Raven.Database.Indexing
 	        context.MetricsCounters.StaleIndexMaps.Update(staleCount);
 		}
 
-	    protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
+		protected override bool ShouldSkipIndex(Index index)
+		{
+			return index.IsTestIndex;
+		}
+
+		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
 	    {
 		    var removeFromIndexTasks = (DatabaseTask)actions.Tasks.GetMergedTask<RemoveFromIndexTask>();
 			var touchReferenceDocumentIfChangedTask = removeFromIndexTasks ?? actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>();

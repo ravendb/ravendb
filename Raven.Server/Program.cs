@@ -545,10 +545,14 @@ namespace Raven.Server
 
         public static void IoTest(PerformanceTestRequest request)
         {
-            var tester = new DiskPerformanceTester(request, Console.WriteLine);
-            tester.DescribeTestParameters();
-            tester.TestDiskIO();
-            var result = tester.Result;
+	        DiskPerformanceResult result;
+
+	        using (var tester = new DiskPerformanceTester(request, Console.WriteLine))
+	        {
+				tester.DescribeTestParameters();
+				tester.TestDiskIO();
+				result = tester.Result;
+	        }
 
             var hasReads = request.OperationType == OperationType.Read || request.OperationType == OperationType.Mix;
             var hasWrites = request.OperationType == OperationType.Write || request.OperationType == OperationType.Mix;

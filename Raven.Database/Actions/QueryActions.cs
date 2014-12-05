@@ -174,11 +174,10 @@ namespace Raven.Database.Actions
 				scoreExplanations = new Dictionary<string, string>();
 				Func<IndexQueryResult, object> tryRecordHighlightingAndScoreExplanation = queryResult =>
 				{
-					if (queryResult.Key == null)
-						return null;
-					if (queryResult.Highligtings != null)
-						highlightings.Add(queryResult.Key, queryResult.Highligtings);
-					if (queryResult.ScoreExplanation != null)
+                  
+                    if (queryResult.Highligtings != null && (queryResult.Key != null || queryResult.HighlighterKey != null))
+						highlightings.Add(queryResult.Key ?? queryResult.HighlighterKey, queryResult.Highligtings);
+                    if (queryResult.Key != null && queryResult.ScoreExplanation != null)
 						scoreExplanations.Add(queryResult.Key, queryResult.ScoreExplanation);
 					return null;
 				};
