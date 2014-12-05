@@ -4,7 +4,9 @@ class periodicExportSetup {
     disabled = ko.observable<boolean>(true);
 
     type = ko.observable<string>();
-    mainValue = ko.observable<string>();
+	mainValue = ko.observable<string>().extend({
+		required: true
+	});
 
     awsAccessKey = ko.observable<string>();
     awsSecretKey = ko.observable<string>();
@@ -45,6 +47,19 @@ class periodicExportSetup {
         { label: "South America (Sao Paulo)", value: "sa-east-1" }
     ];
     availableIntervalUnits = [this.TU_MINUTES, this.TU_HOURS, this.TU_DAYS];
+
+	mainPlaceholder = ko.computed(() => {
+		switch(this.type()) {
+			case this.FILE_SYSTEM:
+				return 'full path';
+			case this.GLACIER_VAULT:
+				return 'vault name only e.g. myvault';
+			case this.S3_BUCKET:
+				return 'bucket name only e.g. mybucket';
+			case this.AZURE_STORAGE:
+				return 'container name only e.g. mycontainer';
+		}
+	}, this);
 
     additionalAwsInfoRequired = ko.computed(() => {
         return jQuery.inArray(

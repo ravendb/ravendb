@@ -351,7 +351,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 			if (azureStorageAccount == Constants.DataCouldNotBeDecrypted ||
 				azureStorageKey == Constants.DataCouldNotBeDecrypted)
 			{
-				throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
+				throw new InvalidOperationException("Could not decrypt the Azure access settings, if you are running on IIS, make sure that load user profile is set to true.");
 			}
 			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey))
 			{
