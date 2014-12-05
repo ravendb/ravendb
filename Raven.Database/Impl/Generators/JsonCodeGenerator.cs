@@ -264,18 +264,18 @@ namespace Raven.Database.Impl.Generators
             
             foreach( var @class in classes )
             {
-                codeBuilder.Append("public class " + @class.Name + Environment.NewLine );
-                codeBuilder.Append("{" + Environment.NewLine);
+                codeBuilder.Append("\tpublic class " + @class.Name + Environment.NewLine);
+                codeBuilder.Append("\t{" + Environment.NewLine);
 
                 foreach ( var @field in @class.Properties )
                 {
-                    codeBuilder.Append("public " + field.Value.Name);
+                    codeBuilder.Append("\t\tpublic " + field.Value.Name);
                     codeBuilder.Append(field.Value.IsArray ? "[] " : " ");
                     codeBuilder.Append(field.Key + " { get; set; } ");
                     codeBuilder.Append(Environment.NewLine);
                 }
 
-                codeBuilder.Append("}" + Environment.NewLine);
+                codeBuilder.Append("\t}" + Environment.NewLine);
             }
 
             return codeBuilder.ToString();
@@ -287,7 +287,33 @@ namespace Raven.Database.Impl.Generators
             this._generatedTypes.Clear();
 
             // Repopulate the generated types after working on the object.
-            GenerateClassTypesFromObject(name, @object);
+            var root = GenerateClassTypesFromObject(name, @object);
+
+            foreach ( var pair in _generatedTypes.ToList())
+            {
+                var @class = pair.Value;
+
+                bool changed = false;
+                var properties = @class.Properties;
+                foreach ( var fieldPair in properties.ToList() )
+                {
+                    var field = fieldPair.Value;
+                    if (field.Name == root.Name)
+                    {
+                        properties[fieldPair.Key] = new FieldType(name, field.IsArray, field.IsPrimitive);
+                        changed = true;
+                    }                        
+                }                
+
+                if ( @class.Name == root.Name )
+                {
+                    _generatedTypes[pair.Key] = new ClassType(name, properties);
+                }                    
+                else if ( changed )
+                {
+                    _generatedTypes[pair.Key] = new ClassType(@class.Name, properties);
+                }
+            }
 
             // Return all the potential classes found.
             return this._generatedTypes.Select(x => x.Value).ToList();
@@ -348,19 +374,7 @@ namespace Raven.Database.Impl.Generators
             foreach (var pair in _generatedTypes)
             {
                 if (pair.Value == clazz)
-                {
-                    Console.WriteLine(pair.Value.Name);
-                    foreach (var kv in pair.Value.Properties)
-                        Console.WriteLine(kv.Key);
-                    Console.WriteLine();
-
-                    Console.WriteLine(clazz.Name);
-                    foreach (var kv in clazz.Properties)
-                        Console.WriteLine(kv.Key);
-                    Console.WriteLine();
-
                     return pair.Value;
-                }                    
             }
 
             _generatedTypes[key] = clazz;

@@ -16,7 +16,7 @@ namespace Raven.Database.Server.Controllers
         [HttpGet]
         [Route("generate/code")]
         [Route("databases/{databaseName}/generate/code")]
-        public HttpResponseMessage GenerateCodeFromDocument([FromUri] string doc, [FromUri] string lang)
+        public HttpResponseMessage GenerateCodeFromDocument([FromUri] string doc, [FromUri] string lang = "csharp")
         {
             var msg = GetEmptyMessage();
             if (Database == null)
@@ -30,13 +30,19 @@ namespace Raven.Database.Server.Controllers
                 msg.StatusCode = HttpStatusCode.NotFound;
                 return msg;
             }
+
+            if (lang.ToLowerInvariant().Trim() != "csharp")
+            {
+                msg.StatusCode = HttpStatusCode.NotImplemented;
+                return msg;
+            }
           
             Debug.Assert(document.Etag != null);
 
-            var generator = new JsonCodeGenerator( lang);
+            var generator = new JsonCodeGenerator(lang);
             var code = generator.Execute(document);
 
-            throw new NotImplementedException();
+            return this.GetMessageWithString(code);
         }
     }
 }
