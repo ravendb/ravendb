@@ -25,6 +25,7 @@ namespace Raven.Database.Client
         public EmbeddedDocumentStore()
         {
             server = new RavenDbServer();
+			Subscriptions = new SubscriptionChannel(this);
         }
 
 	    public RavenDbServer Server
@@ -350,7 +351,9 @@ namespace Raven.Database.Client
             return server.DocumentStore.BulkInsert(database, options);
         }
 
-        public DocumentSessionListeners Listeners { get { return server.DocumentStore.Listeners; } }
+	    public IReliableSubscriptions Subscriptions { get; private set; }
+
+	    public DocumentSessionListeners Listeners { get { return server.DocumentStore.Listeners; } }
         public void SetListeners(DocumentSessionListeners listeners)
         {
             server.DocumentStore.SetListeners(listeners);

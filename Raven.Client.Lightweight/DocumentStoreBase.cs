@@ -32,6 +32,7 @@ namespace Raven.Client
 
 			LastEtagHolder = new GlobalLastEtagHolder();
 			TransactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
+			Subscriptions = new SubscriptionChannel(this);
 		}
 
 		public DocumentSessionListeners Listeners
@@ -175,6 +176,7 @@ namespace Raven.Client
 		}
 
 		public abstract BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
+		public IReliableSubscriptions Subscriptions { get; private set; }
 
 		protected void EnsureNotClosed()
 		{

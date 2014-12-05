@@ -214,6 +214,9 @@
     <Compile Include="Data\StorageStats.cs" />
     <Compile Include="Data\StreamResult.cs" />
     <Compile Include="Data\StringDistanceTypes.cs" />
+    <Compile Include="Data\SubscriptionCriteria.cs" />
+    <Compile Include="Data\SubscriptionDocument.cs" />
+    <Compile Include="Data\SubscriptionBatchOptions.cs" />
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TaskBasedOperationState.cs" />

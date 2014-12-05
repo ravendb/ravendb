@@ -78,7 +78,7 @@ namespace Raven.Database.Server.Controllers
 							Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, doc =>
 							{
 								timeout.Delay();
-								doc.WriteTo(writer);
+								doc.ToJson().WriteTo(writer);
                                 writer.WriteRaw(Environment.NewLine);
 							});
 						else
