@@ -20,16 +20,15 @@ namespace Voron.Tryout
 	public unsafe class Program
 	{
 		public static void Main()
-		{
-			Console.WriteLine ("pid = " + Process.GetCurrentProcess ().Id);
-	
-			Console.WriteLine ("done..");
-			Console.WriteLine ("press any key");
-			Console.ReadKey ();
-
-		    RunAllTests ();
-
-		}
+        {
+            Console.WriteLine("pid = " + Process.GetCurrentProcess().Id);
+            using (var test = new PageSplitter())
+            {
+                test.PageSplitterShouldCalculateSeparatorKeyCorrectly2();
+            }
+            Console.WriteLine("done..");
+            //RunAllTests();
+        }
 
 		static void RunAllTests ()
 		{
