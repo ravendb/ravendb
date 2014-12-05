@@ -24,7 +24,7 @@
                         <select class="form-control" data-bind="options: availablePeriodicExports, optionsText: 'label', optionsValue: 'value', value: type"></select>
                     </div>
                     <div class="col-sm-3">
-						<input type="text" class="form-control" data-bind="value: mainValue, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }" />
+                        <input type="text" required class="form-control" data-bind="value: mainValue, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }" />
                     </div>
                 </div>
                 <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
