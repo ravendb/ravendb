@@ -7,7 +7,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class createFilesystem extends viewModelBase {
 
-    public creationTask = $.Deferred<fileSystemSettingsDto>();
+    public creationTask = $.Deferred();
     creationTaskStarted = false;
 
     public fileSystemName = ko.observable('');
@@ -20,7 +20,9 @@ class createFilesystem extends viewModelBase {
     logsCustomValidityError: KnockoutComputed<string>;
     fileSystemNameFocus = ko.observable(true);
 
-    constructor(private filesystems: KnockoutObservableArray<filesystem>, private parent: dialogViewModelBase) {
+    isEncryptionBundleEnabled = ko.observable(false);
+
+    constructor(private filesystems: KnockoutObservableArray<filesystem>, private licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
         super();
 
         this.nameCustomValidityError = ko.computed(() => {
@@ -60,16 +62,23 @@ class createFilesystem extends viewModelBase {
         }
     }
 
+    isBundleActive(name: string): boolean {
+        var licenseStatus: licenseStatusDto = this.licenseStatus();
+
+        if (licenseStatus == null || licenseStatus.IsCommercial == false) {
+            return true;
+        }
+        else {
+            var value = licenseStatus.Attributes[name];
+            return value === "true";
+        }
+    }
+
     nextOrCreate() {
         // For now we're just creating the filesystem.
         this.creationTaskStarted = true;
         dialog.close(this.parent);
-        this.creationTask.resolve({
-            name: this.fileSystemName(),
-            path: this.fileSystemPath(),
-            logsPath: this.fileSystemLogsPath(),
-            storageEngine: this.storageEngine()
-        });
+        this.creationTask.resolve(this.fileSystemName(), this.getActiveBundles(), this.fileSystemPath(), this.fileSystemLogsPath(), this.storageEngine());
     }
 
     private isFilesystemNameExists(fileSystemName: string, filesystems: filesystem[]): boolean {
@@ -122,6 +131,18 @@ class createFilesystem extends viewModelBase {
             }
         }
         return errorMessage;
+    }
+
+    toggleEncryptionBundle() {
+        this.isEncryptionBundleEnabled.toggle();
+    }
+
+    private getActiveBundles(): string[] {
+        var activeBundles: string[] = [];
+        if (this.isEncryptionBundleEnabled()) {
+            activeBundles.push("Encryption");
+        }
+        return activeBundles;
     }
 }
 
