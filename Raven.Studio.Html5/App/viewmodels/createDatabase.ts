@@ -21,7 +21,6 @@ class createDatabase extends viewModelBase {
     logsCustomValidityError: KnockoutComputed<string>;
     databaseIndexesPath = ko.observable('');
     indexesCustomValidityError: KnockoutComputed<string>;
-    databaseNameFocus = ko.observable(true);
     storageEngine = ko.observable('');
     private maxNameLength = 200;
 
@@ -78,7 +77,6 @@ class createDatabase extends viewModelBase {
     }
 
     attached() {
-        this.databaseNameFocus(true);
     }
 
     deactivate() {
