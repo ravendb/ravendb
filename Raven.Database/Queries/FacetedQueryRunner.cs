@@ -641,7 +641,7 @@ namespace Raven.Database.Queries
 			        {
 				        for (int i = 0; i < _values.Count; i++)
 				        {
-					        _hashCode = _hashCode*397 ^ values[i].GetHashCode();
+					        _hashCode = _hashCode*397 ^ _values[i].GetHashCode();
 				        }
 			        }
 		        }
