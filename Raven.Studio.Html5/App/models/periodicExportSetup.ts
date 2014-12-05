@@ -4,9 +4,9 @@ class periodicExportSetup {
     disabled = ko.observable<boolean>(true);
 
     type = ko.observable<string>();
-	mainValue = ko.observable<string>().extend({
-		required: true
-	});
+    mainValue = ko.observable<string>();
+
+    mainValueCustomValidity: KnockoutObservable<string>;
 
     awsAccessKey = ko.observable<string>();
     awsSecretKey = ko.observable<string>();
@@ -71,6 +71,114 @@ class periodicExportSetup {
     additionalAzureInfoRequired = ko.computed(() => {
         return this.type() === this.AZURE_STORAGE;
     }, this);
+
+    constructor() {
+        this.mainValueCustomValidity = ko.computed(() => {
+            var mainValue = this.mainValue();
+            switch (this.type()) {
+                case this.GLACIER_VAULT:
+                    return this.validateGlacierVaultName(mainValue);
+                case this.S3_BUCKET:
+                    return this.validateS3Bucket(mainValue);
+                case this.AZURE_STORAGE:
+                    return this.validateAzureContainerNAme(mainValue);
+            }
+
+            return '';
+        });
+    }
+
+    /*
+    Names can be between 1 and 255 characters long.
+
+    Allowed characters are a-z, A-Z, 0-9, '_' (underscore), '-' (hyphen), and '.' (period).
+    */
+    validateGlacierVaultName(vaultName: string): string {
+        if (vaultName == null || vaultName.length < 1 || vaultName.length > 255) {
+            return 'Vault name must be at least 1 and no more than 255 characters long.';
+        }
+        var regEx = /^[A-Za-z0-9_\.-]+$/; 
+
+        if (!regEx.test(vaultName)) {
+            return 'Allowed characters are a-z, A-Z, 0-9, \'_\' (underscore), \'-\' (hyphen), and \'.\' (period).';
+        }
+
+        return '';
+    }
+
+    /*
+    Bucket names must :
+        - be at least 3 and no more than 63 characters long.
+        - be a series of one or more labels. 
+            Adjacent labels are separated by a single period (.). 
+            Bucket names can contain lowercase letters, numbers, and hyphens. 
+            Each label must start and end with a lowercase letter or a number.
+        - not be formatted as an IP address (e.g., 192.168.5.4).
+    */
+    validateS3Bucket(bucketName: string): string {
+
+        if (bucketName == null || bucketName.length < 3 || bucketName.length > 63) {
+            return 'Bucket name must be at least 3 and no more than 63 characters long';
+        }
+
+        var labels = bucketName.split(".");
+        var labelRegExp = /^[a-z0-9-]+$/;
+
+        var validLabel = label => {
+            if (label == null || label.length == 0) {
+                return false;
+            }
+            if (!labelRegExp.test(label)) {
+                return false;
+            }
+            if (label[0] == '-' || label[label.length - 1] == '-') {
+                return false;
+            }
+            
+            return true;
+        };
+        if (labels.some(l => !validLabel(l))) {
+            return 'Bucket name is invalid';
+        }
+        
+        var ipRegExp = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
+        if (ipRegExp.test(bucketName)) {
+            return 'Bucket name must not be formatted as an IP address (e.g., 192.168.5.4).';
+        }
+
+        return '';
+    }
+
+    /*
+    Container names must:
+        - start with a letter or number, and can contain only letters, numbers, and the dash (-) character.
+        - every dash (-) character must be immediately preceded and followed by a letter or number; 
+        - consecutive dashes are not permitted in container names.
+        - all letters in a container name must be lowercase.
+        - container names must be from 3 through 63 characters long.
+    */
+    validateAzureContainerNAme(containerName: string): string {
+        if (containerName == null || containerName.length < 3 || containerName.length > 63) {
+            return 'Container name must be at least 3 and no more than 63 characters long';
+        }
+
+        var regExp = /^[a-z0-9-]+$/;
+        if (!regExp.test(containerName)) {
+            return 'Allowed characters are a-z,0-9 and \'-\' (hyphen).';
+        }
+        if (containerName[0] == '-' || containerName[containerName.length - 1] == '-') {
+            return 'Container name must start and end with a letter or number';
+        }
+
+        var twoDashes = /--/;
+        if (twoDashes.test(containerName)) {
+            return 'Consecutive dashes are not permitted in container names';
+        }
+
+        return '';
+    }
+
+
 
     fromDto(dto: periodicExportSetupDto) {
         this.awsRegionEndpoint(dto.AwsRegionEndpoint);
