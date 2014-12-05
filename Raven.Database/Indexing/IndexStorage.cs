@@ -1449,8 +1449,7 @@ namespace Raven.Database.Indexing
 			if (indexToReplace == null)
 				return true;
 
-			DeleteIndex(indexToReplace.IndexId);
-			indexDefinitionStorage.RemoveIndex(indexToReplace.IndexId, removeByNameMapping: false);
+			documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false);
 
 			return true;
 		}
