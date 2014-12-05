@@ -57,9 +57,9 @@ namespace Raven.Abstractions.Json
 		/// </returns>
 		public override bool CanConvert(Type objectType)
 		{
+			if (objectType.Namespace == null)
+				return false;
 			return ReflectionUtils.ImplementsGenericDefinition(objectType,typeof(IEnumerable<>)) &&
-// ReSharper disable once PossibleNullReferenceException
-// this converter should only work for 
 					objectType.Namespace.Contains("Linq");
 		}
 	}
