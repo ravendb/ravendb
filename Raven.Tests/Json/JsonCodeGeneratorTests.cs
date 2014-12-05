@@ -570,9 +570,13 @@ namespace Raven.Tests.Json
                 Recursive = new WithRecursive // This one must be shared with the root.
                 {
                     Name = "First",
-                    Recursive = new WithRecursive // This will be created anyways with a different name (no way to know).
+                    Recursive = new WithRecursive
                     {
                         Name = "Second",
+                        Recursive = new WithRecursive // This will be created anyways with a different name (no way to know).
+                        {
+                            Name = "Second",
+                        }
                     }
                 }
             };
@@ -586,30 +590,45 @@ namespace Raven.Tests.Json
             var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(root))
                                       .ToLookup(x => x.Name);
 
-            Assert.Equal(2, classTypes.Count());
+            Assert.Equal(4, classTypes.Count());
+        }
 
-            var clazz = classTypes["RecursiveClass1"].Single() as JsonCodeGenerator.ClassType;
-            Assert.NotNull(clazz);
+        [Fact]
+        public void JsonCodeGenerator_WithRecursive2LevelsGenerator()
+        {
+            var root = new WithRecursive
+            {
+                Name = "Root",
+                Recursive = new WithRecursive // This one must be shared with the root.
+                {
+                    Name = "First",
+                    Recursive = new WithRecursive
+                    {
+                        Name = "Second",
+                        Recursive = new WithRecursive // This will be created anyways with a different name (no way to know).
+                        {
+                            Name = "Second",
+                        }
+                    }
+                }
+            };
 
-            var clazzLast = classTypes["RecursiveClass"].Single() as JsonCodeGenerator.ClassType;
-            Assert.NotNull(clazzLast);
+            var document = new JsonDocument()
+            {
+                DataAsJson = JsonExtensions.ToJObject(root)
+            };
 
-            Assert.Equal("string", clazz.Properties["Name"].Name);
-            Assert.False(clazz.Properties["Name"].IsArray);
-            Assert.True(clazz.Properties["Name"].IsPrimitive);
+            var generator = new JsonCodeGenerator("csharp");
+            var code = generator.Execute(document);
 
-            Assert.Equal("RecursiveClass", clazz.Properties["Recursive"].Name);
-            Assert.False(clazz.Properties["Recursive"].IsArray);
-            Assert.False(clazz.Properties["Recursive"].IsPrimitive);
+            Console.WriteLine(code);
 
-            Assert.Equal("string", clazzLast.Properties["Name"].Name);
-            Assert.False(clazzLast.Properties["Name"].IsArray);
-            Assert.True(clazzLast.Properties["Name"].IsPrimitive);
-
-            Assert.Equal("object", clazzLast.Properties["Recursive"].Name);
-            Assert.False(clazzLast.Properties["Recursive"].IsArray);
-            Assert.True(clazzLast.Properties["Recursive"].IsPrimitive);
-
+            Assert.Contains("public class RecursiveClass", code);
+            Assert.Contains("public class RecursiveClass1", code);
+            Assert.Contains("public class RecursiveClass2", code);
+            Assert.Contains("public RecursiveClass1 Recursive { get; set; }", code);
+            Assert.Contains("public RecursiveClass2 Recursive { get; set; }", code);
+            Assert.Contains("public object Recursive { get; set; }", code);
         }
 
 
@@ -634,7 +653,7 @@ namespace Raven.Tests.Json
                 Recursive = new WithCrossRecursiveB
                 {
                     NameB = "First",
-                    Recursive = new WithCrossRecursiveA // This one must be shared with the root.
+                    Recursive = new WithCrossRecursiveA // This one cannot be shared with the root.
                     {
                         NameA = "Second",
                         Recursive = new WithCrossRecursiveB // This will be created anyways with a different name (no way to know).
@@ -654,7 +673,48 @@ namespace Raven.Tests.Json
             var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(root))
                                       .ToLookup(x => x.Name);
 
-            Assert.Equal(3, classTypes.Count());
+            Assert.Equal(4, classTypes.Count());
+        }
+
+        [Fact]
+        public void JsonCodeGenerator_WithCrossRecursive2LevelsGenerator()
+        {
+            var root = new WithCrossRecursiveA
+            {
+                NameA = "Root",
+                Recursive = new WithCrossRecursiveB
+                {
+                    NameB = "First",
+                    // RecursiveClass1
+                    Recursive = new WithCrossRecursiveA // This one must be shared with the root.
+                    {
+                        NameA = "Second",
+                        // RecursiveClass
+                        Recursive = new WithCrossRecursiveB // This will be created anyways with a different name (no way to know).
+                        {
+                            NameB = "Null",
+                            // Recursive is going to be object (NULL)
+                        }
+                    }
+                }
+            };
+
+            var document = new JsonDocument()
+            {
+                DataAsJson = JsonExtensions.ToJObject(root)
+            };
+
+            var generator = new JsonCodeGenerator("csharp");
+            var code = generator.Execute(document);
+
+            Console.WriteLine(code);
+
+            Assert.Contains("public class RecursiveClass", code);
+            Assert.Contains("public class RecursiveClass1", code);
+            Assert.Contains("public class RecursiveClass2", code);
+            Assert.Contains("public RecursiveClass1 Recursive { get; set; }", code);
+            Assert.Contains("public RecursiveClass2 Recursive { get; set; }", code);
+            Assert.Contains("public object Recursive { get; set; }", code);
         }
 
     }

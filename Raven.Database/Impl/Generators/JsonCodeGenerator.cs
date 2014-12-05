@@ -248,7 +248,7 @@ namespace Raven.Database.Impl.Generators
                 }
             }
 
-            var classes = GenerateClassesTypesFromObject(@class, document.DataAsJson);
+            var classes = GenerateClassesTypesFromObject(@class, document.DataAsJson);                                
 
             string classCode = GenerateClassCodeFromSpec(classes);
 
@@ -333,6 +333,18 @@ namespace Raven.Database.Impl.Generators
 
         private ClassType IncludeGeneratedClass(ClassType clazz)
         {
+            var key = clazz.Name;
+
+            ClassType dummy;
+            int i = 1;
+            while (_generatedTypes.TryGetValue(key, out dummy))
+            {
+                key = clazz.Name + i;
+                i++;
+            }
+
+            clazz = new ClassType(key, clazz.Properties);
+
             foreach (var pair in _generatedTypes)
             {
                 if (pair.Value == clazz)
@@ -348,21 +360,10 @@ namespace Raven.Database.Impl.Generators
                     Console.WriteLine();
 
                     return pair.Value;
-                }
-                    
+                }                    
             }
 
-            var key = clazz.Name;
-
-            ClassType dummy;
-            int i = 1;
-            while (_generatedTypes.TryGetValue(key, out dummy))
-            {
-                key = clazz.Name + i;
-                i++;
-            }
-
-            _generatedTypes[key] = new ClassType(key, clazz.Properties);
+            _generatedTypes[key] = clazz;
             return clazz;
         }
 
