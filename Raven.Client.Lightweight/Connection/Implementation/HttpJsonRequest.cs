@@ -34,6 +34,9 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public class HttpJsonRequest : IDisposable
 	{
+	    public const int MinimumServerVersion = 3000;
+	    public const int CustomBuildVersion = 13;
+
 		internal readonly string Url;
 		internal readonly string Method;
 
@@ -186,6 +189,7 @@ namespace Raven.Client.Connection
 					CopyHeadersToHttpRequestMessage(requestMessage);
                     Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
 					SetResponseHeaders(Response);
+				    AssertServerVersionSupported();
 					ResponseStatusCode = Response.StatusCode;
 				}
 				finally
@@ -198,7 +202,23 @@ namespace Raven.Client.Connection
             }).ConfigureAwait(false);
 		}
 
-		private async Task<T> RunWithAuthRetry<T>(Func<Task<T>> requestOperation)
+	    private void AssertServerVersionSupported()
+	    {
+	        var serverBuildString = ResponseHeaders[Constants.RavenServerBuild];
+	        int serverBuild;
+
+            // server doesn't return Raven-Server-Build in case of requests failures, thus we firstly check for header presence 
+            if (string.IsNullOrEmpty(serverBuildString) == false && int.TryParse(serverBuildString, out serverBuild))
+            {
+                if (serverBuild < MinimumServerVersion && serverBuild != CustomBuildVersion)
+                {
+                    throw new ServerVersionNotSuppportedException(string.Format("Server version {0} is not supported. Use server with build >= {1}", serverBuildString, MinimumServerVersion));
+                }
+            } 
+           
+	    }
+
+	    private async Task<T> RunWithAuthRetry<T>(Func<Task<T>> requestOperation)
 		{
 			int retries = 0;
 			while (true)
@@ -619,6 +639,7 @@ namespace Raven.Client.Connection
 				var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
 				Response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead);
 				SetResponseHeaders(Response);
+                AssertServerVersionSupported();
 
 			    await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true).ConfigureAwait(false);
 

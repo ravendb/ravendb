@@ -416,7 +416,7 @@ namespace Raven.Database.FileSystem.Controllers
         private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
 			// Raven internal headers
-			"Raven-Server-Build",
+            Constants.RavenServerBuild,
 			"Non-Authoritative-Information",
 			"Raven-Timer-Request",
 
