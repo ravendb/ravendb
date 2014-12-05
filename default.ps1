@@ -510,6 +510,7 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 	@("Raven.Database.???", "Raven.Abstractions.???") `
 		 |% { Copy-Item "$base_dir\Raven.Database\bin\$global:configuration\$_" $nuget_dir\RavenDB.Database\lib\net45 }
 	Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Database\lib\net45
+	Copy-Item $base_dir\NuGet\readme.txt $nuget_dir\RavenDB.Database\ -Recurse
 	
 	New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Server.nuspec $nuget_dir\RavenDB.Server\RavenDB.Server.nuspec
@@ -521,6 +522,7 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
+	Copy-Item $base_dir\NuGet\readme.txt $nuget_dir\RavenDB.Embedded\ -Recurse
 	
 	# Client packages
 	@("Authorization", "UniqueConstraints") | Foreach-Object { 

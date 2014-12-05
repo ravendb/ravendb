@@ -29,13 +29,11 @@ namespace Raven.Database.Client.Azure
 
 		private readonly byte[] accountKey;
 
-		private readonly bool useDevelopmentStorage;
 
-		public RavenAzureClient(string accountName, string accountKey, bool useDevelopmentStorage)
+		public RavenAzureClient(string accountName, string accountKey)
 		{
 			this.accountName = accountName;
 			this.accountKey = Convert.FromBase64String(accountKey);
-			this.useDevelopmentStorage = useDevelopmentStorage;
 		}
 
 		public void PutContainer(string containerName)
@@ -128,9 +126,6 @@ namespace Raven.Database.Client.Azure
 
 		private string GetUrl(string containerName)
 		{
-			if (useDevelopmentStorage)
-				return string.Format("http://ipv4.fiddler:10000/{0}/{1}", accountName, containerName.ToLower());
-
 			return string.Format("https://{0}.blob.core.windows.net/{1}", accountName, containerName.ToLower());
 		}
 

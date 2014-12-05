@@ -165,7 +165,8 @@ namespace Raven.Database
 					CompleteWorkContextSetup();
 
 					prefetcher = new Prefetcher(workContext);
-					indexingExecuter = new IndexingExecuter(workContext, prefetcher);
+					IndexReplacer = new IndexReplacer(this);
+					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
 
 					RaiseIndexingWiringComplete();
 
@@ -348,6 +349,8 @@ namespace Raven.Database
 		public ReducingExecuter ReducingExecuter { get; private set; }
 
 		public ResourceTimerManager TimerManager { get; private set; }
+
+		public IndexReplacer IndexReplacer { get; private set; }
 
 		public string ServerUrl
 		{
@@ -850,6 +853,7 @@ namespace Raven.Database
 
 				TransportState.OnIdle();
 				IndexStorage.RunIdleOperations();
+				IndexReplacer.ReplaceIndexes(IndexDefinitionStorage.Indexes);
 				Tasks.ClearCompletedPendingTasks();
 			}
 			finally
@@ -877,7 +881,7 @@ namespace Raven.Database
 			workContext.StartWork();
 			indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 
-			ReducingExecuter = new ReducingExecuter(workContext);
+			ReducingExecuter = new ReducingExecuter(workContext, IndexReplacer);
 
 			reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}

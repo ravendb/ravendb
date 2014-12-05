@@ -26,7 +26,7 @@ namespace Raven.Abstractions.Extensions
         private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
 			// Raven internal headers
-			"Raven-Server-Build",
+            Constants.RavenServerBuild,
 			"Raven-Client-Version",
 			"Non-Authoritative-Information",
 			"Raven-Timer-Request",

@@ -227,6 +227,7 @@
     <Compile Include="Data\VoronActiveTransaction.cs" />
     <Compile Include="Data\VoronStorageStats.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
+    <Compile Include="Exceptions\ClientNotSupportedException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
     <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
     <Compile Include="Exceptions\SmugglerException.cs" />
@@ -258,9 +259,11 @@
     <Compile Include="FileSystem\SearchResults.cs" />
     <Compile Include="Indexing\IndexLockMode.cs" />
     <Compile Include="Indexing\IndexMergeResults.cs" />
+    <Compile Include="Indexing\IndexReplaceDocument.cs" />
     <Compile Include="Indexing\MergeSuggestions.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
+    <Compile Include="Json\JsonLinqEnumerableConverter.cs" />
     <Compile Include="Json\JsonTextReaderAsync.cs" />
     <Compile Include="Indexing\FieldTermVector.cs" />
     <Compile Include="Indexing\SpatialOptions.cs" />

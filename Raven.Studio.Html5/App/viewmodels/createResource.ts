@@ -15,7 +15,7 @@ class createResource extends dialogViewModelBase {
     constructor(databases: KnockoutObservableArray<database>, filesystems: KnockoutObservableArray<filesystem>, licenseStatus: KnockoutObservable<licenseStatusDto>) {
         super();
         this.createDatabasePart = new createDatabase(databases, licenseStatus, this);
-        this.createFilesystemPart = new createFilesystem(filesystems, this);
+        this.createFilesystemPart = new createFilesystem(filesystems, licenseStatus, this);
         this.resourceType.subscribe(v => v == "db" ? this.enableDbTab() : this.enableFsTab());
     }
 

@@ -247,7 +247,6 @@ namespace Raven.Tests.Issues
                         var load = sesion.Load<User>(i+1);
                         if (load == null)
                         {
-                            Debugger.Launch();
                             throw new InvalidOperationException("Cannot find user " + (i+1));
                         }
                         Assert.Equal("User " + i, load.Name);

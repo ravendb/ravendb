@@ -1379,7 +1379,8 @@ namespace Raven.Client.Connection.Async
 				{
 					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-					var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
+					var serializedData = commandDatas.Select(x => x.ToJson()).ToList();
+					var jArray = new RavenJArray(serializedData);
 
 					ErrorResponseException responseException;
 					try

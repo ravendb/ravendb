@@ -29,13 +29,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private readonly IUuidGenerator generator;
 
 		private readonly Reference<WriteBatch> writeBatch;
+		private readonly GeneralStorageActions generalStorageActions;
 
-        public ListsStorageActions(TableStorage tableStorage, IUuidGenerator generator, Reference<SnapshotReader> snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
+		public ListsStorageActions(TableStorage tableStorage, 
+			IUuidGenerator generator, Reference<SnapshotReader> snapshot, 
+			Reference<WriteBatch> writeBatch, 
+			IBufferPool bufferPool,
+			GeneralStorageActions generalStorageActions)
 			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;
 			this.generator = generator;
 			this.writeBatch = writeBatch;
+	        this.generalStorageActions = generalStorageActions;
 		}
 
 		public void Set(string name, string key, RavenJObject data, UuidType type)
@@ -208,6 +214,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					tableStorage.Lists.Delete(writeBatch.Value, etag.ToString());
 					listsByName.MultiDelete(writeBatch.Value, nameKey, etag.ToString());
 					listsByNameAndKey.Delete(writeBatch.Value, CreateKey(name, key));
+
+					generalStorageActions.MaybePulseTransaction();
 				}
 				while (iterator.MoveNext());
 			}

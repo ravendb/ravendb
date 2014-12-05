@@ -1,7 +1,7 @@
 ﻿import inputCursor = require('common/inputCursor');
 
 class autoCompleterSupport {
-  constructor(private autoCompleteBase: KnockoutObservableArray<KnockoutObservable<string>>, private autoCompleteResults: KnockoutObservableArray<KnockoutObservable<string>>) {
+  constructor(private autoCompleteBase: KnockoutObservableArray<KnockoutObservable<string>>, private autoCompleteResults: KnockoutObservableArray<KnockoutObservable<string>>,private showAllOptionOnEmptyInput: boolean = false) {
   }
 
   searchForCompletions(input: JQuery) {
@@ -9,7 +9,7 @@ class autoCompleterSupport {
 
     var typedWord = this.getWordUserIsTyping(input);
 
-    if (typedWord.length >= 1) {
+      if (typedWord.length >= 1 || this.showAllOptionOnEmptyInput) {
       this.autoCompleteResults(this.autoCompleteBase().filter((value) =>
         autoCompleterSupport.wordMatches(typedWord, value()) &&
         (value() !== input.val()) &&

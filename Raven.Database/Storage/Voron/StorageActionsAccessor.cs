@@ -31,12 +31,13 @@ namespace Raven.Database.Storage.Voron
 			Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatchReference, snapshotReference, storage, bufferPool);
             Indexing = new IndexingStorageActions(storage, generator, snapshotReference, writeBatchReference, this, bufferPool);
             Queue = new QueueStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
-            Lists = new ListsStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
             Tasks = new TasksStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
             Staleness = new StalenessStorageActions(storage, snapshotReference, writeBatchReference, bufferPool);
             MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshotReference, writeBatchReference, bufferPool);
             Attachments = new AttachmentsStorageActions(storage.Attachments, writeBatchReference, snapshotReference, generator, storage, transactionalStorage, bufferPool);
-            General = new GeneralStorageActions(storage, writeBatchReference, snapshotReference, bufferPool);
+	        var generalStorageActions = new GeneralStorageActions(storage, writeBatchReference, snapshotReference, bufferPool);
+	        General = generalStorageActions;
+			Lists = new ListsStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool, generalStorageActions);
 		}
 
 
