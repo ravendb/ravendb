@@ -60,7 +60,7 @@ namespace Raven.Abstractions.Json
 			if (objectType.Namespace == null)
 				return false;
 			return ReflectionUtils.ImplementsGenericDefinition(objectType,typeof(IEnumerable<>)) &&
-					objectType.Namespace.Contains("Linq");
+					objectType.Namespace.StartsWith("System.Linq");
 		}
 	}
 }
