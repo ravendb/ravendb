@@ -261,6 +261,9 @@ namespace Raven.Client.Document
 			// try to wait until all the async disposables are completed
 			Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
 
+			if(Subscriptions != null)
+				Subscriptions.Dispose();
+
 			// if this is still going, we continue with disposal, it is for grace only, anyway
 
 			if (jsonRequestFactory != null)

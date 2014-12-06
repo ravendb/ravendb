@@ -70,7 +70,7 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
+		[Fact(Skip = "Do not push empty patches from server")]
 		public void ShouldSendAllNewAndModifiedDocs()
 		{
 			using (var store = NewDocumentStore())

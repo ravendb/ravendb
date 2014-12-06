@@ -19,6 +19,7 @@ namespace Raven.Database.Actions
 		{
 			public readonly AutoResetEvent NewDocuments = new AutoResetEvent(false);
 			public readonly AutoResetEvent Acknowledgement = new AutoResetEvent(false);
+			public IDisposable Connection;
 		}
 
 		private readonly ConcurrentDictionary<string, SubscriptionWorkContext> openSubscriptions = new ConcurrentDictionary<string, SubscriptionWorkContext>();
@@ -69,19 +70,35 @@ namespace Raven.Database.Actions
 			});
 		}
 
-		public void OpenSubscription(string name)
+		public Action<IDisposable> OpenSubscription(string name)
 		{
 			if (GetSubscriptionDocument(name) == null)
 				throw new InvalidOperationException("Subscription " + name + "does not exit");
 
-			if(openSubscriptions.TryAdd(name, new SubscriptionWorkContext()) == false)
+			var subscriptionWorkContext = new SubscriptionWorkContext();
+			if(openSubscriptions.TryAdd(name, subscriptionWorkContext) == false)
 				throw new InvalidOperationException("Subscription is already in use. There can be only a single open subscription request per subscription.");	
+
+			return connection =>
+			{
+				subscriptionWorkContext.Connection = connection;
+			};
 		}
 
 		public void ReleaseSubscription(string name)
 		{
-			SubscriptionWorkContext _;
-			openSubscriptions.TryRemove(name, out _);
+			SubscriptionWorkContext context;
+			if (openSubscriptions.TryRemove(name, out context))
+			{
+				context.NewDocuments.Dispose();
+				context.Acknowledgement.Dispose();
+				//context.Connection.Dispose(); //TODO arek
+			}
+		}
+
+		public bool IsClosed(string name)
+		{
+			return openSubscriptions.ContainsKey(name) == false;
 		}
 
 		public void AcknowledgeBatchProcessed(string name, Etag lastEtag)

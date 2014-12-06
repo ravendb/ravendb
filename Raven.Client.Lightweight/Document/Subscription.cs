@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -25,15 +26,14 @@ namespace Raven.Client.Document
 		private readonly IAsyncDatabaseCommands commands;
 		private readonly ConcurrentSet<IObserver<JsonDocument>> subscribers = new ConcurrentSet<IObserver<JsonDocument>>();
 		private bool open;
+		private bool disposed = false;
+		private CancellationTokenSource cts = new CancellationTokenSource();
 
-		public Subscription(string name, SubscriptionBatchOptions options, string database, IDocumentStore documentStore)
+		public Subscription(string name, SubscriptionBatchOptions options, IAsyncDatabaseCommands commands)
 		{
 			Name = name;
 			this.options = options;
-
-			commands = database == null ?
-				documentStore.AsyncDatabaseCommands.ForSystemDatabase() :
-				documentStore.AsyncDatabaseCommands.ForDatabase(database);
+			this.commands = commands;
 		}
 
 		public string Name { get; private set; }
@@ -42,9 +42,9 @@ namespace Raven.Client.Document
 
 		private void Open()
 		{
-			Task = OpenConnection()
-						.ObserveException()
-						.ContinueWith(task => task.AssertNotFailed());
+			Task = OpenConnection();
+						//.ObserveException()
+						//.ContinueWith(task => task.AssertNotFailed());
 
 			open = true;
 		}
@@ -60,12 +60,13 @@ namespace Raven.Client.Document
 			{
 				await response.AssertNotFailingResponse().ConfigureAwait(false);
 
-				var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false);
-
+				using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 				using (var streamReader = new StreamReader(responseStream))
 				{
 					do
 					{
+						cts.Token.ThrowIfCancellationRequested();
+
 						var jsonReader = new JsonTextReaderAsync(streamReader);
 						
 						string type = await TryReadType(jsonReader);
@@ -80,6 +81,8 @@ namespace Raven.Client.Document
 								{
 									while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
 									{
+										cts.Token.ThrowIfCancellationRequested();
+
 										var jsonDoc = SerializationHelper.RavenJObjectToJsonDocument(streamedDocs.Current);
 										foreach (var subscriber in subscribers)
 										{
@@ -157,10 +160,47 @@ namespace Raven.Client.Document
 
 		public void Dispose()
 		{
+			if(disposed)
+				return;
+
 			foreach (var subscriber in subscribers)
 			{
 				subscriber.OnCompleted();
 			}
+
+			if (open)
+			{
+				cts.Cancel();
+
+				if (Task != null)
+				{
+					switch (Task.Status)
+					{
+						case TaskStatus.RanToCompletion:
+						case TaskStatus.Canceled:
+							break;
+						default:
+							try
+							{
+								Task.Wait();
+							}
+							catch (AggregateException ae)
+							{
+								if (ae.InnerException is OperationCanceledException == false)
+									throw;
+							}
+							break;
+					}
+				}
+
+				using (var closeRequest = commands.CreateRequest(
+									string.Format("/subscriptions/close?name={0}", Name), "POST"))
+				{
+					closeRequest.ExecuteRequest();
+				}
+			}
+
+			disposed = true;
 		}
 	}
 }

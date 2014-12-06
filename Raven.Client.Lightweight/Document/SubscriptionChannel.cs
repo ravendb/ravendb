@@ -5,12 +5,14 @@
 // -----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Data;
+using Raven.Database.Util;
 
 namespace Raven.Client.Document
 {
 	public class SubscriptionChannel : IReliableSubscriptions
 	{
 		private readonly IDocumentStore documentStore;
+		private readonly ConcurrentSet<Subscription> subscriptions = new ConcurrentSet<Subscription>(); 
 
 		public SubscriptionChannel(IDocumentStore documentStore)
 		{
@@ -26,16 +28,26 @@ namespace Raven.Client.Document
 				throw new InvalidOperationException("Cannot create a subscription if options are null");
 
 			var commands = database == null
-				? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
+				? documentStore.AsyncDatabaseCommands
 				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
 			using (var request = commands.CreateRequest("/subscriptions/create?name=" + name, "POST"))
 			{
 				request.ExecuteRequest();
 
-				var subscription = new Subscription(name, options, database, documentStore);
+				var subscription = new Subscription(name, options, commands);
+
+				subscriptions.Add(subscription);
 
 				return subscription;
+			}
+		}
+
+		public void Dispose()
+		{
+			foreach (var subscription in subscriptions)
+			{
+				subscription.Dispose();
 			}
 		}
 	}

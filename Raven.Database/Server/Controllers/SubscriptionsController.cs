@@ -44,18 +44,35 @@ namespace Raven.Database.Server.Controllers
 			if(options == null)
 				throw new InvalidOperationException("Options cannot be null");
 
-			Database.Subscriptions.OpenSubscription(name);
+			var addConnection = Database.Subscriptions.OpenSubscription(name);
 
-			return new HttpResponseMessage(HttpStatusCode.OK)
+			var pushStreamContent = new PushStreamContent((stream, content, transportContext) => StreamToClient(name, Database.Subscriptions, stream, options))
 			{
-				Content = new PushStreamContent((stream, content, transportContext) => StreamToClient(name, Database.Subscriptions, stream, options))
+				Headers =
 				{
-					Headers =
+					ContentType = new MediaTypeHeaderValue("text/event-stream")
 					{
-						ContentType = new MediaTypeHeaderValue("text/event-stream") { CharSet = "utf-8" }
+						CharSet = "utf-8"
 					}
 				}
 			};
+
+			addConnection(pushStreamContent);
+
+			return new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = pushStreamContent
+			};
+		}
+
+		[HttpPost]
+		[Route("subscriptions/close")]
+		[Route("databases/{databaseName}/subscriptions/close")]
+		public HttpResponseMessage Close(string name)
+		{
+			Database.Subscriptions.ReleaseSubscription(name);
+
+			return GetEmptyMessage();
 		}
 
 		private void StreamToClient(string name, SubscriptionActions subscriptions, Stream stream, SubscriptionBatchOptions options)
@@ -65,7 +82,7 @@ namespace Raven.Database.Server.Controllers
 			using (var streamWriter = new StreamWriter(stream))
 			using (var writer = new JsonTextWriter(streamWriter))
 			{
-				do
+				while (true)
 				{
 					using (var cts = new CancellationTokenSource())
 					using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
@@ -117,6 +134,10 @@ namespace Raven.Database.Server.Controllers
 
 					var batchAcknowledged = subscriptions.WaitForAcknowledgement(name, options.AcknowledgementTimeout);
 
+					// TODO arek - cleanup this mess
+					if (subscriptions.IsClosed(name))
+						break;
+
 					if(batchAcknowledged == false)
 						continue;
 
@@ -131,7 +152,10 @@ namespace Raven.Database.Server.Controllers
 
 					subscriptions.WaitForNewDocuments(name);
 
-				} while (true);
+					if (subscriptions.IsClosed(name))
+						break;
+
+				}
 			}
 		}
 

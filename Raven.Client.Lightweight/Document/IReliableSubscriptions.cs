@@ -1,8 +1,9 @@
-﻿using Raven.Abstractions.Data;
+﻿using System;
+using Raven.Abstractions.Data;
 
 namespace Raven.Client.Document
 {
-	public interface IReliableSubscriptions
+	public interface IReliableSubscriptions : IDisposable
 	{
 		Subscription Create(string name, SubscriptionCriteria criteria, SubscriptionBatchOptions options, string database = null);
 	}
