@@ -66,6 +66,7 @@ namespace Raven.Database.Server
 			new AtomicDictionary<Task<DocumentDatabase>>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+		private readonly SemaphoreSlim _maxNumberOfThreadsForDatabaseToLoad = new SemaphoreSlim(5);
 
 		private readonly ConcurrentDictionary<string, TransportState> databaseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
 
@@ -77,8 +78,6 @@ namespace Raven.Database.Server
 			get { return recentRequests; }
 		}
 #endif
-
-		private readonly SemaphoreSlim maximunNumberOfWaitingThreadsForDatabaseToBeInitializedSemaphore = new SemaphoreSlim(5);
 
 		public int NumberOfRequests
 		{
@@ -937,99 +936,100 @@ namespace Raven.Database.Server
 				return true;
 			}
 			var tenantId = match.Groups[1].Value;
-
-			const int maximumNumberOfDatabaseToLoadAtOnce = 5;
-			if (maximunNumberOfWaitingThreadsForDatabaseToBeInitializedSemaphore.CurrentCount == 0 ||
-			    maximunNumberOfWaitingThreadsForDatabaseToBeInitializedSemaphore.Wait(TimeSpan.FromSeconds(maximumNumberOfDatabaseToLoadAtOnce)) == false)
-			{
-				ctx.SetStatusToNotAvailable();
-				ctx.WriteJson(new
-				{
-					Error =
-						"The database " + tenantId + " is not available yet, as we try to load " + maximumNumberOfDatabaseToLoadAtOnce +
-						" other databases at this time."
-				});
-				return false;
-			}
+			Task<DocumentDatabase> resourceStoreTask;
+			bool hasDb;
 			try
 			{
-				Task<DocumentDatabase> resourceStoreTask;
-				bool hasDb;
+				hasDb = TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
+			}
+			catch (Exception e)
+			{
+				OutputDatabaseOpenFailure(ctx, tenantId, e);
+				return false;
+			}
+
+			if (hasDb)
+			{
 				try
 				{
-					hasDb = TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
-				}
-				catch (Exception e)
-				{
-					OutputDatabaseOpenFailure(ctx, tenantId, e);
-					return false;
-				}
-
-				if (hasDb)
-				{
-					try
+					const int timeToWaitForDatabaseToLoad = 5;
+					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
 					{
-						const int timeToWaitForDatabaseToLoad = 5;
-						if (resourceStoreTask.Wait(TimeSpan.FromSeconds(5)) == false)
+						if (_maxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
 						{
 							ctx.SetStatusToNotAvailable();
 							ctx.WriteJson(new
 							{
 								Error =
 									string.Format(
-										"The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.",
-										tenantId, timeToWaitForDatabaseToLoad),
+										"The database {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.",
+										tenantId),
 							});
 							return false;
 						}
-						if (onBeforeRequest != null)
+						try
 						{
-							var args = new BeforeRequestEventArgs
+							if (resourceStoreTask.Wait(TimeSpan.FromSeconds(timeToWaitForDatabaseToLoad)) == false)
 							{
-								Context = ctx,
-								IgnoreRequest = false,
-								TenantId = tenantId,
-								Database = resourceStoreTask.Result
-							};
-							onBeforeRequest(this, args);
-							if (args.IgnoreRequest)
+								ctx.SetStatusToNotAvailable();
+								ctx.WriteJson(new
+								{
+									Error =
+										string.Format(
+											"The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.",
+											tenantId, timeToWaitForDatabaseToLoad),
+								});
 								return false;
+							}
+						}
+						finally
+						{
+							_maxNumberOfThreadsForDatabaseToLoad.Release();
 						}
 					}
-					catch (Exception e)
+					if (onBeforeRequest != null)
 					{
-						OutputDatabaseOpenFailure(ctx, tenantId, e);
-						return false;
+						var args = new BeforeRequestEventArgs
+						{
+							Context = ctx,
+							IgnoreRequest = false,
+							TenantId = tenantId,
+							Database = resourceStoreTask.Result
+						};
+						onBeforeRequest(this, args);
+						if (args.IgnoreRequest)
+							return false;
 					}
-					var resourceStore = resourceStoreTask.Result;
+				}
+				catch (Exception e)
+				{
+					OutputDatabaseOpenFailure(ctx, tenantId, e);
+					return false;
+				}
+				var resourceStore = resourceStoreTask.Result;
 
-					resourceStore.WorkContext.UpdateFoundWork();
+				resourceStore.WorkContext.UpdateFoundWork();
 
-					if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
-					{
-						ctx.AdjustUrl(Configuration.VirtualDirectory + match.Value);
-					}
-					else
-					{
-						ctx.AdjustUrl(match.Value);
-					}
-					currentTenantId.Value = tenantId;
-					currentDatabase.Value = resourceStore;
-					currentConfiguration.Value = resourceStore.Configuration;
+				if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
+				{
+					ctx.AdjustUrl(Configuration.VirtualDirectory + match.Value);
 				}
 				else
 				{
-					ctx.SetStatusToNotFound();
-					ctx.WriteJson(new
-					{
-						Error = "Could not find a database named: " + tenantId
-					});
-					return false;
+					ctx.AdjustUrl(match.Value);
 				}
+				currentTenantId.Value = tenantId;
+				currentDatabase.Value = resourceStore;
+				currentConfiguration.Value = resourceStore.Configuration;
 			}
-			finally
+			else
 			{
-				maximunNumberOfWaitingThreadsForDatabaseToBeInitializedSemaphore.Release();
+				ctx.SetStatusToNotFound();
+				ctx.WriteJson(new
+				{
+					Error = "Could not find a database named: " + tenantId
+				});
+				return false;
 			}
 
 			return true;
