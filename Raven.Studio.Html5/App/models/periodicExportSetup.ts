@@ -101,7 +101,7 @@ class periodicExportSetup {
                     return value * 1000 * 60 * 60 * 24;
             }
         }
-        return null;
+        return 0;
     }
 
     fromDatabaseSettingsDto(dbSettingsDto: documentDto) {
