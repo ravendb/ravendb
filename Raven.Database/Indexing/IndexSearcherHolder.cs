@@ -8,6 +8,7 @@ using System.Threading;
 using Lucene.Net.Index;
 using Raven.Abstractions;
 using Lucene.Net.Search;
+using Raven.Client.Connection;
 using Raven.Database.Config;
 using Task = System.Threading.Tasks.Task;
 using Raven.Abstractions.Logging;
@@ -171,10 +172,25 @@ namespace Raven.Database.Indexing
 		            yield return cacheVal;
                 }
             }
-
-	        public IEnumerable<Term> GetTermsFromCache(string field, int doc)
+            
+	        public Term[] GetTermsFromCache(string field, int doc)
             {
-                return GetFromCache(field, doc).Select(cacheVal => cacheVal.Term);
+                LinkedList<CacheVal>[] vals;
+	            Term[] results = null;
+	            if (cache.TryGetValue(field, out vals) == false)
+                    return results;
+                if (vals[doc] == null)
+                    return results;
+                
+	            var resultsCursor = 0;
+	            
+	            var curCache = vals[doc];
+                results = new Term[curCache.Count];
+	            for (var docsLinkedList = curCache.First; docsLinkedList != null; docsLinkedList = docsLinkedList.Next, resultsCursor++)
+	            {
+	                results[resultsCursor] = docsLinkedList.Value.Term;
+	            }
+	            return results;
             }
 
             public IEnumerable<string> GetUsedFacets(TimeSpan tooOld)

@@ -141,6 +141,16 @@ namespace Voron.Util
 		    return Extend(0, data, offset, count);
 		}
 
+
+	    public static uint Value(byte[] data)
+	    {
+            fixed (byte* p = data)
+            {
+                return Value(p, 0, data.Length);
+            }
+	        
+	    }
+
 	    private readonly static uint[] Table_0 = new uint[256]
 			{
 				0x00000000, 0xf26b8303, 0xe13b70f7, 0x1350f3f4,

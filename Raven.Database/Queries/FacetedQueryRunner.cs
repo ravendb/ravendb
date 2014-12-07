@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -13,6 +15,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
+using Voron.Util;
 
 namespace Raven.Database.Queries
 {
@@ -261,6 +264,15 @@ namespace Raven.Database.Queries
                 //	once through the collector and pull out all of the terms in one shot
                 var allCollector = new GatherAllCollector();
                 var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
+                
+
+                var sortedFacets = new Dictionary<string, List<Facet>>();
+
+                Facets.Values.ForEach(x =>
+                {
+                    var curFacetArray = sortedFacets.GetOrAdd(x.Name);
+                    curFacetArray.Add(x);
+                });
 
 
                 using (var currentState = Database.IndexStorage.GetCurrentStateHolder(Index))
@@ -273,12 +285,20 @@ namespace Raven.Database.Queries
 	                var fields = Facets.Values.Select(x => x.Name)
                             .Concat(Ranges.Select(x => x.Key));
                     var fieldsToRead = new HashSet<string>(fields);
+
+                    
                     IndexedTerms.ReadEntriesForFields(currentState,
                         fieldsToRead,
                         allCollector.Documents,
-                        (term, doc) =>
+                        indexReader,
+                        (term, document, docId) =>
                         {
-                            var facets = Facets.Values.Where(facet => facet.Name == term.Field);
+                            //var facets = Facets.Values.Where(facet => facet.Name == term.Field);
+                            List<Facet> facets;
+                            if (!sortedFacets.TryGetValue(term.Field, out facets))
+                                return;
+                            
+
                             foreach (var facet in facets)
                             {
                                 switch (facet.Mode)
@@ -294,7 +314,7 @@ namespace Raven.Database.Queries
                                             };
                                             facetValues[term.Text] = existing;
                                         }
-										ApplyFacetValueHit(existing, facet, doc, null, indexReader);
+                                        ApplyFacetValueHit(existing, facet, docId, null, indexReader, document);
                                         break;
                                     case FacetMode.Ranges:
                                         List<ParsedRange> list;
@@ -306,7 +326,7 @@ namespace Raven.Database.Queries
                                                 if (parsedRange.IsMatch(term.Text))
                                                 {
                                                     var facetValue = Results.Results[term.Field].Values[i];
-                                                    ApplyFacetValueHit(facetValue, facet, doc, parsedRange, indexReader);
+                                                    ApplyFacetValueHit(facetValue, facet, docId, parsedRange, indexReader, document);
                                                 }
                                             }
                                         }
@@ -546,7 +566,7 @@ namespace Raven.Database.Queries
                 return fieldName.EndsWith("_Range") ? fieldName.Substring(0, fieldName.Length - "_Range".Length) : fieldName;
             }
 
-            private void ApplyFacetValueHit(FacetValue facetValue, Facet value, int docId, ParsedRange parsedRange, IndexReader indexReader)
+            private void ApplyFacetValueHit(FacetValue facetValue, Facet value, int docId, ParsedRange parsedRange, IndexReader indexReader, Document document)
             {
                 facetValue.Hits++;
                 if (
@@ -573,8 +593,7 @@ namespace Raven.Database.Queries
 
 		            if (set.AlreadySeen == null)
 			            set.AlreadySeen = new HashSet<StringCollectionValue>();
-
-		            var document = indexReader.Document(docId);
+		            
 		            var fields = new List<string>();
 					foreach (var fieldName in IndexQuery.FieldsToFetch)
 		            {
@@ -608,8 +627,10 @@ namespace Raven.Database.Queries
 
 	        private class StringCollectionValue
 	        {
-		        private readonly List<string> _values;
+	            private int _valuesAmount;
+		        
 		        private readonly int _hashCode;
+	            private uint _crc;
 		        public override bool Equals(object obj)
 		        {
 			        if (ReferenceEquals(null, obj)) return false;
@@ -617,15 +638,9 @@ namespace Raven.Database.Queries
 			        var other = obj as StringCollectionValue;
 			        if (other == null) return false;
 
-			        if (other._values.Count != _values.Count)
+                    if (other._valuesAmount != _valuesAmount)
 				        return false;
-
-			        for (int i = 0; i < _values.Count; i++)
-			        {
-				        if (_values[i] != other._values[i])
-					        return false;
-			        }
-			        return true;
+		            return _crc == other._crc;
 		        }
 
 		        public override int GetHashCode()
@@ -633,15 +648,45 @@ namespace Raven.Database.Queries
 			        return _hashCode;
 		        }
 
+	           
+
 				public StringCollectionValue(List<string> values)
-		        {
-			        _values = values;
-			        _hashCode = _values.Count;
+				{
+				    _valuesAmount = 0;
+                    for (int i = 0; i < values.Count; i++)
+                    {
+                        _valuesAmount += values[i].Length;
+                    }
+                    byte[] valuesByteArray = new byte[_valuesAmount*2];
+				    byte[] curBytesCouple = new byte[2];
+
+				    int byteArrayCursor = 0;
+
+                    for (int valuesCounter = 0; valuesCounter < values.Count; valuesCounter++)
+                    {
+                        var curValue = values[valuesCounter];
+
+                        for (int curValueStringCharCounter = 0; curValueStringCharCounter < curValue.Length; curValueStringCharCounter++)
+                        {
+                            curBytesCouple = BitConverter.GetBytes(curValue[curValueStringCharCounter]);
+
+                            valuesByteArray[byteArrayCursor++] = curBytesCouple[0];
+                            valuesByteArray[byteArrayCursor++] = curBytesCouple[1];
+                            
+                        }
+                    }
+
+                    //valuesByteArray = values.SelectMany(x => Encoding.ASCII.GetBytes(x)).ToArray();
+
+                    _crc = Crc.Value(valuesByteArray);    
+				    
+				    
+                    _hashCode = values.Count;
 			        unchecked
 			        {
-				        for (int i = 0; i < _values.Count; i++)
+                        for (int i = 0; i < values.Count; i++)
 				        {
-					        _hashCode = _hashCode*397 ^ _values[i].GetHashCode();
+                            _hashCode = _hashCode * 397 ^ values[i].GetHashCode();
 				        }
 			        }
 		        }
