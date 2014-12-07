@@ -37,7 +37,7 @@ namespace Raven.Database.Storage
     {
         private const string IndexDefDir = "IndexDefinitions";
 
-        private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         public long currentlyIndexing;
 
         private readonly ConcurrentDictionary<int, AbstractViewGenerator> indexCache =
