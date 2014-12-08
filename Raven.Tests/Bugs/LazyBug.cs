@@ -11,10 +11,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void ShouldLoadLinkAndUserAccountLazily()
 		{
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8080"
-			}.Initialize())
+			using (var store = NewRemoteDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{
