@@ -233,7 +233,7 @@ class metrics extends viewModelBase {
             self.selectedIndexNames().length * (self.yBarHeight + self.yBarMargin * 2)
             + self.margin.top
             + self.margin.bottom;
-        this.svg = d3.select("#metricsIndexingGraph");
+        this.svg = d3.select("#indexPerformanceGraph");
 
         (this.svg.select('defs').node() !== null ? <any>this.svg.transition() : <any>this.svg)
             .attr("width", totalWidthWithMargins)
