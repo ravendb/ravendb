@@ -20,9 +20,9 @@ namespace Raven.Abstractions.Data
 
 		public string LocalFolderName { get; set; }
 
-		public int IntervalMilliseconds { get; set; }
+		public int? IntervalMilliseconds { get; set; }
 
-        public int FullBackupIntervalMilliseconds { get; set; }
+        public int? FullBackupIntervalMilliseconds { get; set; }
 
 		protected bool Equals(PeriodicExportSetup other)
 		{
@@ -52,8 +52,8 @@ namespace Raven.Abstractions.Data
 				hashCode = (hashCode*397) ^ (AwsRegionEndpoint != null ? AwsRegionEndpoint.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ (AzureStorageContainer != null ? AzureStorageContainer.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ (LocalFolderName != null ? LocalFolderName.GetHashCode() : 0);
-				hashCode = (hashCode*397) ^ IntervalMilliseconds;
-			    hashCode = (hashCode*397) ^ FullBackupIntervalMilliseconds;
+				hashCode = (hashCode*397) ^ IntervalMilliseconds.GetValueOrDefault();
+			    hashCode = (hashCode*397) ^ FullBackupIntervalMilliseconds.GetValueOrDefault();
 				return hashCode;
 			}
 		}
