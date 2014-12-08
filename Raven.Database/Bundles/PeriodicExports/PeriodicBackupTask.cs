@@ -353,7 +353,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 			{
 				throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
 			}
-			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, true))
+			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, false))
 			{
 				client.PutContainer(localExportConfigs.AzureStorageContainer);
 				using (var fileStream = File.OpenRead(backupPath))
