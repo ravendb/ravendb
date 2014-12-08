@@ -86,9 +86,9 @@ namespace Raven.Database.Bundles.PeriodicExports
 					azureStorageAccount = Database.Configuration.Settings["Raven/AzureStorageAccount"];
 					azureStorageKey = Database.Configuration.Settings["Raven/AzureStorageKey"];
 
-					if (exportConfigs.IntervalMilliseconds > 0)
+					if (exportConfigs.IntervalMilliseconds.GetValueOrDefault() > 0)
 					{
-						var interval = TimeSpan.FromMilliseconds(exportConfigs.IntervalMilliseconds);
+						var interval = TimeSpan.FromMilliseconds(exportConfigs.IntervalMilliseconds.GetValueOrDefault());
 						logger.Info("Incremental periodic export started, will export every" + interval.TotalMinutes + "minutes");
 
 						var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastBackup;
@@ -100,9 +100,9 @@ namespace Raven.Database.Bundles.PeriodicExports
 						logger.Warn("Incremental periodic export interval is set to zero or less, incremental periodic export is now disabled");
 					}
 
-					if (exportConfigs.FullBackupIntervalMilliseconds > 0)
+					if (exportConfigs.FullBackupIntervalMilliseconds.GetValueOrDefault() > 0)
 					{
-						var interval = TimeSpan.FromMilliseconds(exportConfigs.FullBackupIntervalMilliseconds);
+						var interval = TimeSpan.FromMilliseconds(exportConfigs.FullBackupIntervalMilliseconds.GetValueOrDefault());
 						logger.Info("Full periodic export started, will export every" + interval.TotalMinutes + "minutes");
 
 						var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastFullBackup;
@@ -353,7 +353,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 			{
 				throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
 			}
-			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, true))
+			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, false))
 			{
 				client.PutContainer(localExportConfigs.AzureStorageContainer);
 				using (var fileStream = File.OpenRead(backupPath))
