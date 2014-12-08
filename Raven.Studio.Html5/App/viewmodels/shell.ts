@@ -49,10 +49,9 @@ import enterApiKey = require("viewmodels/enterApiKey");
 import latestBuildReminder = require("viewmodels/latestBuildReminder");
 import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
-
+import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 class shell extends viewModelBase {
     private router = router;
-
     
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
 
@@ -222,11 +221,25 @@ class shell extends viewModelBase {
 
         appUrl.mapUnknownRoutes(router);
 
-        window.addEventListener("beforeunload", () => {
-            this.cleanupNotifications();
-            this.globalChangesApi.dispose();
-            shell.disconnectFromResourceChangesApi();
+        window.addEventListener("beforeunload", this.destroyChangesApi);
+
+        $(window).bind('storage', (e:any) => {
+            if (e.originalEvent.key == eventSourceSettingStorage.localStorageName) {
+                if (!JSON.parse(e.originalEvent.newValue)) {
+                    this.destroyChangesApi();
+                } else {
+                    // enable changes api
+                    this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+                    this.notifications = this.createNotifications();
+                }
+            }
         });
+    }
+
+    private destroyChangesApi() {
+        this.cleanupNotifications();
+        this.globalChangesApi.dispose();
+        shell.disconnectFromResourceChangesApi();
     }
 
     // Called by Durandal when shell.html has been put into the DOM.

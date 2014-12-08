@@ -9,6 +9,7 @@ import commandBase = require('commands/commandBase');
 import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import idGenerator = require("common/idGenerator");
+import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 
 class changesApi {
 
@@ -53,7 +54,11 @@ class changesApi {
             this.connect(this.connectWebSocket);
         }
         else if ("EventSource" in window) {
-            this.connect(this.connectEventSource);
+            if (eventSourceSettingStorage.useEventSource()) {
+                this.connect(this.connectEventSource);
+            } else {
+                this.connectToChangesApiTask.reject();
+            }
         }
         else {
             //The browser doesn't support nor websocket nor eventsource
@@ -165,18 +170,24 @@ class changesApi {
         var details;
 
         if ("EventSource" in window) {
-            this.connect(this.connectEventSource);
-            warningMessage = "Your server doesn't support the WebSocket protocol!";
-            details = "EventSource API is going to be used instead. However, multi tab usage isn't supported.\r\n" +
-            "WebSockets are only supported on servers running on Windows Server 2012 and equivalent. \r\n" +
-            " If you have issues with WebSockets on Windows Server 2012 and equivalent use Status > Debug > WebSocket to debug.";
+            if (eventSourceSettingStorage.useEventSource()) {
+                this.connect(this.connectEventSource);
+                warningMessage = "Your server doesn't support the WebSocket protocol!";
+                details = "EventSource API is going to be used instead. However, multi tab usage isn't supported.\r\n" +
+                "WebSockets are only supported on servers running on Windows Server 2012 and equivalent. \r\n" +
+                " If you have issues with WebSockets on Windows Server 2012 and equivalent use Status > Debug > WebSocket to debug.";
+            } else {
+                warningMessage = "Event source was disabled!";
+                details = "EventSource API is NOT going to be used, as you disabled it in server settings. Multi tab usage is now supported.";
+                this.connectToChangesApiTask.reject();
+            }
         } else {
             this.connectToChangesApiTask.reject();
             warningMessage = "Changes API is Disabled!";
             details = "Your server doesn't support the WebSocket protocol and your browser doesn't support the EventSource API.\r\n" +
-                "In order to use it, please use a browser that supports the EventSource API.";
+            "In order to use it, please use a browser that supports the EventSource API.";
+            
         }
-
         this.showWarning(warningMessage, details);
     }
 
