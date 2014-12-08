@@ -16,6 +16,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Voron.Util;
+using Voron.Util.Conversion;
 
 namespace Raven.Database.Queries
 {
@@ -185,7 +186,7 @@ namespace Raven.Database.Queries
             }
         }
 
-        private class ParsedRange
+        public class ParsedRange
         {
             public bool LowInclusive;
             public bool HighInclusive;
@@ -221,9 +222,9 @@ namespace Raven.Database.Queries
             }
         }
 
-        private class QueryForFacets
+        public class QueryForFacets
         {
-            private readonly Dictionary<FacetValue, FacetValueState> matches = new Dictionary<FacetValue, FacetValueState>();
+            public readonly Dictionary<FacetValue, FacetValueState> matches = new Dictionary<FacetValue, FacetValueState>();
             private readonly IndexDefinition indexDefinition;
 
             public QueryForFacets(
@@ -540,7 +541,7 @@ namespace Raven.Database.Queries
                 }
             }
 
-            private readonly Dictionary<string, SortOptions> cache = new Dictionary<string, SortOptions>();
+            public readonly Dictionary<string, SortOptions> cache = new Dictionary<string, SortOptions>();
             private SortOptions GetSortOptionsForFacet(string field)
             {
                 SortOptions value;
@@ -617,7 +618,7 @@ namespace Raven.Database.Queries
                 set.Docs.Add(docId);
             }
 
-            private class FacetValueState
+            public class FacetValueState
             {
 	            public HashSet<StringCollectionValue> AlreadySeen; 
                 public HashSet<int> Docs;
@@ -625,7 +626,7 @@ namespace Raven.Database.Queries
                 public ParsedRange Range;
             }
 
-	        private class StringCollectionValue
+	        public class StringCollectionValue
 	        {
 	            private int _valuesAmount;
 		        
@@ -651,46 +652,19 @@ namespace Raven.Database.Queries
 	           
 
 				public StringCollectionValue(List<string> values)
-				{
-				    _valuesAmount = 0;
-                    for (int i = 0; i < values.Count; i++)
-                    {
-                        _valuesAmount += values[i].Length;
-                    }
-                    byte[] valuesByteArray = new byte[_valuesAmount*2];
-				    byte[] curBytesCouple = new byte[2];
-
-				    int byteArrayCursor = 0;
-
-                    for (int valuesCounter = 0; valuesCounter < values.Count; valuesCounter++)
-                    {
-                        var curValue = values[valuesCounter];
-
-                        for (int curValueStringCharCounter = 0; curValueStringCharCounter < curValue.Length; curValueStringCharCounter++)
-                        {
-                            curBytesCouple = BitConverter.GetBytes(curValue[curValueStringCharCounter]);
-
-                            valuesByteArray[byteArrayCursor++] = curBytesCouple[0];
-                            valuesByteArray[byteArrayCursor++] = curBytesCouple[1];
-                            
-                        }
-                    }
-
-                    //valuesByteArray = values.SelectMany(x => Encoding.ASCII.GetBytes(x)).ToArray();
-
-                    _crc = Crc.Value(valuesByteArray);    
-				    
+				{                    
 				    
                     _hashCode = values.Count;
-			        unchecked
-			        {
-                        for (int i = 0; i < values.Count; i++)
-				        {
-                            _hashCode = _hashCode * 397 ^ values[i].GetHashCode();
-				        }
-			        }
+                    for (_valuesAmount = 0; _valuesAmount < values.Count; _valuesAmount++)
+                    {
+                        unchecked
+                        {
+                            _hashCode = _hashCode * 397 ^ values[_valuesAmount].GetHashCode();
+                        }
+                        var curValue = values[_valuesAmount];                        
+                        _crc = Crc.Value(curValue, _crc);                       
+                    }			                   
 		        }
-
 	        }
 
             private void UpdateFacetResults(Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
