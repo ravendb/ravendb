@@ -1,5 +1,7 @@
 /// <reference path="../../Scripts/typings/d3/nvd3.d.ts" />
 /// <reference path="../../Scripts/typings/d3/d3.d.ts" />
+/// <reference path="../../Scripts/typings/d3/timelinesChart.d.ts" />
+/// <reference path="../../Scripts/typings/d3/timelines.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
@@ -7,7 +9,7 @@ import moment = require("moment");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
 
-class metricsPrefetchers extends viewModelBase {
+class indexPrefetches extends viewModelBase {
 
     currentStats: KnockoutObservable<databaseStatisticsDto> = ko.observable(null);
 
@@ -19,8 +21,13 @@ class metricsPrefetchers extends viewModelBase {
     static prefetchesAllowZoom = false;
 
     attached() {
-        metricsPrefetchers.prefetchesAllowZoom = false;
+        indexPrefetches.prefetchesAllowZoom = false;
         this.modelPolling();
+    }
+
+    detached() {
+        super.detached();
+        $(window).off('resize.indexPrefetches');
     }
 
     modelPolling() {
@@ -82,10 +89,10 @@ class metricsPrefetchers extends viewModelBase {
                 });
 
                 chart.dispatch.on('controlsChange', function (e) {
-                    metricsPrefetchers.prefetchesAllowZoom = !!e.disabled;
+                    indexPrefetches.prefetchesAllowZoom = !!e.disabled;
                 });
 
-                nv.utils.windowResize(chart);
+                $(window).on('resize.indexPrefetches', (e) => chart(e));
 
                 return chart;
             }, (chart) => {
@@ -95,7 +102,7 @@ class metricsPrefetchers extends viewModelBase {
                     .call(this.prefetchesChart);
                 });
         } else {
-            if (!metricsPrefetchers.prefetchesAllowZoom) {
+            if (!indexPrefetches.prefetchesAllowZoom) {
                 d3.select('#prefetchesContainer svg')
                     .datum(this.prefetchesChartData)
                     .call(this.prefetchesChart);
@@ -115,4 +122,4 @@ class metricsPrefetchers extends viewModelBase {
 
 }
 
-export = metricsPrefetchers; 
+export = indexPrefetches; 

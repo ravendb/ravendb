@@ -1,11 +1,11 @@
 ﻿import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getStatusDebugRequestTracingCommand = require("commands/getStatusDebugRequestTracingCommand");
+import getRequestTracingCommand = require("commands/getRequestTracingCommand");
 import database = require("models/database");
 import moment = require("moment");
 import document = require("models/document");
 
-class statusDebugRequestTracing extends viewModelBase {
+class requestTracing extends viewModelBase {
     
     allEntries = ko.observableArray<requestTracingDto>();
     statusFilter = ko.observable("All");
@@ -30,7 +30,7 @@ class statusDebugRequestTracing extends viewModelBase {
     fetchRequestTracing(): JQueryPromise<requestTracingDto[]> {
         var db = this.activeDatabase();
         if (db) {
-            return new getStatusDebugRequestTracingCommand(db)
+            return new getRequestTracingCommand(db)
                 .execute()
                 .done((results: requestTracingDto[]) => this.processResults(results));
         }
@@ -122,4 +122,4 @@ class statusDebugRequestTracing extends viewModelBase {
     }
 }
 
-export = statusDebugRequestTracing;
+export = requestTracing;
