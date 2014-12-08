@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Database.Util;
 
@@ -45,10 +47,14 @@ namespace Raven.Client.Document
 
 		public void Dispose()
 		{
+			var tasks = new List<Task>();
+
 			foreach (var subscription in subscriptions)
 			{
-				subscription.Dispose();
+				tasks.Add(subscription.DisposeAsync());
 			}
+
+			Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
 		}
 	}
 }

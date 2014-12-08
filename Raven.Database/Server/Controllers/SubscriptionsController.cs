@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -50,7 +49,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				Headers =
 				{
-					ContentType = new MediaTypeHeaderValue("text/event-stream")
+					ContentType = new MediaTypeHeaderValue("application/json")
 					{
 						CharSet = "utf-8"
 					}
@@ -66,6 +65,16 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
+		[Route("subscriptions/acknowledgeBatch")]
+		[Route("databases/{databaseName}/subscriptions/acknowledgeBatch")]
+		public HttpResponseMessage AcknowledgeBatch(string name, string lastEtag)
+		{
+			Database.Subscriptions.AcknowledgeBatchProcessed(name, Etag.Parse(lastEtag));
+
+			return GetEmptyMessage();
+		}
+
+		[HttpPost]
 		[Route("subscriptions/close")]
 		[Route("databases/{databaseName}/subscriptions/close")]
 		public HttpResponseMessage Close(string name)
@@ -77,22 +86,16 @@ namespace Raven.Database.Server.Controllers
 
 		private void StreamToClient(string name, SubscriptionActions subscriptions, Stream stream, SubscriptionBatchOptions options)
 		{
-			var start = -1; // ignored
-
 			using (var streamWriter = new StreamWriter(stream))
 			using (var writer = new JsonTextWriter(streamWriter))
 			{
 				while (true)
 				{
+					var docsStreamed = false;
+
 					using (var cts = new CancellationTokenSource())
 					using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 					{
-						writer.WriteStartObject();
-						writer.WritePropertyName("Type");
-						writer.WriteValue("Data");
-						writer.WritePropertyName("Results");
-						writer.WriteStartArray();
-
 						var lastProcessedDocEtag = Etag.Empty;
 						var totalSizeOfDocs = 0;
 
@@ -105,17 +108,23 @@ namespace Raven.Database.Server.Controllers
 							// the cache for that, to avoid filling it up very quickly
 							using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 							{
-								Database.Documents.GetDocuments(start, options.MaxDocCount, ackEtag, cts.Token, doc =>
+								Database.Documents.GetDocuments(-1, options.MaxDocCount, ackEtag, cts.Token, doc =>
 								{
 									timeout.Delay();
 
-									if (totalSizeOfDocs > options.MaxSize)
+									if (options.MaxSize.HasValue && totalSizeOfDocs > options.MaxSize)
 										return;
 
 									lastProcessedDocEtag = doc.Etag;
 									
 									if (doc.Key.StartsWith("Raven/"))
 										return;
+
+									if (docsStreamed == false)
+									{
+										InitializeDataBatch(writer);
+										docsStreamed = true;
+									}
 
 									doc.ToJson().WriteTo(writer);
 									writer.WriteRaw(Environment.NewLine);
@@ -125,48 +134,72 @@ namespace Raven.Database.Server.Controllers
 							}
 						});
 
-						writer.WriteEndArray();
-						writer.WritePropertyName("LastProcessedEtag");
-						writer.WriteValue(lastProcessedDocEtag.ToString());
-						writer.WriteEndObject();
-						writer.Flush();
+						if (docsStreamed)
+						{
+							EndDataBatchAndFlush(writer, lastProcessedDocEtag);
+						}
 					}
 
-					var batchAcknowledged = subscriptions.WaitForAcknowledgement(name, options.AcknowledgementTimeout);
+					if (docsStreamed)
+					{
+						var batchAcknowledged = subscriptions.WaitForAcknowledgement(name, options.AcknowledgementTimeout);
 
-					// TODO arek - cleanup this mess
-					if (subscriptions.IsClosed(name))
-						break;
+						// TODO arek - cleanup this mess
+						if (subscriptions.IsClosed(name))
+							break;
 
-					if(batchAcknowledged == false)
+						if (batchAcknowledged == false)
+							continue;
+					}
+
+					if(subscriptions.HasMoreDocumentsToSent(name))
 						continue;
 
-					var lastDocEtag = Etag.Empty;
+					bool newDocsFound;
 
-					Database.TransactionalStorage.Batch(accessor => lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag());
+					do
+					{
+						newDocsFound = subscriptions.WaitForNewDocuments(name, TimeSpan.FromSeconds(5));
 
-					var lastAckEtag = subscriptions.GetSubscriptionDocument(name).AckEtag;
+						if (subscriptions.IsClosed(name))
+							break;
 
-					if(EtagUtil.IsGreaterThan(lastDocEtag, lastAckEtag))
-						continue;
+						if (newDocsFound == false)
+							SendHearbeat(writer);
 
-					subscriptions.WaitForNewDocuments(name);
+					} while (newDocsFound == false);
 
 					if (subscriptions.IsClosed(name))
 						break;
-
 				}
 			}
 		}
 
-		[HttpPost]
-		[Route("subscriptions/acknowledgeBatch")]
-		[Route("databases/{databaseName}/subscriptions/acknowledgeBatch")]
-		public HttpResponseMessage AcknowledgeBatch(string name, string lastEtag)
+		private static void InitializeDataBatch(JsonTextWriter writer)
 		{
-			Database.Subscriptions.AcknowledgeBatchProcessed(name, Etag.Parse(lastEtag));
+			writer.WriteStartObject();
+			writer.WritePropertyName("Type");
+			writer.WriteValue("Data");
+			writer.WritePropertyName("Results");
+			writer.WriteStartArray();
+		}
 
-			return GetEmptyMessage();
+		private static void EndDataBatchAndFlush(JsonTextWriter writer, Etag lastProcessedDocEtag)
+		{
+			writer.WriteEndArray();
+			writer.WritePropertyName("LastProcessedEtag");
+			writer.WriteValue(lastProcessedDocEtag.ToString());
+			writer.WriteEndObject();
+			writer.Flush();
+		}
+
+		private static void SendHearbeat(JsonTextWriter writer)
+		{
+			writer.WriteStartObject();
+			writer.WritePropertyName("Type");
+			writer.WriteValue("Heartbeat");
+			writer.WriteEndObject();
+			writer.Flush();
 		}
 	}
 }

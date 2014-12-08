@@ -46,8 +46,6 @@ namespace Raven.Tests.Issues
 
 				subscription.Subscribe(x => ages.Add(x.DataAsJson.Value<int>("Age")));
 
-				//subscription.Task.Wait(); // TODO arek
-
 				string key;
 				Assert.True(keys.TryTake(out key, TimeSpan.FromSeconds(10)));
 				Assert.Equal("users/1", key);
@@ -70,7 +68,7 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact(Skip = "Do not push empty patches from server")]
+		[Fact]
 		public void ShouldSendAllNewAndModifiedDocs()
 		{
 			using (var store = NewDocumentStore())

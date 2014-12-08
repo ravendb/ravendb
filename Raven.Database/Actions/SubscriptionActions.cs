@@ -9,17 +9,29 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
 {
 	public class SubscriptionActions : ActionsBase
 	{
-		private class SubscriptionWorkContext
+		private class SubscriptionWorkContext : IDisposable
 		{
 			public readonly AutoResetEvent NewDocuments = new AutoResetEvent(false);
 			public readonly AutoResetEvent Acknowledgement = new AutoResetEvent(false);
 			public IDisposable Connection;
+
+			public void Dispose()
+			{
+				NewDocuments.Set();
+				NewDocuments.Dispose();
+
+				Acknowledgement.Set();
+				Acknowledgement.Dispose();
+
+				//context.Connection.Dispose(); //TODO arek
+			}
 		}
 
 		private readonly ConcurrentDictionary<string, SubscriptionWorkContext> openSubscriptions = new ConcurrentDictionary<string, SubscriptionWorkContext>();
@@ -38,7 +50,10 @@ namespace Raven.Database.Actions
 				{
 					foreach (var openSubscription in openSubscriptions)
 					{
-						openSubscription.Value.NewDocuments.Set();
+						lock (openSubscription.Value)
+						{
+							openSubscription.Value.NewDocuments.Set();
+						}
 					}
 				}
 			};
@@ -90,9 +105,10 @@ namespace Raven.Database.Actions
 			SubscriptionWorkContext context;
 			if (openSubscriptions.TryRemove(name, out context))
 			{
-				context.NewDocuments.Dispose();
-				context.Acknowledgement.Dispose();
-				//context.Connection.Dispose(); //TODO arek
+				lock (context)
+				{
+					context.Dispose();
+				}
 			}
 		}
 
@@ -116,7 +132,10 @@ namespace Raven.Database.Actions
 				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, name, RavenJObject.FromObject(doc), UuidType.Subscriptions);
 			});
 
-			subscriptionContext.Acknowledgement.Set();
+			lock (subscriptionContext)
+			{
+				subscriptionContext.Acknowledgement.Set();
+			}
 		}
 
 		public bool WaitForAcknowledgement(string name, TimeSpan timeout)
@@ -128,13 +147,13 @@ namespace Raven.Database.Actions
 			return subscriptionContext.Acknowledgement.WaitOne(timeout);
 		}
 
-		public bool WaitForNewDocuments(string name)
+		public bool WaitForNewDocuments(string name, TimeSpan timeout)
 		{
 			SubscriptionWorkContext subscriptionContext;
 			if (openSubscriptions.TryGetValue(name, out subscriptionContext) == false)
 				return false;
 
-			return subscriptionContext.NewDocuments.WaitOne(-1);
+			return subscriptionContext.NewDocuments.WaitOne(timeout);
 		}
 
 		public SubscriptionDocument GetSubscriptionDocument(string name)
@@ -152,6 +171,27 @@ namespace Raven.Database.Actions
 			});
 
 			return doc;
+		}
+
+		public bool HasMoreDocumentsToSent(string name)
+		{
+			SubscriptionWorkContext subscriptionContext;
+			
+			if(openSubscriptions.TryGetValue(name, out subscriptionContext) == false)
+				throw new InvalidOperationException("No such subscription: " + name);
+
+			lock (subscriptionContext)
+			{
+				Etag lastDocEtag = null;
+
+				Database.TransactionalStorage.Batch(accessor => lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag());
+
+				var lastAckEtag = GetSubscriptionDocument(name).AckEtag;
+
+				subscriptionContext.NewDocuments.Reset();
+
+				return EtagUtil.IsGreaterThan(lastDocEtag, lastAckEtag);
+			}
 		}
 	}
 }
