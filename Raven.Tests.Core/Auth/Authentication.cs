@@ -61,7 +61,7 @@ namespace Raven.Tests.Core.Auth
             }
         }
 
-        [Fact(Skip = "Need to replace cretential to make this test pass")]
+        [Fact(Skip = "Need to replace credentials to make this test pass")]
         public void CanUseWindowsAuthentication()
         {
             Raven.Database.Server.Security.Authentication.EnableOnce();
