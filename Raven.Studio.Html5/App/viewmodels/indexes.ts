@@ -13,6 +13,7 @@ import changeSubscription = require("models/changeSubscription");
 import indexesShell = require("viewmodels/indexesShell");
 import recentQueriesStorage = require("common/recentQueriesStorage");
 import copyIndexDialog = require("viewmodels/copyIndexDialog");
+import replaceIndexDialog = require("viewmodels/replaceIndexDialog");
 import indexesAndTransformersClipboardDialog = require("viewmodels/indexesAndTransformersClipboardDialog");
 
 class indexes extends viewModelBase {
@@ -181,6 +182,10 @@ class indexes extends viewModelBase {
 
     pasteIndex() {
         app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
+    }
+
+    replaceIndex(i: index) {
+        app.showDialog(new replaceIndexDialog(i.name, this.activeDatabase())); 
     }
     
     copyIndexesAndTransformers() {

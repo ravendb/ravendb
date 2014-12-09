@@ -416,6 +416,7 @@
     <TypeScriptCompile Include="App\viewmodels\statusStorageCollections.ts" />
     <TypeScriptCompile Include="App\viewmodels\requests.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexing.ts" />
+    <TypeScriptCompile Include="App\viewmodels\replaceIndexDialog.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\adminSettings.html" />
@@ -425,6 +426,7 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\indexing.html" />
+    <Content Include="App\views\replaceIndexDialog.html" />
     <Content Include="App\views\statusStorageCollections.html" />
     <Content Include="App\views\statusStorageBreakdown.html" />
     <Content Include="App\views\statusStorageOnDisk.html" />
