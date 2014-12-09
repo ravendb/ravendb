@@ -29,6 +29,8 @@ namespace Raven.Tests.Issues
 			public string ValueAsDecimal { get; set; }
 
 			public string ValueAsShort { get; set; }
+
+			public string ValueAsLong { get; set; }
 		}
 
 		private class Items_Numbers : AbstractIndexCreationTask<Item>
@@ -52,6 +54,10 @@ namespace Raven.Tests.Issues
 				public short Short1 { get; set; }
 
 				public short Short2 { get; set; }
+
+				public long Long1 { get; set; }
+
+				public long Long2 { get; set; }
 			}
 
 			public Items_Numbers()
@@ -67,6 +73,8 @@ namespace Raven.Tests.Issues
 										  Decimal2 = item.ValueAsDecimal.ParseDecimal(-1),
 										  Short1 = item.ValueAsShort.ParseShort(),
 										  Short2 = item.ValueAsShort.ParseShort(-1),
+										  Long1 = item.ValueAsLong.ParseLong(),
+										  Long2 = item.ValueAsLong.ParseLong(-1),
 										  Id = item.Id
 									  };
 
@@ -85,6 +93,7 @@ namespace Raven.Tests.Issues
 				double dbl = 10.2;
 				short s = 52;
 				int i = 2;
+				long l = long.MaxValue;
 
 				using (var session = store.OpenSession())
 				{
@@ -93,7 +102,8 @@ namespace Raven.Tests.Issues
 						ValueAsDecimal = dec.ToString(CultureInfo.InvariantCulture),
 						ValueAsDouble = dbl.ToString(CultureInfo.InvariantCulture),
 						ValueAsInt = i.ToString(CultureInfo.InvariantCulture),
-						ValueAsShort = s.ToString(CultureInfo.InvariantCulture)
+						ValueAsShort = s.ToString(CultureInfo.InvariantCulture),
+						ValueAsLong = l.ToString(CultureInfo.InvariantCulture)
 					});
 
 					session.Store(new Item
@@ -101,7 +111,8 @@ namespace Raven.Tests.Issues
 						ValueAsDecimal = "one",
 						ValueAsDouble = "one",
 						ValueAsInt = "one",
-						ValueAsShort = "one"
+						ValueAsShort = "one",
+						ValueAsLong = "one"
 					});
 
 					session.SaveChanges();
@@ -132,6 +143,9 @@ namespace Raven.Tests.Issues
 					Assert.Equal(i, item1.Int1);
 					Assert.Equal(i, item1.Int2);
 
+					Assert.Equal(l, item1.Long1);
+					Assert.Equal(l, item1.Long2);
+
 					var item2 = items.Single(x => x.Id == "items/2");
 
 					Assert.Equal(default(decimal), item2.Decimal1);
@@ -145,6 +159,9 @@ namespace Raven.Tests.Issues
 
 					Assert.Equal(default(int), item2.Int1);
 					Assert.Equal(-1, item2.Int2);
+
+					Assert.Equal(default(long), item2.Long1);
+					Assert.Equal(-1, item2.Long2);
 				}
 			}
 		}

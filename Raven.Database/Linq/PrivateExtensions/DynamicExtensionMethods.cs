@@ -105,6 +105,24 @@ namespace Raven.Database.Linq.PrivateExtensions
 			return short.TryParse(value, out result) ? result : defaultValue;
 		}
 
+		public static dynamic ParseLong(dynamic o)
+		{
+			return ParseLong(o, default(long));
+		}
+
+		public static dynamic ParseLong(dynamic o, long defaultValue)
+		{
+			if (o == null)
+				return defaultValue;
+
+			var value = o as string;
+			if (value == null)
+				return defaultValue;
+
+			long result;
+			return long.TryParse(value, out result) ? result : defaultValue;
+		}
+
 		public static BoostedValue Boost(dynamic o, object value)
 		{
 			return new BoostedValue
