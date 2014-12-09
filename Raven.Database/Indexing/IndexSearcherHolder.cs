@@ -10,6 +10,7 @@ using Raven.Abstractions;
 using Lucene.Net.Search;
 using Raven.Client.Connection;
 using Raven.Database.Config;
+using Voron.Util;
 using Task = System.Threading.Tasks.Task;
 using Raven.Abstractions.Logging;
 using Raven.Json.Linq;
@@ -141,7 +142,7 @@ namespace Raven.Database.Indexing
             private readonly ConcurrentDictionary<string, DateTime> lastFacetQuery = new ConcurrentDictionary<string, DateTime>();
 
             private readonly ReaderWriterLockSlim rwls = new ReaderWriterLockSlim();
-	        private readonly Dictionary<string, LinkedList<CacheVal>[]> cache = new Dictionary<string, LinkedList<CacheVal>[]>();
+	        private readonly Dictionary<uint, LinkedList<CacheVal>[]> cache = new Dictionary<uint, LinkedList<CacheVal>[]>(1200);
 
 	        public ReaderWriterLockSlim Lock
             {
@@ -162,7 +163,8 @@ namespace Raven.Database.Indexing
             public IEnumerable<CacheVal> GetFromCache(string field, int doc)
             {
 	            LinkedList<CacheVal>[] vals;
-	            if (cache.TryGetValue(field, out vals) == false)
+                uint key = Crc.Value(field, 0);
+                if (cache.TryGetValue(key, out vals) == false)
                     yield break;
 	            if (vals[doc] == null)
                     yield break;
@@ -177,7 +179,8 @@ namespace Raven.Database.Indexing
             {
                 LinkedList<CacheVal>[] vals;
 	            Term[] results = null;
-	            if (cache.TryGetValue(field, out vals) == false)
+	            var key = Crc.Value(field, 0);
+                if (cache.TryGetValue(key, out vals) == false)
                     return results;
                 if (vals[doc] == null)
                     return results;
@@ -203,7 +206,8 @@ namespace Raven.Database.Indexing
             {
                 var now = SystemTime.UtcNow;
                 lastFacetQuery.AddOrUpdate(field, now, (s, time) => time > now ? time : now);
-                return cache.ContainsKey(field);
+                var key = Crc.Value(field, 0);
+                return cache.ContainsKey(key);
             }
 
             public IndexSearcherHoldingState(IndexSearcher indexSearcher)
@@ -273,7 +277,8 @@ namespace Raven.Database.Indexing
 
 	        public void SetInCache(string field, LinkedList<CacheVal>[] items)
 	        {
-		        cache[field] = items;
+	            var key = Crc.Value(field, 0);
+                cache[key] = items;
 	        }
         }
     }
