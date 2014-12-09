@@ -195,7 +195,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = NewDocumentStore())
             {
-                new CustomersIndex().Execute(store);
+                new ReducedCustomersIndex().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -214,7 +214,7 @@ namespace Raven.Tests.Bugs
                 {
 
                     RavenQueryStatistics qs;
-                    var qRes = session.Advanced.DocumentQuery<Customer>("CustomersIndex")
+                    var qRes = session.Advanced.DocumentQuery<Customer>("ReducedCustomersIndex")
                         .Statistics(out qs).Where("Occupation:Marketing")
                         .Distinct()
                         .SelectFields<Customer>("CustomerId")

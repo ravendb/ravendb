@@ -590,36 +590,46 @@ namespace Raven.Database.Actions
 
         public void DeleteIndex(string name)
         {
-            using (IndexDefinitionStorage.TryRemoveIndexContext())
-            {
-                var instance = IndexDefinitionStorage.GetIndexDefinition(name);
-                if (instance == null) return;
+            var instance = IndexDefinitionStorage.GetIndexDefinition(name);
+            if (instance == null) 
+				return;
 
-                // Set up a flag to signal that this is something we're doing
-                TransactionalStorage.Batch(actions => actions.Lists.Set("Raven/Indexes/PendingDeletion", instance.IndexId.ToString(CultureInfo.InvariantCulture), (RavenJObject.FromObject(new
-                {
-                    TimeOfOriginalDeletion = SystemTime.UtcNow,
-                    instance.IndexId,
-                    IndexName = instance.Name
-                })), UuidType.Tasks));
-
-                // Delete the main record synchronously
-                IndexDefinitionStorage.RemoveIndex(name);
-                Database.IndexStorage.DeleteIndex(instance.IndexId);
-
-	            WorkContext.ClearErrorsFor(name);
-
-                // And delete the data in the background
-                StartDeletingIndexDataAsync(instance.IndexId, name);
-
-                // We raise the notification now because as far as we're concerned it is done *now*
-                TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new IndexChangeNotification
-                {
-                    Name = name,
-                    Type = IndexChangeTypes.IndexRemoved,
-                }));
-            }
+			DeleteIndex(instance);
         }
+
+		internal void DeleteIndex(IndexDefinition instance, bool removeByNameMapping = true, bool clearErrors = true)
+		{
+			using (IndexDefinitionStorage.TryRemoveIndexContext())
+			{
+				if (instance == null) 
+					return;
+
+				// Set up a flag to signal that this is something we're doing
+				TransactionalStorage.Batch(actions => actions.Lists.Set("Raven/Indexes/PendingDeletion", instance.IndexId.ToString(CultureInfo.InvariantCulture), (RavenJObject.FromObject(new
+				{
+					TimeOfOriginalDeletion = SystemTime.UtcNow,
+					instance.IndexId,
+					IndexName = instance.Name
+				})), UuidType.Tasks));
+
+				// Delete the main record synchronously
+				IndexDefinitionStorage.RemoveIndex(instance.IndexId, removeByNameMapping);
+				Database.IndexStorage.DeleteIndex(instance.IndexId);
+
+				if (clearErrors)
+					WorkContext.ClearErrorsFor(instance.Name);
+
+				// And delete the data in the background
+				StartDeletingIndexDataAsync(instance.IndexId, instance.Name);
+
+				// We raise the notification now because as far as we're concerned it is done *now*
+				TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => Database.Notifications.RaiseNotifications(new IndexChangeNotification
+				{
+					Name = instance.Name,
+					Type = IndexChangeTypes.IndexRemoved,
+				}));
+			}
+		}
 
     }
 }

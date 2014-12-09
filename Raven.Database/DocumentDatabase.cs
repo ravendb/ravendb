@@ -164,8 +164,8 @@ namespace Raven.Database
 					CompleteWorkContextSetup();
 
 					prefetcher = new Prefetcher(workContext);
-					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
 					IndexReplacer = new IndexReplacer(this);
+					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
 
 					RaiseIndexingWiringComplete();
 

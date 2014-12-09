@@ -6,6 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
+using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -119,7 +121,8 @@ namespace Raven.Database.Indexing
               IndexSearcherHolder.IndexSearcherHoldingState state,
               HashSet<string> fieldsToRead,
               HashSet<int> docIds,
-              Action<Term, int> onTermFound)
+              IndexReader indexReader,
+              Action<Term, Document, int> onTermFound)
         {
             var reader = state.IndexSearcher.IndexReader;
 
@@ -128,13 +131,22 @@ namespace Raven.Database.Indexing
             {
                 EnsureFieldsAreInCache(state, fieldsToRead, reader);
 
-                foreach (var field in fieldsToRead)
+                foreach (var docId in docIds)
                 {
-                    foreach (var docId in docIds)
+                    Document document = null;
+
+                    foreach (var field in fieldsToRead)    
                     {
-                        foreach (var term in state.GetTermsFromCache(field, docId))
+                        var terms = state.GetTermsFromCache(field, docId);
+                        if (terms != null)
                         {
-                            onTermFound(term, docId);
+                            if (document == null)
+                                document = indexReader.Document(docId);
+
+                            for (int i = 0; i < terms.Length; i++)
+                            {
+                                onTermFound(terms[i], document, docId);
+                            }
                         }
                     }
                 }
@@ -184,11 +196,12 @@ namespace Raven.Database.Indexing
 
         private static void FillCache(IndexSearcherHolder.IndexSearcherHoldingState state, IEnumerable<string> fieldsToRead,IndexReader reader)
         {
-            foreach (var field in fieldsToRead)
+            using (var termDocs = reader.TermDocs())
             {
-	            var items = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>[reader.MaxDoc];
-                using (var termDocs = reader.TermDocs())
+                foreach (var field in fieldsToRead)
                 {
+                    var items = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>[reader.MaxDoc];
+
                     using (var termEnum = reader.Terms(new Term(field)))
                     {
                         do
@@ -200,27 +213,28 @@ namespace Raven.Database.Indexing
                             if (LowPrecisionNumber(term.Field, term.Text))
                                 continue;
 
-
                             var totalDocCountIncludedDeletes = termEnum.DocFreq();
                             termDocs.Seek(termEnum.Term);
 
                             while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
                             {
+                                var curDoc = termDocs.Doc;
                                 totalDocCountIncludedDeletes -= 1;
-                                if (reader.IsDeleted(termDocs.Doc))
+                                if (reader.IsDeleted(curDoc))
                                     continue;
-								if(items[termDocs.Doc] == null)
-									items[termDocs.Doc] = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>();
+                                if (items[curDoc] == null)
+                                    items[curDoc] = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>();
 
-	                            items[termDocs.Doc].AddLast(new IndexSearcherHolder.IndexSearcherHoldingState.CacheVal
-	                            {
-		                            Term = termEnum.Term
-	                            });
+                                items[curDoc].AddLast(new IndexSearcherHolder.IndexSearcherHoldingState.CacheVal
+                                {
+                                    Term = termEnum.Term
+                                });
                             }
                         } while (termEnum.Next());
                     }
+
+                    state.SetInCache(field, items);
                 }
-	            state.SetInCache(field, items);
             }
         }
 

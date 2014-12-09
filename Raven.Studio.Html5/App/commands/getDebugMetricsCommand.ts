@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import appUrl = require("common/appUrl");
 
-class getStatusDebugMetricsCommand extends commandBase {
+class getDebugMetricsCommand extends commandBase {
 
     constructor(private db: database) {
         super();
@@ -22,4 +22,4 @@ class getStatusDebugMetricsCommand extends commandBase {
     }
 }
 
-export = getStatusDebugMetricsCommand;
+export = getDebugMetricsCommand;
