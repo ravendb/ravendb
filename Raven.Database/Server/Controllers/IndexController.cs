@@ -138,40 +138,11 @@ namespace Raven.Database.Server.Controllers
 			var serializedIndexDefinition = RavenJObject.FromObject(indexDefinition);
 
 			var failedDestinations = new ConcurrentBag<string>();
-			Parallel.ForEach(replicationDestinations, destination =>
-			{
-				var connectionOptions = new RavenConnectionStringOptions
-				{
-					ApiKey = destination.ApiKey,
-					Url = destination.Url,
-					DefaultDatabase = destination.Database					
-				};
-
-				if (!String.IsNullOrWhiteSpace(destination.Username) &&
-				    !String.IsNullOrWhiteSpace(destination.Password) &&
-					!String.IsNullOrWhiteSpace(destination.Domain))
-				{
-					connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain);
-				}
-
-				var operationUrl = string.Format("//{0}/databases/{1}/indexes/{2}?definition=yes", destination.Url, destination.Database, Uri.EscapeUriString(id));				
-				var replicationRequest = _httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
-				replicationRequest.Write(serializedIndexDefinition);
-
-				try
-				{
-					replicationRequest.ExecuteRequest();
-				}
-				catch (Exception e)
-				{
-					Log.ErrorException("failed to replicate index to: " + destination.Url, e);
-					failedDestinations.Add(destination.Url);
-				}
-			});
+			Parallel.ForEach(replicationDestinations, destination => ReplicateIndex(id, destination, serializedIndexDefinition, failedDestinations));
 
 			return GetMessageWithObject(new
 			{
-				ReplicatedDestinationCount = (replicationDestinations.Count - failedDestinations.Count),
+				SuccessfulReplicationCount = (replicationDestinations.Count - failedDestinations.Count),
 				FailedDestinationUrls = failedDestinations
 			});
 		}
@@ -821,5 +792,37 @@ namespace Raven.Database.Server.Controllers
 			stats.SetLastDocumentEtag(lastEtag);
 			return GetMessageWithObject(stats);
 		}
+
+		private void ReplicateIndex(string indexName, ReplicationDestination destination, RavenJObject indexDefinition, ConcurrentBag<string> failedDestinations)
+		{
+			var connectionOptions = new RavenConnectionStringOptions
+			{
+				ApiKey = destination.ApiKey,
+				Url = destination.Url,
+				DefaultDatabase = destination.Database
+			};
+
+			if (!String.IsNullOrWhiteSpace(destination.Username) &&
+				!String.IsNullOrWhiteSpace(destination.Password) &&
+				!String.IsNullOrWhiteSpace(destination.Domain))
+			{
+				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain);
+			}
+
+			var operationUrl = string.Format("//{0}/databases/{1}/indexes/{2}?definition=yes", destination.Url, destination.Database, Uri.EscapeUriString(indexName));
+			var replicationRequest = _httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
+			replicationRequest.Write(indexDefinition);
+
+			try
+			{
+				replicationRequest.ExecuteRequest();
+			}
+			catch (Exception e)
+			{
+				Log.ErrorException("failed to replicate index to: " + destination.Url, e);
+				failedDestinations.Add(destination.Url);
+			}
+		}
+
 	}
 }
