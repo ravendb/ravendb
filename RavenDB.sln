@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+VisualStudioVersion = 12.0.30501.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -3334,9 +3334,6 @@ Global
 		{E6C2EAA5-B5BC-4BE2-B981-0064E819DBEB} = {702CE58F-C8D5-4C3E-8138-98D20B0E26F9}
 		{108260D1-12ED-4EC5-8C6B-1DED1D73271F} = {B7C4AD28-873C-45D5-8331-5CF9EEB41CC8}
 		{FE36CB0D-80BE-4898-9599-81FDC9D4BF77} = {B67A7937-6AE0-452B-824A-491E19E1710D}
-	EndGlobalSection
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 6944aade-3195-477c-8aed-9ebe2902fc57
