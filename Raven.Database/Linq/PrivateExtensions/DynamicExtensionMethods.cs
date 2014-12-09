@@ -33,6 +33,78 @@ namespace Raven.Database.Linq.PrivateExtensions
 			return document.DocumentNode.InnerText.Trim();
 		}
 
+		public static dynamic ParseInt(dynamic o)
+		{
+			return ParseInt(o, default(int));
+		}
+
+		public static dynamic ParseInt(dynamic o, int defaultValue)
+		{
+			if (o == null) 
+				return defaultValue;
+
+			var value = o as string;
+			if (value == null) 
+				return defaultValue;
+
+			int result;
+			return int.TryParse(value, out result) ? result : defaultValue;
+		}
+
+		public static dynamic ParseDouble(dynamic o)
+		{
+			return ParseDouble(o, default(double));
+		}
+
+		public static dynamic ParseDouble(dynamic o, double defaultValue)
+		{
+			if (o == null)
+				return defaultValue;
+
+			var value = o as string;
+			if (value == null)
+				return defaultValue;
+
+			double result;
+			return double.TryParse(value, out result) ? result : defaultValue;
+		}
+
+		public static dynamic ParseDecimal(dynamic o)
+		{
+			return ParseDecimal(o, default(decimal));
+		}
+
+		public static dynamic ParseDecimal(dynamic o, decimal defaultValue)
+		{
+			if (o == null)
+				return defaultValue;
+
+			var value = o as string;
+			if (value == null)
+				return defaultValue;
+
+			decimal result;
+			return decimal.TryParse(value, out result) ? result : defaultValue;
+		}
+
+		public static dynamic ParseShort(dynamic o)
+		{
+			return ParseShort(o, default(short));
+		}
+
+		public static dynamic ParseShort(dynamic o, short defaultValue)
+		{
+			if (o == null)
+				return defaultValue;
+
+			var value = o as string;
+			if (value == null)
+				return defaultValue;
+
+			short result;
+			return short.TryParse(value, out result) ? result : defaultValue;
+		}
+
 		public static BoostedValue Boost(dynamic o, object value)
 		{
 			return new BoostedValue
