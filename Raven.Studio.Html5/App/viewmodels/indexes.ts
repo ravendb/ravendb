@@ -13,7 +13,11 @@ import changeSubscription = require("models/changeSubscription");
 import indexesShell = require("viewmodels/indexesShell");
 import recentQueriesStorage = require("common/recentQueriesStorage");
 import copyIndexDialog = require("viewmodels/copyIndexDialog");
+import replaceIndexDialog = require("viewmodels/replaceIndexDialog");
 import indexesAndTransformersClipboardDialog = require("viewmodels/indexesAndTransformersClipboardDialog");
+import indexReplaceDocument = require("models/indexReplaceDocument");
+import getPendingIndexReplacementsCommand = require("commands/getPendingIndexReplacementsCommand");
+import d3 = require('d3/d3');
 
 class indexes extends viewModelBase {
 
@@ -76,9 +80,24 @@ class indexes extends viewModelBase {
     }
 
     private fetchIndexes() {
-        return new getDatabaseStatsCommand(this.activeDatabase())
-            .execute()
-            .done((stats: databaseStatisticsDto) => this.processDbStats(stats));
+        var deferred = $.Deferred();
+
+        var statsTask = new getDatabaseStatsCommand(this.activeDatabase())
+            .execute();
+
+        var replacementTask = new getPendingIndexReplacementsCommand(this.activeDatabase()).execute();
+
+        $.when(statsTask, replacementTask)
+            .done((statsTaskResult, replacements: indexReplaceDocument[]) => {
+
+                var stats: databaseStatisticsDto = statsTaskResult[0];
+                this.processData(stats, replacements);
+
+                deferred.resolve(stats);
+            })
+            .fail(xhr => deferred.reject(xhr));
+
+        return deferred.promise();
     }
 
     private fetchRecentQueries() {
@@ -111,9 +130,25 @@ class indexes extends viewModelBase {
         return "";
     }
 
-    processDbStats(stats: databaseStatisticsDto) {
+    processData(stats: databaseStatisticsDto, replacements: indexReplaceDocument[]) {
+        var willReplaceMap = d3.map([]);
+        var willBeReplacedMap = d3.map([]);
+        replacements.forEach(r => {
+            willBeReplacedMap.set(r.indexToReplace, r.extractReplaceWithIndexName());
+            willReplaceMap.set(r.extractReplaceWithIndexName(), r.indexToReplace);
+        });
+
         stats.Indexes
-            .map(i => new index(i))
+            .map(i => {
+                var idx = new index(i);
+                if (willBeReplacedMap.has(idx.name)) {
+                    idx.willBeReplacedByIndex(willBeReplacedMap.get(idx.name));
+                }
+                if (willReplaceMap.has(idx.name)) {
+                    idx.willReplaceIndex(willReplaceMap.get(idx.name));
+                }
+                return idx;
+            })
             .forEach(i => this.putIndexIntoGroups(i));
     }
 
@@ -146,7 +181,19 @@ class indexes extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [ shell.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)) ];
+        return [
+            shell.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
+            shell.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, e => this.processReplaceEvent())
+        ];
+    }
+
+    processReplaceEvent() {
+         if (this.indexMutex == true) {
+            this.indexMutex = false;
+            setTimeout(() => {
+                this.fetchIndexes().always(() => this.indexMutex = true);
+            }, 10);
+        }
     }
 
     processIndexEvent(e: indexChangeNotificationDto) {
@@ -181,6 +228,10 @@ class indexes extends viewModelBase {
 
     pasteIndex() {
         app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
+    }
+
+    replaceIndex(i: index) {
+        app.showDialog(new replaceIndexDialog(i.name, this.activeDatabase())); 
     }
     
     copyIndexesAndTransformers() {

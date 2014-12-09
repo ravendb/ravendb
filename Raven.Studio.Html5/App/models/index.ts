@@ -33,6 +33,9 @@ class index {
     editUrl: KnockoutComputed<string>;
     queryUrl: KnockoutComputed<string>;
 
+    willReplaceIndex = ko.observable<string>();
+    willBeReplacedByIndex = ko.observable<string>();
+
     static priorityNormal = "Normal";
     static priorityIdle = "Idle";
     static priorityDisabled = "Disabled";
