@@ -7,6 +7,7 @@ import jsonUtil = require("common/jsonUtil");
 import generalUtils = require("common/generalUtils");
 import svgDownloader = require("common/svgDownloader");
 import fileDownloader = require("common/fileDownloader");
+import messagePublisher = require("common/messagePublisher");
 
 import chunkFetcher = require("common/chunkFetcher");
 
@@ -213,38 +214,55 @@ class visualizer extends viewModelBase {
     }
 
     addDocKey(key: string) {
-
-        if (key && !this.docKeys.contains(key)) {
-            this.docKeys.push(key);
-        }
-        new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { sourceId: key }, 0, 1024)
+        if (key && this.docKeys.contains(key)) return;
+        new queryIndexDebugDocsCommand(this.indexName(), this.activeDatabase(), key, 0, 2)
             .execute()
-            .then(results => {
-                results.forEach(r => this.addReduceKey(r));
-            });
+            .done(results => {
+                if (results && results.length === 1 && results[0] == key) {
+                    if (key && !this.docKeys.contains(key)) {
+                        this.docKeys.push(key);
+                        new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { sourceId: key }, 0, 1024)
+                            .execute()
+                            .then(results => {
+                                results.forEach(r => this.addReduceKey(r));
+                            });
+                    }
+                } else {
+                    messagePublisher.reportWarning("The document, " + key + " , is not contained in the documents for this index.");
+                }
+            });        
     }
 
     addReduceKey(key: string) {
+        if (key && this.reduceKeys().contains(key)) return;
         this.showLoadingIndicator(true);
         var self = this;
-        if (key && !this.reduceKeys().contains(key)) {
-            this.reduceKeys.push(key);
+        new queryIndexDebugMapCommand(this.indexName(), this.activeDatabase(), { startsWith: "",contains : key}, 0, 10)
+            .execute()
+            .done((x) => {
+                if (x) {
+                    if (key && !this.reduceKeys().contains(key)) {
+                        this.reduceKeys.push(key);
 
-            this.colorMap[key] = this.colors(Object.keys(this.colorMap).length);
-            this.reduceKey("");
+                        this.colorMap[key] = this.colors(Object.keys(this.colorMap).length);
+                        this.reduceKey("");
 
-            this.fetchDataFor(key).then((subTree: visualizerDataObjectNodeDto) => {
-                if (self.tree.children === undefined) {
-                    self.tree.children = [];
+                        this.fetchDataFor(key).then((subTree: visualizerDataObjectNodeDto) => {
+                            if (self.tree.children === undefined) {
+                                self.tree.children = [];
+                            }
+                            if (subTree.children.length > 0) {
+                                self.tree.children.push(subTree);
+                                self.updateGraph();
+                            }
+                        }).always(() => this.showLoadingIndicator(false));
+                    } else {
+                        this.showLoadingIndicator(false);
+                    }
+                } else {
+                    messagePublisher.reportWarning("The key, " + key + " , is not contained in the reduce keys for this index.");
                 }
-                if (subTree.children.length > 0) {
-                    self.tree.children.push(subTree);
-                    self.updateGraph();
-                }
-            }).always(() => this.showLoadingIndicator(false));
-        } else {
-            this.showLoadingIndicator(false);
-        }
+            }).always(() => this.showLoadingIndicator(false));         
     }
 
     setSelectedIndex(indexName) {
