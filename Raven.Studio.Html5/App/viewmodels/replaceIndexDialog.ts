@@ -7,16 +7,22 @@ import index = require("models/index");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import datePickerBindingHandler = require("common/datePickerBindingHandler");
 import moment = require("moment");
+import saveDocumentCommand = require("commands/saveDocumentCommand");
+import indexReplaceDocument = require("models/indexReplaceDocument");
+import messagePublisher = require("common/messagePublisher");
 
 class replaceIndexDialog extends dialogViewModelBase {
 
-    static ModeStale = "stale";
+    static ModeEtag = "etag";
     static ModeTime = "time";
 
     private indexes = ko.observableArray<index>();
     indexesExceptCurrent: KnockoutComputed<index[]>;
     private selectedIndex = ko.observable<string>();
-    private replaceMode = ko.observable<string>(replaceIndexDialog.ModeStale);
+    private replaceMode = ko.observable<string>(replaceIndexDialog.ModeEtag);
+    private lastIndexedEtag = ko.observable<string>();
+
+    private extraMode = ko.observable<boolean>(false);
 
     saveEnabled = ko.computed(() => {
         return !!this.selectedIndex();
@@ -65,19 +71,42 @@ class replaceIndexDialog extends dialogViewModelBase {
     processDbStats(stats: databaseStatisticsDto) {
         this.indexes(stats.Indexes
             .map(i => new index(i)));
-    }
-
-    deleteScheduledReplace() {
-        //TODO:
+        var oldIndex = stats.Indexes.first(i => i.Name == this.indexName);
+        this.lastIndexedEtag(oldIndex.LastIndexedEtag);       
     }
 
     saveReplace() {
-        //TODO:
-        console.log('SAVING REPLACE');
+        var replaceDocument: indexReplaceDocument = null;
+        if (this.extraMode()) {
+            replaceDocument = new indexReplaceDocument({ IndexToReplace: this.indexName });
+        } else {
+            switch (this.replaceMode()) {
+                case replaceIndexDialog.ModeTime:
+                    replaceDocument = new indexReplaceDocument({ IndexToReplace: this.indexName, ReplaceTimeUtc: this.replaceDate().toISOString() });
+                    break;
+                case replaceIndexDialog.ModeEtag:
+                    replaceDocument = new indexReplaceDocument({ IndexToReplace: this.indexName, MinimumEtagBeforeReplace: this.etag() });
+                    break;
+            }
+        }
+
+        var docKey = indexReplaceDocument.replaceDocumentPrefix + this.selectedIndex();
+
+        new saveDocumentCommand(docKey, replaceDocument, this.db, false)
+            .execute()
+            .done(() => {
+                messagePublisher.reportSuccess("Saved replace index document");
+                dialog.close(this);
+            })
+            .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index document.", response.responseText, response.statusText));
     }
 
     close() {
         dialog.close(this);
+    }
+
+    toggleExtraModes() {
+        this.extraMode(!this.extraMode());
     }
 }
 

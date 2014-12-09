@@ -338,6 +338,7 @@
     <TypeScriptCompile Include="App\commands\getStatusStorageOnDiskCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusStorageBreakdownCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingBatchStatsCommand.ts" />
+    <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
@@ -390,6 +391,7 @@
     <TypeScriptCompile Include="App\models\performanceTestRequest.ts" />
     <TypeScriptCompile Include="App\models\performanceTestResultWrapped.ts" />
     <TypeScriptCompile Include="App\models\indexMergeSuggestion.ts" />
+    <TypeScriptCompile Include="App\models\indexReplaceDocument.ts" />
     <Content Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />

@@ -24,22 +24,28 @@
                  </div>
              </div>    
             <div class="form-group">
-                <label class="col-sm-4 control-label">When:</label>
-                <div class="btn-group">
+                <label class="col-md-4 control-label"></label>
+                <div>When new index become non-stale</div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-4 control-label">
+                     <button type="button" class="btn btn-default" data-bind="click: toggleExtraModes">
+                        <i data-bind="css: { 'fa-check': extraMode }" class="fa fa-fw"></i> Or:
+                    </button>
+                </label>
+                <div class="btn-group" data-bind="visible: extraMode">
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                        <span data-bind="visible: replaceMode() == 'stale'">New index become non-stale</span>
-                        <span data-bind="visible: replaceMode() == 'etag'">New index etag reaches last indexed etag of old index</span>
-                        <span data-bind="visible: replaceMode() == 'time'">Date is reached</span>
+                        <span data-bind="visible: replaceMode() == 'etag'">index etag reaches last indexed etag of old index</span>
+                        <span data-bind="visible: replaceMode() == 'time'">or date is reached</span>
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" role="menu">
-                        <li><a href="#" data-bind="click: changeReplaceMode.bind($root, 'stale')">New index become non-stale</a></li>
-                        <li><a href="#" data-bind="click: changeReplaceMode.bind($root, 'etag')">New index etag reaches last indexed etag of old index</a></li>
-                        <li><a href="#" data-bind="click: changeReplaceMode.bind($root, 'time')">Date is reached</a></li>
+                        <li><a href="#" data-bind="click: changeReplaceMode.bind($root, 'etag')">index etag reaches last indexed etag of old index</a></li>
+                        <li><a href="#" data-bind="click: changeReplaceMode.bind($root, 'time')">date is reached</a></li>
                     </ul>
                 </div>
             </div>
-            <div class="form-group" data-bind="visible: replaceMode() == 'time'">
+            <div class="form-group" data-bind="visible: replaceMode() == 'time' && extraMode()">
                 <label class="col-sm-4 control-label">Replacement date (UTC):</label>
                 <div class="btn-group">
                     <input id="replaceDate" disabled="disabled" type="datetime" class="form-control" data-bind="value: replaceDateText" />

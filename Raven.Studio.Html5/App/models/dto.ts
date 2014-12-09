@@ -1121,3 +1121,9 @@ interface diskPerformanceResultWrappedDto {
     Request: performanceTestRequestDto;
     DebugMsgs: string[];
 }
+
+interface indexReplaceDocumentDto extends documentDto {
+    IndexToReplace: string;
+    MinimumEtagBeforeReplace?: string;
+    ReplaceTimeUtc?: string;
+}
