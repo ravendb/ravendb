@@ -14,7 +14,7 @@
 
 define('jquery', function() { return jQuery; });
 define('knockout', ko);
-define('nvd3', ['d3/d3', 'd3/nv'], function (d3, nv) { return nv; });
+define('nvd3', ['d3/d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], function (d3, nv, timelines, chart) { return nv; });
 
 // Do not remove the below comment, as it's used by the optimized build to inline Durandal scripts.
 // OPTIMIZED BUILD INLINE DURANDAL HERE
