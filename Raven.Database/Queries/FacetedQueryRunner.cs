@@ -275,31 +275,26 @@ namespace Raven.Database.Queries
                     curFacetArray.Add(x);
                 });
 
-
                 using (var currentState = Database.IndexStorage.GetCurrentStateHolder(Index))
                 {
                     var currentIndexSearcher = currentState.IndexSearcher;
 
                     var baseQuery = Database.IndexStorage.GetDocumentQuery(Index, IndexQuery, Database.IndexQueryTriggers);
                     currentIndexSearcher.Search(baseQuery, allCollector);
-	                var indexReader = currentIndexSearcher.IndexReader;
-	                var fields = Facets.Values.Select(x => x.Name)
-                            .Concat(Ranges.Select(x => x.Key));
-                    var fieldsToRead = new HashSet<string>(fields);
+                    var fieldsToRead = new HashSet<string>(Facets.Values.Select(x => x.Name)
+                        .Concat(Ranges.Select(x => x.Key)));
 
-                    
+                    uint fieldsCrc = fieldsToRead.Aggregate<string, uint>(0, (current, field) => Crc.Value(field, current));
+
                     IndexedTerms.ReadEntriesForFields(currentState,
                         fieldsToRead,
                         allCollector.Documents,
-                        indexReader,
-                        (term, document, docId) =>
+                        (term, docId) =>
                         {
-                            //var facets = Facets.Values.Where(facet => facet.Name == term.Field);
                             List<Facet> facets;
                             if (!sortedFacets.TryGetValue(term.Field, out facets))
                                 return;
                             
-
                             foreach (var facet in facets)
                             {
                                 switch (facet.Mode)
@@ -315,7 +310,7 @@ namespace Raven.Database.Queries
                                             };
                                             facetValues[term.Text] = existing;
                                         }
-                                        ApplyFacetValueHit(existing, facet, docId, null, indexReader, document);
+                                        ApplyFacetValueHit(existing, facet, docId, null, currentState, fieldsCrc);
                                         break;
                                     case FacetMode.Ranges:
                                         List<ParsedRange> list;
@@ -327,7 +322,7 @@ namespace Raven.Database.Queries
                                                 if (parsedRange.IsMatch(term.Text))
                                                 {
                                                     var facetValue = Results.Results[term.Field].Values[i];
-                                                    ApplyFacetValueHit(facetValue, facet, docId, parsedRange, indexReader, document);
+                                                    ApplyFacetValueHit(facetValue, facet, docId, parsedRange, currentState, fieldsCrc);
                                                 }
                                             }
                                         }
@@ -567,7 +562,7 @@ namespace Raven.Database.Queries
                 return fieldName.EndsWith("_Range") ? fieldName.Substring(0, fieldName.Length - "_Range".Length) : fieldName;
             }
 
-            private void ApplyFacetValueHit(FacetValue facetValue, Facet value, int docId, ParsedRange parsedRange, IndexReader indexReader, Document document)
+            private void ApplyFacetValueHit(FacetValue facetValue, Facet value, int docId, ParsedRange parsedRange, IndexSearcherHolder.IndexSearcherHoldingState state, uint fieldsCrc)
             {
                 facetValue.Hits++;
                 if (
@@ -589,83 +584,30 @@ namespace Raven.Database.Queries
                 }
 	            if (IndexQuery.IsDistinct)
 	            {
-					if(IndexQuery.FieldsToFetch.Length == 0)
-						throw new InvalidOperationException("Cannot process distinct facet query without specifying which fields to distinct upon.");
+	                if (IndexQuery.FieldsToFetch.Length == 0)
+	                    throw new InvalidOperationException("Cannot process distinct facet query without specifying which fields to distinct upon.");
 
-		            if (set.AlreadySeen == null)
-			            set.AlreadySeen = new HashSet<StringCollectionValue>();
-		            
-		            var fields = new List<string>();
-					foreach (var fieldName in IndexQuery.FieldsToFetch)
-		            {
-						foreach (var field in document.GetFields(fieldName))
-						{
-							if (field.StringValue == null)
-								continue;
-				            fields.Add(field.StringValue);
-			            }
-		            }
-		            if (fields.Count == 0)
-			            throw new InvalidOperationException("Cannot apply distinct facet on [" + string.Join(", ", IndexQuery.FieldsToFetch) +
-							"], did you forget to store them in the index? ");
+	                if (set.AlreadySeen == null)
+	                    set.AlreadySeen = new HashSet<IndexSearcherHolder.StringCollectionValue>();
 
-		            if (set.AlreadySeen.Add(new StringCollectionValue(fields)) == false)
-		            {
-			            facetValue.Hits--;// already seen, cancel this
-			            return;
-		            }
+                    var fields = state.GetFieldsValues(docId, fieldsCrc, IndexQuery.FieldsToFetch);
+	                
+	                if (set.AlreadySeen.Add(fields) == false)
+	                {
+	                    facetValue.Hits--; // already seen, cancel this
+	                    return;
+	                }
 	            }
                 set.Docs.Add(docId);
             }
 
             public class FacetValueState
             {
-	            public HashSet<StringCollectionValue> AlreadySeen; 
+	            public HashSet<IndexSearcherHolder.StringCollectionValue> AlreadySeen; 
                 public HashSet<int> Docs;
                 public Facet Facet;
                 public ParsedRange Range;
             }
-
-	        public class StringCollectionValue
-	        {
-	            private int _valuesAmount;
-		        
-		        private readonly int _hashCode;
-	            private uint _crc;
-		        public override bool Equals(object obj)
-		        {
-			        if (ReferenceEquals(null, obj)) return false;
-			        if (ReferenceEquals(this, obj)) return true;
-			        var other = obj as StringCollectionValue;
-			        if (other == null) return false;
-
-                    if (other._valuesAmount != _valuesAmount)
-				        return false;
-		            return _crc == other._crc;
-		        }
-
-		        public override int GetHashCode()
-		        {
-			        return _hashCode;
-		        }
-
-	           
-
-				public StringCollectionValue(List<string> values)
-				{                    
-				    
-                    _hashCode = values.Count;
-                    for (_valuesAmount = 0; _valuesAmount < values.Count; _valuesAmount++)
-                    {
-                        unchecked
-                        {
-                            _hashCode = _hashCode * 397 ^ values[_valuesAmount].GetHashCode();
-                        }
-                        var curValue = values[_valuesAmount];                        
-                        _crc = Crc.Value(curValue, _crc);                       
-                    }			                   
-		        }
-	        }
 
             private void UpdateFacetResults(Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
             {
