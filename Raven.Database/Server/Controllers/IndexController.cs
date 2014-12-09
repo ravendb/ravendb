@@ -399,7 +399,12 @@ namespace Raven.Database.Server.Controllers
                     keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, startsWith, sourceId, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
 						.ToList();
 				});
-
+			    var keyToSearch = GetQueryStringValue("contains");
+                if (!String.IsNullOrEmpty(keyToSearch))
+                    return GetMessageWithObject(new
+                    {
+                        Results = keys.Contains(keyToSearch)
+                    });
 				return GetMessageWithObject(new
 				{
 					keys.Count,

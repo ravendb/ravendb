@@ -338,6 +338,7 @@
     <TypeScriptCompile Include="App\commands\getStatusStorageOnDiskCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusStorageBreakdownCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingBatchStatsCommand.ts" />
+    <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
@@ -390,6 +391,7 @@
     <TypeScriptCompile Include="App\models\performanceTestRequest.ts" />
     <TypeScriptCompile Include="App\models\performanceTestResultWrapped.ts" />
     <TypeScriptCompile Include="App\models\indexMergeSuggestion.ts" />
+    <TypeScriptCompile Include="App\models\indexReplaceDocument.ts" />
     <Content Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
@@ -416,6 +418,7 @@
     <TypeScriptCompile Include="App\viewmodels\statusStorageCollections.ts" />
     <TypeScriptCompile Include="App\viewmodels\requests.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexing.ts" />
+    <TypeScriptCompile Include="App\viewmodels\replaceIndexDialog.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\adminSettings.html" />
@@ -425,6 +428,7 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\indexing.html" />
+    <Content Include="App\views\replaceIndexDialog.html" />
     <Content Include="App\views\statusStorageCollections.html" />
     <Content Include="App\views\statusStorageBreakdown.html" />
     <Content Include="App\views\statusStorageOnDisk.html" />
