@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -10,31 +10,41 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
-using Lucene.Net.Documents;
+using JetBrains.Annotations;
+using Mono.CSharp;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.MEF;
-using Raven.Client.Indexes;
+using Raven.Abstractions.Replication;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
-using Raven.Database.Linq;
-using Raven.Database.Linq.PrivateExtensions;
-using Raven.Database.Plugins;
 using Raven.Database.Queries;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Enum = System.Enum;
 
 namespace Raven.Database.Server.Controllers
 {
 	public class IndexController : RavenDbApiController
 	{
+		private readonly HttpRavenRequestFactory _httpRavenRequestFactory;
+
+		public IndexController()
+		{
+			_httpRavenRequestFactory = new HttpRavenRequestFactory
+			{
+				RequestTimeoutInMs = 5000 //TODO : check from where should this value be taken
+			};
+		}
+
 		[HttpGet]
 		[Route("indexes")]
 		[Route("databases/{databaseName}/indexes")]
@@ -74,6 +84,96 @@ namespace Raven.Database.Server.Controllers
 
                 return GetIndexQueryResult(index, cts.Token);
             }
+		}
+
+		[HttpPost]
+		[Route("indexes/replicate/{*id}")]
+		[Route("databases/{databaseName}/indexes/replicate/{*id}")]
+		public HttpResponseMessage IndexReplicate(string id)
+		{
+			if (id == null) throw new ArgumentNullException("id");
+
+			JsonDocument replicationDestinationsDocument;
+			try
+			{
+				replicationDestinationsDocument = Database.Documents.Get("Raven/Replication/Destinations", null);
+			}
+			catch (Exception e)
+			{
+				const string ErrorMessage = "Something very wrong has happened, was unable to retrieve replication destinations.";
+				Log.ErrorException(ErrorMessage,e);
+				return GetMessageWithObject(new { Message = ErrorMessage + "Check server logs for more details." }, HttpStatusCode.InternalServerError);
+			}
+
+			if (replicationDestinationsDocument == null)
+			{
+				return GetMessageWithObject(new { Message = "Replication destinations not found. Perhaps no replication is configured? Nothing to do in this case..." });
+			}
+
+			var replicationDestinations = 
+					replicationDestinationsDocument.DataAsJson["Destinations"]
+												   .JsonDeserialization<HashSet<ReplicationDestination>>();
+			
+			replicationDestinations.RemoveWhere(dest => dest.SkipIndexReplication);
+			if (replicationDestinations.Count == 0) //precaution
+			{
+				return GetMessageWithObject(new { Message = @"Replication document found, but no destinations configured for index replication. 
+																Maybe all replication destinations have SkipIndexReplication flag equals to true?. 
+																Nothing to do in this case..." });
+			}
+
+			if (id.EndsWith("/")) //since id is part of the url, perhaps a trailing forward slash appears there
+				id = id.Substring(0, id.Length - 1);
+			id = HttpUtility.UrlDecode(id);
+
+			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(id);
+			if (indexDefinition == null)
+			{
+				return GetMessageWithObject(new
+				{
+					Message = string.Format("Index with name: {0} not found. Cannot proceed with replication...", id)
+				}, HttpStatusCode.NotFound);
+			}
+
+			var serializedIndexDefinition = RavenJObject.FromObject(indexDefinition);
+
+			var failedDestinations = new ConcurrentBag<string>();
+			Parallel.ForEach(replicationDestinations, destination =>
+			{
+				var connectionOptions = new RavenConnectionStringOptions
+				{
+					ApiKey = destination.ApiKey,
+					Url = destination.Url,
+					DefaultDatabase = destination.Database					
+				};
+
+				if (!String.IsNullOrWhiteSpace(destination.Username) &&
+				    !String.IsNullOrWhiteSpace(destination.Password) &&
+					!String.IsNullOrWhiteSpace(destination.Domain))
+				{
+					connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain);
+				}
+
+				var operationUrl = string.Format("//{0}/databases/{1}/indexes/{2}?definition=yes", destination.Url, destination.Database, Uri.EscapeUriString(id));				
+				var replicationRequest = _httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
+				replicationRequest.Write(serializedIndexDefinition);
+
+				try
+				{
+					replicationRequest.ExecuteRequest();
+				}
+				catch (Exception e)
+				{
+					Log.ErrorException("failed to replicate index to: " + destination.Url, e);
+					failedDestinations.Add(destination.Url);
+				}
+			});
+
+			return GetMessageWithObject(new
+			{
+				ReplicatedDestinationCount = (replicationDestinations.Count - failedDestinations.Count),
+				FailedDestinationUrls = failedDestinations
+			});
 		}
 
 		[HttpPut]
