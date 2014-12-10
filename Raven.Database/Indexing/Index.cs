@@ -185,7 +185,7 @@ namespace Raven.Database.Indexing
 		}
 
 		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, int loadDocumentCount, long loadDocumentDurationInMs,
-			long writingDocumentsToLuceneDurationMs, long linqExecutionDurationMs, long flushToDiskDurationMs)
+			long writingDocumentsToLuceneDurationMs, long linqExecutionDurationMs, long flushToDiskDurationMs, long reduceInMapLinqExecutionDurationMs)
 		{
 			
 
@@ -205,6 +205,7 @@ namespace Raven.Database.Indexing
 				stats.WritingDocumentsToLuceneDurationMs = writingDocumentsToLuceneDurationMs;
 				stats.LinqExecutionDurationMs = linqExecutionDurationMs;
 				stats.FlushToDiskDurationMs = flushToDiskDurationMs;
+				stats.ReduceInMapLinqExecutionDurationMs = reduceInMapLinqExecutionDurationMs;
 
 				AddIndexingPerformanceStats(stats);
 			}
@@ -810,10 +811,10 @@ namespace Raven.Database.Indexing
 
 		// we don't care about tracking map/reduce stats here, since it is merely
 		// an optimization step
-		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func)
+		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func, out Stopwatch reduceDuringMapLinqExecution)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
+			var robustEnumerator = new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
 			{
 				BeforeMoveNext = () => { }, // don't care
 				CancelMoveNext = () => { }, // don't care
@@ -830,7 +831,11 @@ namespace Raven.Database.Indexing
 										TryGetDocKey(o)),
 						exception);
 				}
-			}.RobustEnumeration(input, func);
+			};
+
+			reduceDuringMapLinqExecution = robustEnumerator.MoveNextDutation;
+
+			return robustEnumerator.RobustEnumeration(input, func);
 		}
 
 		public static string TryGetDocKey(object current)
