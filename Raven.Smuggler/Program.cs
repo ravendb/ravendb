@@ -123,6 +123,7 @@ namespace Raven.Smuggler
 			    {"batch-size:", "The batch size for requests", s => databaseOptions.BatchSize = int.Parse(s)},
 				{"chunk-size:", "The number of documents to import before new connection will be opened", s => databaseOptions.ChunkSize = int.Parse(s)},
                 {"continuation-file:", "Activates the usage of a continuation file in case of unreliable or huge imports", s => databaseOptions.ContinuationFile = s },
+                {"skip-conflicted", "The database will issue and error when conflicted documents are put. The default is to alert the user, this allows to skip them to continue.", _ => databaseOptions.SkipConflicted = true },
 			    {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => databaseOptions.Source.DefaultDatabase = value},
 			    {"d2|database2:", "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => databaseOptions.Destination.DefaultDatabase = value},
                 {"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _ => databaseOptions.WaitForIndexing = true},
@@ -215,52 +216,63 @@ namespace Raven.Smuggler
                 return;
             }
 
-
-            switch (this.mode)
+            try
             {
-                case SmugglerMode.Database:
-                    {
-                        try
+                switch (this.mode)
+                {
+                    case SmugglerMode.Database:
                         {
-                            databaseOptionSet.Parse(args);
+                            try
+                            {
+                                databaseOptionSet.Parse(args);
+                            }
+                            catch (Exception e)
+                            {
+                                PrintUsageAndExit(e);
+                            }
+
+                            options.Source.Url = url;
+                            options.BackupPath = args[2];
+
+                            if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
+                                smugglerApi.Options.Incremental = true;
+
+                            ValidateDatabaseParameters(smugglerApi, action);
+                            var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
+                            await databaseDispatcher.Execute(action);
                         }
-                        catch (Exception e)
+                        break;
+                    case SmugglerMode.Filesystem:
                         {
-                            PrintUsageAndExit(e);
+                            try
+                            {
+                                filesystemOptionSet.Parse(args);
+                            }
+                            catch (Exception e)
+                            {
+                                PrintUsageAndExit(e);
+                            }
+
+                            filesOptions.Source.Url = url;
+                            filesOptions.BackupPath = args[2];
+
+                            if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
+                                smugglerFilesApi.Options.Incremental = true;
+
+                            var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
+                            await filesDispatcher.Execute(action);
                         }
-
-                        options.Source.Url = url;
-                        options.BackupPath = args[2];
-
-                        if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
-                            smugglerApi.Options.Incremental = true;
-
-                        ValidateDatabaseParameters(smugglerApi, action);
-                        var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
-                        await databaseDispatcher.Execute(action);
-                    }
-                    break;
-                case SmugglerMode.Filesystem:
-                    {
-                        try
-                        {
-                            filesystemOptionSet.Parse(args);
-                        }
-                        catch (Exception e)
-                        {
-                            PrintUsageAndExit(e);
-                        }
-
-                        filesOptions.Source.Url = url;
-                        filesOptions.BackupPath = args[2];
-
-                        if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
-                            smugglerFilesApi.Options.Incremental = true;
-
-                        var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
-                        await filesDispatcher.Execute(action);
-                    }
-                    break;
+                        break;
+                }
+            }
+            catch (Exception e)
+            {
+                if (e is AggregateException)
+                    Console.WriteLine(e.SimplifyError());
+                else
+                    Console.WriteLine(e.Message);
+			
+                Environment.Exit(-1);
             }
         }
 
@@ -280,9 +292,13 @@ namespace Raven.Smuggler
             }
         }
 
-		private void PrintUsageAndExit(Exception e)
+        private void PrintUsageAndExit(Exception e)
 		{
-			Console.WriteLine(e.Message);
+            if (e is AggregateException)
+                Console.WriteLine(e.SimplifyError());
+            else
+                Console.WriteLine(e.Message);
+			
 			PrintUsageAndExit(-1);
 		}
 

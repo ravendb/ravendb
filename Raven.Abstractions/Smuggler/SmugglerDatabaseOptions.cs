@@ -196,6 +196,8 @@ namespace Raven.Abstractions.Smuggler
         public bool WaitForIndexing { get; set; }
 
 		public bool StripReplicationInformation { get; set; }
+
+        public bool SkipConflicted { get; set; }
     }
 
  

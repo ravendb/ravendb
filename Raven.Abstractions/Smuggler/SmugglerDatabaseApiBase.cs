@@ -537,7 +537,7 @@ namespace Raven.Abstractions.Smuggler
 					{
 						stream = File.OpenRead(importOptions.FromFile);
 						ownStream = true;
-				}
+				    }
 					await ImportData(importOptions, stream);
 				}
 				finally
@@ -870,89 +870,99 @@ namespace Raven.Abstractions.Smuggler
             var state = new OperationState
             {
                 FilePath = Options.ContinuationFile,
-                LastAttachmentsEtag = Options.StartAttachmentsEtag,
                 LastDocsEtag = Options.StartDocsEtag,
-                LastDocDeleteEtag = Options.StartDocsDeletionEtag,
-                LastAttachmentsDeleteEtag = Options.StartAttachmentsDeletionEtag
             };
 
             if ( Options.UseContinuationFile )
             {
                 ReadLastEtagsFromFile(state, state.FilePath);
-            }                
-           
+            }
+
+            int skippedDocuments = 0;
+            long skippedDocumentsSize = 0;
+
             Etag tempLastEtag = Etag.Empty;
 
-            try
-            {
-                while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-			    {
-                    Options.CancelToken.Token.ThrowIfCancellationRequested();
+            while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+			{
+                Options.CancelToken.Token.ThrowIfCancellationRequested();
 
-				    var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
-				    var size = DocumentHelpers.GetRoughSize(document);
-				    if (size > 1024 * 1024)
-				    {
-					    Console.WriteLine("Large document warning: {0:#,#.##;;0} kb - {1}",
-									      (double)size / 1024,
-									      document["@metadata"].Value<string>("@id"));
-				    }
-                    if ((Options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
-					    continue;
-                    if (Options.MatchFilters(document) == false)
-					    continue;
+				var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+				var size = DocumentHelpers.GetRoughSize(document);
+				if (size > 1024 * 1024)
+				{
+					Console.WriteLine("Large document warning: {0:#,#.##;;0} kb - {1}",
+									    (double)size / 1024,
+									    document["@metadata"].Value<string>("@id"));
+				}
+                if ((Options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
+					continue;
+                if (Options.MatchFilters(document) == false)
+					continue;
 
-                    if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
-					    continue;
+                if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
+					continue;
 
-                    if (!string.IsNullOrEmpty(Options.TransformScript))
-                        document = await Operations.TransformDocument(document, Options.TransformScript);
+                if (!string.IsNullOrEmpty(Options.TransformScript))
+                    document = await Operations.TransformDocument(document, Options.TransformScript);
 
-				    if (Options.StripReplicationInformation) 
-					    document["@metadata"] = Operations.StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
+                // If document is null after a transform we skip it. 
+                if (document == null)
+                    continue;
 
-				    if (document == null)
-					    continue;
+                var metadata = document["@metadata"] as RavenJObject;
+                if ( metadata != null )
+                {
+                    if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
+                        continue;
 
-                    if ( Options.UseContinuationFile )
+                    if (Options.StripReplicationInformation)
+                        document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
+
+                }
+
+                if ( Options.UseContinuationFile )
+                {
+                    tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+                    if (tempLastEtag.CompareTo(state.LastDocsEtag) < 0) // tempLastEtag < lastEtag therefore we are skipping.
                     {
-                        tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
-                        if (tempLastEtag.CompareTo(state.LastDocsEtag) < 0) // tempLastEtag < lastEtag therefore we are skipping.
-                            continue;
+                        skippedDocuments++;
+                        skippedDocumentsSize += size;
+                        continue;
+                    }     
+                }
+
+				await Operations.PutDocument(document, (int)size);
+
+				count++;
+
+                if (count % Options.BatchSize == 0)
+				{                   
+                    if (Options.UseContinuationFile)
+                    {
+                        if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
+                            state.LastDocsEtag = tempLastEtag;
+
+                        WriteLastEtagsToFile(state, state.FilePath);
                     }
 
-				    await Operations.PutDocument(document, (int)size);
+                    Operations.ShowProgress("Read {0:#,#;;0} documents", count + skippedDocuments);
+				}
+			}
 
-				    count++;
+			await Operations.PutDocument(null, -1); // force flush    
 
-                    if (count % Options.BatchSize == 0)
-				    {
-					    Operations.ShowProgress("Read {0:#,#;;0} documents", count);
-
-                        if (Options.UseContinuationFile)
-                        {
-                            if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
-                                state.LastDocsEtag = tempLastEtag;
-
-                            WriteLastEtagsToFile(state, state.FilePath);
-                        }
-				    }
-			    }
-
-			    await Operations.PutDocument(null, -1); // force flush    
-
-			    return count;
-            }
-            finally
+            if (Options.UseContinuationFile)
             {
-                if (Options.UseContinuationFile)
-                {
-                    if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
-                        state.LastDocsEtag = tempLastEtag;
+                if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
+                    state.LastDocsEtag = tempLastEtag;
 
-                    WriteLastEtagsToFile(state, state.FilePath);
-                }
+                WriteLastEtagsToFile(state, state.FilePath);
+
+                Operations.ShowProgress("Documents skipped by continuation {0:#,#;;0} - approx. {1:#,#.##;;0} Mb.", skippedDocuments, (double)skippedDocumentsSize / 1024 / 1024);
             }
+
+			return count;
 		}
 
 		private async Task<int> ImportIndexes(JsonReader jsonReader)
