@@ -16,6 +16,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.Controllers
@@ -25,8 +26,8 @@ namespace Raven.Database.Server.Controllers
 		private static ThreadLocal<bool> recursive = new ThreadLocal<bool>(() => false);
 
 		[HttpPost]
-		[Route("multi_get")]
-		[Route("databases/{databaseName}/multi_get")]
+		[RavenRoute("multi_get")]
+		[RavenRoute("databases/{databaseName}/multi_get")]
 		public async Task<HttpResponseMessage> MultiGet()
 		{
 			if (recursive.Value)

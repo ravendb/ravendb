@@ -6,8 +6,10 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using System.Web.UI;
 using Microsoft.Owin;
 using Raven.Abstractions.Connection;
@@ -114,7 +116,7 @@ namespace Owin
 
 			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
 			cfg.Filters.Add(new RavenExceptionFilterAttribute());
-			cfg.MapHttpAttributeRoutes();
+			cfg.MapHttpAttributeRoutes(new RavenInlineConstraintResolver());
 
 			cfg.Routes.MapHttpRoute(
 				"RavenFs", "fs/{controller}/{action}",
@@ -133,10 +135,9 @@ namespace Owin
 
 			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
 			cfg.EnsureInitialized();
+
 			return cfg;
 		}
-
-        
 
 		private class MyAssemblyResolver : IAssembliesResolver
 		{

@@ -17,6 +17,7 @@ using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Server.Security;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
@@ -29,8 +30,8 @@ namespace Raven.Database.Server.Controllers
     public class BulkInsertController : RavenDbApiController
     {
         [HttpPost]
-        [Route("bulkInsert")]
-        [Route("databases/{databaseName}/bulkInsert")]
+        [RavenRoute("bulkInsert")]
+        [RavenRoute("databases/{databaseName}/bulkInsert")]
         public async Task<HttpResponseMessage> BulkInsertPost()
         {
             if (string.IsNullOrEmpty(GetQueryStringValue("no-op")) == false)

@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Commercial;
 using Raven.Database.Extensions;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -17,7 +18,7 @@ namespace Raven.Database.Server.Controllers.Admin
 	public class AdminDatabasesController : BaseAdminController
 	{
 		[HttpGet]
-		[Route("admin/databases/{*id}")]
+		[RavenRoute("admin/databases/{*id}")]
 		public HttpResponseMessage DatabasesGet(string id)
 		{
 			if (IsSystemDatabase(id))
@@ -44,7 +45,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPut]
-		[Route("admin/databases/{*id}")]
+		[RavenRoute("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasesPut(string id)
 		{
 			if (IsSystemDatabase(id))
@@ -90,7 +91,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 
 		[HttpDelete]
-		[Route("admin/databases/{*id}")]
+		[RavenRoute("admin/databases/{*id}")]
 		public HttpResponseMessage DatabasesDelete(string id)
 		{
 			bool result;
@@ -106,7 +107,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpDelete]
-		[Route("admin/databases/batch-delete")]
+		[RavenRoute("admin/databases/batch-delete")]
 		public HttpResponseMessage DatabasesBatchDelete()
 		{
 			string[] databasesToDelete = GetQueryStringValues("ids");
@@ -133,7 +134,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPost]
-		[Route("admin/databases/{*id}")]
+		[RavenRoute("admin/databases/{*id}")]
 		public HttpResponseMessage DatabaseToggleDisable(string id, bool isSettingDisabled)
 		{
 			var message = ToggeleDatabaseDisabled(id, isSettingDisabled);
@@ -146,7 +147,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
         [HttpPost]
-        [Route("admin/databases/toggle-indexing/{*id}")]
+        [RavenRoute("admin/databases/toggle-indexing/{*id}")]
         public HttpResponseMessage DatabaseToggleIndexingDisable(string id, bool isSettingIndexingDisabled)
         {
             var message = ToggeleDatabaseIndexingDisabled(id, isSettingIndexingDisabled);
@@ -159,7 +160,7 @@ namespace Raven.Database.Server.Controllers.Admin
         }
 
         [HttpPost]
-        [Route("admin/databases/toggle-reject-clients/{*id}")]
+        [RavenRoute("admin/databases/toggle-reject-clients/{*id}")]
         public HttpResponseMessage DatabaseToggleRejectClientsEnabled(string id, bool isRejectClientsEnabled)
         {
             var message = ToggleRejectClientsEnabled(id, isRejectClientsEnabled);
@@ -172,7 +173,7 @@ namespace Raven.Database.Server.Controllers.Admin
         }
         
 		[HttpPost]
-		[Route("admin/databases/batch-toggle-disable")]
+		[RavenRoute("admin/databases/batch-toggle-disable")]
 		public HttpResponseMessage DatabaseBatchToggleDisable(bool isSettingDisabled)
 		{
 			string[] databasesToToggle = GetQueryStringValues("ids");

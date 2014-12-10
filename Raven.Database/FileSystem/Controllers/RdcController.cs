@@ -16,6 +16,7 @@ using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
 using Raven.Database.FileSystem.Util;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
@@ -24,7 +25,7 @@ namespace Raven.Database.FileSystem.Controllers
 		private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/rdc/Signatures/{*id}")]
+        [RavenRoute("fs/{fileSystemName}/rdc/Signatures/{*id}")]
 		public HttpResponseMessage Signatures(string id)
 		{
             var canonicalFilename = FileHeader.Canonize(id);
@@ -40,7 +41,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/rdc/Stats")]
+        [RavenRoute("fs/{fileSystemName}/rdc/Stats")]
 		public HttpResponseMessage Stats()
 		{
 			using (var rdcVersionChecker = new RdcVersionChecker())
@@ -59,7 +60,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/rdc/Manifest/{*id}")]
+        [RavenRoute("fs/{fileSystemName}/rdc/Manifest/{*id}")]
         public async Task<HttpResponseMessage> Manifest(string id)
 		{
             var canonicalFilename = FileHeader.Canonize(id);

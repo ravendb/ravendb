@@ -15,6 +15,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Database.Extensions;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -26,7 +27,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 
         [HttpGet]
-        [Route("fs/{fileSystemName}/streams/files")]
+        [RavenRoute("fs/{fileSystemName}/streams/files")]
         public HttpResponseMessage Get()
         {
             var etag = GetEtagFromQueryString();
