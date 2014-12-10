@@ -282,7 +282,7 @@ namespace Raven.Database.Indexing
 				index =>
 				{
 					HandleIndexingFor(index, lastEtag, lastModified);
-					var performance = index.Batch.GetIndexingPerformance();
+					var performance = index.Batch.IndexingPerformance;
 
 					if (performance != null)
 						indexingBatchInfo.PerformanceStats.TryAdd(index.Index.PublicName, performance);
@@ -332,10 +332,10 @@ namespace Raven.Database.Indexing
 		        }
 		        finally
 		        {
-			        var performance = indexingBatchForIndex.Batch.GetIndexingPerformance();
-
 			        if (batchInfo != null)
-			        {
+					{
+						var performance = indexingBatchForIndex.Batch.IndexingPerformance;
+
 				        if (performance != null)
 					        batchInfo.PerformanceStats.TryAdd(indexingBatchForIndex.Index.PublicName, performance);
 
@@ -351,7 +351,19 @@ namespace Raven.Database.Indexing
 
 			try
 			{
-				transactionalStorage.Batch(actions => IndexDocuments(actions, batchForIndex));
+				var commitExecution = new Stopwatch();
+
+				transactionalStorage.Batch(actions =>
+				{
+					actions.BeforeStorageCommit += commitExecution.Start;
+					actions.AfterStorageCommit += commitExecution.Stop;
+
+					IndexDocuments(actions, batchForIndex);
+				});
+
+				var performance = batchForIndex.Batch.IndexingPerformance;
+				if (performance != null)
+					performance.StorageCommitDurationMs = commitExecution.ElapsedMilliseconds;
 			}
 			catch (Exception e)
 			{

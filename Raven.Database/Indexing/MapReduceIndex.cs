@@ -85,8 +85,7 @@ namespace Raven.Database.Indexing
 			var count = 0;
 			var sourceCount = 0;
 			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
-			var indexPerfStats = RecordCurrentBatch("Current Map", batch.Docs.Count);
-			batch.SetIndexingPerformance(indexPerfStats);
+			batch.IndexingPerformance = RecordCurrentBatch("Current Map", batch.Docs.Count);
 
 			var documentsWrapped = batch.Docs.Select(doc =>
 			{
@@ -125,7 +124,7 @@ namespace Raven.Database.Indexing
 						var currentDocumentResults = new List<object>();
 						string currentKey = null;
 						bool skipDocument = false;
-						var reduceInMapLinqExecution = new Stopwatch();
+						Stopwatch reduceInMapLinqExecution;
 
 						foreach (var currentDoc in mapResults)
 						{

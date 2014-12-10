@@ -99,6 +99,7 @@ namespace Raven.Abstractions.Data
 	    public long LinqExecutionDurationMs { get; set; }
 		public long ReduceInMapLinqExecutionDurationMs { get; set; }
 	    public long FlushToDiskDurationMs { get; set; }
+		public long StorageCommitDurationMs { get; set; }
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
 
 	    public override bool Equals(object obj)
@@ -111,7 +112,7 @@ namespace Raven.Abstractions.Data
 
 		protected bool Equals(IndexingPerformanceStats other)
 		{
-			return string.Equals(Operation, other.Operation) && ItemsCount == other.ItemsCount && InputCount == other.InputCount && OutputCount == other.OutputCount && Started.Equals(other.Started) && Completed.Equals(other.Completed) && Duration.Equals(other.Duration) && LoadDocumentCount == other.LoadDocumentCount && LoadDocumentDurationMs == other.LoadDocumentDurationMs && WritingDocumentsToLuceneDurationMs == other.WritingDocumentsToLuceneDurationMs && LinqExecutionDurationMs == other.LinqExecutionDurationMs && ReduceInMapLinqExecutionDurationMs == other.ReduceInMapLinqExecutionDurationMs && FlushToDiskDurationMs == other.FlushToDiskDurationMs && WaitingTimeSinceLastBatchCompleted.Equals(other.WaitingTimeSinceLastBatchCompleted);
+			return string.Equals(Operation, other.Operation) && ItemsCount == other.ItemsCount && InputCount == other.InputCount && OutputCount == other.OutputCount && Started.Equals(other.Started) && Completed.Equals(other.Completed) && Duration.Equals(other.Duration) && LoadDocumentCount == other.LoadDocumentCount && LoadDocumentDurationMs == other.LoadDocumentDurationMs && WritingDocumentsToLuceneDurationMs == other.WritingDocumentsToLuceneDurationMs && LinqExecutionDurationMs == other.LinqExecutionDurationMs && ReduceInMapLinqExecutionDurationMs == other.ReduceInMapLinqExecutionDurationMs && FlushToDiskDurationMs == other.FlushToDiskDurationMs && StorageCommitDurationMs == other.StorageCommitDurationMs && WaitingTimeSinceLastBatchCompleted.Equals(other.WaitingTimeSinceLastBatchCompleted);
 		}
 
 		public override int GetHashCode()
@@ -131,6 +132,7 @@ namespace Raven.Abstractions.Data
 				hashCode = (hashCode * 397) ^ LinqExecutionDurationMs.GetHashCode();
 				hashCode = (hashCode * 397) ^ ReduceInMapLinqExecutionDurationMs.GetHashCode();
 				hashCode = (hashCode * 397) ^ FlushToDiskDurationMs.GetHashCode();
+				hashCode = (hashCode * 397) ^ StorageCommitDurationMs.GetHashCode();
 				hashCode = (hashCode * 397) ^ WaitingTimeSinceLastBatchCompleted.GetHashCode();
 				return hashCode;
 			}

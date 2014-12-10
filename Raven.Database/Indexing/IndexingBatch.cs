@@ -1,14 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 
 namespace Raven.Database.Indexing
 {
 	public class IndexingBatch
 	{
-		private IndexingPerformanceStats indexingPerformanceStats;
-
 		public IndexingBatch(Etag highestEtagBeforeFiltering)
 		{
 			HighestEtagBeforeFiltering = highestEtagBeforeFiltering;
@@ -22,16 +19,7 @@ namespace Raven.Database.Indexing
 		public readonly List<bool> SkipDeleteFromIndex;
 		public DateTime? DateTime;
 		public readonly Etag HighestEtagBeforeFiltering;
-
-		public void SetIndexingPerformance(IndexingPerformanceStats stats)
-		{
-			indexingPerformanceStats = stats;
-		}
-
-		public IndexingPerformanceStats GetIndexingPerformance()
-		{
-			return indexingPerformanceStats;
-		}
+		public IndexingPerformanceStats IndexingPerformance;
 
 		public void Add(JsonDocument doc, object asJson, bool skipDeleteFromIndex)
 		{

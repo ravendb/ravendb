@@ -58,9 +58,8 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-					var indexingPerfStats = RecordCurrentBatch("Current", batch.Docs.Count);
-					batch.SetIndexingPerformance(indexingPerfStats);
-
+					batch.IndexingPerformance = RecordCurrentBatch("Current", batch.Docs.Count);
+					
 					var docIdTerm = new Term(Constants.DocumentIdFieldName);
 					var documentsWrapped = batch.Docs.Select((doc, i) =>
 					{
