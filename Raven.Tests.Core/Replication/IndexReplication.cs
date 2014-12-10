@@ -131,7 +131,7 @@ namespace Raven.Tests.Core.Replication
 		}
 
 		[Fact]
-		public void ExecuteIndex_should_replicate_indexes()
+		public void ExecuteIndex_should_replicate_indexes_by_default()
 		{
 			using (var sourceServer = GetNewServer(8077))
 			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer))
@@ -153,6 +153,34 @@ namespace Raven.Tests.Core.Replication
 			
 				var indexStatsAfterReplication = destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
 				Assert.True(indexStatsAfterReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
+			}
+		}
+
+		[Fact]
+		public void ExecuteIndex_should_not_replicate_indexes_if_convention_flag_is_not_set()
+		{
+			using (var sourceServer = GetNewServer(8077))
+			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer))
+			using (var destinationServer = GetNewServer(8078))
+			using (var destination = NewRemoteDocumentStore(ravenDbServer: destinationServer))
+			{
+				CreateDatabaseWithReplication(source, "testDB");
+				CreateDatabaseWithReplication(destination, "testDB");
+
+				SetupReplication(source, "testDB", destination);
+
+				var userIndex = new UserIndex();
+
+				var indexStatsBeforeReplication = destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
+				Assert.False(indexStatsBeforeReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
+
+				source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+				userIndex.Execute(source.DatabaseCommands.ForDatabase("testDB"), source.Conventions);
+
+				//since IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None, creation
+				//of index on source should not trigger replication to destination
+				var indexStatsAfterReplication = destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
+				Assert.False(indexStatsAfterReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
 			}
 		}
 
