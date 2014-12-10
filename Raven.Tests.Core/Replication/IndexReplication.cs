@@ -10,6 +10,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Replication;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
@@ -100,8 +101,10 @@ namespace Raven.Tests.Core.Replication
 				CreateDatabaseWithReplication(destination2, "testDB");
 				CreateDatabaseWithReplication(destination3, "testDB");
 
-// ReSharper disable once AccessToDisposedClosure
-				SetupReplication(source, "testDB",store => store == destination2, destination1, destination2, destination3);
+				//turn-off automatic index replication - precaution
+				source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+				// ReSharper disable once AccessToDisposedClosure
+				SetupReplication(source, "testDB", store => store == destination2, destination1, destination2, destination3);
 			
 				//make sure not to replicate the index automatically
 				var userIndex = new UserIndex();
@@ -117,12 +120,39 @@ namespace Raven.Tests.Core.Replication
 				var indexStatsAfterReplication = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
 				Assert.True(indexStatsAfterReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
 
+				//this one should not have replicated index -> because of SkipIndexReplication = true in ReplicationDocument of source
+				indexStatsAfterReplication = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
+				Assert.False(indexStatsAfterReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
+
 				indexStatsAfterReplication = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
 				Assert.True(indexStatsAfterReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
 
-				//this one should not have replicated index -> because of SkipIndexReplication = true
-				indexStatsAfterReplication = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
-				Assert.False(indexStatsAfterReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
+			}
+		}
+
+		[Fact]
+		public void ExecuteIndex_should_replicate_indexes()
+		{
+			using (var sourceServer = GetNewServer(8077))
+			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer))
+			using (var destinationServer = GetNewServer(8078))
+			using (var destination = NewRemoteDocumentStore(ravenDbServer: destinationServer))
+			{
+				CreateDatabaseWithReplication(source, "testDB");
+				CreateDatabaseWithReplication(destination, "testDB");
+				
+				SetupReplication(source, "testDB", destination);
+
+				var userIndex = new UserIndex();
+
+				var indexStatsBeforeReplication = destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
+				Assert.False(indexStatsBeforeReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
+				
+				//this should fire http request to index replication endpoint -> so the index is replicated
+				userIndex.Execute(source.DatabaseCommands.ForDatabase("testDB"),source.Conventions);
+			
+				var indexStatsAfterReplication = destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
+				Assert.True(indexStatsAfterReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
 			}
 		}
 
@@ -138,6 +168,8 @@ namespace Raven.Tests.Core.Replication
 				CreateDatabaseWithReplication(source, "testDB");
 				CreateDatabaseWithReplication(destination, "testDB");
 
+				//turn-off automatic index replication - precaution
+				source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
 				SetupReplication(source, "testDB", destination);
 
 				//make sure not to replicate the index automatically
@@ -154,7 +186,7 @@ namespace Raven.Tests.Core.Replication
 				});
 				replicationRequest.ExecuteRequest();
 
-				var indexStatsAfterReplication = destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
+				var indexStatsAfterReplication = destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;				
 				Assert.True(indexStatsAfterReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
 			}
 		}
