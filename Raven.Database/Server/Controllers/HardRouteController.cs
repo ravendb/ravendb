@@ -6,18 +6,20 @@ using System.Net.Http.Headers;
 using System.Security.Policy;
 using System.Web.Http;
 
+using Raven.Database.Server.WebApi.Attributes;
+
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
 	public class HardRouteController : RavenDbApiController
 	{
-		[HttpGet][Route("favicon.ico")]
+		[HttpGet][RavenRoute("favicon.ico")]
 		public HttpResponseMessage FaviconGet()
 		{
 			return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Database.Server.WebUI", null, "favicon.ico");
 		}
 
-		[HttpGet][Route("clientaccesspolicy.xml")]
+		[HttpGet][RavenRoute("clientaccesspolicy.xml")]
 		public HttpResponseMessage ClientaccessPolicyGet()
 		{
 			var msg = new HttpResponseMessage
@@ -45,7 +47,7 @@ namespace Raven.Database.Server.Controllers
 		public const string RootPath = "studio/index.html";
 
 		[HttpGet]
-		[Route("")]
+		[RavenRoute("")]
 		public HttpResponseMessage RavenRoot()
 		{
 			var location = DatabasesLandlord.SystemConfiguration.VirtualDirectory != "/" 

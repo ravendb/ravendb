@@ -36,8 +36,8 @@ namespace Raven.Database.Server.Controllers
 	public class IndexController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("indexes")]
-		[Route("databases/{databaseName}/indexes")]
+		[RavenRoute("indexes")]
+		[RavenRoute("databases/{databaseName}/indexes")]
 		public HttpResponseMessage IndexesGet()
 		{
 			var namesOnlyString = GetQueryStringValue("namesOnly");
@@ -52,8 +52,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexGet(string id)
 		{
             using (var cts = new CancellationTokenSource())
@@ -77,8 +77,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPut]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public async Task<HttpResponseMessage> IndexPut(string id)
 		{
 			var index = id;
@@ -115,8 +115,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpHead]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexHead(string id)
 		{
 			var index = id;
@@ -126,8 +126,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public async Task<HttpResponseMessage >IndexPost(string id)
 		{
 			var index = id;
@@ -163,8 +163,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpReset]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexReset(string id)
 		{
 			var index = id;
@@ -173,8 +173,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpDelete]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexDelete(string id)
 		{
 			var index = id;
@@ -183,8 +183,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("indexes/set-priority/{*id}")]
-		[Route("databases/{databaseName}/indexes/set-priority/{*id}")]
+		[RavenRoute("indexes/set-priority/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/set-priority/{*id}")]
 		public HttpResponseMessage SetPriority(string id)
 		{
 			var index = id;
@@ -205,8 +205,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-        [Route("c-sharp-index-definition/{*fullIndexName}")]
-		[Route("databases/{databaseName}/c-sharp-index-definition/{*fullIndexName}")]
+        [RavenRoute("c-sharp-index-definition/{*fullIndexName}")]
+		[RavenRoute("databases/{databaseName}/c-sharp-index-definition/{*fullIndexName}")]
 		public HttpResponseMessage GenerateCSharpIndexDefinition(string fullIndexName)
 		{
 			var indexDefinition = Database.Indexes.GetIndexDefinition(fullIndexName);
@@ -299,7 +299,12 @@ namespace Raven.Database.Server.Controllers
                     keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, startsWith, sourceId, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
 						.ToList();
 				});
-
+			    var keyToSearch = GetQueryStringValue("contains");
+                if (!String.IsNullOrEmpty(keyToSearch))
+                    return GetMessageWithObject(new
+                    {
+                        Results = keys.Contains(keyToSearch)
+                    });
 				return GetMessageWithObject(new
 				{
 					keys.Count,

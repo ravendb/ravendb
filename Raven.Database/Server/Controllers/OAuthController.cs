@@ -10,6 +10,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Server.Security.OAuth;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -20,7 +21,7 @@ namespace Raven.Database.Server.Controllers
 		private const int MaxOAuthContentLength = 1500;
 		private static readonly TimeSpan MaxChallengeAge = TimeSpan.FromMinutes(10);
 
-		[HttpPost][Route("OAuth/API-Key")]
+		[HttpPost][RavenRoute("OAuth/API-Key")]
 		public async Task<HttpResponseMessage> ApiKeyPost()
 		{
 			if (InnerRequest.Content.Headers.ContentLength > MaxOAuthContentLength)

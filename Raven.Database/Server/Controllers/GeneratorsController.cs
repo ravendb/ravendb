@@ -9,13 +9,15 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 
+using Raven.Database.Server.WebApi.Attributes;
+
 namespace Raven.Database.Server.Controllers
 {
     public class GeneratorsController : RavenDbApiController
     {
         [HttpGet]
-        [Route("generate/code")]
-        [Route("databases/{databaseName}/generate/code")]
+        [RavenRoute("generate/code")]
+        [RavenRoute("databases/{databaseName}/generate/code")]
         public HttpResponseMessage GenerateCodeFromDocument([FromUri] string doc, [FromUri] string lang = "csharp")
         {
             var msg = GetEmptyMessage();

@@ -134,12 +134,12 @@ namespace Raven.Smuggler
                 {"h|?|help", v => PrintUsageAndExit(0)},
                 {"timeout:", "The timeout to use for requests", s => databaseOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)) },
                 {"incremental", "States usage of incremental operations", _ => databaseOptions.Incremental = true },
-			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential)databaseOptions.Source.Credentials).UserName = value },
-			    {"u2|user2|username2:", "The username to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)databaseOptions.Destination.Credentials).UserName = value },
-			    {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => ((NetworkCredential) databaseOptions.Source.Credentials).Password = value },
-			    {"p2|pass2|password2:", "The password to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)databaseOptions.Destination.Credentials).Password = value },
-			    {"domain:", "The domain to use when the database requires the client to authenticate.", value => ((NetworkCredential)databaseOptions.Source.Credentials).Domain = value },
-			    {"domain2:", "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)databaseOptions.Destination.Credentials).Domain = value },
+			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => GetCredentials(databaseOptions.Source).UserName = value },
+			    {"u2|user2|username2:", "The username to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(databaseOptions.Destination).UserName = value },
+			    {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => GetCredentials(databaseOptions.Source).Password = value },
+			    {"p2|pass2|password2:", "The password to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(databaseOptions.Destination).Password = value },
+			    {"domain:", "The domain to use when the database requires the client to authenticate.", value => GetCredentials(databaseOptions.Source).Domain = value },
+			    {"domain2:", "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(databaseOptions.Destination).Domain = value },
 			    {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => databaseOptions.Source.ApiKey = value },
 			    {"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => databaseOptions.Destination.ApiKey = value },
 
@@ -152,12 +152,12 @@ namespace Raven.Smuggler
                 {"h|?|help", v => PrintUsageAndExit(0)},
                 {"timeout:", "The timeout to use for requests", s => filesOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)) },
                 {"incremental", "States usage of incremental operations", _ => filesOptions.Incremental = true },
-			    {"u|user|username:", "The username to use when the filesystem requires the client to authenticate.", value => ((NetworkCredential)filesOptions.Source.Credentials).UserName = value },
-			    {"u2|user2|username2:", "The username to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)filesOptions.Destination.Credentials).UserName = value },
-			    {"p|pass|password:", "The password to use when the filesystem requires the client to authenticate.", value => ((NetworkCredential)filesOptions.Source.Credentials).Password = value },
-			    {"p2|pass2|password2:", "The password to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)filesOptions.Destination.Credentials).Password = value },
-			    {"domain:", "The domain to use when the filesystem requires the client to authenticate.", value => ((NetworkCredential)filesOptions.Source.Credentials).Domain = value },
-			    {"domain2:", "The domain to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential)filesOptions.Destination.Credentials).Domain = value },
+			    {"u|user|username:", "The username to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).UserName = value },
+			    {"u2|user2|username2:", "The username to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).UserName = value },
+			    {"p|pass|password:", "The password to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).Password = value },
+			    {"p2|pass2|password2:", "The password to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).Password = value },
+			    {"domain:", "The domain to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).Domain = value },
+			    {"domain2:", "The domain to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).Domain = value },
 			    {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => filesOptions.Source.ApiKey = value },
 			    {"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => filesOptions.Destination.ApiKey = value },
 
@@ -166,6 +166,26 @@ namespace Raven.Smuggler
 			    {"f2|filesystem2:", "The filesystem to export to. If no specified, the operations will be on the default filesystem. This parameter is used only in the between operation.", value => filesOptions.Destination.DefaultFileSystem = value },
 		    };
 	    }
+
+		private NetworkCredential GetCredentials(FilesConnectionStringOptions connectionStringOptions)
+		{
+			var cred = connectionStringOptions.Credentials as NetworkCredential;
+			if (cred != null)
+				return cred;
+			cred = new NetworkCredential();
+			connectionStringOptions.Credentials = cred;
+			return cred;
+		}
+
+		private static NetworkCredential GetCredentials(RavenConnectionStringOptions connectionStringOptions)
+		{
+			var cred = connectionStringOptions.Credentials as NetworkCredential;
+			if (cred != null)
+				return cred;
+			cred = new NetworkCredential();
+			connectionStringOptions.Credentials = cred;
+			return cred;
+		}
 
 		static void Main(string[] args)
 		{

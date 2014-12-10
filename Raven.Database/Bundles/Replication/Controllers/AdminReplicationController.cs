@@ -9,6 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Server.Controllers;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Controllers
@@ -28,8 +29,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/replication/purge-tombstones")]
-		[Route("databases/{databaseName}/admin/replication/purge-tombstones")]
+		[RavenRoute("admin/replication/purge-tombstones")]
+		[RavenRoute("databases/{databaseName}/admin/replication/purge-tombstones")]
 		public HttpResponseMessage PurgeTombstones()
 		{
 			var docEtagStr = GetQueryStringValue("docEtag");
@@ -65,8 +66,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/replicationInfo")]
-		[Route("databases/{databaseName}/admin/replicationInfo")]
+		[RavenRoute("admin/replicationInfo")]
+		[RavenRoute("databases/{databaseName}/admin/replicationInfo")]
 		public async Task<HttpResponseMessage> ReplicationInfo()
 		{
 			var replicationDocument = await ReadJsonObjectAsync<ReplicationDocument>();
@@ -85,8 +86,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/replication/topology/view")]
-		[Route("databases/{databaseName}/admin/replication/topology/view")]
+		[RavenRoute("admin/replication/topology/view")]
+		[RavenRoute("databases/{databaseName}/admin/replication/topology/view")]
 		public Task<HttpResponseMessage> ReplicationTopology()
 		{
 			var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(Database, new RavenJArray(), 10, Log);
@@ -97,8 +98,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/replication/topology/discover")]
-		[Route("databases/{databaseName}/admin/replication/topology/discover")]
+		[RavenRoute("admin/replication/topology/discover")]
+		[RavenRoute("databases/{databaseName}/admin/replication/topology/discover")]
 		public async Task<HttpResponseMessage> ReplicationTopologyDiscover()
 		{
 			var ttlAsString = GetQueryStringValue("ttl");
