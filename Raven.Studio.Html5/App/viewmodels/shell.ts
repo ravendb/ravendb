@@ -221,12 +221,14 @@ class shell extends viewModelBase {
 
         appUrl.mapUnknownRoutes(router);
 
-        window.addEventListener("beforeunload", this.destroyChangesApi);
+        var self = this;
 
+        window.addEventListener("beforeunload", self.destroyChangesApi.bind(self));
+        
         $(window).bind('storage', (e:any) => {
             if (e.originalEvent.key == eventSourceSettingStorage.localStorageName) {
                 if (!JSON.parse(e.originalEvent.newValue)) {
-                    this.destroyChangesApi();
+                    self.destroyChangesApi();
                 } else {
                     // enable changes api
                     this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());

@@ -34,15 +34,36 @@ class searchDialogViewModel extends dialogViewModelBase {
         return submit;
     }
 
-    enabled(): boolean {
-        var submit: boolean = true;
-
-        for (var i = 0; i < this.inputs.length; i++) {
-            submit = this.inputs[i]() != null && this.inputs[i]().trim() != "";
-        }
-
-        return submit;
+    enabled() {
+        return this.checkRequired(true);
     }
+
+    // check inputs 
+    checkRequired(allRequired: boolean) {
+        if (allRequired) {
+            var result = true;
+
+            this.inputs.forEach(input => {
+                if (input() == null || !input().trim()) {
+                    result = false;
+                }
+            });
+
+            return result;
+        } else { // at least one is required
+            var result = false;
+
+            this.inputs.forEach(input => {
+                if (input() != null && input().trim()) {
+                    result = true;
+                }
+            });
+
+            return result;
+        }
+    }
+
+   
 }
 
 export = searchDialogViewModel;
