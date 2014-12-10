@@ -10,6 +10,7 @@ using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -29,7 +30,7 @@ namespace Raven.Database.FileSystem.Controllers
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/files")]
+        [RavenRoute("fs/{fileSystemName}/files")]
         public HttpResponseMessage Get()
 		{
             int results;
@@ -43,7 +44,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/files/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files/{*name}")]
         public HttpResponseMessage Get(string name)
 		{
             name = FileHeader.Canonize(name);
@@ -79,7 +80,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpDelete]
-        [Route("fs/{fileSystemName}/files/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Delete(string name)
 		{
             name = FileHeader.Canonize(name);
@@ -140,7 +141,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpHead]
-        [Route("fs/{fileSystemName}/files/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Head(string name)
 		{
             name = FileHeader.Canonize(name);
@@ -172,7 +173,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
         [HttpGet]
-        [Route("fs/{fileSystemName}/files/metadata")]
+        [RavenRoute("fs/{fileSystemName}/files/metadata")]
         public HttpResponseMessage Metadata([FromUri] string[] fileNames)
         {
             if (fileNames == null || fileNames.Length == 0)
@@ -191,7 +192,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
 		[HttpPost]
-        [Route("fs/{fileSystemName}/files/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Post(string name)
 		{
             name = FileHeader.Canonize(name);
@@ -229,7 +230,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPatch]
-        [Route("fs/{fileSystemName}/files/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Patch(string name, string rename)
 		{
             name = FileHeader.Canonize(name);
@@ -286,7 +287,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPut]
-        [Route("fs/{fileSystemName}/files/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public async Task<HttpResponseMessage> Put(string name, string uploadId = null, bool preserveTimestamps = false)
 		{                     
 			try

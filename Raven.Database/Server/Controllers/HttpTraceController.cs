@@ -10,14 +10,15 @@ using System.Web.Http;
 
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Security;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
     public class HttpTraceController : RavenDbApiController
     {
         [HttpGet]
-        [Route("traffic-watch/events")]
-        [Route("databases/{databaseName}/traffic-watch/events")]
+        [RavenRoute("traffic-watch/events")]
+        [RavenRoute("databases/{databaseName}/traffic-watch/events")]
         public HttpResponseMessage HttpTrace()
         {
             var traceTransport = new HttpTracePushContent(this);

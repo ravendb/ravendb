@@ -224,6 +224,8 @@
     <Compile Include="Actions\PatchActions.cs" />
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
+    <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
     <Compile Include="DiskIO\DiskPerformanceTester.cs" />
     <Compile Include="DiskIO\PerformanceTestRequest.cs" />
     <Compile Include="FileSystem\Bundles\Encryption\Plugin\FileEncryption.cs" />

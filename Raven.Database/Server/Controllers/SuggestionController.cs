@@ -5,14 +5,15 @@ using System.Net.Http;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Queries;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
 	public class SuggestionController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("suggest/{*id}")]
-		[Route("databases/{databaseName}/suggest/{*id}")]
+		[RavenRoute("suggest/{*id}")]
+		[RavenRoute("databases/{databaseName}/suggest/{*id}")]
 		public HttpResponseMessage SuggestGet(string id)
 		{
 			var index = id;

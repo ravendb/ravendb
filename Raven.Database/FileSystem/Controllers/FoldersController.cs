@@ -3,13 +3,14 @@ using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
 using Raven.Database.FileSystem.Extensions;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
 	public class FoldersController : RavenFsApiController
 	{
 		[HttpGet]
-        [Route("fs/{fileSystemName}/folders/Subdirectories/{*directory}")]
+        [RavenRoute("fs/{fileSystemName}/folders/Subdirectories/{*directory}")]
         public HttpResponseMessage Subdirectories(string directory = null)
 		{
             int nesting = 1;

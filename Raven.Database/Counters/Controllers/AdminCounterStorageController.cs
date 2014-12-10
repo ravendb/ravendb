@@ -6,6 +6,7 @@
 using Raven.Abstractions.Counters;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 using System.Net;
 using System.Net.Http;
@@ -17,7 +18,7 @@ namespace Raven.Database.Counters.Controllers
     public class AdminCounterStorageController : BaseAdminController
     {
         [HttpPut]
-        [Route("counterstorage/admin/{*id}")]
+        [RavenRoute("counterstorage/admin/{*id}")]
         public async Task<HttpResponseMessage> Put(string id)
         {
             var docKey = "Raven/Counters/" + id;
@@ -45,7 +46,7 @@ namespace Raven.Database.Counters.Controllers
 	    }
 
 		[HttpDelete]
-        [Route("counterstorage/admin/{*id}")]
+        [RavenRoute("counterstorage/admin/{*id}")]
 		public HttpResponseMessage Delete(string id)
 		{
             var docKey = "Raven/Counters/" + id;

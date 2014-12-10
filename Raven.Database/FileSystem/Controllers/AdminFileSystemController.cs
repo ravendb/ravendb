@@ -14,6 +14,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -73,7 +74,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPut]
-        [Route("admin/fs/{*id}")]
+        [RavenRoute("admin/fs/{*id}")]
         public async Task<HttpResponseMessage> FileSystemPut(string id, bool update = false)
         {
 			
@@ -126,7 +127,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
 		[HttpDelete]
-		[Route("admin/fs/{*id}")]
+		[RavenRoute("admin/fs/{*id}")]
 		public HttpResponseMessage FileSystemDelete(string id)
 		{
 			bool result;
@@ -142,7 +143,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpDelete]
-		[Route("admin/fs/batch-delete")]
+		[RavenRoute("admin/fs/batch-delete")]
 		public HttpResponseMessage FileSystemBatchDelete()
 		{
 			string[] fileSystemsToDelete = GetQueryStringValues("ids");
@@ -169,7 +170,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/fs/{*id}")]
+		[RavenRoute("admin/fs/{*id}")]
 		public HttpResponseMessage FileSystemToggleDisable(string id, bool isSettingDisabled)
 		{
 			var message = ToggleFileSystemDisabled(id, isSettingDisabled);
@@ -182,7 +183,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/fs/batch-toggle-disable")]
+		[RavenRoute("admin/fs/batch-toggle-disable")]
 		public HttpResponseMessage FileSystemBatchToggleDisable(bool isSettingDisabled)
 		{
 			string[] databasesToToggle = GetQueryStringValues("ids");
@@ -253,8 +254,8 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
         [HttpPost]
-        [Route("admin/fs/backup")]
-        [Route("fs/{fileSystemName}/admin/fs/backup")]
+        [RavenRoute("admin/fs/backup")]
+        [RavenRoute("fs/{fileSystemName}/admin/fs/backup")]
         public async Task<HttpResponseMessage> Backup()
         {
             var backupRequest = await ReadJsonObjectAsync<FilesystemBackupRequest>();
@@ -328,7 +329,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPost]
-        [Route("admin/fs/compact")]
+        [RavenRoute("admin/fs/compact")]
         public HttpResponseMessage Compact()
         {
             var fs = InnerRequest.RequestUri.ParseQueryString()["filesystem"];
@@ -361,8 +362,8 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPost]
-        [Route("admin/fs/restore")]
-        [Route("fs/{fileSystemName}/admin/fs/restore")]
+        [RavenRoute("admin/fs/restore")]
+        [RavenRoute("fs/{fileSystemName}/admin/fs/restore")]
         public async Task<HttpResponseMessage> Restore()
         {
             if (EnsureSystemDatabase() == false)
