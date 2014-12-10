@@ -54,61 +54,77 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(Name))
 				throw new InvalidOperationException("Subscription does not have any name");
 
-			var subscriptionRequest = commands.CreateRequest("/subscriptions/open?name=" + Name, "POST", disableRequestCompression: true, disableAuthentication: true);
-
-			using (var response = await subscriptionRequest.ExecuteRawResponseAsync(RavenJObject.FromObject(options)).ConfigureAwait(false))
+			try
 			{
-				await response.AssertNotFailingResponse().ConfigureAwait(false);
+				var subscriptionRequest = commands.CreateRequest("/subscriptions/open?name=" + Name, "POST", disableRequestCompression: true, disableAuthentication: true);
 
-				using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
-				using (var streamReader = new StreamReader(responseStream))
+				using (var response = await subscriptionRequest.ExecuteRawResponseAsync(RavenJObject.FromObject(options)).ConfigureAwait(false))
 				{
-					while (true)
+
+					await response.AssertNotFailingResponse().ConfigureAwait(false);
+
+					using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
+					using (var streamReader = new StreamReader(responseStream))
 					{
-						cts.Token.ThrowIfCancellationRequested();
-
-						var jsonReader = new JsonTextReaderAsync(streamReader);
-
-						var type = await TryReadType(jsonReader).ConfigureAwait(false);
-
-						if (type == null)
-							continue;
-
-						switch (type)
+						while (true)
 						{
-							case "Data":
-								using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, jsonReader: jsonReader, batchReadingMode: true))
-								{
-									while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
-									{
-										cts.Token.ThrowIfCancellationRequested();
+							cts.Token.ThrowIfCancellationRequested();
 
-										var jsonDoc = SerializationHelper.RavenJObjectToJsonDocument(streamedDocs.Current);
-										foreach (var subscriber in subscribers)
+							var jsonReader = new JsonTextReaderAsync(streamReader);
+
+							var type = await TryReadType(jsonReader).ConfigureAwait(false);
+
+							if (type == null)
+								continue;
+
+							switch (type)
+							{
+								case "Data":
+									using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, jsonReader: jsonReader, batchReadingMode: true))
+									{
+										while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
 										{
-											subscriber.OnNext(jsonDoc);
+											cts.Token.ThrowIfCancellationRequested();
+
+											var jsonDoc = SerializationHelper.RavenJObjectToJsonDocument(streamedDocs.Current);
+											foreach (var subscriber in subscribers)
+											{
+												subscriber.OnNext(jsonDoc);
+											}
 										}
 									}
-								}
 
-								var lastProcessedEtagInBatch = await ReadLastProcessedEtag(jsonReader).ConfigureAwait(false);
+									var lastProcessedEtagInBatch = await ReadLastProcessedEtag(jsonReader).ConfigureAwait(false);
 
-								await EnsureValidEndOfMessage(jsonReader, streamReader).ConfigureAwait(false);
+									await EnsureValidEndOfMessage(jsonReader, streamReader).ConfigureAwait(false);
 
-								using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?name={0}&lastEtag={1}", Name, lastProcessedEtagInBatch), "POST"))
-								{
-									acknowledgmentRequest.ExecuteRequest();
-								}
+									using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?name={0}&lastEtag={1}", Name, lastProcessedEtagInBatch), "POST"))
+									{
+										acknowledgmentRequest.ExecuteRequest();
+									}
 
-								break;
-							case "Heartbeat":
-								await EnsureValidEndOfMessage(jsonReader, streamReader).ConfigureAwait(false);
-								break;
-							default:
-								throw new InvalidOperationException("Unknown type of stream part: " + type);
+									break;
+								case "Heartbeat":
+									await EnsureValidEndOfMessage(jsonReader, streamReader).ConfigureAwait(false);
+									break;
+								default:
+									throw new InvalidOperationException("Unknown type of stream part: " + type);
+							}
 						}
 					}
 				}
+			}
+			catch (Exception ex)
+			{
+				if (ex.InnerException is OperationCanceledException == false)
+				{
+					foreach (var subscriber in subscribers)
+					{
+						subscriber.OnError(ex);
+					}
+				}
+
+				throw;
 			}
 		}
 
@@ -148,13 +164,22 @@ namespace Raven.Client.Document
 
 		public IDisposable Subscribe(IObserver<JsonDocument> observer)
 		{
+			if (Task != null && Task.IsFaulted)
+				throw new InvalidOperationException("Cannot subscribe because the subscription task is faulted", Task.Exception);
+
 			if (subscribers.TryAdd(observer))
 			{
 				if (!open)
 					Open();
 			}
 
-			return new DisposableAction(() => subscribers.TryRemove(observer));
+			return new DisposableAction(() =>
+			{
+				subscribers.TryRemove(observer);
+
+				if (subscribers.Count == 0 && open)
+					CloseConnectionAsync().WaitUnwrap();
+			});
 		}
 
 		public void Dispose()
@@ -179,6 +204,11 @@ namespace Raven.Client.Document
 			if (!open) 
 				return new CompletedTask();
 
+			return CloseConnectionAsync();
+		}
+
+		private async Task CloseConnectionAsync()
+		{
 			cts.Cancel();
 
 			switch (Task.Status)
@@ -204,7 +234,8 @@ namespace Raven.Client.Document
 
 			using (var closeRequest = commands.CreateRequest(string.Format("/subscriptions/close?name={0}", Name), "POST"))
 			{
-				return closeRequest.ExecuteRequestAsync();
+				await closeRequest.ExecuteRequestAsync();
+				open = false;
 			}
 		}
 	}

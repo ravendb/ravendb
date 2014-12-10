@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -89,88 +90,117 @@ namespace Raven.Database.Server.Controllers
 			using (var streamWriter = new StreamWriter(stream))
 			using (var writer = new JsonTextWriter(streamWriter))
 			{
-				while (true)
+				try
 				{
-					var docsStreamed = false;
+					bool? previousBatchAcknowledged = null;
 
-					using (var cts = new CancellationTokenSource())
-					using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
+					while (true)
 					{
-						var lastProcessedDocEtag = Etag.Empty;
-						var totalSizeOfDocs = 0;
+						var docsStreamed = false;
 
-						Database.TransactionalStorage.Batch(accessor =>
+						using (var cts = new CancellationTokenSource())
+						using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 						{
-							var ackEtag = subscriptions.GetSubscriptionDocument(name).AckEtag;
+							var lastProcessedDocEtag = Etag.Empty;
+							var totalSizeOfDocs = 0;
 
-							// we may be sending a LOT of documents to the user, and most 
-							// of them aren't going to be relevant for other ops, so we are going to skip
-							// the cache for that, to avoid filling it up very quickly
-							using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+							Database.TransactionalStorage.Batch(accessor =>
 							{
-								Database.Documents.GetDocuments(-1, options.MaxDocCount, ackEtag, cts.Token, doc =>
+								var ackEtag = subscriptions.GetSubscriptionDocument(name).AckEtag;
+
+								// we may be sending a LOT of documents to the user, and most 
+								// of them aren't going to be relevant for other ops, so we are going to skip
+								// the cache for that, to avoid filling it up very quickly
+								using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 								{
-									timeout.Delay();
-
-									if (options.MaxSize.HasValue && totalSizeOfDocs > options.MaxSize)
-										return;
-
-									lastProcessedDocEtag = doc.Etag;
-									
-									if (doc.Key.StartsWith("Raven/"))
-										return;
-
-									if (docsStreamed == false)
+									Database.Documents.GetDocuments(-1, options.MaxDocCount, ackEtag, cts.Token, doc =>
 									{
-										InitializeDataBatch(writer);
-										docsStreamed = true;
-									}
+										timeout.Delay();
 
-									doc.ToJson().WriteTo(writer);
-									writer.WriteRaw(Environment.NewLine);
+										if (options.MaxSize.HasValue && totalSizeOfDocs > options.MaxSize)
+											return;
 
-									totalSizeOfDocs += doc.SerializedSizeOnDisk;
-								});
+										lastProcessedDocEtag = doc.Etag;
+
+										if (doc.Key.StartsWith("Raven/"))
+											return;
+
+										if (docsStreamed == false)
+										{
+											InitializeDataBatch(writer);
+											docsStreamed = true;
+										}
+
+										doc.ToJson().WriteTo(writer);
+										writer.WriteRaw(Environment.NewLine);
+
+										totalSizeOfDocs += doc.SerializedSizeOnDisk;
+									});
+								}
+							});
+
+							if (docsStreamed)
+							{
+								EndDataBatchAndFlush(writer, lastProcessedDocEtag);
 							}
-						});
+						}
 
 						if (docsStreamed)
 						{
-							EndDataBatchAndFlush(writer, lastProcessedDocEtag);
+							var batchAcknowledged = subscriptions.WaitForAcknowledgement(name, options.AcknowledgementTimeout);
+
+							// TODO arek - cleanup this mess
+							if (subscriptions.IsClosed(name))
+								break;
+
+							if (batchAcknowledged == false)
+								continue;
+						}
+
+						if (subscriptions.HasMoreDocumentsToSent(name))
+							continue;
+
+						bool newDocsFound;
+
+						do
+						{
+							newDocsFound = subscriptions.WaitForNewDocuments(name, TimeSpan.FromSeconds(5));
+
+							if (subscriptions.IsClosed(name))
+								break;
+
+							if (newDocsFound == false)
+								SendHearbeat(writer);
+
+						} while (newDocsFound == false);
+
+						if (subscriptions.IsClosed(name))
+							break;
+					}
+				}
+				catch (Exception ex)
+				{
+					if (ex is IOException == false)
+					{
+						Log.WarnException("Unexpected exception in subscription " + name, ex);
+					}
+					else
+					{
+						var httpListenerException = ex.InnerException as HttpListenerException;
+
+						if ((httpListenerException == null && httpListenerException.ErrorCode == 1229) == false)
+						{
+							Log.WarnException("Unexpected exception in subscription " + name, ex);
+						}
+						else
+						{
+							
 						}
 					}
-
-					if (docsStreamed)
-					{
-						var batchAcknowledged = subscriptions.WaitForAcknowledgement(name, options.AcknowledgementTimeout);
-
-						// TODO arek - cleanup this mess
-						if (subscriptions.IsClosed(name))
-							break;
-
-						if (batchAcknowledged == false)
-							continue;
-					}
-
-					if(subscriptions.HasMoreDocumentsToSent(name))
-						continue;
-
-					bool newDocsFound;
-
-					do
-					{
-						newDocsFound = subscriptions.WaitForNewDocuments(name, TimeSpan.FromSeconds(5));
-
-						if (subscriptions.IsClosed(name))
-							break;
-
-						if (newDocsFound == false)
-							SendHearbeat(writer);
-
-					} while (newDocsFound == false);
-
-					if (subscriptions.IsClosed(name))
-						break;
+				}
+				finally
+				{
+					subscriptions.ReleaseSubscription(name);
 				}
 			}
 		}
