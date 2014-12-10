@@ -10,6 +10,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
@@ -18,8 +19,8 @@ namespace Raven.Database.Server.Controllers
 	public class OperationsController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("operation/status")]
-		[Route("databases/{databaseName}/operation/status")]
+		[RavenRoute("operation/status")]
+		[RavenRoute("databases/{databaseName}/operation/status")]
 		public HttpResponseMessage OperationStatusGet()
 		{
 			var idStr = GetQueryStringValue("id");
@@ -37,8 +38,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
         [HttpGet]
-        [Route("operation/kill")]
-        [Route("databases/{databaseName}/operation/kill")]
+        [RavenRoute("operation/kill")]
+        [RavenRoute("databases/{databaseName}/operation/kill")]
         public HttpResponseMessage OperationKill()
         {
             var idStr = GetQueryStringValue("id");
@@ -55,16 +56,16 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpGet]
-        [Route("operations")]
-        [Route("databases/{databaseName}/operations")]
+        [RavenRoute("operations")]
+        [RavenRoute("databases/{databaseName}/operations")]
         public HttpResponseMessage CurrentOperations()
         {
             return GetMessageWithObject(Database.Tasks.GetAll());
         }
 
         [HttpGet]
-        [Route("operation/alerts")]
-        [Route("databases/{databaseName}/operation/alerts")]
+        [RavenRoute("operation/alerts")]
+        [RavenRoute("databases/{databaseName}/operation/alerts")]
         public HttpResponseMessage Alerts()
         {
             var jsonDocument = Database.Documents.Get("Raven/Alerts", null);
@@ -88,8 +89,8 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpPost]
-        [Route("operation/alert/dismiss")]
-        [Route("databases/{databaseName}/operation/alert/dismiss")]
+        [RavenRoute("operation/alert/dismiss")]
+        [RavenRoute("databases/{databaseName}/operation/alert/dismiss")]
         public async Task<HttpResponseMessage> AlertDismiss()
         {
             var request = await ReadJsonObjectAsync<RavenJObject>();

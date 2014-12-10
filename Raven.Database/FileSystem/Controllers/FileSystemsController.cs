@@ -9,6 +9,7 @@ using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +23,7 @@ namespace Raven.Database.FileSystem.Controllers
 	public class FileSystemsController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("fs")]
+		[RavenRoute("fs")]
 		public HttpResponseMessage FileSystems(bool getAdditionalData = false)
 		{
 			HttpResponseMessage responseMessage;
@@ -42,7 +43,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
         [HttpGet]
-        [Route("fs/status")]
+        [RavenRoute("fs/status")]
         public HttpResponseMessage Status()
         {
             string status = "ready";
@@ -55,7 +56,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
 		[HttpGet]
-		[Route("fs/stats")]
+		[RavenRoute("fs/stats")]
 		public async Task<HttpResponseMessage> Stats()
 		{
 			var stats = new List<FileSystemStats>();

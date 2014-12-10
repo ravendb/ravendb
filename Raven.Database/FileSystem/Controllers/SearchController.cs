@@ -7,13 +7,14 @@ using Lucene.Net.Search;
 using Raven.Database.FileSystem.Storage;
 using System.Net.Http;
 using Raven.Abstractions.FileSystem;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
 	public class SearchController : RavenFsApiController
 	{
         [HttpGet]
-        [Route("fs/{fileSystemName}/search/Terms")]
+        [RavenRoute("fs/{fileSystemName}/search/Terms")]
         public HttpResponseMessage Terms([FromUri] string query  = "")
         {
             IndexSearcher searcher;
@@ -27,7 +28,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/search")]
+        [RavenRoute("fs/{fileSystemName}/search")]
         public HttpResponseMessage Get(string query, [FromUri] string[] sort)
 		{
 			int results;

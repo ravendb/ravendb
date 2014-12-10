@@ -10,14 +10,15 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Bundles.Authorization.Model;
 using Raven.Database.Server.Controllers;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Bundles.Authorization.Controllers
 {
 	public class IsAllowedController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("authorization/IsAllowed/{*userId}")]
-		[Route("databases/{databaseName}/authorization/IsAllowed/{*userId}")]
+		[RavenRoute("authorization/IsAllowed/{*userId}")]
+		[RavenRoute("databases/{databaseName}/authorization/IsAllowed/{*userId}")]
 		public HttpResponseMessage IsAllowed(string userId)
 		{
 			//var userId = id;
