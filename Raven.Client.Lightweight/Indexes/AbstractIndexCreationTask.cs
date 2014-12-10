@@ -226,8 +226,8 @@ namespace Raven.Client.Indexes
 
 			if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
 			{
-				UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
-					commands.DirectPutIndex(IndexName, url, true, indexDefinition));
+				//TODO: do not forget to replace this with a call to server-side index replication endpoint
+				//UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) => commands.DirectPutIndex(IndexName, url, true, indexDefinition));
 			}
 		}
 

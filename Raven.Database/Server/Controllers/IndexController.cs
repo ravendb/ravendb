@@ -87,16 +87,16 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("indexes/replicate/{*id}")]
-		[Route("databases/{databaseName}/indexes/replicate/{*id}")]
-		public HttpResponseMessage IndexReplicate(string id)
+		[Route("indexes/replicate/{*indexName}")]
+		[Route("databases/{databaseName}/indexes/replicate/{*indexName}")]
+		public HttpResponseMessage IndexReplicate(string indexName)
 		{
-			if (id == null) throw new ArgumentNullException("id");
+			if (String.IsNullOrWhiteSpace(indexName)) throw new ArgumentNullException("indexName");
 
 			JsonDocument replicationDestinationsDocument;
 			try
 			{
-				replicationDestinationsDocument = Database.Documents.Get("Raven/Replication/Destinations", null);
+				replicationDestinationsDocument = Database.Documents.Get(Constants.RavenReplicationDestinations, null);
 			}
 			catch (Exception e)
 			{
@@ -107,42 +107,42 @@ namespace Raven.Database.Server.Controllers
 
 			if (replicationDestinationsDocument == null)
 			{
-				return GetMessageWithObject(new { Message = "Replication destinations not found. Perhaps no replication is configured? Nothing to do in this case..." });
+				return GetMessageWithObject(new { Message = "Replication destinations not found. Perhaps no replication is configured? Nothing to do in this case..." },HttpStatusCode.NotFound);
 			}
 
-			var replicationDestinations = 
-					replicationDestinationsDocument.DataAsJson["Destinations"]
-												   .JsonDeserialization<HashSet<ReplicationDestination>>();
+			var replicationDocument = 
+					replicationDestinationsDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
 			
-			replicationDestinations.RemoveWhere(dest => dest.SkipIndexReplication);
-			if (replicationDestinations.Count == 0) //precaution
+			replicationDocument.Destinations.RemoveAll(dest => dest.SkipIndexReplication);
+			if (replicationDocument.Destinations.Count == 0) //precaution
 			{
 				return GetMessageWithObject(new { Message = @"Replication document found, but no destinations configured for index replication. 
-																Maybe all replication destinations have SkipIndexReplication flag equals to true?. 
-																Nothing to do in this case..." });
+																Maybe all replication destinations have SkipIndexReplication flag equals to true?  
+																Nothing to do in this case..." },HttpStatusCode.NoContent);
 			}
 
-			if (id.EndsWith("/")) //since id is part of the url, perhaps a trailing forward slash appears there
-				id = id.Substring(0, id.Length - 1);
-			id = HttpUtility.UrlDecode(id);
+			if (indexName.EndsWith("/")) //since id is part of the url, perhaps a trailing forward slash appears there
+				indexName = indexName.Substring(0, indexName.Length - 1);
+			indexName = HttpUtility.UrlDecode(indexName);
 
-			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(id);
+			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
 			if (indexDefinition == null)
 			{
 				return GetMessageWithObject(new
 				{
-					Message = string.Format("Index with name: {0} not found. Cannot proceed with replication...", id)
+					Message = string.Format("Index with name: {0} not found. Cannot proceed with replication...", indexName)
 				}, HttpStatusCode.NotFound);
 			}
 
 			var serializedIndexDefinition = RavenJObject.FromObject(indexDefinition);
 
 			var failedDestinations = new ConcurrentBag<string>();
-			Parallel.ForEach(replicationDestinations, destination => ReplicateIndex(id, destination, serializedIndexDefinition, failedDestinations));
+			Parallel.ForEach(replicationDocument.Destinations, 
+				destination => ReplicateIndex(indexName, destination, serializedIndexDefinition, failedDestinations));
 
 			return GetMessageWithObject(new
 			{
-				SuccessfulReplicationCount = (replicationDestinations.Count - failedDestinations.Count),
+				SuccessfulReplicationCount = (replicationDocument.Destinations.Count - failedDestinations.Count),
 				FailedDestinationUrls = failedDestinations
 			});
 		}
@@ -803,13 +803,15 @@ namespace Raven.Database.Server.Controllers
 			};
 
 			if (!String.IsNullOrWhiteSpace(destination.Username) &&
-				!String.IsNullOrWhiteSpace(destination.Password) &&
-				!String.IsNullOrWhiteSpace(destination.Domain))
+				!String.IsNullOrWhiteSpace(destination.Password))
 			{
-				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain);
+				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain ?? string.Empty);
 			}
 
-			var operationUrl = string.Format("//{0}/databases/{1}/indexes/{2}?definition=yes", destination.Url, destination.Database, Uri.EscapeUriString(indexName));
+			var urlTemplate = "{0}/databases/{1}/indexes/{2}?definition=yes";
+			if (destination.Url.Contains("://") == false)
+				urlTemplate = "//" + urlTemplate;
+			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(indexName));
 			var replicationRequest = _httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
 			replicationRequest.Write(indexDefinition);
 
