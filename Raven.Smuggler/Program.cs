@@ -122,6 +122,7 @@ namespace Raven.Smuggler
 
 			    {"batch-size:", "The batch size for requests", s => databaseOptions.BatchSize = int.Parse(s)},
 				{"chunk-size:", "The number of documents to import before new connection will be opened", s => databaseOptions.ChunkSize = int.Parse(s)},
+                {"continuation-file:", "Activates the usage of a continuation file in case of unreliable or huge imports", s => databaseOptions.ContinuationFile = s },
 			    {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => databaseOptions.Source.DefaultDatabase = value},
 			    {"d2|database2:", "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => databaseOptions.Destination.DefaultDatabase = value},
                 {"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _ => databaseOptions.WaitForIndexing = true},

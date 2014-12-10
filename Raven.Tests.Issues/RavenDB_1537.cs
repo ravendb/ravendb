@@ -586,7 +586,7 @@ namespace Raven.Tests.Issues
                 streamWriter.Flush();
             }
 
-            var result = new ExportDataResult
+            var result = new OperationState
             {
                 FilePath = backupPath
             };
@@ -622,7 +622,7 @@ namespace Raven.Tests.Issues
                 return ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
-			public override Task ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtags)
+			public override Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtags)
 			{
 				return base.ExportDeletions(jsonWriter, result, maxEtags);
 			}
@@ -772,7 +772,7 @@ namespace Raven.Tests.Issues
 
                     writer.WriteStartObject();
                     var lastEtags = new LastEtagsInfo();
-                    var exportResult = new ExportDataResult
+                    var exportResult = new OperationState
                     {
                         LastDocDeleteEtag = user6DeletionEtag,
                         LastAttachmentsDeleteEtag = attach5DeletionEtag

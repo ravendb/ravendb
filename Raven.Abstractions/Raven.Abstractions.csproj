@@ -360,7 +360,7 @@
     <Compile Include="Replication\ReplicationDocument.cs" />
     <Compile Include="Replication\ReplicationStatistics.cs" />
     <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
-    <Compile Include="Smuggler\Data\ExportDataResult.cs" />
+    <Compile Include="Smuggler\Data\OperationState.cs" />
     <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />
     <Compile Include="Smuggler\Data\ExportFilesResult.cs" />
     <Compile Include="Smuggler\Data\Tombstone.cs" />
