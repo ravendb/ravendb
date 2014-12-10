@@ -339,6 +339,7 @@
     <TypeScriptCompile Include="App\commands\getStatusStorageBreakdownCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingBatchStatsCommand.ts" />
     <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\patchByQueryCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
