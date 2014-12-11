@@ -21,10 +21,13 @@ import autoCompleterSupport = require("common/autoCompleterSupport");
 import mergedIndexesStorage = require("common/mergedIndexesStorage");
 import indexMergeSuggestion = require("models/indexMergeSuggestion");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
+import replaceIndexDialog = require("viewmodels/replaceIndexDialog");
+import saveDocumentCommand = require("commands/saveDocumentCommand");
+import indexReplaceDocument = require("models/indexReplaceDocument");
+import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
+import saveScriptedIndexesCommand = require("commands/saveScriptedIndexesCommand");
 
 class editIndex extends viewModelBase { 
-
-    static TestIndexPrefix = "Test/";
 
     isEditingExistingIndex = ko.observable<boolean>(false);
     mergeSuggestion = ko.observable<indexMergeSuggestion>(null);
@@ -44,6 +47,11 @@ class editIndex extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     indexAutoCompleter: indexAceAutoCompleteProvider;
     loadedIndexName = ko.observable<string>();
+    isSideBySideIndex = ko.computed(() => {
+        console.log(this.editedIndex() != null ? this.editedIndex().name() : "null");
+
+        return this.editedIndex() != null && this.editedIndex().name().startsWith(index.SideBySideIndexPrefix);
+        });
 
     // Scripted Index Part
     isScriptedIndexBundleActive = ko.observable<boolean>(false);
@@ -464,14 +472,14 @@ class editIndex extends viewModelBase {
         if (this.editedIndex().name() && this.editedIndex().isTestIndex()) {
             this.editedIndex().isTestIndex(false);
             // trim Test prefix
-            this.editedIndex().name(this.editedIndex().name().substr(editIndex.TestIndexPrefix.length));
-            var index = this.editedIndex().toDto();
+            this.editedIndex().name(this.editedIndex().name().substr(index.TestIndexPrefix.length));
+            var indexDef = this.editedIndex().toDto();
             if (this.scriptedIndex() !== null) {
                 // reset etag as we save different document
                 delete this.scriptedIndex().__metadata.etag;
             }
 
-            this.saveIndex(index);
+            this.saveIndex(indexDef);
         }
     }
 
@@ -479,46 +487,75 @@ class editIndex extends viewModelBase {
         if (this.editedIndex().name()) {
             if (!this.editedIndex().isTestIndex()) {
                 this.editedIndex().isTestIndex(true);
-                this.editedIndex().name(editIndex.TestIndexPrefix + this.editedIndex().name());
+                this.editedIndex().name(index.TestIndexPrefix + this.editedIndex().name());
             }
-            var index = this.editedIndex().toDto();
+            var indexDef = this.editedIndex().toDto();
 
             if (this.scriptedIndex() !== null) {
                 // reset etag as we save different document
                 delete this.scriptedIndex().__metadata.etag;
             }
             
-            this.saveIndex(index);
+            this.saveIndex(indexDef);
         }
     }
 
-    private saveIndex(index: indexDefinitionDto) {
-        require(["commands/saveIndexDefinitionCommand", "commands/saveScriptedIndexesCommand"], (saveIndexDefinitionCommand, saveScriptedIndexesCommand) => {
-            var commands = [];
+    private saveIndex(index: indexDefinitionDto): JQueryPromise<any> {
+        var commands = [];
 
-            commands.push(new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase()).execute());
-            if (this.scriptedIndex() !== null) {
-                commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
+        commands.push(new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase()).execute());
+        if (this.scriptedIndex() !== null) {
+            commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
+        }
+
+        return $.when.apply($, commands).done(() => {
+            this.initializeDirtyFlag();
+            this.editedIndex().name.valueHasMutated();
+            var isSavingMergedIndex = this.mergeSuggestion() != null;
+
+            if (!this.isEditingExistingIndex()) {
+                this.isEditingExistingIndex(true);
+                this.editExistingIndex(index.Name);
+            }
+            if (isSavingMergedIndex) {
+                var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
+                this.deleteMergedIndexes(indexesToDelete);
+                this.mergeSuggestion(null);
             }
 
-            $.when.apply($, commands).done(() => {
-                this.initializeDirtyFlag();
-                this.editedIndex().name.valueHasMutated();
-                var isSavingMergedIndex = this.mergeSuggestion() != null;
+            this.updateUrl(index.Name, isSavingMergedIndex);
+        });
+    }
 
-                if (!this.isEditingExistingIndex()) {
-                    this.isEditingExistingIndex(true);
-                    this.editExistingIndex(index.Name);
-                }
-                if (isSavingMergedIndex) {
-                    var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
-                    this.deleteMergedIndexes(indexesToDelete);
-                    this.mergeSuggestion(null);
-                }
+    replaceIndex() {
+        var indexToReplaceName = this.editedIndex().name();
+        var replaceDialog = new replaceIndexDialog(indexToReplaceName, this.activeDatabase());
 
-                this.updateUrl(index.Name, isSavingMergedIndex);
-            });
-        }); 
+        replaceDialog.replaceSettingsTask.done((replaceDocument) => {
+            if (!this.editedIndex().name().startsWith(index.SideBySideIndexPrefix)) {
+                this.editedIndex().name(index.SideBySideIndexPrefix + this.editedIndex().name());
+            }
+
+            var indexDef = this.editedIndex().toDto();
+            var replaceDocumentKey = indexReplaceDocument.replaceDocumentPrefix + this.editedIndex().name();
+
+            if (this.scriptedIndex() !== null) {
+                // reset etag as we save different document
+                delete this.scriptedIndex().__metadata.etag;
+            }
+
+            this.saveIndex(indexDef)
+                .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index.", response.responseText, response.statusText))
+                .done(() => {
+                    new saveDocumentCommand(replaceDocumentKey, replaceDocument, this.activeDatabase(), false)
+                        .execute()
+                        .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index document.", response.responseText, response.statusText))
+                        .done(() => messagePublisher.reportSuccess("Successfully saved side-by-side index"));
+                })
+                .always(() => dialog.close(replaceDialog));
+        });
+
+        app.showDialog(replaceDialog);
     }
 }
 

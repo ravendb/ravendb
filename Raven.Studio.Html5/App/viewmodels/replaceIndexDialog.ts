@@ -16,17 +16,12 @@ class replaceIndexDialog extends dialogViewModelBase {
     static ModeEtag = "etag";
     static ModeTime = "time";
 
-    private indexes = ko.observableArray<index>();
-    indexesExceptCurrent: KnockoutComputed<index[]>;
-    private selectedIndex = ko.observable<string>();
+    replaceSettingsTask = $.Deferred();
+
     private replaceMode = ko.observable<string>(replaceIndexDialog.ModeEtag);
     private lastIndexedEtag = ko.observable<string>();
 
     private extraMode = ko.observable<boolean>(false);
-
-    saveEnabled = ko.computed(() => {
-        return !!this.selectedIndex();
-    });
 
     private etag = ko.observable<string>();
     private replaceDate = ko.observable<Moment>(moment(new Date()));
@@ -38,10 +33,6 @@ class replaceIndexDialog extends dialogViewModelBase {
         super(elementToFocusOnDismissal);
 
         datePickerBindingHandler.install();
-
-        this.indexesExceptCurrent = ko.computed(() => {
-            return this.indexes().filter(index => index.name != this.indexName);
-        });
     }
 
     canActivate(args: any): any {
@@ -52,10 +43,6 @@ class replaceIndexDialog extends dialogViewModelBase {
             .fail(() => deferred.resolve({ can: false }));
 
         return deferred.promise();
-    }
-
-    setSelectedIndex(name: string) {
-        this.selectedIndex(name);
     }
 
     private fetchIndexes() {
@@ -69,8 +56,6 @@ class replaceIndexDialog extends dialogViewModelBase {
     }
 
     processDbStats(stats: databaseStatisticsDto) {
-        this.indexes(stats.Indexes
-            .map(i => new index(i)));
         var oldIndex = stats.Indexes.first(i => i.Name == this.indexName);
         this.lastIndexedEtag(oldIndex.LastIndexedEtag);       
     }
@@ -89,19 +74,11 @@ class replaceIndexDialog extends dialogViewModelBase {
                     break;
             }
         }
-
-        var docKey = indexReplaceDocument.replaceDocumentPrefix + this.selectedIndex();
-
-        new saveDocumentCommand(docKey, replaceDocument, this.db, false)
-            .execute()
-            .done(() => {
-                messagePublisher.reportSuccess("Saved replace index document");
-                dialog.close(this);
-            })
-            .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index document.", response.responseText, response.statusText));
+        this.replaceSettingsTask.resolve(replaceDocument);
     }
 
     close() {
+        this.replaceSettingsTask.reject();
         dialog.close(this);
     }
 
