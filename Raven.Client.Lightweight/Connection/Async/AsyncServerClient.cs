@@ -1042,6 +1042,10 @@ namespace Raven.Client.Connection.Async
 				{
 					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
+                    var cachedRequestDetails = jsonRequestFactory.ConfigureCaching(requestUri, (key, val) => request.AddHeader(key, val));
+                    request.CachedRequestDetails = cachedRequestDetails.CachedRequest;
+                    request.SkipServerCheck = cachedRequestDetails.SkipServerCheck;
+
 					var json = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 					return json.JsonDeserialization<FacetResults>();
 				}
@@ -1050,21 +1054,39 @@ namespace Raven.Client.Connection.Async
 
 		public Task<FacetResults[]> GetMultiFacetsAsync(FacetQuery[] facetedQueries)
 		{
-			return ExecuteWithReplication("POST", async operationMetadata =>
-			{
-				var requestUri = operationMetadata.Url + "/facets/multisearch";
+            var multiGetReuestItems = facetedQueries.Select(x =>
+            {
+                string addition;
+                if (x.FacetSetupDoc != null)
+                    addition = "facetDoc=" + x.FacetSetupDoc;
+                else
+                    addition = "facets=" + Uri.EscapeDataString(JsonConvert.SerializeObject(x.Facets));
 
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "POST", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
-				{
-					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                return new GetRequest()
+                {
 
-					var data = JsonConvert.SerializeObject(facetedQueries);
-					await request.WriteAsync(data).ConfigureAwait(false);
-					var response = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                    Url = "/facets/" + x.IndexName,
+                    Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
+                        x.Query.GetMinimalQueryString(),
+                        x.Query.Start,
+                        x.Query.PageSize,
+                        addition)
+                };
+            }).ToArray();
 
-					return convention.CreateSerializer().Deserialize<FacetResults[]>(new RavenJTokenReader(response));
-				}
-			});
+		    var results =  MultiGetAsync(multiGetReuestItems).ContinueWith(x =>
+		    {
+                var facetResults = new FacetResults[x.Result.Length];
+
+		        for (var facetResultCounter = 0; facetResultCounter < facetResults.Length; facetResultCounter++)
+		        {
+                    var curFacetDoc = x.Result[facetResultCounter].Result;
+                    facetResults[facetResultCounter] = curFacetDoc.JsonDeserialization<FacetResults>();
+		        }
+
+		        return facetResults;
+		    });
+		    return results;
 		}
 
 		/// <summary>
@@ -1094,11 +1116,52 @@ namespace Raven.Client.Connection.Async
 
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, method, operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)).AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
 				{
-					if (method != "GET")
-						request.WriteAsync(facetsJson).Wait();
 
-					var json = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-					return json.JsonDeserialization<FacetResults>();
+				    if (method != "GET")
+				    {
+                        var cachedRequestDetails = jsonRequestFactory.ConfigureCaching(requestUri, (key, val) => request.AddHeader(key, val));
+                        request.CachedRequestDetails = cachedRequestDetails.CachedRequest;
+                        request.SkipServerCheck = cachedRequestDetails.SkipServerCheck;
+                        request.WriteAsync(facetsJson).Wait();
+				    }
+
+				    FacetResults result = null;
+                    
+                    if (request.Response == null || request.Response.StatusCode == HttpStatusCode.NotModified)
+                    {
+                        var cachedRequestDetails = request.CachedRequestDetails;
+                        if (cachedRequestDetails != null)
+                        {
+
+                            foreach (string header in request.CachedRequestDetails.Headers)
+                            {
+                                request.ResponseHeaders[header] = request.CachedRequestDetails.Headers[header];
+                            }
+
+                            result = cachedRequestDetails.Data.CloneToken().JsonDeserialization<FacetResults>();
+                            jsonRequestFactory.IncrementCachedRequests();
+                        }
+                        
+                    }
+                    else
+                    {
+                        var json = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                        
+                        var nameValueCollection = new NameValueCollection();
+
+                        foreach (string header in request.ResponseHeaders)
+                        {
+                            nameValueCollection[header] = request.ResponseHeaders[header];
+                        }
+
+                        jsonRequestFactory.CacheResponse(requestUri, json, nameValueCollection);
+
+                        result = json.JsonDeserialization<FacetResults>();
+                    }
+
+				    return result;
+
+
 				}
 			});
 		}
