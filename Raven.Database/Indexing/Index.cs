@@ -184,7 +184,7 @@ namespace Raven.Database.Indexing
 			return performanceStats;
 		}
 
-		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, int loadDocumentCount, long loadDocumentDurationInMs, long writingDocumentsToLuceneDurationMs, long linqExecutionDurationMs, long flushToDiskDurationMs, long reduceInMapLinqExecutionDurationMs, long putMapResultsDuration)
+		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, int loadDocumentCount, long loadDocumentDurationInMs, long writingDocumentsToLuceneDurationMs, long linqExecutionDurationMs, long flushToDiskDurationMs, long reduceInMapLinqExecutionDurationMs, long putMappedResultsDuration, long deleteMappedResultsDuration)
 		{
 			IndexingPerformanceStats stats;
 			if (currentlyIndexing.TryRemove(indexingStep, out stats))
@@ -203,7 +203,8 @@ namespace Raven.Database.Indexing
 				stats.LinqExecutionDurationMs = linqExecutionDurationMs;
 				stats.FlushToDiskDurationMs = flushToDiskDurationMs;
 				stats.ReduceInMapLinqExecutionDurationMs = reduceInMapLinqExecutionDurationMs;
-				stats.PutMapResultsDurationMs = putMapResultsDuration;
+				stats.PutMappedResultsDurationMs = putMappedResultsDuration;
+				stats.DeleteMappedResultsDurationMs = deleteMappedResultsDuration;
 
 				AddIndexingPerformanceStats(stats);
 			}
@@ -771,7 +772,7 @@ namespace Raven.Database.Indexing
 				OnError = onErrorFunc
 			};
 
-			linqExecutionDuration = robustEnumerator.MoveNextDutation;
+			linqExecutionDuration = robustEnumerator.MoveNextDuration;
 
 			return robustEnumerator.RobustEnumeration(input, funcs);
 		}
@@ -802,7 +803,7 @@ namespace Raven.Database.Indexing
 				}
 			};
 
-			linqExecutionDuration = robustEnumerator.MoveNextDutation;
+			linqExecutionDuration = robustEnumerator.MoveNextDuration;
 
 			return robustEnumerator.RobustEnumeration(input, func);
 		}
@@ -831,7 +832,7 @@ namespace Raven.Database.Indexing
 				}
 			};
 
-			reduceDuringMapLinqExecution = robustEnumerator.MoveNextDutation;
+			reduceDuringMapLinqExecution = robustEnumerator.MoveNextDuration;
 
 			return robustEnumerator.RobustEnumeration(input, func);
 		}

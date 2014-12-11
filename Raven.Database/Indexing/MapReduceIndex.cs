@@ -87,11 +87,16 @@ namespace Raven.Database.Indexing
 			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
 			batch.IndexingPerformance = RecordCurrentBatch("Current Map", batch.Docs.Count);
 
+			var deleteMappedResultsDuration = new Stopwatch();
 			var documentsWrapped = batch.Docs.Select(doc =>
 			{
 				sourceCount++;
 				var documentId = doc.__document_id;
+
+				deleteMappedResultsDuration.Start();
 				actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, indexId, deleted);
+				deleteMappedResultsDuration.Stop();
+				
 				return doc;
 			})
 				.Where(x => x is FilteredDocument == false)
@@ -104,7 +109,7 @@ namespace Raven.Database.Indexing
 			long loadDocumentDuration = 0;
 			long linqExecutionDuration = 0;
 			long reduceInMapLinqExecutionDuration = 0;
-			long putMapResultsDuration = 0;
+			long putMappedResultsDuration = 0;
 
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, partition =>
 			{
@@ -112,6 +117,8 @@ namespace Raven.Database.Indexing
 				var localChanges = new HashSet<ReduceKeyAndBucket>();
 				var statsPerKey = new Dictionary<string, int>();
 				var linqExecution = new Stopwatch();
+				var putMappedResultsTiming = new Stopwatch();
+				long reduceDuringMapDurationTicks = 0;
 
 				allState.Enqueue(Tuple.Create(localChanges, localStats, statsPerKey));
 
@@ -126,17 +133,15 @@ namespace Raven.Database.Indexing
 						string currentKey = null;
 						bool skipDocument = false;
 						Stopwatch reduceInMapLinqExecution;
-						Stopwatch putMapResultsTiming;
-
+						
 						foreach (var currentDoc in mapResults)
 						{
 							var documentId = GetDocumentId(currentDoc);
 							if (documentId != currentKey)
 							{
-								count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, out reduceInMapLinqExecution, out putMapResultsTiming);
+								count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, out reduceInMapLinqExecution, ref putMappedResultsTiming);
 
-								Interlocked.Add(ref reduceInMapLinqExecutionDuration, reduceInMapLinqExecution.ElapsedMilliseconds);
-								Interlocked.Add(ref putMapResultsDuration, putMapResultsTiming.ElapsedMilliseconds);
+								reduceDuringMapDurationTicks += reduceInMapLinqExecution.Elapsed.Ticks;
 
 								currentDocumentResults.Clear();
 								currentKey = documentId;
@@ -156,16 +161,17 @@ namespace Raven.Database.Indexing
 
 							Interlocked.Increment(ref localStats.IndexingSuccesses);
 						}
-						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, out reduceInMapLinqExecution, out putMapResultsTiming);
+						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, out reduceInMapLinqExecution, ref putMappedResultsTiming);
 
-						Interlocked.Add(ref reduceInMapLinqExecutionDuration, reduceInMapLinqExecution.ElapsedMilliseconds);
-						Interlocked.Add(ref putMapResultsDuration, putMapResultsTiming.ElapsedMilliseconds);
+						reduceDuringMapDurationTicks += reduceInMapLinqExecution.Elapsed.Ticks;
 					});
 					allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
 					allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
 					Interlocked.Add(ref loadDocumentCount, CurrentIndexingScope.Current.LoadDocumentCount);
 					Interlocked.Add(ref loadDocumentDuration, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds);
 					Interlocked.Add(ref linqExecutionDuration, linqExecution.ElapsedMilliseconds);
+					Interlocked.Add(ref putMappedResultsDuration, putMappedResultsTiming.ElapsedMilliseconds);
+					Interlocked.Add(ref reduceInMapLinqExecutionDuration, (long) TimeSpan.FromTicks(reduceDuringMapDurationTicks).TotalMilliseconds);
 				}
 			});
 
@@ -201,18 +207,18 @@ namespace Raven.Database.Indexing
 
 			UpdateIndexingStats(context, stats);
 
-			BatchCompleted("Current Map", "Map", sourceCount, count, loadDocumentCount, loadDocumentDuration, -1, linqExecutionDuration, -1, reduceInMapLinqExecutionDuration, putMapResultsDuration);
+			BatchCompleted("Current Map", "Map", sourceCount, count, loadDocumentCount, loadDocumentDuration, -1, linqExecutionDuration, -1, reduceInMapLinqExecutionDuration, putMappedResultsDuration, deleteMappedResultsDuration.ElapsedMilliseconds);
 			logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
 		}
 
 		private int ProcessBatch(AbstractViewGenerator viewGenerator, List<object> currentDocumentResults, string currentKey, HashSet<ReduceKeyAndBucket> changes,
 			IStorageActionsAccessor actions,
-			IDictionary<string, int> statsPerKey, out Stopwatch reduceDuringMapLinqExecution, out Stopwatch putMapResultsDuration)
+			IDictionary<string, int> statsPerKey, out Stopwatch reduceDuringMapLinqExecution, ref Stopwatch putMappedResultsDuration)
 		{
 			if (currentKey == null || currentDocumentResults.Count == 0)
 			{
 				reduceDuringMapLinqExecution = new Stopwatch();
-				putMapResultsDuration = new Stopwatch();
+				putMappedResultsDuration = new Stopwatch();
 				return 0;
 			}
 
@@ -234,7 +240,6 @@ namespace Raven.Database.Indexing
 				}
 
 				int count = 0;
-				putMapResultsDuration = new Stopwatch();
 
 				var results = RobustEnumerationReduceDuringMapPhase(currentDocumentResults.GetEnumerator(), viewGenerator.ReduceDefinition, out reduceDuringMapLinqExecution);
 				foreach (var doc in results)
@@ -254,9 +259,9 @@ namespace Raven.Database.Indexing
 
 					logIndexing.Debug("Index {0} for document {1} resulted in ({2}): {3}", PublicName, currentKey, reduceKey, data);
 
-					putMapResultsDuration.Start();
+					putMappedResultsDuration.Start();
 					actions.MapReduce.PutMappedResult(indexId, currentKey, reduceKey, data);
-					putMapResultsDuration.Stop();
+					putMappedResultsDuration.Stop();
 
 					statsPerKey[reduceKey] = statsPerKey.GetOrDefault(reduceKey) + 1;
 					actions.General.MaybePulseTransaction();
@@ -629,7 +634,7 @@ namespace Raven.Database.Indexing
 					};
 				});
 
-				parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count, -1, -1, writeDocumentToIndexTotalDutation.ElapsedMilliseconds, linqExecutionDuration, writeStats.FlushToDiskDurationMs, -1, -1);
+				parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count, -1, -1, writeDocumentToIndexTotalDutation.ElapsedMilliseconds, linqExecutionDuration, writeStats.FlushToDiskDurationMs, -1, -1, -1);
 
 				logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, indexId, string.Join(", ", ReduceKeys)));
 			}
