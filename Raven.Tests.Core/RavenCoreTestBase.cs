@@ -15,10 +15,12 @@ using Raven.Client.Extensions;
 using System.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Tests.Core.Auth;
 using Xunit;
 using Raven.Server;
 using Raven.Database;
 using Raven.Database.Server;
+using Authentication = Raven.Database.Server.Security.Authentication;
 
 namespace Raven.Tests.Core
 {
@@ -187,6 +189,7 @@ namespace Raven.Tests.Core
 
 		public virtual void Dispose()
 		{
+			Authentication.Disable();
 			foreach (var store in createdStores)
 			{
 				store.Dispose();

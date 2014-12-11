@@ -466,10 +466,14 @@ class visualizer extends viewModelBase {
         enteringNodes.append("text")
             .attr("x", self.boxWidth / 2)
             .attr("y", 4.5)
-            .text(d => d.name);
+            .text(d => self.trimTextIfNeeded(d.name));
 
         (<D3.UpdateSelection>this.node).exit().remove();
         (<D3.UpdateSelection>this.link).exit().remove();
+    }
+
+    trimTextIfNeeded(input: string) {
+        return input.length > 25 ? input.substring(0, 25) + "..." : input;
     }
 
     fetchDataFor(key: string) {

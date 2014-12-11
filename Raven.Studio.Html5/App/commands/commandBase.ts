@@ -344,6 +344,10 @@ class commandBase {
     reportWarning(title: string, details?: string, httpStatusText?: string) {
         messagePublisher.reportWarning(title, details, httpStatusText);
     }
+
+    reportWarningWithButton(title: string, details: string, buttonName: string, action: () => any) {
+        messagePublisher.reportWarningWithButton(title, details, buttonName, action);
+    }
 }
 
 export = commandBase;
