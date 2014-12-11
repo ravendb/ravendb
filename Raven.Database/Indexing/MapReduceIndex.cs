@@ -207,7 +207,24 @@ namespace Raven.Database.Indexing
 
 			UpdateIndexingStats(context, stats);
 
-			BatchCompleted("Current Map", "Map", sourceCount, count, loadDocumentCount, loadDocumentDuration, -1, linqExecutionDuration, -1, reduceInMapLinqExecutionDuration, putMappedResultsDuration, deleteMappedResultsDuration.ElapsedMilliseconds);
+			BatchCompleted("Current Map", "Map", sourceCount, count,
+				new LoadDocumentPerformanceStats
+				{
+					LoadDocumentCount = loadDocumentCount,
+					LoadDocumentDurationMs = loadDocumentDuration
+				},
+				new LinqExecutionPerformanceStats
+				{
+					MapLinqExecutionDurationMs = linqExecutionDuration,
+					ReduceLinqExecutionDurationMs = reduceInMapLinqExecutionDuration
+				},
+				null,
+				new MapReducePerformanceStats
+				{
+					DeleteMappedResultsDurationMs = deleteMappedResultsDuration.ElapsedMilliseconds,
+					PutMappedResultsDurationMs = putMappedResultsDuration
+				});
+
 			logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
 		}
 
@@ -634,7 +651,19 @@ namespace Raven.Database.Indexing
 					};
 				});
 
-				parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count, -1, -1, writeDocumentToIndexTotalDutation.ElapsedMilliseconds, linqExecutionDuration, writeStats.FlushToDiskDurationMs, -1, -1, -1);
+				parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count,
+					null,
+					new LinqExecutionPerformanceStats()
+					{
+						MapLinqExecutionDurationMs = -1,
+						ReduceLinqExecutionDurationMs = linqExecutionDuration
+					},
+					new LucenePerformanceStats()
+					{
+						WriteDocumentsDurationMs = writeDocumentToIndexTotalDutation.ElapsedMilliseconds,
+						FlushToDiskDurationMs = writeStats.FlushToDiskDurationMs,
+					},
+					new MapReducePerformanceStats());
 
 				logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, indexId, string.Join(", ", ReduceKeys)));
 			}

@@ -202,8 +202,23 @@ namespace Raven.Database.Indexing
 				};
 			});
 
-			BatchCompleted("Current", "Index", sourceCount, count, loadDocumentCount, loadDocumentDuration,
-						addDocumentTotalDutation.ElapsedMilliseconds, linqExecutionDutation, writeStats.FlushToDiskDurationMs, -1, -1, -1);
+			BatchCompleted("Current", "Index", sourceCount, count, 
+				new LoadDocumentPerformanceStats
+				{
+					LoadDocumentCount = loadDocumentCount,
+					LoadDocumentDurationMs = loadDocumentDuration
+				},
+				new LinqExecutionPerformanceStats
+				{
+					MapLinqExecutionDurationMs = linqExecutionDutation,
+					ReduceLinqExecutionDurationMs = -1
+				},
+				new LucenePerformanceStats
+				{
+					WriteDocumentsDurationMs = addDocumentTotalDutation.ElapsedMilliseconds,
+					FlushToDiskDurationMs = writeStats.FlushToDiskDurationMs
+				}, null);
+
 			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
 		}
 

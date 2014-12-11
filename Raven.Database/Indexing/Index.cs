@@ -184,7 +184,7 @@ namespace Raven.Database.Indexing
 			return performanceStats;
 		}
 
-		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, int loadDocumentCount, long loadDocumentDurationInMs, long writingDocumentsToLuceneDurationMs, long linqExecutionDurationMs, long flushToDiskDurationMs, long reduceInMapLinqExecutionDurationMs, long putMappedResultsDuration, long deleteMappedResultsDuration)
+		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, LoadDocumentPerformanceStats loadDocumentStats, LinqExecutionPerformanceStats linqExecutionStats, LucenePerformanceStats writeToLuceneStats, MapReducePerformanceStats mapReduceStats)
 		{
 			IndexingPerformanceStats stats;
 			if (currentlyIndexing.TryRemove(indexingStep, out stats))
@@ -196,15 +196,11 @@ namespace Raven.Database.Indexing
 				stats.InputCount = inputCount;
 				stats.OutputCount = outputCount;
 
-				stats.LoadDocumentCount = loadDocumentCount;
-				stats.LoadDocumentDurationMs = loadDocumentDurationInMs;
+				stats.LoadDocumentStats = loadDocumentStats;
+				stats.LinqExecutionStats = linqExecutionStats;
 
-				stats.WritingDocumentsToLuceneDurationMs = writingDocumentsToLuceneDurationMs;
-				stats.LinqExecutionDurationMs = linqExecutionDurationMs;
-				stats.FlushToDiskDurationMs = flushToDiskDurationMs;
-				stats.ReduceInMapLinqExecutionDurationMs = reduceInMapLinqExecutionDurationMs;
-				stats.PutMappedResultsDurationMs = putMappedResultsDuration;
-				stats.DeleteMappedResultsDurationMs = deleteMappedResultsDuration;
+				stats.LucenePerformance = writeToLuceneStats;
+				stats.MapReduceStats = mapReduceStats;
 
 				AddIndexingPerformanceStats(stats);
 			}

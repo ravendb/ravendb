@@ -93,14 +93,10 @@ namespace Raven.Abstractions.Data
 		public DateTime Completed { get; set; }
 	    public TimeSpan Duration { get; set; }
 	    public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
-	    public int LoadDocumentCount { get; set; }
-	    public long LoadDocumentDurationMs { get; set; }
-	    public long WritingDocumentsToLuceneDurationMs { get; set; }
-	    public long LinqExecutionDurationMs { get; set; }
-		public long ReduceInMapLinqExecutionDurationMs { get; set; }
-	    public long DeleteMappedResultsDurationMs { get; set; }
-		public long PutMappedResultsDurationMs { get; set; }
-	    public long FlushToDiskDurationMs { get; set; }
+		public LoadDocumentPerformanceStats LoadDocumentStats { get; set; }
+		public LinqExecutionPerformanceStats LinqExecutionStats { get; set; }
+		public LucenePerformanceStats LucenePerformance { get; set; }
+		public MapReducePerformanceStats MapReduceStats { get; set; }
 		public long StorageCommitDurationMs { get; set; }
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
 
@@ -111,36 +107,6 @@ namespace Raven.Abstractions.Data
 		    if (obj.GetType() != this.GetType()) return false;
 		    return Equals((IndexingPerformanceStats) obj);
 	    }
-
-		protected bool Equals(IndexingPerformanceStats other)
-		{
-			return string.Equals(Operation, other.Operation) && ItemsCount == other.ItemsCount && InputCount == other.InputCount && OutputCount == other.OutputCount && Started.Equals(other.Started) && Completed.Equals(other.Completed) && Duration.Equals(other.Duration) && LoadDocumentCount == other.LoadDocumentCount && LoadDocumentDurationMs == other.LoadDocumentDurationMs && WritingDocumentsToLuceneDurationMs == other.WritingDocumentsToLuceneDurationMs && LinqExecutionDurationMs == other.LinqExecutionDurationMs && ReduceInMapLinqExecutionDurationMs == other.ReduceInMapLinqExecutionDurationMs && DeleteMappedResultsDurationMs == other.DeleteMappedResultsDurationMs && PutMappedResultsDurationMs == other.PutMappedResultsDurationMs && FlushToDiskDurationMs == other.FlushToDiskDurationMs && StorageCommitDurationMs == other.StorageCommitDurationMs && WaitingTimeSinceLastBatchCompleted.Equals(other.WaitingTimeSinceLastBatchCompleted);
-		}
-
-		public override int GetHashCode()
-		{
-			unchecked
-			{
-				var hashCode = (Operation != null ? Operation.GetHashCode() : 0);
-				hashCode = (hashCode * 397) ^ ItemsCount;
-				hashCode = (hashCode * 397) ^ InputCount;
-				hashCode = (hashCode * 397) ^ OutputCount;
-				hashCode = (hashCode * 397) ^ Started.GetHashCode();
-				hashCode = (hashCode * 397) ^ Completed.GetHashCode();
-				hashCode = (hashCode * 397) ^ Duration.GetHashCode();
-				hashCode = (hashCode * 397) ^ LoadDocumentCount;
-				hashCode = (hashCode * 397) ^ LoadDocumentDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ WritingDocumentsToLuceneDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ LinqExecutionDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ ReduceInMapLinqExecutionDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ DeleteMappedResultsDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ PutMappedResultsDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ FlushToDiskDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ StorageCommitDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ WaitingTimeSinceLastBatchCompleted.GetHashCode();
-				return hashCode;
-			}
-		}
 
 	    public override string ToString()
 	    {
@@ -157,5 +123,139 @@ Duration in ms: {4:#,#}
 		                         DurationMilliseconds);
 
 	    }
+
+		protected bool Equals(IndexingPerformanceStats other)
+		{
+			return string.Equals(Operation, other.Operation) && ItemsCount == other.ItemsCount && InputCount == other.InputCount && OutputCount == other.OutputCount && Started.Equals(other.Started) && Completed.Equals(other.Completed) && Duration.Equals(other.Duration) && Equals(LoadDocumentStats, other.LoadDocumentStats) && Equals(LinqExecutionStats, other.LinqExecutionStats) && Equals(LucenePerformance, other.LucenePerformance) && Equals(MapReduceStats, other.MapReduceStats) && StorageCommitDurationMs == other.StorageCommitDurationMs && WaitingTimeSinceLastBatchCompleted.Equals(other.WaitingTimeSinceLastBatchCompleted);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				var hashCode = (Operation != null ? Operation.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ ItemsCount;
+				hashCode = (hashCode * 397) ^ InputCount;
+				hashCode = (hashCode * 397) ^ OutputCount;
+				hashCode = (hashCode * 397) ^ Started.GetHashCode();
+				hashCode = (hashCode * 397) ^ Completed.GetHashCode();
+				hashCode = (hashCode * 397) ^ Duration.GetHashCode();
+				hashCode = (hashCode * 397) ^ (LoadDocumentStats != null ? LoadDocumentStats.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (LinqExecutionStats != null ? LinqExecutionStats.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (LucenePerformance != null ? LucenePerformance.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (MapReduceStats != null ? MapReduceStats.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ StorageCommitDurationMs.GetHashCode();
+				hashCode = (hashCode * 397) ^ WaitingTimeSinceLastBatchCompleted.GetHashCode();
+				return hashCode;
+			}
+		}
+	}
+
+	public class LinqExecutionPerformanceStats
+	{
+		public long MapLinqExecutionDurationMs { get; set; }
+		public long ReduceLinqExecutionDurationMs { get; set; }
+
+		protected bool Equals(LinqExecutionPerformanceStats other)
+		{
+			return MapLinqExecutionDurationMs == other.MapLinqExecutionDurationMs && ReduceLinqExecutionDurationMs == other.ReduceLinqExecutionDurationMs;
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				return (MapLinqExecutionDurationMs.GetHashCode()*397) ^ ReduceLinqExecutionDurationMs.GetHashCode();
+			}
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((LinqExecutionPerformanceStats) obj);
+		}
+	}
+
+	public class LoadDocumentPerformanceStats
+	{
+		public int LoadDocumentCount { get; set; }
+		public long LoadDocumentDurationMs { get; set; }
+
+		protected bool Equals(LoadDocumentPerformanceStats other)
+		{
+			return LoadDocumentCount == other.LoadDocumentCount && LoadDocumentDurationMs == other.LoadDocumentDurationMs;
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				return (LoadDocumentCount*397) ^ LoadDocumentDurationMs.GetHashCode();
+			}
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((LoadDocumentPerformanceStats) obj);
+		}
+	}
+
+	public class MapReducePerformanceStats
+	{
+		public long DeleteMappedResultsDurationMs { get; set; }
+		public long PutMappedResultsDurationMs { get; set; }
+
+		protected bool Equals(MapReducePerformanceStats other)
+		{
+			return DeleteMappedResultsDurationMs == other.DeleteMappedResultsDurationMs && PutMappedResultsDurationMs == other.PutMappedResultsDurationMs;
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				return (DeleteMappedResultsDurationMs.GetHashCode()*397) ^ PutMappedResultsDurationMs.GetHashCode();
+			}
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((MapReducePerformanceStats) obj);
+		}
+	}
+
+	public class LucenePerformanceStats
+	{
+		public long WriteDocumentsDurationMs { get; set; }
+		public long FlushToDiskDurationMs { get; set; }
+
+		protected bool Equals(LucenePerformanceStats other)
+		{
+			return WriteDocumentsDurationMs == other.WriteDocumentsDurationMs && FlushToDiskDurationMs == other.FlushToDiskDurationMs;
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				return (WriteDocumentsDurationMs.GetHashCode()*397) ^ FlushToDiskDurationMs.GetHashCode();
+			}
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((LucenePerformanceStats) obj);
+		}
 	}
 }
