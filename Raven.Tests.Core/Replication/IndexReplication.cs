@@ -1,18 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Replication;
 using Raven.Client;
-using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Tests.Helpers;
@@ -84,7 +77,7 @@ namespace Raven.Tests.Core.Replication
 		}
 
 		[Fact]
-		public void Should_skip_index_replication_if_flag_is_true()
+		public void Should_skip_index_replication_if_serverside_flag_is_true()
 		{
 			var requestFactory = new HttpRavenRequestFactory();
 			using (var sourceServer = GetNewServer(8077))
