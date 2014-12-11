@@ -31,9 +31,10 @@ namespace Owin
 {
 	public static class AppBuilderExtensions
 	{
-	    private const string HostOnAppDisposing = "host.OnAppDisposing";
+		private static HttpConfiguration httpConfiguration;
+		private const string HostOnAppDisposing = "host.OnAppDisposing";		
 
-	    public static IAppBuilder UseRavenDB(this IAppBuilder app)
+		public static IAppBuilder UseRavenDB(this IAppBuilder app)
 		{
 			return UseRavenDB(app, new RavenConfiguration());
 		}
@@ -76,8 +77,11 @@ namespace Owin
 #endif
 
             app.Use((context, func) => UpgradeToWebSockets(options, context, func));
-            
-            app.UseWebApi(CreateHttpCfg(options));
+			
+			if(httpConfiguration == null)
+				httpConfiguration = CreateHttpCfg(options);
+
+			app.UseWebApi(httpConfiguration);
 
 
 			return app;
