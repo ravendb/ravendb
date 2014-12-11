@@ -203,7 +203,7 @@ namespace Raven.Database.Indexing
 			});
 
 			BatchCompleted("Current", "Index", sourceCount, count, loadDocumentCount, loadDocumentDuration,
-						addDocumentTotalDutation.ElapsedMilliseconds, linqExecutionDutation, writeStats.FlushToDiskDurationMs, -1);
+						addDocumentTotalDutation.ElapsedMilliseconds, linqExecutionDutation, writeStats.FlushToDiskDurationMs, -1, -1);
 			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
 		}
 
