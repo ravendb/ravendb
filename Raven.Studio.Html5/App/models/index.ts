@@ -45,6 +45,11 @@ class index {
     static priorityDisabledForced = "Disabled,Forced";
     static priorityAbandonedForced = "Abandoned,Forced";
 
+
+    static SideBySideIndexPrefix = "ReplacementOf/";
+
+    static TestIndexPrefix = "Test/";
+
     constructor(dto: indexStatisticsDto) {
         this.createdTimestamp = dto.CreatedTimestamp;
         this.docsCount = dto.DocsCount;
