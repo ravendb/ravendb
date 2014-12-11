@@ -14,6 +14,11 @@ namespace Raven.Database.Server.Security
 	{
 		private static DateTime? licenseEnabled;
 
+		public static void Disable()
+		{
+			licenseEnabled = null;
+		}
+
         public static void EnableOnce()
         {
 	        licenseEnabled = SystemTime.UtcNow.AddMinutes(1);
