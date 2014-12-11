@@ -118,6 +118,9 @@ namespace Raven.Database.FileSystem
             if (storageType == null) // We choose the system wide if not defined.
                 storageType = configuration.DefaultStorageTypeName;
 
+			if (storageType != null)
+				storageType = storageType.ToLowerInvariant();
+
             switch (storageType)
             {
                 case InMemoryRavenConfiguration.VoronTypeName:

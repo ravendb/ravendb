@@ -686,9 +686,9 @@ namespace Raven.Database.Server.Controllers
 		private HttpResponseMessage GetIndexEntries(string index)
 		{
 			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
-			var reduceKeysArray = GetQueryStringValue("reduceKeys");
+		    var reduceKeys = GetQueryStringValues("reduceKeys").Select(x => x.Trim()).ToList();
 
-			if (string.IsNullOrEmpty(indexQuery.Query) == false && string.IsNullOrEmpty(reduceKeysArray) == false)
+			if (string.IsNullOrEmpty(indexQuery.Query) == false && reduceKeys.Count > 0)
 			{
 				return GetMessageWithObject(new
 				{
@@ -696,11 +696,8 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			List<string> reduceKeys = null;
-
-			if (string.IsNullOrEmpty(reduceKeysArray) == false)
+			if (reduceKeys.Count > 0)
 			{
-                reduceKeys = reduceKeysArray.Split(',').Select(x => x.Trim()).ToList();
                 // overwrite indexQueryPagining as __reduce_key field is not indexed, and we don't have simple method to obtain column alias
 			    indexQuery.Start = 0;
 			    indexQuery.PageSize = int.MaxValue;

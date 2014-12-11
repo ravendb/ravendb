@@ -12,24 +12,27 @@ namespace Raven.Database.Server.Security
 {
 	public static class Authentication
 	{
-	    private static bool isEnabled;
-		private static DateTime? ravenFsEnabled;
+		private static DateTime? licenseEnabled;
+
+		public static void Disable()
+		{
+			licenseEnabled = null;
+		}
 
         public static void EnableOnce()
         {
-            isEnabled = true;
-	        ravenFsEnabled = SystemTime.UtcNow.AddMinutes(1);
+	        licenseEnabled = SystemTime.UtcNow.AddMinutes(1);
         }
 
 		public static bool IsLicensedForRavenFs
 		{
 			get
 			{
-				if (ravenFsEnabled != null)
+				if (licenseEnabled != null)
 				{
-					if (SystemTime.UtcNow < ravenFsEnabled.Value)
+					if (SystemTime.UtcNow < licenseEnabled.Value)
 						return true;
-					ravenFsEnabled = null;
+					licenseEnabled = null;
 				}
 
 				string ravenFsValue;
@@ -52,10 +55,11 @@ namespace Raven.Database.Server.Security
 		{
 			get
 			{
-                if (isEnabled)
+				if (licenseEnabled != null)
                 {
-                    isEnabled = false;
-                    return true;
+					if (SystemTime.UtcNow < licenseEnabled.Value)
+						return true;
+					licenseEnabled = null;
                 }
 
 			    return ValidateLicense.CurrentLicense.IsCommercial ||
