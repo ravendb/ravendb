@@ -388,6 +388,7 @@
     <TypeScriptCompile Include="App\common\adminLogsClient.ts" />
     <TypeScriptCompile Include="App\models\adminLogsConfig.ts" />
     <TypeScriptCompile Include="App\common\eventSourceSettingStorage.ts" />
+    <TypeScriptCompile Include="App\common\changesApiWarnStorage.ts" />
     <Content Include="App\models\adminLogsConfigEntry.ts" />
     <TypeScriptCompile Include="App\models\performanceTestRequest.ts" />
     <TypeScriptCompile Include="App\models\performanceTestResultWrapped.ts" />
