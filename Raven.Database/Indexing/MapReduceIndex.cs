@@ -21,6 +21,7 @@ using Lucene.Net.Store;
 using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
+using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
@@ -110,6 +111,9 @@ namespace Raven.Database.Indexing
 			long linqExecutionDuration = 0;
 			long reduceInMapLinqExecutionDuration = 0;
 			long putMappedResultsDuration = 0;
+			long storageCommitDuration = 0;
+
+			var usedStorageAccessors = new ConcurrentSet<IStorageActionsAccessor>();
 
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, partition =>
 			{
@@ -128,6 +132,20 @@ namespace Raven.Database.Indexing
 					// should result in less memory and better perf
 					context.TransactionalStorage.Batch(accessor =>
 					{
+						if (usedStorageAccessors.TryAdd(accessor))
+						{
+							var storageCommitDurationWatch = new Stopwatch();
+
+							accessor.BeforeStorageCommit += storageCommitDurationWatch.Start;
+
+							accessor.AfterStorageCommit += () =>
+							{
+								storageCommitDurationWatch.Stop();
+								performanceStats.MapStoragePerformance.StorageCommitDurationMs = 
+									Interlocked.Add(ref storageCommitDuration, storageCommitDurationWatch.ElapsedMilliseconds);
+							};
+						}
+
 						var mapResults = RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, localStats, out linqExecution);
 						var currentDocumentResults = new List<object>();
 						string currentKey = null;

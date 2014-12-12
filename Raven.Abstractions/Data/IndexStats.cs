@@ -85,6 +85,14 @@ namespace Raven.Abstractions.Data
 
     public class IndexingPerformanceStats
 	{
+	    public IndexingPerformanceStats()
+	    {
+		    LoadDocumentPerformance = new LoadDocumentPerformanceStats();
+			LinqExecutionPerformance = new LinqExecutionPerformanceStats();
+			LucenePerformance = new LucenePerformanceStats();
+			MapStoragePerformance = new MapStoragePerformanceStats();
+	    }
+
 	    public string Operation { get; set; }
 	    public int ItemsCount { get; set; }
 	    public int InputCount { get; set; }
@@ -205,6 +213,13 @@ Duration in ms: {4:#,#}
 
 	public class MapStoragePerformanceStats
 	{
+		public MapStoragePerformanceStats()
+		{
+			DeleteMappedResultsDurationMs = -1;
+			PutMappedResultsDurationMs = -1;
+			StorageCommitDurationMs = -1;
+		}
+
 		public long DeleteMappedResultsDurationMs { get; set; }
 		public long PutMappedResultsDurationMs { get; set; }
 		public long StorageCommitDurationMs { get; set; }

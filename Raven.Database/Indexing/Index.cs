@@ -196,11 +196,18 @@ namespace Raven.Database.Indexing
 				stats.InputCount = inputCount;
 				stats.OutputCount = outputCount;
 
-				stats.LoadDocumentPerformance = loadDocumentStats;
-				stats.LinqExecutionPerformance = linqExecutionStats;
+				stats.LoadDocumentPerformance.LoadDocumentCount = loadDocumentStats.LoadDocumentCount;
+				stats.LoadDocumentPerformance.LoadDocumentDurationMs = loadDocumentStats.LoadDocumentDurationMs;
 
-				stats.LucenePerformance = writeToLuceneStats;
-				stats.MapStoragePerformance = mapStorageStats;
+				stats.LinqExecutionPerformance.MapLinqExecutionDurationMs = linqExecutionStats.MapLinqExecutionDurationMs;
+				stats.LinqExecutionPerformance.ReduceLinqExecutionDurationMs = linqExecutionStats.ReduceLinqExecutionDurationMs;
+
+				stats.LucenePerformance.WriteDocumentsDurationMs = writeToLuceneStats.WriteDocumentsDurationMs;
+				stats.LucenePerformance.FlushToDiskDurationMs = writeToLuceneStats.FlushToDiskDurationMs;
+
+				stats.MapStoragePerformance.PutMappedResultsDurationMs = mapStorageStats.PutMappedResultsDurationMs;
+				stats.MapStoragePerformance.DeleteMappedResultsDurationMs = mapStorageStats.DeleteMappedResultsDurationMs;
+				// stats.MapStoragePerformance.StorageCommitDurationMs - it's set in MapReduceIndex.IndexDocuments because storage commit can happen after this batch completes
 
 				AddIndexingPerformanceStats(stats);
 			}
