@@ -83,8 +83,8 @@
 <script type="text/html" id="index-stat-template">
     <div style="padding: 10px">
         <form>
-        <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
-            </form>
+            <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
+        </form>
 
         <table class="table table-condensed table-striped" data-bind="with: data">
             <thead>
@@ -118,25 +118,38 @@
                     <td>Started</td>
                     <td data-bind="text: Started"></td>
                 </tr>
-                <tr data-bind="visible: LinqExecutionDurationMs >= 0">
-                    <td>Linq execution duration</td>
-                    <td data-bind="text: LinqExecutionDurationMs"></td>
+
+                <tr data-bind="visible: LoadDocumentPerformance.LoadDocumentDurationMs >= 0">
+                    <td>LoadDocument duration</td>
+                    <td data-bind="text: LoadDocumentPerformance.LoadDocumentDurationMs"></td>
                 </tr>
-                <tr data-bind="visible: LoadDocumentCount >= 0">
-                    <td>Load document count</td>
-                    <td data-bind="text: LoadDocumentCount"></td>
+                <tr data-bind="visible: LinqExecutionPerformance.MapLinqExecutionDurationMs >= 0">
+                    <td>Linq: map execution duration</td>
+                    <td data-bind="text: LinqExecutionPerformance.MapLinqExecutionDurationMs"></td>
                 </tr>
-                <tr data-bind="visible: LoadDocumentDurationMs >= 0">
-                    <td>Load document duration</td>
-                    <td data-bind="text: LoadDocumentDurationMs"></td>
+                <tr data-bind="visible: LinqExecutionPerformance.ReduceLinqExecutionDurationMs >= 0">
+                    <td>Linq: reduce execution duration</td>
+                    <td data-bind="text: LinqExecutionPerformance.ReduceLinqExecutionDurationMs"></td>
                 </tr>
-                <tr data-bind="visible: WritingDocumentsToLuceneDurationMs >= 0">
-                    <td>Writing documents<br />to lucene duration</td>
-                    <td data-bind="text: WritingDocumentsToLuceneDurationMs"></td>
+                <tr data-bind="visible: LucenePerformance.WriteDocumentsDurationMs >= 0">
+                    <td>Lucene: write documents duration</td>
+                    <td data-bind="text: LucenePerformance.WriteDocumentsDurationMs"></td>
                 </tr>
-                <tr data-bind="visible: FlushToDiskDurationMs >= 0">
-                    <td>Flash to disk duration</td>
-                    <td data-bind="text: FlushToDiskDurationMs"></td>
+                <tr data-bind="visible: LucenePerformance.FlushToDiskDurationMs >= 0">
+                    <td>Lucene: flush to disk duration</td>
+                    <td data-bind="text: LucenePerformance.FlushToDiskDurationMs"></td>
+                </tr>
+                <tr data-bind="visible: MapStoragePerformance.DeleteMappedResultsDurationMs >= 0">
+                    <td>Map storage: delete mapped results duration</td>
+                    <td data-bind="text: MapStoragePerformance.DeleteMappedResultsDurationMs"></td>
+                </tr>
+                <tr data-bind="visible: MapStoragePerformance.PutMappedResultsDurationMs >= 0">
+                    <td>Map storage: put mapped results duration</td>
+                    <td data-bind="text: MapStoragePerformance.PutMappedResultsDurationMs"></td>
+                </tr>
+                <tr data-bind="visible: MapStoragePerformance.StorageCommitDurationMs >= 0">
+                    <td>Map storage: commit duration</td>
+                    <td data-bind="text: MapStoragePerformance.StorageCommitDurationMs"></td>
                 </tr>
                 <tr>
                     <td>Waiting time since<br /> last batch completed</td>

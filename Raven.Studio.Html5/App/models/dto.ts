@@ -136,6 +136,11 @@ interface indexNameAndPerformanceStats {
     stats: indexPerformanceDto;
 }
 
+interface indexNameAndPerformanceStatsWithCache extends indexNameAndPerformanceStats {
+    widths: number[];
+    cumulativeSums: number[];
+}
+
 interface indexPerformanceDto {
     Operation: string;
     ItemsCount: number;
@@ -145,11 +150,12 @@ interface indexPerformanceDto {
     Completed: string; // Date
     Duration: string;
     DurationMilliseconds: number;
-    LoadDocumentCount: number;
-    LoadDocumentDurationMs: number;
-    WritingDocumentsToLuceneDurationMs: number;
-    LinqExecutionDurationMs: number;
-    FlushToDiskDurationMs: number;
+
+    LoadDocumentPerformance: { LoadDocumentCount: number; LoadDocumentDurationMs: number };
+    LinqExecutionPerformance: { MapLinqExecutionDurationMs: number; ReduceLinqExecutionDurationMs: number };
+    LucenePerformance: { WriteDocumentsDurationMs: number; FlushToDiskDurationMs: number };
+    MapStoragePerformance: { DeleteMappedResultsDurationMs: number; PutMappedResultsDurationMs: number; StorageCommitDurationMs: number };
+
     WaitingTimeSinceLastBatchCompleted: string;
 }
 

@@ -94,7 +94,8 @@ class gapFinder {
 
 class metrics extends viewModelBase { 
 
-    static colors = { linq: '#004080', load: '#ffff80', write: '#00ff00', flush: '#9f0000' };
+    static bar_names = ['load_bar', 'map_linq_bar', 'reduce_linq_bar', 'write_bar', 'flush_bar', 'del_mr_bar', 'put_mr_bar', 'commit_bar'];
+    static bar_colors = ['#FFF200', '#ED1C24', '#00A2E8', '#167232', '#C44F00', '#CAFAB4', '#C8BFE7', '#880015' ]; 
 
     static minGapTime = 1000 * 10;
 
@@ -185,12 +186,16 @@ class metrics extends viewModelBase {
 
     private mergeJsonData(currentData: indexingBatchInfoDto[], incomingData: indexingBatchInfoDto[]) {
         // create lookup map to avoid O(n^2) 
+        var self = this;
         var dateLookup = d3.map();
         currentData.forEach((d, i) => {
             dateLookup.set(d.StartedAt, i);
         });
 
         incomingData.forEach(d => {
+
+            d.PerfStats.forEach(self.computeCache);
+
             if (dateLookup.has(d.StartedAt)) {
                 var index = dateLookup.get(d.StartedAt);
                 currentData[index] = d;
@@ -200,6 +205,33 @@ class metrics extends viewModelBase {
         });
         return currentData;
     }
+
+    computeCache(input: indexNameAndPerformanceStatsWithCache) {
+        var widths = [];
+        var sums = [];
+        var currentOffset = 0;
+
+        var timings = [
+            input.stats.LoadDocumentPerformance.LoadDocumentDurationMs,
+            input.stats.LinqExecutionPerformance.MapLinqExecutionDurationMs,
+            input.stats.LinqExecutionPerformance.ReduceLinqExecutionDurationMs,
+            input.stats.LucenePerformance.WriteDocumentsDurationMs,
+            input.stats.LucenePerformance.FlushToDiskDurationMs,
+            input.stats.MapStoragePerformance.DeleteMappedResultsDurationMs,
+            input.stats.MapStoragePerformance.PutMappedResultsDurationMs,
+            input.stats.MapStoragePerformance.StorageCommitDurationMs
+        ];
+        for (var i = 0; i < timings.length; i++) {
+            var currentWidth = Math.max(timings[i], 0);
+            widths.push(currentWidth);
+            sums.push(currentOffset);
+            currentOffset += currentWidth;
+        }
+
+        input.widths = widths;
+        input.cumulativeSums = sums;
+    }
+
 
     graphScrolled() {
         var leftScroll = $("#metricsContainer").scrollLeft();
@@ -420,24 +452,12 @@ class metrics extends viewModelBase {
         opTransition.select('.main_bar')
             .attr('width', (d: indexNameAndPerformanceStats) => self.xScaleExtent(d.stats.DurationMilliseconds));
 
-        opTransition.select('.linq_bar')
-            .attr('width', (d: indexNameAndPerformanceStats) => self.xScaleExtent(Math.max(d.stats.LinqExecutionDurationMs, 0)));
-
-        opTransition.select('.load_bar')
-            .attr('x', (d: indexNameAndPerformanceStats) => self.xScaleExtent(Math.max(d.stats.LinqExecutionDurationMs, 0)))
-            .attr('width', (d: indexNameAndPerformanceStats) => self.xScaleExtent(Math.max(d.stats.LoadDocumentDurationMs, 0)));
-
-        opTransition.select('.write_bar')
-            .attr('x', (d: indexNameAndPerformanceStats) =>
-                self.xScaleExtent(Math.max(d.stats.LinqExecutionDurationMs, 0) + Math.max(d.stats.LoadDocumentDurationMs, 0)))
-            .attr('width', (d: indexNameAndPerformanceStats) => self.xScaleExtent(Math.max(d.stats.WritingDocumentsToLuceneDurationMs, 0)));
-            
-        opTransition.select('.flush_bar')
-            .attr('x', (d: indexNameAndPerformanceStats) =>
-                self.xScaleExtent(Math.max(d.stats.LinqExecutionDurationMs, 0)
-                    + Math.max(d.stats.LoadDocumentDurationMs, 0)
-                    + Math.max(d.stats.WritingDocumentsToLuceneDurationMs, 0)))
-            .attr('width', (d: indexNameAndPerformanceStats) => self.xScaleExtent(Math.max(d.stats.FlushToDiskDurationMs, 0)));
+        for (var i = 0; i < metrics.bar_names.length; i++) {
+            var barName = metrics.bar_names[i];
+            opTransition.select('.' + barName)
+                .attr('x', (d: indexNameAndPerformanceStatsWithCache) => self.xScaleExtent(d.cumulativeSums[i]))
+                .attr('width', (d: indexNameAndPerformanceStatsWithCache) => self.xScaleExtent(d.widths[i]));
+        }
 
         var enteringOps = op.enter()
             .append('g')
@@ -460,50 +480,19 @@ class metrics extends viewModelBase {
             .transition()
             .attr('width', (d: indexNameAndPerformanceStats) => self.xScaleExtent(d.stats.DurationMilliseconds));
 
-        enteringOps.append('rect')
-            .attr('class', 'linq_bar')
-            .attr('x', 0)
-            .attr('y', self.yBarMargin + 3)
-            .attr('width', 0)
-            .attr('height', self.yBarHeight - 6)
-            .style('fill', metrics.colors.linq)
-            .transition()
-            .attr('width', (d: indexNameAndPerformanceStats) => self.xScaleExtent(Math.max(d.stats.LinqExecutionDurationMs, 0)));
-
-        enteringOps.append('rect')
-            .attr('class', 'load_bar')
-            .attr('x', (d: indexNameAndPerformanceStats) => self.xScaleExtent(Math.max(d.stats.LinqExecutionDurationMs, 0)))
-            .attr('y', self.yBarMargin + 3)
-            .attr('width', 0)
-            .attr('height', self.yBarHeight - 6)
-            .style('fill', metrics.colors.load)
-            .transition()
-            .attr('width', (d: indexNameAndPerformanceStats) => self.xScaleExtent(Math.max(d.stats.LoadDocumentDurationMs, 0)));
-
-        enteringOps.append('rect')
-            .attr('class', 'write_bar')
-            .attr('x', (d: indexNameAndPerformanceStats) =>
-                self.xScaleExtent(Math.max(d.stats.LinqExecutionDurationMs, 0) + Math.max(d.stats.LoadDocumentDurationMs, 0)))
-            .attr('y', self.yBarMargin + 3)
-            .attr('width', 0)
-            .attr('height', self.yBarHeight - 6)
-            .style('fill', metrics.colors.write)
-            .transition()
-            .attr('width', (d: indexNameAndPerformanceStats) => self.xScaleExtent(Math.max(d.stats.WritingDocumentsToLuceneDurationMs, 0)));
-
-        enteringOps.append('rect')
-            .attr('class', 'flush_bar')
-            .attr('x', (d: indexNameAndPerformanceStats) =>
-                self.xScaleExtent(Math.max(d.stats.LinqExecutionDurationMs, 0)
-                    + Math.max(d.stats.LoadDocumentDurationMs, 0)
-                    + Math.max(d.stats.WritingDocumentsToLuceneDurationMs, 0)))
-            .attr('y', self.yBarMargin + 3)
-            .attr('width', 0)
-            .attr('height', self.yBarHeight - 6)
-            .style('fill', metrics.colors.flush)
-            .transition()
-            .attr('width', (d: indexNameAndPerformanceStats) => self.xScaleExtent(Math.max(d.stats.FlushToDiskDurationMs, 0)));
-
+        for (var i = 0; i < metrics.bar_names.length; i++) {
+            var barName = metrics.bar_names[i];
+            var barColor = metrics.bar_colors[i];
+            enteringOps.append('rect')
+                .attr('class', barName)
+                .attr('x', (d: indexNameAndPerformanceStatsWithCache) => self.xScaleExtent(d.cumulativeSums[i]))
+                .attr('y', self.yBarMargin + 3)
+                .attr('width', 0)
+                .attr('height', self.yBarHeight - 6)
+                .style('fill', barColor)
+                .transition()
+                .attr('width', (d: indexNameAndPerformanceStatsWithCache) => self.xScaleExtent(d.widths[i]));
+        }
     }
 
     private updateGaps(gapsPositions: timeGap[]) {
