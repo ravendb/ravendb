@@ -443,7 +443,7 @@ namespace Raven.Client.Connection.Async
 							{
 								Key = key,
 								Patches = patches,
-								Etag = etag
+								Etag = etag,
 							}
 					}).ConfigureAwait(false);
 			return batchResults[0].AdditionalData;

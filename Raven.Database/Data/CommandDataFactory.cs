@@ -52,6 +52,7 @@ namespace Raven.Database.Data
 							.Cast<RavenJObject>()
 							.Select(PatchRequest.FromJson)
 							.ToArray(),
+						SkipPatchIfEtagMismatch = jsonCommand.ContainsKey("SkipPatchIfEtagMismatch") && jsonCommand.Value<bool>("SkipPatchIfEtagMismatch")
 					};
 				case "EVAL":
 					var debug = jsonCommand["DebugMode"].Value<bool>();
