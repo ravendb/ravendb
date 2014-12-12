@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Raven.Abstractions.Data
 {
-	public class ReducingBatchInfo : IEquatable<ReducingBatchInfo>
+	public class ReducingBatchInfo
 	{
 		public List<string> IndexesToWorkOn { get; set; }
 
@@ -27,37 +27,16 @@ namespace Raven.Abstractions.Data
 			var now = SystemTime.UtcNow;
 			TotalDurationMs = (now - StartedAt).TotalMilliseconds;
 
-			if (PerformanceStats.Count > 0)
-				TimeSinceFirstReduceInBatchCompletedMs = -1; // TODO arek (now - PerformanceStats.Min(x => x.Value.Completed)).TotalMilliseconds;
-		}
-
-		public override bool Equals(object obj)
-		{
-			if (ReferenceEquals(null, obj)) return false;
-			if (ReferenceEquals(this, obj)) return true;
-			if (obj.GetType() != this.GetType()) return false;
-			return Equals((ReducingBatchInfo) obj);
-		}
-
-		public bool Equals(ReducingBatchInfo other)
-		{
-			if (ReferenceEquals(null, other))
-				return false;
-			if (ReferenceEquals(this, other))
-				return true;
-			return Equals(IndexesToWorkOn, other.IndexesToWorkOn) && StartedAt.Equals(other.StartedAt) && TotalDurationMs.Equals(other.TotalDurationMs) && TimeSinceFirstReduceInBatchCompletedMs.Equals(other.TimeSinceFirstReduceInBatchCompletedMs) && Equals(PerformanceStats, other.PerformanceStats);
-		}
-
-		public override int GetHashCode()
-		{
-			unchecked
+			try
 			{
-				var hashCode = (IndexesToWorkOn != null ? IndexesToWorkOn.GetHashCode() : 0);
-				hashCode = (hashCode * 397) ^ StartedAt.GetHashCode();
-				hashCode = (hashCode * 397) ^ TotalDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ TimeSinceFirstReduceInBatchCompletedMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ (PerformanceStats != null ? PerformanceStats.GetHashCode() : 0);
-				return hashCode;
+				if (PerformanceStats.Count > 0)
+				{
+					TimeSinceFirstReduceInBatchCompletedMs = (now - PerformanceStats.Min(x => x.Value.LevelStats.Count > 0 ? x.Value.LevelStats.Last().Completed : DateTime.MaxValue)).TotalMilliseconds;
+				}
+			}
+			catch (Exception)
+			{
+
 			}
 		}
 	}
