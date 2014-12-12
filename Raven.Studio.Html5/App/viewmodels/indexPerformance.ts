@@ -102,8 +102,8 @@ class metrics extends viewModelBase {
     yBarHeight = 40;
     yBarMargin = 10;
     
-    jsonData: indexingBatchInfoDto[] = [];
-    rawJsonData: indexingBatchInfoDto[] = [];
+    mapJsonData: indexingBatchInfoDto[] = [];
+    rawMapJsonData: indexingBatchInfoDto[] = [];
     allIndexNames = ko.observableArray<string>();
     selectedIndexNames = ko.observableArray<string>();
 
@@ -134,7 +134,7 @@ class metrics extends viewModelBase {
         });
     }
 
-    fetchJsonData() {
+    fetchMapJsonData() {
         return new getIndexingBatchStatsCommand(this.activeDatabase()).execute();
     }
 
@@ -163,23 +163,23 @@ class metrics extends viewModelBase {
     }
 
     filterJsonData() {
-        this.jsonData = [];
+        this.mapJsonData = [];
         var selectedIndexes = this.selectedIndexNames();
-        this.rawJsonData.forEach(rawData => {
+        this.rawMapJsonData.forEach(rawData => {
             var filteredStats = rawData.PerfStats.filter(p => selectedIndexes.contains(p.indexName));
             if (filteredStats.length > 0) {
                 var rawCopy: indexingBatchInfoDto = $.extend(false, {}, rawData);
                 rawCopy.PerfStats = filteredStats;
-                this.jsonData.push(rawCopy);
+                this.mapJsonData.push(rawCopy);
             }
         });
     }
 
     refresh() {
-        return this.fetchJsonData().done((data) => {
-            this.rawJsonData = this.mergeJsonData(this.rawJsonData, data);
+        return this.fetchMapJsonData().done((data) => {
+            this.rawMapJsonData = this.mergeMapJsonData(this.rawMapJsonData, data);
 
-            var indexes = this.findIndexNames(this.rawJsonData);
+            var indexes = this.findIndexNames(this.rawMapJsonData);
             var oldAllIndexes = this.allIndexNames();
             var newIndexes = indexes.filter(i => !oldAllIndexes.contains(i));
 
@@ -192,7 +192,7 @@ class metrics extends viewModelBase {
         });
     }
 
-    private mergeJsonData(currentData: indexingBatchInfoDto[], incomingData: indexingBatchInfoDto[]) {
+    private mergeMapJsonData(currentData: indexingBatchInfoDto[], incomingData: indexingBatchInfoDto[]) {
         // create lookup map to avoid O(n^2) 
         var self = this;
         var dateLookup = d3.map();
@@ -259,7 +259,7 @@ class metrics extends viewModelBase {
 
         // compute dates extents
         var gapsFinder = new gapFinder(
-            this.jsonData.map(
+            this.mapJsonData.map(
                 j => new dateRange(j.StartedAtDate, new Date(j.StartedAtDate.getTime() + j.TotalDurationMs))
                 ), self.pixelsPerSecond(), metrics.minGapTime);
 
@@ -289,7 +289,7 @@ class metrics extends viewModelBase {
 
         var defs = this.svg
             .selectAll('defs')
-            .data([this.jsonData])
+            .data([this.mapJsonData])
             .enter()
             .append('defs');
 
@@ -318,7 +318,7 @@ class metrics extends viewModelBase {
 
         var svgEnter = this.svg
             .selectAll(".main_group")
-            .data([this.jsonData]).enter();
+            .data([this.mapJsonData]).enter();
 
         var mainGroup = svgEnter.append('g')
             .attr('class', 'main_group')
@@ -336,7 +336,7 @@ class metrics extends viewModelBase {
 
         var controllsEnter = this.svg
             .selectAll(".controlls")
-            .data([this.jsonData]).enter()
+            .data([this.mapJsonData]).enter()
             .append("g")
             .attr('class', 'controlls')
             .attr("transform", "translate(" + self.margin.left + "," + self.margin.top + ")");
@@ -402,7 +402,7 @@ class metrics extends viewModelBase {
         var self = this;
         var batches = self.svg.select(".batches")
             .selectAll(".batchRange")
-            .data(self.jsonData, d => d.StartedAt);
+            .data(self.mapJsonData, d => d.StartedAt);
 
         batches.exit().remove();
 
@@ -436,7 +436,7 @@ class metrics extends viewModelBase {
     private updateOperations() {
         var self = this;
         var batches = self.svg.select(".ops").selectAll(".opGroup")
-            .data(self.jsonData, d => d.StartedAt);
+            .data(self.mapJsonData, d => d.StartedAt);
 
         batches.exit().remove();
 
@@ -602,8 +602,8 @@ class metrics extends viewModelBase {
         }
     }
 
-    findIndexNames(jsonData: indexingBatchInfoDto[]) {
-        var statsInline = d3.merge(jsonData.map((d) => d.PerfStats));
+    findIndexNames(mapJsonData: indexingBatchInfoDto[]) {
+        var statsInline = d3.merge(mapJsonData.map((d) => d.PerfStats));
         var byKey = d3
             .nest()
             .key(d => d.indexName)
