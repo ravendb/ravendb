@@ -17,10 +17,11 @@ namespace Raven.Tryouts
 				var sp = Stopwatch.StartNew();
 				using (var store = new EmbeddableDocumentStore()
 				{
-					RunInMemory = true
+					RunInMemory = true,
+					
 				}.Initialize())
 				{
-
+					store.DatabaseCommands.Get("hello");
 				}
 				Console.WriteLine(sp.ElapsedMilliseconds);
 			}

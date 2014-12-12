@@ -31,7 +31,6 @@ namespace Owin
 {
 	public static class AppBuilderExtensions
 	{
-		private static HttpRouteCollection httpRouteCollection;
 		private const string HostOnAppDisposing = "host.OnAppDisposing";
 
 		public static IAppBuilder UseRavenDB(this IAppBuilder app)
@@ -109,38 +108,34 @@ namespace Owin
 		{
 			var cfg = new HttpConfiguration(httpRouteCollection ?? new HttpRouteCollection());
 
-			cfg.Properties[typeof(DatabasesLandlord)] = options.DatabaseLandlord;
-			cfg.Properties[typeof(FileSystemsLandlord)] = options.FileSystemLandlord;
-			cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
-			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
-			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
+
+			cfg.Properties[typeof (DatabasesLandlord)] = options.DatabaseLandlord;
+			cfg.Properties[typeof (FileSystemsLandlord)] = options.FileSystemLandlord;
+			cfg.Properties[typeof (CountersLandlord)] = options.CountersLandlord;
+			cfg.Properties[typeof (MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
+			cfg.Properties[typeof (RequestManager)] = options.RequestManager;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 			cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
-			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
+			cfg.Services.Replace(typeof (IAssembliesResolver), new MyAssemblyResolver());
 			cfg.Filters.Add(new RavenExceptionFilterAttribute());
-			if (httpRouteCollection == null)
-			{
-				cfg.MapHttpAttributeRoutes(new RavenInlineConstraintResolver());
+			cfg.MapHttpAttributeRoutes(new RavenInlineConstraintResolver());
 
-				cfg.Routes.MapHttpRoute(
-					"RavenFs", "fs/{controller}/{action}",
-					new { id = RouteParameter.Optional });
+			cfg.Routes.MapHttpRoute(
+				"RavenFs", "fs/{controller}/{action}",
+				new {id = RouteParameter.Optional});
 
-				cfg.Routes.MapHttpRoute(
-					"API Default", "{controller}/{action}",
-					new { id = RouteParameter.Optional });
+			cfg.Routes.MapHttpRoute(
+				"API Default", "{controller}/{action}",
+				new {id = RouteParameter.Optional});
 
-				cfg.Routes.MapHttpRoute(
-					"Database Route", "databases/{databaseName}/{controller}/{action}",
-					new { id = RouteParameter.Optional });
-
-				httpRouteCollection = cfg.Routes;
-			}
+			cfg.Routes.MapHttpRoute(
+				"Database Route", "databases/{databaseName}/{controller}/{action}",
+				new {id = RouteParameter.Optional});
 
 			cfg.MessageHandlers.Add(new ThrottlingHandler(options.SystemDatabase.Configuration.MaxConcurrentServerRequests));
 			cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
 
-			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
+			cfg.Services.Replace(typeof (IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
 			cfg.EnsureInitialized();
 
 			return cfg;
