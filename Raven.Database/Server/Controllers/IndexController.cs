@@ -36,8 +36,8 @@ namespace Raven.Database.Server.Controllers
 	public class IndexController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("indexes")]
-		[Route("databases/{databaseName}/indexes")]
+		[RavenRoute("indexes")]
+		[RavenRoute("databases/{databaseName}/indexes")]
 		public HttpResponseMessage IndexesGet()
 		{
 			var namesOnlyString = GetQueryStringValue("namesOnly");
@@ -52,8 +52,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexGet(string id)
 		{
             using (var cts = new CancellationTokenSource())
@@ -77,8 +77,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPut]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public async Task<HttpResponseMessage> IndexPut(string id)
 		{
 			var index = id;
@@ -115,8 +115,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpHead]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexHead(string id)
 		{
 			var index = id;
@@ -126,8 +126,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public async Task<HttpResponseMessage >IndexPost(string id)
 		{
 			var index = id;
@@ -163,8 +163,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpReset]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexReset(string id)
 		{
 			var index = id;
@@ -173,8 +173,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpDelete]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexDelete(string id)
 		{
 			var index = id;
@@ -183,8 +183,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("indexes/set-priority/{*id}")]
-		[Route("databases/{databaseName}/indexes/set-priority/{*id}")]
+		[RavenRoute("indexes/set-priority/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/set-priority/{*id}")]
 		public HttpResponseMessage SetPriority(string id)
 		{
 			var index = id;
@@ -205,8 +205,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-        [Route("c-sharp-index-definition/{*fullIndexName}")]
-		[Route("databases/{databaseName}/c-sharp-index-definition/{*fullIndexName}")]
+        [RavenRoute("c-sharp-index-definition/{*fullIndexName}")]
+		[RavenRoute("databases/{databaseName}/c-sharp-index-definition/{*fullIndexName}")]
 		public HttpResponseMessage GenerateCSharpIndexDefinition(string fullIndexName)
 		{
 			var indexDefinition = Database.Indexes.GetIndexDefinition(fullIndexName);
@@ -615,9 +615,9 @@ namespace Raven.Database.Server.Controllers
 		private HttpResponseMessage GetIndexEntries(string index)
 		{
 			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
-			var reduceKeysArray = GetQueryStringValue("reduceKeys");
+		    var reduceKeys = GetQueryStringValues("reduceKeys").Select(x => x.Trim()).ToList();
 
-			if (string.IsNullOrEmpty(indexQuery.Query) == false && string.IsNullOrEmpty(reduceKeysArray) == false)
+			if (string.IsNullOrEmpty(indexQuery.Query) == false && reduceKeys.Count > 0)
 			{
 				return GetMessageWithObject(new
 				{
@@ -625,11 +625,8 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			List<string> reduceKeys = null;
-
-			if (string.IsNullOrEmpty(reduceKeysArray) == false)
+			if (reduceKeys.Count > 0)
 			{
-                reduceKeys = reduceKeysArray.Split(',').Select(x => x.Trim()).ToList();
                 // overwrite indexQueryPagining as __reduce_key field is not indexed, and we don't have simple method to obtain column alias
 			    indexQuery.Start = 0;
 			    indexQuery.PageSize = int.MaxValue;

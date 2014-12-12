@@ -230,10 +230,6 @@ class indexes extends viewModelBase {
         app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
     }
 
-    replaceIndex(i: index) {
-        app.showDialog(new replaceIndexDialog(i.name, this.activeDatabase())); 
-    }
-    
     copyIndexesAndTransformers() {
         app.showDialog(new indexesAndTransformersClipboardDialog(this.activeDatabase(), false));
     }

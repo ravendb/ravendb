@@ -7,6 +7,7 @@ using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Security;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -15,7 +16,7 @@ namespace Raven.Database.Server.Controllers
 	public class DatabasesController : RavenDbApiController
 	{
 	    [HttpGet]
-		[Route("databases")]
+		[RavenRoute("databases")]
 		public HttpResponseMessage Databases(bool getAdditionalData = false)
 		{
 			if (EnsureSystemDatabase() == false)
@@ -127,8 +128,8 @@ namespace Raven.Database.Server.Controllers
 	    }
 
 	    [HttpGet]
-		[Route("database/size")]
-		[Route("databases/{databaseName}/database/size")]
+		[RavenRoute("database/size")]
+		[RavenRoute("databases/{databaseName}/database/size")]
 		public HttpResponseMessage DatabaseSize()
 		{
 			var totalSizeOnDisk = Database.GetTotalSizeOnDisk();
@@ -140,8 +141,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("database/storage/sizes")]
-		[Route("databases/{databaseName}/database/storage/sizes")]
+		[RavenRoute("database/storage/sizes")]
+		[RavenRoute("databases/{databaseName}/database/storage/sizes")]
 		public HttpResponseMessage DatabaseStorageSizes()
 		{
 			var indexStorageSize = Database.GetIndexStorageSizeOnDisk();

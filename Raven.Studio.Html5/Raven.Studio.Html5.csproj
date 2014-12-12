@@ -339,6 +339,7 @@
     <TypeScriptCompile Include="App\commands\getStatusStorageBreakdownCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingBatchStatsCommand.ts" />
     <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
@@ -387,6 +388,7 @@
     <TypeScriptCompile Include="App\common\adminLogsClient.ts" />
     <TypeScriptCompile Include="App\models\adminLogsConfig.ts" />
     <TypeScriptCompile Include="App\common\eventSourceSettingStorage.ts" />
+    <TypeScriptCompile Include="App\common\changesApiWarnStorage.ts" />
     <Content Include="App\models\adminLogsConfigEntry.ts" />
     <TypeScriptCompile Include="App\models\performanceTestRequest.ts" />
     <TypeScriptCompile Include="App\models\performanceTestResultWrapped.ts" />
