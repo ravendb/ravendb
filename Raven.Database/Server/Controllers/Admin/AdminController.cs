@@ -877,15 +877,31 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				return GetMessageWithString("IO Test is only possible from the system database", HttpStatusCode.BadRequest);
 			}
-			var ioTestRequest = await ReadJsonObjectAsync<PerformanceTestRequest>();
+		    var json = await ReadJsonAsync();
+		    var testType = json.Value<string>("TestType");
+
+		    AbstractPerformanceTestRequest ioTestRequest;
+            switch (testType)
+            {
+                case GenericPerformanceTestRequest.Mode:
+                    ioTestRequest = json.JsonDeserialization<GenericPerformanceTestRequest>();
+                    break;
+                case BatchPerformanceTestRequest.Mode:
+                    ioTestRequest = json.JsonDeserialization<BatchPerformanceTestRequest>();
+                    break;
+                default: 
+                    return GetMessageWithObject(new
+                {
+                    Error = "test type is invalid: " + testType
+                }, HttpStatusCode.BadRequest);
+            }
 
 			if (Directory.Exists(ioTestRequest.Path) == false)
 			{
 				return GetMessageWithString(string.Format("Directory {0} doesn't exist.", ioTestRequest.Path), HttpStatusCode.BadRequest);
 			}
-			ioTestRequest.Path = Path.Combine(ioTestRequest.Path, DiskPerformanceTester.TemporaryFileName);
 
-			Database.Documents.Delete(DiskPerformanceTester.PerformanceResultDocumentKey, null, null);
+            Database.Documents.Delete(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, null);
 
 			var killTaskCts = new CancellationTokenSource();
 
@@ -893,7 +909,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				var debugInfo = new List<string>();
 
-				using (var diskIo = new DiskPerformanceTester(ioTestRequest, debugInfo.Add, killTaskCts.Token))
+				using (var diskIo = AbstractDiskPerformanceTester.ForRequest(ioTestRequest, debugInfo.Add, killTaskCts.Token))
 				{
 					diskIo.TestDiskIO();
 
@@ -904,7 +920,7 @@ namespace Raven.Database.Server.Controllers.Admin
 						DebugMsgs = debugInfo
 					};
 
-					Database.Documents.Put(DiskPerformanceTester.PerformanceResultDocumentKey, null, RavenJObject.FromObject(diskIoRequestAndResponse), new RavenJObject(), null);
+					Database.Documents.Put(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, RavenJObject.FromObject(diskIoRequestAndResponse), new RavenJObject(), null);
 				}
 			});
 

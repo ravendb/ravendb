@@ -27,6 +27,14 @@ namespace Raven.Abstractions.Commands
 		public PatchRequest[] PatchesIfMissing { get; set; }
 
 		/// <summary>
+		/// If set to true, _and_ the Etag is specified then the behavior
+		/// of the patch in the case of etag mismatch is different. Instead of throwing,
+		/// the patch operation wouldn't complete, and the Skipped status would be returned 
+		/// to the user for this operation
+		/// </summary>
+		public bool SkipPatchIfEtagMismatch { get; set; }
+
+		/// <summary>
 		/// Gets the key.
 		/// </summary>
 		/// <value>The key.</value>
@@ -84,7 +92,8 @@ namespace Raven.Abstractions.Commands
 						{"Method", Method},
 						{"Patches", new RavenJArray(Patches.Select(x => x.ToJson()))},
 						{"Metadata", Metadata},
-						{"AdditionalData", AdditionalData}
+						{"AdditionalData", AdditionalData},
+						{"SkipPatchIfEtagMismatch", SkipPatchIfEtagMismatch}
 					};
 			if (Etag != null)
 				ret.Add("Etag", Etag.ToString());

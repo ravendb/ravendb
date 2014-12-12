@@ -30,11 +30,11 @@ class performanceTestResultWrapped {
     constructor(dto: diskPerformanceResultWrappedDto) {
         this.totalRead = ko.computed(() => this.formatter(dto.Result.TotalRead / 1024 / 1024) + " MB");
         this.totalWrite = ko.computed(() => this.formatter(dto.Result.TotalWrite / 1024 / 1024) + " MB");
-        this.hasReads = ko.computed(() => dto.Request.OperationType == "Read" || dto.Request.OperationType == "Mix");
-        this.hasWrites = ko.computed(() => dto.Request.OperationType == "Write" || dto.Request.OperationType == "Mix");
-        this.testTime = ko.computed(() => dto.Request.TimeToRunInSeconds + "s");
-        this.avgRead = ko.computed(() => this.formatter(dto.Result.TotalRead / 1024 / 1024 / dto.Request.TimeToRunInSeconds) + "MB/s");
-        this.avgWrite = ko.computed(() => this.formatter(dto.Result.TotalWrite / 1024 / 1024 / dto.Request.TimeToRunInSeconds) + "MB/s");
+        this.hasReads = ko.computed(() => dto.Request.TestType == "generic" && (dto.Request.OperationType == "Read" || dto.Request.OperationType == "Mix"));
+        this.hasWrites = ko.computed(() => dto.Request.TestType == "batch" || dto.Request.OperationType == "Write" || dto.Request.OperationType == "Mix");
+        this.testTime = ko.computed(() => this.formatter(dto.Result.TotalTimeMs / 1000) + "s");
+        this.avgRead = ko.computed(() => this.formatter(dto.Result.TotalRead / 1024 / 1024 / (dto.Result.TotalTimeMs / 1000)) + "MB/s");
+        this.avgWrite = ko.computed(() => this.formatter(dto.Result.TotalWrite / 1024 / 1024 / (dto.Result.TotalTimeMs / 1000)) + "MB/s");
 
         this.readLatencyMin = ko.computed(() => this.formatter(dto.Result.ReadLatency.Min) + "ms");
         this.readLatencyMax = ko.computed(() => this.formatter(dto.Result.ReadLatency.Max) + "ms");

@@ -28,6 +28,17 @@ namespace Raven.Tests.Core.Replication
 											modifyDatabaseDocument: doc => doc.Settings.Add("Raven/ActiveBundles", "replication"));
 		}
 
+		protected void SetupReplication(DocumentStore source, string databaseName, params DocumentStore[] destinations)
+		{
+			Assert.NotEmpty(destinations);
+			SetupReplication(source, destinations.Select(destination => new RavenJObject
+                                                                        {
+                                                                            { "Url", destination.Url },
+                                                                            { "Database", databaseName ?? destination.DefaultDatabase }
+                                                                        }),databaseName);
+		}
+
+
 		protected void SetupReplication(DocumentStore source, params DocumentStore[] destinations)
 		{
 			Assert.NotEmpty(destinations);
@@ -36,6 +47,16 @@ namespace Raven.Tests.Core.Replication
                                                                             { "Url", destination.Url },
                                                                             { "Database", destination.DefaultDatabase }
                                                                         }));
+		}
+
+		protected void SetupReplication(DocumentStore source, IEnumerable<RavenJObject> destinations, string databaseName)
+		{
+			source.DatabaseCommands.ForDatabase(databaseName).Put(Constants.RavenReplicationDestinations, null, new RavenJObject
+			{
+				{
+					"Destinations", new RavenJArray(destinations)
+				}
+			}, new RavenJObject());
 		}
 
 		protected void SetupReplication(DocumentStore source, IEnumerable<RavenJObject> destinations)

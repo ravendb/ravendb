@@ -1096,13 +1096,20 @@ interface fileSystemSettingsDto {
 interface performanceTestRequestDto {
     Path: string;
     FileSize: number;
-    OperationType: string;
-    BufferingType: string;
-    Sequential: boolean;
-    ThreadCount: number;
-    TimeToRunInSeconds: number;
+    TestType: string;
+
+    OperationType?: string;
+    BufferingType?: string;
+    Sequential?: boolean;
+    ThreadCount?: number;
+    TimeToRunInSeconds?: number;
     RandomSeed?: number;
-    ChunkSize: number;
+    ChunkSize?: number;
+
+    NumberOfDocuments?: number;
+    SizeOfDocuments?: number;
+    NumberOfDocumentsInBatch?: number;
+    WaitBetweenBatches?: number;
 }
 
 interface diskPerformanceResultDto {
@@ -1114,6 +1121,7 @@ interface diskPerformanceResultDto {
     WriteLatency: histogramDataDto;
     TotalRead: number;
     TotalWrite: number;
+    TotalTimeMs: number;
 }
 
 interface diskPerformanceResultWrappedDto {
