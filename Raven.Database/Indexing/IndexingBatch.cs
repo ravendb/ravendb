@@ -19,7 +19,6 @@ namespace Raven.Database.Indexing
 		public readonly List<bool> SkipDeleteFromIndex;
 		public DateTime? DateTime;
 		public readonly Etag HighestEtagBeforeFiltering;
-		public IndexingPerformanceStats IndexingPerformance;
 
 		public void Add(JsonDocument doc, object asJson, bool skipDeleteFromIndex)
 		{

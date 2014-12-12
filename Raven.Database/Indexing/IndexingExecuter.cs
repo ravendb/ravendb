@@ -281,8 +281,7 @@ namespace Raven.Database.Indexing
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, result,
 				index =>
 				{
-					HandleIndexingFor(index, lastEtag, lastModified);
-					var performance = index.Batch.IndexingPerformance;
+					var performance = HandleIndexingFor(index, lastEtag, lastModified);
 
 					if (performance != null)
 						indexingBatchInfo.PerformanceStats.TryAdd(index.Index.PublicName, performance);
@@ -312,7 +311,7 @@ namespace Raven.Database.Indexing
 					return;
 
 				IndexingBatchInfo batchInfo = null;
-
+		        IndexingPerformanceStats performance = null;
 		        try
 		        {
 			        context.ReportIndexingBatchStarted(precomputedBatch.Documents.Count, precomputedBatch.Documents.Sum(x => x.SerializedSizeOnDisk), new List<string>()
@@ -328,14 +327,12 @@ namespace Raven.Database.Indexing
 					        precomputedBatch.Index.PublicName, precomputedBatch.Documents.Count);
 			        }
 
-			        HandleIndexingFor(indexingBatchForIndex, precomputedBatch.LastIndexed, precomputedBatch.LastModified);
+			        performance = HandleIndexingFor(indexingBatchForIndex, precomputedBatch.LastIndexed, precomputedBatch.LastModified);
 		        }
 		        finally
 		        {
 			        if (batchInfo != null)
 					{
-						var performance = indexingBatchForIndex.Batch.IndexingPerformance;
-
 				        if (performance != null)
 					        batchInfo.PerformanceStats.TryAdd(indexingBatchForIndex.Index.PublicName, performance);
 
@@ -345,13 +342,18 @@ namespace Raven.Database.Indexing
 	        }
         }
 
-		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified)
+		private IndexingPerformanceStats HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified)
 		{
 		    currentlyProcessedIndexes.TryAdd(batchForIndex.IndexId, batchForIndex.Index);
 
+			IndexingPerformanceStats performanceResult = null;
+
 			try
 			{
-				transactionalStorage.Batch(actions => IndexDocuments(actions, batchForIndex));
+				transactionalStorage.Batch(actions =>
+				{
+					performanceResult = IndexDocuments(actions, batchForIndex);
+				});
 			}
 			catch (Exception e)
 			{
@@ -375,6 +377,8 @@ namespace Raven.Database.Indexing
 				Index _;
 				currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
 			}
+
+			return performanceResult;
 		}
 
 
@@ -496,13 +500,15 @@ namespace Raven.Database.Indexing
 			return true;
 		}
 
-		private void IndexDocuments(IStorageActionsAccessor actions, IndexingBatchForIndex indexingBatchForIndex)
+		private IndexingPerformanceStats IndexDocuments(IStorageActionsAccessor actions, IndexingBatchForIndex indexingBatchForIndex)
 		{
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexingBatchForIndex.IndexId);
 			if (viewGenerator == null)
-				return; // index was deleted, probably
+				return null; // index was deleted, probably
 
 			var batch = indexingBatchForIndex.Batch;
+
+			IndexingPerformanceStats performanceStats = null;
 			try
 			{
 				if (Log.IsDebugEnabled)
@@ -519,7 +525,7 @@ namespace Raven.Database.Indexing
 				context.CancellationToken.ThrowIfCancellationRequested();
 
 				
-				context.IndexStorage.Index(indexingBatchForIndex.IndexId, viewGenerator, batch, context, actions, batch.DateTime ?? DateTime.MinValue);
+				performanceStats = context.IndexStorage.Index(indexingBatchForIndex.IndexId, viewGenerator, batch, context, actions, batch.DateTime ?? DateTime.MinValue);
 			}
 			catch (OperationCanceledException)
 			{
@@ -528,10 +534,12 @@ namespace Raven.Database.Indexing
 			catch (Exception e)
 			{
 				if (actions.IsWriteConflict(e))
-					return;
+					return null;
 				Log.WarnException(string.Format("Failed to index documents for index: {0}", indexingBatchForIndex.Index.PublicName), e);
 				context.AddError(indexingBatchForIndex.IndexId, indexingBatchForIndex.Index.PublicName, null, e.Message);
 			}
+
+			return performanceStats;
 		}
 
 		protected override void Dispose()

@@ -990,7 +990,7 @@ namespace Raven.Database.Indexing
 		}
 
 		[CLSCompliant(false)]
-		public void Index(int index,
+		public IndexingPerformanceStats Index(int index,
 			AbstractViewGenerator viewGenerator,
 			IndexingBatch batch,
 			WorkContext context,
@@ -1001,17 +1001,19 @@ namespace Raven.Database.Indexing
 			if (indexes.TryGetValue(index, out value) == false)
 			{
 				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
-				return;
+				return null;
 			}
 			using (EnsureInvariantCulture())
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
-				value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp);
+				var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp);
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = value.PublicName,
 					Type = IndexChangeTypes.MapCompleted
 				});
+
+				return performance;
 			}
 		}
 

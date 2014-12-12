@@ -76,7 +76,7 @@ namespace Raven.Database.Indexing
 			get { return true; }
 		}
 
-		public override void IndexDocuments(
+		public override IndexingPerformanceStats IndexDocuments(
 			AbstractViewGenerator viewGenerator,
 			IndexingBatch batch,
 			IStorageActionsAccessor actions,
@@ -85,7 +85,7 @@ namespace Raven.Database.Indexing
 			var count = 0;
 			var sourceCount = 0;
 			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
-			batch.IndexingPerformance = RecordCurrentBatch("Current Map", batch.Docs.Count);
+			var performanceStats = RecordCurrentBatch("Current Map", batch.Docs.Count);
 
 			var deleteMappedResultsDuration = new Stopwatch();
 			var documentsWrapped = batch.Docs.Select(doc =>
@@ -230,6 +230,8 @@ namespace Raven.Database.Indexing
 				});
 
 			logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
+
+			return performanceStats;
 		}
 
 		private int ProcessBatch(AbstractViewGenerator viewGenerator, List<object> currentDocumentResults, string currentKey, HashSet<ReduceKeyAndBucket> changes,

@@ -40,7 +40,7 @@ namespace Raven.Database.Indexing
 
 		public DateTime LastCommitPointStoreTime { get; private set; }
 
-		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp)
+		public override IndexingPerformanceStats IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp)
 		{
 			var count = 0;
 			var sourceCount = 0;
@@ -48,6 +48,8 @@ namespace Raven.Database.Indexing
 			long loadDocumentDuration = 0;
 			long linqExecutionDutation = 0;
 			var addDocumentTotalDutation = new Stopwatch();
+
+			IndexingPerformanceStats performance = null;
 
 			var writeStats = Write((indexWriter, analyzer, stats) =>
 			{
@@ -58,7 +60,7 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-					batch.IndexingPerformance = RecordCurrentBatch("Current", batch.Docs.Count);
+					performance = RecordCurrentBatch("Current", batch.Docs.Count);
 					
 					var docIdTerm = new Term(Constants.DocumentIdFieldName);
 					var documentsWrapped = batch.Docs.Select((doc, i) =>
@@ -225,6 +227,8 @@ namespace Raven.Database.Indexing
 				});
 
 			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
+
+			return performance;
 		}
 
 		protected override bool IsUpToDateEnoughToWriteToDisk(Etag highestETag)
