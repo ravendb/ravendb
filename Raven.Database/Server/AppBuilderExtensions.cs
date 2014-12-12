@@ -106,7 +106,7 @@ namespace Owin
 
 		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
 		{
-			var cfg = new HttpConfiguration(httpRouteCollection ?? new HttpRouteCollection());
+			var cfg = new HttpConfiguration();
 
 
 			cfg.Properties[typeof (DatabasesLandlord)] = options.DatabaseLandlord;
