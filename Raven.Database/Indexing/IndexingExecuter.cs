@@ -351,19 +351,7 @@ namespace Raven.Database.Indexing
 
 			try
 			{
-				var commitExecution = new Stopwatch();
-
-				transactionalStorage.Batch(actions =>
-				{
-					actions.BeforeStorageCommit += commitExecution.Start;
-					actions.AfterStorageCommit += commitExecution.Stop;
-
-					IndexDocuments(actions, batchForIndex);
-				});
-
-				var performance = batchForIndex.Batch.IndexingPerformance;
-				if (performance != null)
-					performance.StorageCommitDurationMs = commitExecution.ElapsedMilliseconds;
+				transactionalStorage.Batch(actions => IndexDocuments(actions, batchForIndex));
 			}
 			catch (Exception e)
 			{

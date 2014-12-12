@@ -97,7 +97,6 @@ namespace Raven.Abstractions.Data
 		public LinqExecutionPerformanceStats LinqExecutionPerformance { get; set; }
 		public LucenePerformanceStats LucenePerformance { get; set; }
 		public MapStoragePerformanceStats MapStoragePerformance { get; set; }
-		public long StorageCommitDurationMs { get; set; }
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
 
 	    public override bool Equals(object obj)
@@ -126,7 +125,7 @@ Duration in ms: {4:#,#}
 
 		protected bool Equals(IndexingPerformanceStats other)
 		{
-			return string.Equals(Operation, other.Operation) && ItemsCount == other.ItemsCount && InputCount == other.InputCount && OutputCount == other.OutputCount && Started.Equals(other.Started) && Completed.Equals(other.Completed) && Duration.Equals(other.Duration) && Equals(LoadDocumentPerformance, other.LoadDocumentPerformance) && Equals(LinqExecutionPerformance, other.LinqExecutionPerformance) && Equals(LucenePerformance, other.LucenePerformance) && Equals(MapStoragePerformance, other.MapStoragePerformance) && StorageCommitDurationMs == other.StorageCommitDurationMs && WaitingTimeSinceLastBatchCompleted.Equals(other.WaitingTimeSinceLastBatchCompleted);
+			return string.Equals(Operation, other.Operation) && ItemsCount == other.ItemsCount && InputCount == other.InputCount && OutputCount == other.OutputCount && Started.Equals(other.Started) && Completed.Equals(other.Completed) && Duration.Equals(other.Duration) && Equals(LoadDocumentPerformance, other.LoadDocumentPerformance) && Equals(LinqExecutionPerformance, other.LinqExecutionPerformance) && Equals(LucenePerformance, other.LucenePerformance) && Equals(MapStoragePerformance, other.MapStoragePerformance) && WaitingTimeSinceLastBatchCompleted.Equals(other.WaitingTimeSinceLastBatchCompleted);
 		}
 
 		public override int GetHashCode()
@@ -144,7 +143,6 @@ Duration in ms: {4:#,#}
 				hashCode = (hashCode * 397) ^ (LinqExecutionPerformance != null ? LinqExecutionPerformance.GetHashCode() : 0);
 				hashCode = (hashCode * 397) ^ (LucenePerformance != null ? LucenePerformance.GetHashCode() : 0);
 				hashCode = (hashCode * 397) ^ (MapStoragePerformance != null ? MapStoragePerformance.GetHashCode() : 0);
-				hashCode = (hashCode * 397) ^ StorageCommitDurationMs.GetHashCode();
 				hashCode = (hashCode * 397) ^ WaitingTimeSinceLastBatchCompleted.GetHashCode();
 				return hashCode;
 			}
@@ -209,6 +207,7 @@ Duration in ms: {4:#,#}
 	{
 		public long DeleteMappedResultsDurationMs { get; set; }
 		public long PutMappedResultsDurationMs { get; set; }
+		public long StorageCommitDurationMs { get; set; }
 
 		protected bool Equals(MapStoragePerformanceStats other)
 		{
