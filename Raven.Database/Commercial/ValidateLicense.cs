@@ -176,13 +176,7 @@ namespace Raven.Database.Commercial
 				publicKey = new StreamReader(stream).ReadToEnd();
 			}
 
-			config.Container.SatisfyImportsOnce(this);
-
-			var value = config.Settings["Raven/License"];
-			if (LicenseProvider != null && !string.IsNullOrEmpty(LicenseProvider.License))
-			{
-				value = LicenseProvider.License;
-			}
+			var value = GetLicenseText(config);
 
 			var fullPath = GetLicensePath(config).ToFullPath();
 			if (string.IsNullOrEmpty(value) == false)
@@ -265,15 +259,8 @@ namespace Raven.Database.Commercial
 			return errorMessage;
 		}
 
-		[Import(AllowDefault = true)]
-		private ILicenseProvider LicenseProvider { get; set; }
-
 		private string GetLicenseText(InMemoryRavenConfiguration config)
 		{
-			config.Container.SatisfyImportsOnce(this);
-			if (LicenseProvider != null && !string.IsNullOrEmpty(LicenseProvider.License))
-				return LicenseProvider.License;
-
 			var value = config.Settings["Raven/License"];
 			if (string.IsNullOrEmpty(value) == false)
 				return value;

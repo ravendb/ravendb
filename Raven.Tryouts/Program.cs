@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using Raven.Client.Embedded;
 using Raven.SlowTests.Issues;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Querying;
@@ -9,14 +11,18 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			for (int i = 0; i < 100; i++)
+			Console.WriteLine("3.0");
+			for (int i = 0; i < 25; i++)
 			{
-				using (var s = new RavenDB_1359())
+				var sp = Stopwatch.StartNew();
+				using (var store = new EmbeddableDocumentStore()
 				{
-					Console.WriteLine(i);
-					s.IndexThatLoadAttachmentsShouldIndexAllDocuments();
+					RunInMemory = true
+				}.Initialize())
+				{
+
 				}
-			
+				Console.WriteLine(sp.ElapsedMilliseconds);
 			}
 
 		}
