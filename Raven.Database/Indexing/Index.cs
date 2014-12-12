@@ -94,7 +94,6 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
-		private IndexingPerformanceStats lastIndexingPerformanceStats;
 
 		[CLSCompliant(false)]
 		protected Index(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
@@ -174,7 +173,7 @@ namespace Raven.Database.Indexing
 				Started = SystemTime.UtcNow,
 			};
 
-			var lastStats = lastIndexingPerformanceStats;
+			var lastStats = indexingPerformanceStats.LastOrDefault(x => x.Operation.Equals(indexingStep, StringComparison.OrdinalIgnoreCase));
 
 			if (lastStats != null)
 				performanceStats.WaitingTimeSinceLastBatchCompleted = performanceStats.Started - lastStats.Completed;
@@ -216,8 +215,6 @@ namespace Raven.Database.Indexing
 		public void AddIndexingPerformanceStats(IndexingPerformanceStats stats)
 		{
 			indexingPerformanceStats.Enqueue(stats);
-
-			lastIndexingPerformanceStats = stats;
 
 			while (indexingPerformanceStats.Count > 25)
 				indexingPerformanceStats.TryDequeue(out stats);
