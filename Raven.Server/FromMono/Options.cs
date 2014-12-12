@@ -128,13 +128,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 using System.Text;
 using System.Text.RegularExpressions;
-
 #if LINQ
 using System.Linq;
 #endif
@@ -142,6 +141,7 @@ using System.Linq;
 #if TEST
 using NDesk.Options;
 #endif
+using Raven.Database.FileSystem.Extensions;
 
 namespace NDesk.Options
 {
@@ -292,18 +292,21 @@ namespace NDesk.Options
 
 	public abstract class Option
 	{
-		string prototype, description;
-		string[] names;
-		OptionValueType type;
-		int count;
-		string[] separators;
+		private readonly string prototype;
 
-		protected Option(string prototype, string description)
-			: this(prototype, description, 1)
-		{
-		}
+		private readonly OptionCategory category;
 
-		protected Option(string prototype, string description, int maxValueCount)
+		private readonly string description;
+
+		private readonly string[] names;
+
+		private readonly OptionValueType type;
+
+		private readonly int count;
+
+		private string[] separators;
+
+		protected Option(string prototype, OptionCategory category, string description, int maxValueCount)
 		{
 			if (prototype == null)
 				throw new ArgumentNullException("prototype");
@@ -313,6 +316,7 @@ namespace NDesk.Options
 				throw new ArgumentOutOfRangeException("maxValueCount");
 
 			this.prototype = prototype;
+			this.category = category;
 			this.names = prototype.Split('|');
 			this.description = description;
 			this.count = maxValueCount;
@@ -339,6 +343,7 @@ namespace NDesk.Options
 		public string Description { get { return description; } }
 		public OptionValueType OptionValueType { get { return type; } }
 		public int MaxValueCount { get { return count; } }
+		public OptionCategory Category { get { return category; } }
 
 		public string[] GetNames()
 		{
@@ -611,10 +616,10 @@ namespace NDesk.Options
 
 		sealed class ActionOption : Option
 		{
-			Action<OptionValueCollection> action;
+			readonly Action<OptionValueCollection> action;
 
-			public ActionOption(string prototype, string description, int count, Action<OptionValueCollection> action)
-				: base(prototype, description, count)
+			public ActionOption(string prototype, OptionCategory category, string description, int count, Action<OptionValueCollection> action)
+				: base(prototype, category, description, count)
 			{
 				if (action == null)
 					throw new ArgumentNullException("action");
@@ -627,42 +632,30 @@ namespace NDesk.Options
 			}
 		}
 
-		public OptionSet Add(string prototype, Action<string> action)
-		{
-			return Add(prototype, null, action);
-		}
-
-		public OptionSet Add(string prototype, string description, Action<string> action)
+		public OptionSet Add(string prototype, OptionCategory category, string description, Action<string> action)
 		{
 			if (action == null)
 				throw new ArgumentNullException("action");
-			Option p = new ActionOption(prototype, description, 1,
-					delegate(OptionValueCollection v) { action(v[0]); });
+			Option p = new ActionOption(prototype, category, description, 1, v => action(v[0]));
 			base.Add(p);
 			return this;
 		}
 
-		public OptionSet Add(string prototype, OptionAction<string, string> action)
-		{
-			return Add(prototype, null, action);
-		}
-
-		public OptionSet Add(string prototype, string description, OptionAction<string, string> action)
+		public OptionSet Add(string prototype, OptionCategory category, string description, OptionAction<string, string> action)
 		{
 			if (action == null)
 				throw new ArgumentNullException("action");
-			Option p = new ActionOption(prototype, description, 2,
-					delegate(OptionValueCollection v) { action(v[0], v[1]); });
+			Option p = new ActionOption(prototype, category, description, 2, v => action(v[0], v[1]));
 			base.Add(p);
 			return this;
 		}
 
 		sealed class ActionOption<T> : Option
 		{
-			Action<T> action;
+			readonly Action<T> action;
 
-			public ActionOption(string prototype, string description, Action<T> action)
-				: base(prototype, description, 1)
+			public ActionOption(string prototype, OptionCategory category, string description, Action<T> action)
+				: base(prototype, category, description, 1)
 			{
 				if (action == null)
 					throw new ArgumentNullException("action");
@@ -679,8 +672,8 @@ namespace NDesk.Options
 		{
 			OptionAction<TKey, TValue> action;
 
-			public ActionOption(string prototype, string description, OptionAction<TKey, TValue> action)
-				: base(prototype, description, 2)
+			public ActionOption(string prototype, OptionCategory category, string description, OptionAction<TKey, TValue> action)
+				: base(prototype, category, description, 2)
 			{
 				if (action == null)
 					throw new ArgumentNullException("action");
@@ -695,24 +688,9 @@ namespace NDesk.Options
 			}
 		}
 
-		public OptionSet Add<T>(string prototype, Action<T> action)
+		public OptionSet Add<TKey, TValue>(string prototype, OptionCategory category, string description, OptionAction<TKey, TValue> action)
 		{
-			return Add(prototype, null, action);
-		}
-
-		public OptionSet Add<T>(string prototype, string description, Action<T> action)
-		{
-			return Add(new ActionOption<T>(prototype, description, action));
-		}
-
-		public OptionSet Add<TKey, TValue>(string prototype, OptionAction<TKey, TValue> action)
-		{
-			return Add(prototype, null, action);
-		}
-
-		public OptionSet Add<TKey, TValue>(string prototype, string description, OptionAction<TKey, TValue> action)
-		{
-			return Add(new ActionOption<TKey, TValue>(prototype, description, action));
+			return Add(new ActionOption<TKey, TValue>(prototype, category, description, action));
 		}
 
 		protected virtual OptionContext CreateOptionContext()
@@ -945,27 +923,59 @@ namespace NDesk.Options
 
 		public void WriteOptionDescriptions(TextWriter o)
 		{
-			foreach (Option p in this)
+			var allCategories = Enum.GetValues(typeof(OptionCategory));
+			var results = new Dictionary<OptionCategory, List<Option>>();
+			foreach (OptionCategory category in allCategories)
 			{
-				int written = 0;
-				if (!WriteOptionPrototype(o, p, ref written))
+				foreach (Option p in this)
+				{
+					if (!p.Category.HasFlag(category))
+						continue;
+
+					if (results.ContainsKey(category) == false)
+						results[category] = new List<Option>();
+
+					results[category].Add(p);
+				}
+			}
+
+			foreach (var key in results.Keys)
+			{
+				var options = results[key];
+				if (options.Count == 0)
 					continue;
 
-				if (written < OptionWidth)
-					o.Write(new string(' ', OptionWidth - written));
-				else
+				o.WriteLine();
+				if (key != OptionCategory.None)
 				{
-					o.WriteLine();
-					o.Write(new string(' ', OptionWidth));
+					o.WriteLine("----------------------------------------");
+					o.WriteLine(key.GetDescription());
+					o.WriteLine("----------------------------------------");
 				}
+				o.WriteLine();
 
-				List<string> lines = GetLines(localizer(GetDescription(p.Description)));
-				o.WriteLine(lines[0]);
-				string prefix = new string(' ', OptionWidth + 2);
-				for (int i = 1; i < lines.Count; ++i)
+				foreach (Option p in options)
 				{
-					o.Write(prefix);
-					o.WriteLine(lines[i]);
+					int written = 0;
+					if (!WriteOptionPrototype(o, p, ref written))
+						continue;
+
+					if (written < OptionWidth)
+						o.Write(new string(' ', OptionWidth - written));
+					else
+					{
+						o.WriteLine();
+						o.Write(new string(' ', OptionWidth));
+					}
+
+					List<string> lines = GetLines(localizer(GetDescription(p.Description)));
+					o.WriteLine(lines[0]);
+					string prefix = new string(' ', OptionWidth + 2);
+					for (int i = 1; i < lines.Count; ++i)
+					{
+						o.Write(prefix);
+						o.WriteLine(lines[i]);
+					}
 				}
 			}
 		}
@@ -980,12 +990,12 @@ namespace NDesk.Options
 
 			if (names[i].Length == 1)
 			{
-				Write(o, ref written, "  -");
+				Write(o, ref written, " -");
 				Write(o, ref written, names[0]);
 			}
 			else
 			{
-				Write(o, ref written, "      --");
+				Write(o, ref written, "   --");
 				Write(o, ref written, names[0]);
 			}
 
@@ -1170,6 +1180,35 @@ namespace NDesk.Options
 				return end;
 			return sep;
 		}
+	}
+
+	[Flags]
+	public enum OptionCategory
+	{
+		None = 1 << 0,
+
+		General = 1 << 1,
+
+		Service = 1 << 2,
+
+		[Description("Restore Database")]
+		RestoreDatabase = 1 << 3,
+
+		[Description("Restore FileSystem")]
+		RestoreFileSystem = 1 << 4,
+
+		[Description("IO Test")]
+		IOTest = 1 << 5,
+
+		Encryption = 1 << 6,
+
+		SSL = 1 << 7,
+
+		Update = 1 << 8,
+
+		Help = 1 << 9,
+
+		Other = 1 << 10,
 	}
 }
 
