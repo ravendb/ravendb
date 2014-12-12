@@ -5,6 +5,11 @@
     .batchRange rect:hover {
         opacity: 0.5;
     }
+    .rect_legend {
+        width: 10px;
+        height: 10px;
+        border: solid 1px black;
+    }
     .op {
         cursor: pointer;
     }
@@ -18,10 +23,10 @@
         user-select: none;
     }
     .op rect {
-        opacity: 0.8;
+        opacity: 1;
     }
     .op:hover rect {
-        opacity: 1;
+        opacity: 0.8;
     }
     .batchRange {
         cursor: pointer;
@@ -120,35 +125,35 @@
                 </tr>
 
                 <tr data-bind="visible: LoadDocumentPerformance.LoadDocumentDurationMs >= 0">
-                    <td>LoadDocument duration</td>
+                    <td><span data-bind=" style: { 'background-color': $root.colors[0] }" class="rect_legend"></span> LoadDocument duration</td>
                     <td data-bind="text: LoadDocumentPerformance.LoadDocumentDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: LinqExecutionPerformance.MapLinqExecutionDurationMs >= 0">
-                    <td>Linq: map execution duration</td>
+                    <td><span data-bind=" style: { 'background-color': $root.colors[1] }" class="rect_legend"></span> Linq: map execution duration</td>
                     <td data-bind="text: LinqExecutionPerformance.MapLinqExecutionDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: LinqExecutionPerformance.ReduceLinqExecutionDurationMs >= 0">
-                    <td>Linq: reduce execution duration</td>
+                    <td><span data-bind=" style: { 'background-color': $root.colors[2] }" class="rect_legend"></span> Linq: reduce execution duration</td>
                     <td data-bind="text: LinqExecutionPerformance.ReduceLinqExecutionDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: LucenePerformance.WriteDocumentsDurationMs >= 0">
-                    <td>Lucene: write documents duration</td>
+                    <td><span data-bind=" style: { 'background-color': $root.colors[3] }" class="rect_legend"></span> Lucene: write documents duration</td>
                     <td data-bind="text: LucenePerformance.WriteDocumentsDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: LucenePerformance.FlushToDiskDurationMs >= 0">
-                    <td>Lucene: flush to disk duration</td>
+                    <td><span data-bind=" style: { 'background-color': $root.colors[4] }" class="rect_legend"></span> Lucene: flush to disk duration</td>
                     <td data-bind="text: LucenePerformance.FlushToDiskDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: MapStoragePerformance.DeleteMappedResultsDurationMs >= 0">
-                    <td>Map storage: delete mapped results duration</td>
+                    <td><span data-bind=" style: { 'background-color': $root.colors[5] }" class="rect_legend"></span> Map storage: delete mapped results duration</td>
                     <td data-bind="text: MapStoragePerformance.DeleteMappedResultsDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: MapStoragePerformance.PutMappedResultsDurationMs >= 0">
-                    <td>Map storage: put mapped results duration</td>
+                    <td><span data-bind=" style: { 'background-color': $root.colors[6] }" class="rect_legend"></span> Map storage: put mapped results duration</td>
                     <td data-bind="text: MapStoragePerformance.PutMappedResultsDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: MapStoragePerformance.StorageCommitDurationMs >= 0">
-                    <td>Map storage: commit duration</td>
+                    <td><span data-bind=" style: { 'background-color': $root.colors[7] }" class="rect_legend"></span> Map storage: commit duration</td>
                     <td data-bind="text: MapStoragePerformance.StorageCommitDurationMs"></td>
                 </tr>
                 <tr>
@@ -162,21 +167,11 @@
 
 <div>
     <div class="btn-group">
-        <button class="btn btn-default" data-bind="click: zoomIn" title="Zoom in"><i class="fa fa-search-plus"></i></button>
-        <button class="btn btn-default" data-bind="click: zoomOut" title="Zoom out"><i class="fa fa-search-minus"></i></button>    
+        <button class="btn btn-default" data-bind="event: { mousedown: startZoomIn, mouseup: stopZoomIn }" title="Zoom in"><i class="fa fa-search-plus"></i></button>
+        <button class="btn btn-default" data-bind="event: { mousedown: startZoomOut, mouseup: stopZoomOut }" title="Zoom out"><i class="fa fa-search-minus"></i></button>    
     </div>
     <div class="btn-group">
         <select id="visibleIndexesSelector" data-bind="options: allIndexNames, selectedOptions: selectedIndexNames" multiple="multiple"></select>
-        <svg transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice" style="display: inline; width: 500px; height: 40px; margin-left: 10px">
-            <rect x="10" y="10" width="20" height="20" stroke-width="1" stroke="black" fill="#004080"></rect>
-            <text x="35" y="25">Linq execution</text>
-            <rect x="130" y="10" width="20" height="20" stroke-width="1" stroke="black" fill="#ffff80"></rect>
-            <text x="158" y="25">Load document</text>
-            <rect x="265" y="10" width="20" height="20" stroke-width="1" stroke="black" fill="#00ff00"></rect>
-            <text x="293" y="25">Write to lucene</text>
-            <rect x="390" y="10" width="20" height="20" stroke-width="1" stroke="black" fill="#9f0000"></rect>
-            <text x="418" y="25">Flush</text>
-        </svg>    
     </div>
     
     

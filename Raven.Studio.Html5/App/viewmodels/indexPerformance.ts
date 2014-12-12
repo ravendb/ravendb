@@ -95,7 +95,7 @@ class gapFinder {
 class metrics extends viewModelBase { 
 
     static bar_names = ['load_bar', 'map_linq_bar', 'reduce_linq_bar', 'write_bar', 'flush_bar', 'del_mr_bar', 'put_mr_bar', 'commit_bar'];
-    static bar_colors = ['#FFF200', '#ED1C24', '#00A2E8', '#167232', '#C44F00', '#CAFAB4', '#C8BFE7', '#880015' ]; 
+    static bar_colors = ['#FFF200', '#ED1C24', '#00227A', '#167232', '#C44F00', '#FFFFFF', '#DDDDDD', '#880015' ]; 
 
     static minGapTime = 1000 * 10;
 
@@ -110,7 +110,7 @@ class metrics extends viewModelBase {
     color = d3.scale.category10();
     margin = { top: 40, right: 20, bottom: 40, left: 200 };
 
-    pixelsPerSecond = 100;
+    private pixelsPerSecond = ko.observable<number>(100);
 
     width: number;
 
@@ -125,6 +125,14 @@ class metrics extends viewModelBase {
 
     private refreshGraphObservable = ko.observable<number>();
     private refreshSubscription: KnockoutSubscription;
+
+    constructor() {
+        super();
+        this.pixelsPerSecond.throttle(100).subscribe((value) => {
+            nv.tooltip.cleanup();
+            this.redrawGraph();
+        });
+    }
 
     fetchJsonData() {
         return new getIndexingBatchStatsCommand(this.activeDatabase()).execute();
@@ -253,7 +261,7 @@ class metrics extends viewModelBase {
         var gapsFinder = new gapFinder(
             this.jsonData.map(
                 j => new dateRange(j.StartedAtDate, new Date(j.StartedAtDate.getTime() + j.TotalDurationMs))
-                ), self.pixelsPerSecond, metrics.minGapTime);
+                ), self.pixelsPerSecond(), metrics.minGapTime);
 
         self.xScale = gapsFinder.constructScale();
 
@@ -387,7 +395,7 @@ class metrics extends viewModelBase {
     // uses optimalization which assumes that both start and start + size falls into continuous region
     private xScaleExtent(size: number) {
         var self = this;
-        return size / 1000 * self.pixelsPerSecond;
+        return size / 1000 * self.pixelsPerSecond();
     }
 
     private updateBatchesRanges() {
@@ -574,7 +582,7 @@ class metrics extends viewModelBase {
 
     private fillTooltip(model: any) {
         var node = $(".nvtooltip")[0];
-        ko.applyBindings({ data: model, tooltipClose:  nv.tooltip.cleanup }, node);
+        ko.applyBindings({ data: model, colors: metrics.bar_colors, tooltipClose:  nv.tooltip.cleanup }, node);
     }
 
     onWindowHeightChanged() {
@@ -605,18 +613,41 @@ class metrics extends viewModelBase {
         return byKey.map(d => d.key);
     }
 
+    private zoomingIn = false;
+    private zoomingOut = false;
+
+    startZoomIn() {
+        this.zoomingIn = true;
+        this.zoomIn();
+    }
+
+    startZoomOut() {
+        this.zoomingOut = true;
+        this.zoomOut();
+    }
+
+    stopZoomIn() {
+        this.zoomingIn = false;
+    }
+
+    stopZoomOut() {
+        this.zoomingOut = false;
+    }
+
     zoomIn() {
-        this.pixelsPerSecond += 10;
-        nv.tooltip.cleanup();
-        this.redrawGraph();
+        if (this.zoomingIn) {
+            this.pixelsPerSecond(this.pixelsPerSecond() + 20);
+            setTimeout(() => this.zoomIn(), 100);
+        }
     }
 
     zoomOut() {
-        if (this.pixelsPerSecond > 10) {
-            this.pixelsPerSecond -= 10;
+        if (this.zoomingOut) {
+            if (this.pixelsPerSecond() > 20) {
+                this.pixelsPerSecond(this.pixelsPerSecond() - 20);
+            }
+            setTimeout(() => this.zoomOut(), 100);
         }
-        nv.tooltip.cleanup();
-        this.redrawGraph();
     }
 }
 
