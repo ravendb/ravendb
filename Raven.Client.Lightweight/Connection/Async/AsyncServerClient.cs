@@ -84,7 +84,7 @@ namespace Raven.Client.Connection.Async
 		public AsyncServerClient(string url, DocumentConvention convention, OperationCredentials credentials,
 								 HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId,
 								 Func<string, IDocumentStoreReplicationInformer> replicationInformerGetter, string databaseName,
-								 IDocumentConflictListener[] conflictListeners)
+								 IDocumentConflictListener[] conflictListeners, bool incrementReadStripe)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
 			this.url = url;
@@ -104,7 +104,7 @@ namespace Raven.Client.Connection.Async
 			this.conflictListeners = conflictListeners;
 			this.replicationInformerGetter = replicationInformerGetter;
 			this.replicationInformer = replicationInformerGetter(databaseName);
-			this.readStripingBase = replicationInformer.GetReadStripingBase();
+            this.readStripingBase = replicationInformer.GetReadStripingBase(incrementReadStripe);
 
 			this.replicationInformer.UpdateReplicationInformationIfNeeded(this);
 		}
@@ -598,7 +598,7 @@ namespace Raven.Client.Connection.Async
 			if (databaseUrl == url)
 				return this;
 			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId,
-										 replicationInformerGetter, database, conflictListeners)
+										 replicationInformerGetter, database, conflictListeners, false)
 			{
 				operationsHeaders = operationsHeaders
 			};
@@ -614,7 +614,7 @@ namespace Raven.Client.Connection.Async
 			if (databaseUrl == url)
 				return this;
 			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId,
-										 replicationInformerGetter, databaseName, conflictListeners)
+										 replicationInformerGetter, databaseName, conflictListeners, false)
 			{
 				operationsHeaders = operationsHeaders
 			};
@@ -2404,7 +2404,7 @@ namespace Raven.Client.Connection.Async
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
 			return new AsyncServerClient(url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId,
-										 replicationInformerGetter, databaseName, conflictListeners);
+										 replicationInformerGetter, databaseName, conflictListeners, false);
 		}
 
 		internal async Task<ReplicationDocument> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata)
