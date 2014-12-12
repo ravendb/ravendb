@@ -258,4 +258,45 @@ Duration in ms: {4:#,#}
 			return Equals((LucenePerformanceStats) obj);
 		}	
 	}
+
+	public class ReducingPerformanceStats
+	{
+		public ReduceType ReduceType { get; set; }
+		public List<ReduceLevelPeformanceStats> LevelStats { get; set; } 
+	}
+
+	public class ReduceLevelPeformanceStats
+	{
+		public ReduceLevelPeformanceStats()
+		{
+			LinqExecutionStats = new LinqExecutionPerformanceStats()
+			{
+				MapLinqExecutionDurationMs = -1
+			};
+			LucenePerformance = new LucenePerformanceStats();
+		}
+
+		public int Level { get; set; }
+		public int ItemsCount { get; set; }
+		public int InputCount { get; set; }
+		public int OutputCount { get; set; }
+		public DateTime Started { get; set; }
+		public DateTime Completed { get; set; }
+		public TimeSpan Duration { get; set; }
+		public double DurationMs{ get { return Math.Round(Duration.TotalMilliseconds, 2); } }
+		public LinqExecutionPerformanceStats LinqExecutionStats { get; set; }
+		public LucenePerformanceStats LucenePerformance { get; set; }
+
+		public void Add(IndexingPerformanceStats other)
+		{
+			ItemsCount += other.ItemsCount;
+			InputCount += other.InputCount;
+			OutputCount += other.OutputCount;
+
+			LinqExecutionStats.ReduceLinqExecutionDurationMs += other.LinqExecutionStats.ReduceLinqExecutionDurationMs;
+
+			LucenePerformance.WriteDocumentsDurationMs += other.LucenePerformance.WriteDocumentsDurationMs;
+			LucenePerformance.FlushToDiskDurationMs += other.LucenePerformance.FlushToDiskDurationMs;
+		}
+	}
 }

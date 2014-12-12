@@ -168,6 +168,7 @@
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\PrefetchingUser.cs" />
     <Compile Include="Data\QueryHeaderInformation.cs" />
+    <Compile Include="Data\ReduceType.cs" />
     <Compile Include="Data\ReducingBatchInfo.cs" />
     <Compile Include="Data\ReplicationInfoStatus.cs" />
     <Compile Include="Data\DatabaseRestoreRequest.cs" />

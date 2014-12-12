@@ -218,7 +218,11 @@ namespace Raven.Database.Indexing
 					MapLinqExecutionDurationMs = linqExecutionDuration,
 					ReduceLinqExecutionDurationMs = reduceInMapLinqExecutionDuration
 				},
-				null,
+				new LucenePerformanceStats
+				{
+					FlushToDiskDurationMs = -1,
+					WriteDocumentsDurationMs = -1
+				}, 
 				new MapReducePerformanceStats
 				{
 					DeleteMappedResultsDurationMs = deleteMappedResultsDuration.ElapsedMilliseconds,
@@ -654,18 +658,26 @@ namespace Raven.Database.Indexing
 				});
 
 				parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count,
-					null,
-					new LinqExecutionPerformanceStats()
+					new LoadDocumentPerformanceStats()
+					{
+						LoadDocumentCount = -1,
+						LoadDocumentDurationMs = -1
+					}, 
+					new LinqExecutionPerformanceStats
 					{
 						MapLinqExecutionDurationMs = -1,
 						ReduceLinqExecutionDurationMs = linqExecutionDuration
 					},
-					new LucenePerformanceStats()
+					new LucenePerformanceStats
 					{
 						WriteDocumentsDurationMs = writeDocumentToIndexTotalDutation.ElapsedMilliseconds,
 						FlushToDiskDurationMs = writeStats.FlushToDiskDurationMs,
 					},
-					new MapReducePerformanceStats());
+					new MapReducePerformanceStats
+					{
+						DeleteMappedResultsDurationMs = -1,
+						PutMappedResultsDurationMs = -1
+					});
 
 				logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, indexId, string.Join(", ", ReduceKeys)));
 

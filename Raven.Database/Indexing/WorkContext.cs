@@ -348,7 +348,7 @@ namespace Raven.Database.Indexing
 			{
 				IndexesToWorkOn = indexesToWorkOn,
 				StartedAt = SystemTime.UtcNow,
-				PerformanceStats = new ConcurrentDictionary<string, IndexingPerformanceStats>()
+				PerformanceStats = new ConcurrentDictionary<string, ReducingPerformanceStats>()
 			};
 
 			lastActualReducingBatchInfo.Add(reducingBatchInfo);

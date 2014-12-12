@@ -20,7 +20,7 @@ namespace Raven.Abstractions.Data
 
 		public double TimeSinceFirstReduceInBatchCompletedMs { get; set; }
 
-		public ConcurrentDictionary<string, IndexingPerformanceStats> PerformanceStats { get; set; }
+		public ConcurrentDictionary<string, ReducingPerformanceStats> PerformanceStats { get; set; }
 
 		public void BatchCompleted()
 		{
@@ -28,7 +28,7 @@ namespace Raven.Abstractions.Data
 			TotalDurationMs = (now - StartedAt).TotalMilliseconds;
 
 			if (PerformanceStats.Count > 0)
-				TimeSinceFirstReduceInBatchCompletedMs = (now - PerformanceStats.Min(x => x.Value.Completed)).TotalMilliseconds;
+				TimeSinceFirstReduceInBatchCompletedMs = -1; // TODO arek (now - PerformanceStats.Min(x => x.Value.Completed)).TotalMilliseconds;
 		}
 
 		public override bool Equals(object obj)

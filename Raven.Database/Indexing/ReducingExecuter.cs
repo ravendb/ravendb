@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -22,7 +23,7 @@ namespace Raven.Database.Indexing
 			autoTuner = new ReduceBatchSizeAutoTuner(context);
 		}
 
-		protected IndexingPerformanceStats[] HandleReduceForIndex(IndexToWorkOn indexToWorkOn)
+		protected ReducingPerformanceStats[] HandleReduceForIndex(IndexToWorkOn indexToWorkOn)
 		{
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexToWorkOn.IndexId);
 			if (viewGenerator == null)
@@ -44,7 +45,7 @@ namespace Raven.Database.Indexing
 
 			currentlyProcessedIndexes.TryAdd(indexToWorkOn.IndexId, indexToWorkOn.Index);
 
-			var performanceStats = new List<IndexingPerformanceStats>();
+			var performanceStats = new List<ReducingPerformanceStats>();
 
 			try
 			{
@@ -53,7 +54,7 @@ namespace Raven.Database.Indexing
 					Log.Debug("SingleStep reduce for keys: {0}",singleStepReduceKeys.Select(x => x + ","));
 					var singleStepStats = SingleStepReduce(indexToWorkOn, singleStepReduceKeys, viewGenerator, itemsToDelete);
 
-					performanceStats.AddRange(singleStepStats);
+					performanceStats.Add(singleStepStats);
 				}
 
 				if (multiStepsReduceKeys.Length > 0)
@@ -61,7 +62,7 @@ namespace Raven.Database.Indexing
 					Log.Debug("MultiStep reduce for keys: {0}", singleStepReduceKeys.Select(x => x + ","));
 					var multiStepStats = MultiStepReduce(indexToWorkOn, multiStepsReduceKeys, viewGenerator, itemsToDelete);
 
-					performanceStats.AddRange(multiStepStats);
+					performanceStats.Add(multiStepStats);
 				}
 			}
 			catch (OperationCanceledException)
@@ -88,7 +89,7 @@ namespace Raven.Database.Indexing
 				currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
 			}
 
-			return performanceStats.Where(x => x != null).ToArray();
+			return performanceStats.ToArray();
 		}
 
 	    protected override void UpdateStalenessMetrics(int staleCount)
@@ -101,7 +102,7 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-		private IEnumerable<IndexingPerformanceStats> MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete)
+		private ReducingPerformanceStats MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete)
 		{
 			var needToMoveToMultiStep = new HashSet<string>();
 			transactionalStorage.Batch(actions =>
@@ -125,11 +126,21 @@ namespace Raven.Database.Indexing
 				}
 			});
 
-			var performanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
+			var reducePerformance = new ReducingPerformanceStats
+			{
+				ReduceType = ReduceType.MultiStep,
+				LevelStats = new List<ReduceLevelPeformanceStats>()
+			};
 
 			for (int i = 0; i < 3; i++)
 			{
 				var level = i;
+
+				var levelPerformanceStats = new ReduceLevelPeformanceStats()
+				{
+					Level = level,
+					Started = SystemTime.UtcNow,
+				};
 
 				var reduceParams = new GetItemsToReduceParams(
 					index.IndexId,
@@ -211,7 +222,7 @@ namespace Raven.Database.Indexing
 
 							var performance = context.IndexStorage.Reduce(index.IndexId, viewGenerator, results, level, context, actions, reduceKeys, persistedResults.Count);
 
-							performanceStats.Enqueue(performance);
+							levelPerformanceStats.Add(performance);
 
 							var batchDuration = batchTimeWatcher.Elapsed;
 							Log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4} on level {5}", reduceKeys.Count, batchDuration,
@@ -226,6 +237,11 @@ namespace Raven.Database.Indexing
 						autoTuner.CurrentlyUsedBatchSizesInBytes.TryRemove(reduceBatchAutoThrottlerId, out _);
 					}
 				}
+
+				levelPerformanceStats.Completed = SystemTime.UtcNow;
+				levelPerformanceStats.Duration = levelPerformanceStats.Completed - levelPerformanceStats.Started;
+
+				reducePerformance.LevelStats.Add(levelPerformanceStats);
 			}
 
 			foreach (var reduceKey in needToMoveToMultiStep)
@@ -236,10 +252,10 @@ namespace Raven.Database.Indexing
 																					   ReduceType.MultiStep));
 			}
 
-			return performanceStats;
+			return reducePerformance;
 		}
 
-		private IEnumerable<IndexingPerformanceStats> SingleStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator,
+		private ReducingPerformanceStats SingleStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator,
 												ConcurrentSet<object> itemsToDelete)
 		{
 			var needToMoveToSingleStepQueue = new ConcurrentQueue<HashSet<string>>();
@@ -247,10 +263,23 @@ namespace Raven.Database.Indexing
 			Log.Debug(() => string.Format("Executing single step reducing for {0} keys [{1}]", keysToReduce.Length, string.Join(", ", keysToReduce)));
 			var batchTimeWatcher = Stopwatch.StartNew();
 			var reducingBatchThrottlerId = Guid.NewGuid();
-			var performanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
+
+			var reducePerformanceStats = new ReducingPerformanceStats()
+			{
+				ReduceType = ReduceType.SingleStep,
+				LevelStats = new List<ReduceLevelPeformanceStats>()
+			};
+
+			var reduceLevelStats = new ReduceLevelPeformanceStats()
+			{
+				Started = SystemTime.UtcNow,
+				Level = 2
+			};
 
 			try
 			{
+				var performanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
+
 				BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
 				{
 					var localNeedToMoveToSingleStep = new HashSet<string>();
@@ -370,6 +399,16 @@ namespace Raven.Database.Indexing
 					transactionalStorage.Batch(actions =>
 						actions.MapReduce.UpdatePerformedReduceType(index.IndexId, localReduceKey, ReduceType.SingleStep));
 				}
+
+				reduceLevelStats.Completed = SystemTime.UtcNow;
+				reduceLevelStats.Duration = reduceLevelStats.Completed - reduceLevelStats.Started;
+
+				foreach (var stats in performanceStats)
+				{
+					reduceLevelStats.Add(stats);
+				}
+
+				reducePerformanceStats.LevelStats.Add(reduceLevelStats);
 			}
 			finally
 			{
@@ -377,7 +416,7 @@ namespace Raven.Database.Indexing
 				autoTuner.CurrentlyUsedBatchSizesInBytes.TryRemove(reducingBatchThrottlerId, out _);
 			}
 
-			return performanceStats;
+			return reducePerformanceStats;
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)

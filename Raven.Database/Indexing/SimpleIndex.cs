@@ -217,7 +217,12 @@ namespace Raven.Database.Indexing
 				{
 					WriteDocumentsDurationMs = addDocumentTotalDutation.ElapsedMilliseconds,
 					FlushToDiskDurationMs = writeStats.FlushToDiskDurationMs
-				}, null);
+				}, 
+				new MapReducePerformanceStats
+				{
+					DeleteMappedResultsDurationMs = -1,
+					PutMappedResultsDurationMs = -1
+				});
 
 			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
 		}
