@@ -218,7 +218,7 @@ namespace Raven.Database.Indexing
 					WriteDocumentsDurationMs = addDocumentTotalDutation.ElapsedMilliseconds,
 					FlushToDiskDurationMs = writeStats.FlushToDiskDurationMs
 				}, 
-				new MapReducePerformanceStats
+				new MapStoragePerformanceStats
 				{
 					DeleteMappedResultsDurationMs = -1,
 					PutMappedResultsDurationMs = -1

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -136,7 +137,7 @@ namespace Raven.Database.Indexing
 			{
 				var level = i;
 
-				var levelPerformanceStats = new ReduceLevelPeformanceStats()
+				var reduceLevelStats = new ReduceLevelPeformanceStats()
 				{
 					Level = level,
 					Started = SystemTime.UtcNow,
@@ -148,6 +149,8 @@ namespace Raven.Database.Indexing
 					level,
 					true,
 					itemsToDelete);
+
+				var gettigItemsToReduceDuration = new Stopwatch();
 
 				bool retry = true;
 				while (retry && reduceParams.ReduceKeys.Count > 0)
@@ -162,7 +165,10 @@ namespace Raven.Database.Indexing
 							var batchTimeWatcher = Stopwatch.StartNew();
 
 							reduceParams.Take = context.CurrentNumberOfItemsToReduceInSingleBatch;
+
+							gettigItemsToReduceDuration.Start();
 							var persistedResults = actions.MapReduce.GetItemsToReduce(reduceParams).ToList();
+							gettigItemsToReduceDuration.Stop();
 							if (persistedResults.Count == 0)
 							{
 								retry = false;
@@ -222,7 +228,7 @@ namespace Raven.Database.Indexing
 
 							var performance = context.IndexStorage.Reduce(index.IndexId, viewGenerator, results, level, context, actions, reduceKeys, persistedResults.Count);
 
-							levelPerformanceStats.Add(performance);
+							reduceLevelStats.Add(performance);
 
 							var batchDuration = batchTimeWatcher.Elapsed;
 							Log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4} on level {5}", reduceKeys.Count, batchDuration,
@@ -238,10 +244,11 @@ namespace Raven.Database.Indexing
 					}
 				}
 
-				levelPerformanceStats.Completed = SystemTime.UtcNow;
-				levelPerformanceStats.Duration = levelPerformanceStats.Completed - levelPerformanceStats.Started;
+				reduceLevelStats.Completed = SystemTime.UtcNow;
+				reduceLevelStats.Duration = reduceLevelStats.Completed - reduceLevelStats.Started;
+				reduceLevelStats.ReduceStoragePerformance.GetItemsToReduceDurationMs = gettigItemsToReduceDuration.ElapsedMilliseconds;
 
-				reducePerformance.LevelStats.Add(levelPerformanceStats);
+				reducePerformance.LevelStats.Add(reduceLevelStats);
 			}
 
 			foreach (var reduceKey in needToMoveToMultiStep)
@@ -280,6 +287,8 @@ namespace Raven.Database.Indexing
 			{
 				var performanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 
+				long gettigItemsToReduceDurationMs = 0;
+
 				BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
 				{
 					var localNeedToMoveToSingleStep = new HashSet<string>();
@@ -300,7 +309,11 @@ namespace Raven.Database.Indexing
 						};
 
 
+						var getItemsToReduceDuration = Stopwatch.StartNew();
 						var scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
+
+						Interlocked.Add(ref gettigItemsToReduceDurationMs, getItemsToReduceDuration.ElapsedMilliseconds);
+
 						autoTuner.CurrentlyUsedBatchSizesInBytes.GetOrAdd(reducingBatchThrottlerId, scheduledItems.Sum(x => x.Size));
 						if (scheduledItems.Count == 0)
 						{
@@ -402,6 +415,7 @@ namespace Raven.Database.Indexing
 
 				reduceLevelStats.Completed = SystemTime.UtcNow;
 				reduceLevelStats.Duration = reduceLevelStats.Completed - reduceLevelStats.Started;
+				reduceLevelStats.ReduceStoragePerformance.GetItemsToReduceDurationMs = gettigItemsToReduceDurationMs;
 
 				foreach (var stats in performanceStats)
 				{

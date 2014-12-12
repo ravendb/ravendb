@@ -93,10 +93,10 @@ namespace Raven.Abstractions.Data
 		public DateTime Completed { get; set; }
 	    public TimeSpan Duration { get; set; }
 	    public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
-		public LoadDocumentPerformanceStats LoadDocumentStats { get; set; }
-		public LinqExecutionPerformanceStats LinqExecutionStats { get; set; }
+		public LoadDocumentPerformanceStats LoadDocumentPerformance { get; set; }
+		public LinqExecutionPerformanceStats LinqExecutionPerformance { get; set; }
 		public LucenePerformanceStats LucenePerformance { get; set; }
-		public MapReducePerformanceStats MapReduceStats { get; set; }
+		public MapStoragePerformanceStats MapStoragePerformance { get; set; }
 		public long StorageCommitDurationMs { get; set; }
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
 
@@ -126,7 +126,7 @@ Duration in ms: {4:#,#}
 
 		protected bool Equals(IndexingPerformanceStats other)
 		{
-			return string.Equals(Operation, other.Operation) && ItemsCount == other.ItemsCount && InputCount == other.InputCount && OutputCount == other.OutputCount && Started.Equals(other.Started) && Completed.Equals(other.Completed) && Duration.Equals(other.Duration) && Equals(LoadDocumentStats, other.LoadDocumentStats) && Equals(LinqExecutionStats, other.LinqExecutionStats) && Equals(LucenePerformance, other.LucenePerformance) && Equals(MapReduceStats, other.MapReduceStats) && StorageCommitDurationMs == other.StorageCommitDurationMs && WaitingTimeSinceLastBatchCompleted.Equals(other.WaitingTimeSinceLastBatchCompleted);
+			return string.Equals(Operation, other.Operation) && ItemsCount == other.ItemsCount && InputCount == other.InputCount && OutputCount == other.OutputCount && Started.Equals(other.Started) && Completed.Equals(other.Completed) && Duration.Equals(other.Duration) && Equals(LoadDocumentPerformance, other.LoadDocumentPerformance) && Equals(LinqExecutionPerformance, other.LinqExecutionPerformance) && Equals(LucenePerformance, other.LucenePerformance) && Equals(MapStoragePerformance, other.MapStoragePerformance) && StorageCommitDurationMs == other.StorageCommitDurationMs && WaitingTimeSinceLastBatchCompleted.Equals(other.WaitingTimeSinceLastBatchCompleted);
 		}
 
 		public override int GetHashCode()
@@ -140,10 +140,10 @@ Duration in ms: {4:#,#}
 				hashCode = (hashCode * 397) ^ Started.GetHashCode();
 				hashCode = (hashCode * 397) ^ Completed.GetHashCode();
 				hashCode = (hashCode * 397) ^ Duration.GetHashCode();
-				hashCode = (hashCode * 397) ^ (LoadDocumentStats != null ? LoadDocumentStats.GetHashCode() : 0);
-				hashCode = (hashCode * 397) ^ (LinqExecutionStats != null ? LinqExecutionStats.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (LoadDocumentPerformance != null ? LoadDocumentPerformance.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (LinqExecutionPerformance != null ? LinqExecutionPerformance.GetHashCode() : 0);
 				hashCode = (hashCode * 397) ^ (LucenePerformance != null ? LucenePerformance.GetHashCode() : 0);
-				hashCode = (hashCode * 397) ^ (MapReduceStats != null ? MapReduceStats.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (MapStoragePerformance != null ? MapStoragePerformance.GetHashCode() : 0);
 				hashCode = (hashCode * 397) ^ StorageCommitDurationMs.GetHashCode();
 				hashCode = (hashCode * 397) ^ WaitingTimeSinceLastBatchCompleted.GetHashCode();
 				return hashCode;
@@ -205,12 +205,12 @@ Duration in ms: {4:#,#}
 		}
 	}
 
-	public class MapReducePerformanceStats
+	public class MapStoragePerformanceStats
 	{
 		public long DeleteMappedResultsDurationMs { get; set; }
 		public long PutMappedResultsDurationMs { get; set; }
 
-		protected bool Equals(MapReducePerformanceStats other)
+		protected bool Equals(MapStoragePerformanceStats other)
 		{
 			return DeleteMappedResultsDurationMs == other.DeleteMappedResultsDurationMs && PutMappedResultsDurationMs == other.PutMappedResultsDurationMs;
 		}
@@ -228,7 +228,7 @@ Duration in ms: {4:#,#}
 			if (ReferenceEquals(null, obj)) return false;
 			if (ReferenceEquals(this, obj)) return true;
 			if (obj.GetType() != this.GetType()) return false;
-			return Equals((MapReducePerformanceStats) obj);
+			return Equals((MapStoragePerformanceStats) obj);
 		}
 	}
 
@@ -269,11 +269,12 @@ Duration in ms: {4:#,#}
 	{
 		public ReduceLevelPeformanceStats()
 		{
-			LinqExecutionStats = new LinqExecutionPerformanceStats()
+			LinqExecutionPerformance = new LinqExecutionPerformanceStats()
 			{
 				MapLinqExecutionDurationMs = -1
 			};
 			LucenePerformance = new LucenePerformanceStats();
+			ReduceStoragePerformance = new ReduceStoragePerformanceStats();
 		}
 
 		public int Level { get; set; }
@@ -284,8 +285,9 @@ Duration in ms: {4:#,#}
 		public DateTime Completed { get; set; }
 		public TimeSpan Duration { get; set; }
 		public double DurationMs{ get { return Math.Round(Duration.TotalMilliseconds, 2); } }
-		public LinqExecutionPerformanceStats LinqExecutionStats { get; set; }
+		public LinqExecutionPerformanceStats LinqExecutionPerformance { get; set; }
 		public LucenePerformanceStats LucenePerformance { get; set; }
+		public ReduceStoragePerformanceStats ReduceStoragePerformance { get; set; }
 
 		public void Add(IndexingPerformanceStats other)
 		{
@@ -293,10 +295,15 @@ Duration in ms: {4:#,#}
 			InputCount += other.InputCount;
 			OutputCount += other.OutputCount;
 
-			LinqExecutionStats.ReduceLinqExecutionDurationMs += other.LinqExecutionStats.ReduceLinqExecutionDurationMs;
+			LinqExecutionPerformance.ReduceLinqExecutionDurationMs += other.LinqExecutionPerformance.ReduceLinqExecutionDurationMs;
 
 			LucenePerformance.WriteDocumentsDurationMs += other.LucenePerformance.WriteDocumentsDurationMs;
 			LucenePerformance.FlushToDiskDurationMs += other.LucenePerformance.FlushToDiskDurationMs;
 		}
+	}
+
+	public class ReduceStoragePerformanceStats
+	{
+		public long GetItemsToReduceDurationMs { get; set; }
 	}
 }
