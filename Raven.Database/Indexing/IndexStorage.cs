@@ -1016,7 +1016,7 @@ namespace Raven.Database.Indexing
 		}
 
 		[CLSCompliant(false)]
-		public void Reduce(
+		public IndexingPerformanceStats Reduce(
 			int index,
 			AbstractViewGenerator viewGenerator,
 			IEnumerable<IGrouping<int, object>> mappedResults,
@@ -1030,23 +1030,27 @@ namespace Raven.Database.Indexing
 			if (value == null)
 			{
 				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
-				return;
+				return null;
 			}
 			var mapReduceIndex = value as MapReduceIndex;
 			if (mapReduceIndex == null)
 			{
 				log.Warn("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
-				return;
+				return null;
 			}
 			using (EnsureInvariantCulture())
 			{
 				var reduceDocuments = new MapReduceIndex.ReduceDocuments(mapReduceIndex, viewGenerator, mappedResults, level, context, actions, reduceKeys, inputCount);
-				reduceDocuments.ExecuteReduction();
+
+				var performance = reduceDocuments.ExecuteReduction();
+
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = value.PublicName,
 					Type = IndexChangeTypes.ReduceCompleted
 				});
+
+				return performance;
 			}
 		}
 

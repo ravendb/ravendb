@@ -563,19 +563,21 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			public void ExecuteReduction()
+			public IndexingPerformanceStats ExecuteReduction()
 			{
 				var count = 0;
 				var sourceCount = 0;
 				var writeDocumentToIndexTotalDutation = new Stopwatch();
 				long linqExecutionDuration = 0;
 
+				IndexingPerformanceStats performance = null;
+
 				var writeStats = parent.Write((indexWriter, analyzer, stats) =>
 				{
 					stats.Operation = IndexingWorkStats.Status.Reduce;
 					try
 					{
-						parent.RecordCurrentBatch("Current Reduce #" + Level, MappedResultsByBucket.Sum(x => x.Count()));
+						performance = parent.RecordCurrentBatch("Current Reduce #" + Level, MappedResultsByBucket.Sum(x => x.Count()));
 						if (Level == 2)
 						{
 							RemoveExistingReduceKeysFromIndex(indexWriter);
@@ -666,6 +668,8 @@ namespace Raven.Database.Indexing
 					new MapReducePerformanceStats());
 
 				logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, indexId, string.Join(", ", ReduceKeys)));
+
+				return performance;
 			}
 
 			private void WriteDocumentToIndex(object doc, RavenIndexWriter indexWriter, Analyzer analyzer)
