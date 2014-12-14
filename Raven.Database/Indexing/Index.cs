@@ -95,6 +95,8 @@ namespace Raven.Database.Indexing
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
 		private IndexingPerformanceStats lastIndexingPerformanceStats;
+	    private static readonly TimeSpan flushIndexToDiskTimeout = TimeSpan.FromMinutes(15);
+	    private Timer flushIndexToDiskTimer;
 
 		[CLSCompliant(false)]
 		protected Index(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
@@ -111,7 +113,6 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Creating index for {0}", indexId);
 			this.directory = directory;
 			flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
-
 			RecreateSearcher();
 		}
 
@@ -520,15 +521,19 @@ namespace Raven.Database.Indexing
 
 						if (itemsInfo.ChangedDocs > 0)
 						{
-							WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
-
+							WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);                            
 							if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
 							{
 								var sw = Stopwatch.StartNew();
 								Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
 								writeIndexStat.FlushToDiskDurationMs = sw.ElapsedMilliseconds;
 								flushed = true;
-							}
+                            }
+                            else
+                            {
+                                if (flushIndexToDiskTimer != null) flushIndexToDiskTimer.Dispose();
+                                flushIndexToDiskTimer = new Timer(flushCallback, itemsInfo.HighestETag, flushIndexToDiskTimeout, TimeSpan.Zero);
+                            }
 
 							UpdateIndexingStats(context, stats);
 						}
@@ -575,6 +580,13 @@ namespace Raven.Database.Indexing
 
 			return writeIndexStat;
 		}
+
+        private void flushCallback(object state)
+        {
+            Flush((Etag)state);
+            flushIndexToDiskTimer.Dispose();
+            flushIndexToDiskTimer = null;
+        }
 
 		private IndexSegmentsInfo GetCurrentSegmentsInfo()
 		{
