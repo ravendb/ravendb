@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions;
@@ -1113,55 +1114,24 @@ namespace Raven.Client.Connection.Async
 
 				if (method == "GET")
 					requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
-
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, method, operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)).AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
+                FacetResults result = null;
+			    RavenJToken json = null;
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(
+                    new CreateHttpJsonRequestParams(this, requestUri, method, operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders),true).AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
 				{
 
 				    if (method != "GET")
 				    {
-                        var cachedRequestDetails = jsonRequestFactory.ConfigureCaching(requestUri, (key, val) => request.AddHeader(key, val));
-                        request.CachedRequestDetails = cachedRequestDetails.CachedRequest;
-                        request.SkipServerCheck = cachedRequestDetails.SkipServerCheck;
-                        request.WriteAsync(facetsJson).Wait();
+                        json = await request.WriteAsyncTryReturnCache(facetsJson).ConfigureAwait(false);
+				    }
+				    
+
+                    if (json == null)
+				    {
+                        json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				    }
 
-				    FacetResults result = null;
-                    
-                    if (request.Response == null || request.Response.StatusCode == HttpStatusCode.NotModified)
-                    {
-                        var cachedRequestDetails = request.CachedRequestDetails;
-                        if (cachedRequestDetails != null)
-                        {
-
-                            foreach (string header in request.CachedRequestDetails.Headers)
-                            {
-                                request.ResponseHeaders[header] = request.CachedRequestDetails.Headers[header];
-                            }
-
-                            result = cachedRequestDetails.Data.CloneToken().JsonDeserialization<FacetResults>();
-                            jsonRequestFactory.IncrementCachedRequests();
-                        }
-                        
-                    }
-                    else
-                    {
-                        var json = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-                        
-                        var nameValueCollection = new NameValueCollection();
-
-                        foreach (string header in request.ResponseHeaders)
-                        {
-                            nameValueCollection[header] = request.ResponseHeaders[header];
-                        }
-
-                        jsonRequestFactory.CacheResponse(requestUri, json, nameValueCollection);
-
-                        result = json.JsonDeserialization<FacetResults>();
-                    }
-
-				    return result;
-
-
+                    return json.JsonDeserialization<FacetResults>();
 				}
 			});
 		}
@@ -1340,19 +1310,28 @@ namespace Raven.Client.Connection.Async
 
 				if (method == "POST")
 					path += "&postQuery=true";
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention) { AvoidCachingRequest = query.DisableCaching }.AddOperationHeaders(OperationsHeaders)))
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention) { AvoidCachingRequest = query.DisableCaching }.AddOperationHeaders(OperationsHeaders),true))
 				{
+                    RavenJObject json = null;
 					request.AddReplicationStatusHeaders(operationMetadata.Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-					if (method == "POST") await request.WriteAsync(query.Query).ConfigureAwait(false);
+				    if (method == "POST")
+				    {
+				        json = (RavenJObject)await request.WriteAsyncTryReturnCache(query.Query).ConfigureAwait(false);
+				    }
+
+				    if (json == null)
+				    {
+                        json = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				    }
 
 					ErrorResponseException responseException;
 					try
 					{
-						var result = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						if (result == null) throw new InvalidOperationException("Got empty response from the server for the following request: " + request.Url);
+						
+						if (json == null) throw new InvalidOperationException("Got empty response from the server for the following request: " + request.Url);
 
-						var queryResult = SerializationHelper.ToQueryResult(result, request.ResponseHeaders.GetEtagHeader(), request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
+						var queryResult = SerializationHelper.ToQueryResult(json, request.ResponseHeaders.GetEtagHeader(), request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
 
 						var docResults = queryResult.Results.Concat(queryResult.Includes);
 						return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult, () => QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly), conflictedResultId => new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) + ", conflict must be resolved before the document will be accessible", true) { ConflictedVersionIds = new[] { conflictedResultId } }).ConfigureAwait(false);
