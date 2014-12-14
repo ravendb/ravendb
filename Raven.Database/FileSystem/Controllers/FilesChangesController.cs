@@ -10,6 +10,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 
+using Raven.Database.Server.WebApi.Attributes;
+
 namespace Raven.Database.FileSystem.Controllers
 {
     public class FilesChangesController : RavenFsApiController
@@ -17,7 +19,7 @@ namespace Raven.Database.FileSystem.Controllers
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
         [HttpGet]
-        [Route("fs/{fileSystemName}/changes/config")]
+        [RavenRoute("fs/{fileSystemName}/changes/config")]
         public HttpResponseMessage GetChangeConfig()
         {
             var value = GetQueryStringValue("value");
@@ -91,7 +93,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpGet]
-        [Route("fs/{fileSystemName}/changes/events")]
+        [RavenRoute("fs/{fileSystemName}/changes/events")]
 		public HttpResponseMessage GetChangesEvents()
         {
             var eventsTransport = new ChangesPushContent(this);

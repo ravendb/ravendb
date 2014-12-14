@@ -13,14 +13,15 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Queries;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
     public class FacetsController : RavenDbApiController
     {
         [HttpGet]
-        [Route("facets/{*id}")]
-        [Route("databases/{databaseName}/facets/{*id}")]
+        [RavenRoute("facets/{*id}")]
+        [RavenRoute("databases/{databaseName}/facets/{*id}")]
         public async Task<HttpResponseMessage> FacetsGet(string id)
         {
             List<Facet> facets = null;
@@ -62,8 +63,8 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpPost]
-        [Route("facets/{*id}")]
-        [Route("databases/{databaseName}/facets/{*id}")]
+        [RavenRoute("facets/{*id}")]
+        [RavenRoute("databases/{databaseName}/facets/{*id}")]
         public async Task<HttpResponseMessage> FacetsPost(string id)
         {
             List<Facet> facets;
@@ -82,8 +83,8 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpPost]
-        [Route("facets/multisearch")]
-        [Route("databases/{databaseName}/facets/multisearch")]
+        [RavenRoute("facets/multisearch")]
+        [RavenRoute("databases/{databaseName}/facets/multisearch")]
         public async Task<HttpResponseMessage> MultiSearch()
         {
             var str = await ReadStringAsync();

@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Replication;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Counters.Controllers
 {
     public class CounterReplicationController : RavenCountersApiController
     {
-		[Route("counters/{counterName}/lastEtag")]
+		[RavenRoute("counters/{counterName}/lastEtag")]
 		[HttpGet]
 		public HttpResponseMessage GetLastEtag(string serverUrl)
 		{
@@ -23,7 +24,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-        [Route("counters/{counterName}/replication")]
+        [RavenRoute("counters/{counterName}/replication")]
 		[HttpPost]
         public async Task<HttpResponseMessage> Post()
         {
@@ -99,7 +100,7 @@ namespace Raven.Database.Counters.Controllers
             }
         }
 
-        [Route("counters/{counterName}/replication/heartbeat")]
+        [RavenRoute("counters/{counterName}/replication/heartbeat")]
 		[HttpPost]
         public HttpResponseMessage HeartbeatPost(string sourceServer)
         {
@@ -118,7 +119,7 @@ namespace Raven.Database.Counters.Controllers
             return GetEmptyMessage();
         }
 
-		[Route("counters/{counterName}/replications/get")]
+		[RavenRoute("counters/{counterName}/replications/get")]
 		[HttpGet]
 		public HttpResponseMessage ReplicationsGet()
 		{
@@ -134,7 +135,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[Route("counters/{counterName}/replications/save")]
+		[RavenRoute("counters/{counterName}/replications/save")]
 		[HttpPost]
 		public async Task<HttpResponseMessage> ReplicationsSave()
 		{
@@ -157,7 +158,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-        [Route("counters/{counterName}/replications/stats")]
+        [RavenRoute("counters/{counterName}/replications/stats")]
         [HttpGet]
         public HttpResponseMessage ReplicationStats()
         {

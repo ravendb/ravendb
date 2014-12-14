@@ -287,10 +287,10 @@ namespace Raven.Database.Indexing
                 return docsCache.GetOrAdd(key, _ =>
                 {
                     var doc = IndexSearcher.Doc(docId);
-                    return new StringCollectionValue((from field in fields
-                        from fld in doc.GetFields(field)
-                        where fld.StringValue != null
-                        select field).ToList());
+	                return new StringCollectionValue((from field in fields
+		                from fld in doc.GetFields(field)
+		                where fld.StringValue != null
+		                select fld.StringValue).ToList());
                 });
                 
             }
@@ -300,6 +300,10 @@ namespace Raven.Database.Indexing
         {
             private readonly int _hashCode;
             private uint _crc;
+#if DEBUG
+	        private List<string> _values;
+#endif
+
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -317,6 +321,9 @@ namespace Raven.Database.Indexing
 
             public StringCollectionValue(List<string> values)
             {
+#if DEBUG
+	            _values = values;
+#endif
                 if (values.Count == 0)
                     throw new InvalidOperationException("Cannot apply distinct facet on empty fields, did you forget to store them in the index? ");
 

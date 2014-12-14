@@ -17,7 +17,6 @@ class recentErrors extends dialogViewModelBase {
         if (this.errors().length > 0) {
             $("#errorDetailsCollapse0").collapse("show");
         }
-
         this.registerResizing("recentErrorsResize");
     }
 

@@ -6,14 +6,15 @@ using System.Net.Http;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Queries;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
 	public class MoreLikeThisController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("morelikethis/{*id}")]
-		[Route("databases/{databaseName}/morelikethis/{*id}")]
+		[RavenRoute("morelikethis/{*id}")]
+		[RavenRoute("databases/{databaseName}/morelikethis/{*id}")]
 		public HttpResponseMessage MoreLikeThisGet()
 		{
 			var nameValueCollection = new NameValueCollection();

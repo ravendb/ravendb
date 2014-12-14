@@ -2,25 +2,11 @@
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
   <MonoDevelop.Ide.Workbench ActiveDocument="Voron.Tryout/Program.cs">
     <Files>
-      <File FileName="Voron.Tryout/Program.cs" Line="22" Column="1" />
-      <File FileName="Voron/Platform/Posix/PosixPageFileBackedMemoryMapPager.cs" Line="43" Column="3" />
-      <File FileName="Voron.Tests/Journal/BasicActions.cs" Line="71" Column="1" />
-      <File FileName="Voron/StorageEnvironment.cs" Line="106" Column="1" />
-      <File FileName="Voron.Tests/StorageTest.cs" Line="30" Column="1" />
+      <File FileName="Voron.Tryout/Program.cs" Line="25" Column="4" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
-          <Node name="Voron" expanded="True">
-            <Node name="Impl" expanded="True" />
-            <Node name="Platform" expanded="True">
-              <Node name="Posix" expanded="True" />
-            </Node>
-          </Node>
-          <Node name="Voron.Tests" expanded="True">
-            <Node name="Journal" expanded="True" />
-            <Node name="ScratchBuffer" expanded="True" />
-          </Node>
           <Node name="Voron.Tryout" expanded="True">
             <Node name="Program.cs" selected="True" />
           </Node>
@@ -30,9 +16,8 @@
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore>
-      <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron/StorageEnvironmentOptions.cs" line="192" column="1" />
-      <Breakpoint file="/home/hibernating/ravendb/Raven.Voron/Voron/Impl/Backup/FullBackup.cs" line="39" column="3" />
-      <Breakpoint file="/home/hibernating/ravendb/Raven.Voron/Voron.Tryout/Program.cs" line="23" column="43" />
+      <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron/StorageEnvironmentOptions.cs" line="183" column="1" />
+      <Breakpoint file="/home/hr/work/ravendb/Raven.Voron/Voron/Platform/Posix/PosixMemoryMapPager.cs" line="93" column="1" />
     </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />

@@ -146,7 +146,7 @@ namespace Raven.Server
 
 		private static void InteractiveRun(string[] args)
 		{
-		    var ioTestRequest = new PerformanceTestRequest();
+            var ioTestRequest = new GenericPerformanceTestRequest();
 
 			string backupLocation = null;
 			string restoreLocation = null;
@@ -318,7 +318,7 @@ namespace Raven.Server
                     restoreFilesystemName = value;
                     requiresRestoreAction.Add("restore-filesystem-name");
                 }},
-                {"io-test=", "Performs disk io test using {0:path} as temporary file path", path =>
+                {"io-test=", "Performs disk io test using {0:dir} as temporary dir path", path =>
                 {
                     ioTestRequest.Path = path;
                     actionToTake = () => IoTest(ioTestRequest);
@@ -543,11 +543,11 @@ namespace Raven.Server
 	        e.SetObserved();
 	    }
 
-        public static void IoTest(PerformanceTestRequest request)
+        public static void IoTest(GenericPerformanceTestRequest request)
         {
 	        DiskPerformanceResult result;
 
-	        using (var tester = new DiskPerformanceTester(request, Console.WriteLine))
+            using (var tester = AbstractDiskPerformanceTester.ForRequest(request, Console.WriteLine))
 	        {
 				tester.DescribeTestParameters();
 				tester.TestDiskIO();

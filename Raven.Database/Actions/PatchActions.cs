@@ -38,7 +38,7 @@ namespace Raven.Database.Actions
 
         public PatchResultData ApplyPatch(string docId, Etag etag,
                                           PatchRequest[] patchExistingDoc, PatchRequest[] patchDefaultDoc, RavenJObject defaultMetadata,
-                                          TransactionInformation transactionInformation, bool debugMode = false)
+										  TransactionInformation transactionInformation, bool debugMode = false, bool skipPatchIfEtagMismatch = false)
         {
             if (docId == null)
                 throw new ArgumentNullException("docId");
@@ -55,7 +55,8 @@ namespace Raven.Database.Actions
                                       },
                                       () => null,
 									  () => null,
-									  debugMode);
+									  debugMode,
+									  skipPatchIfEtagMismatch);
         }
 
         private PatchResultData ApplyPatchInternal(string docId, Etag etag,
@@ -64,7 +65,8 @@ namespace Raven.Database.Actions
                                        Func<RavenJObject> patcherIfMissing,
                                        Func<IList<JsonDocument>> getDocsCreatedInPatch,
 									   Func<RavenJObject> getDebugActions,
-                                       bool debugMode)
+                                       bool debugMode,
+									   bool skipPatchIfEtagMismatch = false)
         {
             if (docId == null) throw new ArgumentNullException("docId");
             docId = docId.Trim();
@@ -84,6 +86,13 @@ namespace Raven.Database.Actions
                 if (etag != null && doc != null && doc.Etag != etag)
                 {
                     Debug.Assert(doc.Etag != null);
+
+	                if (skipPatchIfEtagMismatch)
+	                {
+		                result.PatchResult = PatchResult.Skipped;
+		                return result;
+	                }
+
                     Log.Debug(() => string.Format("Got concurrent exception while tried to patch the following document ID: {0}", docId));
                     throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
                     {

@@ -307,6 +307,10 @@ namespace Raven.Database.Actions
 				index = Database.IndexStorage.GetIndexInstance(definition.IndexId);
 				//ensure that we don't start indexing it right away, let the precomputation run first, if applicable
 	            index.IsMapIndexingInProgress = true;
+
+	            if (definition.IsTestIndex)
+					index.MarkQueried(); // test indexes should be mark queried, so the cleanup task would not delete them immediately
+
 				InvokeSuggestionIndexing(name, definition, index);
 
 	            actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);

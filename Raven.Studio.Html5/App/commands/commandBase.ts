@@ -116,6 +116,10 @@ class commandBase {
         return this.ajax(relativeUrl, args, "PATCH", resource, options);
     }
 
+    evalJs(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "EVAL", resource, options);
+    }
+
     private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         var originalArguments = arguments;
         // ContentType:
@@ -339,6 +343,10 @@ class commandBase {
 
     reportWarning(title: string, details?: string, httpStatusText?: string) {
         messagePublisher.reportWarning(title, details, httpStatusText);
+    }
+
+    reportWarningWithButton(title: string, details: string, buttonName: string, action: () => any) {
+        messagePublisher.reportWarningWithButton(title, details, buttonName, action);
     }
 }
 

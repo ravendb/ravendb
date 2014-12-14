@@ -272,9 +272,9 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public virtual int GetReadStripingBase()
+		public virtual int GetReadStripingBase(bool increment)
 		{
-			return Interlocked.Increment(ref readStripingBase);
+            return increment ? Interlocked.Increment(ref readStripingBase) : readStripingBase;
 		}
 		
         public async Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation)

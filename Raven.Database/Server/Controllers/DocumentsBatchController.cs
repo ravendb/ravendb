@@ -25,8 +25,8 @@ namespace Raven.Database.Server.Controllers
     public class DocumentsBatchController : RavenDbApiController
     {
         [HttpPost]
-        [Route("bulk_docs")]
-        [Route("databases/{databaseName}/bulk_docs")]
+        [RavenRoute("bulk_docs")]
+        [RavenRoute("databases/{databaseName}/bulk_docs")]
         public async Task<HttpResponseMessage> BulkPost()
         {
             using (var cts = new CancellationTokenSource())
@@ -64,8 +64,8 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpDelete]
-        [Route("bulk_docs/{*id}")]
-        [Route("databases/{databaseName}/bulk_docs/{*id}")]
+        [RavenRoute("bulk_docs/{*id}")]
+        [RavenRoute("databases/{databaseName}/bulk_docs/{*id}")]
         public HttpResponseMessage BulkDelete(string id)
         {
             // we don't use using because execution is async
@@ -85,8 +85,8 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpPatch]
-        [Route("bulk_docs/{*id}")]
-        [Route("databases/{databaseName}/bulk_docs/{*id}")]
+        [RavenRoute("bulk_docs/{*id}")]
+        [RavenRoute("databases/{databaseName}/bulk_docs/{*id}")]
         public async Task<HttpResponseMessage> BulkPatch(string id)
         {
             // we don't use using because execution is async
@@ -100,8 +100,8 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpEval]
-        [Route("bulk_docs/{*id}")]
-        [Route("databases/{databaseName}/bulk_docs/{*id}")]
+        [RavenRoute("bulk_docs/{*id}")]
+        [RavenRoute("databases/{databaseName}/bulk_docs/{*id}")]
         public async Task<HttpResponseMessage> BulkEval(string id)
         {
             // we don't use using because execution is async
