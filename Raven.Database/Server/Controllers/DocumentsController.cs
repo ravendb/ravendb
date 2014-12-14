@@ -18,8 +18,8 @@ namespace Raven.Database.Server.Controllers
 	public class DocumentsController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("docs")]
-		[Route("databases/{databaseName}/docs")]
+		[RavenRoute("docs")]
+		[RavenRoute("databases/{databaseName}/docs")]
 		public HttpResponseMessage DocsGet([FromUri] string id)
 		{
 			if (string.IsNullOrEmpty(id))
@@ -28,8 +28,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpHead]
-		[Route("docs")]
-		[Route("databases/{databaseName}/docs")]
+		[RavenRoute("docs")]
+		[RavenRoute("databases/{databaseName}/docs")]
 		public HttpResponseMessage DocsHead([FromUri] string id)
 		{
 			if (string.IsNullOrEmpty(id))
@@ -38,8 +38,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("docs")]
-		[Route("databases/{databaseName}/docs")]
+		[RavenRoute("docs")]
+		[RavenRoute("databases/{databaseName}/docs")]
 		public HttpResponseMessage DocsGet()
 		{
 		    using (var cts = new CancellationTokenSource())
@@ -91,8 +91,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("docs")]
-		[Route("databases/{databaseName}/docs")]
+		[RavenRoute("docs")]
+		[RavenRoute("databases/{databaseName}/docs")]
 		public async Task<HttpResponseMessage> DocsPost()
 		{
 			var json = await ReadJsonAsync();
@@ -104,8 +104,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpHead]
-		[Route("docs/{*docId}")]
-		[Route("databases/{databaseName}/docs/{*docId}")]
+		[RavenRoute("docs/{*docId}")]
+		[RavenRoute("databases/{databaseName}/docs/{*docId}")]
 		public HttpResponseMessage DocHead(string docId)
 		{
 			var msg = GetEmptyMessage();
@@ -137,8 +137,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("docs/{*docId}")]
-		[Route("databases/{databaseName}/docs/{*docId}")]
+		[RavenRoute("docs/{*docId}")]
+		[RavenRoute("databases/{databaseName}/docs/{*docId}")]
 		public HttpResponseMessage DocGet(string docId)
 		{
 			var msg = GetEmptyMessage();
@@ -171,8 +171,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpDelete]
-		[Route("docs/{*docId}")]
-		[Route("databases/{databaseName}/docs/{*docId}")]
+		[RavenRoute("docs/{*docId}")]
+		[RavenRoute("databases/{databaseName}/docs/{*docId}")]
 		public HttpResponseMessage DocDelete(string docId)
 		{
 			Database.Documents.Delete(docId, GetEtag(), GetRequestTransaction());
@@ -180,8 +180,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPut]
-		[Route("docs/{*docId}")]
-		[Route("databases/{databaseName}/docs/{*docId}")]
+		[RavenRoute("docs/{*docId}")]
+		[RavenRoute("databases/{databaseName}/docs/{*docId}")]
 		public async Task<HttpResponseMessage> DocPut(string docId)
 		{
 			var json = await ReadJsonAsync();
@@ -190,8 +190,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPatch]
-		[Route("docs/{*docId}")]
-		[Route("databases/{databaseName}/docs/{*docId}")]
+		[RavenRoute("docs/{*docId}")]
+		[RavenRoute("databases/{databaseName}/docs/{*docId}")]
 		public async Task<HttpResponseMessage> DocPatch(string docId)
 		{
 			var patchRequestJson = await ReadJsonArrayAsync();
@@ -201,8 +201,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpEval]
-		[Route("docs/{*docId}")]
-		[Route("databases/{databaseName}/docs/{*docId}")]
+		[RavenRoute("docs/{*docId}")]
+		[RavenRoute("databases/{databaseName}/docs/{*docId}")]
 		public async Task<HttpResponseMessage> DocEval(string docId)
 		{
 			var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();

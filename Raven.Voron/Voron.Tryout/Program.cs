@@ -21,13 +21,12 @@ namespace Voron.Tryout
 	{
 		public static void Main()
 		{
-			Console.WriteLine ("pid = " + Process.GetCurrentProcess ().Id);
-	
-			Console.WriteLine ("done..");
-			Console.WriteLine ("press any key");
-			Console.ReadKey ();
-
-		    RunAllTests ();
+			var t = Type.GetType ("Mono.Runtime");
+			var m = t.GetMethod ("GetDisplayName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+			Console.WriteLine ( "Mono runtime: " +  m.Invoke(null, null));
+			using (var f = new Full()) {
+				f.CanBackupAndRestore ();
+			}
 
 		}
 

@@ -7,6 +7,7 @@ using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Data;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
@@ -14,16 +15,16 @@ namespace Raven.Database.Server.Controllers
 	public class QueriesController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("queries")]
-		[Route("databases/{databaseName}/queries")]
+		[RavenRoute("queries")]
+		[RavenRoute("databases/{databaseName}/queries")]
 		public Task<HttpResponseMessage> QueriesGet()
 		{
 			return GetQueriesResponse(true);
 		}
 
 		[HttpPost]
-		[Route("queries")]
-		[Route("databases/{databaseName}/queries")]
+		[RavenRoute("queries")]
+		[RavenRoute("databases/{databaseName}/queries")]
 		public Task<HttpResponseMessage> QueriesPost()
 		{
 			return GetQueriesResponse(false);

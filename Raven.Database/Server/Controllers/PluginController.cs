@@ -3,13 +3,15 @@ using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
 using Raven.Database.Plugins;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
 	public class PluginController : RavenDbApiController
 	{
-		[HttpGet][Route("plugins/status")]
+		[HttpGet]
+		[RavenRoute("plugins/status")]
 		public HttpResponseMessage PlugingsStatusGet()
 		{
 			var dir = DatabasesLandlord.SystemDatabase.Configuration.PluginsDirectory;

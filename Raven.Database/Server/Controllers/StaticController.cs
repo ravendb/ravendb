@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -12,8 +13,8 @@ namespace Raven.Database.Server.Controllers
 	public class StaticController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("static/")]
-		[Route("databases/{databaseName}/static/")]
+		[RavenRoute("static/")]
+		[RavenRoute("databases/{databaseName}/static/")]
 		public HttpResponseMessage StaticGet()
 		{
 			var array = Database.Attachments.GetAttachments(GetStart(),
@@ -26,8 +27,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("static/{*id}")]
-		[Route("databases/{databaseName}/static/{*id}")]
+		[RavenRoute("static/{*id}")]
+		[RavenRoute("databases/{databaseName}/static/{*id}")]
 		public HttpResponseMessage StaticGet(string id)
 		{
             if (id == null)
@@ -69,8 +70,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpHead]
-		[Route("static/{*id}")]
-		[Route("databases/{databaseName}/static/{*id}")]
+		[RavenRoute("static/{*id}")]
+		[RavenRoute("databases/{databaseName}/static/{*id}")]
 		public HttpResponseMessage StaticHead(string id)
 		{
 			var filename = id;
@@ -97,8 +98,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPut]
-		[Route("static/{*filename}")]
-		[Route("databases/{databaseName}/static/{*filename}")]
+		[RavenRoute("static/{*filename}")]
+		[RavenRoute("databases/{databaseName}/static/{*filename}")]
 		public async Task<HttpResponseMessage> StaticPut(string filename)
 		{
 			var newEtag = Database.Attachments.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), InnerHeaders.FilterHeadersAttachment());
@@ -111,8 +112,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("static/{*id}")]
-		[Route("databases/{databaseName}/static/{*id}")]
+		[RavenRoute("static/{*id}")]
+		[RavenRoute("databases/{databaseName}/static/{*id}")]
 		public HttpResponseMessage StaticPost(string id)
 		{
 			var filename = id;
@@ -124,8 +125,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpDelete]
-		[Route("static/{*id}")]
-		[Route("databases/{databaseName}/static/{*id}")]
+		[RavenRoute("static/{*id}")]
+		[RavenRoute("databases/{databaseName}/static/{*id}")]
 		public HttpResponseMessage StaticDelete(string id)
 		{
 			var filename = id;

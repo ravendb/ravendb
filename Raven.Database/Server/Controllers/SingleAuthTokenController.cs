@@ -4,14 +4,15 @@ using System.Net.Http;
 using System.Web.Http;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Security;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
     public class DbSingleAuthTokenController : RavenDbApiController
     {
         [HttpGet]
-        [Route("singleAuthToken")]
-        [Route("databases/{databaseName}/singleAuthToken")]
+        [RavenRoute("singleAuthToken")]
+        [RavenRoute("databases/{databaseName}/singleAuthToken")]
         public HttpResponseMessage SingleAuthGet()
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
@@ -48,7 +49,7 @@ namespace Raven.Database.FileSystem.Controllers
     public class FsSingleAuthTokenController : RavenFsApiController
     {
         [HttpGet]
-        [Route("fs/{fileSystemName}/singleAuthToken")]
+        [RavenRoute("fs/{fileSystemName}/singleAuthToken")]
         public HttpResponseMessage SingleAuthGet()
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
@@ -68,7 +69,7 @@ namespace Raven.Database.Counters.Controllers
     public class CounterSingleAuthTokenController : RavenCountersApiController
     {
         [HttpGet]
-        [Route("counters/{counterName}/singleAuthToken")]
+        [RavenRoute("counters/{counterName}/singleAuthToken")]
         public HttpResponseMessage SingleAuthGet()
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];

@@ -80,12 +80,15 @@
             <button class="btn btn-danger" title="Delete index" data-bind="click: deleteIndex">
                 <i class="fa fa-trash-o"></i>
             </button>
+            <button class="btn btn-default" data-bind="visible: isSideBySideIndex() == false, click: replaceIndex" title="Replaces current index when specified condition is met"><i class="fa fa-reply fa-fw"></i> Side-by-size indexing</button>
         </div>
         
         <div class="btn-group">
             <button class="btn btn-default" title="Create test index based on limited data set" data-bind="visible: editedIndex().isTestIndex() == false, click: tryIndex">
                 Try index
             </button>
+        </div>
+        <div class="btn-group">
             <button class="btn btn-primary" title="Saves test index as persistent" data-bind="visible: editedIndex().isTestIndex(), click: makePermanent">
                 <i class="fa fa-save"></i> Make permanent
             </button>

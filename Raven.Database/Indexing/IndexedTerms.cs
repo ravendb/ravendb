@@ -121,8 +121,7 @@ namespace Raven.Database.Indexing
               IndexSearcherHolder.IndexSearcherHoldingState state,
               HashSet<string> fieldsToRead,
               HashSet<int> docIds,
-              IndexReader indexReader,
-              Action<Term, Document, int> onTermFound)
+              Action<Term, int> onTermFound)
         {
             var reader = state.IndexSearcher.IndexReader;
 
@@ -131,22 +130,19 @@ namespace Raven.Database.Indexing
             {
                 EnsureFieldsAreInCache(state, fieldsToRead, reader);
 
+                var cacheEntries = state.GetCachedFields(fieldsToRead);
+
                 foreach (var docId in docIds)
                 {
-                    Document document = null;
-
-                    foreach (var field in fieldsToRead)    
+                    for (int i = 0; i < cacheEntries.Length; i++)
                     {
-                        var terms = state.GetTermsFromCache(field, docId);
-                        if (terms != null)
-                        {
-                            if (document == null)
-                                document = indexReader.Document(docId);
+                        var cacheVals = cacheEntries[i].Item2[docId];
+                        if (cacheVals == null) 
+                            continue;
 
-                            for (int i = 0; i < terms.Length; i++)
-                            {
-                                onTermFound(terms[i], document, docId);
-                            }
+                        foreach (var t in cacheVals)
+                        {
+                            onTermFound(t.Term, docId);
                         }
                     }
                 }
@@ -200,7 +196,7 @@ namespace Raven.Database.Indexing
             {
                 foreach (var field in fieldsToRead)
                 {
-                    var items = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>[reader.MaxDoc];
+                    var items = new List<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>[reader.MaxDoc];
 
                     using (var termEnum = reader.Terms(new Term(field)))
                     {
@@ -223,9 +219,9 @@ namespace Raven.Database.Indexing
                                 if (reader.IsDeleted(curDoc))
                                     continue;
                                 if (items[curDoc] == null)
-                                    items[curDoc] = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>();
+                                    items[curDoc] = new List<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>();
 
-                                items[curDoc].AddLast(new IndexSearcherHolder.IndexSearcherHoldingState.CacheVal
+                                items[curDoc].Add(new IndexSearcherHolder.IndexSearcherHoldingState.CacheVal
                                 {
                                     Term = termEnum.Term
                                 });

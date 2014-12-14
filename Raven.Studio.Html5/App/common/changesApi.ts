@@ -10,6 +10,8 @@ import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import idGenerator = require("common/idGenerator");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
+import changesApiWarnStorage = require("common/changesApiWarnStorage");
+import messagePublisher = require("common/messagePublisher");
 
 class changesApi {
 
@@ -176,9 +178,19 @@ class changesApi {
                 details = "EventSource API is going to be used instead. However, multi tab usage isn't supported.\r\n" +
                 "WebSockets are only supported on servers running on Windows Server 2012 and equivalent. \r\n" +
                 " If you have issues with WebSockets on Windows Server 2012 and equivalent use Status > Debug > WebSocket to debug.";
+                if (changesApi.isServerSupportingWebSockets) {
+                    changesApi.isServerSupportingWebSockets = false;
+                    if (changesApiWarnStorage.showChangesApiWarning()) {
+                        this.commandBase.reportWarningWithButton(warningMessage, details, "Don't warn me again", () => {
+                            if (changesApiWarnStorage.showChangesApiWarning()) {
+                                changesApiWarnStorage.setValue(true);
+                                messagePublisher.reportInfo("Disabled notification about WebSocket.");
+                            }
+                        });
+                    }
+                }
             } else {
-                warningMessage = "Event source was disabled!";
-                details = "EventSource API is NOT going to be used, as you disabled it in server settings. Multi tab usage is now supported.";
+                changesApi.isServerSupportingWebSockets = false;
                 this.connectToChangesApiTask.reject();
             }
         } else {
@@ -186,15 +198,10 @@ class changesApi {
             warningMessage = "Changes API is Disabled!";
             details = "Your server doesn't support the WebSocket protocol and your browser doesn't support the EventSource API.\r\n" +
             "In order to use it, please use a browser that supports the EventSource API.";
-            
-        }
-        this.showWarning(warningMessage, details);
-    }
-
-    private showWarning(message: string, details: string) {
-        if (changesApi.isServerSupportingWebSockets) {
-            changesApi.isServerSupportingWebSockets = false;
-            this.commandBase.reportWarning(message, details);
+            if (changesApi.isServerSupportingWebSockets) {
+                changesApi.isServerSupportingWebSockets = false;
+                this.commandBase.reportWarning(warningMessage, details);
+            }
         }
     }
 

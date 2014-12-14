@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Mono.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Extensions;
@@ -335,10 +336,7 @@ namespace Raven.Database.Config
 			container = null;
 
 			var catalog = GetUnfilteredCatalogs(Catalog.Catalogs);
-
-			Catalog.Catalogs.Clear();
-
-			Catalog.Catalogs.Add(new BundlesFilteredCatalog(catalog, ActiveBundles.ToArray()));
+			Catalog = new AggregateCatalog(new List<ComposablePartCatalog> { new BundlesFilteredCatalog(catalog, ActiveBundles.ToArray()) });
 		}
 
 		public IEnumerable<string> ActiveBundles

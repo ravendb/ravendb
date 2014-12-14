@@ -2,6 +2,7 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
+using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
@@ -20,6 +21,11 @@ namespace Raven.Tests.Security.OAuth
 			store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 			store.Credentials = null;
 			store.ApiKey = apiKey;
+		}
+
+		protected override void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
+		{
+			inMemoryRavenConfiguration.Settings["Raven/Licensing/AllowAdminAnonymousAccessForCommercialUse"] = "true";
 		}
 
 		protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)

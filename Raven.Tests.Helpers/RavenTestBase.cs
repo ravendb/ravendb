@@ -703,6 +703,7 @@ namespace Raven.Tests.Helpers
 
 		public virtual void Dispose()
 		{
+			Authentication.Disable();
 			GC.SuppressFinalize(this);
 
 			var errors = new List<Exception>();

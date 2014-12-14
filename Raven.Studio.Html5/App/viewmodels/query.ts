@@ -37,6 +37,7 @@ import recentQueriesStorage = require("common/recentQueriesStorage");
 
 class query extends viewModelBase {
 
+    isTestIndex = ko.observable<boolean>(false);
     isStaticIndexSelected: KnockoutComputed<boolean>;
     selectedIndex = ko.observable<string>();
     indexes = ko.observableArray<indexDataDto>();
@@ -625,6 +626,7 @@ class query extends viewModelBase {
                 new getIndexDefinitionCommand(indexName, this.activeDatabase())
                     .execute()
                     .done((result: indexDefinitionContainerDto) => {
+                        this.isTestIndex(result.Index.IsTestIndex);
                         this.indexFields(result.Index.Fields);
                     });
             }

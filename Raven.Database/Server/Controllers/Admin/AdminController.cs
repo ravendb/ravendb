@@ -31,6 +31,7 @@ using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.Connections;
 using Raven.Database.FileSystem;
 using Raven.Database.Server.Security;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron.Impl;
 using Raven.Database.Util;
@@ -57,8 +58,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		                                                           };
 
 		[HttpPost]
-		[Route("admin/backup")]
-		[Route("databases/{databaseName}/admin/backup")]
+		[RavenRoute("admin/backup")]
+		[RavenRoute("databases/{databaseName}/admin/backup")]
 		public async Task<HttpResponseMessage> Backup()
 		{
 			var backupRequest = await ReadJsonObjectAsync<DatabaseBackupRequest>();
@@ -99,8 +100,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPost]
-		[Route("admin/restore")]
-		[Route("databases/{databaseName}/admin/restore")]
+		[RavenRoute("admin/restore")]
+		[RavenRoute("databases/{databaseName}/admin/restore")]
 		public async Task<HttpResponseMessage> Restore()
 		{
 			if (EnsureSystemDatabase() == false)
@@ -363,8 +364,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPost]
-		[Route("admin/changedbid")]
-		[Route("databases/{databaseName}/admin/changedbid")]
+		[RavenRoute("admin/changedbid")]
+		[RavenRoute("databases/{databaseName}/admin/changedbid")]
 		public HttpResponseMessage ChangeDbId()
 		{
 			Guid old = Database.TransactionalStorage.Id;
@@ -378,7 +379,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPost]
-		[Route("admin/compact")]
+		[RavenRoute("admin/compact")]
 		public HttpResponseMessage Compact()
 		{
 			var db = InnerRequest.RequestUri.ParseQueryString()["database"];
@@ -411,8 +412,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpGet]
-		[Route("admin/indexingStatus")]
-		[Route("databases/{databaseName}/admin/indexingStatus")]
+		[RavenRoute("admin/indexingStatus")]
+		[RavenRoute("databases/{databaseName}/admin/indexingStatus")]
 		public HttpResponseMessage IndexingStatus()
 		{
 			string indexDisableStatus;
@@ -429,16 +430,16 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPost]
-		[Route("admin/optimize")]
-		[Route("databases/{databaseName}/admin/optimize")]
+		[RavenRoute("admin/optimize")]
+		[RavenRoute("databases/{databaseName}/admin/optimize")]
 		public void Optimize()
 		{
 			Database.IndexStorage.MergeAllIndexes();
 		}
 
 		[HttpPost]
-		[Route("admin/startIndexing")]
-		[Route("databases/{databaseName}/admin/startIndexing")]
+		[RavenRoute("admin/startIndexing")]
+		[RavenRoute("databases/{databaseName}/admin/startIndexing")]
 		public void StartIndexing()
 		{
 			var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
@@ -450,15 +451,15 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPost]
-		[Route("admin/stopIndexing")]
-		[Route("databases/{databaseName}/admin/stopIndexing")]
+		[RavenRoute("admin/stopIndexing")]
+		[RavenRoute("databases/{databaseName}/admin/stopIndexing")]
 		public void StopIndexing()
 		{
 			Database.StopIndexingWorkers();
 		}
 
 		[HttpGet]
-		[Route("admin/stats")]
+		[RavenRoute("admin/stats")]
 		public HttpResponseMessage Stats()
 		{
 			if (Database != DatabasesLandlord.SystemDatabase)
@@ -567,8 +568,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		});
 
 		[HttpGet]
-		[Route("admin/detailed-storage-breakdown")]
-		[Route("databases/{databaseName}/admin/detailed-storage-breakdown")]
+		[RavenRoute("admin/detailed-storage-breakdown")]
+		[RavenRoute("databases/{databaseName}/admin/detailed-storage-breakdown")]
 		public HttpResponseMessage DetailedStorageBreakdown()
 		{
 			var x = Database.TransactionalStorage.ComputeDetailedStorageInformation();
@@ -577,7 +578,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpPost]
 		[HttpGet]
-		[Route("admin/gc")]
+		[RavenRoute("admin/gc")]
 		public HttpResponseMessage Gc()
 		{
 			if (EnsureSystemDatabase() == false)
@@ -593,7 +594,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpGet]
 		[HttpPost]
-		[Route("admin/loh-compaction")]
+		[RavenRoute("admin/loh-compaction")]
 		public HttpResponseMessage LohCompaction()
 		{
 			if (EnsureSystemDatabase() == false)
@@ -609,8 +610,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpGet]
-		[Route("admin/tasks")]
-		[Route("databases/{databaseName}/admin/tasks")]
+		[RavenRoute("admin/tasks")]
+		[RavenRoute("databases/{databaseName}/admin/tasks")]
 		public HttpResponseMessage Tasks()
 		{
 			return GetMessageWithObject(FilterOutTasks(Database.StartupTasks));
@@ -622,8 +623,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpGet]
-		[Route("admin/killQuery")]
-		[Route("databases/{databaseName}/admin/killQuery")]
+		[RavenRoute("admin/killQuery")]
+		[RavenRoute("databases/{databaseName}/admin/killQuery")]
 		public HttpResponseMessage KillQuery()
 		{
 			var idStr = GetQueryStringValue("id");
@@ -649,7 +650,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpGet]
-		[Route("admin/debug/info-package")]
+		[RavenRoute("admin/debug/info-package")]
 		public HttpResponseMessage InfoPackage()
 		{
 			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -789,7 +790,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 
 		[HttpGet]
-		[Route("admin/logs/configure")]
+		[RavenRoute("admin/logs/configure")]
 		public HttpResponseMessage OnAdminLogsConfig()
 		{
 			var id = GetQueryStringValue("id");
@@ -843,7 +844,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpGet]
-		[Route("admin/logs/events")]
+		[RavenRoute("admin/logs/events")]
 		public HttpResponseMessage OnAdminLogsFetch()
 		{
 			var logsTransport = new LogsPushContent(this);
@@ -855,8 +856,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPost]
-		[Route("databases/{databaseName}/admin/transactions/rollbackAll")]
-		[Route("admin/transactions/rollbackAll")]
+		[RavenRoute("databases/{databaseName}/admin/transactions/rollbackAll")]
+		[RavenRoute("admin/transactions/rollbackAll")]
 		public HttpResponseMessage Transactions()
 		{
 			var transactions = Database.TransactionalStorage.GetPreparedTransactions();
@@ -869,22 +870,38 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPost]
-		[Route("admin/ioTest")]
+		[RavenRoute("admin/ioTest")]
 		public async Task<HttpResponseMessage> IoTest()
 		{
 			if (EnsureSystemDatabase() == false)
 			{
 				return GetMessageWithString("IO Test is only possible from the system database", HttpStatusCode.BadRequest);
 			}
-			var ioTestRequest = await ReadJsonObjectAsync<PerformanceTestRequest>();
+		    var json = await ReadJsonAsync();
+		    var testType = json.Value<string>("TestType");
+
+		    AbstractPerformanceTestRequest ioTestRequest;
+            switch (testType)
+            {
+                case GenericPerformanceTestRequest.Mode:
+                    ioTestRequest = json.JsonDeserialization<GenericPerformanceTestRequest>();
+                    break;
+                case BatchPerformanceTestRequest.Mode:
+                    ioTestRequest = json.JsonDeserialization<BatchPerformanceTestRequest>();
+                    break;
+                default: 
+                    return GetMessageWithObject(new
+                {
+                    Error = "test type is invalid: " + testType
+                }, HttpStatusCode.BadRequest);
+            }
 
 			if (Directory.Exists(ioTestRequest.Path) == false)
 			{
 				return GetMessageWithString(string.Format("Directory {0} doesn't exist.", ioTestRequest.Path), HttpStatusCode.BadRequest);
 			}
-			ioTestRequest.Path = Path.Combine(ioTestRequest.Path, DiskPerformanceTester.TemporaryFileName);
 
-			Database.Documents.Delete(DiskPerformanceTester.PerformanceResultDocumentKey, null, null);
+            Database.Documents.Delete(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, null);
 
 			var killTaskCts = new CancellationTokenSource();
 
@@ -892,7 +909,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				var debugInfo = new List<string>();
 
-				using (var diskIo = new DiskPerformanceTester(ioTestRequest, debugInfo.Add, killTaskCts.Token))
+				using (var diskIo = AbstractDiskPerformanceTester.ForRequest(ioTestRequest, debugInfo.Add, killTaskCts.Token))
 				{
 					diskIo.TestDiskIO();
 
@@ -903,7 +920,7 @@ namespace Raven.Database.Server.Controllers.Admin
 						DebugMsgs = debugInfo
 					};
 
-					Database.Documents.Put(DiskPerformanceTester.PerformanceResultDocumentKey, null, RavenJObject.FromObject(diskIoRequestAndResponse), new RavenJObject(), null);
+					Database.Documents.Put(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, RavenJObject.FromObject(diskIoRequestAndResponse), new RavenJObject(), null);
 				}
 			});
 
