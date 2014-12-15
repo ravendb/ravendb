@@ -30,7 +30,7 @@ namespace Raven.Client.Connection.Async
                 this.OperationsHeaders = new NameValueCollection();
 
             this._replicationInformer = new Lazy<TReplicationInformer>(GetReplicationInformer, true);
-            this.readStrippingBase = new Lazy<int>(() => this.ReplicationInformer.GetReadStripingBase(), true);
+            this.readStrippingBase = new Lazy<int>(() => this.ReplicationInformer.GetReadStripingBase(true), true);
 
             this.MaxQuerySizeForGetRequest = 8 * 1024;
         }

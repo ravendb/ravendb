@@ -67,6 +67,11 @@ namespace Raven.Abstractions.Replication
 		public TransitiveReplicationOptions TransitiveReplicationBehavior { get; set; }
 
 		/// <summary>
+		/// Gets or sets a flag that controls whether index is replicated to the node or not
+		/// </summary>
+		public bool SkipIndexReplication { get; set; }
+
+		/// <summary>
 		/// Gets or sets if the replication will ignore this destination in the client
 		/// </summary>
 		public bool IgnoredClient { get; set; }

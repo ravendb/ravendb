@@ -69,7 +69,7 @@ namespace Owin
 				}
 			}
 
-            AssemblyExtractor.ExtractEmbeddedAssemblies();
+            AssemblyExtractor.ExtractEmbeddedAssemblies(options.SystemDatabase.Configuration);
 
 #if DEBUG
 			app.UseInterceptor();
@@ -103,18 +103,20 @@ namespace Owin
         }
         
 
+
 		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
 		{
 			var cfg = new HttpConfiguration();
-			cfg.Properties[typeof(DatabasesLandlord)] = options.DatabaseLandlord;
-            cfg.Properties[typeof(FileSystemsLandlord)] = options.FileSystemLandlord;
-			cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
-			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
-			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
+
+
+			cfg.Properties[typeof (DatabasesLandlord)] = options.DatabaseLandlord;
+			cfg.Properties[typeof (FileSystemsLandlord)] = options.FileSystemLandlord;
+			cfg.Properties[typeof (CountersLandlord)] = options.CountersLandlord;
+			cfg.Properties[typeof (MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
+			cfg.Properties[typeof (RequestManager)] = options.RequestManager;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 			cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
-
-			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
+			cfg.Services.Replace(typeof (IAssembliesResolver), new MyAssemblyResolver());
 			cfg.Filters.Add(new RavenExceptionFilterAttribute());
 			cfg.MapHttpAttributeRoutes(new RavenInlineConstraintResolver());
 
@@ -124,16 +126,16 @@ namespace Owin
 
 			cfg.Routes.MapHttpRoute(
 				"API Default", "{controller}/{action}",
-				new { id = RouteParameter.Optional });
+				new {id = RouteParameter.Optional});
 
 			cfg.Routes.MapHttpRoute(
 				"Database Route", "databases/{databaseName}/{controller}/{action}",
-				new { id = RouteParameter.Optional });
+				new {id = RouteParameter.Optional});
 
 			cfg.MessageHandlers.Add(new ThrottlingHandler(options.SystemDatabase.Configuration.MaxConcurrentServerRequests));
 			cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
 
-			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
+			cfg.Services.Replace(typeof (IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
 			cfg.EnsureInitialized();
 
 			return cfg;
@@ -190,7 +192,8 @@ namespace Owin
 
 		private class InterceptMiddleware : OwinMiddleware
 		{
-			public InterceptMiddleware(OwinMiddleware next) : base(next)
+			public InterceptMiddleware(OwinMiddleware next)
+				: base(next)
 			{
 			}
 
