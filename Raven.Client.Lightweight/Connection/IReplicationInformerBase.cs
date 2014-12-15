@@ -40,7 +40,7 @@ namespace Raven.Client.Connection
         /// </summary>
         DateTime GetFailureLastCheck(string operationUrl);
 
-        int GetReadStripingBase();
+        int GetReadStripingBase(bool increment);
 
         Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation);
 

@@ -3,11 +3,11 @@
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
-import getStatusDebugMetricsCommand = require("commands/getStatusDebugMetricsCommand");
+import getDebugMetricsCommand = require("commands/getDebugMetricsCommand");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
 
-class metricsRequests extends viewModelBase {
+class requestsCount extends viewModelBase {
 
     currentMetrics: KnockoutObservable<statusDebugMetricsDto> = ko.observable(null);
     requestsMetricsUrl = ko.observable("");
@@ -106,7 +106,7 @@ class metricsRequests extends viewModelBase {
     fetchMetrics(): JQueryPromise<statusDebugMetricsDto> {
         var db = this.activeDatabase();
         if (db) {
-            var command = new getStatusDebugMetricsCommand(db);
+            var command = new getDebugMetricsCommand(db);
             this.requestsMetricsUrl(command.getQueryUrl());
             return command
                 .execute()
@@ -117,4 +117,4 @@ class metricsRequests extends viewModelBase {
     }
 }
 
-export = metricsRequests; 
+export = requestsCount; 

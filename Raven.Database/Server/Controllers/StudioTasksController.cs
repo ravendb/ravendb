@@ -31,6 +31,7 @@ using Raven.Client.Util;
 using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Plugins;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
@@ -41,8 +42,8 @@ namespace Raven.Database.Server.Controllers
         const int csvImportBatchSize = 512;
 
         [HttpPost]
-		[Route("studio-tasks/validateCustomFunctions")]
-        [Route("databases/{databaseName}/studio-tasks/validateCustomFunctions")]
+		[RavenRoute("studio-tasks/validateCustomFunctions")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/validateCustomFunctions")]
         public async Task<HttpResponseMessage> ValidateCustomFunctions()
         {
             try
@@ -79,8 +80,8 @@ for(var customFunction in customFunctions) {{
     
 
 		[HttpPost]
-		[Route("studio-tasks/import")]
-		[Route("databases/{databaseName}/studio-tasks/import")]
+		[RavenRoute("studio-tasks/import")]
+		[RavenRoute("databases/{databaseName}/studio-tasks/import")]
 		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
 		{
 			if (!Request.Content.IsMimeMultipartContent())
@@ -193,8 +194,8 @@ for(var customFunction in customFunctions) {{
 	    }
         
 		[HttpPost]
-		[Route("studio-tasks/exportDatabase")]
-		[Route("databases/{databaseName}/studio-tasks/exportDatabase")]
+		[RavenRoute("studio-tasks/exportDatabase")]
+		[RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
         public Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
 		{
             var requestString = smugglerOptionsJson.SmugglerOptions;
@@ -241,8 +242,8 @@ for(var customFunction in customFunctions) {{
 		}
         
 		[HttpPost]
-		[Route("studio-tasks/createSampleData")]
-		[Route("databases/{databaseName}/studio-tasks/createSampleData")]
+		[RavenRoute("studio-tasks/createSampleData")]
+		[RavenRoute("databases/{databaseName}/studio-tasks/createSampleData")]
 		public async Task<HttpResponseMessage> CreateSampleData()
 		{
 			var results = Database.Queries.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery(), CancellationToken.None);
@@ -261,8 +262,8 @@ for(var customFunction in customFunctions) {{
 		}
 
         [HttpGet]
-        [Route("studio-tasks/simulate-sql-replication")]
-        [Route("databases/{databaseName}/studio-tasks/simulate-sql-replication")]
+        [RavenRoute("studio-tasks/simulate-sql-replication")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/simulate-sql-replication")]
         public Task<HttpResponseMessage> SimulateSqlReplication(string documentId, bool performRolledBackTransaction)
         {
 
@@ -297,8 +298,8 @@ for(var customFunction in customFunctions) {{
         }
 
         [HttpGet]
-        [Route("studio-tasks/test-sql-replication-connection")]
-        [Route("databases/{databaseName}/studio-tasks/test-sql-replication-connection")]
+        [RavenRoute("studio-tasks/test-sql-replication-connection")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/test-sql-replication-connection")]
         public Task<HttpResponseMessage> TestSqlReplicationConnection(string factoryName, string connectionString)
         {
             try
@@ -317,8 +318,8 @@ for(var customFunction in customFunctions) {{
         }
 
         [HttpGet]
-        [Route("studio-tasks/createSampleDataClass")]
-        [Route("databases/{databaseName}/studio-tasks/createSampleDataClass")]
+        [RavenRoute("studio-tasks/createSampleDataClass")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/createSampleDataClass")]
         public Task<HttpResponseMessage> CreateSampleDataClass()
         {
             using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.NorthwindHelpData.cs"))
@@ -336,8 +337,8 @@ for(var customFunction in customFunctions) {{
         }
 
         [HttpGet]
-        [Route("studio-tasks/get-sql-replication-stats")]
-        [Route("databases/{databaseName}/studio-tasks/get-sql-replication-stats")]
+        [RavenRoute("studio-tasks/get-sql-replication-stats")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/get-sql-replication-stats")]
         public HttpResponseMessage GetSQLReplicationStats(string sqlReplicationName)
         {
             var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
@@ -357,8 +358,8 @@ for(var customFunction in customFunctions) {{
         }
 
         [HttpPost]
-        [Route("studio-tasks/reset-sql-replication")]
-        [Route("databases/{databaseName}/studio-tasks/reset-sql-replication")]
+        [RavenRoute("studio-tasks/reset-sql-replication")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/reset-sql-replication")]
         public Task<HttpResponseMessage> ResetSqlReplication(string sqlReplicationName)
         {
             var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
@@ -382,7 +383,7 @@ for(var customFunction in customFunctions) {{
         }
 
 		[HttpGet]
-		[Route("studio-tasks/latest-server-build-version")]
+		[RavenRoute("studio-tasks/latest-server-build-version")]
 		public HttpResponseMessage GetLatestServerBuildVersion(bool stableOnly = true)
 		{
 			var request = (HttpWebRequest)WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?stableOnly=" + stableOnly);
@@ -402,7 +403,7 @@ for(var customFunction in customFunctions) {{
 		}
 
 		[HttpGet]
-		[Route("studio-tasks/new-encryption-key")]
+		[RavenRoute("studio-tasks/new-encryption-key")]
 		public HttpResponseMessage GetNewEncryption(string path = null)
 		{
 			RandomNumberGenerator randomNumberGenerator = new RNGCryptoServiceProvider();
@@ -415,7 +416,7 @@ for(var customFunction in customFunctions) {{
 		}
 
         [HttpPost]
-        [Route("studio-tasks/is-base-64-key")]
+        [RavenRoute("studio-tasks/is-base-64-key")]
         public async Task<HttpResponseMessage> IsBase64Key(string path = null)
         {
             string message = null;
@@ -456,8 +457,8 @@ for(var customFunction in customFunctions) {{
         }
 
         [HttpGet]
-        [Route("studio-tasks/resolveMerge")]
-        [Route("databases/{databaseName}/studio-tasks/resolveMerge")]
+        [RavenRoute("studio-tasks/resolveMerge")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/resolveMerge")]
         public Task<HttpResponseMessage> ResolveMerge(string documentId)
         {
             int nextPage = 0;
@@ -467,8 +468,8 @@ for(var customFunction in customFunctions) {{
         }
 
 	    [HttpPost]
-        [Route("studio-tasks/loadCsvFile")]
-	    [Route("databases/{databaseName}/studio-tasks/loadCsvFile")]
+        [RavenRoute("studio-tasks/loadCsvFile")]
+	    [RavenRoute("databases/{databaseName}/studio-tasks/loadCsvFile")]
 	    public async Task<HttpResponseMessage> LoadCsvFile()
 	    {
 

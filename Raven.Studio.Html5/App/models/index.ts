@@ -33,6 +33,9 @@ class index {
     editUrl: KnockoutComputed<string>;
     queryUrl: KnockoutComputed<string>;
 
+    willReplaceIndex = ko.observable<string>();
+    willBeReplacedByIndex = ko.observable<string>();
+
     static priorityNormal = "Normal";
     static priorityIdle = "Idle";
     static priorityDisabled = "Disabled";
@@ -41,6 +44,11 @@ class index {
     static priorityIdleForced = "Idle,Forced";
     static priorityDisabledForced = "Disabled,Forced";
     static priorityAbandonedForced = "Abandoned,Forced";
+
+
+    static SideBySideIndexPrefix = "ReplacementOf/";
+
+    static TestIndexPrefix = "Test/";
 
     constructor(dto: indexStatisticsDto) {
         this.createdTimestamp = dto.CreatedTimestamp;

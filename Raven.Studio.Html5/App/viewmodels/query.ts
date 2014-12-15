@@ -37,6 +37,8 @@ import recentQueriesStorage = require("common/recentQueriesStorage");
 
 class query extends viewModelBase {
 
+    isTestIndex = ko.observable<boolean>(false);
+    isStaticIndexSelected: KnockoutComputed<boolean>;
     selectedIndex = ko.observable<string>();
     indexes = ko.observableArray<indexDataDto>();
     indexesExceptCurrent: KnockoutComputed<indexDataDto[]>;
@@ -92,6 +94,7 @@ class query extends viewModelBase {
         this.hasSelectedIndex = ko.computed(() => this.selectedIndex() != null);
         this.rawJsonUrl.subscribe((value: string) => ko.postbox.publish("SetRawJSONUrl", value));
         this.selectedIndexLabel = ko.computed(() => this.selectedIndex() === "dynamic" ? "All Documents" : this.selectedIndex());
+        this.isStaticIndexSelected = ko.computed(() => this.selectedIndex() == null || this.selectedIndex().indexOf(this.dynamicPrefix) == -1);
         this.selectedIndexEditUrl = ko.computed(() => {
             if (this.queryStats()) {
                 var index = this.queryStats().IndexName;
@@ -623,6 +626,7 @@ class query extends viewModelBase {
                 new getIndexDefinitionCommand(indexName, this.activeDatabase())
                     .execute()
                     .done((result: indexDefinitionContainerDto) => {
+                        this.isTestIndex(result.Index.IsTestIndex);
                         this.indexFields(result.Index.Fields);
                     });
             }

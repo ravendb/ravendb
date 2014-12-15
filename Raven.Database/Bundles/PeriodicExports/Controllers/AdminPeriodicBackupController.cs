@@ -9,6 +9,7 @@ using System.Web.Http;
 
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Controllers;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Bundles.PeriodicExports.Controllers
 {
@@ -20,8 +21,8 @@ namespace Raven.Database.Bundles.PeriodicExports.Controllers
         }
 
         [HttpPost]
-		[Route("admin/periodicExport/purge-tombstones")]
-		[Route("databases/{databaseName}/admin/periodicExport/purge-tombstones")]
+		[RavenRoute("admin/periodicExport/purge-tombstones")]
+		[RavenRoute("databases/{databaseName}/admin/periodicExport/purge-tombstones")]
         public HttpResponseMessage PurgeTombstones()
         {
             var docEtagStr = GetQueryStringValue("docEtag");

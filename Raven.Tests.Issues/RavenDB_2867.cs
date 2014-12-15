@@ -77,6 +77,11 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
+				store
+					.DatabaseCommands
+					.Admin
+					.StopIndexing();
+
 				store.SystemDatabase.IndexReplacer.ReplaceIndexes(store.SystemDatabase.IndexStorage.Indexes);
 
 				using (var session = store.OpenSession())

@@ -21,6 +21,12 @@ class messagePublisher {
         this.reportProgress(alertType.warning, title, details, httpStatusText);
     }
 
+    static reportWarningWithButton(title: string, details: string, buttonName: string, action: () => any) {
+        var alert = new alertArgs(alertType.warning, title, details, null, true);
+        alert.setupButtton(buttonName, action);
+        ko.postbox.publish("Alert", alert);
+    }
+
     private static reportProgress(type: alertType, title: string, details?: string, httpStatusText?: string, displayInRecentErrors: boolean = true) {
         ko.postbox.publish("Alert", new alertArgs(type, title, details, httpStatusText, displayInRecentErrors));
     }

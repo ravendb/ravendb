@@ -4,6 +4,8 @@ import searchDialogViewModel = require("viewmodels/filesystem/searchDialogViewMo
 
 class searchFileSizeRangeClause extends searchDialogViewModel {
 
+    static inputRegexp =  /^(\d+)\s*(|[kmgKMG]b)$/;
+
     public applyFilterTask = $.Deferred();
 
     constructor() {
@@ -19,16 +21,16 @@ class searchFileSizeRangeClause extends searchDialogViewModel {
         this.close();
     }
 
+    private validateInput(input: string): boolean {
+        return !input.trim() || searchFileSizeRangeClause.inputRegexp.test(input);
+    }
+
     private convertInputStringToRangeValue(input: string) : string {
 
         if (!input)
             return "*";
 
-        var regex = /^(\d+)\s*(\w*)$/;
-        if (!regex.test(input))
-            return "*";
-
-        var match = regex.exec(input);
+        var match = searchFileSizeRangeClause.inputRegexp.exec(input);
         var value = parseInt(match[1]);
         var loweredCaseMultiplier = match[2].toLowerCase();
         var multiplier = this.getMultiplier(loweredCaseMultiplier);
@@ -43,16 +45,22 @@ class searchFileSizeRangeClause extends searchDialogViewModel {
         if (!value)
             return 1;
 
-        if (value.indexOf("k") > -1)
+        if (value.indexOf("kb") > -1)
             return 1024;
 
-        if (value.indexOf("m") > -1)
+        if (value.indexOf("mb") > -1)
             return 1024 * 1024;
 
-        if (value.indexOf("g") > -1)
+        if (value.indexOf("gb") > -1)
             return 1024 * 1024 * 1024;
 
         return 1;
+    }
+
+    enabled(): boolean {
+        return this.checkRequired(false)
+            && this.validateInput(this.inputs[0]())
+            && this.validateInput(this.inputs[1]());
     }
 }
 

@@ -6,6 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
+using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -128,13 +130,19 @@ namespace Raven.Database.Indexing
             {
                 EnsureFieldsAreInCache(state, fieldsToRead, reader);
 
-                foreach (var field in fieldsToRead)
+                var cacheEntries = state.GetCachedFields(fieldsToRead);
+
+                foreach (var docId in docIds)
                 {
-                    foreach (var docId in docIds)
+                    for (int i = 0; i < cacheEntries.Length; i++)
                     {
-                        foreach (var term in state.GetTermsFromCache(field, docId))
+                        var cacheVals = cacheEntries[i].Item2[docId];
+                        if (cacheVals == null) 
+                            continue;
+
+                        foreach (var t in cacheVals)
                         {
-                            onTermFound(term, docId);
+                            onTermFound(t.Term, docId);
                         }
                     }
                 }
@@ -184,11 +192,12 @@ namespace Raven.Database.Indexing
 
         private static void FillCache(IndexSearcherHolder.IndexSearcherHoldingState state, IEnumerable<string> fieldsToRead,IndexReader reader)
         {
-            foreach (var field in fieldsToRead)
+            using (var termDocs = reader.TermDocs())
             {
-	            var items = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>[reader.MaxDoc];
-                using (var termDocs = reader.TermDocs())
+                foreach (var field in fieldsToRead)
                 {
+                    var items = new List<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>[reader.MaxDoc];
+
                     using (var termEnum = reader.Terms(new Term(field)))
                     {
                         do
@@ -200,27 +209,28 @@ namespace Raven.Database.Indexing
                             if (LowPrecisionNumber(term.Field, term.Text))
                                 continue;
 
-
                             var totalDocCountIncludedDeletes = termEnum.DocFreq();
                             termDocs.Seek(termEnum.Term);
 
                             while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
                             {
+                                var curDoc = termDocs.Doc;
                                 totalDocCountIncludedDeletes -= 1;
-                                if (reader.IsDeleted(termDocs.Doc))
+                                if (reader.IsDeleted(curDoc))
                                     continue;
-								if(items[termDocs.Doc] == null)
-									items[termDocs.Doc] = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>();
+                                if (items[curDoc] == null)
+                                    items[curDoc] = new List<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>();
 
-	                            items[termDocs.Doc].AddLast(new IndexSearcherHolder.IndexSearcherHoldingState.CacheVal
-	                            {
-		                            Term = termEnum.Term
-	                            });
+                                items[curDoc].Add(new IndexSearcherHolder.IndexSearcherHoldingState.CacheVal
+                                {
+                                    Term = termEnum.Term
+                                });
                             }
                         } while (termEnum.Next());
                     }
+
+                    state.SetInCache(field, items);
                 }
-	            state.SetInCache(field, items);
             }
         }
 

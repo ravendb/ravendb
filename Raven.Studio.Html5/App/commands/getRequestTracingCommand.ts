@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 
-class getStatusDebugRequestTracingommand extends commandBase {
+class getRequestTracingCommand extends commandBase {
 
     constructor(private db: database) {
         super();
@@ -13,4 +13,4 @@ class getStatusDebugRequestTracingommand extends commandBase {
     }
 }
 
-export = getStatusDebugRequestTracingommand;
+export = getRequestTracingCommand;

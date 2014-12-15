@@ -225,10 +225,23 @@ namespace Raven.Client.Indexes
 			databaseCommands.PutIndex(IndexName, indexDefinition, true);
 
 			if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
+				ReplicateIfNeeded(databaseCommands);
+		}
+
+		internal void ReplicateIfNeeded(IDatabaseCommands databaseCommands)
+		{
+			var serverClient = databaseCommands as ServerClient;
+			if (serverClient == null)
+				return;
+			var replicateIndexUrl = String.Format("/indexes/replicate/{0}", IndexName);
+			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, "POST"))
 			{
-				UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
-					commands.DirectPutIndex(IndexName, url, true, indexDefinition));
+				var requestTask = replicateIndexRequest.ExecuteRawResponseAsync();
+				requestTask.Wait();
+				var responseHttpMessage = requestTask.Result;
+				var status = responseHttpMessage.StatusCode;
 			}
+
 		}
 
 		private IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)

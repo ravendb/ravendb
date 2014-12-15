@@ -18,14 +18,14 @@ interface computedAppUrls {
     reporting: KnockoutComputed<string>;
     tasks: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
+    indexPerformance: KnockoutComputed<string>;
     indexStats: KnockoutComputed<string>;
+    indexBatchSize: KnockoutComputed<string>;
+    indexPrefetches: KnockoutComputed<string>;
     replicationPerfStats: KnockoutComputed<string>;
     sqlReplicationPerfStats: KnockoutComputed<string>;
-    metrics: KnockoutComputed<string>;
-    metricsIndexing: KnockoutComputed<string>;
-    metricsRequests: KnockoutComputed<string>;
-    metricsIndexBatchSize: KnockoutComputed<string>;
-    metricsPrefetches: KnockoutComputed<string>;
+    requestsCount: KnockoutComputed<string>;
+    requestsTracing: KnockoutComputed<string>;
     settings: KnockoutComputed<string>;
     logs: KnockoutComputed<string>;
     runningTasks: KnockoutComputed<string>;
@@ -53,7 +53,6 @@ interface computedAppUrls {
     statusDebugQueries: KnockoutComputed<string>;
     statusDebugTasks: KnockoutComputed<string>;
     statusDebugRoutes: KnockoutComputed<string>;
-    statusDebugRequestTracing: KnockoutComputed<string>;
     statusDebugSqlReplication: KnockoutComputed<string>;
     statusDebugIndexFields: KnockoutComputed<string>;
     statusDebugIdentities: KnockoutComputed<string>;

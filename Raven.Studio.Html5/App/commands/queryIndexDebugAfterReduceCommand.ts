@@ -10,7 +10,7 @@ class queryIndexDebugAfterReduceCommand extends commandBase {
     execute(): JQueryPromise<any[]> {
         var args = {
             debug: "entries",
-            reduceKeys: this.reduceKeys.join(",")
+            reduceKeys: this.reduceKeys
         };
         var url = "/indexes/" + this.indexName;
         return this.query(url, args, this.db, r => r.Results);

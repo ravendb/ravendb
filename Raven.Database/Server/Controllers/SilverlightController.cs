@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
 using Raven.Database.Plugins.Builtins;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -12,8 +13,8 @@ namespace Raven.Database.Server.Controllers
 	public class SilverlightController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("silverlight/ensureStartup")]
-		[Route("databases/{databaseName}/silverlight/ensureStartup")]
+		[RavenRoute("silverlight/ensureStartup")]
+		[RavenRoute("databases/{databaseName}/silverlight/ensureStartup")]
 		public HttpResponseMessage SilverlightEnsureStartup()
 		{
 			Database.ExtensionsState.GetOrAdd("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
@@ -30,7 +31,7 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(new { ok = true });
 		}
 
-		[HttpGet][Route("silverlight/{*id}")]
+		[HttpGet][RavenRoute("silverlight/{*id}")]
 		public HttpResponseMessage SilverlightUi(string id)
 		{
 			if (id.Contains(".xap") == false)

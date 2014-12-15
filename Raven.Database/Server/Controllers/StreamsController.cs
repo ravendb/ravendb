@@ -16,6 +16,7 @@ using Raven.Abstractions.Util;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -27,8 +28,8 @@ namespace Raven.Database.Server.Controllers
 	public class StreamsController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("streams/docs")]
-		[Route("databases/{databaseName}/streams/docs")]
+		[RavenRoute("streams/docs")]
+		[RavenRoute("databases/{databaseName}/streams/docs")]
 		public HttpResponseMessage StreamDocsGet()
 		{
 			var start = GetStart();
@@ -104,8 +105,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("streams/query/{*id}")]
-		[Route("databases/{databaseName}/streams/query/{*id}")]
+		[RavenRoute("streams/query/{*id}")]
+		[RavenRoute("databases/{databaseName}/streams/query/{*id}")]
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
 			var cts = new CancellationTokenSource();
@@ -148,8 +149,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("streams/query/{*id}")]
-		[Route("databases/{databaseName}/streams/query/{*id}")]
+		[RavenRoute("streams/query/{*id}")]
+		[RavenRoute("databases/{databaseName}/streams/query/{*id}")]
 		public async Task<HttpResponseMessage> SteamQueryPost(string id)
 		{
 			var postedQuery = await ReadStringAsync();

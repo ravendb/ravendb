@@ -4,12 +4,14 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import appUrl = require("common/appUrl");
 import documentClass = require("models/document");
 import serverBuildReminder = require("common/serverBuildReminder");
+import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 
 class studioConfig extends viewModelBase {
 
     systemDatabase: database;
     configDocument = ko.observable<documentClass>();
     warnWhenUsingSystemDatabase = ko.observable<boolean>(true);
+    disableEventSource = ko.observable<boolean>(false);
     timeUntilRemindToUpgrade = ko.observable<string>();
     mute: KnockoutComputed<boolean>;
     timeUntilRemindToUpgradeMessage: KnockoutComputed<string>;
@@ -20,6 +22,7 @@ class studioConfig extends viewModelBase {
         this.systemDatabase = appUrl.getSystemDatabase();
 
         this.timeUntilRemindToUpgrade(serverBuildReminder.get());
+        this.disableEventSource(eventSourceSettingStorage.get());
         this.mute = ko.computed(() => {
             var lastBuildCheck = this.timeUntilRemindToUpgrade();
             var timestamp = Date.parse(lastBuildCheck);
@@ -68,6 +71,11 @@ class studioConfig extends viewModelBase {
             var saveTask = this.saveStudioConfig(newDocument);
             saveTask.fail(() => this.warnWhenUsingSystemDatabase(!warnSetting));
         }
+    }
+
+    setEventSourceDisabled(setting: boolean) {
+        this.disableEventSource(setting);
+        eventSourceSettingStorage.setValue(setting);
     }
 
     setUpgradeReminder(upgradeSetting: boolean) {

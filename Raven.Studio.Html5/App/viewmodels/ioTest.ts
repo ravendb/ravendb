@@ -112,7 +112,8 @@ class ioTest extends viewModelBase {
                     .axisLabel('ms')
                     .tickFormat(d3.format(',.2f'));
 
-                nv.utils.windowResize(function () { chart.update() });
+                $(window).on('resize.ioTest', (e) => chart.update());
+
                 return chart;
             }, (chart) => {
                 this.overTimeLatencyChart = chart;
@@ -175,7 +176,7 @@ class ioTest extends viewModelBase {
         var diskTestParams = this.ioTestRequest.toDto();
 
         require(["commands/ioTestCommand"], ioTestCommand => {
-            this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams);
+            this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams); 
             this.lastCommand
                 .execute()
                 .done(() => {

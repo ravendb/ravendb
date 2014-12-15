@@ -59,7 +59,8 @@ namespace Raven.Database.Extensions
 			{
 				var result = database.Patches.ApplyPatch(patchCommandData.Key, patchCommandData.Etag,
 												 patchCommandData.Patches, patchCommandData.PatchesIfMissing, patchCommandData.Metadata,
-												 patchCommandData.TransactionInformation);
+												 patchCommandData.TransactionInformation,
+												 skipPatchIfEtagMismatch : patchCommandData.SkipPatchIfEtagMismatch);
 
 				if (batchResult != null)
 					batchResult.PatchResult = result.PatchResult;

@@ -20,6 +20,7 @@
                     <div class="panel-body">
                         <pre class="error-details" data-bind="text: $root.getErrorDetails($data)"></pre>
                         <pre class="http-status" data-bind="visible: httpStatusText, text: httpStatusText"></pre>
+                        <button class="btn btn-default" data-bind="visible: buttonName, text: buttonName, click: onClickAction"></button>    
                     </div>
                 </div>
             </div>
