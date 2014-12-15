@@ -5,7 +5,11 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 using Xunit;
@@ -134,6 +138,48 @@ namespace Raven.Tests.Issues
 
 				Assert.True(names.TryTake(out name, TimeSpan.FromSeconds(10)));
 				Assert.Equal("David", name);
+			}
+		}
+
+		[Fact]
+		public void ShouldRespectMaxDocCountInBatch()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					for (int i = 0; i < 100; i++)
+					{
+						session.Store(new User());
+					}
+
+					session.SaveChanges();
+				}
+
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions{ MaxDocCount = 25});
+
+				var batchSizes = new List<Reference<int>>();
+
+				subscription.BeforeBatch +=
+					() => batchSizes.Add(new Reference<int>());
+
+				subscription.Subscribe(x =>
+				{
+					var reference = batchSizes.Last();
+					reference.Value++;
+				});
+
+				var result = SpinWait.SpinUntil(() => batchSizes.Sum(x => x.Value) >= 100, TimeSpan.FromSeconds(60));
+
+				Assert.True(result);
+
+				Assert.Equal(4, batchSizes.Count);
+
+				foreach (var reference in batchSizes)
+				{
+					Assert.Equal(25, reference.Value);
+				}
 			}
 		}
 	}

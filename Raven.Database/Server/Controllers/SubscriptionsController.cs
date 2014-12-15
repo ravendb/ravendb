@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -120,36 +121,51 @@ namespace Raven.Database.Server.Controllers
 				using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 				{
 					Etag lastProcessedDocEtag = null;
-					var totalSizeOfDocs = 0;
+					var totalDocSize = 0;
+					var totalDocCount = 0;
+					bool hasMoreDocs = false;
+					var startEtag = subscriptions.GetSubscriptionDocument(id).AckEtag;
 
-					Database.TransactionalStorage.Batch(accessor =>
+					do
 					{
-						var ackEtag = subscriptions.GetSubscriptionDocument(id).AckEtag;
-
-						// we may be sending a LOT of documents to the user, and most 
-						// of them aren't going to be relevant for other ops, so we are going to skip
-						// the cache for that, to avoid filling it up very quickly
-						using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+						Database.TransactionalStorage.Batch(accessor =>
 						{
-							Database.Documents.GetDocuments(-1, options.MaxDocCount, ackEtag, cts.Token, doc =>
+							// we may be sending a LOT of documents to the user, and most 
+							// of them aren't going to be relevant for other ops, so we are going to skip
+							// the cache for that, to avoid filling it up very quickly
+							using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 							{
-								timeout.Delay();
+								Database.Documents.GetDocuments(-1, options.MaxDocCount - totalDocCount, startEtag, cts.Token, doc =>
+								{
+									timeout.Delay();
 
-								if (options.MaxSize.HasValue && totalSizeOfDocs > options.MaxSize)
-									return;
+									if (options.MaxSize.HasValue && totalDocSize + doc.SerializedSizeOnDisk > options.MaxSize)
+										return;
 
-								lastProcessedDocEtag = doc.Etag;
+									lastProcessedDocEtag = doc.Etag;
 
-								if (doc.Key.StartsWith("Raven/"))
-									return;
+									if (doc.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+										return;
 
-								doc.ToJson().WriteTo(writer);
-								writer.WriteRaw(Environment.NewLine);
+									doc.ToJson().WriteTo(writer);
+									writer.WriteRaw(Environment.NewLine);
 
-								totalSizeOfDocs += doc.SerializedSizeOnDisk;
-							});
-						}
-					});
+									totalDocSize += doc.SerializedSizeOnDisk;
+									totalDocCount++;
+								});
+							}
+
+							if (lastProcessedDocEtag == null)
+								hasMoreDocs = false;
+							else
+							{
+								var lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+								hasMoreDocs = EtagUtil.IsGreaterThan(lastDocEtag, lastProcessedDocEtag);
+
+								startEtag = lastProcessedDocEtag;
+							}	
+						});
+					} while (hasMoreDocs && totalDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || totalDocSize < options.MaxSize));
 
 					writer.WriteEndArray();
 

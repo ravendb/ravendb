@@ -29,6 +29,9 @@ namespace Raven.Client.Document
 		private bool pullingStarted;
 		private bool disposed;
 
+		public event Action BeforeBatch = delegate { };
+		public event Action AfterBatch = delegate { };
+
 		internal Subscription(long id, string connectionId, IAsyncDatabaseCommands commands, IDatabaseChanges changes)
 		{
 			this.id = id;
@@ -75,6 +78,9 @@ namespace Raven.Client.Document
 							{
 								while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
 								{
+									if (pulledDocs == false) // first doc in batch
+										BeforeBatch();
+
 									pulledDocs = true;
 
 									cts.Token.ThrowIfCancellationRequested();
@@ -94,6 +100,9 @@ namespace Raven.Client.Document
 									acknowledgmentRequest.ExecuteRequest();
 								}
 							}
+
+							if (pulledDocs)
+								AfterBatch();
 						}
 					}
 				} while (pulledDocs);
