@@ -105,6 +105,8 @@ namespace Raven.Database.Config
 			MaxNumberOfParallelProcessingTasks =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfParallelProcessingTasks"] ?? settings["Raven/MaxNumberOfParallelIndexTasks"], Environment.ProcessorCount, 1);
 
+			NewIndexInMemoryMaxTime =
+				new TimeSpanSetting(settings["Raven/NewIndexInMemoryMaxTime"], TimeSpan.FromMinutes(15), TimeSpanArgumentType.FromParse);
 			NewIndexInMemoryMaxMb =
 				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/NewIndexInMemoryMaxMB"], 64, 1), 1024 * 1024);
 			RunInMemory =
@@ -280,6 +282,8 @@ namespace Raven.Database.Config
 		public IntegerSettingWithMin MaxNumberOfParallelProcessingTasks { get; private set; }
 
 		public MultipliedIntegerSetting NewIndexInMemoryMaxMb { get; private set; }
+
+		public TimeSpanSetting NewIndexInMemoryMaxTime { get; private set; }
 
 		public BooleanSetting RunInMemory { get; private set; }
 

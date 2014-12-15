@@ -175,6 +175,8 @@ namespace Raven.Database.Config
 
 			NewIndexInMemoryMaxBytes = ravenSettings.NewIndexInMemoryMaxMb.Value;
 
+			NewIndexInMemoryMaxTime = ravenSettings.NewIndexInMemoryMaxTime.Value;
+
 			MaxIndexCommitPointStoreTimeInterval = ravenSettings.MaxIndexCommitPointStoreTimeInterval.Value;
 
 			MinIndexingTimeIntervalToStoreCommitPoint = ravenSettings.MinIndexingTimeIntervalToStoreCommitPoint.Value;
@@ -960,6 +962,11 @@ namespace Raven.Database.Config
 		public long FlushIndexToDiskSizeInMb { get; set; }
 
 		public bool EnableResponseLoggingForEmbeddedDatabases { get; set; }
+
+		/// <summary>
+		/// How long can we keep the new index in memory before we have to flush it
+		/// </summary>
+		public TimeSpan NewIndexInMemoryMaxTime { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
