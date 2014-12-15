@@ -32,6 +32,7 @@ namespace Raven.Tests.FileSystem.Indexing
                 {
                     session.RegisterUpload("test1.file", CreateUniformFileStream(128));
                     session.RegisterUpload("test2.file", CreateUniformFileStream(128));
+                    session.RegisterUpload("test3.file.deleting", CreateUniformFileStream(128));
                     await session.SaveChangesAsync();
                 }
             }
@@ -104,7 +105,7 @@ namespace Raven.Tests.FileSystem.Indexing
             var filesystemDirectoryPath = Path.Combine(dataDirectoryPath, "FileSystems");
             File.Delete(Path.Combine(filesystemDirectoryPath, filesystem, "Indexes", fileToDelete));
 
-            
+
             bool changed = false;
 
             // Ensure the index has been reseted.            
@@ -135,6 +136,58 @@ namespace Raven.Tests.FileSystem.Indexing
             }
 
             Assert.True(changed);
+        }
+
+        [Fact]
+        public async Task WillReindexAfterNoIndexes()
+        {
+            int port = 9999;
+            var filesystem = Path.GetRandomFileName();
+            var nameof = "WillReindexAfterCrashing-" + DateTime.Now.Ticks;
+
+            string dataDirectoryPath;
+            using (var server = CreateServer(port, dataDirectory: nameof, runInMemory: false))
+            {
+                dataDirectoryPath = server.Configuration.DataDirectory;
+
+                var store = server.FilesStore;
+                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(filesystem);
+
+                using (var session = store.OpenAsyncSession(filesystem))
+                {
+                    session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                    session.RegisterUpload("admin/test2.file", CreateUniformFileStream(128));
+                    session.RegisterUpload("admin/test3.file", CreateUniformFileStream(128));
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            // Simulate an index corruption.
+            var filesystemDirectoryPath = Path.Combine(dataDirectoryPath, "FileSystems");
+
+            Directory.Delete( Path.Combine(filesystemDirectoryPath, filesystem, "Indexes"), true );
+
+            // Ensure the index has been reseted.            
+            using (var server = CreateServer(port, dataDirectory: nameof, runInMemory: false))
+            {
+                var store = server.FilesStore;
+
+                using (var session = store.OpenAsyncSession(filesystem))
+                {
+                    // Ensure the files are there.
+                    var file1 = await session.LoadFileAsync("test1.file");
+                    Assert.NotNull(file1);
+
+                    // Ensure the files are indexed.
+                    var query = await session.Query()
+                                             .OnDirectory("admin")
+                                             .WhereStartsWith(x => x.Name, "test")
+                                             .ToListAsync();
+
+                    Assert.True(query.Any());
+                    Assert.Equal(2, query.Count());
+                }
+            }
         }
     }
 }
