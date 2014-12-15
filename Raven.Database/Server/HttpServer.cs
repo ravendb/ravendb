@@ -4,11 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition;
+using System.Data.Services.Common;
 using System.Diagnostics;
+using System.DirectoryServices.ActiveDirectory;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -66,6 +69,7 @@ namespace Raven.Database.Server
 			new AtomicDictionary<Task<DocumentDatabase>>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+		private readonly SemaphoreSlim _maxNumberOfThreadsForDatabaseToLoad = new SemaphoreSlim(5);
 
 		private readonly ConcurrentDictionary<string, TransportState> databaseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
 
@@ -946,18 +950,45 @@ namespace Raven.Database.Server
 				OutputDatabaseOpenFailure(ctx, tenantId, e);
 				return false;
 			}
+
 			if (hasDb)
 			{
 				try
 				{
-					if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
+					const int timeToWaitForDatabaseToLoad = 5;
+					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
 					{
-						ctx.SetStatusToNotAvailable();
-						ctx.WriteJson(new
+						if (_maxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
 						{
-							Error = "The database " + tenantId + " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.",
-						});
-						return false;
+							ctx.SetStatusToNotAvailable();
+							ctx.WriteJson(new
+							{
+								Error =
+									string.Format(
+										"The database {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.",
+										tenantId),
+							});
+							return false;
+						}
+						try
+						{
+							if (resourceStoreTask.Wait(TimeSpan.FromSeconds(timeToWaitForDatabaseToLoad)) == false)
+							{
+								ctx.SetStatusToNotAvailable();
+								ctx.WriteJson(new
+								{
+									Error =
+										string.Format(
+											"The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.",
+											tenantId, timeToWaitForDatabaseToLoad),
+								});
+								return false;
+							}
+						}
+						finally
+						{
+							_maxNumberOfThreadsForDatabaseToLoad.Release();
+						}
 					}
 					if (onBeforeRequest != null)
 					{
@@ -1003,6 +1034,7 @@ namespace Raven.Database.Server
 				});
 				return false;
 			}
+
 			return true;
 		}
 
@@ -1089,6 +1121,18 @@ namespace Raven.Database.Server
 				}
 				return task;
 			}).Unwrap());
+
+			if (database.IsFaulted && database.Exception != null)
+			{
+				// if we are here, there is an error, and if there is an error, we need to clear it from the 
+				// resource store cache so we can try to reload it.
+				// Note that we return the faulted task anyway, because we need the user to look at the error
+				if (database.Exception.Data.Contains("Raven/KeepInResourceStore") == false)
+				{
+					Task<DocumentDatabase> val;
+					ResourcesStoresCache.TryRemove(tenantId, out val);
+				}
+			}
 			return true;
 		}
 
@@ -1106,7 +1150,13 @@ namespace Raven.Database.Server
 				{
 					var tcs = new TaskCompletionSource<DocumentDatabase>();
 					tcs.SetException(new ObjectDisposedException(dbName, "Database named " + dbName + " is being disposed right now and cannot be accessed.\r\n" +
-																 "Access will be available when the dispose process will end"));
+																 "Access will be available when the dispose process will end")
+					{
+						Data =
+						{
+							{"Raven/KeepInResourceStore", "true"}
+						}
+					});
 					return tcs.Task;
 				});
 			}

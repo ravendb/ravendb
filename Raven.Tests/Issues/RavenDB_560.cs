@@ -32,42 +32,41 @@ namespace Raven.Tests.Issues
 
 			store1 = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8111"
+				DefaultDatabase = "Northwind1",
+				Url = server1.Database.ServerUrl
 			};
 
 			store1.Initialize();
 
 			store2 = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8112"
+				DefaultDatabase = "Northwind2",
+				Url = server2.Database.ServerUrl
 			};
-
 			store2.Initialize();
 
 			store1.DatabaseCommands.CreateDatabase(
 				new DatabaseDocument
 				{
-					Id = "Northwind",
+					Id = "Northwind1",
 					Settings = {{"Raven/ActiveBundles", "replication"}, {"Raven/DataDir", @"~\D1\N"}}
 				});
 
 			store2.DatabaseCommands.CreateDatabase(
 				new DatabaseDocument
 				{
-					Id = "Northwind",
+					Id = "Northwind2",
 					Settings = {{"Raven/ActiveBundles", "replication"}, {"Raven/DataDir", @"~\D2\N"}}
 				});
 
-			var db1Url = store1.Url + "/databases/Northwind";
-			var db2Url = store2.Url + "/databases/Northwind";
+			var db1Url = store1.Url + "/databases/Northwind1";
+			var db2Url = store2.Url + "/databases/Northwind2";
 
 			SetupReplication(store1.DatabaseCommands, db2Url);
 
 			using (var store = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
+				DefaultDatabase = "Northwind1",
 				Url = store1.Url,
 				Conventions =
 				{
@@ -77,7 +76,7 @@ namespace Raven.Tests.Issues
 			{
 
 				store.Initialize();
-				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
+				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind1");
 				replicationInformerForDatabase
 					.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
 					.Wait();
@@ -105,7 +104,7 @@ namespace Raven.Tests.Issues
 				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
 
 				var replicationTask =
-					server2.Server.GetDatabaseInternal("Northwind").Result.StartupTasks.OfType<ReplicationTask>().First();
+					server2.Server.GetDatabaseInternal("Northwind2").Result.StartupTasks.OfType<ReplicationTask>().First();
 				replicationTask.Heartbeats.Clear();
 
 				server1 = StartServer(server1);
@@ -143,7 +142,7 @@ namespace Raven.Tests.Issues
 
 			store1 = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
+				DefaultDatabase = "Northwind1",
 				Url = "http://localhost:8113"
 			};
 
@@ -151,7 +150,7 @@ namespace Raven.Tests.Issues
 
 			store2 = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
+				DefaultDatabase = "Northwind2",
 				Url = "http://localhost:8114"
 			};
 
@@ -160,25 +159,25 @@ namespace Raven.Tests.Issues
 			store1.DatabaseCommands.CreateDatabase(
 				new DatabaseDocument
 				{
-					Id = "Northwind",
+					Id = "Northwind1",
 					Settings = {{"Raven/ActiveBundles", "replication"}, {"Raven/DataDir", @"~\D1\N"}}
 				});
 
 			store2.DatabaseCommands.CreateDatabase(
 				new DatabaseDocument
 				{
-					Id = "Northwind",
+					Id = "Northwind2",
 					Settings = {{"Raven/ActiveBundles", "replication"}, {"Raven/DataDir", @"~\D2\N"}}
 				});
 
-			var db1Url = store1.Url + "/databases/Northwind";
-			var db2Url = store2.Url + "/databases/Northwind";
+			var db1Url = store1.Url + "/databases/Northwind1";
+			var db2Url = store2.Url + "/databases/Northwind2";
 
 			this.SetupReplication(store1.DatabaseCommands, db2Url);
 
 			using (var store = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
+				DefaultDatabase = "Northwind1",
 				Url = store1.Url,
 				Conventions =
 				{
@@ -188,7 +187,7 @@ namespace Raven.Tests.Issues
 			{
 
 				store.Initialize();
-				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
+				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind1");
 				replicationInformerForDatabase
 					.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
 					.Wait();
@@ -215,7 +214,7 @@ namespace Raven.Tests.Issues
 				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
 
 				var replicationTask =
-					server2.Server.GetDatabaseInternal("Northwind").Result.StartupTasks.OfType<ReplicationTask>().First();
+					server2.Server.GetDatabaseInternal("Northwind2").Result.StartupTasks.OfType<ReplicationTask>().First();
 				replicationTask.Heartbeats.Clear();
 
 				server1 = this.StartServer(server1);

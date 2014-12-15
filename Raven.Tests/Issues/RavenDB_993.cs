@@ -37,7 +37,7 @@ namespace Raven.Tests.Issues
 
 			store1 = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
+				DefaultDatabase = "Northwind1",
 				Url = "http://localhost:8111"
 			};
 
@@ -45,7 +45,7 @@ namespace Raven.Tests.Issues
 
 			store2 = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
+				DefaultDatabase = "Northwind2",
 				Url = "http://localhost:8112"
 			};
 
@@ -54,19 +54,19 @@ namespace Raven.Tests.Issues
 			store1.DatabaseCommands.CreateDatabase(
 				new DatabaseDocument
 				{
-					Id = "Northwind",
+					Id = "Northwind1",
 					Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\D1\N" } }
 				});
 
 			store2.DatabaseCommands.CreateDatabase(
 				new DatabaseDocument
 				{
-					Id = "Northwind",
+					Id = "Northwind2",
 					Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\D2\N" } }
 				});
 
-			var db1Url = store1.Url + "/databases/Northwind";
-			var db2Url = store2.Url + "/databases/Northwind";
+			var db1Url = store1.Url + "/databases/Northwind1";
+			var db2Url = store2.Url + "/databases/Northwind2";
 
 			SetupReplication(store1.DatabaseCommands, db2Url);
 
@@ -93,7 +93,7 @@ namespace Raven.Tests.Issues
 
 			store1 = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
+				DefaultDatabase = "Northwind1",
 				Url = "http://localhost:8111"
 			};
 
@@ -101,7 +101,7 @@ namespace Raven.Tests.Issues
 
 			store2 = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
+				DefaultDatabase = "Northwind2",
 				Url = "http://localhost:8112"
 			};
 
@@ -110,19 +110,19 @@ namespace Raven.Tests.Issues
 			store1.DatabaseCommands.CreateDatabase(
 				new DatabaseDocument
 				{
-					Id = "Northwind",
+					Id = "Northwind1",
 					Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\D1\N" } }
 				});
 
 			store2.DatabaseCommands.CreateDatabase(
 				new DatabaseDocument
 				{
-					Id = "Northwind",
+					Id = "Northwind2",
 					Settings = { { "Raven/ActiveBundles", "" }, { "Raven/DataDir", @"~\D2\N" } }
 				});
 
-			var db1Url = store1.Url + "/databases/Northwind";
-			var db2Url = store2.Url + "/databases/Northwind";
+			var db1Url = store1.Url + "/databases/Northwind1";
+			var db2Url = store2.Url + "/databases/Northwind2";
 
 			SetupReplication(store1.DatabaseCommands, db2Url);
 
