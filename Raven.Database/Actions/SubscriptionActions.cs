@@ -16,153 +16,123 @@ namespace Raven.Database.Actions
 {
 	public class SubscriptionActions : ActionsBase
 	{
-		private class SubscriptionWorkContext : IDisposable
+		private class SubscriptionWorkContext
 		{
-			public readonly AutoResetEvent NewDocuments = new AutoResetEvent(false);
-			public readonly AutoResetEvent Acknowledgement = new AutoResetEvent(false);
-			public IDisposable Connection;
-
-			public void Dispose()
-			{
-				NewDocuments.Set();
-				NewDocuments.Dispose();
-
-				Acknowledgement.Set();
-				Acknowledgement.Dispose();
-
-				//context.Connection.Dispose(); //TODO arek
-			}
+			public string ConnectionId;
+			public SubscriptionBatchOptions BatchOptions;
 		}
 
-		private readonly ConcurrentDictionary<string, SubscriptionWorkContext> openSubscriptions = new ConcurrentDictionary<string, SubscriptionWorkContext>();
+		private readonly ConcurrentDictionary<long, SubscriptionWorkContext> openSubscriptions = new ConcurrentDictionary<long, SubscriptionWorkContext>();
 
 		public SubscriptionActions(DocumentDatabase database, ILog log)
 			: base(database, null, null, log)
 		{
-			//TODO arek - should also update on BulkInsertEnd operation
-
-			Database.Notifications.OnDocumentChange += (db, notification, metadata) =>
-			{
-				if (notification.Id == null)
-					return;
-
-				if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase) == false)
-				{
-					foreach (var openSubscription in openSubscriptions)
-					{
-						lock (openSubscription.Value)
-						{
-							openSubscription.Value.NewDocuments.Set();
-						}
-					}
-				}
-			};
 		}
 
-		public void CreateSubscription(string name, SubscriptionCriteria criteria)
+		public long CreateSubscription(SubscriptionCriteria criteria)
 		{
-			if (string.IsNullOrEmpty(name))
-				throw new InvalidOperationException("Subscription must have a name");
-
+			long id = -1;
 
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				var subscriptionDocument = GetSubscriptionDocument(name);
-
-				if (subscriptionDocument != null)
-				{
-					throw new InvalidOperationException("Subscription already exists."); // TODO arek
-				}
+				id = accessor.General.GetNextIdentityValue(Constants.RavenSubscriptionsPrefix);
 
 				var doc = new SubscriptionDocument
 				{
-					Name = name,
+					SubscriptionId = id,
 					Criteria = criteria,
 					AckEtag = Etag.Empty
 				};
 
-				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, name,  RavenJObject.FromObject(doc), UuidType.Subscriptions);
+				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, id.ToString("D19"),  RavenJObject.FromObject(doc), UuidType.Subscriptions);
 			});
+
+			return id;
 		}
 
-		public Action<IDisposable> OpenSubscription(string name)
+		public bool TryOpenSubscription(long id, SubscriptionBatchOptions options, out string connectionId)
 		{
-			if (GetSubscriptionDocument(name) == null)
-				throw new InvalidOperationException("Subscription " + name + "does not exit");
+			connectionId = Base62Util.Base62Random();
 
-			var subscriptionWorkContext = new SubscriptionWorkContext();
-			if(openSubscriptions.TryAdd(name, subscriptionWorkContext) == false)
-				throw new InvalidOperationException("Subscription is already in use. There can be only a single open subscription request per subscription.");	
-
-			return connection =>
+			var subscriptionWorkContext = new SubscriptionWorkContext
 			{
-				subscriptionWorkContext.Connection = connection;
+				ConnectionId = connectionId,
+				BatchOptions = options
 			};
+
+			return openSubscriptions.TryAdd(id, subscriptionWorkContext);
 		}
 
-		public void ReleaseSubscription(string name)
+		public void ReleaseSubscription(long id)
 		{
 			SubscriptionWorkContext context;
-			if (openSubscriptions.TryRemove(name, out context))
-			{
-				lock (context)
-				{
-					context.Dispose();
-				}
-			}
+			openSubscriptions.TryRemove(id, out context);
 		}
 
-		public bool IsClosed(string name)
+		public bool IsClosed(long id)
 		{
-			return openSubscriptions.ContainsKey(name) == false;
+			return openSubscriptions.ContainsKey(id) == false;
 		}
 
-		public void AcknowledgeBatchProcessed(string name, Etag lastEtag)
+		public void AcknowledgeBatchProcessed(long id, Etag lastEtag)
 		{
-			SubscriptionWorkContext subscriptionContext;
-			if(openSubscriptions.TryGetValue(name, out subscriptionContext) == false)
-				throw new InvalidOperationException("There is no subscription with name: " + name + " being opened");
-
 			TransactionalStorage.Batch(accessor =>
 			{
-				var doc = GetSubscriptionDocument(name);
+				var doc = GetSubscriptionDocument(id);
 
 				doc.AckEtag = lastEtag;
 
-				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, name, RavenJObject.FromObject(doc), UuidType.Subscriptions);
+				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, id.ToString("D19"), RavenJObject.FromObject(doc), UuidType.Subscriptions);
 			});
+		}
 
-			lock (subscriptionContext)
+		public void AssertOpenSubscriptionConnection(long id, string connection)
+		{
+			SubscriptionWorkContext subscriptionContext;
+			if (openSubscriptions.TryGetValue(id, out subscriptionContext) == false)
+				throw new InvalidOperationException("There is no subscription with id: " + id + " being opened");
+
+			if (subscriptionContext.ConnectionId.Equals(connection, StringComparison.OrdinalIgnoreCase) == false)
 			{
-				subscriptionContext.Acknowledgement.Set();
+				// prevent from concurrent working against the same subscription
+				throw new InvalidOperationException("Subscription is being opened for a different connection");
 			}
 		}
 
-		public bool WaitForAcknowledgement(string name, TimeSpan timeout)
+		//public bool WaitForAcknowledgement(long id, TimeSpan timeout)
+		//{
+		//	SubscriptionWorkContext subscriptionContext;
+		//	if (openSubscriptions.TryGetValue(id, out subscriptionContext) == false)
+		//		return false;
+
+		//	return subscriptionContext.Acknowledgement.WaitOne(timeout);
+		//}
+
+		//public bool WaitForNewDocuments(long id, TimeSpan timeout)
+		//{
+		//	SubscriptionWorkContext subscriptionContext;
+		//	if (openSubscriptions.TryGetValue(id, out subscriptionContext) == false)
+		//		return false;
+
+		//	return subscriptionContext.NewDocuments.WaitOne(timeout);
+		//}
+
+		public SubscriptionBatchOptions GetBatchOptions(long id)
 		{
 			SubscriptionWorkContext subscriptionContext;
-			if (openSubscriptions.TryGetValue(name, out subscriptionContext) == false)
-				return false;
+			if (openSubscriptions.TryGetValue(id, out subscriptionContext) == false)
+				throw new InvalidOperationException("There is no open subscription with id: " + id);
 
-			return subscriptionContext.Acknowledgement.WaitOne(timeout);
+			return subscriptionContext.BatchOptions;
 		}
 
-		public bool WaitForNewDocuments(string name, TimeSpan timeout)
-		{
-			SubscriptionWorkContext subscriptionContext;
-			if (openSubscriptions.TryGetValue(name, out subscriptionContext) == false)
-				return false;
-
-			return subscriptionContext.NewDocuments.WaitOne(timeout);
-		}
-
-		public SubscriptionDocument GetSubscriptionDocument(string name)
+		public SubscriptionDocument GetSubscriptionDocument(long id)
 		{
 			SubscriptionDocument doc = null;
 
 			TransactionalStorage.Batch(accessor =>
 			{
-				var listItem = accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, name);
+				var listItem = accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, id.ToString("D19"));
 
 				if(listItem == null)
 					return;
@@ -173,25 +143,26 @@ namespace Raven.Database.Actions
 			return doc;
 		}
 
-		public bool HasMoreDocumentsToSent(string name)
-		{
-			SubscriptionWorkContext subscriptionContext;
+		//public bool HasMoreDocumentsToSent(long id)
+		//{
+		//	SubscriptionWorkContext subscriptionContext;
 			
-			if(openSubscriptions.TryGetValue(name, out subscriptionContext) == false)
-				throw new InvalidOperationException("No such subscription: " + name);
+		//	if(openSubscriptions.TryGetValue(id, out subscriptionContext) == false)
+		//		throw new InvalidOperationException("No such subscription: " + id);
 
-			lock (subscriptionContext)
-			{
-				Etag lastDocEtag = null;
+		//	lock (subscriptionContext)
+		//	{
+		//		Etag lastDocEtag = null;
 
-				Database.TransactionalStorage.Batch(accessor => lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag());
+		//		Database.TransactionalStorage.Batch(accessor => lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag());
 
-				var lastAckEtag = GetSubscriptionDocument(name).AckEtag;
+		//		var lastAckEtag = GetSubscriptionDocument(id).AckEtag;
 
-				subscriptionContext.NewDocuments.Reset();
+		//		subscriptionContext.NewDocuments.Reset();
 
-				return EtagUtil.IsGreaterThan(lastDocEtag, lastAckEtag);
-			}
-		}
+		//		return EtagUtil.IsGreaterThan(lastDocEtag, lastAckEtag);
+		//	}
+		//}
+
 	}
 }

@@ -1770,7 +1770,6 @@ namespace Raven.Client.Connection.Async
 			private readonly int pageSize;
 
 			private readonly RavenPagingInformation pagingInformation;
-			private readonly bool batchReadingMode;
 
 			private readonly Stream stream;
 			private readonly StreamReader streamReader;
@@ -1778,22 +1777,23 @@ namespace Raven.Client.Connection.Async
 			private bool complete;
 
 			private bool wasInitialized;
+			private Func<JsonTextReaderAsync, bool> customEndOfResults;
 
-			public YieldStreamResults(HttpJsonRequest request, Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null, JsonTextReaderAsync jsonReader = null, bool batchReadingMode = false)
+			public YieldStreamResults(HttpJsonRequest request, Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null, Func<JsonTextReaderAsync, bool> customEndOfResults = null)
 			{
 				this.request = request;
 				this.start = start;
 				this.pageSize = pageSize;
 				this.pagingInformation = pagingInformation;
-				this.batchReadingMode = batchReadingMode;
 				this.stream = stream;
+				this.customEndOfResults = customEndOfResults;
 				streamReader = new StreamReader(stream);
-				reader = jsonReader ?? new JsonTextReaderAsync(streamReader);
+				reader = new JsonTextReaderAsync(streamReader);
 			}
 
 			private async Task InitAsync()
 			{
-				if (batchReadingMode == false && (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.StartObject))
+				if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.StartObject)
 					throw new InvalidOperationException("Unexpected data at start of stream");
 
 				if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.PropertyName || Equals("Results", reader.Value) == false)
@@ -1805,9 +1805,6 @@ namespace Raven.Client.Connection.Async
 
 			public void Dispose()
 			{
-				if(batchReadingMode)
-					return;
-
 				reader.Close();
 				streamReader.Close();
 				stream.Close();
@@ -1867,8 +1864,9 @@ namespace Raven.Client.Connection.Async
 						var err = await reader.ReadAsString().ConfigureAwait(false);
 						throw new InvalidOperationException("Server error" + Environment.NewLine + err);
 					default:
-						if(batchReadingMode)
+						if (customEndOfResults != null && customEndOfResults(reader))
 							break;
+
 						throw new InvalidOperationException("Unexpected property name: " + reader.Value);
 				}
 
@@ -1876,9 +1874,6 @@ namespace Raven.Client.Connection.Async
 
 			private async Task EnsureValidEndOfResponse()
 			{
-				if (batchReadingMode)
-					return;
-
 				if (reader.TokenType != JsonToken.EndObject && await reader.ReadAsync().ConfigureAwait(false) == false)
 					throw new InvalidOperationException("Unexpected end of response - missing EndObject token");
 

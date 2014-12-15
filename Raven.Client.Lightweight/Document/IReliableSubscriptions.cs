@@ -5,6 +5,7 @@ namespace Raven.Client.Document
 {
 	public interface IReliableSubscriptions : IDisposable
 	{
-		Subscription Create(string name, SubscriptionCriteria criteria, SubscriptionBatchOptions options, string database = null);
+		long Create(SubscriptionCriteria criteria, string database = null);
+		Subscription Open(long id, SubscriptionBatchOptions options, string database = null);
 	}
 }

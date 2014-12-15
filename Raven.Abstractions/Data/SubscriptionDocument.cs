@@ -7,7 +7,7 @@ namespace Raven.Abstractions.Data
 {
 	public class SubscriptionDocument
 	{
-		public string Name { get; set; }
+		public long SubscriptionId { get; set; }
 		public SubscriptionCriteria Criteria { get; set; }
 		public Etag AckEtag { get; set; }
 	}

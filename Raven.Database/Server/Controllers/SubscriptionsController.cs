@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -25,28 +24,47 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("subscriptions/create")]
 		[Route("databases/{databaseName}/subscriptions/create")]
-		public async Task<HttpResponseMessage> Create(string name)
+		public async Task<HttpResponseMessage> Create()
 		{
 			var subscriptionCriteria = await ReadJsonObjectAsync<SubscriptionCriteria>();
 
-			Database.Subscriptions.CreateSubscription(name, subscriptionCriteria);
+			var id = Database.Subscriptions.CreateSubscription(subscriptionCriteria);
 
-			return GetEmptyMessage();
+			return GetMessageWithObject(new
+			{
+				SubscriptionId = id
+			}, HttpStatusCode.Created);
 		}
 
 		[HttpPost]
 		[Route("subscriptions/open")]
 		[Route("databases/{databaseName}/subscriptions/open")]
-		public async Task<HttpResponseMessage> Open(string name)
+		public async Task<HttpResponseMessage> Open(long id)
 		{
+			if (Database.Subscriptions.GetSubscriptionDocument(id) == null)
+				return GetMessageWithString("Cannot find a subscription for the specified id: " + id, HttpStatusCode.NotFound);
+
 			var options = await ReadJsonObjectAsync<SubscriptionBatchOptions>();
 
-			if(options == null)
+			if (options == null)
 				throw new InvalidOperationException("Options cannot be null");
 
-			var addConnection = Database.Subscriptions.OpenSubscription(name);
+			string connectionId;
 
-			var pushStreamContent = new PushStreamContent((stream, content, transportContext) => StreamToClient(name, Database.Subscriptions, stream, options))
+			if (Database.Subscriptions.TryOpenSubscription(id, options, out connectionId) == false)
+				return GetMessageWithString("Subscription is already in use. There can be only a single open subscription connection per subscription.", HttpStatusCode.Gone);
+
+			return GetMessageWithString(connectionId);
+		}
+
+		[HttpGet]
+		[Route("subscriptions/pull")]
+		[Route("databases/{databaseName}/subscriptions/pull")]
+		public HttpResponseMessage Pull(long id, string connection)
+		{
+			Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+
+			var pushStreamContent = new PushStreamContent((stream, content, transportContext) => StreamToClient(id, Database.Subscriptions, stream))
 			{
 				Headers =
 				{
@@ -57,8 +75,6 @@ namespace Raven.Database.Server.Controllers
 				}
 			};
 
-			addConnection(pushStreamContent);
-
 			return new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = pushStreamContent
@@ -68,9 +84,11 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("subscriptions/acknowledgeBatch")]
 		[Route("databases/{databaseName}/subscriptions/acknowledgeBatch")]
-		public HttpResponseMessage AcknowledgeBatch(string name, string lastEtag)
+		public HttpResponseMessage AcknowledgeBatch(long id, string lastEtag, string connection)
 		{
-			Database.Subscriptions.AcknowledgeBatchProcessed(name, Etag.Parse(lastEtag));
+			Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+
+			Database.Subscriptions.AcknowledgeBatchProcessed(id, Etag.Parse(lastEtag));
 
 			return GetEmptyMessage();
 		}
@@ -78,158 +96,73 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("subscriptions/close")]
 		[Route("databases/{databaseName}/subscriptions/close")]
-		public HttpResponseMessage Close(string name)
+		public HttpResponseMessage Close(long id, string connection)
 		{
-			Database.Subscriptions.ReleaseSubscription(name);
+			Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+
+			Database.Subscriptions.ReleaseSubscription(id);
 
 			return GetEmptyMessage();
 		}
 
-		private void StreamToClient(string name, SubscriptionActions subscriptions, Stream stream, SubscriptionBatchOptions options)
+		private void StreamToClient(long id, SubscriptionActions subscriptions, Stream stream)
 		{
 			using (var streamWriter = new StreamWriter(stream))
 			using (var writer = new JsonTextWriter(streamWriter))
 			{
-				try
+				var options = subscriptions.GetBatchOptions(id);
+
+				writer.WriteStartObject();
+				writer.WritePropertyName("Results");
+				writer.WriteStartArray();
+
+				using (var cts = new CancellationTokenSource())
+				using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
 				{
-					bool? previousBatchAcknowledged = null;
+					Etag lastProcessedDocEtag = null;
+					var totalSizeOfDocs = 0;
 
-					while (true)
+					Database.TransactionalStorage.Batch(accessor =>
 					{
-						var docsStreamed = false;
+						var ackEtag = subscriptions.GetSubscriptionDocument(id).AckEtag;
 
-						using (var cts = new CancellationTokenSource())
-						using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
+						// we may be sending a LOT of documents to the user, and most 
+						// of them aren't going to be relevant for other ops, so we are going to skip
+						// the cache for that, to avoid filling it up very quickly
+						using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 						{
-							var lastProcessedDocEtag = Etag.Empty;
-							var totalSizeOfDocs = 0;
-
-							Database.TransactionalStorage.Batch(accessor =>
+							Database.Documents.GetDocuments(-1, options.MaxDocCount, ackEtag, cts.Token, doc =>
 							{
-								var ackEtag = subscriptions.GetSubscriptionDocument(name).AckEtag;
+								timeout.Delay();
 
-								// we may be sending a LOT of documents to the user, and most 
-								// of them aren't going to be relevant for other ops, so we are going to skip
-								// the cache for that, to avoid filling it up very quickly
-								using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
-								{
-									Database.Documents.GetDocuments(-1, options.MaxDocCount, ackEtag, cts.Token, doc =>
-									{
-										timeout.Delay();
+								if (options.MaxSize.HasValue && totalSizeOfDocs > options.MaxSize)
+									return;
 
-										if (options.MaxSize.HasValue && totalSizeOfDocs > options.MaxSize)
-											return;
+								lastProcessedDocEtag = doc.Etag;
 
-										lastProcessedDocEtag = doc.Etag;
+								if (doc.Key.StartsWith("Raven/"))
+									return;
 
-										if (doc.Key.StartsWith("Raven/"))
-											return;
+								doc.ToJson().WriteTo(writer);
+								writer.WriteRaw(Environment.NewLine);
 
-										if (docsStreamed == false)
-										{
-											InitializeDataBatch(writer);
-											docsStreamed = true;
-										}
-
-										doc.ToJson().WriteTo(writer);
-										writer.WriteRaw(Environment.NewLine);
-
-										totalSizeOfDocs += doc.SerializedSizeOnDisk;
-									});
-								}
+								totalSizeOfDocs += doc.SerializedSizeOnDisk;
 							});
-
-							if (docsStreamed)
-							{
-								EndDataBatchAndFlush(writer, lastProcessedDocEtag);
-							}
 						}
+					});
 
-						if (docsStreamed)
-						{
-							var batchAcknowledged = subscriptions.WaitForAcknowledgement(name, options.AcknowledgementTimeout);
+					writer.WriteEndArray();
 
-							// TODO arek - cleanup this mess
-							if (subscriptions.IsClosed(name))
-								break;
-
-							if (batchAcknowledged == false)
-								continue;
-						}
-
-						if (subscriptions.HasMoreDocumentsToSent(name))
-							continue;
-
-						bool newDocsFound;
-
-						do
-						{
-							newDocsFound = subscriptions.WaitForNewDocuments(name, TimeSpan.FromSeconds(5));
-
-							if (subscriptions.IsClosed(name))
-								break;
-
-							if (newDocsFound == false)
-								SendHearbeat(writer);
-
-						} while (newDocsFound == false);
-
-						if (subscriptions.IsClosed(name))
-							break;
-					}
-				}
-				catch (Exception ex)
-				{
-					if (ex is IOException == false)
+					if (lastProcessedDocEtag != null)
 					{
-						Log.WarnException("Unexpected exception in subscription " + name, ex);
+						writer.WritePropertyName("LastProcessedEtag");
+						writer.WriteValue(lastProcessedDocEtag.ToString());
 					}
-					else
-					{
-						var httpListenerException = ex.InnerException as HttpListenerException;
 
-						if ((httpListenerException == null && httpListenerException.ErrorCode == 1229) == false)
-						{
-							Log.WarnException("Unexpected exception in subscription " + name, ex);
-						}
-						else
-						{
-							
-						}
-					}
-				}
-				finally
-				{
-					subscriptions.ReleaseSubscription(name);
+					writer.WriteEndObject();
+					writer.Flush();
 				}
 			}
-		}
-
-		private static void InitializeDataBatch(JsonTextWriter writer)
-		{
-			writer.WriteStartObject();
-			writer.WritePropertyName("Type");
-			writer.WriteValue("Data");
-			writer.WritePropertyName("Results");
-			writer.WriteStartArray();
-		}
-
-		private static void EndDataBatchAndFlush(JsonTextWriter writer, Etag lastProcessedDocEtag)
-		{
-			writer.WriteEndArray();
-			writer.WritePropertyName("LastProcessedEtag");
-			writer.WriteValue(lastProcessedDocEtag.ToString());
-			writer.WriteEndObject();
-			writer.Flush();
-		}
-
-		private static void SendHearbeat(JsonTextWriter writer)
-		{
-			writer.WriteStartObject();
-			writer.WritePropertyName("Type");
-			writer.WriteValue("Heartbeat");
-			writer.WriteEndObject();
-			writer.Flush();
 		}
 	}
 }

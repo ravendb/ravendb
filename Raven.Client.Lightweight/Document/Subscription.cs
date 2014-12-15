@@ -4,115 +4,100 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
+using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Database.Util;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
 	public class Subscription : IObservable<JsonDocument>, IDisposable
 	{
 		private readonly SubscriptionBatchOptions options;
+		private readonly string connectionId;
 		private readonly IAsyncDatabaseCommands commands;
+		private readonly IDatabaseChanges changes;
 		private readonly ConcurrentSet<IObserver<JsonDocument>> subscribers = new ConcurrentSet<IObserver<JsonDocument>>();
-		private bool open;
-		private bool disposed = false;
-		private CancellationTokenSource cts = new CancellationTokenSource();
+		private readonly long id;
+		private readonly CancellationTokenSource cts = new CancellationTokenSource();
+		private bool pullingStarted;
+		private bool disposed;
 
-		public Subscription(string name, SubscriptionBatchOptions options, IAsyncDatabaseCommands commands)
+		internal Subscription(long id, string connectionId, IAsyncDatabaseCommands commands, IDatabaseChanges changes)
 		{
-			Name = name;
-			this.options = options;
+			this.id = id;
+			this.connectionId = connectionId;
 			this.commands = commands;
+			this.changes = changes;
 		}
 
-		public string Name { get; private set; }
+		public Task PullingTask { get; private set; }
+		private IDisposable NewDocumentsObserver { get; set; }
 
-		public Task Task { get; private set; }
-
-		private void Open()
+		private async Task PullDocuments()
 		{
-			Task = OpenConnection();
-			//.ObserveException()
-			//.ContinueWith(task => task.AssertNotFailed());
-
-			open = true;
-		}
-
-		private async Task OpenConnection()
-		{
-			if (string.IsNullOrEmpty(Name))
-				throw new InvalidOperationException("Subscription does not have any name");
+			if(NewDocumentsObserver != null)
+				NewDocumentsObserver.Dispose();
 
 			try
 			{
-				var subscriptionRequest = commands.CreateRequest("/subscriptions/open?name=" + Name, "POST", disableRequestCompression: true, disableAuthentication: true);
+				bool pulledDocs;
 
-				using (var response = await subscriptionRequest.ExecuteRawResponseAsync(RavenJObject.FromObject(options)).ConfigureAwait(false))
+				do
 				{
+					pulledDocs = false;
 
-					await response.AssertNotFailingResponse().ConfigureAwait(false);
-
-					using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
-					using (var streamReader = new StreamReader(responseStream))
+					using (var subscriptionRequest = commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, connectionId), "GET"))
+					using (var response = await subscriptionRequest.ExecuteRawResponseAsync().ConfigureAwait(false))
 					{
-						while (true)
+						await response.AssertNotFailingResponse().ConfigureAwait(false);
+
+						using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 						{
 							cts.Token.ThrowIfCancellationRequested();
 
-							var jsonReader = new JsonTextReaderAsync(streamReader);
+							Etag lastProcessedEtagInBatch = null;
 
-							var type = await TryReadType(jsonReader).ConfigureAwait(false);
-
-							if (type == null)
-								continue;
-
-							switch (type)
+							using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, customEndOfResults: reader =>
 							{
-								case "Data":
-									using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, jsonReader: jsonReader, batchReadingMode: true))
+								if (Equals("LastProcessedEtag", reader.Value) == false)
+									return false;
+
+								lastProcessedEtagInBatch = Etag.Parse(reader.ReadAsString().ResultUnwrap());
+								return true;
+							}))
+							{
+								while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
+								{
+									pulledDocs = true;
+
+									cts.Token.ThrowIfCancellationRequested();
+
+									var jsonDoc = SerializationHelper.RavenJObjectToJsonDocument(streamedDocs.Current);
+									foreach (var subscriber in subscribers)
 									{
-										while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
-										{
-											cts.Token.ThrowIfCancellationRequested();
-
-											var jsonDoc = SerializationHelper.RavenJObjectToJsonDocument(streamedDocs.Current);
-											foreach (var subscriber in subscribers)
-											{
-												subscriber.OnNext(jsonDoc);
-											}
-										}
+										subscriber.OnNext(jsonDoc);
 									}
+								}
+							}
 
-									var lastProcessedEtagInBatch = await ReadLastProcessedEtag(jsonReader).ConfigureAwait(false);
-
-									await EnsureValidEndOfMessage(jsonReader, streamReader).ConfigureAwait(false);
-
-									using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?name={0}&lastEtag={1}", Name, lastProcessedEtagInBatch), "POST"))
-									{
-										acknowledgmentRequest.ExecuteRequest();
-									}
-
-									break;
-								case "Heartbeat":
-									await EnsureValidEndOfMessage(jsonReader, streamReader).ConfigureAwait(false);
-									break;
-								default:
-									throw new InvalidOperationException("Unknown type of stream part: " + type);
+							if (lastProcessedEtagInBatch != null)
+							{
+								using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtagInBatch, connectionId), "POST"))
+								{
+									acknowledgmentRequest.ExecuteRequest();
+								}
 							}
 						}
 					}
-				}
+				} while (pulledDocs);
+				
 			}
 			catch (Exception ex)
 			{
@@ -126,60 +111,33 @@ namespace Raven.Client.Document
 
 				throw;
 			}
-		}
 
-		private static async Task EnsureValidEndOfMessage(JsonTextReaderAsync reader, StreamReader streamReader)
-		{
-			if (reader.TokenType != JsonToken.EndObject && await reader.ReadAsync().ConfigureAwait(false) == false)
-				throw new InvalidOperationException("Unexpected end of message - missing EndObject token");
+			PullingTask = null;
 
-			if (reader.TokenType != JsonToken.EndObject)
-				throw new InvalidOperationException(string.Format("Unexpected token type at the end of the message: {0}. Error: {1}", reader.TokenType, streamReader.ReadToEnd()));
-		}
-
-		private static async Task<string> TryReadType(JsonTextReaderAsync reader)
-		{
-			if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType == JsonToken.None)
-				return null;
-
-			if (reader.TokenType != JsonToken.StartObject)
-				throw new InvalidOperationException("Invalid subscription stream format. Unexpected toke type:" + reader.TokenType);
-
-			if (await reader.ReadAsync().ConfigureAwait(false) && reader.TokenType != JsonToken.PropertyName)
-				throw new InvalidOperationException("Invalid subscription stream format. Unexpected toke type:" + reader.TokenType);
-
-			if (Equals("Type", reader.Value) == false)
-				throw new InvalidOperationException("Unexpected property name. Got: '" + reader.TokenType + "' instead of 'Type'");
-
-			return await reader.ReadAsString().ConfigureAwait(false);
-		}
-
-		private static async Task<Etag> ReadLastProcessedEtag(JsonTextReaderAsync reader)
-		{
-			if (Equals("LastProcessedEtag", reader.Value) == false)
-				throw new InvalidOperationException("Unexpected property name. Got: '" + reader.TokenType + "' instead of 'LastProcessedEtag'");
-
-			return Etag.Parse(await reader.ReadAsString().ConfigureAwait(false));
+			NewDocumentsObserver = changes.ForAllDocuments().Subscribe(notification =>
+			{
+				if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase) == false)
+				{
+					PullingTask = PullDocuments();
+				}
+			});
 		}
 
 		public IDisposable Subscribe(IObserver<JsonDocument> observer)
 		{
-			if (Task != null && Task.IsFaulted)
-				throw new InvalidOperationException("Cannot subscribe because the subscription task is faulted", Task.Exception);
+			if (PullingTask != null && PullingTask.IsFaulted)
+				throw new InvalidOperationException("Cannot subscribe because the subscription pulling task is faulted", PullingTask.Exception);
 
 			if (subscribers.TryAdd(observer))
 			{
-				if (!open)
-					Open();
+				if (pullingStarted == false)
+				{
+					PullingTask = PullDocuments();
+					pullingStarted = true;
+				}
 			}
 
-			return new DisposableAction(() =>
-			{
-				subscribers.TryRemove(observer);
-
-				if (subscribers.Count == 0 && open)
-					CloseConnectionAsync().WaitUnwrap();
-			});
+			return new DisposableAction(() => subscribers.TryRemove(observer));
 		}
 
 		public void Dispose()
@@ -190,10 +148,11 @@ namespace Raven.Client.Document
 			DisposeAsync().Wait();
 		}
 
-		public Task DisposeAsync()
+		public async Task DisposeAsync()
 		{
 			if (disposed)
-				return new CompletedTask();
+				return;
+
 			disposed = true;
 
 			foreach (var subscriber in subscribers)
@@ -201,42 +160,46 @@ namespace Raven.Client.Document
 				subscriber.OnCompleted();
 			}
 
-			if (!open) 
-				return new CompletedTask();
+			if (NewDocumentsObserver != null)
+				NewDocumentsObserver.Dispose();
 
-			return CloseConnectionAsync();
-		}
+			var disposableChanges = changes as IDisposable;
 
-		private async Task CloseConnectionAsync()
-		{
+			if (disposableChanges != null)
+				disposableChanges.Dispose();
+
 			cts.Cancel();
 
-			switch (Task.Status)
+			if (PullingTask != null)
 			{
-				case TaskStatus.RanToCompletion:
-				case TaskStatus.Canceled:
-					break;
-				default:
-					try
-					{
-						Task.Wait();
-					}
-					catch (AggregateException ae)
-					{
-						if (ae.InnerException is OperationCanceledException == false)
+				switch (PullingTask.Status)
+				{
+					case TaskStatus.RanToCompletion:
+					case TaskStatus.Canceled:
+						break;
+					default:
+						try
 						{
-							throw;
+							PullingTask.Wait();
 						}
-					}
+						catch (AggregateException ae)
+						{
+							if (ae.InnerException is OperationCanceledException == false)
+							{
+								throw;
+							}
+						}
 
-					break;
+						break;
+				}
 			}
 
-			using (var closeRequest = commands.CreateRequest(string.Format("/subscriptions/close?name={0}", Name), "POST"))
+			using (var closeRequest = commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, connectionId), "POST"))
 			{
-				await closeRequest.ExecuteRequestAsync();
-				open = false;
+				await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
+				pullingStarted = false;
 			}
 		}
+
 	}
 }

@@ -19,7 +19,34 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.Subscriptions.Create("OrdersSubscription", new SubscriptionCriteria(), new SubscriptionBatchOptions());
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+				Assert.Equal(1, id);
+
+				id = store.Subscriptions.Create(new SubscriptionCriteria());
+				Assert.Equal(2, id);
+			}
+		}
+
+		[Fact]
+		public void ShouldThrowWhenOpeningNoExisingSubscription()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var ex = Assert.Throws<InvalidOperationException>(() => store.Subscriptions.Open(1, new SubscriptionBatchOptions()));
+				Assert.Equal("Subscription with the specified id does not exist.", ex.Message);
+			}
+		}
+
+		[Fact]
+		public void ShouldThrowOnAttemptToOpenAlreadyOpenedSubscription()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+				store.Subscriptions.Open(id, new SubscriptionBatchOptions());
+
+				var ex = Assert.Throws<InvalidOperationException>(() => store.Subscriptions.Open(id, new SubscriptionBatchOptions()));
+				Assert.Equal("Subscription is already in use. There can be only a single open subscription connection per subscription.", ex.Message);
 			}
 		}
 
@@ -37,13 +64,13 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				var subscription = store.Subscriptions.Create("OrdersSubscription", new SubscriptionCriteria(), new SubscriptionBatchOptions());
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions());
 
 				var keys = new BlockingCollection<string>();
 				var ages = new BlockingCollection<int>();
 
 				subscription.Subscribe(x => keys.Add(x.Key));
-
 				subscription.Subscribe(x => ages.Add(x.DataAsJson.Value<int>("Age")));
 
 				string key;
@@ -73,12 +100,13 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewDocumentStore())
 			{
-				var subscription = store.Subscriptions.Create("OrdersSubscription", new SubscriptionCriteria(), new SubscriptionBatchOptions());
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions());
 
 				var names = new BlockingCollection<string>();
 
 				subscription.Subscribe(x => names.Add(x.DataAsJson.Value<string>("Name")));
-
+				
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "James" }, "users/1");
