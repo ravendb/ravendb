@@ -1097,6 +1097,16 @@ namespace Raven.Database.Indexing
 
 			public IEnumerable<RavenJObject> IndexEntries(Reference<int> totalResults)
 			{
+				var returnFullEntries = reduceKeys == null || reduceKeys.Count == 0;
+				HashSet<RavenJToken> reduceValuesJson = null;
+				if (returnFullEntries == false)
+				{
+					reduceValuesJson =new HashSet<RavenJToken>(RavenJTokenEqualityComparer.Default);
+					foreach (var reduceKey in reduceKeys)
+					{
+						reduceValuesJson.Add(new RavenJValue(reduceKey));
+					}
+				}
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
 				{
@@ -1119,15 +1129,15 @@ namespace Raven.Database.Indexing
 								ravenJObject.Remove(prop.Key);
 							}
 
-							if (reduceKeys == null)
-								yield return ravenJObject;
-							else
+							if (returnFullEntries)
 							{
-								RavenJToken reduceKeyValue;
-								if (ravenJObject.TryGetValue(Constants.ReduceKeyFieldName, out reduceKeyValue) && reduceKeys.Any(x => reduceKeyValue.Equals(new RavenJValue(x))))
-								{
-									yield return ravenJObject;
-								}
+								yield return ravenJObject;
+								continue;
+							}
+							RavenJToken reduceKeyValue;
+							if (ravenJObject.TryGetValue(Constants.ReduceKeyFieldName, out reduceKeyValue) && reduceValuesJson.Contains(reduceKeyValue))
+							{
+								yield return ravenJObject;
 							}
 						}
 					}
