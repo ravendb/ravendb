@@ -31,9 +31,9 @@ namespace Owin
 {
 	public static class AppBuilderExtensions
 	{
-		private const string HostOnAppDisposing = "host.OnAppDisposing";
+	    private const string HostOnAppDisposing = "host.OnAppDisposing";
 
-		public static IAppBuilder UseRavenDB(this IAppBuilder app)
+	    public static IAppBuilder UseRavenDB(this IAppBuilder app)
 		{
 			return UseRavenDB(app, new RavenConfiguration());
 		}
@@ -61,7 +61,7 @@ namespace Owin
 				// This is a katana specific key (i.e. not a standard OWIN key) to be notified
 				// when the host in being shut down. Works both in HttpListener and SystemWeb hosting
 				// Until owin spec is officially updated, there is no other way to know the host
-				// is shutting down / disposing
+ 				// is shutting down / disposing
 				var appDisposing = app.Properties[HostOnAppDisposing] as CancellationToken?;
 				if (appDisposing.HasValue)
 				{
@@ -69,39 +69,39 @@ namespace Owin
 				}
 			}
 
-			AssemblyExtractor.ExtractEmbeddedAssemblies();
+            AssemblyExtractor.ExtractEmbeddedAssemblies(options.SystemDatabase.Configuration);
 
 #if DEBUG
 			app.UseInterceptor();
 #endif
 
-			app.Use((context, func) => UpgradeToWebSockets(options, context, func));
-
-			app.UseWebApi(CreateHttpCfg(options));
+            app.Use((context, func) => UpgradeToWebSockets(options, context, func));
+            
+            app.UseWebApi(CreateHttpCfg(options));
 
 
 			return app;
 		}
 
-		private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
-		{
-			var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
-			if (accept == null)
-			{
-				// Not a websocket request
-				await next();
-				return;
-			}
-
-			WebSocketsTransport webSocketsTrasport = WebSocketTransportFactory.CreateWebSocketTransport(options, context);
-
-			if (webSocketsTrasport != null)
-			{
-				if (await webSocketsTrasport.TrySetupRequest())
-					accept(null, webSocketsTrasport.Run);
-			}
-		}
-
+        private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
+        {
+            var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
+            if (accept == null)
+            {
+                // Not a websocket request
+                await next();
+                return;
+            }
+            
+            WebSocketsTransport webSocketsTrasport = WebSocketTransportFactory.CreateWebSocketTransport(options, context);
+            
+            if (webSocketsTrasport != null)
+            {
+                if (await webSocketsTrasport.TrySetupRequest())
+                    accept(null, webSocketsTrasport.Run);
+            }
+        }
+        
 
 
 		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
@@ -160,7 +160,7 @@ namespace Owin
 				if (context != null)
 				{
 					if (context.Request.Uri.LocalPath.EndsWith("bulkInsert", StringComparison.OrdinalIgnoreCase) ||
-						context.Request.Uri.LocalPath.EndsWith("studio-tasks/loadCsvFile", StringComparison.OrdinalIgnoreCase) ||
+                        context.Request.Uri.LocalPath.EndsWith("studio-tasks/loadCsvFile", StringComparison.OrdinalIgnoreCase) ||
 						context.Request.Uri.LocalPath.EndsWith("studio-tasks/import", StringComparison.OrdinalIgnoreCase) ||
 						context.Request.Uri.LocalPath.EndsWith("replication/replicateDocs", StringComparison.OrdinalIgnoreCase) ||
 						context.Request.Uri.LocalPath.EndsWith("replication/replicateAttachments", StringComparison.OrdinalIgnoreCase))
@@ -172,22 +172,22 @@ namespace Owin
 
 			public bool UseBufferedOutputStream(HttpResponseMessage response)
 			{
-				var content = response.Content;
-				var compressedContent = content as GZipToJsonAndCompressHandler.CompressedContent;
-				if (compressedContent != null && response.StatusCode != HttpStatusCode.NoContent)
-					return ShouldBuffer(compressedContent.OriginalContent);
-				return ShouldBuffer(content);
+                var content = response.Content;
+			    var compressedContent = content as GZipToJsonAndCompressHandler.CompressedContent;
+			    if (compressedContent != null && response.StatusCode != HttpStatusCode.NoContent)
+                    return ShouldBuffer(compressedContent.OriginalContent);
+			    return ShouldBuffer(content);
 			}
 
-			private bool ShouldBuffer(HttpContent content)
-			{
-				return (content is IEventsTransport ||
-						content is StreamsController.StreamQueryContent ||
-						content is StreamContent ||
-						content is PushStreamContent ||
-						content is JsonContent ||
-						content is MultiGetController.MultiGetContent) == false;
-			}
+		    private bool ShouldBuffer(HttpContent content)
+		    {
+		        return (content is IEventsTransport ||
+		                content is StreamsController.StreamQueryContent ||
+		                content is StreamContent ||
+		                content is PushStreamContent ||
+		                content is JsonContent ||
+		                content is MultiGetController.MultiGetContent) == false;
+		    }
 		}
 
 		private class InterceptMiddleware : OwinMiddleware
