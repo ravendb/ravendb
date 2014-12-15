@@ -40,10 +40,16 @@
         -ms-user-select: all;
         user-select: all;
     }
+    line.reduce_split_line {
+        stroke:black;
+        stroke-width: 1;
+        opacity: 0.5;
+
+    }
 
 </style>
 
-<script type="text/html" id="batch-info-template">
+<script type="text/html" id="map-batch-info-template">
     <div style="padding: 10px">
         <form>
             <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
@@ -79,6 +85,39 @@
                 <tr>
                     <td>Total duration</td>
                     <td data-bind="text: TotalDurationMs"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</script>
+
+
+<script type="text/html" id="reduce-batch-info-template">
+    <div style="padding: 10px">
+        <form>
+            <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
+        </form>
+        <table class="table table-condensed table-striped" data-bind="with: data">
+            <tbody>
+                <tr>
+                    <td>Indexes to work on</td>
+                    <td>
+                        <ul data-bind="foreach: IndexesToWorkOn">
+                            <li data-bind="text: $data"></l>
+                        </ul>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Started at</td>
+                    <td data-bind="text: StartedAt"></td>
+                </tr>
+                <tr>
+                    <td>Total duration</td>
+                    <td data-bind="text: TotalDurationMs"></td>
+                </tr>
+                <tr>
+                    <td>Time since first reduce<br />in batch completed ms</td>
+                    <td data-bind="text: TimeSinceFirstReduceInBatchCompletedMs"></td>
                 </tr>
             </tbody>
         </table>
@@ -125,40 +164,104 @@
                 </tr>
 
                 <tr data-bind="visible: LoadDocumentPerformance.LoadDocumentDurationMs >= 0">
-                    <td><span data-bind=" style: { 'background-color': $root.colors[0] }" class="rect_legend"></span> LoadDocument duration</td>
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[0] }" class="rect_legend"></span> LoadDocument duration</td>
                     <td data-bind="text: LoadDocumentPerformance.LoadDocumentDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: LinqExecutionPerformance.MapLinqExecutionDurationMs >= 0">
-                    <td><span data-bind=" style: { 'background-color': $root.colors[1] }" class="rect_legend"></span> Linq: map execution duration</td>
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[1] }" class="rect_legend"></span> Linq: map execution duration</td>
                     <td data-bind="text: LinqExecutionPerformance.MapLinqExecutionDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: LinqExecutionPerformance.ReduceLinqExecutionDurationMs >= 0">
-                    <td><span data-bind=" style: { 'background-color': $root.colors[2] }" class="rect_legend"></span> Linq: reduce execution duration</td>
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[2] }" class="rect_legend"></span> Linq: reduce execution duration</td>
                     <td data-bind="text: LinqExecutionPerformance.ReduceLinqExecutionDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: LucenePerformance.WriteDocumentsDurationMs >= 0">
-                    <td><span data-bind=" style: { 'background-color': $root.colors[3] }" class="rect_legend"></span> Lucene: write documents duration</td>
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[3] }" class="rect_legend"></span> Lucene: write documents duration</td>
                     <td data-bind="text: LucenePerformance.WriteDocumentsDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: LucenePerformance.FlushToDiskDurationMs >= 0">
-                    <td><span data-bind=" style: { 'background-color': $root.colors[4] }" class="rect_legend"></span> Lucene: flush to disk duration</td>
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[4] }" class="rect_legend"></span> Lucene: flush to disk duration</td>
                     <td data-bind="text: LucenePerformance.FlushToDiskDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: MapStoragePerformance.DeleteMappedResultsDurationMs >= 0">
-                    <td><span data-bind=" style: { 'background-color': $root.colors[5] }" class="rect_legend"></span> Map storage: delete mapped results duration</td>
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[5] }" class="rect_legend"></span> Map storage: delete mapped results duration</td>
                     <td data-bind="text: MapStoragePerformance.DeleteMappedResultsDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: MapStoragePerformance.PutMappedResultsDurationMs >= 0">
-                    <td><span data-bind=" style: { 'background-color': $root.colors[6] }" class="rect_legend"></span> Map storage: put mapped results duration</td>
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[6] }" class="rect_legend"></span> Map storage: put mapped results duration</td>
                     <td data-bind="text: MapStoragePerformance.PutMappedResultsDurationMs"></td>
                 </tr>
                 <tr data-bind="visible: MapStoragePerformance.StorageCommitDurationMs >= 0">
-                    <td><span data-bind=" style: { 'background-color': $root.colors[7] }" class="rect_legend"></span> Map storage: commit duration</td>
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[7] }" class="rect_legend"></span> Map storage: commit duration</td>
                     <td data-bind="text: MapStoragePerformance.StorageCommitDurationMs"></td>
                 </tr>
                 <tr>
                     <td>Waiting time since<br /> last batch completed</td>
                     <td data-bind="text: WaitingTimeSinceLastBatchCompleted"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</script>
+
+<script type="text/html" id="reduce-stat-template">
+    <div style="padding: 10px">
+        <form>
+            <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
+        </form>
+
+        <table class="table table-condensed table-striped" data-bind="with: data">
+            <thead>
+                <tr>
+                    <th>Reduce of index stats:</th>
+                    <th data-bind="text: parent.indexName"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Reduce type</td>
+                    <td data-bind="text: parent.stats.ReduceType"></td>
+                </tr>
+                <tr>
+                    <td>Level</td>
+                    <td data-bind="text: Level"></td>
+                </tr>
+                <tr>
+                    <td>Items count</td>
+                    <td data-bind="text: ItemsCount"></td>
+                </tr>
+                <tr>
+                    <td>Output count</td>
+                    <td data-bind="text: OutputCount"></td>
+                </tr>
+                <tr>
+                    <td>Duration</td>
+                    <td data-bind="text: Duration"></td>
+                </tr>
+                <tr>
+                    <td>Started</td>
+                    <td data-bind="text: Started"></td>
+                </tr>
+
+                <tr data-bind="visible: LinqExecutionPerformance.MapLinqExecutionDurationMs >= 0">
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[0] }" class="rect_legend"></span> Linq: map execution duration</td>
+                    <td data-bind="text: LinqExecutionPerformance.MapLinqExecutionDurationMs"></td>
+                </tr>
+                <tr data-bind="visible: LinqExecutionPerformance.ReduceLinqExecutionDurationMs >= 0">
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[1] }" class="rect_legend"></span> Linq: reduce execution duration</td>
+                    <td data-bind="text: LinqExecutionPerformance.ReduceLinqExecutionDurationMs"></td>
+                </tr>
+                <tr data-bind="visible: LucenePerformance.WriteDocumentsDurationMs >= 0">
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[2] }" class="rect_legend"></span> Lucene: write documents duration</td>
+                    <td data-bind="text: LucenePerformance.WriteDocumentsDurationMs"></td>
+                </tr>
+                <tr data-bind="visible: LucenePerformance.FlushToDiskDurationMs >= 0">
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[3] }" class="rect_legend"></span> Lucene: flush to disk duration</td>
+                    <td data-bind="text: LucenePerformance.FlushToDiskDurationMs"></td>
+                </tr>
+                <tr data-bind="visible: ReduceStoragePerformance.GetItemsToReduceDurationMs >= 0">
+                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[4] }" class="rect_legend"></span> Reduce storage: get items to reduce duration</td>
+                    <td data-bind="text: ReduceStoragePerformance.GetItemsToReduceDurationMs"></td>
                 </tr>
             </tbody>
         </table>

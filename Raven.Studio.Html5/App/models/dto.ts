@@ -128,15 +128,15 @@ interface indexingBatchInfoDto {
     StartedAt: string; // ISO date string.
     StartedAtDate?: Date;
     TotalDurationMs: number;
-    PerfStats: indexNameAndPerformanceStats[];  
+    PerfStats: indexNameAndMapPerformanceStats[];  
 }
 
-interface indexNameAndPerformanceStats {
+interface indexNameAndMapPerformanceStats {
     indexName: string;
     stats: indexPerformanceDto;
 }
 
-interface indexNameAndPerformanceStatsWithCache extends indexNameAndPerformanceStats {
+interface indexNameAndMapPerformanceStatsWithCache extends indexNameAndMapPerformanceStats {
     widths: number[];
     cumulativeSums: number[];
 }
@@ -158,6 +158,48 @@ interface indexPerformanceDto {
 
     WaitingTimeSinceLastBatchCompleted: string;
 }
+
+
+interface reducingBatchInfoDto {
+    IndexesToWorkOn: string[];
+    TotalDurationMs: number;
+    StartedAt: string; // ISO date string.
+    StartedAtDate?: Date;
+    TimeSinceFirstReduceInBatchCompletedMs: number;
+    PerfStats: indexNameAndReducingPerformanceStats[];
+}
+
+interface indexNameAndReducingPerformanceStats {
+    indexName: string;
+    stats: reducePerformanceStatsDto;
+    parent?: reducingBatchInfoDto;
+}
+
+interface reducePerformanceStatsDto {
+    ReduceType?: string;
+    LevelStats: reduceLevelPeformanceStatsDto[];
+}
+
+interface reduceLevelPeformanceStatsDtoWithCache extends reduceLevelPeformanceStatsDto {
+    widths: number[];
+    cumulativeSums: number[];
+}
+
+interface reduceLevelPeformanceStatsDto {
+    Level: number;
+    ItemsCount: number;
+    InputCount: number;
+    OutputCount: number;
+    Started: string; // ISO date string
+    Completed: string; // Date
+    Duration: string;
+    DurationMs: number;
+    LinqExecutionPerformance: { MapLinqExecutionDurationMs: number; ReduceLinqExecutionDurationMs: number };
+    LucenePerformance: { WriteDocumentsDurationMs: number; FlushToDiskDurationMs: number };
+    ReduceStoragePerformance: { GetItemsToReduceDurationMs: number };
+    parent?: indexNameAndReducingPerformanceStats;
+}
+
 
 interface apiKeyDto extends documentDto {
     Name: string;

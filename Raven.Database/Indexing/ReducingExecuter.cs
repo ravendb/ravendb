@@ -60,7 +60,7 @@ namespace Raven.Database.Indexing
 
 				if (multiStepsReduceKeys.Length > 0)
 				{
-					Log.Debug("MultiStep reduce for keys: {0}", singleStepReduceKeys.Select(x => x + ","));
+                    Log.Debug("MultiStep reduce for keys: {0}", multiStepsReduceKeys.Select(x => x + ","));
 					var multiStepStats = MultiStepReduce(indexToWorkOn, multiStepsReduceKeys, viewGenerator, itemsToDelete);
 
 					performanceStats.Add(multiStepStats);
