@@ -119,5 +119,18 @@ namespace Raven.Abstractions.Data
 		{
 			return Key;
 		}
+
+        public static void EnsureIdInMetadata(IJsonDocumentMetadata doc)
+        {
+            if (doc == null || doc.Metadata == null)
+                return;
+
+            if (doc.Metadata.IsSnapshot)
+            {
+                doc.Metadata = (RavenJObject)doc.Metadata.CreateSnapshot();
+            }
+
+            doc.Metadata["@id"] = doc.Key;
+        }
 	}
 }

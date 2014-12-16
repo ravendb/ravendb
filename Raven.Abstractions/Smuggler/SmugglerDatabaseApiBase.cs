@@ -894,7 +894,7 @@ namespace Raven.Abstractions.Smuggler
                     state = lastEtagsDocument.DataAsJson.JsonDeserialization<OperationState>();
                 }
 
-                lastEtagsDocument.Metadata["@id"] = continuationDocId;
+                JsonDocument.EnsureIdInMetadata(lastEtagsDocument);
             }
 
             int skippedDocuments = 0;
