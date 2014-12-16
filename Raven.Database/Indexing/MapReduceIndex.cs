@@ -318,7 +318,8 @@ namespace Raven.Database.Indexing
 			return new IndexQueryResult
 			{
 				Projection = RavenJObject.Parse(field.StringValue),
-				Score = score.Score
+				Score = score.Score,
+				ReduceVal = field.StringValue
 			};
 		}
 
