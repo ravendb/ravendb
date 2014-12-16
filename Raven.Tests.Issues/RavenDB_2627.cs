@@ -77,8 +77,8 @@ namespace Raven.Tests.Issues
 				var keys = new BlockingCollection<string>();
 				var ages = new BlockingCollection<int>();
 
-				subscription.Subscribe(x => keys.Add(x.Key));
-				subscription.Subscribe(x => ages.Add(x.DataAsJson.Value<int>("Age")));
+				subscription.Subscribe(x => keys.Add(x[Constants.Metadata].Value<string>("@id")));
+				subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
 
 				string key;
 				Assert.True(keys.TryTake(out key, waitForDocTimeout));
@@ -112,7 +112,7 @@ namespace Raven.Tests.Issues
 
 				var names = new BlockingCollection<string>();
 
-				subscription.Subscribe(x => names.Add(x.DataAsJson.Value<string>("Name")));
+				subscription.Subscribe(x => names.Add(x.Value<string>("Name")));
 				
 				using (var session = store.OpenSession())
 				{
@@ -155,7 +155,7 @@ namespace Raven.Tests.Issues
 					AcknowledgmentTimeout = TimeSpan.FromSeconds(0) // the client won't be able to acknowledge in 0 seconds
 				});
 
-				var docs = new BlockingCollection<JsonDocument>();
+				var docs = new BlockingCollection<RavenJObject>();
 
 				subscriptionZeroTimeout.Subscribe(docs.Add);
 
@@ -165,16 +165,16 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				JsonDocument document;
+				RavenJObject document;
 
 				Assert.True(docs.TryTake(out document, waitForDocTimeout));
-				Assert.Equal("Raven", document.DataAsJson.Value<string>("Name"));
+				Assert.Equal("Raven", document.Value<string>("Name"));
 
 				Assert.True(docs.TryTake(out document, waitForDocTimeout));
-				Assert.Equal("Raven", document.DataAsJson.Value<string>("Name"));
+				Assert.Equal("Raven", document.Value<string>("Name"));
 
 				Assert.True(docs.TryTake(out document, waitForDocTimeout));
-				Assert.Equal("Raven", document.DataAsJson.Value<string>("Name"));
+				Assert.Equal("Raven", document.Value<string>("Name"));
 
 				subscriptionZeroTimeout.Dispose();
 
@@ -185,12 +185,12 @@ namespace Raven.Tests.Issues
 					AcknowledgmentTimeout = TimeSpan.FromSeconds(30)
 				});
 
-				var docs2 = new BlockingCollection<JsonDocument>();
+				var docs2 = new BlockingCollection<RavenJObject>();
 
 				subscriptionLongerTimeout.Subscribe(docs2.Add);
 
 				Assert.True(docs2.TryTake(out document, waitForDocTimeout));
-				Assert.Equal("Raven", document.DataAsJson.Value<string>("Name"));
+				Assert.Equal("Raven", document.Value<string>("Name"));
 
 				Assert.False(docs2.TryTake(out document, waitForDocTimeout));
 			}
@@ -261,10 +261,10 @@ namespace Raven.Tests.Issues
 					MaxSize = 16 * 1024
 				});
 
-				var batches = new List<List<JsonDocument>>();
+				var batches = new List<List<RavenJObject>>();
 
 				subscription.BeforeBatch +=
-					() => batches.Add(new List<JsonDocument>());
+					() => batches.Add(new List<RavenJObject>());
 
 				subscription.Subscribe(x =>
 				{
@@ -302,7 +302,7 @@ namespace Raven.Tests.Issues
 
 				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions { MaxDocCount = 31 });
 
-				var docs = new List<JsonDocument>();
+				var docs = new List<RavenJObject>();
 
 				subscription.Subscribe(docs.Add);
 
@@ -311,7 +311,7 @@ namespace Raven.Tests.Issues
 
 				foreach (var jsonDocument in docs)
 				{
-					Assert.Equal("Users", jsonDocument.Metadata.Value<string>(Constants.RavenEntityName));
+					Assert.Equal("Users", jsonDocument[Constants.Metadata].Value<string>(Constants.RavenEntityName));
 				}
 			}
 		}
@@ -338,7 +338,7 @@ namespace Raven.Tests.Issues
 
 				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions { MaxDocCount = 15 });
 
-				var docs = new List<JsonDocument>();
+				var docs = new List<RavenJObject>();
 
 				subscription.Subscribe(docs.Add);
 
@@ -347,7 +347,7 @@ namespace Raven.Tests.Issues
 
 				foreach (var jsonDocument in docs)
 				{
-					Assert.True(jsonDocument.Key.StartsWith("users/favorite/"));
+					Assert.True(jsonDocument[Constants.Metadata].Value<string>("@id").StartsWith("users/favorite/"));
 				}
 			}
 		}
@@ -387,7 +387,7 @@ namespace Raven.Tests.Issues
 
 				var carolines = store.Subscriptions.Open(id, new SubscriptionBatchOptions { MaxDocCount = 5 });
 
-				var docs = new List<JsonDocument>();
+				var docs = new List<RavenJObject>();
 
 				carolines.Subscribe(docs.Add);
 
@@ -396,7 +396,7 @@ namespace Raven.Tests.Issues
 
 				foreach (var jsonDocument in docs)
 				{
-					Assert.Equal("Caroline", jsonDocument.DataAsJson.Value<string>("Name"));
+					Assert.Equal("Caroline", jsonDocument.Value<string>("Name"));
 				}
 			}
 		}
@@ -436,7 +436,7 @@ namespace Raven.Tests.Issues
 
 				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions { MaxDocCount = 5 });
 
-				var docs = new List<JsonDocument>();
+				var docs = new List<RavenJObject>();
 
 				subscription.Subscribe(docs.Add);
 
@@ -445,7 +445,7 @@ namespace Raven.Tests.Issues
 
 				foreach (var jsonDocument in docs)
 				{
-					Assert.True(jsonDocument.DataAsJson.ContainsKey("Name") == false || jsonDocument.DataAsJson.Value<string>("Name") != "Caroline");
+					Assert.True(jsonDocument.ContainsKey("Name") == false || jsonDocument.Value<string>("Name") != "Caroline");
 				}
 			}
 		}

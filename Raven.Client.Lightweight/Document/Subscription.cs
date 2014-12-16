@@ -15,16 +15,17 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Database.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
-	public class Subscription : IObservable<JsonDocument>, IDisposable
+	public class Subscription : IObservable<RavenJObject>, IDisposable
 	{
 		private readonly SubscriptionBatchOptions options;
 		private readonly string connectionId;
 		private readonly IAsyncDatabaseCommands commands;
 		private readonly IDatabaseChanges changes;
-		private readonly ConcurrentSet<IObserver<JsonDocument>> subscribers = new ConcurrentSet<IObserver<JsonDocument>>();
+		private readonly ConcurrentSet<IObserver<RavenJObject>> subscribers = new ConcurrentSet<IObserver<RavenJObject>>();
 		private readonly long id;
 		private readonly CancellationTokenSource cts = new CancellationTokenSource();
 		private bool pullingStarted;
@@ -86,7 +87,7 @@ namespace Raven.Client.Document
 
 									cts.Token.ThrowIfCancellationRequested();
 
-									var jsonDoc = SerializationHelper.RavenJObjectToJsonDocument(streamedDocs.Current);
+									var jsonDoc = streamedDocs.Current;
 									foreach (var subscriber in subscribers)
 									{
 										subscriber.OnNext(jsonDoc);
@@ -140,7 +141,7 @@ namespace Raven.Client.Document
 			});
 		}
 
-		public IDisposable Subscribe(IObserver<JsonDocument> observer)
+		public IDisposable Subscribe(IObserver<RavenJObject> observer)
 		{
 			if (PullingTask != null && PullingTask.IsFaulted)
 				throw new InvalidOperationException("Cannot subscribe because the subscription pulling task is faulted", PullingTask.Exception);
