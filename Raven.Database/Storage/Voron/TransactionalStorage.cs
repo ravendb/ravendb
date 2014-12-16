@@ -204,10 +204,18 @@ namespace Raven.Storage.Voron
 
                 action(storageActionsAccessor);
                 storageActionsAccessor.SaveAllTasks();
+				storageActionsAccessor.ExecuteBeforeStorageCommit();
 
-                tableStorage.Write(writeBatchRef.Value);
+				tableStorage.Write(writeBatchRef.Value);
 
-	            return storageActionsAccessor.ExecuteOnStorageCommit;
+	            try
+	            {
+		            return storageActionsAccessor.ExecuteOnStorageCommit;
+	            }
+	            finally
+	            {
+					storageActionsAccessor.ExecuteAfterStorageCommit();
+	            }
             }
             finally
             {

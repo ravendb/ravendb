@@ -17,7 +17,7 @@ namespace Raven.Database.Indexing
 		public Action BeforeMoveNext = delegate { };
 		public Action CancelMoveNext = delegate { };
 		public Action<Exception, object> OnError = delegate { };
-		public Stopwatch MoveNextDutation = new Stopwatch();
+		public Stopwatch MoveNextDuration = new Stopwatch();
 		private readonly CancellationToken cancellationToken;
 		private readonly int numberOfConsecutiveErrors;
 
@@ -153,7 +153,7 @@ namespace Raven.Database.Indexing
 
 		private bool? MoveNext(IEnumerator en, StatefulEnumerableWrapper<object> innerEnumerator)
 		{
-			MoveNextDutation.Start();
+			MoveNextDuration.Start();
 			try
 			{
 				BeforeMoveNext();
@@ -171,7 +171,7 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
-				MoveNextDutation.Stop();
+				MoveNextDuration.Stop();
 			}
 
 			return null;

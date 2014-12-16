@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions.Data;
 using Raven.Tests.Common;
 
 namespace Raven.Tests.Storage.Bugs
