@@ -18,6 +18,7 @@ using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Extensions;
@@ -66,14 +67,13 @@ namespace Raven.Abstractions.Smuggler
 					ReadLastEtagsFromFile(result);
 				}
 
-                result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
+                result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-0", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
 				if (File.Exists(result.FilePath))
 				{
 					var counter = 1;
 					while (true)
 					{
-						// ReSharper disable once AssignNullToNotNullAttribute
-                        result.FilePath = Path.Combine(Path.GetDirectoryName(result.FilePath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-incremental-dump");
+                        result.FilePath = Path.Combine(Path.GetDirectoryName(result.FilePath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + "-" + counter + ".ravendb-incremental-dump");
 
 						if (File.Exists(result.FilePath) == false)
 							break;
@@ -242,7 +242,7 @@ namespace Raven.Abstractions.Smuggler
 
         public static void ReadLastEtagsFromFile(OperationState result, string etagFileLocation)
         {
-            var log = LogManager.GetCurrentClassLogger();
+            var log = LogManager.GetCurrentClassLogger();            
 
             if (!File.Exists(etagFileLocation))
                 return;
@@ -564,6 +564,7 @@ namespace Raven.Abstractions.Smuggler
             {
                 using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files[i])))
                 {
+                    Operations.ShowProgress("Starting to import file: {0}", files[i]);
                     await ImportData(importOptions, fileStream);
                 }
             }
@@ -572,6 +573,7 @@ namespace Raven.Abstractions.Smuggler
 
             using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files.Last())))
             {
+                Operations.ShowProgress("Starting to import file: {0}", files.Last());
                 await ImportData(importOptions, fileStream);
             }
 		}
@@ -866,6 +868,7 @@ namespace Raven.Abstractions.Smuggler
 		{
 			var now = SystemTime.UtcNow;
 			var count = 0;
+            string continuationDocId = "Raven/Smuggler/Continuation/" + Options.ContinuationFile;
 
             var state = new OperationState
             {
@@ -873,9 +876,25 @@ namespace Raven.Abstractions.Smuggler
                 LastDocsEtag = Options.StartDocsEtag,
             };
 
+            JsonDocument lastEtagsDocument = null;
             if ( Options.UseContinuationFile )
             {
-                ReadLastEtagsFromFile(state, state.FilePath);
+                lastEtagsDocument = Operations.GetDocument(continuationDocId);
+                if ( lastEtagsDocument == null )
+                {
+                    lastEtagsDocument = new JsonDocument()
+                    {
+                        Key = continuationDocId,                        
+                        Etag = Etag.Empty,
+                        DataAsJson = RavenJObject.FromObject(state)
+                    };
+                }
+                else
+                {                    
+                    state = lastEtagsDocument.DataAsJson.JsonDeserialization<OperationState>();
+                }
+
+                lastEtagsDocument.Metadata["@id"] = continuationDocId;
             }
 
             int skippedDocuments = 0;
@@ -888,7 +907,7 @@ namespace Raven.Abstractions.Smuggler
                 Options.CancelToken.Token.ThrowIfCancellationRequested();
 
 				var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
-				var size = DocumentHelpers.GetRoughSize(document);
+                var size = DocumentHelpers.GetRoughSize(document);
 				if (size > 1024 * 1024)
 				{
 					Console.WriteLine("Large document warning: {0:#,#.##;;0} kb - {1}",
@@ -918,13 +937,12 @@ namespace Raven.Abstractions.Smuggler
 
                     if (Options.StripReplicationInformation)
                         document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
-
                 }
 
                 if ( Options.UseContinuationFile )
                 {
                     tempLastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
-                    if (tempLastEtag.CompareTo(state.LastDocsEtag) < 0) // tempLastEtag < lastEtag therefore we are skipping.
+                    if (tempLastEtag.CompareTo(state.LastDocsEtag) <= 0) // tempLastEtag < lastEtag therefore we are skipping.
                     {
                         skippedDocuments++;
                         skippedDocumentsSize += size;
@@ -937,20 +955,24 @@ namespace Raven.Abstractions.Smuggler
 				count++;
 
                 if (count % Options.BatchSize == 0)
-				{                   
+				{                    
                     if (Options.UseContinuationFile)
-                    {
+                    {                        
                         if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
                             state.LastDocsEtag = tempLastEtag;
 
-                        WriteLastEtagsToFile(state, state.FilePath);
+                        lastEtagsDocument.DataAsJson = RavenJObject.FromObject(state);                       
+
+                        var stateDocument = lastEtagsDocument.ToJson();
+                        int stateDocumentSize = (int) DocumentHelpers.GetRoughSize(stateDocument);
+                        await Operations.PutDocument(stateDocument, stateDocumentSize);
                     }
 
                     Operations.ShowProgress("Read {0:#,#;;0} documents", count + skippedDocuments);
 				}
 			}
 
-			await Operations.PutDocument(null, -1); // force flush    
+            await Operations.PutDocument(null, -1); // force flush    
 
             if (Options.UseContinuationFile)
             {
