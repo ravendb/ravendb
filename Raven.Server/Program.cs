@@ -70,9 +70,13 @@ namespace Raven.Server
 
 					WaitForUserInputAndExitWithError(errorMessage, args);
 				}
+				catch (OptionException e)
+				{
+					ConsoleWriteLineWithColor(ConsoleColor.Red, e.Message);
+					Environment.Exit(-1);
+				}
 				catch (Exception e)
 				{
-
 					EmitWarningInRed();
 
 					WaitForUserInputAndExitWithError(e.ToString(), args);
@@ -180,7 +184,7 @@ namespace Raven.Server
 				ravenConfiguration.Initialize();
 				actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.Admin, ravenConfiguration, launchBrowser, noLog);
 			});
-			optionSet.Add("debug", OptionCategory.General, "Runs RavenDB in debug mode", key => actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser, noLog));
+			optionSet.Add("debug", OptionCategory.General, "Run RavenDB in debug mode", key => actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser, noLog));
 			optionSet.Add("browser|launchbrowser", OptionCategory.General, "After the server starts, launches the browser", key => launchBrowser = true);
 			optionSet.Add("help", OptionCategory.Help, "Help about the command line interface", key =>
 			{
@@ -204,7 +208,7 @@ namespace Raven.Server
 				{
 					if (backupLocation == null || restoreLocation == null)
 					{
-						throw new OptionException("when using --restore-system-database, --restore-source and --restore-destination must be specified", "restore-system-database");
+						throw new OptionException("When using --restore-system-database, --restore-source and --restore-destination must be specified", "restore-system-database");
 					}
 					RunSystemDatabaseRestoreOperation(backupLocation, restoreLocation, defrag);
 				};
@@ -216,13 +220,13 @@ namespace Raven.Server
 				{
 					if (backupLocation == null)
 					{
-						throw new OptionException("when using --restore-database, --restore-source must be specified", "restore-database");
+						throw new OptionException("When using --restore-database, --restore-source must be specified", "restore-database");
 					}
 
 					Uri uri;
 					if (Uri.TryCreate(url, UriKind.Absolute, out uri) == false)
 					{
-						throw new OptionException("specified destination server url is not valid", "restore-database");
+						throw new OptionException("Specified destination server url is not valid", "restore-database");
 					}
 
 					RunRemoteDatabaseRestoreOperation(backupLocation, restoreLocation, restoreDatabaseName, defrag, restoreDisableReplication, uri, waitForRestore, restoreStartTimeout);
@@ -236,13 +240,13 @@ namespace Raven.Server
 				{
 					if (backupLocation == null)
 					{
-						throw new OptionException("when using --restore-filesystem, --restore-source must be specified", "restore-filesystem");
+						throw new OptionException("When using --restore-filesystem, --restore-source must be specified", "restore-filesystem");
 					}
 
 					Uri uri;
 					if (Uri.TryCreate(url, UriKind.Absolute, out uri) == false)
 					{
-						throw new OptionException("specified destination server url is not valid", "restore-database");
+						throw new OptionException("Specified destination server url is not valid", "restore-database");
 					}
 
 					RunRemoteFilesystemRestoreOperation(backupLocation, restoreLocation, restoreFilesystemName, defrag, uri, waitForRestore, restoreStartTimeout);
@@ -265,7 +269,7 @@ namespace Raven.Server
 				int timeout;
 				if (int.TryParse(value, out timeout) == false)
 				{
-					throw new OptionException("specified restore start timeout is not valid", "restore-start-timeout");
+					throw new OptionException("Specified restore start timeout is not valid", "restore-start-timeout");
 				}
 				restoreStartTimeout = timeout;
 				requiresRestoreAction.Add("restore-start-timeout");
@@ -306,7 +310,7 @@ namespace Raven.Server
 				int fileSize;
 				if (int.TryParse(value, out fileSize) == false)
 				{
-					throw new OptionException("specified test file size is not valid", "io-test-file-size");
+					throw new OptionException("Specified test file size is not valid", "io-test-file-size");
 				}
 				ioTestRequest.FileSize = fileSize * 1024 * 1024;
 				requiresIoTestAction.Add("io-test-file-size");
@@ -316,7 +320,7 @@ namespace Raven.Server
 				int threads;
 				if (int.TryParse(value, out threads) == false)
 				{
-					throw new OptionException("specified amount of threads is not valid", "io-test-threads");
+					throw new OptionException("Specified amount of threads is not valid", "io-test-threads");
 				}
 				ioTestRequest.ThreadCount = threads;
 				requiresIoTestAction.Add("io-test-threads");
@@ -326,7 +330,7 @@ namespace Raven.Server
 				int testTime;
 				if (int.TryParse(value, out testTime) == false)
 				{
-					throw new OptionException("specified test time is not valid", "io-test-time");
+					throw new OptionException("Specified test time is not valid", "io-test-time");
 				}
 				ioTestRequest.TimeToRunInSeconds = testTime;
 				requiresIoTestAction.Add("io-test-time");
@@ -336,7 +340,7 @@ namespace Raven.Server
 				int seed;
 				if (int.TryParse(value, out seed) == false)
 				{
-					throw new OptionException("specified random seed is not valid", "io-test-seed");
+					throw new OptionException("Specified random seed is not valid", "io-test-seed");
 				}
 				ioTestRequest.RandomSeed = seed;
 				requiresIoTestAction.Add("io-test-seed");
@@ -346,7 +350,7 @@ namespace Raven.Server
 				OperationType opType;
 				if (Enum.TryParse(value, true, out opType) == false)
 				{
-					throw new OptionException("specified test mode is not valid", "io-test-mode");
+					throw new OptionException("Specified test mode is not valid", "io-test-mode");
 				}
 				ioTestRequest.OperationType = opType;
 				requiresIoTestAction.Add("io-test-mode");
@@ -356,7 +360,7 @@ namespace Raven.Server
 				int chunkSize;
 				if (int.TryParse(value, out chunkSize) == false)
 				{
-					throw new OptionException("specified test chunk size is not valid", "io-test-chunk-size");
+					throw new OptionException("Specified test chunk size is not valid", "io-test-chunk-size");
 				}
 				ioTestRequest.ChunkSize = chunkSize * 1024;
 				requiresIoTestAction.Add("io-test-chunk-size");
@@ -371,7 +375,7 @@ namespace Raven.Server
 				BufferingType bufferingType;
 				if (Enum.TryParse(value, true, out bufferingType) == false)
 				{
-					throw new OptionException("specified buffering type is not valid", "io-test-buffering-type");
+					throw new OptionException("Specified buffering type is not valid", "io-test-buffering-type");
 				}
 				ioTestRequest.BufferingType = bufferingType;
 				requiresIoTestAction.Add("io-test-buffering-type");
@@ -414,28 +418,37 @@ namespace Raven.Server
 			}
 			catch (Exception e)
 			{
-				Console.WriteLine(e.Message);
+				ConsoleWriteLineWithColor(ConsoleColor.Red, e.Message);
 				PrintUsage(optionSet);
+				ConsoleWriteLineWithColor(ConsoleColor.Red, e.Message);
+				Environment.Exit(-1);
 				return;
 			}
 
 			if (!isRestoreAction && requiresRestoreAction.Any())
 			{
 				var joinedActions = string.Join(", ", requiresRestoreAction);
-				throw new OptionException(string.Format("when using {0}, --restore-source must be specified", joinedActions), joinedActions);
+				throw new OptionException(string.Format("When using {0}, --restore-source must be specified", joinedActions), joinedActions);
 			}
 
 			if (!isIoTestAction && requiresIoTestAction.Any())
 			{
 				var joinedActions = string.Join(", ", requiresRestoreAction);
-				throw new OptionException(string.Format("when using {0}, --io-test must be specified", joinedActions), joinedActions);
+				throw new OptionException(string.Format("When using {0}, --io-test must be specified", joinedActions), joinedActions);
 			}
 
 			if (actionToTake == null)
 				actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser, noLog);
 
 			actionToTake();
+		}
 
+		private static void ConsoleWriteLineWithColor(ConsoleColor color, string message, params object[] args)
+		{
+			var previousColor = Console.ForegroundColor;
+			Console.ForegroundColor = color;
+			Console.WriteLine(message, args);
+			Console.ForegroundColor = previousColor;
 		}
 
 		private static void RunRemoteDatabaseRestoreOperation(string backupLocation, string restoreLocation, string restoreDatabaseName, bool defrag, bool disableReplicationDestionations, Uri uri, bool waitForRestore, int? timeout)
@@ -670,9 +683,9 @@ namespace Raven.Server
 				@"
 Raven DB
 Document Database for the .Net Platform
-----------------------------------------
+----------------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
-----------------------------------------
+----------------------------------------------
 Configuration databaseOptions:
 ",
 				SystemTime.UtcNow.Year);
@@ -899,13 +912,13 @@ Configuration databaseOptions:
 
 		private static void PrintUsage(OptionSet optionSet)
 		{
-			Console.WriteLine(
+			ConsoleWriteLineWithColor(ConsoleColor.DarkMagenta,
 				@"
 RavenDB
-Document Database for the .Net Platform
-----------------------------------------
+Document Database for the .NET Platform
+----------------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
-----------------------------------------
+----------------------------------------------
 Command line options:",
 				SystemTime.UtcNow.Year);
 

@@ -141,7 +141,6 @@ using System.Linq;
 #if TEST
 using NDesk.Options;
 #endif
-using Raven.Database.FileSystem.Extensions;
 
 namespace NDesk.Options
 {
@@ -793,6 +792,8 @@ namespace NDesk.Options
 			return true;
 		}
 
+		private OptionCategory currentCategory = OptionCategory.None;
+
 		protected virtual bool Parse(string argument, OptionContext c)
 		{
 			if (c.Option != null)
@@ -809,6 +810,9 @@ namespace NDesk.Options
 			if (Contains(n))
 			{
 				p = this[n];
+
+				CheckCategory(p, f, n);
+
 				c.OptionName = f + n;
 				c.Option = p;
 				switch (p.OptionValueType)
@@ -832,6 +836,24 @@ namespace NDesk.Options
 				return true;
 
 			return false;
+		}
+
+		private void CheckCategory(Option p, string f, string n)
+		{
+			if (currentCategory == OptionCategory.None)
+			{
+				currentCategory = p.Category;
+			}
+			else if (p.Category.HasFlag(currentCategory) || p.Category == OptionCategory.None)
+			{
+				currentCategory |= p.Category;
+			}
+			else
+			{
+				var category = currentCategory;
+				category &= ~OptionCategory.None;
+				throw new InvalidOperationException(string.Format("Cannot use options from different category. Current category: '{0}'. Invalid option: '{1}' from category '{2}'.", category, f + n, p.Category));
+			}
 		}
 
 		private void ParseValue(string option, OptionContext c)
@@ -941,17 +963,17 @@ namespace NDesk.Options
 
 			foreach (var key in results.Keys)
 			{
+				if (currentCategory.HasFlag(key) == false && currentCategory != OptionCategory.None && currentCategory != OptionCategory.Help && key != OptionCategory.Help && key != OptionCategory.None)
+					continue;
+
 				var options = results[key];
 				if (options.Count == 0)
 					continue;
 
 				o.WriteLine();
-				if (key != OptionCategory.None)
-				{
-					o.WriteLine("----------------------------------------");
-					o.WriteLine(key.GetDescription());
-					o.WriteLine("----------------------------------------");
-				}
+				o.WriteLine("----------------------------------------------");
+				o.WriteLine(GetDescription(key));
+				o.WriteLine("----------------------------------------------");
 				o.WriteLine();
 
 				foreach (Option p in options)
@@ -1180,11 +1202,29 @@ namespace NDesk.Options
 				return end;
 			return sep;
 		}
+
+		private static string GetDescription(Enum enumerationValue)
+		{
+			var type = enumerationValue.GetType();
+			var memberInfo = type.GetMember(enumerationValue.ToString());
+			if (memberInfo.Length > 0)
+			{
+				var attributes = memberInfo[0].GetCustomAttributes(typeof(DescriptionAttribute), false);
+
+				if (attributes.Length > 0)
+				{
+					return ((DescriptionAttribute)attributes[0]).Description;
+				}
+			}
+
+			return enumerationValue.ToString();
+		}
 	}
 
 	[Flags]
 	public enum OptionCategory
 	{
+		[Description("Global (can be used with other categories)")]
 		None = 1 << 0,
 
 		General = 1 << 1,
@@ -1209,6 +1249,12 @@ namespace NDesk.Options
 		Help = 1 << 9,
 
 		Other = 1 << 10,
+
+		[Description("Import/Export Database")]
+		SmugglerDatabase = 1 << 11,
+
+		[Description("Import/Export FileSystem")]
+		SmugglerFileSystem = 1 << 12,
 	}
 }
 
