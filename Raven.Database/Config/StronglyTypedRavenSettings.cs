@@ -105,6 +105,8 @@ namespace Raven.Database.Config
 			MaxNumberOfParallelProcessingTasks =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfParallelProcessingTasks"] ?? settings["Raven/MaxNumberOfParallelIndexTasks"], Environment.ProcessorCount, 1);
 
+			NewIndexInMemoryMaxTime =
+				new TimeSpanSetting(settings["Raven/NewIndexInMemoryMaxTime"], TimeSpan.FromMinutes(15), TimeSpanArgumentType.FromParse);
 			NewIndexInMemoryMaxMb =
 				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/NewIndexInMemoryMaxMB"], 64, 1), 1024 * 1024);
 			RunInMemory =
@@ -147,6 +149,8 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/WebDir"], GetDefaultWebDir);
 			PluginsDirectory =
 				new StringSetting(settings["Raven/PluginsDirectory"], @"~\Plugins");
+            AssembliesDirectory =
+                new StringSetting(settings["Raven/AssembliesDirectory"], @"~\Assemblies");
 			CompiledIndexCacheDirectory =
 				new StringSetting(settings["Raven/CompiledIndexCacheDirectory"], @"~\Raven\CompiledIndexCache");
 			TaskScheduler =
@@ -279,6 +283,8 @@ namespace Raven.Database.Config
 
 		public MultipliedIntegerSetting NewIndexInMemoryMaxMb { get; private set; }
 
+		public TimeSpanSetting NewIndexInMemoryMaxTime { get; private set; }
+
 		public BooleanSetting RunInMemory { get; private set; }
 
 		public BooleanSetting CreateAutoIndexesForAdHocQueriesIfNeeded { get; private set; }
@@ -322,6 +328,8 @@ namespace Raven.Database.Config
 		public StringSetting PluginsDirectory { get; private set; }
 
 		public StringSetting CompiledIndexCacheDirectory { get; private set; }
+
+        public StringSetting AssembliesDirectory { get; private set; }
 
 		public StringSetting TaskScheduler { get; private set; }
 

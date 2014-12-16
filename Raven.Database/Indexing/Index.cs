@@ -111,7 +111,7 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Creating index for {0}", indexId);
 			this.directory = directory;
 			flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
-
+			_indexCreationTime = SystemTime.UtcNow;
 			RecreateSearcher();
 		}
 
@@ -164,6 +164,7 @@ namespace Raven.Database.Indexing
 
 		[CLSCompliant(false)]
 		public volatile bool IsMapIndexingInProgress;
+		private DateTime _indexCreationTime;
 
 		protected IndexingPerformanceStats RecordCurrentBatch(string indexingStep, int itemsCount)
 		{
@@ -520,15 +521,14 @@ namespace Raven.Database.Indexing
 
 						if (itemsInfo.ChangedDocs > 0)
 						{
-							WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
-
+							WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);                            
 							if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
 							{
 								var sw = Stopwatch.StartNew();
 								Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
 								writeIndexStat.FlushToDiskDurationMs = sw.ElapsedMilliseconds;
 								flushed = true;
-							}
+                            }
 
 							UpdateIndexingStats(context, stats);
 						}
@@ -664,7 +664,9 @@ namespace Raven.Database.Indexing
 			var stale = IsUpToDateEnoughToWriteToDisk(highestETag) == false;
 			var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;
 
-			if (forceWriteToDisk || toobig || !stale)
+			var tooOld = (SystemTime.UtcNow - _indexCreationTime) > context.Configuration.NewIndexInMemoryMaxTime;
+
+			if (forceWriteToDisk || toobig || !stale || tooOld)
 			{
 				indexWriter.Commit(highestETag);
 				var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition);
@@ -1095,6 +1097,16 @@ namespace Raven.Database.Indexing
 
 			public IEnumerable<RavenJObject> IndexEntries(Reference<int> totalResults)
 			{
+				var returnFullEntries = reduceKeys == null || reduceKeys.Count == 0;
+				HashSet<RavenJToken> reduceValuesJson = null;
+				if (returnFullEntries == false)
+				{
+					reduceValuesJson =new HashSet<RavenJToken>(RavenJTokenEqualityComparer.Default);
+					foreach (var reduceKey in reduceKeys)
+					{
+						reduceValuesJson.Add(new RavenJValue(reduceKey));
+					}
+				}
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
 				{
@@ -1117,15 +1129,15 @@ namespace Raven.Database.Indexing
 								ravenJObject.Remove(prop.Key);
 							}
 
-							if (reduceKeys == null)
-								yield return ravenJObject;
-							else
+							if (returnFullEntries)
 							{
-								RavenJToken reduceKeyValue;
-								if (ravenJObject.TryGetValue(Constants.ReduceKeyFieldName, out reduceKeyValue) && reduceKeys.Any(x => reduceKeyValue.Equals(new RavenJValue(x))))
-								{
-									yield return ravenJObject;
-								}
+								yield return ravenJObject;
+								continue;
+							}
+							RavenJToken reduceKeyValue;
+							if (ravenJObject.TryGetValue(Constants.ReduceKeyFieldName, out reduceKeyValue) && reduceValuesJson.Contains(reduceKeyValue))
+							{
+								yield return ravenJObject;
 							}
 						}
 					}
