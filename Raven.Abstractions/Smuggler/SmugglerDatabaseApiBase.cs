@@ -961,31 +961,36 @@ namespace Raven.Abstractions.Smuggler
                         if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
                             state.LastDocsEtag = tempLastEtag;
 
-                        lastEtagsDocument.DataAsJson = RavenJObject.FromObject(state);                       
-
-                        var stateDocument = lastEtagsDocument.ToJson();
-                        int stateDocumentSize = (int) DocumentHelpers.GetRoughSize(stateDocument);
-                        await Operations.PutDocument(stateDocument, stateDocumentSize);
+                        await WriteLastEtagToDatabase(state, lastEtagsDocument);
                     }
 
                     Operations.ShowProgress("Read {0:#,#;;0} documents", count + skippedDocuments);
 				}
-			}
-
-            await Operations.PutDocument(null, -1); // force flush    
+			}            
 
             if (Options.UseContinuationFile)
             {
                 if (tempLastEtag.CompareTo(state.LastDocsEtag) > 0)
                     state.LastDocsEtag = tempLastEtag;
 
-                WriteLastEtagsToFile(state, state.FilePath);
+                await WriteLastEtagToDatabase(state, lastEtagsDocument);
 
                 Operations.ShowProgress("Documents skipped by continuation {0:#,#;;0} - approx. {1:#,#.##;;0} Mb.", skippedDocuments, (double)skippedDocumentsSize / 1024 / 1024);
             }
 
+            await Operations.PutDocument(null, -1); // force flush    
+
 			return count;
 		}
+
+        private async Task WriteLastEtagToDatabase(OperationState state, JsonDocument lastEtagsDocument)
+        {
+            lastEtagsDocument.DataAsJson = RavenJObject.FromObject(state);
+
+            var stateDocument = lastEtagsDocument.ToJson();
+            int stateDocumentSize = (int)DocumentHelpers.GetRoughSize(stateDocument);
+            await Operations.PutDocument(stateDocument, stateDocumentSize);
+        }
 
 		private async Task<int> ImportIndexes(JsonReader jsonReader)
 		{
