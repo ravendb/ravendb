@@ -19,13 +19,14 @@ namespace Raven.Database.Server.WebApi
 
 		private const string InfoDataTokenKey = "info";
 
-		private static readonly Dictionary<string, HttpRouteInformation> RouteCache = new Dictionary<string, HttpRouteInformation>();
+		private static Dictionary<string, HttpRouteInformation> RouteCache;
 
 		public static void CacheRoutesIfNecessary(HttpConfiguration cfg)
 		{
-			if (RouteCache.Count > 0)
+			if (RouteCache != null)
 				return;
 
+			var cache = new Dictionary<string, HttpRouteInformation>();
 			for (var i = 0; i < cfg.Routes.Count; i++)
 			{
 				var j = 0;
@@ -33,15 +34,18 @@ namespace Raven.Database.Server.WebApi
 
 				foreach (var routeInformation in CacheRoutes(route))
 				{
-					RouteCache.Add(string.Format("RavenDB_Route_{0}_{1}", i, j), routeInformation);
+					cache.Add(string.Format("RavenDB_Route_{0}_{1}", i, j), routeInformation);
 					j++;
 				}
 			}
+
+			RouteCache = cache;
 		}
 
 		public static bool TryAddRoutesFromCache(HttpConfiguration cfg)
 		{
-			if (RouteCache.Count == 0)
+			var cache = RouteCache;
+			if (cache == null)
 				return false;
 
 			var previousInitializer = cfg.Initializer;
@@ -50,7 +54,7 @@ namespace Raven.Database.Server.WebApi
 				previousInitializer(config);
 
 				var controllerDescriptors = new Dictionary<Type, HttpControllerDescriptor>();
-				foreach (var pair in RouteCache)
+				foreach (var pair in cache)
 				{
 					var name = pair.Key;
 					var route = pair.Value;
