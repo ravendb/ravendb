@@ -114,6 +114,17 @@ namespace Raven.Database.Server.Controllers
 			return GetEmptyMessage();
 		}
 
+		[HttpGet]
+		[Route("subscriptions")]
+		[Route("databases/{databaseName}/subscriptions")]
+		public HttpResponseMessage Get()
+		{
+			var start = GetStart();
+			var take = GetPageSize(Database.Configuration.MaxPageSize);
+
+			return GetMessageWithObject(Database.Subscriptions.GetSubscriptions(start, take));
+		}
+
 		private void StreamToClient(long id, SubscriptionActions subscriptions, Stream stream)
 		{
 			var sentDocuments = false;

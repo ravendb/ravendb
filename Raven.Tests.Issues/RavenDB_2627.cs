@@ -449,5 +449,40 @@ namespace Raven.Tests.Issues
 				}
 			}
 		}
+
+		[Fact]
+		public void CanGetSubscriptionsFromDatabase()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
+
+				Assert.Equal(0, subscriptionDocuments.Count);
+
+				store.Subscriptions.Create(new SubscriptionCriteria
+				{
+					KeyStartsWith = "users/"
+				});
+
+				subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
+
+				Assert.Equal(1, subscriptionDocuments.Count);
+				Assert.Equal("users/", subscriptionDocuments[0].Criteria.KeyStartsWith);
+
+				var subscription = store.Subscriptions.Open(subscriptionDocuments[0].SubscriptionId, new SubscriptionBatchOptions());
+
+				var docs = new List<RavenJObject>();
+				subscription.Subscribe(docs.Add);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				Assert.True(SpinWait.SpinUntil(() => docs.Count >= 1, TimeSpan.FromSeconds(60)));
+			}
+		}
+
 	}
 }

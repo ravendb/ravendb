@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -96,6 +97,24 @@ namespace Raven.Client.Document
 			subscriptions.Add(subscription);
 
 			return subscription;
+		}
+
+		public List<SubscriptionDocument> GetSubscriptions(int start, int take, string database = null)
+		{
+			var commands = database == null
+				? documentStore.AsyncDatabaseCommands
+				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
+
+			List<SubscriptionDocument> documents;
+
+			using (var request = commands.CreateRequest("/subscriptions", "GET"))
+			{
+				var response = request.ReadResponseJson();
+
+				documents = documentStore.Conventions.CreateSerializer().Deserialize<SubscriptionDocument[]>(new RavenJTokenReader(response)).ToList();
+			}
+
+			return documents;
 		}
 
 		public void Dispose()

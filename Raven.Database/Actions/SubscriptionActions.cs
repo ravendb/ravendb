@@ -5,6 +5,9 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -67,7 +70,7 @@ namespace Raven.Database.Actions
 				BatchOptions = options
 			};
 
-			return openSubscriptions.TryAdd(id, subscriptionWorkContext);
+			return openSubscriptions.TryAdd(id, subscriptionWorkContext); //TODO arek - need to add some timeout to allow to release the subscription
 		}
 
 		public void ReleaseSubscription(long id)
@@ -147,6 +150,22 @@ namespace Raven.Database.Actions
 
 				SaveSubscriptionDocument(id, doc);
 			});
+		}
+
+		public List<SubscriptionDocument> GetSubscriptions(int start, int take)
+		{
+			var subscriptions = new List<SubscriptionDocument>();
+
+			TransactionalStorage.Batch(accessor =>
+			{
+				foreach (var listItem in accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, start, take))
+				{
+					var doc = listItem.Data.JsonDeserialization<SubscriptionDocument>();
+					subscriptions.Add(doc);
+				}
+			});
+
+			return subscriptions;
 		}
 	}
 }
