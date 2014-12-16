@@ -115,7 +115,7 @@
     <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
     <Compile Include="Convention.cs" />
     <Compile Include="Document\Subscription.cs" />
-    <Compile Include="Document\SubscriptionChannel.cs" />
+    <Compile Include="Document\DocumentSubscriptions.cs" />
     <Compile Include="Extensions\Internal\HttpJsonRequestExtensions.cs" />
     <Compile Include="FileSystem\AbstractFilesQuery.cs" />
     <Compile Include="FileSystem\AsyncFilesSession.cs" />

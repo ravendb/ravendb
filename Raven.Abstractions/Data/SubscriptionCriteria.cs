@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
@@ -13,8 +14,8 @@ namespace Raven.Abstractions.Data
 
 		public string BelongsToCollection { get; set; }
 
-		public Dictionary<string, object> PropertiesMatch { get; set; }
+		public Dictionary<string, RavenJToken> PropertiesMatch { get; set; }
 
-		public Dictionary<string, object> PropertiesNotMatch { get; set; } 
+		public Dictionary<string, RavenJToken> PropertiesNotMatch { get; set; } 
 	}
 }

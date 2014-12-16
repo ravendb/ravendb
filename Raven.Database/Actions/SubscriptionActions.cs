@@ -5,11 +5,12 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
-using System.Threading;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Storage;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
@@ -44,10 +45,16 @@ namespace Raven.Database.Actions
 					AckEtag = Etag.Empty
 				};
 
-				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, id.ToString("D19"),  RavenJObject.FromObject(doc), UuidType.Subscriptions);
+				SaveSubscriptionDocument(id, doc);
 			});
 
 			return id;
+		}
+
+		private void SaveSubscriptionDocument(long id, SubscriptionDocument doc)
+		{
+			Database.TransactionalStorage.Batch(accessor => 
+				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, id.ToString("D19"), RavenJObject.FromObject(doc), UuidType.Subscriptions));
 		}
 
 		public bool TryOpenSubscription(long id, SubscriptionBatchOptions options, out string connectionId)
@@ -79,10 +86,15 @@ namespace Raven.Database.Actions
 			TransactionalStorage.Batch(accessor =>
 			{
 				var doc = GetSubscriptionDocument(id);
+				var options = GetBatchOptions(id);
+
+				var timeSinceSendingBatch = SystemTime.UtcNow - doc.LastSentBatchTime;
+				if(timeSinceSendingBatch > options.AcknowledgmentTimeout)
+					throw new TimeoutException("The subscription cannot be acknowledged because the timeout has been reached.");
 
 				doc.AckEtag = lastEtag;
 
-				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, id.ToString("D19"), RavenJObject.FromObject(doc), UuidType.Subscriptions);
+				SaveSubscriptionDocument(id, doc);
 			});
 		}
 
@@ -98,24 +110,6 @@ namespace Raven.Database.Actions
 				throw new InvalidOperationException("Subscription is being opened for a different connection");
 			}
 		}
-
-		//public bool WaitForAcknowledgement(long id, TimeSpan timeout)
-		//{
-		//	SubscriptionWorkContext subscriptionContext;
-		//	if (openSubscriptions.TryGetValue(id, out subscriptionContext) == false)
-		//		return false;
-
-		//	return subscriptionContext.Acknowledgement.WaitOne(timeout);
-		//}
-
-		//public bool WaitForNewDocuments(long id, TimeSpan timeout)
-		//{
-		//	SubscriptionWorkContext subscriptionContext;
-		//	if (openSubscriptions.TryGetValue(id, out subscriptionContext) == false)
-		//		return false;
-
-		//	return subscriptionContext.NewDocuments.WaitOne(timeout);
-		//}
 
 		public SubscriptionBatchOptions GetBatchOptions(long id)
 		{
@@ -143,26 +137,16 @@ namespace Raven.Database.Actions
 			return doc;
 		}
 
-		//public bool HasMoreDocumentsToSent(long id)
-		//{
-		//	SubscriptionWorkContext subscriptionContext;
-			
-		//	if(openSubscriptions.TryGetValue(id, out subscriptionContext) == false)
-		//		throw new InvalidOperationException("No such subscription: " + id);
+		public void UpdateBatchSentTime(long id)
+		{
+			TransactionalStorage.Batch(accessor =>
+			{
+				var doc = GetSubscriptionDocument(id);
 
-		//	lock (subscriptionContext)
-		//	{
-		//		Etag lastDocEtag = null;
+				doc.LastSentBatchTime = SystemTime.UtcNow;
 
-		//		Database.TransactionalStorage.Batch(accessor => lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag());
-
-		//		var lastAckEtag = GetSubscriptionDocument(id).AckEtag;
-
-		//		subscriptionContext.NewDocuments.Reset();
-
-		//		return EtagUtil.IsGreaterThan(lastDocEtag, lastAckEtag);
-		//	}
-		//}
-
+				SaveSubscriptionDocument(id, doc);
+			});
+		}
 	}
 }

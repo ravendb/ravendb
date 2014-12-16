@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -65,14 +66,14 @@ namespace Raven.Client.Document
 						{
 							cts.Token.ThrowIfCancellationRequested();
 
-							Etag lastProcessedEtagInBatch = null;
+							Etag lastProcessedEtagOnServer = null;
 
 							using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, customEndOfResults: reader =>
 							{
 								if (Equals("LastProcessedEtag", reader.Value) == false)
 									return false;
 
-								lastProcessedEtagInBatch = Etag.Parse(reader.ReadAsString().ResultUnwrap());
+								lastProcessedEtagOnServer = Etag.Parse(reader.ReadAsString().ResultUnwrap());
 								return true;
 							}))
 							{
@@ -93,16 +94,23 @@ namespace Raven.Client.Document
 								}
 							}
 
-							if (lastProcessedEtagInBatch != null)
-							{
-								using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtagInBatch, connectionId), "POST"))
-								{
-									acknowledgmentRequest.ExecuteRequest();
-								}
-							}
-
 							if (pulledDocs)
+							{
+								using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtagOnServer, connectionId), "POST"))
+								{
+									try
+									{
+										acknowledgmentRequest.ExecuteRequest();
+									}
+									catch (Exception)
+									{
+										if (acknowledgmentRequest.ResponseStatusCode != HttpStatusCode.RequestTimeout) // ignore acknowledgment timeouts
+											throw;
+									}
+								}
+
 								AfterBatch();
+							}
 						}
 					}
 				} while (pulledDocs);

@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+
 namespace Raven.Abstractions.Data
 {
 	public class SubscriptionDocument
@@ -10,5 +12,6 @@ namespace Raven.Abstractions.Data
 		public long SubscriptionId { get; set; }
 		public SubscriptionCriteria Criteria { get; set; }
 		public Etag AckEtag { get; set; }
+		public DateTime LastSentBatchTime { get; set; }
 	}
 }

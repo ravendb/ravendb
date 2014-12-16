@@ -32,7 +32,7 @@ namespace Raven.Client
 
 			LastEtagHolder = new GlobalLastEtagHolder();
 			TransactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
-			Subscriptions = new SubscriptionChannel(this);
+			Subscriptions = new DocumentSubscriptions(this);
 		}
 
 		public DocumentSessionListeners Listeners

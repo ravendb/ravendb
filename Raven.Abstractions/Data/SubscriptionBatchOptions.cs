@@ -12,13 +12,13 @@ namespace Raven.Abstractions.Data
 		public SubscriptionBatchOptions()
 		{
 			MaxDocCount = 4096;
-			AcknowledgementTimeout = TimeSpan.FromMinutes(1);
+			AcknowledgmentTimeout = TimeSpan.FromMinutes(1);
 		}
 
 		public int? MaxSize { get; set; }
 
 		public int MaxDocCount { get; set; }
 
-		public TimeSpan AcknowledgementTimeout { get; set; }
+		public TimeSpan AcknowledgmentTimeout { get; set; }
 	}
 }

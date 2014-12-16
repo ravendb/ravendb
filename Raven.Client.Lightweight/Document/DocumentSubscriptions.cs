@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -17,12 +16,12 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
-	public class SubscriptionChannel : IReliableSubscriptions
+	public class DocumentSubscriptions : IReliableSubscriptions
 	{
 		private readonly IDocumentStore documentStore;
 		private readonly ConcurrentSet<Subscription> subscriptions = new ConcurrentSet<Subscription>(); 
 
-		public SubscriptionChannel(IDocumentStore documentStore)
+		public DocumentSubscriptions(IDocumentStore documentStore)
 		{
 			this.documentStore = documentStore;
 		}
@@ -38,14 +37,29 @@ namespace Raven.Client.Document
 
 			using (var request = commands.CreateRequest("/subscriptions/create", "POST"))
 			{
-				var json = request.ReadResponseJson();
+				var response = request.ExecuteRawResponseAsync(RavenJObject.FromObject(criteria)).ResultUnwrap();
+				response.AssertNotFailingResponse().WaitUnwrap();
 
-				return json.Value<long>("SubscriptionId");
+				long subscriptionId;
+
+				using (var stream = response.GetResponseStreamWithHttpDecompression().ResultUnwrap())
+				using (var reader = new StreamReader(stream))
+				{
+					subscriptionId = long.Parse(reader.ReadToEnd());
+				}
+
+				return subscriptionId;
 			}
 		}
 
 		public Subscription Open(long id, SubscriptionBatchOptions options, string database = null)
 		{
+			if(options == null)
+				throw new InvalidOperationException("Cannot open a subscription if options are null");
+
+			if(options.MaxSize.HasValue && options.MaxSize.Value < 16 * 1024)
+				throw new InvalidOperationException("Max size value of batch options cannot be less that 16 KB");
+
 			var commands = database == null
 				? documentStore.AsyncDatabaseCommands
 				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
