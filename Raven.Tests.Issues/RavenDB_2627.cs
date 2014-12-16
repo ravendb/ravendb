@@ -105,7 +105,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ShouldSendAllNewAndModifiedDocs()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewRemoteDocumentStore())
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
 				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions());

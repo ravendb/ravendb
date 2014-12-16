@@ -11,7 +11,6 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
-using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Database.Util;
@@ -21,14 +20,14 @@ namespace Raven.Client.Document
 {
 	public class Subscription : IObservable<RavenJObject>, IDisposable
 	{
-		private readonly SubscriptionBatchOptions options;
+		private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
 		private readonly string connectionId;
 		private readonly IAsyncDatabaseCommands commands;
 		private readonly IDatabaseChanges changes;
 		private readonly ConcurrentSet<IObserver<RavenJObject>> subscribers = new ConcurrentSet<IObserver<RavenJObject>>();
 		private readonly long id;
 		private readonly CancellationTokenSource cts = new CancellationTokenSource();
-		private bool pullingStarted;
+		private bool started;
 		private bool disposed;
 
 		public event Action BeforeBatch = delegate { };
@@ -47,16 +46,14 @@ namespace Raven.Client.Document
 
 		private async Task PullDocuments()
 		{
-			if(NewDocumentsObserver != null)
-				NewDocumentsObserver.Dispose();
-
 			try
 			{
-				bool pulledDocs;
-
-				do
+				while (true)
 				{
-					pulledDocs = false;
+					cts.Token.ThrowIfCancellationRequested();
+
+					var pulledDocs = false;
+					Etag lastProcessedEtagOnServer = null;
 
 					using (var subscriptionRequest = commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, connectionId), "GET"))
 					using (var response = await subscriptionRequest.ExecuteRawResponseAsync().ConfigureAwait(false))
@@ -67,9 +64,7 @@ namespace Raven.Client.Document
 						{
 							cts.Token.ThrowIfCancellationRequested();
 
-							Etag lastProcessedEtagOnServer = null;
-
-							using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, customEndOfResults: reader =>
+							using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, customizedEndResult: reader =>
 							{
 								if (Equals("LastProcessedEtag", reader.Value) == false)
 									return false;
@@ -94,28 +89,32 @@ namespace Raven.Client.Document
 									}
 								}
 							}
-
-							if (pulledDocs)
-							{
-								using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtagOnServer, connectionId), "POST"))
-								{
-									try
-									{
-										acknowledgmentRequest.ExecuteRequest();
-									}
-									catch (Exception)
-									{
-										if (acknowledgmentRequest.ResponseStatusCode != HttpStatusCode.RequestTimeout) // ignore acknowledgment timeouts
-											throw;
-									}
-								}
-
-								AfterBatch();
-							}
 						}
 					}
-				} while (pulledDocs);
-				
+
+					if (pulledDocs)
+					{
+						using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}",
+							id, lastProcessedEtagOnServer, connectionId), "POST"))
+						{
+							try
+							{
+								acknowledgmentRequest.ExecuteRequest();
+							}
+							catch (Exception)
+							{
+								if (acknowledgmentRequest.ResponseStatusCode != HttpStatusCode.RequestTimeout) // ignore acknowledgment timeouts
+									throw;
+							}
+						}
+
+						AfterBatch();
+
+						continue; // try to pull more documents from subscription
+					}
+
+					newDocuments.WaitOne();
+				}
 			}
 			catch (Exception ex)
 			{
@@ -128,17 +127,7 @@ namespace Raven.Client.Document
 				}
 
 				throw;
-			}
-
-			PullingTask = null;
-
-			NewDocumentsObserver = changes.ForAllDocuments().Subscribe(notification =>
-			{
-				if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase) == false)
-				{
-					PullingTask = PullDocuments();
-				}
-			});
+			}	
 		}
 
 		public IDisposable Subscribe(IObserver<RavenJObject> observer)
@@ -148,14 +137,26 @@ namespace Raven.Client.Document
 
 			if (subscribers.TryAdd(observer))
 			{
-				if (pullingStarted == false)
+				if (started == false)
 				{
 					PullingTask = PullDocuments();
-					pullingStarted = true;
+					NewDocumentsObserver = ObserveNewDocuments();
+					started = true;
 				}
 			}
 
 			return new DisposableAction(() => subscribers.TryRemove(observer));
+		}
+
+		private IDisposable ObserveNewDocuments()
+		{
+			return changes.ForAllDocuments().Subscribe(notification =>
+			{
+				if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) == false)
+				{
+					newDocuments.Set();
+				}
+			});
 		}
 
 		public void Dispose()
@@ -188,6 +189,8 @@ namespace Raven.Client.Document
 
 			cts.Cancel();
 
+			newDocuments.Set();
+
 			if (PullingTask != null)
 			{
 				switch (PullingTask.Status)
@@ -215,7 +218,7 @@ namespace Raven.Client.Document
 			using (var closeRequest = commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, connectionId), "POST"))
 			{
 				await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
-				pullingStarted = false;
+				started = false;
 			}
 		}
 
