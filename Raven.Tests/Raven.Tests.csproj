@@ -616,6 +616,7 @@
     <Compile Include="PreFetching.cs" />
     <Compile Include="Properties\TestAssemblyInfo.cs" />
     <Compile Include="Queries\CommentsInQueries.cs" />
+    <Compile Include="Querying\CachingOfLongQueries.cs" />
     <Compile Include="Querying\SkipDuplicates.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
     <Compile Include="ResultsTransformer\TransformerParametersToResultTransformer.cs" />

@@ -71,7 +71,7 @@ namespace Raven.Client.Connection
 					createHttpJsonRequestParams.Convention.ShouldCacheRequest(createHttpJsonRequestParams.Url)
 			};
 
-			if (request.ShouldCacheRequest && createHttpJsonRequestParams.Method == "GET" && !DisableHttpCaching || request.IsQueryRequest)
+			if (request.ShouldCacheRequest && request.IsQueryRequest && !DisableHttpCaching)
 			{
 				var cachedRequestDetails = ConfigureCaching(createHttpJsonRequestParams.Url, request.AddHeader);
 				request.CachedRequestDetails = cachedRequestDetails.CachedRequest;

@@ -87,7 +87,7 @@ namespace Raven.Client.Connection
 
 			Url = requestParams.Url;
 			Method = requestParams.Method;
-		    IsQueryRequest = Method == "GET" || isQueryRequest == true;
+		    IsQueryRequest = Method == "GET" || isQueryRequest;
 
 			if (requestParams.Timeout.HasValue)
 			{
@@ -468,7 +468,7 @@ namespace Raven.Client.Connection
 				var data = RavenJToken.TryLoad(countingStream);
 				Size = countingStream.NumberOfReadBytes;
 
-				if (Method == "GET" && ShouldCacheRequest || IsQueryRequest)
+				if (IsQueryRequest && ShouldCacheRequest)
 				{
 					factory.CacheResponse(Url, data, ResponseHeaders);
 				}
