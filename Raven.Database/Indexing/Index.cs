@@ -94,7 +94,6 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
-		private IndexingPerformanceStats lastIndexingPerformanceStats;
 
 		[CLSCompliant(false)]
 		protected Index(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
@@ -111,7 +110,7 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Creating index for {0}", indexId);
 			this.directory = directory;
 			flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
-
+			_indexCreationTime = SystemTime.UtcNow;
 			RecreateSearcher();
 		}
 
@@ -164,6 +163,7 @@ namespace Raven.Database.Indexing
 
 		[CLSCompliant(false)]
 		public volatile bool IsMapIndexingInProgress;
+		private DateTime _indexCreationTime;
 
 		protected IndexingPerformanceStats RecordCurrentBatch(string indexingStep, int itemsCount)
 		{
@@ -174,7 +174,7 @@ namespace Raven.Database.Indexing
 				Started = SystemTime.UtcNow,
 			};
 
-			var lastStats = lastIndexingPerformanceStats;
+			var lastStats = indexingPerformanceStats.LastOrDefault(x => x.Operation.Equals(indexingStep, StringComparison.OrdinalIgnoreCase));
 
 			if (lastStats != null)
 				performanceStats.WaitingTimeSinceLastBatchCompleted = performanceStats.Started - lastStats.Completed;
@@ -184,11 +184,8 @@ namespace Raven.Database.Indexing
 			return performanceStats;
 		}
 
-		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, int loadDocumentCount, long loadDocumentDurationInMs,
-			long writingDocumentsToLuceneDurationMs, long linqExecutionDurationMs, long flushToDiskDurationMs)
+		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, LoadDocumentPerformanceStats loadDocumentStats, LinqExecutionPerformanceStats linqExecutionStats, LucenePerformanceStats writeToLuceneStats, MapStoragePerformanceStats mapStorageStats)
 		{
-			
-
 			IndexingPerformanceStats stats;
 			if (currentlyIndexing.TryRemove(indexingStep, out stats))
 			{
@@ -199,12 +196,18 @@ namespace Raven.Database.Indexing
 				stats.InputCount = inputCount;
 				stats.OutputCount = outputCount;
 
-				stats.LoadDocumentCount = loadDocumentCount;
-				stats.LoadDocumentDurationMs = loadDocumentDurationInMs;
+				stats.LoadDocumentPerformance.LoadDocumentCount = loadDocumentStats.LoadDocumentCount;
+				stats.LoadDocumentPerformance.LoadDocumentDurationMs = loadDocumentStats.LoadDocumentDurationMs;
 
-				stats.WritingDocumentsToLuceneDurationMs = writingDocumentsToLuceneDurationMs;
-				stats.LinqExecutionDurationMs = linqExecutionDurationMs;
-				stats.FlushToDiskDurationMs = flushToDiskDurationMs;
+				stats.LinqExecutionPerformance.MapLinqExecutionDurationMs = linqExecutionStats.MapLinqExecutionDurationMs;
+				stats.LinqExecutionPerformance.ReduceLinqExecutionDurationMs = linqExecutionStats.ReduceLinqExecutionDurationMs;
+
+				stats.LucenePerformance.WriteDocumentsDurationMs = writeToLuceneStats.WriteDocumentsDurationMs;
+				stats.LucenePerformance.FlushToDiskDurationMs = writeToLuceneStats.FlushToDiskDurationMs;
+
+				stats.MapStoragePerformance.PutMappedResultsDurationMs = mapStorageStats.PutMappedResultsDurationMs;
+				stats.MapStoragePerformance.DeleteMappedResultsDurationMs = mapStorageStats.DeleteMappedResultsDurationMs;
+				// stats.MapStoragePerformance.StorageCommitDurationMs - it's set in MapReduceIndex.IndexDocuments because storage commit can happen after this batch completes
 
 				AddIndexingPerformanceStats(stats);
 			}
@@ -213,8 +216,6 @@ namespace Raven.Database.Indexing
 		public void AddIndexingPerformanceStats(IndexingPerformanceStats stats)
 		{
 			indexingPerformanceStats.Enqueue(stats);
-
-			lastIndexingPerformanceStats = stats;
 
 			while (indexingPerformanceStats.Count > 25)
 				indexingPerformanceStats.TryDequeue(out stats);
@@ -356,7 +357,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp);
+		public abstract IndexingPerformanceStats IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
 		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
@@ -520,15 +521,14 @@ namespace Raven.Database.Indexing
 
 						if (itemsInfo.ChangedDocs > 0)
 						{
-							WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
-
+							WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);                            
 							if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
 							{
 								var sw = Stopwatch.StartNew();
 								Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
 								writeIndexStat.FlushToDiskDurationMs = sw.ElapsedMilliseconds;
 								flushed = true;
-							}
+                            }
 
 							UpdateIndexingStats(context, stats);
 						}
@@ -664,7 +664,9 @@ namespace Raven.Database.Indexing
 			var stale = IsUpToDateEnoughToWriteToDisk(highestETag) == false;
 			var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;
 
-			if (forceWriteToDisk || toobig || !stale)
+			var tooOld = (SystemTime.UtcNow - _indexCreationTime) > context.Configuration.NewIndexInMemoryMaxTime;
+
+			if (forceWriteToDisk || toobig || !stale || tooOld)
 			{
 				indexWriter.Commit(highestETag);
 				var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition);
@@ -772,7 +774,7 @@ namespace Raven.Database.Indexing
 				OnError = onErrorFunc
 			};
 
-			linqExecutionDuration = robustEnumerator.MoveNextDutation;
+			linqExecutionDuration = robustEnumerator.MoveNextDuration;
 
 			return robustEnumerator.RobustEnumeration(input, funcs);
 		}
@@ -803,17 +805,17 @@ namespace Raven.Database.Indexing
 				}
 			};
 
-			linqExecutionDuration = robustEnumerator.MoveNextDutation;
+			linqExecutionDuration = robustEnumerator.MoveNextDuration;
 
 			return robustEnumerator.RobustEnumeration(input, func);
 		}
 
 		// we don't care about tracking map/reduce stats here, since it is merely
 		// an optimization step
-		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func)
+		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func, out Stopwatch reduceDuringMapLinqExecution)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
+			var robustEnumerator = new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
 			{
 				BeforeMoveNext = () => { }, // don't care
 				CancelMoveNext = () => { }, // don't care
@@ -830,7 +832,11 @@ namespace Raven.Database.Indexing
 										TryGetDocKey(o)),
 						exception);
 				}
-			}.RobustEnumeration(input, func);
+			};
+
+			reduceDuringMapLinqExecution = robustEnumerator.MoveNextDuration;
+
+			return robustEnumerator.RobustEnumeration(input, func);
 		}
 
 		public static string TryGetDocKey(object current)
@@ -1095,6 +1101,16 @@ namespace Raven.Database.Indexing
 
 			public IEnumerable<RavenJObject> IndexEntries(Reference<int> totalResults)
 			{
+				var returnFullEntries = reduceKeys == null || reduceKeys.Count == 0;
+				HashSet<RavenJToken> reduceValuesJson = null;
+				if (returnFullEntries == false)
+				{
+					reduceValuesJson =new HashSet<RavenJToken>(RavenJTokenEqualityComparer.Default);
+					foreach (var reduceKey in reduceKeys)
+					{
+						reduceValuesJson.Add(new RavenJValue(reduceKey));
+					}
+				}
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
 				{
@@ -1117,15 +1133,15 @@ namespace Raven.Database.Indexing
 								ravenJObject.Remove(prop.Key);
 							}
 
-							if (reduceKeys == null)
-								yield return ravenJObject;
-							else
+							if (returnFullEntries)
 							{
-								RavenJToken reduceKeyValue;
-								if (ravenJObject.TryGetValue(Constants.ReduceKeyFieldName, out reduceKeyValue) && reduceKeys.Any(x => reduceKeyValue.Equals(new RavenJValue(x))))
-								{
-									yield return ravenJObject;
-								}
+								yield return ravenJObject;
+								continue;
+							}
+							RavenJToken reduceKeyValue;
+							if (ravenJObject.TryGetValue(Constants.ReduceKeyFieldName, out reduceKeyValue) && reduceValuesJson.Contains(reduceKeyValue))
+							{
+								yield return ravenJObject;
 							}
 						}
 					}

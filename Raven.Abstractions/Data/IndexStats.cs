@@ -85,6 +85,14 @@ namespace Raven.Abstractions.Data
 
     public class IndexingPerformanceStats
 	{
+	    public IndexingPerformanceStats()
+	    {
+		    LoadDocumentPerformance = new LoadDocumentPerformanceStats();
+			LinqExecutionPerformance = new LinqExecutionPerformanceStats();
+			LucenePerformance = new LucenePerformanceStats();
+			MapStoragePerformance = new MapStoragePerformanceStats();
+	    }
+
 	    public string Operation { get; set; }
 	    public int ItemsCount { get; set; }
 	    public int InputCount { get; set; }
@@ -93,62 +101,90 @@ namespace Raven.Abstractions.Data
 		public DateTime Completed { get; set; }
 	    public TimeSpan Duration { get; set; }
 	    public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
-	    public int LoadDocumentCount { get; set; }
-	    public long LoadDocumentDurationMs { get; set; }
-	    public long WritingDocumentsToLuceneDurationMs { get; set; }
-	    public long LinqExecutionDurationMs { get; set; }
-	    public long FlushToDiskDurationMs { get; set; }
+		public LoadDocumentPerformanceStats LoadDocumentPerformance { get; set; }
+		public LinqExecutionPerformanceStats LinqExecutionPerformance { get; set; }
+		public LucenePerformanceStats LucenePerformance { get; set; }
+		public MapStoragePerformanceStats MapStoragePerformance { get; set; }
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
+	}
 
-	    public override bool Equals(object obj)
+	public class LinqExecutionPerformanceStats
+	{
+		public long MapLinqExecutionDurationMs { get; set; }
+		public long ReduceLinqExecutionDurationMs { get; set; }
+	}
+
+	public class LoadDocumentPerformanceStats
+	{
+		public int LoadDocumentCount { get; set; }
+		public long LoadDocumentDurationMs { get; set; }
+	}
+
+	public class MapStoragePerformanceStats
+	{
+		public MapStoragePerformanceStats()
 		{
-			if (ReferenceEquals(null, obj)) return false;
-			if (ReferenceEquals(this, obj)) return true;
-			if (obj.GetType() != GetType()) return false;
-			return Equals((IndexingPerformanceStats) obj);
+			DeleteMappedResultsDurationMs = -1;
+			PutMappedResultsDurationMs = -1;
+			StorageCommitDurationMs = -1;
 		}
 
-		protected bool Equals(IndexingPerformanceStats other)
-		{
-			return LoadDocumentCount == other.LoadDocumentCount && LoadDocumentDurationMs == other.LoadDocumentDurationMs && WritingDocumentsToLuceneDurationMs == other.WritingDocumentsToLuceneDurationMs && LinqExecutionDurationMs == other.LinqExecutionDurationMs && FlushToDiskDurationMs == other.FlushToDiskDurationMs && string.Equals(Operation, other.Operation) && OutputCount == other.OutputCount && InputCount == other.InputCount && ItemsCount == other.ItemsCount && Duration.Equals(other.Duration) && Started.Equals(other.Started) && Completed.Equals(other.Completed) && WaitingTimeSinceLastBatchCompleted.Equals(other.WaitingTimeSinceLastBatchCompleted);
-		}
+		public long DeleteMappedResultsDurationMs { get; set; }
+		public long PutMappedResultsDurationMs { get; set; }
+		public long StorageCommitDurationMs { get; set; }
+	}
 
-		public override int GetHashCode()
+	public class LucenePerformanceStats
+	{
+		public long WriteDocumentsDurationMs { get; set; }
+		public long FlushToDiskDurationMs { get; set; }
+	}
+
+	public class ReducingPerformanceStats
+	{
+		public ReduceType ReduceType { get; set; }
+		public List<ReduceLevelPeformanceStats> LevelStats { get; set; } 
+	}
+
+	public class ReduceLevelPeformanceStats
+	{
+		public ReduceLevelPeformanceStats()
 		{
-			unchecked
+			LinqExecutionPerformance = new LinqExecutionPerformanceStats()
 			{
-				int hashCode = LoadDocumentCount;
-				hashCode = (hashCode * 397) ^ LoadDocumentDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ WritingDocumentsToLuceneDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ LinqExecutionDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ FlushToDiskDurationMs.GetHashCode();
-				hashCode = (hashCode * 397) ^ (Operation != null ? Operation.GetHashCode() : 0);
-				hashCode = (hashCode * 397) ^ OutputCount;
-				hashCode = (hashCode * 397) ^ InputCount;
-				hashCode = (hashCode * 397) ^ ItemsCount;
-				hashCode = (hashCode * 397) ^ Duration.GetHashCode();
-				hashCode = (hashCode * 397) ^ Started.GetHashCode();
-				hashCode = (hashCode * 397) ^ Completed.GetHashCode();
-				hashCode = (hashCode * 397) ^ WaitingTimeSinceLastBatchCompleted.GetHashCode();
-				return hashCode;
-			}
+				MapLinqExecutionDurationMs = -1
+			};
+			LucenePerformance = new LucenePerformanceStats();
+			ReduceStoragePerformance = new ReduceStoragePerformanceStats();
 		}
 
+		public int Level { get; set; }
+		public int ItemsCount { get; set; }
+		public int InputCount { get; set; }
+		public int OutputCount { get; set; }
+		public DateTime Started { get; set; }
+		public DateTime Completed { get; set; }
+		public TimeSpan Duration { get; set; }
+		public double DurationMs{ get { return Math.Round(Duration.TotalMilliseconds, 2); } }
+		public LinqExecutionPerformanceStats LinqExecutionPerformance { get; set; }
+		public LucenePerformanceStats LucenePerformance { get; set; }
+		public ReduceStoragePerformanceStats ReduceStoragePerformance { get; set; }
 
-	    public override string ToString()
-	    {
-		    return string.Format(@"
-Operation:         {0}
-Input:              {1:#,#}
-Output:              {2:#,#}
-Duration:          {3}
-Duration in ms: {4:#,#}
-", Operation,
-		                         InputCount,
-		                         OutputCount,
-		                         Duration,
-		                         DurationMilliseconds);
+		public void Add(IndexingPerformanceStats other)
+		{
+			ItemsCount += other.ItemsCount;
+			InputCount += other.InputCount;
+			OutputCount += other.OutputCount;
 
-	    }
+			LinqExecutionPerformance.ReduceLinqExecutionDurationMs += other.LinqExecutionPerformance.ReduceLinqExecutionDurationMs;
+
+			LucenePerformance.WriteDocumentsDurationMs += other.LucenePerformance.WriteDocumentsDurationMs;
+			LucenePerformance.FlushToDiskDurationMs += other.LucenePerformance.FlushToDiskDurationMs;
+		}
+	}
+
+	public class ReduceStoragePerformanceStats
+	{
+		public long GetItemsToReduceDurationMs { get; set; }
 	}
 }
