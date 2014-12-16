@@ -1041,7 +1041,7 @@ namespace Raven.Tests.Smuggler
 
 
                 // Import the first batch
-                var importDumper = new SmugglerDatabaseApi { Options = { Incremental = true, ContinuationFile = continuationToken, BatchSize = 1 } };
+                var importDumper = new SmugglerDatabaseApi { Options = { Incremental = true, ContinuationToken = continuationToken, BatchSize = 1 } };
                 await importDumper.ImportData(
                         new SmugglerImportOptions<RavenConnectionStringOptions>
                         {

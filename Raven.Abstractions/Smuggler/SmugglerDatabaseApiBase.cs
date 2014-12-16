@@ -868,11 +868,11 @@ namespace Raven.Abstractions.Smuggler
 		{
 			var now = SystemTime.UtcNow;
 			var count = 0;
-            string continuationDocId = "Raven/Smuggler/Continuation/" + Options.ContinuationFile;
+            string continuationDocId = "Raven/Smuggler/Continuation/" + Options.ContinuationToken;
 
             var state = new OperationState
             {
-                FilePath = Options.ContinuationFile,
+                FilePath = Options.ContinuationToken,
                 LastDocsEtag = Options.StartDocsEtag,
             };
 

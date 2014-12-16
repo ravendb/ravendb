@@ -39,7 +39,7 @@ namespace Raven.Abstractions.Smuggler
 
         private string continuationFile;
         private bool useContinuationFile = false;
-        public string ContinuationFile 
+        public string ContinuationToken 
         {
             get { return continuationFile; }
             set

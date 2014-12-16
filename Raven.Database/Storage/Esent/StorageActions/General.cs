@@ -27,6 +27,9 @@ namespace Raven.Storage.Esent.StorageActions
 	public partial class DocumentStorageActions : IDisposable, IGeneralStorageActions
 	{
 		public event Action OnStorageCommit = delegate { };
+		public event Action BeforeStorageCommit;
+		public event Action AfterStorageCommit;
+
 		private readonly TableColumnsCache tableColumnsCache;
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 		private readonly IUuidGenerator uuidGenerator;
@@ -157,6 +160,32 @@ namespace Raven.Storage.Esent.StorageActions
 			aggregator.ThrowIfNeeded();
 		}
 
+		internal void ExecuteOnStorageCommit()
+		{
+			if (OnStorageCommit != null)
+			{
+				OnStorageCommit();
+			}
+		}
+
+		internal void ExecuteBeforeStorageCommit()
+		{
+			var before = BeforeStorageCommit;
+			if (before != null)
+			{
+				before();
+			}
+		}
+
+		internal void ExecuteAfterStorageCommit()
+		{
+			var after = AfterStorageCommit;
+			if (after != null)
+			{
+				after();
+			}
+		}
+
 		public void UseLazyCommit()
 		{
 			UsingLazyCommit = true;
@@ -164,9 +193,18 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void PulseTransaction()
 		{
-			transaction.Commit(CommitTransactionGrbit.LazyFlush);
-			UseLazyCommit();
-			transaction.Begin();
+			try
+			{
+				ExecuteBeforeStorageCommit();
+
+				transaction.Commit(CommitTransactionGrbit.LazyFlush);
+				UseLazyCommit();
+				transaction.Begin();
+			}
+			finally
+			{
+				ExecuteAfterStorageCommit();
+			}
 		}
 
 		private int maybePulseCount;

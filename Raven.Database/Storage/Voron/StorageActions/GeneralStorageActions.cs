@@ -18,15 +18,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	    private readonly TableStorage storage;
 		private readonly Reference<WriteBatch> writeBatch;
         private readonly Reference<SnapshotReader> snapshot;
+	    private readonly StorageActionsAccessor storageActionsAccessor;
 
-        private int maybePulseCount;
+	    private int maybePulseCount;
 
-        public GeneralStorageActions(TableStorage storage, Reference<WriteBatch> writeBatch, Reference<SnapshotReader> snapshot, IBufferPool bufferPool)
+        public GeneralStorageActions(TableStorage storage, Reference<WriteBatch> writeBatch, Reference<SnapshotReader> snapshot, IBufferPool bufferPool, StorageActionsAccessor storageActionsAccessor)
             : base(snapshot, bufferPool)
         {
             this.storage = storage;
             this.writeBatch = writeBatch;
             this.snapshot = snapshot;
+	        this.storageActionsAccessor = storageActionsAccessor;
         }
 
 	    public IEnumerable<KeyValuePair<string, long>> GetIdentities(int start, int take, out long totalCount)
@@ -93,13 +95,22 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         public void PulseTransaction()
         {
-			storage.Write(writeBatch.Value);
+	        try
+	        {
+				storageActionsAccessor.ExecuteBeforeStorageCommit();
 
-            snapshot.Value.Dispose();
-            writeBatch.Value.Dispose();
+		        storage.Write(writeBatch.Value);
 
-            snapshot.Value = storage.CreateSnapshot();
-			writeBatch.Value = new WriteBatch {DisposeAfterWrite = writeBatch.Value.DisposeAfterWrite};
+		        snapshot.Value.Dispose();
+		        writeBatch.Value.Dispose();
+
+		        snapshot.Value = storage.CreateSnapshot();
+		        writeBatch.Value = new WriteBatch {DisposeAfterWrite = writeBatch.Value.DisposeAfterWrite};
+	        }
+	        finally
+	        {
+		        storageActionsAccessor.ExecuteAfterStorageCommit();
+	        }
 		}
 
 		public bool MaybePulseTransaction()
