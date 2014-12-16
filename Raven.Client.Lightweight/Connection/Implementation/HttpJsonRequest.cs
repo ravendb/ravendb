@@ -69,9 +69,7 @@ namespace Raven.Client.Connection
 		private string operationUrl;
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
-
-	    internal readonly bool IsQueryRequest;
-
+        
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -80,14 +78,14 @@ namespace Raven.Client.Connection
 
 		internal HttpJsonRequest(
 			CreateHttpJsonRequestParams requestParams,
-			HttpJsonRequestFactory factory, bool isQueryRequest = false)
+			HttpJsonRequestFactory factory)
 		{
 			_credentials = requestParams.DisableAuthentication == false ? requestParams.Credentials : null;
 			disabledAuthRetries = requestParams.DisableAuthentication;
 
 			Url = requestParams.Url;
 			Method = requestParams.Method;
-		    IsQueryRequest = Method == "GET" || isQueryRequest;
+		    
 
 			if (requestParams.Timeout.HasValue)
 			{
@@ -468,7 +466,7 @@ namespace Raven.Client.Connection
 				var data = RavenJToken.TryLoad(countingStream);
 				Size = countingStream.NumberOfReadBytes;
 
-				if (IsQueryRequest && ShouldCacheRequest)
+				if (ShouldCacheRequest)
 				{
 					factory.CacheResponse(Url, data, ResponseHeaders);
 				}
@@ -719,23 +717,7 @@ namespace Raven.Client.Connection
 				return request;
 			}).ConfigureAwait(false);
 		}
-
-        public async Task<RavenJToken> WriteAsyncTryReturnCache(string data)
-        {
-            postedData = data;
-            writeCalled = true;
-
-            return await SendRequestInternal(() =>
-            {
-                var request = new HttpRequestMessage(new HttpMethod(Method), Url)
-                {
-                    Content = new CompressedStringContent(data, factory.DisableRequestCompression),
-                };
-                request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
-                return request;
-            }).ConfigureAwait(false);
-        }
-
+        
 		public async Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
 		{
             Response = await RunWithAuthRetry(async () =>

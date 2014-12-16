@@ -56,7 +56,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Creates the HTTP json request.
 		/// </summary>
-		public HttpJsonRequest CreateHttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams, bool isQueryRequest = false)
+		public HttpJsonRequest CreateHttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams)
 		{
 			if (disposed)
 				throw new ObjectDisposedException(typeof(HttpJsonRequestFactory).FullName);
@@ -64,14 +64,14 @@ namespace Raven.Client.Connection
 			if (RequestTimeout != null)
 				createHttpJsonRequestParams.Timeout = RequestTimeout.Value;
 
-            var request = new HttpJsonRequest(createHttpJsonRequestParams, this, isQueryRequest)
+            var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
 			{
 				ShouldCacheRequest =
 					createHttpJsonRequestParams.AvoidCachingRequest == false && 
 					createHttpJsonRequestParams.Convention.ShouldCacheRequest(createHttpJsonRequestParams.Url)
 			};
 
-			if (request.ShouldCacheRequest && request.IsQueryRequest && !DisableHttpCaching)
+			if (request.ShouldCacheRequest && !DisableHttpCaching)
 			{
 				var cachedRequestDetails = ConfigureCaching(createHttpJsonRequestParams.Url, request.AddHeader);
 				request.CachedRequestDetails = cachedRequestDetails.CachedRequest;
