@@ -175,6 +175,8 @@ namespace Raven.Database.Config
 
 			NewIndexInMemoryMaxBytes = ravenSettings.NewIndexInMemoryMaxMb.Value;
 
+			NewIndexInMemoryMaxTime = ravenSettings.NewIndexInMemoryMaxTime.Value;
+
 			MaxIndexCommitPointStoreTimeInterval = ravenSettings.MaxIndexCommitPointStoreTimeInterval.Value;
 
 			MinIndexingTimeIntervalToStoreCommitPoint = ravenSettings.MinIndexingTimeIntervalToStoreCommitPoint.Value;
@@ -246,6 +248,8 @@ namespace Raven.Database.Config
 			WebDir = ravenSettings.WebDir.Value;
 
 			PluginsDirectory = ravenSettings.PluginsDirectory.Value.ToFullPath();
+
+		    AssembliesDirectory = ravenSettings.AssembliesDirectory.Value.ToFullPath();
 
 			CompiledIndexCacheDirectory = ravenSettings.CompiledIndexCacheDirectory.Value.ToFullPath();
 
@@ -795,6 +799,12 @@ namespace Raven.Database.Config
 			}
 		}
 
+        /// <summary>
+        /// Where the internal assemblies will be extracted to.
+        /// Default: ~\Assemblies
+        /// </summary>
+        public string AssembliesDirectory { get; set; }
+
 		public bool CreatePluginsDirectoryIfNotExisting { get; set; }
 		public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
 
@@ -952,6 +962,11 @@ namespace Raven.Database.Config
 		public long FlushIndexToDiskSizeInMb { get; set; }
 
 		public bool EnableResponseLoggingForEmbeddedDatabases { get; set; }
+
+		/// <summary>
+		/// How long can we keep the new index in memory before we have to flush it
+		/// </summary>
+		public TimeSpan NewIndexInMemoryMaxTime { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

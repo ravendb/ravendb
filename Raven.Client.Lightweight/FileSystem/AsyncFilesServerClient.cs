@@ -385,7 +385,8 @@ namespace Raven.Client.FileSystem
             var sb = new StringBuilder(operationMetadata.Url)
                             .Append("/streams/files?etag=")
                             .Append(fromEtag)
-                            .Append("&");
+                            .Append("&pageSize=")
+                            .Append(pageSize);
 
             var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", operationMetadata.Credentials, this.Conventions)
                                         .AddOperationHeaders(OperationsHeaders));

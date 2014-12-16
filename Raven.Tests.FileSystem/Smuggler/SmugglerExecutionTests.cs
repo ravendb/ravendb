@@ -213,7 +213,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 				{
                     ReseedRandom(100); // Force a random distribution.
 
-					await InitializeWithRandomFiles(store, 20, 30);
+                    await InitializeWithRandomFiles(store, 50, 30);
 
 					// now perform full backup
 					var dumper = new SmugglerFilesApi { Options = { Incremental = true } };
@@ -262,7 +262,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 						using (var session = s.OpenAsyncSession())
 						{
                             var files = s.AsyncFilesCommands.BrowseAsync().Result;
-                            Assert.Equal(20, files.Count());
+                            Assert.Equal(50, files.Count());
 						}
 
 					});
