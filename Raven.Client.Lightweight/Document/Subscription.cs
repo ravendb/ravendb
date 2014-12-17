@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
@@ -20,10 +21,13 @@ namespace Raven.Client.Document
 {
 	public class Subscription : IObservable<RavenJObject>, IDisposable
 	{
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+
 		private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
 		private readonly string connectionId;
 		private readonly IAsyncDatabaseCommands commands;
 		private readonly IDatabaseChanges changes;
+		private readonly Func<Task> ensureOpenSubscription;
 		private readonly ConcurrentSet<IObserver<RavenJObject>> subscribers = new ConcurrentSet<IObserver<RavenJObject>>();
 		private readonly long id;
 		private readonly CancellationTokenSource cts = new CancellationTokenSource();
@@ -33,12 +37,13 @@ namespace Raven.Client.Document
 		public event Action BeforeBatch = delegate { };
 		public event Action AfterBatch = delegate { };
 
-		internal Subscription(long id, string connectionId, IAsyncDatabaseCommands commands, IDatabaseChanges changes)
+		internal Subscription(long id, string connectionId, IAsyncDatabaseCommands commands, IDatabaseChanges changes, Func<Task> ensureOpenSubscription)
 		{
 			this.id = id;
 			this.connectionId = connectionId;
 			this.commands = commands;
 			this.changes = changes;
+			this.ensureOpenSubscription = ensureOpenSubscription;
 		}
 
 		public Task PullingTask { get; private set; }
@@ -46,117 +51,152 @@ namespace Raven.Client.Document
 
 		private async Task PullDocuments()
 		{
-			try
+			while (true)
 			{
-				while (true)
+				cts.Token.ThrowIfCancellationRequested();
+
+				var pulledDocs = false;
+				Etag lastProcessedEtagOnServer = null;
+
+				using (var subscriptionRequest = commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, connectionId), "GET"))
+				using (var response = await subscriptionRequest.ExecuteRawResponseAsync().ConfigureAwait(false))
 				{
-					cts.Token.ThrowIfCancellationRequested();
+					await response.AssertNotFailingResponse().ConfigureAwait(false);
 
-					var pulledDocs = false;
-					Etag lastProcessedEtagOnServer = null;
-
-					using (var subscriptionRequest = commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, connectionId), "GET"))
-					using (var response = await subscriptionRequest.ExecuteRawResponseAsync().ConfigureAwait(false))
+					using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 					{
-						await response.AssertNotFailingResponse().ConfigureAwait(false);
+						cts.Token.ThrowIfCancellationRequested();
 
-						using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
+						using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, customizedEndResult: reader =>
 						{
-							cts.Token.ThrowIfCancellationRequested();
+							if (Equals("LastProcessedEtag", reader.Value) == false)
+								return false;
 
-							using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, customizedEndResult: reader =>
+							lastProcessedEtagOnServer = Etag.Parse(reader.ReadAsString().ResultUnwrap());
+							return true;
+						}))
+						{
+							while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
 							{
-								if (Equals("LastProcessedEtag", reader.Value) == false)
-									return false;
+								if (pulledDocs == false) // first doc in batch
+									BeforeBatch();
 
-								lastProcessedEtagOnServer = Etag.Parse(reader.ReadAsString().ResultUnwrap());
-								return true;
-							}))
-							{
-								while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
+								pulledDocs = true;
+
+								cts.Token.ThrowIfCancellationRequested();
+
+								var jsonDoc = streamedDocs.Current;
+								foreach (var subscriber in subscribers)
 								{
-									if (pulledDocs == false) // first doc in batch
-										BeforeBatch();
-
-									pulledDocs = true;
-
-									cts.Token.ThrowIfCancellationRequested();
-
-									var jsonDoc = streamedDocs.Current;
-									foreach (var subscriber in subscribers)
-									{
-										subscriber.OnNext(jsonDoc);
-									}
+									subscriber.OnNext(jsonDoc);
 								}
 							}
 						}
 					}
+				}
 
-					if (pulledDocs)
+				if (pulledDocs)
+				{
+					using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}",
+						id, lastProcessedEtagOnServer, connectionId), "POST"))
 					{
-						using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}",
-							id, lastProcessedEtagOnServer, connectionId), "POST"))
+						try
 						{
-							try
-							{
-								acknowledgmentRequest.ExecuteRequest();
-							}
-							catch (Exception)
-							{
-								if (acknowledgmentRequest.ResponseStatusCode != HttpStatusCode.RequestTimeout) // ignore acknowledgment timeouts
-									throw;
-							}
+							acknowledgmentRequest.ExecuteRequest();
 						}
-
-						AfterBatch();
-
-						continue; // try to pull more documents from subscription
+						catch (Exception)
+						{
+							if (acknowledgmentRequest.ResponseStatusCode != HttpStatusCode.RequestTimeout) // ignore acknowledgment timeouts
+								throw;
+						}
 					}
 
-					newDocuments.WaitOne();
-				}
-			}
-			catch (Exception ex)
-			{
-				if (ex.InnerException is OperationCanceledException == false)
-				{
-					foreach (var subscriber in subscribers)
-					{
-						subscriber.OnError(ex);
-					}
+					AfterBatch();
+
+					continue; // try to pull more documents from subscription
 				}
 
-				throw;
-			}	
+				newDocuments.WaitOne();
+			}
 		}
 
-		public IDisposable Subscribe(IObserver<RavenJObject> observer)
+		private async Task StartPullingDocs()
 		{
-			if (PullingTask != null && PullingTask.IsFaulted)
-				throw new InvalidOperationException("Cannot subscribe because the subscription pulling task is faulted", PullingTask.Exception);
+			PullingTask = PullDocuments().ObserveException();
 
-			if (subscribers.TryAdd(observer))
+			try
 			{
-				if (started == false)
-				{
-					PullingTask = PullDocuments();
-					NewDocumentsObserver = ObserveNewDocuments();
-					started = true;
-				}
+				await PullingTask.ConfigureAwait(false);
 			}
+			catch (Exception e)
+			{
+				if (cts.Token.IsCancellationRequested)
+					return;
 
-			return new DisposableAction(() => subscribers.TryRemove(observer));
+				PullingTask = null;
+
+				foreach (var subscriber in subscribers)
+				{
+					subscriber.OnError(e);
+				}
+
+				RestartPullingTask().ConfigureAwait(false);
+			}
 		}
 
-		private IDisposable ObserveNewDocuments()
+		private async Task RestartPullingTask()
 		{
-			return changes.ForAllDocuments().Subscribe(notification =>
+			await Time.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false);
+			try
+			{
+				await ensureOpenSubscription().ConfigureAwait(false);
+			}
+			catch (Exception)
+			{
+				RestartPullingTask().ConfigureAwait(false);
+				return;
+			}
+
+			try
+			{
+				await StartPullingDocs().ConfigureAwait(false);
+			}
+			catch (Exception e)
+			{
+				var exception = new Exception("Could not restart pulling task.", e);
+
+				foreach (var subscriber in subscribers)
+				{
+					subscriber.OnError(exception);
+				}
+			}
+		}
+
+		private void StartWatchingDocs()
+		{
+			NewDocumentsObserver = changes.ForAllDocuments().Subscribe(notification =>
 			{
 				if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) == false)
 				{
 					newDocuments.Set();
 				}
 			});
+		}
+
+		public IDisposable Subscribe(IObserver<RavenJObject> observer)
+		{
+			if (subscribers.TryAdd(observer))
+			{
+				if (started == false)
+				{
+					StartPullingDocs().ConfigureAwait(false);
+					StartWatchingDocs();
+
+					started = true;
+				}
+			}
+
+			return new DisposableAction(() => subscribers.TryRemove(observer));
 		}
 
 		public void Dispose()

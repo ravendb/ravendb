@@ -10,6 +10,8 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client;
+using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
@@ -105,7 +107,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ShouldSendAllNewAndModifiedDocs()
 		{
-			using (var store = NewRemoteDocumentStore())
+			using (var store = NewDocumentStore())
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
 				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions());
@@ -226,7 +228,7 @@ namespace Raven.Tests.Issues
 					reference.Value++;
 				});
 
-				var result = SpinWait.SpinUntil(() => batchSizes.Sum(x => x.Value) >= 100, TimeSpan.FromSeconds(60));
+				var result = SpinWait.SpinUntil(() => batchSizes.ToList().Sum(x => x.Value) >= 100, TimeSpan.FromSeconds(60));
 
 				Assert.True(result);
 
@@ -272,7 +274,7 @@ namespace Raven.Tests.Issues
 					list.Add(x);
 				});
 
-				var result = SpinWait.SpinUntil(() => batches.Sum(x => x.Count) >= 200, TimeSpan.FromSeconds(160));
+				var result = SpinWait.SpinUntil(() => batches.ToList().Sum(x => x.Count) >= 200, TimeSpan.FromSeconds(160));
 
 				Assert.True(result);
 				Assert.True(batches.Count > 1);
@@ -481,6 +483,84 @@ namespace Raven.Tests.Issues
 				}
 
 				Assert.True(SpinWait.SpinUntil(() => docs.Count >= 1, TimeSpan.FromSeconds(60)));
+			}
+		}
+
+		[Fact]
+		public void ShouldKeepPullingDocsAfterServerRestart()
+		{
+			var dataPath = NewDataPath("RavenDB_2627_after_restart");
+
+			IDocumentStore store = null;
+			try
+			{
+				var serverDisposed = false;
+
+				var server = GetNewServer(dataDirectory: dataPath, runInMemory: false);
+				
+				store = new DocumentStore()
+				{
+					Url = "http://localhost:" + server.Configuration.Port,
+					DefaultDatabase = "RavenDB_2627"
+				}.Initialize();
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User());
+					session.Store(new User());
+					session.Store(new User());
+					session.Store(new User());
+
+					session.SaveChanges();
+				}
+
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+
+				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions()
+				{
+					MaxDocCount = 1
+				});
+
+				var subscriptionExceptionOccurred = false;
+				var serverDisposingHandler = subscription.Subscribe(x =>
+				{
+					server.Dispose(); // dispose the server
+					serverDisposed = true;
+				}, ex =>
+				{
+					subscriptionExceptionOccurred = true;
+				});
+
+				SpinWait.SpinUntil(() => serverDisposed, TimeSpan.FromSeconds(30));
+				SpinWait.SpinUntil(() => subscriptionExceptionOccurred, TimeSpan.FromSeconds(5));
+
+				serverDisposingHandler.Dispose();
+
+				var docs = new BlockingCollection<RavenJObject>();
+				subscription.Subscribe(docs.Add);
+
+				//recreate the server
+				GetNewServer(dataDirectory: dataPath, runInMemory: false);
+				
+				RavenJObject doc;
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User(), "users/arek");
+					session.SaveChanges();
+				}
+
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+				Assert.Equal("users/arek", doc[Constants.Metadata].Value<string>("@id"));
+			}
+			finally
+			{
+				if(store != null)
+					store.Dispose();
 			}
 		}
 

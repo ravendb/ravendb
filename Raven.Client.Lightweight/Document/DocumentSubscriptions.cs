@@ -11,6 +11,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Database.Util;
 using Raven.Json.Linq;
@@ -59,44 +60,53 @@ namespace Raven.Client.Document
 				throw new InvalidOperationException("Cannot open a subscription if options are null");
 
 			if(options.MaxSize.HasValue && options.MaxSize.Value < 16 * 1024)
-				throw new InvalidOperationException("Max size value of batch options cannot be less that 16 KB");
+				throw new InvalidOperationException("Max size value of batch options cannot be lower than that 16 KB");
 
 			var commands = database == null
 				? documentStore.AsyncDatabaseCommands
 				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-			string connectionId;
+			var connectionId = SendOpenSubscriptionRequest(commands, id, options, null).ResultUnwrap();
 
-			using (var request = commands.CreateRequest("/subscriptions/open?id=" + id, "POST"))
+			var subscription = new Subscription(id, connectionId, commands, documentStore.Changes(database), () => 
+				SendOpenSubscriptionRequest(commands, id, options, connectionId)); // to ensure that subscription is open try to call it with the same connection id
+
+			subscriptions.Add(subscription);
+
+			return subscription;
+		}
+
+		private static async Task<string> SendOpenSubscriptionRequest(IAsyncDatabaseCommands commands, long id, SubscriptionBatchOptions options, string connectionId)
+		{
+			var relativeUrl = "/subscriptions/open?id=" + id;
+
+			if (connectionId != null)
+				relativeUrl += "&connection=" + connectionId;
+
+			using (var request = commands.CreateRequest(relativeUrl, "POST"))
 			{
 				try
 				{
-					var response = request.ExecuteRawResponseAsync(RavenJObject.FromObject(options)).ResultUnwrap();
-					response.AssertNotFailingResponse().WaitUnwrap();
+					var response = await request.ExecuteRawResponseAsync(RavenJObject.FromObject(options)).ConfigureAwait(false);
+					await response.AssertNotFailingResponse().ConfigureAwait(false);
 
-					using (var stream = response.GetResponseStreamWithHttpDecompression().ResultUnwrap())
-		            using (var reader = new StreamReader(stream))
-		            {
-			            connectionId = reader.ReadToEnd();
-		            }
+					using (var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
+					using (var reader = new StreamReader(stream))
+					{
+						return reader.ReadToEnd();
+					}
 				}
 				catch (Exception e)
 				{
 					if (request.ResponseStatusCode == HttpStatusCode.NotFound)
 						throw new InvalidOperationException("Subscription with the specified id does not exist.", e);
 
-					if(request.ResponseStatusCode == HttpStatusCode.Gone)
+					if (request.ResponseStatusCode == HttpStatusCode.Gone)
 						throw new InvalidOperationException("Subscription is already in use. There can be only a single open subscription connection per subscription.");
 
 					throw;
 				}
 			}
-
-			var subscription = new Subscription(id, connectionId, commands, documentStore.Changes(database));
-
-			subscriptions.Add(subscription);
-
-			return subscription;
 		}
 
 		public List<SubscriptionDocument> GetSubscriptions(int start, int take, string database = null)

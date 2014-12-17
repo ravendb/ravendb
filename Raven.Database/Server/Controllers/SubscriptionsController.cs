@@ -41,7 +41,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("subscriptions/open")]
 		[Route("databases/{databaseName}/subscriptions/open")]
-		public async Task<HttpResponseMessage> Open(long id)
+		public async Task<HttpResponseMessage> Open(long id, string connection = null)
 		{
 			if (Database.Subscriptions.GetSubscriptionDocument(id) == null)
 				return GetMessageWithString("Cannot find a subscription for the specified id: " + id, HttpStatusCode.NotFound);
@@ -53,7 +53,7 @@ namespace Raven.Database.Server.Controllers
 
 			string connectionId;
 
-			if (Database.Subscriptions.TryOpenSubscription(id, options, out connectionId) == false)
+			if (Database.Subscriptions.TryOpenSubscription(id, connection, options, out connectionId) == false)
 				return GetMessageWithString("Subscription is already in use. There can be only a single open subscription connection per subscription.", HttpStatusCode.Gone);
 
 			return GetMessageWithString(connectionId);

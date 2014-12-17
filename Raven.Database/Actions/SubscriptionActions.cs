@@ -6,14 +6,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Database.Storage;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
@@ -60,9 +57,9 @@ namespace Raven.Database.Actions
 				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, id.ToString("D19"), RavenJObject.FromObject(doc), UuidType.Subscriptions));
 		}
 
-		public bool TryOpenSubscription(long id, SubscriptionBatchOptions options, out string connectionId)
+		public bool TryOpenSubscription(long id, string existingConnectionId, SubscriptionBatchOptions options, out string connectionId)
 		{
-			connectionId = Base62Util.Base62Random();
+			connectionId = existingConnectionId ?? Base62Util.Base62Random();
 
 			var subscriptionWorkContext = new SubscriptionWorkContext
 			{
@@ -70,7 +67,20 @@ namespace Raven.Database.Actions
 				BatchOptions = options
 			};
 
-			return openSubscriptions.TryAdd(id, subscriptionWorkContext); //TODO arek - need to add some timeout to allow to release the subscription
+			if (openSubscriptions.TryAdd(id, subscriptionWorkContext))
+				return true;
+			
+			//TODO arek - need to add some timeout to allow to release the subscription
+
+			SubscriptionWorkContext existingSubscriptionContext;
+
+			if(openSubscriptions.TryGetValue(id, out existingSubscriptionContext) == false)
+				throw new InvalidOperationException("Didn't get existing open subscription while it's expected. Subscription id: " + id);
+
+			if (existingConnectionId != null && existingSubscriptionContext.ConnectionId.Equals(existingConnectionId, StringComparison.OrdinalIgnoreCase))
+				return true; // reopen subscription on already existing connection
+
+			return false;
 		}
 
 		public void ReleaseSubscription(long id)
