@@ -107,12 +107,13 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ShouldSendAllNewAndModifiedDocs()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewRemoteDocumentStore())
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
 				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions());
 
 				var names = new BlockingCollection<string>();
+				store.Changes().WaitForAllPendingSubscriptions();
 
 				subscription.Subscribe(x => names.Add(x.Value<string>("Name")));
 				
@@ -180,7 +181,7 @@ namespace Raven.Tests.Issues
 
 				subscriptionZeroTimeout.Dispose();
 
-				// retry with longer timeouts - should sent just one doc
+				// retry with longer timeout - should sent just one doc
 
 				var subscriptionLongerTimeout = store.Subscriptions.Open(id, new SubscriptionBatchOptions
 				{
@@ -274,7 +275,7 @@ namespace Raven.Tests.Issues
 					list.Add(x);
 				});
 
-				var result = SpinWait.SpinUntil(() => batches.ToList().Sum(x => x.Count) >= 200, TimeSpan.FromSeconds(160));
+				var result = SpinWait.SpinUntil(() => batches.ToList().Sum(x => x.Count) >= 200, TimeSpan.FromSeconds(60));
 
 				Assert.True(result);
 				Assert.True(batches.Count > 1);
@@ -564,5 +565,48 @@ namespace Raven.Tests.Issues
 			}
 		}
 
+		[Fact]
+		public void ShouldStopPullingDocsIfThereIsNoSubscriber()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+
+				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions());
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User(), "users/1");
+					session.Store(new User(), "users/2");
+					session.SaveChanges();
+				}
+
+				var docs = new BlockingCollection<RavenJObject>();
+				var subscribe = subscription.Subscribe(docs.Add);
+
+				RavenJObject doc;
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+
+				subscribe.Dispose();
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User(), "users/3");
+					session.Store(new User(), "users/4");
+					session.SaveChanges();
+				}
+
+				Thread.Sleep(TimeSpan.FromSeconds(5)); // should not pull any docs because there is no subscriber that could process them
+
+				subscription.Subscribe(docs.Add);
+
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+				Assert.Equal("users/3", doc[Constants.Metadata].Value<string>("@id"));
+
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+				Assert.Equal("users/4", doc[Constants.Metadata].Value<string>("@id"));
+			}
+		}
 	}
 }

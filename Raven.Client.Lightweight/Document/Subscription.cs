@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
@@ -21,8 +20,6 @@ namespace Raven.Client.Document
 {
 	public class Subscription : IObservable<RavenJObject>, IDisposable
 	{
-		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
-
 		private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
 		private readonly string connectionId;
 		private readonly IAsyncDatabaseCommands commands;
@@ -31,8 +28,8 @@ namespace Raven.Client.Document
 		private readonly ConcurrentSet<IObserver<RavenJObject>> subscribers = new ConcurrentSet<IObserver<RavenJObject>>();
 		private readonly long id;
 		private readonly CancellationTokenSource cts = new CancellationTokenSource();
-		private bool started;
 		private bool disposed;
+		private readonly ManualResetEvent anySubscriber = new ManualResetEvent(false);
 
 		public event Action BeforeBatch = delegate { };
 		public event Action AfterBatch = delegate { };
@@ -44,80 +41,88 @@ namespace Raven.Client.Document
 			this.commands = commands;
 			this.changes = changes;
 			this.ensureOpenSubscription = ensureOpenSubscription;
+
+			StartWatchingDocs();
+			StartPullingDocs().ConfigureAwait(false);
 		}
 
 		public Task PullingTask { get; private set; }
 		private IDisposable NewDocumentsObserver { get; set; }
 
-		private async Task PullDocuments()
+		private Task PullDocuments()
 		{
-			while (true)
+			return Task.Run(async () =>
 			{
-				cts.Token.ThrowIfCancellationRequested();
-
-				var pulledDocs = false;
-				Etag lastProcessedEtagOnServer = null;
-
-				using (var subscriptionRequest = commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, connectionId), "GET"))
-				using (var response = await subscriptionRequest.ExecuteRawResponseAsync().ConfigureAwait(false))
+				while (true)
 				{
-					await response.AssertNotFailingResponse().ConfigureAwait(false);
+					anySubscriber.WaitOne();
 
-					using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
+					cts.Token.ThrowIfCancellationRequested();
+
+					var pulledDocs = false;
+					Etag lastProcessedEtagOnServer = null;
+
+					using (var subscriptionRequest = commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, connectionId), "GET"))
+					using (var response = await subscriptionRequest.ExecuteRawResponseAsync().ConfigureAwait(false))
 					{
-						cts.Token.ThrowIfCancellationRequested();
+						await response.AssertNotFailingResponse().ConfigureAwait(false);
 
-						using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, customizedEndResult: reader =>
+						using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 						{
-							if (Equals("LastProcessedEtag", reader.Value) == false)
-								return false;
+							cts.Token.ThrowIfCancellationRequested();
 
-							lastProcessedEtagOnServer = Etag.Parse(reader.ReadAsString().ResultUnwrap());
-							return true;
-						}))
-						{
-							while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
+							using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, customizedEndResult: reader =>
 							{
-								if (pulledDocs == false) // first doc in batch
-									BeforeBatch();
+								if (Equals("LastProcessedEtag", reader.Value) == false)
+									return false;
 
-								pulledDocs = true;
-
-								cts.Token.ThrowIfCancellationRequested();
-
-								var jsonDoc = streamedDocs.Current;
-								foreach (var subscriber in subscribers)
+								lastProcessedEtagOnServer = Etag.Parse(reader.ReadAsString().ResultUnwrap());
+								return true;
+							}))
+							{
+								while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
 								{
-									subscriber.OnNext(jsonDoc);
+									if (pulledDocs == false) // first doc in batch
+										BeforeBatch();
+
+									pulledDocs = true;
+
+									cts.Token.ThrowIfCancellationRequested();
+
+									var jsonDoc = streamedDocs.Current;
+									foreach (var subscriber in subscribers)
+									{
+										subscriber.OnNext(jsonDoc);
+									}
 								}
 							}
 						}
 					}
-				}
 
-				if (pulledDocs)
-				{
-					using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}",
-						id, lastProcessedEtagOnServer, connectionId), "POST"))
+					if (pulledDocs)
 					{
-						try
+						using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}",
+							id, lastProcessedEtagOnServer, connectionId), "POST"))
 						{
-							acknowledgmentRequest.ExecuteRequest();
+							try
+							{
+								acknowledgmentRequest.ExecuteRequest();
+							}
+							catch (Exception)
+							{
+								if (acknowledgmentRequest.ResponseStatusCode != HttpStatusCode.RequestTimeout) // ignore acknowledgment timeouts
+									throw;
+							}
 						}
-						catch (Exception)
-						{
-							if (acknowledgmentRequest.ResponseStatusCode != HttpStatusCode.RequestTimeout) // ignore acknowledgment timeouts
-								throw;
-						}
+
+						AfterBatch();
+
+						continue; // try to pull more documents from subscription
 					}
 
-					AfterBatch();
-
-					continue; // try to pull more documents from subscription
+					newDocuments.WaitOne();
 				}
-
-				newDocuments.WaitOne();
-			}
+			});
 		}
 
 		private async Task StartPullingDocs()
@@ -174,7 +179,9 @@ namespace Raven.Client.Document
 
 		private void StartWatchingDocs()
 		{
-			NewDocumentsObserver = changes.ForAllDocuments().Subscribe(notification =>
+			var observableWithTask = changes.ForAllDocuments();
+
+			NewDocumentsObserver = observableWithTask.Subscribe(notification =>
 			{
 				if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) == false)
 				{
@@ -187,16 +194,16 @@ namespace Raven.Client.Document
 		{
 			if (subscribers.TryAdd(observer))
 			{
-				if (started == false)
-				{
-					StartPullingDocs().ConfigureAwait(false);
-					StartWatchingDocs();
-
-					started = true;
-				}
+				if (subscribers.Count == 1)
+					anySubscriber.Set();
 			}
 
-			return new DisposableAction(() => subscribers.TryRemove(observer));
+			return new DisposableAction(() =>
+			{
+				subscribers.TryRemove(observer);
+				if (subscribers.Count == 0)
+					anySubscriber.Reset();
+			});
 		}
 
 		public void Dispose()
@@ -219,6 +226,8 @@ namespace Raven.Client.Document
 				subscriber.OnCompleted();
 			}
 
+			subscribers.Clear();
+
 			if (NewDocumentsObserver != null)
 				NewDocumentsObserver.Dispose();
 
@@ -230,6 +239,7 @@ namespace Raven.Client.Document
 			cts.Cancel();
 
 			newDocuments.Set();
+			anySubscriber.Set();
 
 			if (PullingTask != null)
 			{
@@ -258,7 +268,6 @@ namespace Raven.Client.Document
 			using (var closeRequest = commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, connectionId), "POST"))
 			{
 				await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
-				started = false;
 			}
 		}
 
