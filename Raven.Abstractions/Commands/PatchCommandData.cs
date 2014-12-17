@@ -15,15 +15,13 @@ namespace Raven.Abstractions.Commands
 	public class PatchCommandData : ICommandData
 	{
 		/// <summary>
-		/// Gets or sets the patches applied to this document
+		/// Array of patches that will be applied to the document
 		/// </summary>
-		/// <value>The patches.</value>
-		public PatchRequest[] Patches{ get; set;}
+		public PatchRequest[] Patches { get; set; }
 
 		/// <summary>
-		/// Gets or sets the patches to apply to a default document if the document is missing
+		/// Array of patches to apply to a default document if the document is missing
 		/// </summary>
-		/// <value>The patches.</value>
 		public PatchRequest[] PatchesIfMissing { get; set; }
 
 		/// <summary>
@@ -35,55 +33,42 @@ namespace Raven.Abstractions.Commands
 		public bool SkipPatchIfEtagMismatch { get; set; }
 
 		/// <summary>
-		/// Gets the key.
+		/// Key of a document to patch.
 		/// </summary>
-		/// <value>The key.</value>
-		public string Key
-		{
-			get; set;
-		}
+		public string Key { get; set; }
 
 		/// <summary>
-		/// Gets the method.
+		/// Returns operation method. In this case PATCH.
 		/// </summary>
-		/// <value>The method.</value>
 		public string Method
 		{
 			get { return "PATCH"; }
 		}
 
 		/// <summary>
-		/// Gets or sets the etag.
+		/// Current document etag, used for concurrency checks (null to skip check)
 		/// </summary>
-		/// <value>The etag.</value>
-		public Etag Etag
-		{
-			get; set;
-		}
+		public Etag Etag { get; set; }
 
 		/// <summary>
-		/// Gets the transaction information.
+		/// Information used to identify a transaction. Contains transaction Id and timeout.
 		/// </summary>
-		/// <value>The transaction information.</value>
-		public TransactionInformation TransactionInformation
-		{
-			get; set;
-		}
+		public TransactionInformation TransactionInformation { get; set; }
 
 		/// <summary>
-		/// Gets or sets the metadata.
+		/// RavenJObject representing document's metadata.
 		/// </summary>
-		/// <value>The metadata.</value>
-		public RavenJObject Metadata
-		{
-			get; set;
-		}
+		public RavenJObject Metadata { get; set; }
 
+		/// <summary>
+		/// Additional command data. For internal use only.
+		/// </summary>
 		public RavenJObject AdditionalData { get; set; }
 
 		/// <summary>
-		/// Translate this instance to a Json object.
+		/// Translates this instance to a Json object.
 		/// </summary>
+		/// <returns>RavenJObject representing the command.</returns>
 		public RavenJObject ToJson()
 		{
 			var ret = new RavenJObject
