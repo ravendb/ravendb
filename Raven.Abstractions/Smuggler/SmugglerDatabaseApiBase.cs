@@ -494,35 +494,64 @@ namespace Raven.Abstractions.Smuggler
 					}
 				});
 
-				Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+                Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 				return lastEtag;
 			}
 		}
 
+        public async Task WaitForIndexingAsOfLastWrite()
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var justIndexingWait = Stopwatch.StartNew();
+                       
+            var stats = await Operations.GetStats();
+            
+            int tries = 0;
+            Etag cutOffEtag = stats.LastDocEtag;
+            while (true)
+            {
+                if (stats.Indexes.All(x => x.LastIndexedEtag.CompareTo(cutOffEtag) >= 0))
+                {
+                    Operations.ShowProgress("\rWaited {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
+                    break;
+                }
+
+                if (tries++ % 10 == 0)
+                    Operations.ShowProgress("\rWaiting {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
+
+                Thread.Sleep(1000);
+                stats = await Operations.GetStats();
+            }
+
+            stopwatch.Stop();
+            justIndexingWait.Stop();
+        }
         
 
 		public async Task WaitForIndexing()
 		{
-            Stopwatch stopwatch = Stopwatch.StartNew();
+            var stopwatch = Stopwatch.StartNew();
+            var justIndexingWait = Stopwatch.StartNew();
 
-			var justIndexingWait = Stopwatch.StartNew();
-			int tries = 0;
-			while (true)
-			{
-				var databaseStatistics = await Operations.GetStats();
-				if (databaseStatistics.StaleIndexes.Length != 0)
-				{
-					if (tries++ % 10 == 0)
-					{
-						Console.Write("\rWaiting {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
-					}
+            int tries = 0;
+            while (true)
+            {
+                var stats = await Operations.GetStats();
+                if (stats.StaleIndexes.Length != 0)
+                {
+                    if (tries++ % 10 == 0)
+                        Operations.ShowProgress("\rWaiting {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
 
-					Thread.Sleep(1000);
-					continue;
-				}
-				Console.WriteLine("\rWaited {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
-				break;
-			}
+                    Thread.Sleep(1000);
+                    continue;
+                }
+
+                Operations.ShowProgress("\rWaited {0} for indexing ({1} total).", justIndexingWait.Elapsed, stopwatch.Elapsed);
+                break;
+            }
+
+            stopwatch.Stop();
+            justIndexingWait.Stop();
 		}
 
         public virtual async Task ImportData(SmugglerImportOptions<RavenConnectionStringOptions> importOptions)
@@ -963,6 +992,10 @@ namespace Raven.Abstractions.Smuggler
 
                         await WriteLastEtagToDatabase(state, lastEtagsDocument);
                     }
+
+                    // Wait for the batch to be indexed before continue.
+                    if (Options.WaitForIndexing)
+                        await WaitForIndexingAsOfLastWrite();
 
                     Operations.ShowProgress("Read {0:#,#;;0} documents", count + skippedDocuments);
 				}
