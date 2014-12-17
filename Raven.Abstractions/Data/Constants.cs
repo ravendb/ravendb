@@ -3,7 +3,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
-	public static class Constants
+    public static partial class Constants
 	{
 		static Constants()
 		{
@@ -183,11 +183,35 @@ namespace Raven.Abstractions.Data
 
 		public const string RavenDatabasesPrefix = "Raven/Databases/";		
 
-        public static class FileSystem
+        public static partial class FileSystem
         {
             public const string Prefix = "Raven/FileSystems/";
             public const string Storage = "Raven/FileSystem/Storage";
             public const string DataDirectory = "Raven/FileSystem/DataDir";
+            public const string IndexStorageDirectory = "Raven/FileSystem/IndexStoragePath";
+            public const string MaximumSynchronizationInterval = "Raven/FileSystem/MaximumSynchronizationInterval";
+        }
+        
+        public static partial class Esent
+        {
+            public const string CircularLog = "Raven/Esent/CircularLog";
+            public const string CacheSizeMax = "Raven/Esent/CacheSizeMax";
+            public const string MaxVerPages = "Raven/Esent/MaxVerPages";
+            public const string PreferredVerPages = "Raven/Esent/PreferredVerPages";
+            public const string LogFileSize = "Raven/Esent/LogFileSize";
+            public const string LogBuffers = "Raven/Esent/LogBuffers";
+            public const string MaxCursors = "Raven/Esent/MaxCursors";
+            public const string DbExtensionSize = "Raven/Esent/DbExtensionSize";
+        }
+
+        public static partial class Voron
+        {
+            public const string AllowIncrementalBackups = "Raven/Voron/AllowIncrementalBackups";
+            public const string InitialFileSize = "Raven/Voron/InitialFileSize";
+            public const string TempPath = "Raven/Voron/TempPath";
+            public const string MaxBufferPoolSize = "Raven/Voron/MaxBufferPoolSize";
+            public const string InitialSize = "Raven/Voron/InitialSize";
+            public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
         }
 	}
 }

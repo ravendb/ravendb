@@ -210,8 +210,8 @@ namespace Raven.Tests.Issues
                     Settings =
                     {
                         {"Raven/DataDir", "~\\Databases\\db1"},
-                        {"Raven/Esent/CircularLog", "false"},
-                        {"Raven/Voron/AllowIncrementalBackups", "true"}
+                        {Constants.Esent.CircularLog, "false"},
+                        {Constants.Voron.AllowIncrementalBackups, "true"}
                     }
                 });
 
