@@ -149,9 +149,6 @@ namespace Raven.Abstractions.Data
         public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
 		public const string NextPageStart = "Next-Page-Start";
 
-#if DEBUG
-		public const int EnterLockTimeout = 10000;
-#endif
 		/// <summary>
 		/// if no encoding information in headers of incoming request, this encoding is assumed
 		/// </summary>

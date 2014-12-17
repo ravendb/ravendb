@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Security.Principal;
-using Raven.Database.Server.Security.OAuth;
 
 namespace Raven.Abstractions.Data
 {

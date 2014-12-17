@@ -146,7 +146,6 @@
     <Compile Include="Data\EsentStorageStats.cs" />
     <Compile Include="Data\IndexingBatchInfo.cs" />
     <Compile Include="Data\AdminStatistics.cs" />
-    <Compile Include="Data\AggregationData.cs" />
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
