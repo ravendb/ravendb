@@ -181,7 +181,13 @@ namespace Raven.Abstractions.Data
 
 		// General
 
-		public const string RavenDatabasesPrefix = "Raven/Databases/";
-		public const string RavenFileSystemsPrefix = "Raven/FileSystems/";
+		public const string RavenDatabasesPrefix = "Raven/Databases/";		
+
+        public static class FileSystem
+        {
+            public const string Prefix = "Raven/FileSystems/";
+            public const string Storage = "Raven/FileSystem/Storage";
+            public const string DataDirectory = "Raven/FileSystem/DataDir";
+        }
 	}
 }

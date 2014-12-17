@@ -209,8 +209,8 @@ namespace Raven.Database.Config
 
 			FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings["Raven/FileSystem/MaximumSynchronizationInterval"], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
 			FileSystem.IndexStoragePath = new StringSetting(settings["Raven/FileSystem/IndexStoragePath"], string.Empty);
-			FileSystem.DataDir = new StringSetting(settings["Raven/FileSystem/DataDir"], @"~\FileSystems");
-			FileSystem.DefaultStorageTypeName = new StringSetting(settings["Raven/FileSystem/Storage"], string.Empty);
+            FileSystem.DataDir = new StringSetting(settings[Constants.FileSystem.DataDirectory], @"~\FileSystems");
+            FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
 
 			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
 			Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);

@@ -546,7 +546,7 @@ namespace Raven.Tests.FileSystem
                 Id = "Raven/FileSystem/" + newFileSystemName,
                 Settings =
                  {
-                     {"Raven/FileSystem/DataDir", Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
+                     {Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
                  }
             }, newFileSystemName);
 
@@ -583,7 +583,7 @@ namespace Raven.Tests.FileSystem
                 Id = "Raven/FileSystem/" + newFileSystemName,
                 Settings =
                  {
-                     {"Raven/FileSystem/DataDir", Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
+                     {Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
                  }
             };
 

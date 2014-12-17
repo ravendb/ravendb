@@ -1133,8 +1133,8 @@ namespace Raven.Database.Config
 
 		public void CustomizeValuesForFileSystemTenant(string tenantId)
 		{
-			if (string.IsNullOrEmpty(Settings["Raven/FileSystem/DataDir"]) == false)
-				Settings["Raven/FileSystem/DataDir"] = Path.Combine(Settings["Raven/FileSystem/DataDir"], "FileSystems", tenantId);
+            if (string.IsNullOrEmpty(Settings[Constants.FileSystem.DataDirectory]) == false)
+                Settings[Constants.FileSystem.DataDirectory] = Path.Combine(Settings[Constants.FileSystem.DataDirectory], "FileSystems", tenantId);
 		}
 
 		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)

@@ -1,4 +1,5 @@
-﻿// -----------------------------------------------------------------------
+﻿using Raven.Abstractions.Data;
+// -----------------------------------------------------------------------
 //  <copyright file="FileSystemsController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -91,14 +92,14 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			var start = GetStart();
 			var nextPageStart = start; // will trigger rapid pagination
-            var fileSystems = Database.Documents.GetDocumentsWithIdStartingWith("Raven/FileSystems/", null, null, start,
+            var fileSystems = Database.Documents.GetDocumentsWithIdStartingWith(Constants.FileSystem.Prefix, null, null, start,
 										GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
 
 			var fileSystemsData = fileSystems
 				.Select(fileSystem =>
 					new FileSystemData
 					{
-						Name = fileSystem.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/FileSystems/", string.Empty),
+                        Name = fileSystem.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.FileSystem.Prefix, string.Empty),
 						Disabled = fileSystem.Value<bool>("Disabled")
 					}).ToList();
 

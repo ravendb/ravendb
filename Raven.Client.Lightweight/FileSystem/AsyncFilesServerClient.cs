@@ -1799,7 +1799,7 @@ namespace Raven.Client.FileSystem
                         Id = "Raven/FileSystem/" + fileSystem,
                         Settings =
                         {
-                            {"Raven/FileSystem/DataDir", Path.Combine("~", Path.Combine("FileSystems", fileSystem))}
+                            { Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", fileSystem))}
                         }
                     }, fileSystem);
             }

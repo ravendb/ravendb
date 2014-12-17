@@ -95,7 +95,7 @@ namespace Raven.Database.FileSystem.Controllers
 				}, HttpStatusCode.BadRequest);
 	        }
 
-            var docKey = "Raven/FileSystems/" + id;
+            var docKey = Constants.FileSystem.Prefix + id;
            
             // There are 2 possible ways to call this put. We either want to update a filesystem configuration or we want to create a new one.            
             if (!update)
@@ -215,7 +215,7 @@ namespace Raven.Database.FileSystem.Controllers
 			if (configuration == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "File system wasn't found" };
 
-			var docKey = "Raven/FileSystems/" + fileSystemId;
+            var docKey = Constants.FileSystem.Prefix + fileSystemId;
 			Database.Documents.Delete(docKey, null, null);
 
 			if (isHardDeleteNeeded)
@@ -320,8 +320,8 @@ namespace Raven.Database.FileSystem.Controllers
                 IsRunning = true,
             })));
 
-            if (filesystemDocument.Settings.ContainsKey("Raven/StorageTypeName") == false)
-                filesystemDocument.Settings["Raven/StorageTypeName"] = transactionalStorage.FriendlyName ?? transactionalStorage.GetType().AssemblyQualifiedName;
+            if (filesystemDocument.Settings.ContainsKey(Constants.FileSystem.Storage) == false)
+                filesystemDocument.Settings[Constants.FileSystem.Storage] = transactionalStorage.FriendlyName.ToLower() ?? transactionalStorage.GetType().AssemblyQualifiedName;
 
             transactionalStorage.StartBackupOperation(DatabasesLandlord.SystemDatabase, FileSystem, backupDestinationDirectory, incrementalBackup, filesystemDocument);
 
@@ -342,7 +342,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             var task = Task.Factory.StartNew(() =>
             {
-                // as we perform compact async we don't catch exceptions here - they will be propaged to operation
+                // as we perform compact async we don't catch exceptions here - they will be propagated to operation
                 var targetFs = FileSystemsLandlord.GetFileSystemInternal(fs).ResultUnwrap();
                 FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration));
                 return GetEmptyMessage();
@@ -481,7 +481,7 @@ namespace Raven.Database.FileSystem.Controllers
                 if (filesystemDocument == null)
                     return;
 
-                filesystemDocument.Settings["Raven/FileSystem/DataDir"] = documentDataDir;
+                filesystemDocument.Settings[Constants.FileSystem.DataDirectory] = documentDataDir;
 
                 if (restoreRequest.IndexesLocation != null)
                     filesystemDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
@@ -491,7 +491,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 				FileSystemsLandlord.Protect(filesystemDocument);
 
-                DatabasesLandlord.SystemDatabase.Documents.Put("Raven/FileSystems/" + filesystemName, null, RavenJObject.FromObject(filesystemDocument), new RavenJObject(), null);
+                DatabasesLandlord.SystemDatabase.Documents.Put(Constants.FileSystem.Prefix + filesystemName, null, RavenJObject.FromObject(filesystemDocument), new RavenJObject(), null);
 
                 restoreStatus.Messages.Add("The new filesystem was created");
                 DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
