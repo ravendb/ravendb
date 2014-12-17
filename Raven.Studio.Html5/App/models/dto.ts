@@ -1106,18 +1106,6 @@ interface replicationTopologyConnectionDto {
     StoredServerId: string;
 }
 
-interface stringLinkDto {
-    source: string;
-    target: string;
-}
-
-interface replicationTopologyLinkDto extends stringLinkDto {
-    left: boolean;
-    right: boolean;
-    toRightPayload?: replicationTopologyConnectionDto;
-    toLeftPayload?: replicationTopologyConnectionDto;
-}
-
 interface runningTaskDto {
     Id: number;
     TaskStatus: string;
