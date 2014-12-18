@@ -19,11 +19,9 @@ namespace Raven.Tests.Server.Runner
 			Context.Clear();
 			AppDomain.CurrentDomain.ProcessExit += (sender, eventArgs) => Context.Clear();
 
-			optionSet = new OptionSet
-				            {
-								{ "port:", "Change default port (8585).", s => port = int.Parse(s) },
-					            { "h|?|help", v => PrintUsageAndExit(0) },
-				            };
+			optionSet = new OptionSet();
+			optionSet.Add("port:", OptionCategory.General, "Change default port (8585).", s => port = int.Parse(s));
+			optionSet.Add("h|?|help", OptionCategory.Help, string.Empty, v => PrintUsageAndExit(0));
 		}
 
 		public static void Main(string[] args)
@@ -71,9 +69,9 @@ namespace Raven.Tests.Server.Runner
 		{
 			Console.WriteLine(@"
 RavenDB server runner
-----------------------------------------
+----------------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
-----------------------------------------
+----------------------------------------------
 Command line options:", DateTime.UtcNow.Year);
 
 			optionSet.WriteOptionDescriptions(Console.Out);

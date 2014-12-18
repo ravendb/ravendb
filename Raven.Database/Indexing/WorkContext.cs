@@ -6,14 +6,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
-using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
@@ -34,6 +31,7 @@ namespace Raven.Database.Indexing
 		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.OrdinalIgnoreCase);
 
 		private readonly SizeLimitedConcurrentSet<IndexingBatchInfo> lastActualIndexingBatchInfo = new SizeLimitedConcurrentSet<IndexingBatchInfo>(25);
+		private readonly SizeLimitedConcurrentSet<ReducingBatchInfo> lastActualReducingBatchInfo = new SizeLimitedConcurrentSet<ReducingBatchInfo>(25);
 		private readonly ConcurrentQueue<IndexingError> indexingErrors = new ConcurrentQueue<IndexingError>();
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
@@ -344,6 +342,18 @@ namespace Raven.Database.Indexing
 			lastActualIndexingBatchInfo.Add(indexingBatchInfo);
 		}
 
+		public void ReportReducingBatchStarted(List<string> indexesToWorkOn, out ReducingBatchInfo reducingBatchInfo)
+		{
+			reducingBatchInfo = new ReducingBatchInfo
+			{
+				IndexesToWorkOn = indexesToWorkOn,
+				StartedAt = SystemTime.UtcNow,
+				PerformanceStats = new ConcurrentDictionary<string, ReducingPerformanceStats>()
+			};
+
+			lastActualReducingBatchInfo.Add(reducingBatchInfo);
+		}
+
 		public ConcurrentSet<FutureBatchStats> FutureBatchStats
 		{
 			get { return futureBatchStats; }
@@ -352,6 +362,11 @@ namespace Raven.Database.Indexing
 		public SizeLimitedConcurrentSet<IndexingBatchInfo> LastActualIndexingBatchInfo
 		{
 			get { return lastActualIndexingBatchInfo; }
+		}
+
+		public SizeLimitedConcurrentSet<ReducingBatchInfo> LastActualReducingBatchInfo
+		{
+			get { return lastActualReducingBatchInfo; }
 		}
 
 		public DocumentDatabase Database { get; set; }
