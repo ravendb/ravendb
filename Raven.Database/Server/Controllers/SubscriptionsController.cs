@@ -59,7 +59,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			try
 			{
-				Database.Subscriptions.GetSubscriptionDocument(id);
+				Database.Subscriptions.GetSubscriptionConfig(id);
 
 				var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>();
 
@@ -186,9 +186,9 @@ namespace Raven.Database.Server.Controllers
 					var batchDocCount = 0;
 					var hasMoreDocs = false;
 
-					var subscriptionDocument = subscriptions.GetSubscriptionDocument(id);
-					var startEtag = subscriptionDocument.AckEtag;
-					var criteria = subscriptionDocument.Criteria;
+					var config = subscriptions.GetSubscriptionConfig(id);
+					var startEtag = config.AckEtag;
+					var criteria = config.Criteria;
 
 					do
 					{

@@ -7,7 +7,7 @@ using System;
 
 namespace Raven.Abstractions.Data
 {
-	public class SubscriptionDocument
+	public class SubscriptionConfig
 	{
 		public long SubscriptionId { get; set; }
 		public SubscriptionCriteria Criteria { get; set; }

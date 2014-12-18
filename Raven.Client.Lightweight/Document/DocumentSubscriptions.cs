@@ -91,22 +91,22 @@ namespace Raven.Client.Document
 			}
 		}
 
-		public List<SubscriptionDocument> GetSubscriptions(int start, int take, string database = null)
+		public List<SubscriptionConfig> GetSubscriptions(int start, int take, string database = null)
 		{
 			var commands = database == null
 				? documentStore.AsyncDatabaseCommands
 				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-			List<SubscriptionDocument> documents;
+			List<SubscriptionConfig> configs;
 
 			using (var request = commands.CreateRequest("/subscriptions", "GET"))
 			{
 				var response = request.ReadResponseJson();
 
-				documents = documentStore.Conventions.CreateSerializer().Deserialize<SubscriptionDocument[]>(new RavenJTokenReader(response)).ToList();
+				configs = documentStore.Conventions.CreateSerializer().Deserialize<SubscriptionConfig[]>(new RavenJTokenReader(response)).ToList();
 			}
 
-			return documents;
+			return configs;
 		}
 
 		public void Delete(long id, string database)

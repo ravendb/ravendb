@@ -33,14 +33,14 @@ namespace Raven.Database.Actions
 			{
 				id = accessor.General.GetNextIdentityValue(Constants.RavenSubscriptionsPrefix);
 
-				var doc = new SubscriptionDocument
+				var config = new SubscriptionConfig
 				{
 					SubscriptionId = id,
 					Criteria = criteria,
 					AckEtag = Etag.Empty
 				};
 
-				SaveSubscriptionDocument(id, doc);
+				SaveSubscriptionConfig(id, config);
 			});
 
 			return id;
@@ -51,10 +51,10 @@ namespace Raven.Database.Actions
 			Database.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenSubscriptionsPrefix, id.ToString("D19")));
 		}
 
-		private void SaveSubscriptionDocument(long id, SubscriptionDocument doc)
+		private void SaveSubscriptionConfig(long id, SubscriptionConfig config)
 		{
 			Database.TransactionalStorage.Batch(accessor => 
-				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, id.ToString("D19"), RavenJObject.FromObject(doc), UuidType.Subscriptions));
+				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, id.ToString("D19"), RavenJObject.FromObject(config), UuidType.Subscriptions));
 		}
 
 		public void OpenSubscription(long id, SubscriptionConnectionOptions options)
@@ -78,9 +78,9 @@ namespace Raven.Database.Actions
 				return; 
 			}
 
-			var doc = GetSubscriptionDocument(id);
+			var config = GetSubscriptionConfig(id);
 
-			if (SystemTime.UtcNow - doc.TimeOfLastClientActivity > TimeSpan.FromTicks(existingOptions.ClientAliveNotificationInterval.Ticks * 3))
+			if (SystemTime.UtcNow - config.TimeOfLastClientActivity > TimeSpan.FromTicks(existingOptions.ClientAliveNotificationInterval.Ticks * 3))
 			{
 				// last connected client didn't send at least two 'client-alive' notifications - let the requesting client to open it
 
@@ -102,17 +102,17 @@ namespace Raven.Database.Actions
 		{
 			TransactionalStorage.Batch(accessor =>
 			{
-				var doc = GetSubscriptionDocument(id);
+				var config = GetSubscriptionConfig(id);
 				var options = GetBatchOptions(id);
 
-				var timeSinceBatchSent = SystemTime.UtcNow - doc.TimeOfSendingLastBatch;
+				var timeSinceBatchSent = SystemTime.UtcNow - config.TimeOfSendingLastBatch;
 				if(timeSinceBatchSent > options.AcknowledgmentTimeout)
 					throw new TimeoutException("The subscription cannot be acknowledged because the timeout has been reached.");
 
-				doc.AckEtag = lastEtag;
-				doc.TimeOfLastClientActivity = SystemTime.UtcNow;
+				config.AckEtag = lastEtag;
+				config.TimeOfLastClientActivity = SystemTime.UtcNow;
 
-				SaveSubscriptionDocument(id, doc);
+				SaveSubscriptionConfig(id, config);
 			});
 		}
 
@@ -138,9 +138,9 @@ namespace Raven.Database.Actions
 			return options.BatchOptions;
 		}
 
-		public SubscriptionDocument GetSubscriptionDocument(long id)
+		public SubscriptionConfig GetSubscriptionConfig(long id)
 		{
-			SubscriptionDocument doc = null;
+			SubscriptionConfig config = null;
 
 			TransactionalStorage.Batch(accessor =>
 			{
@@ -149,22 +149,22 @@ namespace Raven.Database.Actions
 				if(listItem == null)
 					throw new SubscriptionDoesNotExistExeption("There is no subscription configuration for specified identifier (id: " + id + ")");
 
-				doc = listItem.Data.JsonDeserialization<SubscriptionDocument>();
+				config = listItem.Data.JsonDeserialization<SubscriptionConfig>();
 			});
 
-			return doc;
+			return config;
 		}
 
 		public void UpdateBatchSentTime(long id)
 		{
 			TransactionalStorage.Batch(accessor =>
 			{
-				var doc = GetSubscriptionDocument(id);
+				var config = GetSubscriptionConfig(id);
 
-				doc.TimeOfSendingLastBatch = SystemTime.UtcNow;
-				doc.TimeOfLastClientActivity = SystemTime.UtcNow;
+				config.TimeOfSendingLastBatch = SystemTime.UtcNow;
+				config.TimeOfLastClientActivity = SystemTime.UtcNow;
 
-				SaveSubscriptionDocument(id, doc);
+				SaveSubscriptionConfig(id, config);
 			});
 		}
 
@@ -172,24 +172,24 @@ namespace Raven.Database.Actions
 		{
 			TransactionalStorage.Batch(accessor =>
 			{
-				var doc = GetSubscriptionDocument(id);
-				
-				doc.TimeOfLastClientActivity = SystemTime.UtcNow;
+				var config = GetSubscriptionConfig(id);
 
-				SaveSubscriptionDocument(id, doc);
+				config.TimeOfLastClientActivity = SystemTime.UtcNow;
+
+				SaveSubscriptionConfig(id, config);
 			});
 		}
 
-		public List<SubscriptionDocument> GetSubscriptions(int start, int take)
+		public List<SubscriptionConfig> GetSubscriptions(int start, int take)
 		{
-			var subscriptions = new List<SubscriptionDocument>();
+			var subscriptions = new List<SubscriptionConfig>();
 
 			TransactionalStorage.Batch(accessor =>
 			{
 				foreach (var listItem in accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, start, take))
 				{
-					var doc = listItem.Data.JsonDeserialization<SubscriptionDocument>();
-					subscriptions.Add(doc);
+					var config = listItem.Data.JsonDeserialization<SubscriptionConfig>();
+					subscriptions.Add(config);
 				}
 			});
 

@@ -216,7 +216,7 @@
     <Compile Include="Data\StreamResult.cs" />
     <Compile Include="Data\StringDistanceTypes.cs" />
     <Compile Include="Data\SubscriptionCriteria.cs" />
-    <Compile Include="Data\SubscriptionDocument.cs" />
+    <Compile Include="Data\SubscriptionConfig.cs" />
     <Compile Include="Data\SubscriptionConnectionOptions.cs" />
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />
