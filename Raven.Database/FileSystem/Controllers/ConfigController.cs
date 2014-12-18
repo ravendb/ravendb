@@ -61,10 +61,11 @@ namespace Raven.Database.FileSystem.Controllers
         public HttpResponseMessage NonGeneratedConfigNames()
         {
             IEnumerable<string> configs = null;
-            Storage.Batch(accessor => { configs = accessor.GetConfigNames(Paging.Start, Paging.PageSize).ToList(); });
+            Storage.Batch(accessor => { configs = accessor.GetConfigNames(Paging.Start, int.MaxValue); });
             
             var searchPattern = new Regex("^(sync|deleteOp|raven\\/synchronization\\/sources|conflicted|renameOp)", RegexOptions.IgnoreCase);
-            configs = configs.Where((c) => !searchPattern.IsMatch(c)).AsEnumerable();
+            configs = configs.Where((c) => !searchPattern.IsMatch(c))
+                             .Take(Paging.PageSize);
 
             return this.GetMessageWithObject(configs)
                        .WithNoCache();

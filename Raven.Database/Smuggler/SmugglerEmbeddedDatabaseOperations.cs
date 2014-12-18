@@ -210,7 +210,7 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask();
 		}
 
-		public void PurgeTombstones(ExportDataResult result)
+		public void PurgeTombstones(OperationState result)
 		{
 			database.TransactionalStorage.Batch(accessor =>
 			{

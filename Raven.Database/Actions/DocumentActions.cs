@@ -145,7 +145,7 @@ namespace Raven.Database.Actions
                             if (!WildcardMatcher.Matches(matches, keyTest) || WildcardMatcher.MatchesExclusion(exclude, keyTest))
                                 continue;
 
-                            DocumentRetriever.EnsureIdInMetadata(doc);
+                            JsonDocument.EnsureIdInMetadata(doc);
                             var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
 
                             var document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
@@ -429,7 +429,7 @@ namespace Raven.Database.Actions
                         token.ThrowIfCancellationRequested();
                         if (etag != null)
                             etag = doc.Etag;
-                        DocumentRetriever.EnsureIdInMetadata(doc);
+                        JsonDocument.EnsureIdInMetadata(doc);
                         var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
                         var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
                         document = documentRetriever
@@ -469,7 +469,7 @@ namespace Raven.Database.Actions
                     document = nonAuthoritativeInformationBehavior(document);
             }
 
-            DocumentRetriever.EnsureIdInMetadata(document);
+            JsonDocument.EnsureIdInMetadata(document);
 
             return new DocumentRetriever(null, Database.ReadTriggers, Database.InFlightTransactionalState)
                 .ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
@@ -493,7 +493,7 @@ namespace Raven.Database.Actions
                     document = nonAuthoritativeInformationBehavior(document);
             }
 
-            DocumentRetriever.EnsureIdInMetadata(document);
+            JsonDocument.EnsureIdInMetadata(document);
             return new DocumentRetriever(null, Database.ReadTriggers, Database.InFlightTransactionalState)
                 .ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
         }

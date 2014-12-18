@@ -22,7 +22,7 @@ namespace Raven.Client.FileSystem.Extensions
                 Id = "Raven/FileSystem/" + commands.FileSystem,
                 Settings =
                  {
-                     {"Raven/FileSystem/DataDir", Path.Combine("FileSystems", commands.FileSystem)}
+                     {Constants.FileSystem.DataDirectory, Path.Combine("FileSystems", commands.FileSystem)}
                  }
             });
         }
