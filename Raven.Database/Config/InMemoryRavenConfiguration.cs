@@ -1145,6 +1145,8 @@ namespace Raven.Database.Config
 
 		    Encryption.UseSsl = defaultConfiguration.Encryption.UseSsl;
 		    Encryption.UseFips = defaultConfiguration.Encryption.UseFips;
+
+		    AssembliesDirectory = defaultConfiguration.AssembliesDirectory;
 		}
 
 		public IEnumerable<string> GetConfigOptionsDocs()
