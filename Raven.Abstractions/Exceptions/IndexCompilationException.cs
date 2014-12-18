@@ -19,22 +19,33 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-		public IndexCompilationException(string message) : base(message)
+		public IndexCompilationException(string message)
+			: base(message)
 		{
 		}
 
-		public IndexCompilationException(string message, Exception inner) : base(message, inner)
+		public IndexCompilationException(string message, Exception inner)
+			: base(message, inner)
 		{
 		}
 
+		/// <summary>
+		/// Indicates which property caused error (Maps, Reduce).
+		/// </summary>
 		public string IndexDefinitionProperty { get; set; }
 
+		/// <summary>
+		/// Value of a problematic property.
+		/// </summary>
 		public string ProblematicText { get; set; }
+
 		protected IndexCompilationException(
 			SerializationInfo info,
-			StreamingContext context) : base(info, context)
+			StreamingContext context)
+			: base(info, context)
 		{
 		}
+
 		public override string ToString()
 		{
 			return this.ExceptionToString(description =>

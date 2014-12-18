@@ -36,6 +36,23 @@ namespace Raven.Abstractions.Smuggler
 		    TotalDocumentSizeInChunkLimitInBytes = DefaultDocumentSizeInChunkLimitInBytes;
 		}
 
+
+        private string continuationFile;
+        private bool useContinuationFile = false;
+        public string ContinuationToken 
+        {
+            get { return continuationFile; }
+            set
+            {
+                useContinuationFile = !string.IsNullOrWhiteSpace(value);
+                continuationFile = value;
+            }
+        }
+        public bool UseContinuationFile
+        {
+            get { return useContinuationFile; }
+        }
+
         /// <summary>
 		/// Limit total size of documents in each chunk
 		/// </summary>
@@ -179,6 +196,8 @@ namespace Raven.Abstractions.Smuggler
         public bool WaitForIndexing { get; set; }
 
 		public bool StripReplicationInformation { get; set; }
+
+        public bool SkipConflicted { get; set; }
     }
 
  

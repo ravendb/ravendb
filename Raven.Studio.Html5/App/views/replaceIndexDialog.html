@@ -8,32 +8,26 @@
     <div class="modal-body">
         <form class="form-horizontal" role="form" id="replaceIndexForm">
             <div class="form-group">
-                <label class="col-md-4 control-label"></label>
-                <div>When new index become non-stale</div>
-            </div>
-            <div class="form-group">
-                <label class="col-sm-4 control-label">
-                     <button type="button" class="btn btn-default" data-bind="click: toggleExtraModes">
-                        <i data-bind="css: { 'fa-check': extraMode }" class="fa fa-fw"></i> Or:
+                <label class="col-md-4 control-label">Replace conditions:</label>
+                <div class="col-md-8">
+                    <button type="button" class="btn btn-default" disabled="disabled">
+                        <i data-bind="css: { 'fa-check': true }" class="fa fa-fw"></i> When new index become non-stale
                     </button>
-                </label>
-                <div class="btn-group" data-bind="visible: extraMode">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                        <span data-bind="visible: replaceMode() == 'etag'">index etag reaches last indexed etag of old index</span>
-                        <span data-bind="visible: replaceMode() == 'time'">or date is reached</span>
-                        <span class="caret"></span>
+                    <button type="button" class="btn btn-default" data-bind="click: toggleEtagMode">
+                        <i data-bind="css: { 'fa-check': etagMode() }" class="fa fa-fw"></i> index etag reaches last indexed etag of old index
                     </button>
-                    <ul class="dropdown-menu" role="menu">
-                        <li><a href="#" data-bind="click: changeReplaceMode.bind($root, 'etag')">index etag reaches last indexed etag of old index</a></li>
-                        <li><a href="#" data-bind="click: changeReplaceMode.bind($root, 'time')">date is reached</a></li>
-                    </ul>
+                    <button type="button" class="btn btn-default" data-bind="click: toggleDateMode">
+                        <i data-bind="css: { 'fa-check': dateMode() }" class="fa fa-fw"></i> date is reached
+                    </button>
                 </div>
             </div>
-            <div class="form-group" data-bind="visible: replaceMode() == 'time' && extraMode()">
-                <label class="col-sm-4 control-label">Replacement date (UTC):</label>
-                <div class="btn-group">
-                    <input id="replaceDate" disabled="disabled" type="datetime" class="form-control" data-bind="value: replaceDateText" />
-                    <button class="btn btn-default" id="replaceDateButton" data-bind="clickBubble: false, datePicker: replaceDate"><i class="fa fa-calendar"></i></button>
+            <div class="form-group" data-bind="visible: dateMode()">
+                <label class="col-md-4 control-label">Replacement date (UTC):</label>
+                <div class="col-md-8">
+                    <div class="btn-group">
+                        <input id="replaceDate" disabled="disabled" type="datetime" class="form-control" data-bind="value: replaceDateText" />
+                        <button class="btn btn-default" id="replaceDateButton" data-bind="clickBubble: false, datePicker: replaceDate"><i class="fa fa-calendar"></i></button>
+                    </div>
                 </div>
             </div>
         </form>

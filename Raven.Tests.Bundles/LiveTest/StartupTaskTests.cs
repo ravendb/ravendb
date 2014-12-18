@@ -115,7 +115,7 @@ namespace Raven.Tests.Bundles.LiveTest
 					Id = "Northwind",
 					Settings =
 					{
-						{ "Raven/FileSystem/DataDir", NewDataPath() }
+						{ Constants.FileSystem.DataDirectory, NewDataPath() }
 					}
 				}, "Northwind");
 
@@ -124,7 +124,7 @@ namespace Raven.Tests.Bundles.LiveTest
 					Id = "Northwind2",
 					Settings =
 					{
-						{ "Raven/FileSystem/DataDir", NewDataPath() }
+						{ Constants.FileSystem.DataDirectory, NewDataPath() }
 					}
 				}, "Northwind2");
 
@@ -133,7 +133,7 @@ namespace Raven.Tests.Bundles.LiveTest
 					Id = "Northwind3",
 					Settings =
 					{
-						{ "Raven/FileSystem/DataDir", NewDataPath() }
+						{ Constants.FileSystem.DataDirectory, NewDataPath() }
 					}
 				}, "Northwind3");
 
@@ -147,15 +147,15 @@ namespace Raven.Tests.Bundles.LiveTest
 					.ForFileSystem("Northwind3")
 					.GetStatisticsAsync();
 
-				Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.RavenFileSystemsPrefix + "Northwind"));
-				Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.RavenFileSystemsPrefix + "Northwind2"));
+                Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind"));
+                Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind2"));
 
 				server
 					.ServerStartupTasks.OfType<LiveTestResourceCleanerStartupTask>().First()
 					.ExecuteCleanup(null);
 
-				Assert.Null(store.DatabaseCommands.ForSystemDatabase().Get(Constants.RavenFileSystemsPrefix + "Northwind"));
-				Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.RavenFileSystemsPrefix + "Northwind2"));
+                Assert.Null(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind"));
+                Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind2"));
 
 				server.Server.Options.FileSystemLandlord.LastRecentlyUsed["Northwind2"] = DateTime.MinValue;
 
@@ -163,8 +163,8 @@ namespace Raven.Tests.Bundles.LiveTest
 					.ServerStartupTasks.OfType<LiveTestResourceCleanerStartupTask>().First()
 					.ExecuteCleanup(null);
 
-				Assert.Null(store.DatabaseCommands.ForSystemDatabase().Get(Constants.RavenFileSystemsPrefix + "Northwind2"));
-				Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.RavenFileSystemsPrefix + "Northwind3"));
+                Assert.Null(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind2"));
+                Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind3"));
 			}
 		}
 	}

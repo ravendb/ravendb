@@ -13,17 +13,22 @@ using System.Web.Http.Routing;
 
 namespace Raven.Database.Server.WebApi
 {
-	internal static class RouteCacher
+	public static class RouteCacher
 	{
 		private const string ActionsDataTokenKey = "actions";
 
 		private const string InfoDataTokenKey = "info";
 
-		private static Dictionary<string, HttpRouteInformation> RouteCache;
+		private static Dictionary<string, HttpRouteInformation> routeCache;
 
-		public static void CacheRoutesIfNecessary(HttpConfiguration cfg)
+		public static void ClearCache()
 		{
-			if (RouteCache != null)
+			routeCache = null;
+		}
+
+		internal static void CacheRoutesIfNecessary(HttpConfiguration cfg)
+		{
+			if (routeCache != null)
 				return;
 
 			var cache = new Dictionary<string, HttpRouteInformation>();
@@ -39,12 +44,12 @@ namespace Raven.Database.Server.WebApi
 				}
 			}
 
-			RouteCache = cache;
+			routeCache = cache;
 		}
 
-		public static bool TryAddRoutesFromCache(HttpConfiguration cfg)
+		internal static bool TryAddRoutesFromCache(HttpConfiguration cfg)
 		{
-			var cache = RouteCache;
+			var cache = routeCache;
 			if (cache == null)
 				return false;
 

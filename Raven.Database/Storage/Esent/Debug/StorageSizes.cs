@@ -14,6 +14,7 @@ using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Util;
 using Raven.Storage.Esent;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Storage.Esent.Debug
 {
@@ -26,7 +27,7 @@ namespace Raven.Database.Storage.Esent.Debug
 				DataDirectory = path,
 				Settings =
 				{
-					{"Raven/Esent/LogFileSize", "1"}
+					{Constants.Esent.LogFileSize, "1"}
 				}
 			}, () => { }, () => { }))
 			{

@@ -8,16 +8,19 @@ using Raven.Abstractions.Extensions;
 namespace Raven.Abstractions.Data
 {
 	/// <summary>
-	/// A Advanced patch request for a specified document (using JavaScript)
+	/// An advanced patch request for a specified document (using JavaScript)
 	/// </summary>
 	public class ScriptedPatchRequest
 	{
 		/// <summary>
-		/// The JavaScript function to use the patch a document
+		/// JavaScript function to use to patch a document
 		/// </summary>
 		/// <value>The type.</value>
 		public string Script { get; set; }
 
+		/// <summary>
+		/// Additional arguments passed to JavaScript function from Script.
+		/// </summary>
 		public Dictionary<string, object> Values { get; set; }
 
 		public ScriptedPatchRequest()

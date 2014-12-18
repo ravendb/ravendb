@@ -795,7 +795,7 @@ namespace Raven.SlowTests.Issues
 				
                 var allDocs = new List<RavenJObject>();
 
-                ExportDataResult exportResult = null;
+                OperationState exportResult = null;
 
                 try
                 {
@@ -812,7 +812,7 @@ namespace Raven.SlowTests.Issues
                 }
                 catch (SmugglerExportException e)
                 {
-                    exportResult = new ExportDataResult
+                    exportResult = new OperationState
                     {
                         FilePath = e.File
                     };
@@ -888,7 +888,7 @@ namespace Raven.SlowTests.Issues
 
 	            var allAttachments = new List<RavenJObject>();
 
-                ExportDataResult exportResult = null;
+                OperationState exportResult = null;
                 try
                 {
                     exportResult = dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
@@ -905,7 +905,7 @@ namespace Raven.SlowTests.Issues
                 catch (AggregateException e)
                 {
                     var inner = (SmugglerExportException)e.ExtractSingleInnerException();
-                    exportResult = new ExportDataResult
+                    exportResult = new OperationState
                     {
                         FilePath = inner.File
                     };

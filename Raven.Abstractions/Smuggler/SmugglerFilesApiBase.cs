@@ -74,13 +74,13 @@ namespace Raven.Abstractions.Smuggler
                     ReadLastEtagsFromFile(result);
                 }
 
-                result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravenfs-incremental-dump");
+                result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-0", CultureInfo.InvariantCulture) + ".ravenfs-incremental-dump");
                 if (File.Exists(result.FilePath))
                 {
                     var counter = 1;
                     while (true)
                     {
-                        result.FilePath = Path.Combine(Path.GetDirectoryName(result.FilePath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravenfs-incremental-dump");
+                        result.FilePath = Path.Combine(Path.GetDirectoryName(result.FilePath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + "-" + counter + ".ravenfs-incremental-dump");
 
                         if (File.Exists(result.FilePath) == false)
                             break;

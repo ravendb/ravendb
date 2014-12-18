@@ -1,5 +1,3 @@
-/// <reference path="../../Scripts/typings/d3/nvd3.d.ts" />
-/// <reference path="../../Scripts/typings/d3/d3.d.ts" />
 /// <reference path="../../Scripts/typings/bootstrap.multiselect/bootstrap.multiselect.d.ts" />
 
 

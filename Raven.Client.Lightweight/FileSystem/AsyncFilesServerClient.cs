@@ -382,20 +382,134 @@ namespace Raven.Client.FileSystem
 
             var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
 
-            var sb = new StringBuilder(operationMetadata.Url)
-                            .Append("/streams/files?etag=")
-                            .Append(fromEtag)
-                            .Append("&");
+            if ( pageSize != int.MaxValue )
+            {
+                return new EtagStreamResults(this, fromEtag, pageSize);
+            }
+            else
+            {
+                var sb = new StringBuilder(operationMetadata.Url)
+                .Append("/streams/files?etag=")
+                .Append(fromEtag)
+                .Append("&pageSize=")
+                .Append(pageSize);
 
-            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", operationMetadata.Credentials, this.Conventions)
-                                        .AddOperationHeaders(OperationsHeaders));
+                var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", operationMetadata.Credentials, this.Conventions)
+                                            .AddOperationHeaders(OperationsHeaders));
 
-            var response = await request.ExecuteRawResponseAsync()
-                                        .ConfigureAwait(false);
+                var response = await request.ExecuteRawResponseAsync()
+                                            .ConfigureAwait(false);
 
-            await response.AssertNotFailingResponse();
+                await response.AssertNotFailingResponse();
 
-            return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+                return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+            }
+        }
+
+        internal class EtagStreamResults : IAsyncEnumerator<FileHeader>
+        {
+            private readonly AsyncFilesServerClient client;
+            private readonly OperationMetadata operationMetadata;
+            private readonly NameValueCollection headers;
+            private readonly Etag startEtag;
+            private readonly int pageSize;
+            private readonly FilesConvention conventions;
+            private readonly HttpJsonRequestFactory requestFactory;
+
+            private bool complete;
+            private bool wasInitialized;
+
+            private FileHeader current;
+            private YieldStreamResults currentStream;
+
+            private Etag currentEtag;
+            private int currentPageCount = 0;
+
+
+            public EtagStreamResults(AsyncFilesServerClient client, Etag startEtag, int pageSize)
+            {
+                this.client = client;
+                this.startEtag = startEtag;
+                this.pageSize = pageSize;
+
+                this.requestFactory = client.RequestFactory;
+                this.operationMetadata = new OperationMetadata(client.BaseUrl, client.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
+                this.headers = client.OperationsHeaders;
+                this.conventions = client.Conventions;
+            }
+
+            private async Task RequestPage(Etag etag)
+            {
+                if (currentStream != null)
+                    currentStream.Dispose();
+
+                var sb = new StringBuilder(operationMetadata.Url)
+                       .Append("/streams/files?etag=")
+                       .Append(etag)
+                       .Append("&pageSize=")
+                       .Append(pageSize);
+
+                var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(client, sb.ToString(), "GET", operationMetadata.Credentials, conventions)
+                                            .AddOperationHeaders(headers));
+
+                var response = await request.ExecuteRawResponseAsync()
+                                            .ConfigureAwait(false);
+
+                await response.AssertNotFailingResponse();
+
+                currentPageCount = 0;
+                currentEtag = etag;
+                currentStream = new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+            }
+
+            public async Task<bool> MoveNextAsync()
+            {
+                if (complete)
+                {
+                    // to parallel IEnumerable<T>, subsequent calls to MoveNextAsync after it has returned false should
+                    // also return false, rather than throwing
+                    return false;
+                }
+
+                if (wasInitialized == false)
+                {
+                    await RequestPage(startEtag).ConfigureAwait(false);
+                    wasInitialized = true;
+                }
+
+                if (await currentStream.MoveNextAsync().ConfigureAwait(false) == false)
+                {
+                    // We didn't finished the page, so there is no more data to retrieve.
+                    if (currentPageCount < pageSize)
+                    {
+                        complete = true;
+                        return false;
+                    }
+                    else
+                    {
+                        await RequestPage(current.Etag).ConfigureAwait(false);
+                        return await this.MoveNextAsync().ConfigureAwait(false);
+                    }
+                }
+                else
+                {
+                    current = currentStream.Current;
+                    currentPageCount++;
+
+                    return true;
+                }                
+            }
+
+            public FileHeader Current
+            {
+                get { return current; }
+            }
+
+            public void Dispose()
+            {
+                if (currentStream != null)
+                    currentStream.Dispose();
+            }
         }
 
         internal class YieldStreamResults : IAsyncEnumerator<FileHeader>
@@ -1685,7 +1799,7 @@ namespace Raven.Client.FileSystem
                         Id = "Raven/FileSystem/" + fileSystem,
                         Settings =
                         {
-                            {"Raven/FileSystem/DataDir", Path.Combine("~", Path.Combine("FileSystems", fileSystem))}
+                            { Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", fileSystem))}
                         }
                     }, fileSystem);
             }

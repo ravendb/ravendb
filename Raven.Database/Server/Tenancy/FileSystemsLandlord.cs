@@ -42,8 +42,8 @@ namespace Raven.Database.Server.Tenancy
     {
 		private bool initialized;
         private readonly DocumentDatabase systemDatabase;
-        private const string FILESYSTEMS_PREFIX = "Raven/FileSystems/";
-        public override string ResourcePrefix { get { return FILESYSTEMS_PREFIX; } }
+
+        public override string ResourcePrefix { get { return Constants.FileSystem.Prefix; } }
 
         public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
 
@@ -70,7 +70,7 @@ namespace Raven.Database.Server.Tenancy
             {
                 if (notification.Id == null)
                     return;
-                const string ravenDbPrefix = FILESYSTEMS_PREFIX;
+                const string ravenDbPrefix = Constants.FileSystem.Prefix;
                 if (notification.Id.StartsWith(ravenDbPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
                     return;
 
@@ -90,7 +90,7 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, "Raven/FileSystem/DataDir", this.SystemConfiguration);
+            return CreateConfiguration(tenantId, document, Constants.FileSystem.DataDirectory, this.SystemConfiguration);
         }
 
         protected InMemoryRavenConfiguration CreateConfiguration(
@@ -107,7 +107,7 @@ namespace Raven.Database.Server.Tenancy
 	        SetupTenantConfiguration(config);
 
 	        config.CustomizeValuesForFileSystemTenant(tenantId);
-	        config.Settings["Raven/FileSystem/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
+            config.Settings[Constants.FileSystem.Storage] = parentConfiguration.FileSystem.DefaultStorageTypeName;
 
 	        foreach (var setting in document.Settings)
 	        {
@@ -179,7 +179,7 @@ namespace Raven.Database.Server.Tenancy
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
             {
-                jsonDocument = systemDatabase.Documents.Get(FILESYSTEMS_PREFIX + tenantId, null);
+                jsonDocument = systemDatabase.Documents.Get(Constants.FileSystem.Prefix + tenantId, null);
             }
 
             if (jsonDocument == null || jsonDocument.Metadata == null ||
@@ -188,7 +188,7 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
-            if (document.Settings.Keys.Contains("Raven/FileSystem/DataDir") == false)
+            if (document.Settings.Keys.Contains(Constants.FileSystem.DataDirectory) == false)
                 throw new InvalidOperationException("Could not find Raven/FileSystem/DataDir");
 
 			if (document.Disabled && !ignoreDisabledFileSystem)
@@ -262,7 +262,7 @@ namespace Raven.Database.Server.Tenancy
 
                     int nextPageStart = 0;
                     var fileSystems =
-                        systemDatabase.Documents.GetDocumentsWithIdStartingWith(FILESYSTEMS_PREFIX, null, null, 0,
+                        systemDatabase.Documents.GetDocumentsWithIdStartingWith(Constants.FileSystem.Prefix, null, null, 0,
                             numberOfAllowedFileSystems, CancellationToken.None, ref nextPageStart).ToList();
                     if (fileSystems.Count >= numberOfAllowedFileSystems)
                         throw new InvalidOperationException(

@@ -14,12 +14,12 @@ namespace Raven.Abstractions.Data
 	[Serializable]
 	public class Etag : IEquatable<Etag>, IComparable<Etag>
 	{
-	
+
 		public override int GetHashCode()
 		{
 			unchecked
 			{
-				return (restarts.GetHashCode()*397) ^ changes.GetHashCode();
+				return (restarts.GetHashCode() * 397) ^ changes.GetHashCode();
 			}
 		}
 
@@ -58,7 +58,7 @@ namespace Raven.Abstractions.Data
 			if (ReferenceEquals(null, obj)) return false;
 			if (ReferenceEquals(this, obj)) return true;
 			if (obj.GetType() != GetType()) return false;
-			return Equals((Etag) obj);
+			return Equals((Etag)obj);
 		}
 
 		public static bool operator ==(Etag a, Etag b)
@@ -99,7 +99,7 @@ namespace Raven.Abstractions.Data
 		{
 			return BitConverter.GetBytes(restarts).Reverse()
 				.Concat(BitConverter.GetBytes(changes).Reverse());
-			}
+		}
 
 		public byte[] ToByteArray()
 		{
@@ -109,7 +109,7 @@ namespace Raven.Abstractions.Data
 		public override string ToString()
 		{
 			var etagBytes = ToBytes().ToList();
-			var sb = etagBytes.Aggregate(new StringBuilder(36), 
+			var sb = etagBytes.Aggregate(new StringBuilder(36),
 				(stringBuilder, b) => stringBuilder.Append(GenericUtil.ByteToHexAsStringLookup[b]));
 
 			sb.Insert(8, "-")
@@ -286,7 +286,7 @@ namespace Raven.Abstractions.Data
 				Array.Reverse(bytes, 0, 4);
 				Array.Reverse(bytes, 4, 2);
 				Array.Reverse(bytes, 6, 2);
-	}
+			}
 			return new Guid(bytes);
 		}
 
@@ -308,7 +308,7 @@ namespace Raven.Abstractions.Data
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
 			var etag = value as Etag;
-			if(etag == null)
+			if (etag == null)
 				writer.WriteNull();
 			else
 				writer.WriteValue(etag.ToString());
@@ -324,7 +324,7 @@ namespace Raven.Abstractions.Data
 
 		public override bool CanConvert(Type objectType)
 		{
-			return objectType == typeof (Etag);
+			return objectType == typeof(Etag);
 		}
 	}
 }

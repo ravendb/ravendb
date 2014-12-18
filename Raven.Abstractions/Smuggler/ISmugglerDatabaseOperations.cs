@@ -51,7 +51,7 @@ namespace Raven.Abstractions.Smuggler
 
 		Task<string> GetVersion(RavenConnectionStringOptions server);
 
-		void PurgeTombstones(ExportDataResult result);
+		void PurgeTombstones(OperationState result);
 
         [Obsolete("Use RavenFS instead.")]
 		Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo);

@@ -14,46 +14,45 @@ namespace Raven.Abstractions.Commands
 	public class DeleteCommandData : ICommandData
 	{
 		/// <summary>
-		/// Gets or sets the key.
+		/// Key of a document to delete.
 		/// </summary>
-		/// <value>The key.</value>
 		public virtual string Key { get; set; }
 
 		/// <summary>
-		/// Gets the method.
+		/// Returns operation method. In this case DELETE.
 		/// </summary>
-		/// <value>The method.</value>
 		public string Method
 		{
 			get { return "DELETE"; }
 		}
 
 		/// <summary>
-		/// Gets or sets the etag.
+		/// Current document etag, used for concurrency checks (null to skip check)
 		/// </summary>
-		/// <value>The etag.</value>
 		public virtual Etag Etag { get; set; }
 
 		/// <summary>
-		/// Gets or sets the transaction information.
+		/// Information used to identify a transaction. Contains transaction Id and timeout.
 		/// </summary>
-		/// <value>The transaction information.</value>
 		public TransactionInformation TransactionInformation { get; set; }
 
 		/// <summary>
-		/// Gets or sets the metadata.
+		/// RavenJObject representing document's metadata. In this case null.
 		/// </summary>
-		/// <value>The metadata.</value>
 		public RavenJObject Metadata
 		{
 			get { return null; }
 		}
 
+		/// <summary>
+		/// Additional command data. For internal use only.
+		/// </summary>
 		public RavenJObject AdditionalData { get; set; }
 
 		/// <summary>
-		/// Translate this instance to a Json object.
+		/// Translates this instance to a Json object.
 		/// </summary>
+		/// <returns>RavenJObject representing the command.</returns>
 		public RavenJObject ToJson()
 		{
 			return new RavenJObject
