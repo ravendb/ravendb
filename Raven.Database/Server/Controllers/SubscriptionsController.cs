@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Util;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
@@ -35,28 +36,34 @@ namespace Raven.Database.Server.Controllers
 
 			var id = Database.Subscriptions.CreateSubscription(subscriptionCriteria);
 
-			return GetMessageWithObject(id, HttpStatusCode.Created);
+			return GetMessageWithObject(new
+			{
+				Id = id
+			}, HttpStatusCode.Created);
 		}
 
 		[HttpPost]
 		[Route("subscriptions/open")]
 		[Route("databases/{databaseName}/subscriptions/open")]
-		public async Task<HttpResponseMessage> Open(long id, string connection = null)
+		public async Task<HttpResponseMessage> Open(long id)
 		{
-			if (Database.Subscriptions.GetSubscriptionDocument(id) == null)
-				return GetMessageWithString("Cannot find a subscription for the specified id: " + id, HttpStatusCode.NotFound);
+			try
+			{
+				Database.Subscriptions.GetSubscriptionDocument(id);
 
-			var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>();
+				var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>();
 
-			if (options == null)
-				throw new InvalidOperationException("Options cannot be null");
+				if (options == null)
+					throw new InvalidOperationException("Options cannot be null");
 
-			string connectionId;
+				Database.Subscriptions.OpenSubscription(id, options);
 
-			if (Database.Subscriptions.TryOpenSubscription(id, connection, options, out connectionId) == false)
-				return GetMessageWithString("Subscription is already in use. There can be only a single open subscription connection per subscription.", HttpStatusCode.Gone);
-
-			return GetMessageWithString(connectionId);
+				return GetEmptyMessage();
+			}
+			catch (SubscriptionException e)
+			{
+				return GetMessageWithString(e.Message, e.ResponseStatusCode);
+			}
 		}
 
 		[HttpGet]
@@ -111,9 +118,9 @@ namespace Raven.Database.Server.Controllers
 			{
 				Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
 			}
-			catch (Exception) // TODO arek - check concrete subscription exceptions
+			catch (SubscriptionException) // TODO arek - check concrete subscription exceptions
 			{
-				// ignore if assertion exception happened
+				// ignore if assertion exception happened on close
 
 				return GetEmptyMessage();
 			}
@@ -153,7 +160,7 @@ namespace Raven.Database.Server.Controllers
 			using (var streamWriter = new StreamWriter(stream))
 			using (var writer = new JsonTextWriter(streamWriter))
 			{
-				var options = subscriptions.GetBatchOptions(id).BatchOptions;
+				var options = subscriptions.GetBatchOptions(id);
 
 				writer.WriteStartObject();
 				writer.WritePropertyName("Results");

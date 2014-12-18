@@ -717,11 +717,6 @@ namespace Raven.Client.Connection
 			}).ConfigureAwait(false);
 		}
 
-		public Task<HttpResponseMessage> ExecuteRawResponseAsync(RavenJToken data)
-		{
-			return ExecuteRawResponseInternalAsync(new JsonContent(data));
-		}
-
 		public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
 		{
 			return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression));

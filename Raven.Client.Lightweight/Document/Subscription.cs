@@ -11,6 +11,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
+using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Database.Util;
@@ -21,25 +22,23 @@ namespace Raven.Client.Document
 	public class Subscription : IObservable<RavenJObject>, IDisposable
 	{
 		private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
-		private readonly string connectionId;
-		private readonly TimeSpan idleNotificationInterval;
+		private readonly ManualResetEvent anySubscriber = new ManualResetEvent(false);
 		private readonly IAsyncDatabaseCommands commands;
 		private readonly IDatabaseChanges changes;
 		private readonly Func<Task> ensureOpenSubscription;
 		private readonly ConcurrentSet<IObserver<RavenJObject>> subscribers = new ConcurrentSet<IObserver<RavenJObject>>();
-		private readonly long id;
+		private readonly SubscriptionConnectionOptions options;
 		private readonly CancellationTokenSource cts = new CancellationTokenSource();
+		private readonly long id;
 		private bool disposed;
-		private readonly ManualResetEvent anySubscriber = new ManualResetEvent(false);
 
 		public event Action BeforeBatch = delegate { };
 		public event Action AfterBatch = delegate { };
 
-		internal Subscription(long id, string connectionId, TimeSpan idleNotificationInterval, IAsyncDatabaseCommands commands, IDatabaseChanges changes, Func<Task> ensureOpenSubscription)
+		internal Subscription(long id, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, Func<Task> ensureOpenSubscription)
 		{
 			this.id = id;
-			this.connectionId = connectionId;
-			this.idleNotificationInterval = idleNotificationInterval;
+			this.options = options;
 			this.commands = commands;
 			this.changes = changes;
 			this.ensureOpenSubscription = ensureOpenSubscription;
@@ -64,7 +63,7 @@ namespace Raven.Client.Document
 					var pulledDocs = false;
 					Etag lastProcessedEtagOnServer = null;
 
-					using (var subscriptionRequest = commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, connectionId), "GET"))
+					using (var subscriptionRequest = CreatePullingRequest())
 					using (var response = await subscriptionRequest.ExecuteRawResponseAsync().ConfigureAwait(false))
 					{
 						await response.AssertNotFailingResponse().ConfigureAwait(false);
@@ -103,8 +102,7 @@ namespace Raven.Client.Document
 
 					if (pulledDocs)
 					{
-						using (var acknowledgmentRequest = commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}",
-							id, lastProcessedEtagOnServer, connectionId), "POST"))
+						using (var acknowledgmentRequest = CreateAcknowledgmentRequest(lastProcessedEtagOnServer))
 						{
 							try
 							{
@@ -122,20 +120,15 @@ namespace Raven.Client.Document
 						continue; // try to pull more documents from subscription
 					}
 
-					while (newDocuments.WaitOne(idleNotificationInterval) == false)
+					while (newDocuments.WaitOne(options.ClientAliveNotificationInterval) == false)
 					{
-						SendClientAlive();
+						using (var clientAliveRequest = CreateClientAliveRequest())
+						{
+							clientAliveRequest.ExecuteRequest();
+						}
 					}
 				}
 			});
-		}
-
-		private void SendClientAlive()
-		{
-			using (var clientAliveRequest = commands.CreateRequest(string.Format("/subscriptions/client-alive?id={0}&connection={1}", id, connectionId), "PATCH"))
-			{
-				clientAliveRequest.ExecuteRequest();
-			}
 		}
 
 		private async Task StartPullingDocs()
@@ -219,6 +212,26 @@ namespace Raven.Client.Document
 			});
 		}
 
+		private HttpJsonRequest CreateAcknowledgmentRequest(Etag lastProcessedEtag)
+		{
+			return commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtag, options.ConnectionId), "POST");
+		}
+
+		private HttpJsonRequest CreatePullingRequest()
+		{
+			return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), "GET");
+		}
+
+		private HttpJsonRequest CreateClientAliveRequest()
+		{
+			return commands.CreateRequest(string.Format("/subscriptions/client-alive?id={0}&connection={1}", id, options.ConnectionId), "PATCH");
+		}
+
+		private HttpJsonRequest CreateCloseRequest()
+		{
+			return commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, options.ConnectionId), "POST");
+		}
+
 		public void Dispose()
 		{
 			if (disposed)
@@ -278,7 +291,7 @@ namespace Raven.Client.Document
 				}
 			}
 
-			using (var closeRequest = commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, connectionId), "POST"))
+			using (var closeRequest = CreateCloseRequest())
 			{
 				await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
 			}

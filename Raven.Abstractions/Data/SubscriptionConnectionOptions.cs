@@ -4,16 +4,23 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Threading;
+using Raven.Abstractions.Util;
 
 namespace Raven.Abstractions.Data
 {
 	public class SubscriptionConnectionOptions
 	{
+		private static int connectionCounter;
+
 		public SubscriptionConnectionOptions()
 		{
+			ConnectionId = Interlocked.Increment(ref connectionCounter) + "/" + Base62Util.Base62Random();
 			BatchOptions = new SubscriptionBatchOptions();
 			ClientAliveNotificationInterval = TimeSpan.FromMinutes(2);
 		}
+
+		public string ConnectionId { get; private set; }
 
 		public SubscriptionBatchOptions BatchOptions { get; set; }
 

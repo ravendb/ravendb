@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
 using Raven.Client;
 using Raven.Client.Document;
@@ -41,8 +42,8 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewDocumentStore())
 			{
-				var ex = Assert.Throws<InvalidOperationException>(() => store.Subscriptions.Open(1, new SubscriptionConnectionOptions()));
-				Assert.Equal("Subscription with the specified id does not exist.", ex.Message);
+				var ex = Assert.Throws<SubscriptionDoesNotExistExeption>(() => store.Subscriptions.Open(1, new SubscriptionConnectionOptions()));
+				Assert.Equal("There is no subscription configuration for specified identifier (id: 1)", ex.Message);
 			}
 		}
 
@@ -54,7 +55,7 @@ namespace Raven.Tests.Issues
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
 				store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
 
-				var ex = Assert.Throws<InvalidOperationException>(() => store.Subscriptions.Open(id, new SubscriptionConnectionOptions()));
+				var ex = Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open(id, new SubscriptionConnectionOptions()));
 				Assert.Equal("Subscription is already in use. There can be only a single open subscription connection per subscription.", ex.Message);
 			}
 		}

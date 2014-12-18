@@ -11,6 +11,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Database.Util;
@@ -39,18 +40,9 @@ namespace Raven.Client.Document
 
 			using (var request = commands.CreateRequest("/subscriptions/create", "POST"))
 			{
-				var response = request.ExecuteRawResponseAsync(RavenJObject.FromObject(criteria)).ResultUnwrap();
-				response.AssertNotFailingResponse().WaitUnwrap();
+				request.WriteAsync(RavenJObject.FromObject(criteria)).WaitUnwrap();
 
-				long subscriptionId;
-
-				using (var stream = response.GetResponseStreamWithHttpDecompression().ResultUnwrap())
-				using (var reader = new StreamReader(stream))
-				{
-					subscriptionId = long.Parse(reader.ReadToEnd());
-				}
-
-				return subscriptionId;
+				return request.ReadResponseJson().Value<long>("Id");
 			}
 		}
 
@@ -69,43 +61,30 @@ namespace Raven.Client.Document
 				? documentStore.AsyncDatabaseCommands
 				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-			var connectionId = SendOpenSubscriptionRequest(commands, id, options, null).ResultUnwrap();
+			SendOpenSubscriptionRequest(commands, id, options).WaitUnwrap();
 
-			var subscription = new Subscription(id, connectionId, options.ClientAliveNotificationInterval, commands, documentStore.Changes(database), () => 
-				SendOpenSubscriptionRequest(commands, id, options, connectionId)); // to ensure that subscription is open try to call it with the same connection id
+			var subscription = new Subscription(id, options, commands, documentStore.Changes(database), () => 
+				SendOpenSubscriptionRequest(commands, id, options)); // to ensure that subscription is open try to call it with the same connection id
 
 			subscriptions.Add(subscription);
 
 			return subscription;
 		}
 
-		private static async Task<string> SendOpenSubscriptionRequest(IAsyncDatabaseCommands commands, long id, SubscriptionConnectionOptions options, string connectionId)
+		private static async Task SendOpenSubscriptionRequest(IAsyncDatabaseCommands commands, long id, SubscriptionConnectionOptions options)
 		{
-			var relativeUrl = "/subscriptions/open?id=" + id;
-
-			if (connectionId != null)
-				relativeUrl += "&connection=" + connectionId;
-
-			using (var request = commands.CreateRequest(relativeUrl, "POST"))
+			using (var request = commands.CreateRequest(string.Format("/subscriptions/open?id={0}&connection={1}", id, options.ConnectionId), "POST"))
 			{
 				try
 				{
-					var response = await request.ExecuteRawResponseAsync(RavenJObject.FromObject(options)).ConfigureAwait(false);
-					await response.AssertNotFailingResponse().ConfigureAwait(false);
-
-					using (var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
-					using (var reader = new StreamReader(stream))
-					{
-						return reader.ReadToEnd();
-					}
+					await request.WriteAsync(RavenJObject.FromObject(options)).ConfigureAwait(false);
+					await request.ExecuteRequestAsync().ConfigureAwait(false);
 				}
-				catch (Exception e)
+				catch (ErrorResponseException e)
 				{
-					if (request.ResponseStatusCode == HttpStatusCode.NotFound)
-						throw new InvalidOperationException("Subscription with the specified id does not exist.", e); // Subsctiption does not exist exception
-
-					if (request.ResponseStatusCode == HttpStatusCode.Gone)
-						throw new InvalidOperationException("Subscription is already in use. There can be only a single open subscription connection per subscription."); //TODO arek - subscriptioninuseException
+					SubscriptionException subscriptionException;
+					if (TryGetSubscriptionException(e, out subscriptionException))
+						throw subscriptionException;
 
 					throw;
 				}
@@ -128,6 +107,30 @@ namespace Raven.Client.Document
 			}
 
 			return documents;
+		}
+
+		public static bool TryGetSubscriptionException(ErrorResponseException ere, out SubscriptionException subscriptionException)
+		{
+			if (ere.StatusCode == SubscriptionDoesNotExistExeption.RelevantHttpStatusCode)
+			{
+				subscriptionException = new SubscriptionDoesNotExistExeption(ere.ResponseString);
+				return true;
+			}
+
+			if (ere.StatusCode == SubscriptionInUseException.RelavantHttpStatusCode)
+			{
+				subscriptionException = new SubscriptionInUseException(ere.Message);
+				return true;
+			}
+
+			if (ere.StatusCode == SubscriptionClosedException.RelevantHttpStatusCode)
+			{
+				subscriptionException = new SubscriptionClosedException(ere.Message);
+				return true;
+			}
+
+			subscriptionException = null;
+			return false;
 		}
 
 		public void Dispose()
