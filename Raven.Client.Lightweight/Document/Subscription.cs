@@ -140,14 +140,12 @@ namespace Raven.Client.Document
 			{
 				await PullingTask.ConfigureAwait(false);
 			}
-			catch (Exception e)
+			catch (Exception)
 			{
 				if (cts.Token.IsCancellationRequested)
 					return;
 
 				PullingTask = null;
-
-				OnErrorNotification(e);
 
 				RestartPullingTask().ConfigureAwait(false);
 			}
@@ -164,8 +162,7 @@ namespace Raven.Client.Document
 			{
 				if (ex is SubscriptionInUseException || ex is SubscriptionDoesNotExistExeption)
 				{
-					// another client has connected to the subscription or it has been deleted meanwhile - we cannot open it
-					OnErrorNotification(ex);
+					// another client has connected to the subscription or it has been deleted meanwhile - we cannot open it so we need to finish
 					OnCompletedNotification();
 
 					return;
@@ -175,23 +172,15 @@ namespace Raven.Client.Document
 				return;
 			}
 
-			try
-			{
-				await StartPullingDocs().ConfigureAwait(false);
-			}
-			catch (Exception e)
-			{
-				var exception = new Exception("Could not restart pulling task.", e);
-
-				OnErrorNotification(exception);
-			}
+			await StartPullingDocs().ObserveException();
 		}
 
 		private void StartWatchingDocs()
 		{
-			var observableWithTask = changes.ForAllDocuments();
+			if(NewDocumentsObserver != null)
+				NewDocumentsObserver.Dispose();
 
-			NewDocumentsObserver = observableWithTask.Subscribe(notification =>
+			NewDocumentsObserver = changes.ForAllDocuments().Subscribe(notification =>
 			{
 				if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) == false)
 				{
@@ -234,14 +223,6 @@ namespace Raven.Client.Document
 		private HttpJsonRequest CreateCloseRequest()
 		{
 			return commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, options.ConnectionId), "POST");
-		}
-
-		private void OnErrorNotification(Exception exception)
-		{
-			foreach (var subscriber in subscribers)
-			{
-				subscriber.OnError(exception);
-			}
 		}
 
 		private void OnCompletedNotification()

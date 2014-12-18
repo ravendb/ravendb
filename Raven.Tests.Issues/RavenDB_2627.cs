@@ -550,18 +550,13 @@ namespace Raven.Tests.Issues
 					}
 				});
 
-				var subscriptionExceptionOccurred = false;
 				var serverDisposingHandler = subscription.Subscribe(x =>
 				{
 					server.Dispose(); // dispose the server
 					serverDisposed = true;
-				}, ex =>
-				{
-					subscriptionExceptionOccurred = true;
 				});
 
 				SpinWait.SpinUntil(() => serverDisposed, TimeSpan.FromSeconds(30));
-				SpinWait.SpinUntil(() => subscriptionExceptionOccurred, TimeSpan.FromSeconds(5));
 
 				serverDisposingHandler.Dispose();
 
