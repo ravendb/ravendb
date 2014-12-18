@@ -10,6 +10,9 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public Dictionary<string, FacetResult> Results { get; set; }
 
+		/// <summary>
+		/// Indicates how much time it took to process facets on server.
+		/// </summary>
         public TimeSpan Duration { get; set; }
 
 		public FacetResults()

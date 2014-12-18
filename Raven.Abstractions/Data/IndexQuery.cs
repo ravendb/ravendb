@@ -42,34 +42,27 @@ namespace Raven.Abstractions.Data
 		public bool IsDistinct { get; set; }
 
 		/// <summary>
-		/// Gets or sets the query.
+		/// Actual query that will be performed (Lucene syntax).
 		/// </summary>
-		/// <value>The query.</value>
 		public string Query { get; set; }
 
-		/// <summary>
-		/// Gets or sets the total size.
-		/// </summary>
-		/// <value>The total size.</value>
 		public Reference<int> TotalSize { get; private set; }
 
 		public Dictionary<string, SortOptions> SortHints { get; set; } 
 
         /// <summary>
-        /// Additional query inputs
+        /// Parameters that will be passed to transformer (if specified).
         /// </summary>
         public Dictionary<string, RavenJToken> TransformerParameters { get; set; }
 
 		/// <summary>
-		/// Gets or sets the start of records to read.
+		/// Number of records that should be skipped.
 		/// </summary>
-		/// <value>The start.</value>
 		public int Start { get; set; }
 
 		/// <summary>
-		/// Gets or sets the size of the page.
+		/// Maximum number of records that will be retrieved.
 		/// </summary>
-		/// <value>The size of the page.</value>
 		public int PageSize
 		{
 			get { return pageSize; }
@@ -81,31 +74,30 @@ namespace Raven.Abstractions.Data
 		}
 
 		/// <summary>
-		/// Gets or sets the fields to fetch.
+		/// Array of fields that will be fetched.
+		/// Fetch order:
+		/// 1. Stored index fields
+		/// 2. Document
 		/// </summary>
-		/// <value>The fields to fetch.</value>
 		public string[] FieldsToFetch { get; set; }
 
 		/// <summary>
-		/// Gets or sets the fields to sort by
+		/// Array of fields containing sorting information.
 		/// </summary>
-		/// <value>The sorted fields.</value>
 		public SortedField[] SortedFields { get; set; }
 
 		/// <summary>
-		/// Gets or sets the cutoff date
+		/// Used to calculate index staleness. Index will be considered stale if modification date of last indexed document is greater than this value.
 		/// </summary>
-		/// <value>The cutoff.</value>
 		public DateTime? Cutoff { get; set; }
 
 		/// <summary>
-		/// Get or sets the WaitForNonStaleResultsAsOfNow
+		/// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
 		/// </summary>
 		public bool WaitForNonStaleResultsAsOfNow { get; set; }
-
 		
 		/// <summary>
-		/// Get or sets the WaitForNonStaleResults
+		/// CAUTION. Used by IDocumentSession ONLY. It will have NO effect if used with IDatabaseCommands or IAsyncDatabaseCommands.
 		/// </summary>
 		public bool WaitForNonStaleResults { get; set; }
 
@@ -119,8 +111,8 @@ namespace Raven.Abstractions.Data
 		/// can work without it.
 		/// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this
 		/// etag belong to is actually considered for the results. 
-		/// What it does it guarantee that the document has been mapped, but not that the mapped values has been reduce. 
-		/// Since map/reduce queries, by their nature,tend to be far less susceptible to issues with staleness, this is 
+		/// What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. 
+		/// Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is 
 		/// considered to be an acceptable tradeoff.
 		/// If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and 
 		/// use the Cutoff date option, instead.
@@ -128,7 +120,7 @@ namespace Raven.Abstractions.Data
 		public Etag CutoffEtag { get; set; }
 
 		/// <summary>
-		/// The default field to use when querying directly on the Lucene query
+		/// Default field to use when querying directly on the Lucene query
 		/// </summary>
 		public string DefaultField { get; set; }
 
@@ -142,7 +134,7 @@ namespace Raven.Abstractions.Data
 		public QueryOperator DefaultOperator { get; set; }
 
 		/// <summary>
-        /// If set to true, this property will send multiple index entries from the same document (assuming the index project them)
+        /// If set to <c>true</c>, this property will send multiple index entries from the same document (assuming the index project them)
         /// to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be 
         /// called just once for each document in the result set
 		/// </summary>
