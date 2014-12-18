@@ -11,11 +11,30 @@ namespace Raven.Abstractions.Data
 			Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		}
 
+		/// <summary>
+		/// Response result as JSON.
+		/// </summary>
 		public RavenJToken Result { get; set; }
+
+		/// <summary>
+		/// Response headers.
+		/// </summary>
 		public IDictionary<string,string> Headers { get; set; }
+
+		/// <summary>
+		/// Response HTTP status code.
+		/// </summary>
 		public int Status { get; set; }
+
+		/// <summary>
+		/// Indicates if request should be retried (forced).
+		/// </summary>
 		public bool ForceRetry { get; set; }
 
+		/// <summary>
+		/// Method used to check if request has errors.
+		/// </summary>
+		/// <returns><c>false</c> if Status is 0, 200, 201, 203, 204, 304 and 404. <c>True</c> otherwise.</returns>
 		public bool RequestHasErrors()
 		{
 			switch (Status)

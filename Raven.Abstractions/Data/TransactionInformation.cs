@@ -13,14 +13,13 @@ namespace Raven.Abstractions.Data
 	public class TransactionInformation
 	{
 		/// <summary>
-		/// Gets or sets the id.
+		/// Transaction identifier.
 		/// </summary>
-		/// <value>The id.</value>
         public string Id { get; set; }
+
 		/// <summary>
-		/// Gets or sets the timeout.
+		/// Transaction timeout.
 		/// </summary>
-		/// <value>The timeout.</value>
 		public TimeSpan Timeout { get; set; }
 	}
 }

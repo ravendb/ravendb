@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Threading;
-
 
 namespace Raven.Abstractions.Data
 {
@@ -13,7 +11,11 @@ namespace Raven.Abstractions.Data
 		/// Indicates whether operations are allowed on stale indexes.
 		/// </summary>
 		public bool AllowStale { get; set; }
-
+		
+		/// <summary>
+		/// If AllowStale is set to false and index is stale, then this is the maximum timeout to wait for index to become non-stale. If timeout is exceeded then exception is thrown.
+		/// </summary>
+		/// <value>null by default - throw immediately if index is stale</value>
 		public TimeSpan? StaleTimeout { get; set; }
 
 		/// <summary>

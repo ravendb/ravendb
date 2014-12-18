@@ -7,7 +7,6 @@ using Raven.Abstractions.Indexing;
 using System.Linq;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
-using Raven.Abstractions.MissingFromBCL;
 using Raven.Client.Linq;
 
 namespace Raven.Client.Indexes
@@ -46,10 +45,10 @@ namespace Raven.Client.Indexes
 			{
 				if (child.IsGenericTypeDefinition)
 					continue;
-				var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child.AsType());
+				var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
 				var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
 				var lambdaExpression = Expression.Lambda(delegateType, expr.Body, Expression.Parameter(genericEnumerable, expr.Parameters[0].Name));
-				addMapGeneric.MakeGenericMethod(child.AsType()).Invoke(this, new[] { lambdaExpression });
+				addMapGeneric.MakeGenericMethod(child).Invoke(this, new[] { lambdaExpression });
 			}
 		}
 

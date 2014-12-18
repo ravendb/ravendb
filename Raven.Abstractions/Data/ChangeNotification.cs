@@ -9,16 +9,42 @@ namespace Raven.Abstractions.Data
 {
 	public class BulkInsertChangeNotification : DocumentChangeNotification
 	{
+		/// <summary>
+		/// BulkInsert operation Id.
+		/// </summary>
 		public Guid OperationId { get; set; }
 	}
 
 	public class DocumentChangeNotification : EventArgs
 	{
+		/// <summary>
+		/// Type of change that occured on document.
+		/// </summary>
 		public DocumentChangeTypes Type { get; set; }
+
+		/// <summary>
+		/// Identifier of document for which notification was created.
+		/// </summary>
 		public string Id { get; set; }
+
+		/// <summary>
+		/// Document collection name.
+		/// </summary>
 		public string CollectionName { get; set; }
+
+		/// <summary>
+		/// Document type name.
+		/// </summary>
 		public string TypeName { get; set; }
+
+		/// <summary>
+		/// Document etag.
+		/// </summary>
 		public Etag Etag { get; set; }
+
+		/// <summary>
+		/// Notification message.
+		/// </summary>
 		public string Message { get; set; }
 
 		public override string ToString()
@@ -73,8 +99,19 @@ namespace Raven.Abstractions.Data
 
 	public class IndexChangeNotification : EventArgs
 	{
+		/// <summary>
+		/// Type of change that occured on index.
+		/// </summary>
 		public IndexChangeTypes Type { get; set; }
+
+		/// <summary>
+		/// Name of index for which notification was created
+		/// </summary>
 		public string Name { get; set; }
+
+		/// <summary>
+		/// TODO [ppekrol]
+		/// </summary>
 		public Etag Etag { get; set; }
 
 		public override string ToString()
@@ -85,7 +122,14 @@ namespace Raven.Abstractions.Data
 
     public class TransformerChangeNotification : EventArgs
     {
+		/// <summary>
+		/// Type of change that occured on transformer.
+		/// </summary>
         public TransformerChangeTypes Type { get; set; }
+
+		/// <summary>
+		/// Name of transformer for which notification was created
+		/// </summary>
         public string Name { get; set; }
 
         public override string ToString()
@@ -96,10 +140,29 @@ namespace Raven.Abstractions.Data
 
 	public class ReplicationConflictNotification : EventArgs
 	{
+		/// <summary>
+		/// Type of conflict that occured (None, DocumentReplicationConflict, AttachmentReplicationConflict).
+		/// </summary>
 		public ReplicationConflictTypes ItemType { get; set; }
+
+		/// <summary>
+		/// Identifier of a document/attachment on which replication conflict occured.
+		/// </summary>
 		public string Id { get; set; }
+
+		/// <summary>
+		/// Current conflict document Etag.
+		/// </summary>
 		public Etag Etag { get; set; }
+
+		/// <summary>
+		/// Operation type on which conflict occured (Put, Delete).
+		/// </summary>
 		public ReplicationOperationTypes OperationType { get; set; }
+
+		/// <summary>
+		/// Array of conflict document Ids.
+		/// </summary>
 		public string[] Conflicts { get; set; }
 
 		public override string ToString()

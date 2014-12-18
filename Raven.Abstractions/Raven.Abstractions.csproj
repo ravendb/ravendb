@@ -146,7 +146,6 @@
     <Compile Include="Data\EsentStorageStats.cs" />
     <Compile Include="Data\IndexingBatchInfo.cs" />
     <Compile Include="Data\AdminStatistics.cs" />
-    <Compile Include="Data\AggregationData.cs" />
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
@@ -322,7 +321,6 @@
     <Compile Include="MEF\PartMetadata.cs" />
     <Compile Include="Data\QueryResult.cs" />
     <Compile Include="Indexing\SortOptions.cs" />
-    <Compile Include="MissingFromBCL\WinRTCompetability.cs" />
     <Compile Include="OAuth\AbstractAuthenticator.cs" />
     <Compile Include="OAuth\BasicAuthenticator.cs" />
     <Compile Include="OAuth\SecuredAuthenticator.cs" />
