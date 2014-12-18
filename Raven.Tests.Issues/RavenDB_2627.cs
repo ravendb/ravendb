@@ -41,7 +41,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewDocumentStore())
 			{
-				var ex = Assert.Throws<InvalidOperationException>(() => store.Subscriptions.Open(1, new SubscriptionBatchOptions()));
+				var ex = Assert.Throws<InvalidOperationException>(() => store.Subscriptions.Open(1, new SubscriptionConnectionOptions()));
 				Assert.Equal("Subscription with the specified id does not exist.", ex.Message);
 			}
 		}
@@ -52,9 +52,9 @@ namespace Raven.Tests.Issues
 			using (var store = NewDocumentStore())
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
-				store.Subscriptions.Open(id, new SubscriptionBatchOptions());
+				store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
 
-				var ex = Assert.Throws<InvalidOperationException>(() => store.Subscriptions.Open(id, new SubscriptionBatchOptions()));
+				var ex = Assert.Throws<InvalidOperationException>(() => store.Subscriptions.Open(id, new SubscriptionConnectionOptions()));
 				Assert.Equal("Subscription is already in use. There can be only a single open subscription connection per subscription.", ex.Message);
 			}
 		}
@@ -74,7 +74,7 @@ namespace Raven.Tests.Issues
 				}
 
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
-				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions());
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
 
 				var keys = new BlockingCollection<string>();
 				var ages = new BlockingCollection<int>();
@@ -110,7 +110,7 @@ namespace Raven.Tests.Issues
 			using (var store = NewRemoteDocumentStore())
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
-				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions());
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
 
 				var names = new BlockingCollection<string>();
 				store.Changes().WaitForAllPendingSubscriptions();
@@ -153,9 +153,12 @@ namespace Raven.Tests.Issues
 			using (var store = NewDocumentStore())
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
-				var subscriptionZeroTimeout = store.Subscriptions.Open(id, new SubscriptionBatchOptions
+				var subscriptionZeroTimeout = store.Subscriptions.Open(id, new SubscriptionConnectionOptions
 				{
-					AcknowledgmentTimeout = TimeSpan.FromSeconds(0) // the client won't be able to acknowledge in 0 seconds
+					BatchOptions = new SubscriptionBatchOptions()
+					{
+						AcknowledgmentTimeout = TimeSpan.FromSeconds(0) // the client won't be able to acknowledge in 0 seconds
+					}
 				});
 
 				var docs = new BlockingCollection<RavenJObject>();
@@ -183,9 +186,12 @@ namespace Raven.Tests.Issues
 
 				// retry with longer timeout - should sent just one doc
 
-				var subscriptionLongerTimeout = store.Subscriptions.Open(id, new SubscriptionBatchOptions
+				var subscriptionLongerTimeout = store.Subscriptions.Open(id, new SubscriptionConnectionOptions
 				{
-					AcknowledgmentTimeout = TimeSpan.FromSeconds(30)
+					BatchOptions = new SubscriptionBatchOptions()
+					{
+						AcknowledgmentTimeout = TimeSpan.FromSeconds(30)
+					}
 				});
 
 				var docs2 = new BlockingCollection<RavenJObject>();
@@ -216,7 +222,7 @@ namespace Raven.Tests.Issues
 				}
 
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
-				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions{ MaxDocCount = 25});
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions{ BatchOptions = new SubscriptionBatchOptions { MaxDocCount = 25 }});
 
 				var batchSizes = new List<Reference<int>>();
 
@@ -259,9 +265,12 @@ namespace Raven.Tests.Issues
 				}
 
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
-				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions()
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
 				{
-					MaxSize = 16 * 1024
+					BatchOptions = new SubscriptionBatchOptions()
+					{
+						MaxSize = 16 * 1024
+					}
 				});
 
 				var batches = new List<List<RavenJObject>>();
@@ -303,7 +312,10 @@ namespace Raven.Tests.Issues
 					BelongsToCollection = "Users"
 				});
 
-				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions { MaxDocCount = 31 });
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions
+				{
+					BatchOptions = new SubscriptionBatchOptions { MaxDocCount = 31 }
+ 				});
 
 				var docs = new List<RavenJObject>();
 
@@ -339,7 +351,13 @@ namespace Raven.Tests.Issues
 					KeyStartsWith = "users/favorite/"
 				});
 
-				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions { MaxDocCount = 15 });
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions
+				{
+					BatchOptions = new SubscriptionBatchOptions()
+					{
+						MaxDocCount = 15
+					}
+				});
 
 				var docs = new List<RavenJObject>();
 
@@ -388,7 +406,7 @@ namespace Raven.Tests.Issues
 					}
 				});
 
-				var carolines = store.Subscriptions.Open(id, new SubscriptionBatchOptions { MaxDocCount = 5 });
+				var carolines = store.Subscriptions.Open(id, new SubscriptionConnectionOptions { BatchOptions = new SubscriptionBatchOptions { MaxDocCount = 5 }});
 
 				var docs = new List<RavenJObject>();
 
@@ -437,7 +455,13 @@ namespace Raven.Tests.Issues
 					}
 				});
 
-				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions { MaxDocCount = 5 });
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions
+				{
+					BatchOptions = new SubscriptionBatchOptions()
+					{
+						MaxDocCount = 5
+					}
+				});
 
 				var docs = new List<RavenJObject>();
 
@@ -472,7 +496,7 @@ namespace Raven.Tests.Issues
 				Assert.Equal(1, subscriptionDocuments.Count);
 				Assert.Equal("users/", subscriptionDocuments[0].Criteria.KeyStartsWith);
 
-				var subscription = store.Subscriptions.Open(subscriptionDocuments[0].SubscriptionId, new SubscriptionBatchOptions());
+				var subscription = store.Subscriptions.Open(subscriptionDocuments[0].SubscriptionId, new SubscriptionConnectionOptions());
 
 				var docs = new List<RavenJObject>();
 				subscription.Subscribe(docs.Add);
@@ -517,9 +541,12 @@ namespace Raven.Tests.Issues
 
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
 
-				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions()
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
 				{
-					MaxDocCount = 1
+					BatchOptions = new SubscriptionBatchOptions()
+					{
+						MaxDocCount = 1
+					}
 				});
 
 				var subscriptionExceptionOccurred = false;
@@ -572,7 +599,7 @@ namespace Raven.Tests.Issues
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
 
-				var subscription = store.Subscriptions.Open(id, new SubscriptionBatchOptions());
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
 
 				using (var session = store.OpenSession())
 				{
@@ -606,6 +633,53 @@ namespace Raven.Tests.Issues
 
 				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
 				Assert.Equal("users/4", doc[Constants.Metadata].Value<string>("@id"));
+			}
+		}
+
+		[Fact]
+		public void ShouldAllowToOpenSubscriptionIfClientDidntSentAliveNotificationOnTime()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
+				{
+					ClientAliveNotificationInterval = TimeSpan.FromSeconds(2)
+				});
+
+				subscription.AfterBatch += () => Thread.Sleep(TimeSpan.FromSeconds(20)); // to prevent the client from sending client-alive notification
+
+				var docs = new BlockingCollection<RavenJObject>();
+
+				subscription.Subscribe(docs.Add);
+
+				RavenJObject _;
+				Assert.True(docs.TryTake(out _, waitForDocTimeout));
+
+				Thread.Sleep(TimeSpan.FromSeconds(10));
+				
+				// first open subscription didn't send the client-alive notification in time, so the server should allow to open it for this subscription
+				var newSubscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+
+				var docs2 = new BlockingCollection<RavenJObject>();
+				newSubscription.Subscribe(docs2.Add);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				Assert.True(docs2.TryTake(out _, waitForDocTimeout));
+
+				Assert.False(docs.TryTake(out _, TimeSpan.FromSeconds(2))); // make sure that first subscriber didn't get new doc
 			}
 		}
 	}

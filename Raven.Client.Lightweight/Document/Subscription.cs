@@ -22,6 +22,7 @@ namespace Raven.Client.Document
 	{
 		private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
 		private readonly string connectionId;
+		private readonly TimeSpan idleNotificationInterval;
 		private readonly IAsyncDatabaseCommands commands;
 		private readonly IDatabaseChanges changes;
 		private readonly Func<Task> ensureOpenSubscription;
@@ -34,10 +35,11 @@ namespace Raven.Client.Document
 		public event Action BeforeBatch = delegate { };
 		public event Action AfterBatch = delegate { };
 
-		internal Subscription(long id, string connectionId, IAsyncDatabaseCommands commands, IDatabaseChanges changes, Func<Task> ensureOpenSubscription)
+		internal Subscription(long id, string connectionId, TimeSpan idleNotificationInterval, IAsyncDatabaseCommands commands, IDatabaseChanges changes, Func<Task> ensureOpenSubscription)
 		{
 			this.id = id;
 			this.connectionId = connectionId;
+			this.idleNotificationInterval = idleNotificationInterval;
 			this.commands = commands;
 			this.changes = changes;
 			this.ensureOpenSubscription = ensureOpenSubscription;
@@ -120,9 +122,20 @@ namespace Raven.Client.Document
 						continue; // try to pull more documents from subscription
 					}
 
-					newDocuments.WaitOne();
+					while (newDocuments.WaitOne(idleNotificationInterval) == false)
+					{
+						SendClientAlive();
+					}
 				}
 			});
+		}
+
+		private void SendClientAlive()
+		{
+			using (var clientAliveRequest = commands.CreateRequest(string.Format("/subscriptions/client-alive?id={0}&connection={1}", id, connectionId), "PATCH"))
+			{
+				clientAliveRequest.ExecuteRequest();
+			}
 		}
 
 		private async Task StartPullingDocs()

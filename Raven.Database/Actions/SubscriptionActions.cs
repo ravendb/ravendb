@@ -20,7 +20,7 @@ namespace Raven.Database.Actions
 		private class SubscriptionWorkContext
 		{
 			public string ConnectionId;
-			public SubscriptionBatchOptions BatchOptions;
+			public SubscriptionConnectionOptions ConnectionOptions;
 		}
 
 		private readonly ConcurrentDictionary<long, SubscriptionWorkContext> openSubscriptions = new ConcurrentDictionary<long, SubscriptionWorkContext>();
@@ -57,21 +57,22 @@ namespace Raven.Database.Actions
 				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, id.ToString("D19"), RavenJObject.FromObject(doc), UuidType.Subscriptions));
 		}
 
-		public bool TryOpenSubscription(long id, string existingConnectionId, SubscriptionBatchOptions options, out string connectionId)
+		public bool TryOpenSubscription(long id, string existingConnectionId, SubscriptionConnectionOptions options, out string connectionId)
 		{
 			connectionId = existingConnectionId ?? Base62Util.Base62Random();
 
 			var subscriptionWorkContext = new SubscriptionWorkContext
 			{
 				ConnectionId = connectionId,
-				BatchOptions = options
+				ConnectionOptions = options
 			};
 
 			if (openSubscriptions.TryAdd(id, subscriptionWorkContext))
+			{
+				UpdateClientActivityDate(id);
 				return true;
+			}
 			
-			//TODO arek - need to add some timeout to allow to release the subscription
-
 			SubscriptionWorkContext existingSubscriptionContext;
 
 			if(openSubscriptions.TryGetValue(id, out existingSubscriptionContext) == false)
@@ -80,6 +81,15 @@ namespace Raven.Database.Actions
 			if (existingConnectionId != null && existingSubscriptionContext.ConnectionId.Equals(existingConnectionId, StringComparison.OrdinalIgnoreCase))
 				return true; // reopen subscription on already existing connection
 
+			var doc = GetSubscriptionDocument(id);
+
+			if (SystemTime.UtcNow - doc.TimeOfLastClientActivity > TimeSpan.FromTicks(existingSubscriptionContext.ConnectionOptions.ClientAliveNotificationInterval.Ticks * 3))
+			{
+				// last connected client didn't send at least two 'client-alive' notifications - let the requesting client to open it
+
+				ReleaseSubscription(id);
+				return openSubscriptions.TryAdd(id, subscriptionWorkContext);
+			}
 			return false;
 		}
 
@@ -89,11 +99,6 @@ namespace Raven.Database.Actions
 			openSubscriptions.TryRemove(id, out context);
 		}
 
-		public bool IsClosed(long id)
-		{
-			return openSubscriptions.ContainsKey(id) == false;
-		}
-
 		public void AcknowledgeBatchProcessed(long id, Etag lastEtag)
 		{
 			TransactionalStorage.Batch(accessor =>
@@ -101,11 +106,12 @@ namespace Raven.Database.Actions
 				var doc = GetSubscriptionDocument(id);
 				var options = GetBatchOptions(id);
 
-				var timeSinceSendingBatch = SystemTime.UtcNow - doc.LastSentBatchTime;
-				if(timeSinceSendingBatch > options.AcknowledgmentTimeout)
+				var timeSinceBatchSent = SystemTime.UtcNow - doc.TimeOfSendingLastBatch;
+				if(timeSinceBatchSent > options.BatchOptions.AcknowledgmentTimeout)
 					throw new TimeoutException("The subscription cannot be acknowledged because the timeout has been reached.");
 
 				doc.AckEtag = lastEtag;
+				doc.TimeOfLastClientActivity = SystemTime.UtcNow;
 
 				SaveSubscriptionDocument(id, doc);
 			});
@@ -124,13 +130,13 @@ namespace Raven.Database.Actions
 			}
 		}
 
-		public SubscriptionBatchOptions GetBatchOptions(long id)
+		public SubscriptionConnectionOptions GetBatchOptions(long id)
 		{
 			SubscriptionWorkContext subscriptionContext;
 			if (openSubscriptions.TryGetValue(id, out subscriptionContext) == false)
 				throw new InvalidOperationException("There is no open subscription with id: " + id);
 
-			return subscriptionContext.BatchOptions;
+			return subscriptionContext.ConnectionOptions;
 		}
 
 		public SubscriptionDocument GetSubscriptionDocument(long id)
@@ -156,7 +162,20 @@ namespace Raven.Database.Actions
 			{
 				var doc = GetSubscriptionDocument(id);
 
-				doc.LastSentBatchTime = SystemTime.UtcNow;
+				doc.TimeOfSendingLastBatch = SystemTime.UtcNow;
+				doc.TimeOfLastClientActivity = SystemTime.UtcNow;
+
+				SaveSubscriptionDocument(id, doc);
+			});
+		}
+
+		public void UpdateClientActivityDate(long id)
+		{
+			TransactionalStorage.Batch(accessor =>
+			{
+				var doc = GetSubscriptionDocument(id);
+				
+				doc.TimeOfLastClientActivity = SystemTime.UtcNow;
 
 				SaveSubscriptionDocument(id, doc);
 			});

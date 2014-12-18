@@ -7,6 +7,19 @@ using System;
 
 namespace Raven.Abstractions.Data
 {
+	public class SubscriptionConnectionOptions
+	{
+		public SubscriptionConnectionOptions()
+		{
+			BatchOptions = new SubscriptionBatchOptions();
+			ClientAliveNotificationInterval = TimeSpan.FromMinutes(2);
+		}
+
+		public SubscriptionBatchOptions BatchOptions { get; set; }
+
+		public TimeSpan ClientAliveNotificationInterval { get; set; }
+	}
+
 	public class SubscriptionBatchOptions
 	{
 		public SubscriptionBatchOptions()

@@ -46,7 +46,7 @@ namespace Raven.Database.Server.Controllers
 			if (Database.Subscriptions.GetSubscriptionDocument(id) == null)
 				return GetMessageWithString("Cannot find a subscription for the specified id: " + id, HttpStatusCode.NotFound);
 
-			var options = await ReadJsonObjectAsync<SubscriptionBatchOptions>();
+			var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>();
 
 			if (options == null)
 				throw new InvalidOperationException("Options cannot be null");
@@ -107,9 +107,30 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/subscriptions/close")]
 		public HttpResponseMessage Close(long id, string connection)
 		{
-			Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+			try
+			{
+				Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+			}
+			catch (Exception) // TODO arek - check concrete subscription exceptions
+			{
+				// ignore if assertion exception happened
+
+				return GetEmptyMessage();
+			}
 
 			Database.Subscriptions.ReleaseSubscription(id);
+
+			return GetEmptyMessage();
+		}
+
+		[HttpPatch]
+		[Route("subscriptions/client-alive")]
+		[Route("databases/{databaseName}/subscriptions/client-alive")]
+		public HttpResponseMessage ClientAlive(long id, string connection)
+		{
+			Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+
+			Database.Subscriptions.UpdateClientActivityDate(id);
 
 			return GetEmptyMessage();
 		}
@@ -132,7 +153,7 @@ namespace Raven.Database.Server.Controllers
 			using (var streamWriter = new StreamWriter(stream))
 			using (var writer = new JsonTextWriter(streamWriter))
 			{
-				var options = subscriptions.GetBatchOptions(id);
+				var options = subscriptions.GetBatchOptions(id).BatchOptions;
 
 				writer.WriteStartObject();
 				writer.WritePropertyName("Results");

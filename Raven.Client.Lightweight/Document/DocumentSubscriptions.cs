@@ -54,12 +54,15 @@ namespace Raven.Client.Document
 			}
 		}
 
-		public Subscription Open(long id, SubscriptionBatchOptions options, string database = null)
+		public Subscription Open(long id, SubscriptionConnectionOptions options, string database = null)
 		{
 			if(options == null)
 				throw new InvalidOperationException("Cannot open a subscription if options are null");
 
-			if(options.MaxSize.HasValue && options.MaxSize.Value < 16 * 1024)
+			if(options.BatchOptions == null)
+				throw new InvalidOperationException("Cannot open a subscription if batch options are null");
+
+			if(options.BatchOptions.MaxSize.HasValue && options.BatchOptions.MaxSize.Value < 16 * 1024)
 				throw new InvalidOperationException("Max size value of batch options cannot be lower than that 16 KB");
 
 			var commands = database == null
@@ -68,7 +71,7 @@ namespace Raven.Client.Document
 
 			var connectionId = SendOpenSubscriptionRequest(commands, id, options, null).ResultUnwrap();
 
-			var subscription = new Subscription(id, connectionId, commands, documentStore.Changes(database), () => 
+			var subscription = new Subscription(id, connectionId, options.ClientAliveNotificationInterval, commands, documentStore.Changes(database), () => 
 				SendOpenSubscriptionRequest(commands, id, options, connectionId)); // to ensure that subscription is open try to call it with the same connection id
 
 			subscriptions.Add(subscription);
@@ -76,7 +79,7 @@ namespace Raven.Client.Document
 			return subscription;
 		}
 
-		private static async Task<string> SendOpenSubscriptionRequest(IAsyncDatabaseCommands commands, long id, SubscriptionBatchOptions options, string connectionId)
+		private static async Task<string> SendOpenSubscriptionRequest(IAsyncDatabaseCommands commands, long id, SubscriptionConnectionOptions options, string connectionId)
 		{
 			var relativeUrl = "/subscriptions/open?id=" + id;
 
@@ -99,10 +102,10 @@ namespace Raven.Client.Document
 				catch (Exception e)
 				{
 					if (request.ResponseStatusCode == HttpStatusCode.NotFound)
-						throw new InvalidOperationException("Subscription with the specified id does not exist.", e);
+						throw new InvalidOperationException("Subscription with the specified id does not exist.", e); // Subsctiption does not exist exception
 
 					if (request.ResponseStatusCode == HttpStatusCode.Gone)
-						throw new InvalidOperationException("Subscription is already in use. There can be only a single open subscription connection per subscription.");
+						throw new InvalidOperationException("Subscription is already in use. There can be only a single open subscription connection per subscription."); //TODO arek - subscriptioninuseException
 
 					throw;
 				}
