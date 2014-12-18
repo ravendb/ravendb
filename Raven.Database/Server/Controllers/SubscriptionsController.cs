@@ -42,6 +42,16 @@ namespace Raven.Database.Server.Controllers
 			}, HttpStatusCode.Created);
 		}
 
+		[HttpDelete]
+		[Route("subscriptions")]
+		[Route("databases/{databaseName}/subscriptions")]
+		public HttpResponseMessage Delete(long id)
+		{
+			Database.Subscriptions.DeleteSubscription(id);
+
+			return GetEmptyMessage();
+		}
+
 		[HttpPost]
 		[Route("subscriptions/open")]
 		[Route("databases/{databaseName}/subscriptions/open")]
@@ -112,16 +122,19 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("subscriptions/close")]
 		[Route("databases/{databaseName}/subscriptions/close")]
-		public HttpResponseMessage Close(long id, string connection)
+		public HttpResponseMessage Close(long id, string connection, bool force = false)
 		{
-			try
+			if (force == false)
 			{
-				Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
-			}
-			catch (SubscriptionException)
-			{
-				// ignore if assertion exception happened on close
-				return GetEmptyMessage();
+				try
+				{
+					Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+				}
+				catch (SubscriptionException)
+				{
+					// ignore if assertion exception happened on close
+					return GetEmptyMessage();
+				}
 			}
 
 			Database.Subscriptions.ReleaseSubscription(id);

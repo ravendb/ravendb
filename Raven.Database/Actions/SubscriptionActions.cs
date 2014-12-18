@@ -46,6 +46,11 @@ namespace Raven.Database.Actions
 			return id;
 		}
 
+		public void DeleteSubscription(long id)
+		{
+			Database.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenSubscriptionsPrefix, id.ToString("D19")));
+		}
+
 		private void SaveSubscriptionDocument(long id, SubscriptionDocument doc)
 		{
 			Database.TransactionalStorage.Batch(accessor => 

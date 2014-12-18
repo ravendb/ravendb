@@ -109,6 +109,30 @@ namespace Raven.Client.Document
 			return documents;
 		}
 
+		public void Delete(long id, string database)
+		{
+			var commands = database == null
+				? documentStore.AsyncDatabaseCommands
+				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
+
+			using (var request = commands.CreateRequest("/subscriptions?id=" + id, "DELETE"))
+			{
+				request.ExecuteRequest();
+			}
+		}
+
+		public void Release(long id, string database = null)
+		{
+			var commands = database == null
+				? documentStore.AsyncDatabaseCommands
+				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
+
+			using (var request = commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection=&force=true", id), "POST"))
+			{
+				request.ExecuteRequest();
+			}
+		}
+
 		public static bool TryGetSubscriptionException(ErrorResponseException ere, out SubscriptionException subscriptionException)
 		{
 			if (ere.StatusCode == SubscriptionDoesNotExistExeption.RelevantHttpStatusCode)

@@ -38,6 +38,27 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
+		public void CanDeleteSubscription()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id1 = store.Subscriptions.Create(new SubscriptionCriteria());
+				var id2 = store.Subscriptions.Create(new SubscriptionCriteria());
+
+				var subscriptions = store.Subscriptions.GetSubscriptions(0, 5);
+
+				Assert.Equal(2, subscriptions.Count);
+
+				store.Subscriptions.Delete(id1);
+				store.Subscriptions.Delete(id2);
+
+				subscriptions = store.Subscriptions.GetSubscriptions(0, 5);
+
+				Assert.Equal(0, subscriptions.Count);
+			}
+		}
+
+		[Fact]
 		public void ShouldThrowWhenOpeningNoExisingSubscription()
 		{
 			using (var store = NewDocumentStore())
@@ -676,6 +697,22 @@ namespace Raven.Tests.Issues
 				Assert.True(docs2.TryTake(out _, waitForDocTimeout));
 
 				Assert.False(docs.TryTake(out _, TimeSpan.FromSeconds(2))); // make sure that first subscriber didn't get new doc
+			}
+		}
+
+		[Fact]
+		public void CanReleaseSubscription()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+				store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+
+				Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open(id, new SubscriptionConnectionOptions()));
+
+				store.Subscriptions.Release(id);
+
+				Assert.DoesNotThrow(() => store.Subscriptions.Open(id, new SubscriptionConnectionOptions()));
 			}
 		}
 	}
