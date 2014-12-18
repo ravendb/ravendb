@@ -118,10 +118,9 @@ namespace Raven.Database.Server.Controllers
 			{
 				Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
 			}
-			catch (SubscriptionException) // TODO arek - check concrete subscription exceptions
+			catch (SubscriptionException)
 			{
 				// ignore if assertion exception happened on close
-
 				return GetEmptyMessage();
 			}
 

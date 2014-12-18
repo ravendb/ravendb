@@ -63,10 +63,15 @@ namespace Raven.Database.Actions
 			SubscriptionConnectionOptions existingOptions;
 
 			if(openSubscriptions.TryGetValue(id, out existingOptions) == false)
-				throw new InvalidOperationException("Didn't get existing open subscription while it's expected. Subscription id: " + id);
+				throw new SubscriptionDoesNotExistExeption("Didn't get existing open subscription while it's expected. Subscription id: " + id);
 
 			if (existingOptions.ConnectionId.Equals(options.ConnectionId, StringComparison.OrdinalIgnoreCase))
-				return; // reopen subscription on already existing connection - might happen after network connection problems the client tries to reopen
+			{
+				// reopen subscription on already existing connection - might happen after network connection problems the client tries to reopen
+
+				UpdateClientActivityDate(id);
+				return; 
+			}
 
 			var doc = GetSubscriptionDocument(id);
 

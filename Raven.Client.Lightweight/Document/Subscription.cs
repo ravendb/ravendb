@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -146,10 +147,7 @@ namespace Raven.Client.Document
 
 				PullingTask = null;
 
-				foreach (var subscriber in subscribers)
-				{
-					subscriber.OnError(e);
-				}
+				OnErrorNotification(e);
 
 				RestartPullingTask().ConfigureAwait(false);
 			}
@@ -162,8 +160,17 @@ namespace Raven.Client.Document
 			{
 				await ensureOpenSubscription().ConfigureAwait(false);
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
+				if (ex is SubscriptionInUseException || ex is SubscriptionDoesNotExistExeption)
+				{
+					// another client has connected to the subscription or it has been deleted meanwhile - we cannot open it
+					OnErrorNotification(ex);
+					OnCompletedNotification();
+
+					return;
+				}
+
 				RestartPullingTask().ConfigureAwait(false);
 				return;
 			}
@@ -176,10 +183,7 @@ namespace Raven.Client.Document
 			{
 				var exception = new Exception("Could not restart pulling task.", e);
 
-				foreach (var subscriber in subscribers)
-				{
-					subscriber.OnError(exception);
-				}
+				OnErrorNotification(exception);
 			}
 		}
 
@@ -232,6 +236,22 @@ namespace Raven.Client.Document
 			return commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, options.ConnectionId), "POST");
 		}
 
+		private void OnErrorNotification(Exception exception)
+		{
+			foreach (var subscriber in subscribers)
+			{
+				subscriber.OnError(exception);
+			}
+		}
+
+		private void OnCompletedNotification()
+		{
+			foreach (var subscriber in subscribers)
+			{
+				subscriber.OnCompleted();
+			}
+		}
+
 		public void Dispose()
 		{
 			if (disposed)
@@ -247,10 +267,7 @@ namespace Raven.Client.Document
 
 			disposed = true;
 
-			foreach (var subscriber in subscribers)
-			{
-				subscriber.OnCompleted();
-			}
+			OnCompletedNotification();
 
 			subscribers.Clear();
 
@@ -296,6 +313,5 @@ namespace Raven.Client.Document
 				await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
 			}
 		}
-
 	}
 }
