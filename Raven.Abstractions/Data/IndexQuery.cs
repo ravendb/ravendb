@@ -46,6 +46,9 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public string Query { get; set; }
 
+		/// <summary>
+		/// For internal use only.
+		/// </summary>
 		public Reference<int> TotalSize { get; private set; }
 
 		public Dictionary<string, SortOptions> SortHints { get; set; } 
@@ -141,38 +144,37 @@ namespace Raven.Abstractions.Data
         public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
 
 		/// <summary>
-		/// Gets or sets the number of skipped results.
+		/// For internal use only.
 		/// </summary>
-		/// <value>The skipped results.</value>
 		public Reference<int> SkippedResults { get; set; }
 
 		/// <summary>
-		/// Whatever we should get the raw index queries
+		/// Whatever we should get the raw index entries.
 		/// </summary>
 		public bool DebugOptionGetIndexEntries { get; set; }
 
         /// <summary>
-        /// Gets or sets the options to highlight the fields
+        /// Array of fields containing highlighting information.
         /// </summary>
         public HighlightedField[] HighlightedFields { get; set; }
 
         /// <summary>
-        /// Gets or sets the highlighter pre tags
+        /// Array of highlighter pre tags that will be applied to highlighting results.
         /// </summary>
 	    public string[] HighlighterPreTags { get; set; }
 
         /// <summary>
-        /// Gets or sets the highlighter post tags
+		/// Array of highlighter post tags that will be applied to highlighting results.
         /// </summary>
 	    public string[] HighlighterPostTags { get; set; }
 
         /// <summary>
-        /// Gets or sets the highlighter key
+        /// Highligter key name.
         /// </summary>
 	    public string HighlighterKeyName { get; set; }
 
         /// <summary>
-        /// Gets or sets the results transformer
+        /// Name of transformer to use on query results.
         /// </summary>
 	    public string ResultsTransformer { get; set; }
 

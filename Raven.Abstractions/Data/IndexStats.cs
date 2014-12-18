@@ -12,32 +12,129 @@ namespace Raven.Abstractions.Data
 {
 	public class IndexStats
 	{
+		/// <summary>
+		/// Index identifier.
+		/// </summary>
 		public int Id { get; set; }
+
+		/// <summary>
+		/// Index name.
+		/// </summary>
 		public string Name { get; set; }
+
+		/// <summary>
+		/// Indicates how many times database tried to index documents (map) using this index.
+		/// </summary>
 		public int IndexingAttempts { get; set; }
+
+		/// <summary>
+		/// Indicates how many indexing attempts succeeded.
+		/// </summary>
 		public int IndexingSuccesses { get; set; }
+
+		/// <summary>
+		/// Indicates how many indexing attempts failed.
+		/// </summary>
 		public int IndexingErrors { get; set; }
+
+		/// <summary>
+		/// This value represents etag of last document indexed (using map) by this index.
+		/// </summary>
 		public Etag LastIndexedEtag { get; set; }
+
+		/// <summary>
+		/// Shows the difference between last document etag available in database and last indexed etag.
+		/// </summary>
 		public int? IndexingLag { get; set; }
+
+		/// <summary>
+		/// Time of last indexing for this index.
+		/// </summary>
         public DateTime LastIndexedTimestamp { get; set; }
+
+		/// <summary>
+		/// Time of last query for this index.
+		/// </summary>
 		public DateTime? LastQueryTimestamp { get; set; }
+
 		public int TouchCount { get; set; }
+
+		/// <summary>
+		/// Index priority (Normal, Disabled, Idle, Abandoned, Error)
+		/// </summary>
         public IndexingPriority Priority { get; set; }
+
+		/// <summary>
+		/// Indicates how many times database tried to index documents (reduce) using this index.
+		/// </summary>
 		public int? ReduceIndexingAttempts { get; set; }
+
+		/// <summary>
+		/// Indicates how many reducing attempts succeeded.
+		/// </summary>
 		public int? ReduceIndexingSuccesses { get; set; }
+
+		/// <summary>
+		/// Indicates how many reducing attempts failed.
+		/// </summary>
 		public int? ReduceIndexingErrors { get; set; }
+
+		/// <summary>
+		/// This value represents etag of last document indexed (using reduce) by this index.
+		/// </summary>
 		public Etag LastReducedEtag { get; set; }
+
+		/// <summary>
+		/// Time of last reduce for this index.
+		/// </summary>
 		public DateTime? LastReducedTimestamp { get; set; }
+
+		/// <summary>
+		/// Date of index creation.
+		/// </summary>
         public DateTime CreatedTimestamp { get; set; }
+
+		/// <summary>
+		/// Time of last indexing (map or reduce) for this index.
+		/// </summary>
 		public DateTime LastIndexingTime { get; set; }
+
+		/// <summary>
+		/// Indicates if index is in-memory only.
+		/// </summary>
 		public string IsOnRam { get; set; }
+
+		/// <summary>
+		/// Indicates current lock mode:
+		/// - Unlock - all index definition changes acceptable
+		/// - LockedIgnore - all index definition changes will be ignored, only log entry will be created
+		/// - LockedError - all index definition changes will raise exception
+		/// </summary>
 		public IndexLockMode LockMode { get; set; }
+
+		/// <summary>
+		/// List of all entity names (collections) for which this index is working.
+		/// </summary>
 		public List<string> ForEntityName { get; set; } 
 
+		/// <summary>
+		/// Performance statistics for this index.
+		/// </summary>
 		public IndexingPerformanceStats[] Performance { get; set; }
+
+		/// <summary>
+		/// Total number of entries in this index.
+		/// </summary>
 		public int DocsCount { get; set; }
+
+		/// <summary>
+		/// Indicates if this is a test index (works on a limited data set - for testing purposes only)
+		/// </summary>
         public bool IsTestIndex { get; set; }
 
+		/// <summary>
+		/// Determines if index is invalid. If more thant 15% of attemps (map or reduce) are errors then value will be <c>true</c>.
+		/// </summary>
 	    public bool IsInvalidIndex
 	    {
 	        get
