@@ -23,7 +23,7 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Gets or sets the previous value, which is compared against the current value to verify a
 		/// change isn't overwriting new values.
-		/// If the value is null, the operation is always successful
+		/// <para>If the value is <c>null</c>, the operation is always successful</para>
 		/// </summary>
 		public RavenJToken PrevVal { get; set; }
 
@@ -77,7 +77,6 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Create an instance from a json object
 		/// </summary>
-		/// <param name="patchRequestJson">The patch request json.</param>
 		public static PatchRequest FromJson(RavenJObject patchRequestJson)
 		{
 			PatchRequest[] nested = null;

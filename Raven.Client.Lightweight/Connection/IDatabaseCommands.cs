@@ -48,8 +48,18 @@ namespace Raven.Client.Connection
 		OperationCredentials PrimaryCredentials { get; }
 
 		/// <summary>
-		/// Retrieves documents for the specified key prefix
+		/// Retrieves documents for the specified key prefix.
 		/// </summary>
+		/// <param name="keyPrefix">prefix for which documents should be returned e.g. "products/"</param>
+		/// <param name="matches">pipe ('|') separated values for which document keys (after 'keyPrefix') should be matched ('?' any single character, '*' any characters)</param>
+		/// <param name="start">number of documents that should be skipped</param>
+		/// <param name="pageSize">maximum number of documents that will be retrieved</param>
+		/// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
+		/// <param name="metadataOnly">specifies if only document metadata should be returned</param>
+		/// <param name="exclude">pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched ('?' any single character, '*' any characters)</param>
+		/// <param name="transformer">name of a transformer that should be used to transform the results</param>
+		/// <param name="transformerParameters">parameters that will be passed to transformer</param>
+		/// <param name="skipAfter">skip document fetching until given key is found and return documents after that key (default: null)</param>
 		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
 		                          RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
 		                          string exclude = null, string transformer = null,
@@ -57,141 +67,149 @@ namespace Raven.Client.Connection
 								  string skipAfter = null);
 
 		/// <summary>
-		/// Retrieves the document for the specified key
+		/// Retrieve a single document for a specified key.
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <returns></returns>
+		/// <param name="key">key of the document you want to retrieve</param>
 		JsonDocument Get(string key);
 
 	    /// <summary>
-	    /// Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the transformer
+	    /// Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the transformer.
+		/// <para>Returns MultiLoadResult where:</para>
+		/// <para>- Results - list of documents in exact same order as in keys parameter</para>
+		/// <para>- Includes - list of documents that were found in specified paths that were passed in includes parameter</para>
 	    /// </summary>
-	    /// <param name="ids">The ids.</param>
-	    /// <param name="includes">The includes.</param>
-	    /// <param name="transformer"></param>
-	    /// <param name="transformerParameters"></param>
-	    /// <param name="metadataOnly">Load just the document metadata</param>
-	    /// <returns></returns>
+		/// <param name="ids">array of keys of the documents you want to retrieve</param>
+		/// <param name="includes">array of paths in documents in which server should look for a 'referenced' document</param>
+		/// <param name="transformer">name of a transformer that should be used to transform the results</param>
+		/// <param name="transformerParameters">parameters that will be passed to transformer</param>
+		/// <param name="metadataOnly">specifies if only document metadata should be returned</param>
 	    MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false);
 
 		/// <summary>
-		/// Get documents from server
+		/// Retrieves multiple documents.
 		/// </summary>
-		/// <param name="start">Paging start</param>
-		/// <param name="pageSize">Size of the page.</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
+		/// <param name="start">number of documents that should be skipped</param>
+		/// <param name="pageSize">maximum number of documents that will be retrieved</param>
+		/// <param name="metadataOnly">specifies if only document metadata should be returned</param>
 		/// <remarks>
 		/// This is primarily useful for administration of a database
 		/// </remarks>
 		JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false);
 
 		/// <summary>
-		/// Puts the document in the database with the specified key
+		/// Puts the document in the database with the specified key.
+		/// <para>Returns PutResult where:</para>
+		/// <para>- Key - unique key under which document was stored,</para>
+		/// <para>- Etag - stored document etag</para>
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="etag">The etag.</param>
-		/// <param name="document">The document.</param>
-		/// <param name="metadata">The metadata.</param>
-		/// <returns></returns>
+		/// <param name="key">unique key under which document will be stored</param>
+		/// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
+		/// <param name="document">document data</param>
+		/// <param name="metadata">document metadata</param>
         PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
 		/// Deletes the document with the specified key
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="etag">The etag.</param>
+		/// <param name="key">key of a document to be deleted</param>
+		/// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
         void Delete(string key, Etag etag);
 
 		/// <summary>
 		/// Puts a byte array as attachment with the specified key
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="etag">The etag.</param>
-		/// <param name="data">The data.</param>
-		/// <param name="metadata">The metadata.</param>
+		/// <param name="key">unique key under which attachment will be stored</param>
+		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
+		/// <param name="data">attachment data</param>
+		/// <param name="metadata">attachment metadata</param>
         [Obsolete("Use RavenFS instead.")]
         void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata);
 
 		/// <summary>
-		/// Updates just the attachment with the specified key's metadata
+		/// Updates attachments metadata only.
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="etag">The etag.</param>
-		/// <param name="metadata">The metadata.</param>
+		/// <param name="key">key under which attachment is stored</param>
+		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
+		/// <param name="metadata">attachment metadata</param>
         [Obsolete("Use RavenFS instead.")]
         void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata);
 
 		/// <summary>
-		/// Retrieves the attachment with the specified key
+		/// Downloads a single attachment.
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <returns></returns>
+		/// <param name="key">key of the attachment you want to download</param>
         [Obsolete("Use RavenFS instead.")]
         Attachment GetAttachment(string key);
 
 		/// <summary>
-		/// Gets the attachments starting with the specified prefix
+		/// Downloads attachment metadata for a multiple attachments.
 		/// </summary>
+		/// <param name="idPrefix">prefix for which attachments should be returned</param>
+		/// <param name="start">number of attachments that should be skipped</param>
+		/// <param name="pageSize">maximum number of attachments that will be returned</param>
         [Obsolete("Use RavenFS instead.")]
         IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize);
 
 		/// <summary>
-		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
+		/// Download attachment metadata for a single attachment.
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <returns></returns>
+		/// <param name="key">key of the attachment you want to download metadata for</param>
         [Obsolete("Use RavenFS instead.")]
         Attachment HeadAttachment(string key);
 
 		/// <summary>
-		/// Deletes the attachment with the specified key
+		/// Removes an attachment from a database.
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="etag">The etag.</param>
+		/// <param name="key">key of an attachment to delete</param>
+		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
         [Obsolete("Use RavenFS instead.")]
         void DeleteAttachment(string key, Etag etag);
 
 		/// <summary>
-		/// Returns the names of all indexes that exist on the server
+		/// Retrieves multiple index names from a database.
 		/// </summary>
-		/// <param name="start">Paging start</param>
-		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="start">number of index names that should be skipped</param>
+		/// <param name="pageSize">maximum number of index names that will be retrieved</param>
 		/// <returns></returns>
 		string[] GetIndexNames(int start, int pageSize);
 
 		/// <summary>
-		/// Gets the indexes from the server
+		/// Retrieves multiple index definitions from a database
 		/// </summary>
-		/// <param name="start">Paging start</param>
-		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="start">number of indexes that should be skipped</param>
+		/// <param name="pageSize">maximum number of indexes that will be retrieved</param>
 		IndexDefinition[] GetIndexes(int start, int pageSize);
 
 		/// <summary>
-		/// Resets the specified index
+		/// Removes all indexing data from a server for a given index so the indexation can start from scratch for that index.
 		/// </summary>
-		/// <param name="name">The name.</param>
+		/// <param name="name">name of an index to reset</param>
 		void ResetIndex(string name);
 
 		/// <summary>
-		/// Gets the index definition for the specified name
+		/// Retrieves an index definition from a database.
 		/// </summary>
-		/// <param name="name">The name.</param>
+		/// <param name="name">name of an index</param>
 		IndexDefinition GetIndex(string name);
 
 		/// <summary>
 		/// Creates an index with the specified name, based on an index definition
 		/// </summary>
-		/// <param name="name">The name.</param>
-		/// <param name="indexDef">The index def.</param>
+		/// <param name="name">name of an index</param>
+		/// <param name="indexDef">definition of an index</param>
 		string PutIndex(string name, IndexDefinition indexDef);
 
         /// <summary>
-        /// Checks if passed index definition matches version stored on server.
+		/// Lets you check if the given index definition differs from the one on a server.
+		/// <para>This might be useful when you want to check the prior index deployment, if index will be overwritten, and if indexing data will be lost.</para>
+		/// <para>Returns:</para>
+		/// <para>- <c>true</c> - if an index does not exist on a server</para>
+		/// <para>- <c>true</c> - if an index definition does not match the one from the indexDef parameter,</para>
+		/// <para>- <c>false</c> - if there are no differences between an index definition on server and the one from the indexDef parameter</para>
         /// If index does not exist this method returns true.
         /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="indexDef">The index definition.</param>
-        /// <returns></returns>
+		/// <param name="name">name of an index to check</param>
+		/// <param name="indexDef">index definition</param>
         bool IndexHasChanged(string name, IndexDefinition indexDef);
 
 		/// <summary>
@@ -202,8 +220,8 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Creates an index with the specified name, based on an index definition
 		/// </summary>
-		/// <param name="name">The name.</param>
-		/// <param name="indexDef">The index def.</param>
+		/// <param name="name">name of an index</param>
+		/// <param name="indexDef">definition of an index</param>
 		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
 		string PutIndex(string name, IndexDefinition indexDef, bool overwrite);
 

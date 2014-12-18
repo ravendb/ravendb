@@ -36,6 +36,8 @@ namespace Raven.Abstractions.Data
 
 		/// <summary>
 		/// Maximum number of suggestions to return.
+		/// <para>Value:</para>
+		/// <para>Default value is 15.</para>
 		/// </summary>
 		/// <value>Default value is 15.</value>
 		public int MaxSuggestions { get; set; }

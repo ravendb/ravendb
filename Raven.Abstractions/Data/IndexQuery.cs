@@ -78,9 +78,9 @@ namespace Raven.Abstractions.Data
 
 		/// <summary>
 		/// Array of fields that will be fetched.
-		/// Fetch order:
-		/// 1. Stored index fields
-		/// 2. Document
+		/// <para>Fetch order:</para>
+		/// <para>1. Stored index fields</para>
+		/// <para>2. Document</para>
 		/// </summary>
 		public string[] FieldsToFetch { get; set; }
 
@@ -129,17 +129,17 @@ namespace Raven.Abstractions.Data
 
 		/// <summary>
 		/// Changes the default operator mode we use for queries.
-		/// When set to Or a query such as 'Name:John Age:18' will be interpreted as:
-		///  Name:John OR Age:18
-		/// When set to And the query will be interpreted as:
-		///	 Name:John AND Age:18
+		/// <para>When set to Or a query such as 'Name:John Age:18' will be interpreted as:</para>
+		/// <para> Name:John OR Age:18</para>
+		/// <para>When set to And the query will be interpreted as:</para>
+		///	<para> Name:John AND Age:18</para>
 		/// </summary>
 		public QueryOperator DefaultOperator { get; set; }
 
 		/// <summary>
         /// If set to <c>true</c>, this property will send multiple index entries from the same document (assuming the index project them)
-        /// to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be 
-        /// called just once for each document in the result set
+		/// <para>to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be </para>
+		/// <para>called just once for each document in the result set</para>
 		/// </summary>
         public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
 
