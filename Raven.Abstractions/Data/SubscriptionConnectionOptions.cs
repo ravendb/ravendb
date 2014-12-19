@@ -25,6 +25,8 @@ namespace Raven.Abstractions.Data
 		public SubscriptionBatchOptions BatchOptions { get; set; }
 
 		public TimeSpan ClientAliveNotificationInterval { get; set; }
+
+		public bool IgnoreSubscribersErrors { get; set; }
 	}
 
 	public class SubscriptionBatchOptions

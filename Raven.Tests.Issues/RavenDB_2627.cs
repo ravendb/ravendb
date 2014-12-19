@@ -740,5 +740,71 @@ namespace Raven.Tests.Issues
 				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
 			}
 		}
+
+		[Fact]
+		public void SouldStopPullingDocsAndCloseSubscriptionOnSubscriberErrorByDefault()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+
+				var docs = new BlockingCollection<RavenJObject>();
+
+				Exception subscriberException = null;
+
+				subscription.Subscribe(docs.Add);
+				subscription.Subscribe(x =>
+				{
+					throw new Exception("Fake exception");
+				},
+				ex =>
+				{
+					subscriberException = ex;
+				});
+
+				store.Changes().WaitForAllPendingSubscriptions();
+
+				store.DatabaseCommands.Put("items/1", null, new RavenJObject(), new RavenJObject());
+
+				Assert.True(SpinWait.SpinUntil(() => subscriberException != null, waitForDocTimeout));
+				Assert.True(subscription.IsErrored);
+
+				Assert.True(SpinWait.SpinUntil(() => subscription.IsClosed, waitForDocTimeout));
+
+				var subscriptionConfig = store.Subscriptions.GetSubscriptions(0, 1).First();
+
+				Assert.Equal(Etag.Empty, subscriptionConfig.AckEtag);
+			}
+		}
+
+		[Fact]
+		public void CanSetToIgnoreSubscriberErrors()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
+				{
+					IgnoreSubscribersErrors = true
+				});
+
+				var docs = new BlockingCollection<RavenJObject>();
+
+				subscription.Subscribe(docs.Add);
+				subscription.Subscribe(x =>
+				{
+					throw new Exception("Fake exception");
+				});
+
+				store.DatabaseCommands.Put("items/1", null, new RavenJObject(), new RavenJObject());
+				store.DatabaseCommands.Put("items/2", null, new RavenJObject(), new RavenJObject());
+
+				RavenJObject doc;
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+				Assert.False(subscription.IsErrored);
+			}
+		}
 	}
 }

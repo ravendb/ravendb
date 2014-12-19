@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +13,8 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -22,6 +26,8 @@ namespace Raven.Client.Document
 {
 	public class Subscription : IObservable<RavenJObject>, IDisposable
 	{
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+
 		private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
 		private readonly ManualResetEvent anySubscriber = new ManualResetEvent(false);
 		private readonly IAsyncDatabaseCommands commands;
@@ -30,6 +36,7 @@ namespace Raven.Client.Document
 		private readonly ConcurrentSet<IObserver<RavenJObject>> subscribers = new ConcurrentSet<IObserver<RavenJObject>>();
 		private readonly SubscriptionConnectionOptions options;
 		private readonly CancellationTokenSource cts = new CancellationTokenSource();
+		private bool completed;
 		private readonly long id;
 		private bool disposed;
 
@@ -45,10 +52,11 @@ namespace Raven.Client.Document
 			this.ensureOpenSubscription = ensureOpenSubscription;
 
 			StartWatchingDocs();
-			StartPullingDocs().ConfigureAwait(false);
+			StartPullingTask = StartPullingDocs();
 		}
 
 		public Task PullingTask { get; private set; }
+		public Task StartPullingTask { get; private set; }
 		private IDisposable PutDocumentsObserver { get; set; }
 		private IDisposable EndedBulkInsertsObserver { get; set; }
 
@@ -95,12 +103,39 @@ namespace Raven.Client.Document
 									var jsonDoc = streamedDocs.Current;
 									foreach (var subscriber in subscribers)
 									{
-										subscriber.OnNext(jsonDoc);
+										try
+										{
+											subscriber.OnNext(jsonDoc);
+										}
+										catch (Exception ex)
+										{
+											logger.WarnException("Subscriber threw an exception", ex);
+
+											if (options.IgnoreSubscribersErrors == false)
+											{
+												try
+												{
+													subscriber.OnError(ex);
+												}
+												catch (Exception)
+												{
+													// can happen if a subscriber doesn't have an onError handler - just ignore it
+												}
+												IsErrored = true;
+												break;
+											}
+										}
 									}
+
+									if (IsErrored)
+										break;
 								}
 							}
 						}
 					}
+
+					if (IsErrored)
+						break;
 
 					if (pulledDocs)
 					{
@@ -133,6 +168,9 @@ namespace Raven.Client.Document
 			});
 		}
 
+		public bool IsErrored { get; private set; }
+		public bool IsClosed { get; private set; }
+
 		private async Task StartPullingDocs()
 		{
 			PullingTask = PullDocuments().ObserveException();
@@ -150,6 +188,20 @@ namespace Raven.Client.Document
 
 				RestartPullingTask().ConfigureAwait(false);
 			}
+
+			if (IsErrored)
+			{
+				OnCompletedNotification();
+
+				try
+				{
+					await CloseSubscription().ConfigureAwait(false);
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Exception happened during an attempt to close subscription after it becomes faulted", e);
+				}
+			}
 		}
 
 		private async Task RestartPullingTask()
@@ -165,7 +217,6 @@ namespace Raven.Client.Document
 				{
 					// another client has connected to the subscription or it has been deleted meanwhile - we cannot open it so we need to finish
 					OnCompletedNotification();
-
 					return;
 				}
 
@@ -173,7 +224,7 @@ namespace Raven.Client.Document
 				return;
 			}
 
-			await StartPullingDocs().ObserveException();
+			StartPullingTask = StartPullingDocs().ObserveException();
 		}
 
 		private void StartWatchingDocs()
@@ -197,6 +248,9 @@ namespace Raven.Client.Document
 
 		public IDisposable Subscribe(IObserver<RavenJObject> observer)
 		{
+			if(IsErrored)
+				throw new InvalidOperationException("Subscription encountered errors and stopped. Cannot add any subscriber.");
+
 			if (subscribers.TryAdd(observer))
 			{
 				if (subscribers.Count == 1)
@@ -233,10 +287,15 @@ namespace Raven.Client.Document
 
 		private void OnCompletedNotification()
 		{
+			if(completed)
+				return;
+
 			foreach (var subscriber in subscribers)
 			{
 				subscriber.OnCompleted();
 			}
+
+			completed = true;
 		}
 
 		public void Dispose()
@@ -247,10 +306,10 @@ namespace Raven.Client.Document
 			DisposeAsync().Wait();
 		}
 
-		public async Task DisposeAsync()
+		public Task DisposeAsync()
 		{
 			if (disposed)
-				return;
+				return new CompletedTask();
 
 			disposed = true;
 
@@ -274,9 +333,12 @@ namespace Raven.Client.Document
 			newDocuments.Set();
 			anySubscriber.Set();
 
-			if (PullingTask != null)
+			foreach (var task in new []{PullingTask, StartPullingTask})
 			{
-				switch (PullingTask.Status)
+				if (task == null) 
+					continue;
+				
+				switch (task.Status)
 				{
 					case TaskStatus.RanToCompletion:
 					case TaskStatus.Canceled:
@@ -284,7 +346,7 @@ namespace Raven.Client.Document
 					default:
 						try
 						{
-							PullingTask.Wait();
+							task.Wait();
 						}
 						catch (AggregateException ae)
 						{
@@ -298,9 +360,18 @@ namespace Raven.Client.Document
 				}
 			}
 
+			if (IsClosed)
+				return new CompletedTask();
+
+			return CloseSubscription();
+		}
+
+		private async Task CloseSubscription()
+		{
 			using (var closeRequest = CreateCloseRequest())
 			{
 				await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
+				IsClosed = true;
 			}
 		}
 	}
