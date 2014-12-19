@@ -49,7 +49,8 @@ namespace Raven.Client.Document
 		}
 
 		public Task PullingTask { get; private set; }
-		private IDisposable NewDocumentsObserver { get; set; }
+		private IDisposable PutDocumentsObserver { get; set; }
+		private IDisposable EndedBulkInsertsObserver { get; set; }
 
 		private Task PullDocuments()
 		{
@@ -177,12 +178,17 @@ namespace Raven.Client.Document
 
 		private void StartWatchingDocs()
 		{
-			if(NewDocumentsObserver != null)
-				NewDocumentsObserver.Dispose();
-
-			NewDocumentsObserver = changes.ForAllDocuments().Subscribe(notification =>
+			PutDocumentsObserver = changes.ForAllDocuments().Subscribe(notification =>
 			{
 				if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) == false)
+				{
+					newDocuments.Set();
+				}
+			});
+
+			EndedBulkInsertsObserver = changes.ForBulkInsert().Subscribe(notification =>
+			{
+				if (notification.Type == DocumentChangeTypes.BulkInsertEnded)
 				{
 					newDocuments.Set();
 				}
@@ -252,8 +258,11 @@ namespace Raven.Client.Document
 
 			subscribers.Clear();
 
-			if (NewDocumentsObserver != null)
-				NewDocumentsObserver.Dispose();
+			if (PutDocumentsObserver != null)
+				PutDocumentsObserver.Dispose();
+
+			if(EndedBulkInsertsObserver != null)
+				EndedBulkInsertsObserver.Dispose();
 
 			var disposableChanges = changes as IDisposable;
 

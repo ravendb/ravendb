@@ -715,5 +715,30 @@ namespace Raven.Tests.Issues
 				Assert.DoesNotThrow(() => store.Subscriptions.Open(id, new SubscriptionConnectionOptions()));
 			}
 		}
+
+		[Fact]
+		public void ShouldPullDocumentsAfterBulkInsert()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var id = store.Subscriptions.Create(new SubscriptionCriteria());
+				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+
+				var docs = new BlockingCollection<RavenJObject>();
+
+				subscription.Subscribe(docs.Add);
+
+				using (var bulk = store.BulkInsert())
+				{
+					bulk.Store(new User());
+					bulk.Store(new User());
+					bulk.Store(new User());
+				}
+
+				RavenJObject doc;
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+				Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+			}
+		}
 	}
 }
