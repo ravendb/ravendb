@@ -197,6 +197,11 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
+		public Task<string> PutIndexAsync<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
+		{
+			return PutIndexAsync(name, indexDef, false);
+		}
+
 		public Task<string> PutIndexAsync<TDocument, TReduceResult>(string name,
 					 IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite = false)
 		{
@@ -221,6 +226,11 @@ namespace Raven.Client.Connection.Async
 				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return result.Value<bool>("Changed");
 			}
+		}
+
+		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef)
+		{
+			return PutIndexAsync(name, indexDef, false);
 		}
 
 		/// <summary>
@@ -391,6 +401,11 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
+		public Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches)
+		{
+			return PatchAsync(key, patches, null);
+		}
+
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
@@ -411,6 +426,11 @@ namespace Raven.Client.Connection.Async
 				batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
 				throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
 			return batchResults[0].AdditionalData;
+		}
+
+		public Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch)
+		{
+			return PatchAsync(key, patch, null);
 		}
 
 		/// <summary>
