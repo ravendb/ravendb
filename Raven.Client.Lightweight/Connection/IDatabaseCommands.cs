@@ -193,6 +193,17 @@ namespace Raven.Client.Connection
 		JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false);
 
 		/// <summary>
+		///     Retrieves multiple documents.
+		/// </summary>
+		/// <param name="fromEtag">Etag from which documents should start</param>
+		/// <param name="pageSize">maximum number of documents that will be retrieved</param>
+		/// <param name="metadataOnly">specifies if only document metadata should be returned</param>
+		/// <remarks>
+		///     This is primarily useful for administration of a database
+		/// </remarks>
+		JsonDocument[] GetDocuments(Etag fromEtag, int pageSize, bool metadataOnly = false);
+
+		/// <summary>
 		///     Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
 		/// <param name="index">name of an index to query</param>
