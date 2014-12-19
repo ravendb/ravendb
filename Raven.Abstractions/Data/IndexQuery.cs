@@ -51,6 +51,9 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public Reference<int> TotalSize { get; private set; }
 
+		/// <summary>
+		/// For internal use only.
+		/// </summary>
 		public Dictionary<string, SortOptions> SortHints { get; set; } 
 
         /// <summary>

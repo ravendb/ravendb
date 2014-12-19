@@ -1,23 +1,23 @@
-using Raven.Abstractions.Connection;
-using Raven.Database.Data;
 //-----------------------------------------------------------------------
 // <copyright file="IDatabaseCommands.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using Raven.Abstractions.Commands;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Connection.Profiling;
+using Raven.Client.Indexes;
+using Raven.Database.Data;
+using Raven.Json.Linq;
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Changes;
-using Raven.Client.Connection.Profiling;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -61,9 +61,9 @@ namespace Raven.Client.Connection
 		/// <param name="transformerParameters">parameters that will be passed to transformer</param>
 		/// <param name="skipAfter">skip document fetching until given key is found and return documents after that key (default: null)</param>
 		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
-		                          RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
-		                          string exclude = null, string transformer = null,
-		                          Dictionary<string, RavenJToken> transformerParameters = null,
+								  RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
+								  string exclude = null, string transformer = null,
+								  Dictionary<string, RavenJToken> transformerParameters = null,
 								  string skipAfter = null);
 
 		/// <summary>
@@ -72,18 +72,18 @@ namespace Raven.Client.Connection
 		/// <param name="key">key of the document you want to retrieve</param>
 		JsonDocument Get(string key);
 
-	    /// <summary>
-	    /// Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the transformer.
+		/// <summary>
+		/// Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the transformer.
 		/// <para>Returns MultiLoadResult where:</para>
 		/// <para>- Results - list of documents in exact same order as in keys parameter</para>
 		/// <para>- Includes - list of documents that were found in specified paths that were passed in includes parameter</para>
-	    /// </summary>
+		/// </summary>
 		/// <param name="ids">array of keys of the documents you want to retrieve</param>
 		/// <param name="includes">array of paths in documents in which server should look for a 'referenced' document</param>
 		/// <param name="transformer">name of a transformer that should be used to transform the results</param>
 		/// <param name="transformerParameters">parameters that will be passed to transformer</param>
 		/// <param name="metadataOnly">specifies if only document metadata should be returned</param>
-	    MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false);
+		MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false);
 
 		/// <summary>
 		/// Retrieves multiple documents.
@@ -106,14 +106,14 @@ namespace Raven.Client.Connection
 		/// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
 		/// <param name="document">document data</param>
 		/// <param name="metadata">document metadata</param>
-        PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata);
+		PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
 		/// Deletes the document with the specified key
 		/// </summary>
 		/// <param name="key">key of a document to be deleted</param>
 		/// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
-        void Delete(string key, Etag etag);
+		void Delete(string key, Etag etag);
 
 		/// <summary>
 		/// Puts a byte array as attachment with the specified key
@@ -122,8 +122,8 @@ namespace Raven.Client.Connection
 		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
 		/// <param name="data">attachment data</param>
 		/// <param name="metadata">attachment metadata</param>
-        [Obsolete("Use RavenFS instead.")]
-        void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata);
+		[Obsolete("Use RavenFS instead.")]
+		void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata);
 
 		/// <summary>
 		/// Updates attachments metadata only.
@@ -131,15 +131,15 @@ namespace Raven.Client.Connection
 		/// <param name="key">key under which attachment is stored</param>
 		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
 		/// <param name="metadata">attachment metadata</param>
-        [Obsolete("Use RavenFS instead.")]
-        void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata);
+		[Obsolete("Use RavenFS instead.")]
+		void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata);
 
 		/// <summary>
 		/// Downloads a single attachment.
 		/// </summary>
 		/// <param name="key">key of the attachment you want to download</param>
-        [Obsolete("Use RavenFS instead.")]
-        Attachment GetAttachment(string key);
+		[Obsolete("Use RavenFS instead.")]
+		Attachment GetAttachment(string key);
 
 		/// <summary>
 		/// Downloads attachment metadata for a multiple attachments.
@@ -147,23 +147,23 @@ namespace Raven.Client.Connection
 		/// <param name="idPrefix">prefix for which attachments should be returned</param>
 		/// <param name="start">number of attachments that should be skipped</param>
 		/// <param name="pageSize">maximum number of attachments that will be returned</param>
-        [Obsolete("Use RavenFS instead.")]
-        IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize);
+		[Obsolete("Use RavenFS instead.")]
+		IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize);
 
 		/// <summary>
 		/// Download attachment metadata for a single attachment.
 		/// </summary>
 		/// <param name="key">key of the attachment you want to download metadata for</param>
-        [Obsolete("Use RavenFS instead.")]
-        Attachment HeadAttachment(string key);
+		[Obsolete("Use RavenFS instead.")]
+		Attachment HeadAttachment(string key);
 
 		/// <summary>
 		/// Removes an attachment from a database.
 		/// </summary>
 		/// <param name="key">key of an attachment to delete</param>
 		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
-        [Obsolete("Use RavenFS instead.")]
-        void DeleteAttachment(string key, Etag etag);
+		[Obsolete("Use RavenFS instead.")]
+		void DeleteAttachment(string key, Etag etag);
 
 		/// <summary>
 		/// Retrieves multiple index names from a database.
@@ -199,22 +199,26 @@ namespace Raven.Client.Connection
 		/// <param name="indexDef">definition of an index</param>
 		string PutIndex(string name, IndexDefinition indexDef);
 
-        /// <summary>
+		/// <summary>
 		/// Lets you check if the given index definition differs from the one on a server.
 		/// <para>This might be useful when you want to check the prior index deployment, if index will be overwritten, and if indexing data will be lost.</para>
 		/// <para>Returns:</para>
 		/// <para>- <c>true</c> - if an index does not exist on a server</para>
 		/// <para>- <c>true</c> - if an index definition does not match the one from the indexDef parameter,</para>
 		/// <para>- <c>false</c> - if there are no differences between an index definition on server and the one from the indexDef parameter</para>
-        /// If index does not exist this method returns true.
-        /// </summary>
+		/// If index does not exist this method returns true.
+		/// </summary>
 		/// <param name="name">name of an index to check</param>
 		/// <param name="indexDef">index definition</param>
-        bool IndexHasChanged(string name, IndexDefinition indexDef);
+		bool IndexHasChanged(string name, IndexDefinition indexDef);
+
 
 		/// <summary>
 		/// Creates a transformer with the specified name, based on an transformer definition
 		/// </summary>
+		/// <param name="name">name of a transformer</param>
+		/// <param name="transformerDef">definition of a transformer</param>
+		/// <returns></returns>
 		string PutTransformer(string name, TransformerDefinition transformerDef);
 
 		/// <summary>
@@ -229,108 +233,120 @@ namespace Raven.Client.Connection
 		/// Creates an index with the specified name, based on an index definition that is created by the supplied
 		/// IndexDefinitionBuilder
 		/// </summary>
-		/// <typeparam name="TDocument">The type of the document.</typeparam>
-		/// <typeparam name="TReduceResult">The type of the reduce result.</typeparam>
-		/// <param name="name">The name.</param>
-		/// <param name="indexDef">The index def.</param>
-		/// <returns></returns>
+		/// <typeparam name="TDocument">Type of the document index should work on</typeparam>
+		/// <typeparam name="TReduceResult">Type of reduce result</typeparam>
+		/// <param name="name">name of an index</param>
+		/// <param name="indexDef">definition of an index</param>
 		string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef);
 
 		/// <summary>
 		/// Creates an index with the specified name, based on an index definition that is created by the supplied
 		/// IndexDefinitionBuilder
 		/// </summary>
-		/// <typeparam name="TDocument">The type of the document.</typeparam>
-		/// <typeparam name="TReduceResult">The type of the reduce result.</typeparam>
-		/// <param name="name">The name.</param>
-		/// <param name="indexDef">The index def.</param>
+		/// <typeparam name="TDocument">Type of the document index should work on</typeparam>
+		/// <typeparam name="TReduceResult">Type of reduce result</typeparam>
+		/// <param name="name">name of an index</param>
+		/// <param name="indexDef">definition of an index</param>
 		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
 		string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite);
 
 		/// <summary>
-		/// Queries the specified index in the Raven flavored Lucene query syntax
+		/// Queries the specified index in the Raven-flavored Lucene query syntax
 		/// </summary>
-		/// <param name="index">The index.</param>
-		/// <param name="query">The query.</param>
-		/// <param name="includes">The includes.</param>
+		/// <param name="index">name of an index to query</param>
+		/// <param name="query">query definition containing all information required to query a specified index</param>
+		/// <param name="includes">an array of relative paths that specify related documents ids which should be included in a query result</param>
+		/// <param name="metadataOnly">true if returned documents should include only metadata without a document body.</param>
+		/// <param name="indexEntriesOnly">true if query results should contain only index entries.</param>
 		QueryResult Query(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false);
-		
+
 		/// <summary>
 		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
 		/// of the number of items that might be returned.
 		/// </summary>
+		/// <param name="index">name of an index to query</param>
+		/// <param name="query">query definition containing all information required to query a specified index</param>
+		/// <param name="queryHeaderInfo">information about performed query</param>
 		IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo);
 
 		/// <summary>
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
+		/// <param name="fromEtag">ETag of a document from which stream should start (mutually exclusive with 'startsWith')</param>
+		/// <param name="startsWith">prefix for which documents should be streamed (mutually exclusive with 'fromEtag')</param>
+		/// <param name="matches">pipe ('|') separated values for which document keys (after 'keyPrefix') should be matched ('?' any single character, '*' any characters)</param>
+		/// <param name="start">number of documents that should be skipped</param>
+		/// <param name="pageSize">maximum number of documents that will be retrieved</param>
+		/// <param name="exclude">pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched ('?' any single character, '*' any characters)</param>
+		/// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
+		/// <param name="skipAfter">skip document fetching until given key is found and return documents after that key (default: null)</param>
 		IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 
 		/// <summary>
 		/// Deletes the specified index
 		/// </summary>
-		/// <param name="name">The name.</param>
+		/// <param name="name">name of an index to delete</param>
 		void DeleteIndex(string name);
 
 		/// <summary>
-		/// Executed the specified commands as a single batch
+		/// Sends multiple operations in a single request, reducing the number of remote calls and allowing several operations to share same transaction
 		/// </summary>
-		/// <param name="commandDatas">The command data.</param> 
+		/// <param name="commandDatas">Commands to process</param> 
 		BatchResult[] Batch(IEnumerable<ICommandData> commandDatas);
 
-	    /// <summary>
-	    /// Commits the specified tx id
-	    /// </summary>
-	    /// <param name="txId">The tx id.</param>
-	    void Commit(string txId);
-
-	    /// <summary>
-	    /// Rollbacks the specified tx id
-	    /// </summary>
-	    /// <param name="txId">The tx id.</param>
-	    void Rollback(string txId);
+		/// <summary>
+		/// Commits the specified tx id
+		/// </summary>
+		/// <param name="txId">transaction identifier</param>
+		void Commit(string txId);
 
 		/// <summary>
-		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
+		/// Rollbacks the specified tx id
 		/// </summary>
-		/// <param name="credentialsForSession">The credentials for session.</param>
+		/// <param name="txId">transaction identifier</param>
+		void Rollback(string txId);
+
+		/// <summary>
+		/// Returns a new <see cref="IDatabaseCommands"/> that use specified credentials
+		/// </summary>
+		/// <param name="credentialsForSession">credentials to use</param>
 		IDatabaseCommands With(ICredentials credentialsForSession);
-	
+
 		/// <summary>
 		/// Perform a set based deletes using the specified index
 		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToDelete">The query to delete.</param>
-        /// <param name="options">Holds configuration options for base operation.</param>
-        Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null);
+		/// <param name="indexName">name of an index to perform a query on</param>
+		/// <param name="queryToDelete">Tquery that will be performed</param>
+		/// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
+		Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null);
 
 		/// <summary>
 		/// Perform a set based update using the specified index
 		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patchRequests">The patch requests.</param>
-        /// <param name="options">Holds configuration options for base operation.</param>
-        Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null);
+		/// <param name="indexName">name of an index to perform a query on</param>
+		/// <param name="queryToUpdate">query that will be performed</param>
+		/// <param name="patchRequests">array of patches that will be executed on a query results</param>
+		/// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
+		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null);
 
 		/// <summary>
 		/// Perform a set based update using the specified index
 		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToUpdate">The query to update.</param>
-        /// <param name="patch">The patch request to use (using JavaScript)</param>
-        /// <param name="options">Holds configuration options for base operation.</param>
-        Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null);
+		/// <param name="indexName">name of an index to perform a query on</param>
+		/// <param name="queryToUpdate">query that will be performed</param>
+		/// <param name="patch">JavaScript patch that will be executed on query results</param>
+		/// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
+		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null);
 
 		/// <summary>
-		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
 		/// with the specified database
 		/// </summary>
 		IDatabaseCommands ForDatabase(string database);
 
 		/// <summary>
-		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
+		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
 		/// with the default database
 		/// </summary>
 		IDatabaseCommands ForSystemDatabase();
@@ -338,50 +354,52 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Returns a list of suggestions based on the specified suggestion query
 		/// </summary>
-		/// <param name="index">The index to query for suggestions</param>
-		/// <param name="suggestionQuery">The suggestion query.</param>
+		/// <param name="index">name of an index to query</param>
+		/// <param name="suggestionQuery">suggestion query definition containing all information required to query a specified index</param>
 		SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery);
 
 		/// <summary>
 		/// Return a list of documents that based on the MoreLikeThisQuery.
 		/// </summary>
-		/// <param name="query">The more like this query parameters</param>
-		/// <returns></returns>
+		/// <param name="query">more like this query definition that will be executed</param>
 		MultiLoadResult MoreLikeThis(MoreLikeThisQuery query);
 
-		///<summary>
+		/// <summary>
 		/// Get the all terms stored in the index for the specified field
 		/// You can page through the results by use fromValue parameter as the 
 		/// starting point for the next query
 		///</summary>
-		///<returns></returns>
+		/// <param name="index">name of an index</param>
+		/// <param name="field">index field</param>
+		/// <param name="fromValue">starting point for a query, used for paging</param>
+		/// <param name="pageSize">maximum number of terms that will be returned</param>
 		IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize);
 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		/// <param name="index">Name of the index</param>
-		/// <param name="query">Query to build facet results</param>
-		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
-		/// <param name="start">Start index for paging</param>
-		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
+		/// <param name="index">name of an index to query</param>
+		/// <param name="query">query definition containing all information required to query a specified index</param>
+		/// <param name="facetSetupDoc">document key that contains predefined FacetSetup</param>
+		/// <param name="start">number of results that should be skipped. Default: 0</param>
+		/// <param name="pageSize">maximum number of results that will be retrieved. Default: null. If set, overrides Facet.MaxResults</param>
+		FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null);
 
 		/// <summary>
 		/// Sends a multiple faceted queries in a single request and calculates the facet results for each of them
 		/// </summary>
-		/// <param name="facetedQueries">List of queries</param>
+		/// <param name="facetedQueries">List of the faceted queries that will be executed on the server-side</param>
 		FacetResults[] GetMultiFacets(FacetQuery[] facetedQueries);
 
-        /// <summary>
-        /// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
-        /// </summary>
-        /// <param name="index">Name of the index</param>
-        /// <param name="query">Query to build facet results</param>
-        /// <param name="facets">List of Facets</param>
-        /// <param name="start">Start index for paging</param>
-        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-        FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null);
+		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+		/// </summary>
+		/// <param name="index">name of an index to query</param>
+		/// <param name="query">query definition containing all information required to query a specified index</param>
+		/// <param name="facets">list of facets required to perform a facet query</param>
+		/// <param name="start">number of results that should be skipped. Default: 0</param>
+		/// <param name="pageSize">maximum number of results that will be retrieved. Default: null. If set, overrides Facet.MaxResults</param>
+		FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null);
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag and if the document is missing
@@ -464,8 +482,10 @@ namespace Raven.Client.Connection
 
 		/// <summary>
 		/// Retrieves the document metadata for the specified document key.
+		/// <para>Returns:</para>
+		/// <para>The document metadata for the specified document, or <c>null</c> if the document does not exist</para>
 		/// </summary>
-		/// <param name="key">The key.</param>
+		/// <param name="key">key of a document to get metadata for</param>
 		/// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
 		JsonDocumentMetadata Head(string key);
 
@@ -492,31 +512,41 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Gets the transformers from the server
 		/// </summary>
-		/// <param name="start">Paging start</param>
-		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="start">number of transformers that should be skipped</param>
+		/// <param name="pageSize">maximum number of transformers that will be retrieved</param>
 		TransformerDefinition[] GetTransformers(int start, int pageSize);
 
 		/// <summary>
 		/// Gets the transformer definition for the specified name
 		/// </summary>
-		/// <param name="name">The name.</param>
+		/// <param name="name">transformer name</param>
 		TransformerDefinition GetTransformer(string name);
 
 		/// <summary>
 		/// Deletes the specified transformer
 		/// </summary>
-		/// <param name="name">The name.</param>
+		/// <param name="name">name of a transformer to delete</param>
 		void DeleteTransformer(string name);
 
-	    /// <summary>
-	    /// Prepares the transaction on the server.
-	    /// </summary>
-	    void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
+		/// <summary>
+		/// Prepares the transaction on the server.
+		/// </summary>
+		void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
 
-        [Obsolete("Use RavenFS instead.")]
-        AttachmentInformation[] GetAttachments(int start, Etag startEtag, int pageSize);
+		/// <summary>
+		/// Used to download attachment information for multiple attachments.
+		/// </summary>
+		/// <param name="start">indicates how many attachments should be skipped</param>
+		/// <param name="startEtag">ETag from which to start</param>
+		/// <param name="pageSize">maximum number of attachments that will be downloaded</param>
+		/// <returns></returns>
+		[Obsolete("Use RavenFS instead.")]
+		AttachmentInformation[] GetAttachments(int start, Etag startEtag, int pageSize);
 
-        IndexMergeResults GetIndexMergeSuggestions();
+		/// <summary>
+		/// Retrieves all suggestions for an index merging
+		/// </summary>
+		IndexMergeResults GetIndexMergeSuggestions();
 	}
 
 	public interface IGlobalAdminDatabaseCommands
@@ -529,11 +559,10 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Returns the names of all tenant databases on the RavenDB server
 		/// </summary>
-		/// <returns>List of tenant database names</returns>
 		string[] GetDatabaseNames(int pageSize, int start = 0);
 
 		/// <summary>
-		/// Get admin statistics
+		/// Gets server-wide statistics.
 		/// </summary>
 		AdminStatistics GetStatistics();
 
@@ -543,45 +572,57 @@ namespace Raven.Client.Connection
 		void CreateDatabase(DatabaseDocument databaseDocument);
 
 		/// <summary>
-		/// Deteles a database with the specified name
+		/// Used to delete a database from a server, with a possibility to remove all the data from hard drive.
+		/// <para>Warning: if hardDelete is set to <c>true</c> then ALL data will be removed from the data directory of a database.</para>
 		/// </summary>
+		/// <param name="dbName">name of a database to delete</param>
+		/// <param name="hardDelete">should all data be removed (data files, indexing files, etc.). Default: false</param>
 		void DeleteDatabase(string dbName, bool hardDelete = false);
 
 		/// <summary>
 		/// Sends an async command to compact a database. During the compaction the specified database will be offline.
 		/// </summary>
+		/// <param name="databaseName">name of a database to compact</param>
 		Operation CompactDatabase(string databaseName);
 
-        /// <summary>
-        /// Begins a restore operation
-        /// </summary>
-        Operation StartRestore(DatabaseRestoreRequest restoreRequest);
+		/// <summary>
+		/// Begins a restore operation.
+		/// </summary>
+		Operation StartRestore(DatabaseRestoreRequest restoreRequest);
 
-        /// <summary>
-        /// Begins a backup operation
-        /// </summary>
-        void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
+		/// <summary>
+		/// Begins a backup operation.
+		/// </summary>
+		/// <param name="backupLocation">path to directory where backup will be stored</param>
+		/// <param name="databaseDocument">Database configuration document that will be stored with backup in 'Database.Document' file. Pass <c>null</c> to use the one from system database. WARNING: Database configuration document may contain sensitive data which will be decrypted and stored in backup.</param>
+		/// <param name="incremental">indicates if backup is incremental</param>
+		/// <param name="databaseName">name of a database that will be backed up</param>
+		void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
 
-        IDatabaseCommands Commands { get; }
+		IDatabaseCommands Commands { get; }
 	}
 
 	public interface IAdminDatabaseCommands
 	{
 		/// <summary>
-		/// Disables all indexing
+		/// Disables all indexing.
 		/// </summary>
 		void StopIndexing();
 
 		/// <summary>
-		/// Enables indexing
+		/// Enables indexing.
 		/// </summary>
-        void StartIndexing(int? maxNumberOfParallelIndexTasks = null);
+		/// <param name="maxNumberOfParallelIndexTasks">if set then maximum number of parallel indexing tasks will be set to this value.</param>
+		void StartIndexing(int? maxNumberOfParallelIndexTasks = null);
 
 		/// <summary>
 		/// Get the indexing status
 		/// </summary>
 		string GetIndexingStatus();
 
+		/// <summary>
+		/// Gets configuration for current database.
+		/// </summary>
 		RavenJObject GetDatabaseConfiguration();
 	}
 }
