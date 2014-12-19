@@ -51,6 +51,7 @@ namespace Raven.Database.Indexing
 			var addDocumentDutation = new Stopwatch();
 			var convertToLuceneDocumentDuration = new Stopwatch();
 			var flushToDiskDuration = new Stopwatch();
+			var recreateSeatcherDuration = new Stopwatch();
 
 			IndexingPerformanceStats performance = null;
 
@@ -215,7 +216,7 @@ namespace Raven.Database.Indexing
 				{
 					ChangedDocs = sourceCount
 				};
-			}, flushToDiskDuration);
+			}, flushToDiskDuration, recreateSeatcherDuration);
 
 			BatchCompleted("Current", "Index", sourceCount, count, 
 				new LoadDocumentPerformanceStats
@@ -231,8 +232,9 @@ namespace Raven.Database.Indexing
 				new LucenePerformanceStats
 				{
 					ConvertToLuceneDocumentsDurationMs = convertToLuceneDocumentDuration.ElapsedMilliseconds,
-					WriteDocumentsDurationMs = addDocumentDutation.ElapsedMilliseconds,
-					FlushToDiskDurationMs = flushToDiskDuration.ElapsedMilliseconds
+					AddDocumentsDurationMs = addDocumentDutation.ElapsedMilliseconds,
+					FlushToDiskDurationMs = flushToDiskDuration.ElapsedMilliseconds,
+					RecreateSearcherDurationMs = recreateSeatcherDuration.ElapsedMilliseconds
 				}, 
 				new MapStoragePerformanceStats
 				{

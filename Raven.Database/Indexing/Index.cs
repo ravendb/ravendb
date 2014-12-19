@@ -203,8 +203,9 @@ namespace Raven.Database.Indexing
 				stats.LinqExecutionPerformance.ReduceLinqExecutionDurationMs = linqExecutionStats.ReduceLinqExecutionDurationMs;
 
 				stats.LucenePerformance.ConvertToLuceneDocumentsDurationMs = writeToLuceneStats.ConvertToLuceneDocumentsDurationMs;
-				stats.LucenePerformance.WriteDocumentsDurationMs = writeToLuceneStats.WriteDocumentsDurationMs;
+				stats.LucenePerformance.AddDocumentsDurationMs = writeToLuceneStats.AddDocumentsDurationMs;
 				stats.LucenePerformance.FlushToDiskDurationMs = writeToLuceneStats.FlushToDiskDurationMs;
+				stats.LucenePerformance.RecreateSearcherDurationMs = writeToLuceneStats.RecreateSearcherDurationMs;
 
 				stats.MapStoragePerformance.PutMappedResultsDurationMs = mapStorageStats.PutMappedResultsDurationMs;
 				stats.MapStoragePerformance.DeleteMappedResultsDurationMs = mapStorageStats.DeleteMappedResultsDurationMs;
@@ -453,7 +454,7 @@ namespace Raven.Database.Indexing
 			return new KeyValuePair<string, RavenJToken>(fld.Name, stringValue);
 		}
 
-		protected void Write(Func<RavenIndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action, Stopwatch flushToDiskDuration = null)
+		protected void Write(Func<RavenIndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action, Stopwatch flushToDiskDuration = null, Stopwatch recreateSearcherDuration = null)
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + PublicName + " has been disposed");
@@ -520,15 +521,16 @@ namespace Raven.Database.Indexing
 
 						if (itemsInfo.ChangedDocs > 0)
 						{
-							WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);                            
-							if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
+							using (StopwatchScope.For(flushToDiskDuration))
 							{
-								using (StopwatchScope.For(flushToDiskDuration))
+								WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
+								
+								if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
 								{
 									Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
+									flushed = true;
 								}
-								flushed = true;
-                            }
+							}
 
 							UpdateIndexingStats(context, stats);
 						}
@@ -570,7 +572,12 @@ namespace Raven.Database.Indexing
 				}
 
 				if (shouldRecreateSearcher)
-					RecreateSearcher();
+				{
+					using (StopwatchScope.For(recreateSearcherDuration))
+					{
+						RecreateSearcher();
+					}
+				}
 			}
 		}
 

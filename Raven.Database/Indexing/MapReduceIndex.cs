@@ -236,7 +236,8 @@ namespace Raven.Database.Indexing
 				{
 					ConvertToLuceneDocumentsDurationMs = -1,
 					FlushToDiskDurationMs = -1,
-					WriteDocumentsDurationMs = -1
+					AddDocumentsDurationMs = -1,
+					RecreateSearcherDurationMs = -1
 				}, 
 				new MapStoragePerformanceStats
 				{
@@ -592,6 +593,7 @@ namespace Raven.Database.Indexing
 				var convertToLuceneDocumentDuration = new Stopwatch();
 				var flushToDiskDuration = new Stopwatch();
 				var linqExecutionDuration = new Stopwatch();
+				var recreateSearcherDuration = new Stopwatch();
 
 				IndexingPerformanceStats performance = null;
 
@@ -668,7 +670,7 @@ namespace Raven.Database.Indexing
 					{
 						ChangedDocs = count + ReduceKeys.Count
 					};
-				}, flushToDiskDuration);
+				}, flushToDiskDuration, recreateSearcherDuration);
 
 				parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count,
 					new LoadDocumentPerformanceStats()
@@ -684,8 +686,9 @@ namespace Raven.Database.Indexing
 					new LucenePerformanceStats
 					{
 						ConvertToLuceneDocumentsDurationMs = convertToLuceneDocumentDuration.ElapsedMilliseconds,
-						WriteDocumentsDurationMs = addDocumentDutation.ElapsedMilliseconds,
-						FlushToDiskDurationMs = flushToDiskDuration.ElapsedMilliseconds
+						AddDocumentsDurationMs = addDocumentDutation.ElapsedMilliseconds,
+						FlushToDiskDurationMs = flushToDiskDuration.ElapsedMilliseconds,
+						RecreateSearcherDurationMs = recreateSearcherDuration.ElapsedMilliseconds
 					},
 					new MapStoragePerformanceStats
 					{
