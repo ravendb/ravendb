@@ -166,5 +166,12 @@ namespace Raven.Client.Connection.Async
 			await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention()).ConfigureAwait(false);
 		}
 
+		public IAsyncDatabaseCommands Commands
+		{
+			get
+			{
+				return innerAsyncServerClient;
+			}
+		}
 	}
 }

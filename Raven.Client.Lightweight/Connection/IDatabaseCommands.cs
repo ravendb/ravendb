@@ -8,7 +8,10 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Replication;
+using Raven.Client.Changes;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Data;
 using Raven.Json.Linq;
@@ -22,15 +25,19 @@ using System.Net;
 namespace Raven.Client.Connection
 {
 	///<summary>
-	/// Expose the set of operations by the RavenDB server
+	/// A sync database command operations
 	///</summary>
 	public interface IDatabaseCommands : IHoldProfilingInformation
 	{
 		/// <summary>
 		/// Gets or sets the operations headers
 		/// </summary>
-		/// <value>The operations headers.</value>
 		NameValueCollection OperationsHeaders { get; set; }
+
+		/// <summary>
+		/// Admin operations performed against system database, like create/delete database
+		/// </summary>
+		IGlobalAdminDatabaseCommands GlobalAdmin { get; }
 
 		/// <summary>
 		/// Admin operations for current database
@@ -38,9 +45,9 @@ namespace Raven.Client.Connection
 		IAdminDatabaseCommands Admin { get; }
 
 		/// <summary>
-		/// Admin operations performed against system database, like create/delete database
+		/// Info operations for current database
 		/// </summary>
-		IGlobalAdminDatabaseCommands GlobalAdmin { get; }
+		IInfoDatabaseCommands Info { get; }
 
 		/// <summary>
 		/// Primary credentials for access. Will be used also in replication context - for failovers
@@ -170,7 +177,6 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="start">number of index names that should be skipped</param>
 		/// <param name="pageSize">maximum number of index names that will be retrieved</param>
-		/// <returns></returns>
 		string[] GetIndexNames(int start, int pageSize);
 
 		/// <summary>
@@ -217,9 +223,8 @@ namespace Raven.Client.Connection
 		/// Creates a transformer with the specified name, based on an transformer definition
 		/// </summary>
 		/// <param name="name">name of a transformer</param>
-		/// <param name="transformerDef">definition of a transformer</param>
-		/// <returns></returns>
-		string PutTransformer(string name, TransformerDefinition transformerDef);
+		/// <param name="transformerDefinition">definition of a transformer</param>
+		string PutTransformer(string name, TransformerDefinition transformerDefinition);
 
 		/// <summary>
 		/// Creates an index with the specified name, based on an index definition
@@ -466,6 +471,11 @@ namespace Raven.Client.Connection
 		RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata);
 
 		/// <summary>
+		/// Create a http request to the specified relative url on the current database
+		/// </summary>
+		HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
+
+		/// <summary>
 		/// Disable all caching within the given scope
 		/// </summary>
 		IDisposable DisableAllCaching();
@@ -539,7 +549,6 @@ namespace Raven.Client.Connection
 		/// <param name="start">indicates how many attachments should be skipped</param>
 		/// <param name="startEtag">ETag from which to start</param>
 		/// <param name="pageSize">maximum number of attachments that will be downloaded</param>
-		/// <returns></returns>
 		[Obsolete("Use RavenFS instead.")]
 		AttachmentInformation[] GetAttachments(int start, Etag startEtag, int pageSize);
 
@@ -547,6 +556,23 @@ namespace Raven.Client.Connection
 		/// Retrieves all suggestions for an index merging
 		/// </summary>
 		IndexMergeResults GetIndexMergeSuggestions();
+
+		/// <summary>
+		/// Gets the Logs
+		/// </summary>
+		LogItem[] GetLogs(bool errorsOnly);
+
+		/// <summary>
+		/// Gets the license status
+		/// </summary>
+		LicensingStatus GetLicenseStatus();
+
+		/// <summary>
+		/// Get the low level bulk insert operation
+		/// </summary>
+		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
+
+		HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 	}
 
 	public interface IGlobalAdminDatabaseCommands
@@ -575,9 +601,9 @@ namespace Raven.Client.Connection
 		/// Used to delete a database from a server, with a possibility to remove all the data from hard drive.
 		/// <para>Warning: if hardDelete is set to <c>true</c> then ALL data will be removed from the data directory of a database.</para>
 		/// </summary>
-		/// <param name="dbName">name of a database to delete</param>
+		/// <param name="databaseName">name of a database to delete</param>
 		/// <param name="hardDelete">should all data be removed (data files, indexing files, etc.). Default: false</param>
-		void DeleteDatabase(string dbName, bool hardDelete = false);
+		void DeleteDatabase(string databaseName, bool hardDelete = false);
 
 		/// <summary>
 		/// Sends an async command to compact a database. During the compaction the specified database will be offline.
@@ -598,6 +624,11 @@ namespace Raven.Client.Connection
 		/// <param name="incremental">indicates if backup is incremental</param>
 		/// <param name="databaseName">name of a database that will be backed up</param>
 		void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
+
+		///<summary>
+		/// Ensures that the database exists, creating it if needed
+		///</summary>
+		void EnsureDatabaseExists(string name, bool ignoreFailures = false);
 
 		IDatabaseCommands Commands { get; }
 	}
@@ -624,5 +655,13 @@ namespace Raven.Client.Connection
 		/// Gets configuration for current database.
 		/// </summary>
 		RavenJObject GetDatabaseConfiguration();
+	}
+
+	public interface IInfoDatabaseCommands
+	{
+		/// <summary>
+		/// Get replication info
+		/// </summary>
+		ReplicationStatistics GetReplicationInfo();
 	}
 }

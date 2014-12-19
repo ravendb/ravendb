@@ -392,22 +392,6 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Deletes the document for the specified id asynchronously
-		/// </summary>
-		/// <param name="id">The id.</param>
-		public Task DeleteDocumentAsync(string id)
-		{
-			return ExecuteWithReplication("DELETE", async operationMetadata =>
-			{
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Doc(id), "DELETE", operationMetadata.Credentials, convention).AddOperationHeaders(operationsHeaders)))
-				{
-					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-					await request.ExecuteRequestAsync().ConfigureAwait(false);
-				}
-			});
-		}
-
-		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>

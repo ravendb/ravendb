@@ -8,9 +8,9 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -31,9 +31,8 @@ namespace Raven.Client.Connection.Async
 	public interface IAsyncDatabaseCommands : IDisposable, IHoldProfilingInformation
 	{
 		/// <summary>
-		/// Gets the operations headers.
+		/// Gets or sets the operations headers
 		/// </summary>
-		/// <value>The operations headers.</value>
 		NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
@@ -46,146 +45,167 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		IAsyncAdminDatabaseCommands Admin { get; }
 
+		/// <summary>
+		/// Info operations for current database
+		/// </summary>
 		IAsyncInfoDatabaseCommands Info { get; }
 
 		/// <summary>
-		/// Begins an async get operation
+		/// Primary credentials for access. Will be used also in replication context - for failovers
 		/// </summary>
-		/// <param name="key">The key.</param>
+		OperationCredentials PrimaryCredentials { get; }
+
+		/// <summary>
+		/// Retrieve a single document for a specified key.
+		/// </summary>
+		/// <param name="key">key of the document you want to retrieve</param>
 		Task<JsonDocument> GetAsync(string key);
 
 		/// <summary>
-		/// Begins an async multi get operation
+		/// Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the transformer.
+		/// <para>Returns MultiLoadResult where:</para>
+		/// <para>- Results - list of documents in exact same order as in keys parameter</para>
+		/// <para>- Includes - list of documents that were found in specified paths that were passed in includes parameter</para>
 		/// </summary>
+		/// <param name="ids">array of keys of the documents you want to retrieve</param>
+		/// <param name="includes">array of paths in documents in which server should look for a 'referenced' document</param>
+		/// <param name="transformer">name of a transformer that should be used to transform the results</param>
+		/// <param name="transformerParameters">parameters that will be passed to transformer</param>
+		/// <param name="metadataOnly">specifies if only document metadata should be returned</param>
 		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false);
 
 		/// <summary>
-		/// Begins an async get operation for documents
+		/// Retrieves multiple documents.
 		/// </summary>
-		/// <param name="start">Paging start</param>
-		/// <param name="pageSize">Size of the page.</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
+		/// <param name="start">number of documents that should be skipped</param>
+		/// <param name="pageSize">maximum number of documents that will be retrieved</param>
+		/// <param name="metadataOnly">specifies if only document metadata should be returned</param>
 		/// <remarks>
 		/// This is primarily useful for administration of a database
 		/// </remarks>
 		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false);
 
 		/// <summary>
-		/// Begins the async query.
+		/// Queries the specified index in the Raven-flavored Lucene query syntax
 		/// </summary>
-		/// <param name="index">The index.</param>
-		/// <param name="query">The query.</param>
-		/// <param name="includes">The include paths</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
-		/// <param name="indexEntriesOnly"></param>
+		/// <param name="index">name of an index to query</param>
+		/// <param name="query">query definition containing all information required to query a specified index</param>
+		/// <param name="includes">an array of relative paths that specify related documents ids which should be included in a query result</param>
+		/// <param name="metadataOnly">true if returned documents should include only metadata without a document body.</param>
+		/// <param name="indexEntriesOnly">true if query results should contain only index entries.</param>
 		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false);
 
 		/// <summary>
-		/// Begins the async batch operation
+		/// Sends multiple operations in a single request, reducing the number of remote calls and allowing several operations to share same transaction
 		/// </summary>
-		/// <param name="commandDatas">The command data.</param>
+		/// <param name="commandDatas">Commands to process</param> 
 		Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas);
 
 		/// <summary>
-		/// Returns a list of suggestions based on the specified suggestion query.
+		/// Returns a list of suggestions based on the specified suggestion query
 		/// </summary>
-		/// <param name="index">The index to query for suggestions</param>
-		/// <param name="suggestionQuery">The suggestion query.</param>
+		/// <param name="index">name of an index to query</param>
+		/// <param name="suggestionQuery">suggestion query definition containing all information required to query a specified index</param>
 		Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery suggestionQuery);
 
 		/// <summary>
-		/// Gets the index names from the server asynchronously
+		/// Retrieves multiple index names from a database.
 		/// </summary>
-		/// <param name="start">Paging start</param>
-		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="start">number of index names that should be skipped</param>
+		/// <param name="pageSize">maximum number of index names that will be retrieved</param>
 		Task<string[]> GetIndexNamesAsync(int start, int pageSize);
 
 		/// <summary>
-		/// Gets the indexes from the server asynchronously
+		/// Retrieves multiple index definitions from a database
 		/// </summary>
-		/// <param name="start">Paging start</param>
-		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="start">number of indexes that should be skipped</param>
+		/// <param name="pageSize">maximum number of indexes that will be retrieved</param>
 		Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize);
 
 		/// <summary>
-		/// Gets the transformers from the server asynchronously
+		/// Gets the transformers from the server
 		/// </summary>
+		/// <param name="start">number of transformers that should be skipped</param>
+		/// <param name="pageSize">maximum number of transformers that will be retrieved</param>
 		Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize);
 
 		/// <summary>
-		/// Resets the specified index asynchronously
+		/// Removes all indexing data from a server for a given index so the indexation can start from scratch for that index.
 		/// </summary>
-		/// <param name="name">The name.</param>
+		/// <param name="name">name of an index to reset</param>
 		Task ResetIndexAsync(string name);
 
 		/// <summary>
-		/// Gets the index definition for the specified name asynchronously
+		/// Retrieves an index definition from a database.
 		/// </summary>
-		/// <param name="name">The name.</param>
+		/// <param name="name">name of an index</param>
 		Task<IndexDefinition> GetIndexAsync(string name);
 
 		/// <summary>
-		/// Gets the transformer definition for the specified name asynchronously
+		/// Gets the transformer definition for the specified name
 		/// </summary>
-		/// <param name="name">The name.</param>
+		/// <param name="name">transformer name</param>
 		Task<TransformerDefinition> GetTransformerAsync(string name);
 
 		/// <summary>
-		/// Puts the index definition for the specified name asynchronously
+		/// Creates an index with the specified name, based on an index definition
 		/// </summary>
-		/// <param name="name">The name.</param>
-		/// <param name="indexDef">The index def.</param>
-		/// <param name="overwrite">Should overwrite index</param>
+		/// <param name="name">name of an index</param>
+		/// <param name="indexDef">definition of an index</param>
+		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
 		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite);
 
 		/// <summary>
-        /// Checks asynchronously if passed index definition matches version stored on server.
-        /// If index does not exist this method returns true.
-        /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="indexDef">The index definition.</param>
-        /// <returns></returns>
-	    Task<bool> IndexHasChangedAsync(string name, IndexDefinition indexDef);
+		/// Lets you check if the given index definition differs from the one on a server.
+		/// <para>This might be useful when you want to check the prior index deployment, if index will be overwritten, and if indexing data will be lost.</para>
+		/// <para>Returns:</para>
+		/// <para>- <c>true</c> - if an index does not exist on a server</para>
+		/// <para>- <c>true</c> - if an index definition does not match the one from the indexDef parameter,</para>
+		/// <para>- <c>false</c> - if there are no differences between an index definition on server and the one from the indexDef parameter</para>
+		/// If index does not exist this method returns true.
+		/// </summary>
+		/// <param name="name">name of an index to check</param>
+		/// <param name="indexDef">index definition</param>
+		Task<bool> IndexHasChangedAsync(string name, IndexDefinition indexDef);
 
 		/// <summary>
-		/// Puts the transformer definition for the specified name asynchronously
+		/// Creates a transformer with the specified name, based on an transformer definition
 		/// </summary>
+		/// <param name="name">name of a transformer</param>
+		/// <param name="transformerDefinition">definition of a transformer</param>
 		Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition);
 
 		/// <summary>
-		/// Deletes the index definition for the specified name asynchronously
+		/// Deletes the specified index
 		/// </summary>
-		/// <param name="name">The name.</param>
+		/// <param name="name">name of an index to delete</param>
 		Task DeleteIndexAsync(string name);
 
 		/// <summary>
 		/// Perform a set based deletes using the specified index
 		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToDelete">The query to delete.</param>
-        /// <param name="options">Holds configuration options for base operation.</param>
-        Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null);
+		/// <param name="indexName">name of an index to perform a query on</param>
+		/// <param name="queryToDelete">Tquery that will be performed</param>
+		/// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
+		Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null);
 
 		/// <summary>
-		/// Deletes the transformer definition for the specified name asynchronously
+		/// Deletes the specified transformer
 		/// </summary>
-		/// <param name="name">The name.</param>
+		/// <param name="name">name of a transformer to delete</param>
 		Task DeleteTransformerAsync(string name);
 
 		/// <summary>
-		/// Deletes the document for the specified id asynchronously
+		/// Puts the document in the database with the specified key.
+		/// <para>Returns PutResult where:</para>
+		/// <para>- Key - unique key under which document was stored,</para>
+		/// <para>- Etag - stored document etag</para>
 		/// </summary>
-		/// <param name="id">The id.</param>
-		Task DeleteDocumentAsync(string id);
-
-		/// <summary>
-		/// Puts the document with the specified key in the database
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="etag">The etag.</param>
-		/// <param name="document">The document.</param>
-		/// <param name="metadata">The metadata.</param>
-        Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata);
+		/// <param name="key">unique key under which document will be stored</param>
+		/// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
+		/// <param name="document">document data</param>
+		/// <param name="metadata">document metadata</param>
+		Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -261,57 +281,60 @@ namespace Raven.Client.Connection.Async
 		IAsyncDatabaseCommands With(ICredentials credentialsForSession);
 
 		/// <summary>
-		/// Retrieve the statistics for the database asynchronously
+		/// Retrieve the statistics for the database
 		/// </summary>
 		Task<DatabaseStatistics> GetStatisticsAsync();
 
 		/// <summary>
-		/// Puts the attachment with the specified key asynchronously
+		/// Puts a byte array as attachment with the specified key
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="etag">The etag.</param>
-		/// <param name="stream">The data stream.</param>
-		/// <param name="metadata">The metadata.</param>
-        [Obsolete("Use RavenFS instead.")]
-        Task PutAttachmentAsync(string key, Etag etag, Stream stream, RavenJObject metadata);
+		/// <param name="key">unique key under which attachment will be stored</param>
+		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
+		/// <param name="data">attachment data</param>
+		/// <param name="metadata">attachment metadata</param>
+		[Obsolete("Use RavenFS instead.")]
+		Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata);
 
 		/// <summary>
-		/// Gets the attachment by the specified key asynchronously
+		/// Downloads a single attachment.
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <returns></returns>
-        [Obsolete("Use RavenFS instead.")]
-        Task<Attachment> GetAttachmentAsync(string key);
+		/// <param name="key">key of the attachment you want to download</param>
+		[Obsolete("Use RavenFS instead.")]
+		Task<Attachment> GetAttachmentAsync(string key);
 
 		/// <summary>
-		/// Gets the attachments asynchronously
+		/// Used to download attachment information for multiple attachments.
 		/// </summary>
-		/// <returns></returns>
-        [Obsolete("Use RavenFS instead.")]
-        Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize);
+		/// <param name="start">indicates how many attachments should be skipped</param>
+		/// <param name="startEtag">ETag from which to start</param>
+		/// <param name="pageSize">maximum number of attachments that will be downloaded</param>
+		[Obsolete("Use RavenFS instead.")]
+		Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize);
 
 		/// <summary>
-		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
+		/// Download attachment metadata for a single attachment.
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <returns></returns>
-        [Obsolete("Use RavenFS instead.")]
-        Task<Attachment> HeadAttachmentAsync(string key);
+		/// <param name="key">key of the attachment you want to download metadata for</param>
+		[Obsolete("Use RavenFS instead.")]
+		Task<Attachment> HeadAttachmentAsync(string key);
 
 		/// <summary>
-		/// Deletes the attachment with the specified key asynchronously
+		/// Removes an attachment from a database.
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="etag">The etag.</param>
-        [Obsolete("Use RavenFS instead.")]
-        Task DeleteAttachmentAsync(string key, Etag etag);
+		/// <param name="key">key of an attachment to delete</param>
+		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
+		[Obsolete("Use RavenFS instead.")]
+		Task DeleteAttachmentAsync(string key, Etag etag);
 
-		///<summary>
-		/// Get the possible terms for the specified field in the index asynchronously
+		/// <summary>
+		/// Get the all terms stored in the index for the specified field
 		/// You can page through the results by use fromValue parameter as the 
 		/// starting point for the next query
 		///</summary>
-		///<returns></returns>
+		/// <param name="index">name of an index</param>
+		/// <param name="field">index field</param>
+		/// <param name="fromValue">starting point for a query, used for paging</param>
+		/// <param name="pageSize">maximum number of terms that will be returned</param>
 		Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize);
 
 		/// <summary>
@@ -327,37 +350,37 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Perform a set based update using the specified index
 		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patch">The patch request to use (using JavaScript)</param>
-        /// <param name="options">Holds configuration options for base operation.</param>
-        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null);
+		/// <param name="indexName">name of an index to perform a query on</param>
+		/// <param name="queryToUpdate">query that will be performed</param>
+		/// <param name="patch">JavaScript patch that will be executed on query results</param>
+		/// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
+		Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null);
 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		/// <param name="index">Name of the index</param>
-		/// <param name="query">Query to build facet results</param>
-		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
-		/// <param name="start">Start index for paging</param>
-		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		/// <param name="index">name of an index to query</param>
+		/// <param name="query">query definition containing all information required to query a specified index</param>
+		/// <param name="facetSetupDoc">document key that contains predefined FacetSetup</param>
+		/// <param name="start">number of results that should be skipped. Default: 0</param>
+		/// <param name="pageSize">maximum number of results that will be retrieved. Default: null. If set, overrides Facet.MaxResults</param>
 		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null);
 
 		/// <summary>
 		/// Sends a multiple faceted queries in a single request and calculates the facet results for each of them
 		/// </summary>
-		/// <param name="facetedQueries">List of queries</param>
+		/// <param name="facetedQueries">List of the faceted queries that will be executed on the server-side</param>
 		Task<FacetResults[]> GetMultiFacetsAsync(FacetQuery[] facetedQueries);
 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		/// <param name="index">Name of the index</param>
-		/// <param name="query">Query to build facet results</param>
-		/// <param name="facets">List of facets</param>
-		/// <param name="start">Start index for paging</param>
-		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize);
+		/// <param name="index">name of an index to query</param>
+		/// <param name="query">query definition containing all information required to query a specified index</param>
+		/// <param name="facets">list of facets required to perform a facet query</param>
+		/// <param name="start">number of results that should be skipped. Default: 0</param>
+		/// <param name="pageSize">maximum number of results that will be retrieved. Default: null. If set, overrides Facet.MaxResults</param>
+		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null);
 
 		/// <summary>
 		/// Gets the Logs
@@ -365,17 +388,27 @@ namespace Raven.Client.Connection.Async
 		Task<LogItem[]> GetLogsAsync(bool errorsOnly);
 
 		/// <summary>
-		/// Gets the license Status
+		/// Gets the license status
 		/// </summary>
 		Task<LicensingStatus> GetLicenseStatusAsync();
 
 		/// <summary>
-		/// Get documents with id of a specific prefix
+		/// Retrieves documents for the specified key prefix.
 		/// </summary>
+		/// <param name="keyPrefix">prefix for which documents should be returned e.g. "products/"</param>
+		/// <param name="matches">pipe ('|') separated values for which document keys (after 'keyPrefix') should be matched ('?' any single character, '*' any characters)</param>
+		/// <param name="start">number of documents that should be skipped</param>
+		/// <param name="pageSize">maximum number of documents that will be retrieved</param>
+		/// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
+		/// <param name="metadataOnly">specifies if only document metadata should be returned</param>
+		/// <param name="exclude">pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched ('?' any single character, '*' any characters)</param>
+		/// <param name="transformer">name of a transformer that should be used to transform the results</param>
+		/// <param name="transformerParameters">parameters that will be passed to transformer</param>
+		/// <param name="skipAfter">skip document fetching until given key is found and return documents after that key (default: null)</param>
 		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
-		                                     RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
-		                                     string exclude = null, string transformer = null,
-		                                     Dictionary<string, RavenJToken> transformerParameters = null,
+											 RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
+											 string exclude = null, string transformer = null,
+											 Dictionary<string, RavenJToken> transformerParameters = null,
 											 string skipAfter = null);
 
 		/// <summary>
@@ -385,8 +418,10 @@ namespace Raven.Client.Connection.Async
 
 		/// <summary>
 		/// Retrieves the document metadata for the specified document key.
+		/// <para>Returns:</para>
+		/// <para>The document metadata for the specified document, or <c>null</c> if the document does not exist</para>
 		/// </summary>
-		/// <param name="key">The key.</param>
+		/// <param name="key">key of a document to get metadata for</param>
 		/// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
 		Task<JsonDocumentMetadata> HeadAsync(string key);
 
@@ -394,19 +429,35 @@ namespace Raven.Client.Connection.Async
 		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
 		/// of the number of items that might be returned.
 		/// </summary>
+		/// <param name="index">name of an index to query</param>
+		/// <param name="query">query definition containing all information required to query a specified index</param>
+		/// <param name="queryHeaderInfo">information about performed query</param>
 		Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo);
 
 		/// <summary>
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
+		/// <param name="fromEtag">ETag of a document from which stream should start (mutually exclusive with 'startsWith')</param>
+		/// <param name="startsWith">prefix for which documents should be streamed (mutually exclusive with 'fromEtag')</param>
+		/// <param name="matches">pipe ('|') separated values for which document keys (after 'keyPrefix') should be matched ('?' any single character, '*' any characters)</param>
+		/// <param name="start">number of documents that should be skipped</param>
+		/// <param name="pageSize">maximum number of documents that will be retrieved</param>
+		/// <param name="exclude">pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched ('?' any single character, '*' any characters)</param>
+		/// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
+		/// <param name="skipAfter">skip document fetching until given key is found and return documents after that key (default: null)</param>
 		Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 
 		/// <summary>
-		/// Get the low level  bulk insert operation
+		/// Get the low level bulk insert operation
 		/// </summary>
 		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
 
+		/// <summary>
+		/// Deletes the document with the specified key
+		/// </summary>
+		/// <param name="key">key of a document to be deleted</param>
+		/// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
 		Task DeleteAsync(string key, Etag etag);
 
 		/// <summary>
@@ -417,58 +468,59 @@ namespace Raven.Client.Connection.Async
 		HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 
 		/// <summary>
-		/// Updates just the attachment with the specified key's metadata
+		/// Updates attachments metadata only.
 		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="etag">The etag.</param>
-		/// <param name="metadata">The metadata.</param>
-        [Obsolete("Use RavenFS instead.")]
-        Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata);
+		/// <param name="key">key under which attachment is stored</param>
+		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
+		/// <param name="metadata">attachment metadata</param>
+		[Obsolete("Use RavenFS instead.")]
+		Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata);
 
 		/// <summary>
-		/// Gets the attachments starting with the specified prefix
+		/// Downloads attachment metadata for a multiple attachments.
 		/// </summary>
-        [Obsolete("Use RavenFS instead.")]
-        Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize);
+		/// <param name="idPrefix">prefix for which attachments should be returned</param>
+		/// <param name="start">number of attachments that should be skipped</param>
+		/// <param name="pageSize">maximum number of attachments that will be returned</param>
+		[Obsolete("Use RavenFS instead.")]
+		Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize);
 
 		/// <summary>
-		/// Commits the specified tx id.
+		/// Commits the specified tx id
 		/// </summary>
-		/// <param name="txId">The tx id.</param>
+		/// <param name="txId">transaction identifier</param>
 		Task CommitAsync(string txId);
 
 		/// <summary>
-		/// Rollbacks the specified tx id.
+		/// Rollbacks the specified tx id
 		/// </summary>
-		/// <param name="txId">The tx id.</param>
+		/// <param name="txId">transaction identifier</param>
 		Task RollbackAsync(string txId);
 
 		/// <summary>
 		/// Prepares the transaction on the server.
 		/// </summary>
-		/// <param name="txId">The tx id.</param>
 		Task PrepareTransactionAsync(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
 
 		/// <summary>
-		/// Perform a set based update using the specified index.
+		/// Perform a set based update using the specified index
 		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patchRequests">The patch requests.</param>
-        /// <param name="options">Holds configuration options for base operation.</param>
-        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null);
+		/// <param name="indexName">name of an index to perform a query on</param>
+		/// <param name="queryToUpdate">query that will be performed</param>
+		/// <param name="patchRequests">array of patches that will be executed on a query results</param>
+		/// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
+		Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null);
 
 		/// <summary>
 		/// Return a list of documents that based on the MoreLikeThisQuery.
 		/// </summary>
-		/// <param name="query">The more like this query parameters</param>
-		/// <returns></returns>
+		/// <param name="query">more like this query definition that will be executed</param>
 		Task<MultiLoadResult> MoreLikeThisAsync(MoreLikeThisQuery query);
 
 		/// <summary>
 		/// Generate the next identity value from the server
 		/// </summary>
-        Task<long> NextIdentityForAsync(string name);
+		Task<long> NextIdentityForAsync(string name);
 
 		/// <summary>
 		/// Seeds the next identity value on the server
@@ -484,64 +536,77 @@ namespace Raven.Client.Connection.Async
 		Task<BuildNumber> GetBuildNumberAsync();
 
 		/// <summary>
-		/// Gets the list of databases from the server asynchronously
+		/// Returns the names of all tenant databases on the RavenDB server
 		/// </summary>
 		Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0);
 
 		/// <summary>
-		/// Get admin statistics
+		/// Gets server-wide statistics.
 		/// </summary>
-		/// <returns></returns>
 		Task<AdminStatistics> GetStatisticsAsync();
 
 		/// <summary>
-		/// Sends an async command to create a database
+		/// Creates a database
 		/// </summary>
 		Task CreateDatabaseAsync(DatabaseDocument databaseDocument);
 
 		/// <summary>
-		/// Sends an async command to delete a database
+		/// Used to delete a database from a server, with a possibility to remove all the data from hard drive.
+		/// <para>Warning: if hardDelete is set to <c>true</c> then ALL data will be removed from the data directory of a database.</para>
 		/// </summary>
+		/// <param name="databaseName">name of a database to delete</param>
+		/// <param name="hardDelete">should all data be removed (data files, indexing files, etc.). Default: false</param>
 		Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false);
 
 		/// <summary>
 		/// Sends an async command to compact a database. During the compaction the specified database will be offline.
 		/// </summary>
+		/// <param name="databaseName">name of a database to compact</param>
 		Task<Operation> CompactDatabaseAsync(string databaseName);
 
-        /// <summary>
-        /// Begins an async restore operation
-        /// </summary>
-        Task<Operation> StartRestoreAsync(DatabaseRestoreRequest restoreRequest);
+		/// <summary>
+		/// Begins a restore operation.
+		/// </summary>
+		Task<Operation> StartRestoreAsync(DatabaseRestoreRequest restoreRequest);
 
-        /// <summary>
-        /// Begins an async backup operation
-        /// </summary>
-        Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
+		/// <summary>
+		/// Begins a backup operation.
+		/// </summary>
+		/// <param name="backupLocation">path to directory where backup will be stored</param>
+		/// <param name="databaseDocument">Database configuration document that will be stored with backup in 'Database.Document' file. Pass <c>null</c> to use the one from system database. WARNING: Database configuration document may contain sensitive data which will be decrypted and stored in backup.</param>
+		/// <param name="incremental">indicates if backup is incremental</param>
+		/// <param name="databaseName">name of a database that will be backed up</param>
+		Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
 
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>
 		Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false);
+
+		IAsyncDatabaseCommands Commands { get; }
 	}
-	
+
 	public interface IAsyncAdminDatabaseCommands
 	{
 		/// <summary>
-		/// Sends an async command that disables all indexing
+		/// Disables all indexing.
 		/// </summary>
 		Task StopIndexingAsync();
-		
+
 		/// <summary>
-		/// Sends an async command that enables indexing
+		/// Enables indexing.
 		/// </summary>
-        Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null);
+		/// <param name="maxNumberOfParallelIndexTasks">if set then maximum number of parallel indexing tasks will be set to this value.</param>
+		Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null);
 
 		/// <summary>
 		/// Get the indexing status
 		/// </summary>
 		Task<string> GetIndexingStatusAsync();
 
+		/// <summary>
+		/// Gets configuration for current database.
+		/// </summary>
 		Task<RavenJObject> GetDatabaseConfigurationAsync();
 	}
 
@@ -550,7 +615,6 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Get replication info
 		/// </summary>
-		/// <returns></returns>
 		Task<ReplicationStatistics> GetReplicationInfoAsync();
 	}
 }

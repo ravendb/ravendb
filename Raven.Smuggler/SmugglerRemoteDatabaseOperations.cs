@@ -68,7 +68,7 @@ namespace Raven.Smuggler
 
 		public Task DeleteDocument(string key)
 		{
-			return Store.AsyncDatabaseCommands.DeleteDocumentAsync(key);
+			return Store.AsyncDatabaseCommands.DeleteAsync(key, null);
 		}
 
         [Obsolete("Use RavenFS instead.")]

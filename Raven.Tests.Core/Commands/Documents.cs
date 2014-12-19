@@ -54,7 +54,7 @@ namespace Raven.Tests.Core.Commands
                 await store.AsyncDatabaseCommands.DeleteAsync("companies/1", putResult.ETag);
                 Assert.Null(await store.AsyncDatabaseCommands.GetAsync("companies/1"));
 
-                await store.AsyncDatabaseCommands.DeleteDocumentAsync("users/2");
+                await store.AsyncDatabaseCommands.DeleteAsync("users/2", null);
                 Assert.Null(await store.AsyncDatabaseCommands.GetAsync("users/2"));
             }
         }

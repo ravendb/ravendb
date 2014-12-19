@@ -35,7 +35,7 @@ namespace Raven.Client.Connection
 	/// <summary>
 	/// Access the RavenDB operations using HTTP
 	/// </summary>
-	public class ServerClient : IDatabaseCommands
+	public class ServerClient : IDatabaseCommands, IInfoDatabaseCommands
 	{
 		private readonly AsyncServerClient asyncServerClient;
 
@@ -54,6 +54,14 @@ namespace Raven.Client.Connection
 		public ServerClient(AsyncServerClient asyncServerClient)
 		{
 			this.asyncServerClient = asyncServerClient;
+		}
+
+		public IInfoDatabaseCommands Info
+		{
+			get
+			{
+				return this;
+			}
 		}
 
 		public OperationCredentials PrimaryCredentials
@@ -128,11 +136,6 @@ namespace Raven.Client.Connection
 		{
 			return asyncServerClient.ExecuteGetRequest(requestUrl).ResultUnwrap();
 		}
-
-		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
-	    {
-			return asyncServerClient.CreateRequest(requestUrl, method, disableRequestCompression);
-	    }
 
 		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method,
 			bool disableRequestCompression = false)
@@ -498,6 +501,26 @@ namespace Raven.Client.Connection
 			return asyncServerClient.GetIndexMergeSuggestionsAsync().ResultUnwrap();
 			    }
 
+		public LogItem[] GetLogs(bool errorsOnly)
+		{
+			return asyncServerClient.GetLogsAsync(errorsOnly).ResultUnwrap();
+		}
+
+		public LicensingStatus GetLicenseStatus()
+		{
+			return asyncServerClient.GetLicenseStatusAsync().ResultUnwrap();
+		}
+
+		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
+		{
+			return asyncServerClient.GetBulkInsertOperation(options, changes);
+		}
+
+		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
+		{
+			return asyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method, disableRequestCompression, disableAuthentication, timeout);
+		}
+
 		[Obsolete("Use RavenFS instead.")]
 		public AttachmentInformation[] GetAttachments(int start, Etag startEtag, int pageSize)
 			{
@@ -790,6 +813,11 @@ namespace Raven.Client.Connection
 			return asyncServerClient.PatchAsync(key, patchExisting, patchDefault, defaultMetadata).ResultUnwrap();
 				}
 
+		public HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
+		{
+			return asyncServerClient.CreateRequest(relativeUrl, method, disableRequestCompression, disableAuthentication, timeout);
+		}
+
 		/// <summary>
 		/// Disable all caching within the given scope
 		/// </summary>
@@ -829,6 +857,11 @@ namespace Raven.Client.Connection
 		~ServerClient()
 		{
 			Dispose();
+		}
+
+		public ReplicationStatistics GetReplicationInfo()
+		{
+			return asyncServerClient.Info.GetReplicationInfoAsync().ResultUnwrap();
 		}
 
 		/// <summary>
