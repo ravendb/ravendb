@@ -182,7 +182,7 @@ namespace Raven.Tests.Issues
 						AcknowledgmentTimeout = TimeSpan.FromSeconds(0) // the client won't be able to acknowledge in 0 seconds
 					}
 				});
-
+				store.Changes().WaitForAllPendingSubscriptions();
 				var docs = new BlockingCollection<RavenJObject>();
 
 				subscriptionZeroTimeout.Subscribe(docs.Add);
@@ -570,6 +570,7 @@ namespace Raven.Tests.Issues
 						MaxDocCount = 1
 					}
 				});
+				store.Changes().WaitForAllPendingSubscriptions();
 
 				var serverDisposingHandler = subscription.Subscribe(x =>
 				{
@@ -617,6 +618,7 @@ namespace Raven.Tests.Issues
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
 
 				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+				store.Changes().WaitForAllPendingSubscriptions();
 
 				using (var session = store.OpenSession())
 				{
@@ -670,12 +672,14 @@ namespace Raven.Tests.Issues
 				{
 					ClientAliveNotificationInterval = TimeSpan.FromSeconds(2)
 				});
+				store.Changes().WaitForAllPendingSubscriptions();
 
 				subscription.AfterBatch += () => Thread.Sleep(TimeSpan.FromSeconds(20)); // to prevent the client from sending client-alive notification
 
 				var docs = new BlockingCollection<RavenJObject>();
 
 				subscription.Subscribe(docs.Add);
+				store.Changes().WaitForAllPendingSubscriptions();
 
 				RavenJObject _;
 				Assert.True(docs.TryTake(out _, waitForDocTimeout));
@@ -707,6 +711,7 @@ namespace Raven.Tests.Issues
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
 				store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+				store.Changes().WaitForAllPendingSubscriptions();
 
 				Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open(id, new SubscriptionConnectionOptions()));
 
@@ -723,10 +728,13 @@ namespace Raven.Tests.Issues
 			{
 				var id = store.Subscriptions.Create(new SubscriptionCriteria());
 				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+				store.Changes().WaitForAllPendingSubscriptions();
 
 				var docs = new BlockingCollection<RavenJObject>();
 
 				subscription.Subscribe(docs.Add);
+
+				store.Changes().WaitForAllPendingSubscriptions();
 
 				using (var bulk = store.BulkInsert())
 				{
@@ -788,6 +796,7 @@ namespace Raven.Tests.Issues
 				{
 					IgnoreSubscribersErrors = true
 				});
+				store.Changes().WaitForAllPendingSubscriptions();
 
 				var docs = new BlockingCollection<RavenJObject>();
 
@@ -796,6 +805,8 @@ namespace Raven.Tests.Issues
 				{
 					throw new Exception("Fake exception");
 				});
+
+				store.Changes().WaitForAllPendingSubscriptions();
 
 				store.DatabaseCommands.Put("items/1", null, new RavenJObject(), new RavenJObject());
 				store.DatabaseCommands.Put("items/2", null, new RavenJObject(), new RavenJObject());
