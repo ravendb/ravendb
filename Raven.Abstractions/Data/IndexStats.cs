@@ -233,6 +233,7 @@ namespace Raven.Abstractions.Data
 
 	public class LucenePerformanceStats
 	{
+		public long DeleteExistingDocumentsDurationMs { get; set; }
 		public long ConvertToLuceneDocumentsDurationMs { get; set; }
 		public long AddDocumentsDurationMs { get; set; }
 		public long FlushToDiskDurationMs { get; set; }
@@ -277,6 +278,7 @@ namespace Raven.Abstractions.Data
 
 			LinqExecutionPerformance.ReduceLinqExecutionDurationMs += other.LinqExecutionPerformance.ReduceLinqExecutionDurationMs;
 
+			LucenePerformance.DeleteExistingDocumentsDurationMs += other.LucenePerformance.DeleteExistingDocumentsDurationMs;
 			LucenePerformance.ConvertToLuceneDocumentsDurationMs += other.LucenePerformance.ConvertToLuceneDocumentsDurationMs;
 			LucenePerformance.AddDocumentsDurationMs += other.LucenePerformance.AddDocumentsDurationMs;
 			LucenePerformance.FlushToDiskDurationMs += other.LucenePerformance.FlushToDiskDurationMs;
@@ -287,5 +289,6 @@ namespace Raven.Abstractions.Data
 	public class ReduceStoragePerformanceStats
 	{
 		public long GetItemsToReduceDurationMs { get; set; }
+		public long DeletePreviouslyScheduledReductionsMs { get; set; }
 	}
 }

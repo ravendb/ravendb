@@ -202,6 +202,7 @@ namespace Raven.Database.Indexing
 				stats.LinqExecutionPerformance.MapLinqExecutionDurationMs = linqExecutionStats.MapLinqExecutionDurationMs;
 				stats.LinqExecutionPerformance.ReduceLinqExecutionDurationMs = linqExecutionStats.ReduceLinqExecutionDurationMs;
 
+				stats.LucenePerformance.DeleteExistingDocumentsDurationMs = writeToLuceneStats.DeleteExistingDocumentsDurationMs;
 				stats.LucenePerformance.ConvertToLuceneDocumentsDurationMs = writeToLuceneStats.ConvertToLuceneDocumentsDurationMs;
 				stats.LucenePerformance.AddDocumentsDurationMs = writeToLuceneStats.AddDocumentsDurationMs;
 				stats.LucenePerformance.FlushToDiskDurationMs = writeToLuceneStats.FlushToDiskDurationMs;

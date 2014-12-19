@@ -234,6 +234,7 @@ namespace Raven.Database.Indexing
 				},
 				new LucenePerformanceStats
 				{
+					DeleteExistingDocumentsDurationMs = -1,
 					ConvertToLuceneDocumentsDurationMs = -1,
 					FlushToDiskDurationMs = -1,
 					AddDocumentsDurationMs = -1,
@@ -594,6 +595,7 @@ namespace Raven.Database.Indexing
 				var flushToDiskDuration = new Stopwatch();
 				var linqExecutionDuration = new Stopwatch();
 				var recreateSearcherDuration = new Stopwatch();
+				var deleteExistingDocumentsDuration = new Stopwatch();
 
 				IndexingPerformanceStats performance = null;
 
@@ -605,7 +607,7 @@ namespace Raven.Database.Indexing
 						performance = parent.RecordCurrentBatch("Current Reduce #" + Level, MappedResultsByBucket.Sum(x => x.Count()));
 						if (Level == 2)
 						{
-							RemoveExistingReduceKeysFromIndex(indexWriter);
+							RemoveExistingReduceKeysFromIndex(indexWriter, deleteExistingDocumentsDuration);
 						}
 						foreach (var mappedResults in MappedResultsByBucket)
 						{
@@ -677,7 +679,7 @@ namespace Raven.Database.Indexing
 					{
 						LoadDocumentCount = -1,
 						LoadDocumentDurationMs = -1
-					}, 
+					},
 					new LinqExecutionPerformanceStats
 					{
 						MapLinqExecutionDurationMs = -1,
@@ -685,6 +687,7 @@ namespace Raven.Database.Indexing
 					},
 					new LucenePerformanceStats
 					{
+						DeleteExistingDocumentsDurationMs = deleteExistingDocumentsDuration.ElapsedMilliseconds,
 						ConvertToLuceneDocumentsDurationMs = convertToLuceneDocumentDuration.ElapsedMilliseconds,
 						AddDocumentsDurationMs = addDocumentDutation.ElapsedMilliseconds,
 						FlushToDiskDurationMs = flushToDiskDuration.ElapsedMilliseconds,
@@ -755,13 +758,17 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			private void RemoveExistingReduceKeysFromIndex(RavenIndexWriter indexWriter)
+			private void RemoveExistingReduceKeysFromIndex(RavenIndexWriter indexWriter, Stopwatch deleteExistingDocumentsDuration)
 			{
 				foreach (var reduceKey in ReduceKeys)
 				{
 					var entryKey = reduceKey;
 					parent.InvokeOnIndexEntryDeletedOnAllBatchers(batchers, new Term(Constants.ReduceKeyFieldName, entryKey));
-					indexWriter.DeleteDocuments(new Term(Constants.ReduceKeyFieldName, entryKey));
+
+					using (StopwatchScope.For(deleteExistingDocumentsDuration))
+					{
+						indexWriter.DeleteDocuments(new Term(Constants.ReduceKeyFieldName, entryKey));
+					}
 				}
 			}
 		}

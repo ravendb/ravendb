@@ -250,6 +250,7 @@ namespace Raven.Database.Indexing
 				reduceLevelStats.Completed = SystemTime.UtcNow;
 				reduceLevelStats.Duration = reduceLevelStats.Completed - reduceLevelStats.Started;
 				reduceLevelStats.ReduceStoragePerformance.GetItemsToReduceDurationMs = gettigItemsToReduceDuration.ElapsedMilliseconds;
+				reduceLevelStats.ReduceStoragePerformance.DeletePreviouslyScheduledReductionsMs = -1;
 
 				reducePerformance.LevelStats.Add(reduceLevelStats);
 			}
@@ -291,6 +292,7 @@ namespace Raven.Database.Indexing
 				var performanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 
 				long gettigItemsToReduceDurationMs = 0;
+				long deletingScheduledReductionsDurationMs = 0;
 
 				BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
 				{
@@ -313,7 +315,12 @@ namespace Raven.Database.Indexing
 
 
 						var getItemsToReduceDuration = Stopwatch.StartNew();
-						var scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
+
+						List<MappedResultInfo> scheduledItems;
+						using (StopwatchScope.For(getItemsToReduceDuration))
+						{
+							scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
+						}
 
 						Interlocked.Add(ref gettigItemsToReduceDurationMs, getItemsToReduceDuration.ElapsedMilliseconds);
 
@@ -328,13 +335,20 @@ namespace Raven.Database.Indexing
 							// Here we have an interesting issue. We have scheduled reductions, because GetReduceTypesPerKeys() returned them
 							// and at the same time, we don't have any at level 0. That probably means that we have them at level 1 or 2.
 							// They shouldn't be here, and indeed, we remove them just a little down from here in this function.
-							// That said, they might bave smuggled in between versions, or something happened to cause them to be here.
+							// That said, they might have smuggled in between versions, or something happened to cause them to be here.
 							// In order to avoid that, we forcibly delete those extra items from the scheduled reductions, and move on
-							foreach (var reduceKey in keysToReduce)
+							
+							var deletingScheduledReductionsDuration = Stopwatch.StartNew();
+
+							using (StopwatchScope.For(deletingScheduledReductionsDuration))
 							{
-								actions.MapReduce.DeleteScheduledReduction(index.IndexId, 1, reduceKey);
-								actions.MapReduce.DeleteScheduledReduction(index.IndexId, 2, reduceKey);
+								foreach (var reduceKey in keysToReduce)
+								{
+									actions.MapReduce.DeleteScheduledReduction(index.IndexId, 1, reduceKey);
+									actions.MapReduce.DeleteScheduledReduction(index.IndexId, 2, reduceKey);
+								}
 							}
+							Interlocked.Add(ref deletingScheduledReductionsDurationMs, deletingScheduledReductionsDuration.ElapsedMilliseconds);
 						}
 
 						foreach (var reduceKey in localKeys)
@@ -419,6 +433,7 @@ namespace Raven.Database.Indexing
 				reduceLevelStats.Completed = SystemTime.UtcNow;
 				reduceLevelStats.Duration = reduceLevelStats.Completed - reduceLevelStats.Started;
 				reduceLevelStats.ReduceStoragePerformance.GetItemsToReduceDurationMs = gettigItemsToReduceDurationMs;
+				reduceLevelStats.ReduceStoragePerformance.DeletePreviouslyScheduledReductionsMs = deletingScheduledReductionsDurationMs;
 
 				foreach (var stats in performanceStats)
 				{

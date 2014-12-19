@@ -52,6 +52,7 @@ namespace Raven.Database.Indexing
 			var convertToLuceneDocumentDuration = new Stopwatch();
 			var flushToDiskDuration = new Stopwatch();
 			var recreateSeatcherDuration = new Stopwatch();
+			var deleteExistingDocumentsDuration = new Stopwatch();
 
 			IndexingPerformanceStats performance = null;
 
@@ -81,13 +82,18 @@ namespace Raven.Database.Indexing
 						InvokeOnIndexEntryDeletedOnAllBatchers(batchers, docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
 
 						if (batch.SkipDeleteFromIndex[i] == false ||
-							context.ShouldRemoveFromIndex(documentId)) // maybe it is recently deleted?
-							indexWriter.DeleteDocuments(docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
+						    context.ShouldRemoveFromIndex(documentId)) // maybe it is recently deleted?
+						{
+							using (StopwatchScope.For(deleteExistingDocumentsDuration))
+							{
+								indexWriter.DeleteDocuments(docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
+							}
+						}
 
 						return doc;
 					})
-						.Where(x => x is FilteredDocument == false)
-						.ToList();
+					.Where(x => x is FilteredDocument == false)
+					.ToList();
 
 					var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 					var allReferenceEtags = new ConcurrentQueue<IDictionary<string, Etag>>();
@@ -231,6 +237,7 @@ namespace Raven.Database.Indexing
 				},
 				new LucenePerformanceStats
 				{
+					DeleteExistingDocumentsDurationMs = deleteExistingDocumentsDuration.ElapsedMilliseconds,
 					ConvertToLuceneDocumentsDurationMs = convertToLuceneDocumentDuration.ElapsedMilliseconds,
 					AddDocumentsDurationMs = addDocumentDutation.ElapsedMilliseconds,
 					FlushToDiskDurationMs = flushToDiskDuration.ElapsedMilliseconds,
