@@ -233,6 +233,7 @@ namespace Raven.Abstractions.Data
 
 	public class LucenePerformanceStats
 	{
+		public long ConvertToLuceneDocumentsDurationMs { get; set; }
 		public long WriteDocumentsDurationMs { get; set; }
 		public long FlushToDiskDurationMs { get; set; }
 	}

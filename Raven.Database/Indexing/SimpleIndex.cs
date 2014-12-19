@@ -22,6 +22,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Spatial4n.Core.Exceptions;
 
 namespace Raven.Database.Indexing
@@ -47,11 +48,13 @@ namespace Raven.Database.Indexing
 			int loadDocumentCount = 0;
 			long loadDocumentDuration = 0;
 			long linqExecutionDutation = 0;
-			var addDocumentTotalDutation = new Stopwatch();
+			var addDocumentDutation = new Stopwatch();
+			var convertToLuceneDocumentDuration = new Stopwatch();
+			var flushToDiskDuration = new Stopwatch();
 
 			IndexingPerformanceStats performance = null;
 
-			var writeStats = Write((indexWriter, analyzer, stats) =>
+			Write((indexWriter, analyzer, stats) =>
 			{
 				var processedKeys = new HashSet<string>();
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
@@ -101,19 +104,23 @@ namespace Raven.Database.Indexing
 							int outputPerDocId = 0;
 							Action<Exception, object> onErrorFunc;
 							bool skipDocument = false;
-							Stopwatch linqExecution;
-							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats, out onErrorFunc, out linqExecution))
+							var linqExecution = new Stopwatch();
+							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats, out onErrorFunc, linqExecution))
 							{
 								float boost;
 								IndexingResult indexingResult;
-								try
+								using (StopwatchScope.For(convertToLuceneDocumentDuration))
 								{
-									indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
-								}
-								catch (Exception e)
-								{
-									onErrorFunc(e, doc);
-									continue;
+									try
+									{
+
+										indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
+									}
+									catch (Exception e)
+									{
+										onErrorFunc(e, doc);
+										continue;
+									}
 								}
 
 								// ReSharper disable once RedundantBoolCompare --> code clarity
@@ -136,14 +143,19 @@ namespace Raven.Database.Indexing
 									continue;
 								}
 								Interlocked.Increment(ref count);
-								luceneDoc.GetFields().Clear();
-								luceneDoc.Boost = boost;
-								documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
-								luceneDoc.Add(documentIdField);
-								foreach (var field in indexingResult.Fields)
+
+								using (StopwatchScope.For(convertToLuceneDocumentDuration))
 								{
-									luceneDoc.Add(field);
+									luceneDoc.GetFields().Clear();
+									luceneDoc.Boost = boost;
+									documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
+									luceneDoc.Add(documentIdField);
+									foreach (var field in indexingResult.Fields)
+									{
+										luceneDoc.Add(field);
+									}
 								}
+
 								batchers.ApplyAndIgnoreAllErrors(
 									exception =>
 									{
@@ -161,9 +173,10 @@ namespace Raven.Database.Indexing
 									trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
 								LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
 
-								addDocumentTotalDutation.Start();
-								AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
-								addDocumentTotalDutation.Stop();
+								using (StopwatchScope.For(addDocumentDutation))
+								{
+									AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+								}
 
 								Interlocked.Increment(ref stats.IndexingSuccesses);
 							}
@@ -202,7 +215,7 @@ namespace Raven.Database.Indexing
 				{
 					ChangedDocs = sourceCount
 				};
-			});
+			}, flushToDiskDuration);
 
 			BatchCompleted("Current", "Index", sourceCount, count, 
 				new LoadDocumentPerformanceStats
@@ -217,8 +230,9 @@ namespace Raven.Database.Indexing
 				},
 				new LucenePerformanceStats
 				{
-					WriteDocumentsDurationMs = addDocumentTotalDutation.ElapsedMilliseconds,
-					FlushToDiskDurationMs = writeStats.FlushToDiskDurationMs
+					ConvertToLuceneDocumentsDurationMs = convertToLuceneDocumentDuration.ElapsedMilliseconds,
+					WriteDocumentsDurationMs = addDocumentDutation.ElapsedMilliseconds,
+					FlushToDiskDurationMs = flushToDiskDuration.ElapsedMilliseconds
 				}, 
 				new MapStoragePerformanceStats
 				{

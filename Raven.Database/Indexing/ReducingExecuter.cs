@@ -166,9 +166,12 @@ namespace Raven.Database.Indexing
 
 							reduceParams.Take = context.CurrentNumberOfItemsToReduceInSingleBatch;
 
-							gettigItemsToReduceDuration.Start();
-							var persistedResults = actions.MapReduce.GetItemsToReduce(reduceParams).ToList();
-							gettigItemsToReduceDuration.Stop();
+							List<MappedResultInfo> persistedResults;
+							using (StopwatchScope.For(gettigItemsToReduceDuration))
+							{
+								persistedResults = actions.MapReduce.GetItemsToReduce(reduceParams).ToList();
+							}
+
 							if (persistedResults.Count == 0)
 							{
 								retry = false;

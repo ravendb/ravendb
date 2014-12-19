@@ -235,7 +235,6 @@
     <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From03To04.cs" />
     <Compile Include="Indexing\IndexReplacer.cs" />
     <Compile Include="Impl\Generators\JsonCodeGenerator.cs" />
-    <Compile Include="Indexing\WriteIndexStats.cs" />
     <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
     <Compile Include="Plugins\Builtins\CheckIncrementalBackupStatus.cs" />
     <Compile Include="Plugins\Builtins\PurgeOutdatedTombstones.cs" />
@@ -287,6 +286,7 @@
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
+    <Compile Include="Util\StopwatchScope.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />
