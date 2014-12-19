@@ -112,6 +112,7 @@ namespace Raven.Database.Indexing
 			long linqExecutionDuration = 0;
 			long reduceInMapLinqExecutionDuration = 0;
 			long putMappedResultsDuration = 0;
+			long scheduleReductionsDuration = 0;
 			long storageCommitDuration = 0;
 
 			var usedStorageAccessors = new ConcurrentSet<IStorageActionsAccessor>();
@@ -212,10 +213,17 @@ namespace Raven.Database.Indexing
 
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, changed, enumerator => context.TransactionalStorage.Batch(accessor =>
 			{
-				while (enumerator.MoveNext())
+				var scheduleReductionsExecution = new Stopwatch();
+
+				using (StopwatchScope.For(scheduleReductionsExecution))
 				{
-					accessor.MapReduce.ScheduleReductions(indexId, 0, enumerator.Current);
+					while (enumerator.MoveNext())
+					{
+						accessor.MapReduce.ScheduleReductions(indexId, 0, enumerator.Current);
+					}
 				}
+
+				Interlocked.Add(ref scheduleReductionsDuration, scheduleReductionsExecution.ElapsedMilliseconds);
 			}));
 
 
@@ -243,7 +251,8 @@ namespace Raven.Database.Indexing
 				new MapStoragePerformanceStats
 				{
 					DeleteMappedResultsDurationMs = deleteMappedResultsDuration.ElapsedMilliseconds,
-					PutMappedResultsDurationMs = putMappedResultsDuration
+					PutMappedResultsDurationMs = putMappedResultsDuration,
+					ScheduleReductionsDurationMs = scheduleReductionsDuration
 				});
 
 			logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
@@ -696,7 +705,8 @@ namespace Raven.Database.Indexing
 					new MapStoragePerformanceStats
 					{
 						DeleteMappedResultsDurationMs = -1,
-						PutMappedResultsDurationMs = -1
+						PutMappedResultsDurationMs = -1,
+						ScheduleReductionsDurationMs = -1
 					});
 
 				logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, indexId, string.Join(", ", ReduceKeys)));

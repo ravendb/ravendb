@@ -246,7 +246,8 @@ namespace Raven.Database.Indexing
 				new MapStoragePerformanceStats
 				{
 					DeleteMappedResultsDurationMs = -1,
-					PutMappedResultsDurationMs = -1
+					PutMappedResultsDurationMs = -1,
+					ScheduleReductionsDurationMs = -1
 				});
 
 			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);

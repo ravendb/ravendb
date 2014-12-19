@@ -208,8 +208,9 @@ namespace Raven.Database.Indexing
 				stats.LucenePerformance.FlushToDiskDurationMs = writeToLuceneStats.FlushToDiskDurationMs;
 				stats.LucenePerformance.RecreateSearcherDurationMs = writeToLuceneStats.RecreateSearcherDurationMs;
 
-				stats.MapStoragePerformance.PutMappedResultsDurationMs = mapStorageStats.PutMappedResultsDurationMs;
 				stats.MapStoragePerformance.DeleteMappedResultsDurationMs = mapStorageStats.DeleteMappedResultsDurationMs;
+				stats.MapStoragePerformance.PutMappedResultsDurationMs = mapStorageStats.PutMappedResultsDurationMs;
+				stats.MapStoragePerformance.ScheduleReductionsDurationMs = mapStorageStats.ScheduleReductionsDurationMs;
 				// stats.MapStoragePerformance.StorageCommitDurationMs - it's set in MapReduceIndex.IndexDocuments because storage commit can happen after this batch completes
 
 				AddIndexingPerformanceStats(stats);

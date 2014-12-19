@@ -223,11 +223,13 @@ namespace Raven.Abstractions.Data
 		{
 			DeleteMappedResultsDurationMs = -1;
 			PutMappedResultsDurationMs = -1;
+			ScheduleReductionsDurationMs = -1;
 			StorageCommitDurationMs = -1;
 		}
 
 		public long DeleteMappedResultsDurationMs { get; set; }
 		public long PutMappedResultsDurationMs { get; set; }
+		public long ScheduleReductionsDurationMs { get; set; }
 		public long StorageCommitDurationMs { get; set; }
 	}
 
@@ -290,5 +292,9 @@ namespace Raven.Abstractions.Data
 	{
 		public long GetItemsToReduceDurationMs { get; set; }
 		public long DeletePreviouslyScheduledReductionsMs { get; set; }
+		public long ScheduleReductionsDurationMs { get; set; }
+		public long GetMappedResultsDurationMs { get; set; }
+		public long RemoveReduceResultsDurationMs { get; set; }
+		public long StorageCommitDurationMs { get; set; }
 	}
 }
