@@ -367,6 +367,10 @@ class metrics extends viewModelBase {
 
         this.svg.select('#dataClip rect')
             .attr('x', leftScroll);
+
+        this.svg.select('.left_texts')
+            .attr("transform", "translate(" + leftScroll + ",0)");
+
         nv.tooltip.cleanup();
     }
 
@@ -509,7 +513,10 @@ class metrics extends viewModelBase {
             .attr('x', -self.reduceGroupOffset - reduceHeight / 2)
             .style('opacity', reduceHeight > 0 ? 1 : 0);
 
-        controllsEnter.append('text')
+        var textsEnter = controllsEnter.append('g')
+            .attr('class', 'left_texts');
+
+        textsEnter.append('text')
             .attr('class', 'map_text')
             .attr("transform", "rotate(-90)")
             .attr("dy", ".71em")
@@ -519,7 +526,7 @@ class metrics extends viewModelBase {
             .text('Map')
             .style('opacity', mapHeight > 0 ? 1 : 0);
 
-        controllsEnter.append('text')
+        textsEnter.append('text')
             .attr('class', 'reduce_text')
             .attr("transform", "rotate(-90)")
             .attr("dy", ".71em")
