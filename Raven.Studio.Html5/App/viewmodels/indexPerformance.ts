@@ -93,11 +93,28 @@ class gapFinder {
 
 class metrics extends viewModelBase { 
 
-    static map_bar_names = ['load_bar', 'map_linq_bar', 'reduce_linq_bar', 'write_bar', 'flush_bar', 'del_mr_bar', 'put_mr_bar', 'commit_bar'];
-    static map_bar_colors = ['#FFF200', '#ED1C24', '#00227A', '#167232', '#C44F00', '#FFFFFF', '#DDDDDD', '#880015']; 
 
-    static reduce_bar_names = ['map_linq_bar', 'reduce_linq_bar', 'write_bar', 'flush_bar', 'get_items_bar'];
-    static reduce_bar_colors = ['#ED1C24', '#00227A', '#167232', '#C44F00', '#000000'];
+    static map_bar_names =
+        ['load_bar',
+        'linq_map_bar', 'linq_reduce_bar',
+        'l_delete_bar', 'l_convert_bar', 'l_add_bar', 'l_flush_bar', 'l_recreate_bar',
+        'map_del_bar', 'map_put_bar', 'map_schedule_bar', 'map_commit_bar'];
+
+    static map_bar_colors = [
+        '#17becf',
+        '#1f77b4', '#ff7f0e',
+        '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2',
+        '#aec7e8', '#ffbb78', '#98df8a', '#ff9896'];
+
+    static reduce_bar_names = 
+        ['linq_map_bar', 'linq_reduce_bar',
+        'l_delete_bar', 'l_convert_bar', 'l_add_bar', 'l_flush_bar', 'l_recreate_bar',
+        'red_get_items_bar', 'red_delete_bar', 'red_schedule_bar', 'red_get_mapped_bar', 'red_remove_bar', 'red_commit_bar'];
+
+    static reduce_bar_colors = [
+        '#1f77b4', '#ff7f0e',
+        '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2',
+        '#c5b0d5', '#c49c94', '#f7b6d2', '#bcbd22', '#dbdb8d', '#9edae5'];
 
     static minGapTime = 1000 * 10;
 
@@ -119,7 +136,9 @@ class metrics extends viewModelBase {
     selectedMapIndexNames = ko.computed(() => this.selectedIndexNames().filter(x => this.mapAllIndexNames().contains(x)));
     selectedReduceIndexes = ko.computed(() => this.selectedIndexNames().filter(x => this.reduceAllIndexNames().contains(x)));
 
-    color = d3.scale.category10();
+    static batchesColors = ['#ececec', '#c2c2c2', '#959595'];
+
+    color = d3.scale.ordinal().range(metrics.batchesColors);
     margin = { top: 40, right: 20, bottom: 40, left: 200, between: 10 };
 
     private pixelsPerSecond = ko.observable<number>(100);
@@ -285,10 +304,14 @@ class metrics extends viewModelBase {
             input.stats.LoadDocumentPerformance.LoadDocumentDurationMs,
             input.stats.LinqExecutionPerformance.MapLinqExecutionDurationMs,
             input.stats.LinqExecutionPerformance.ReduceLinqExecutionDurationMs,
-            input.stats.LucenePerformance.WriteDocumentsDurationMs,
+            input.stats.LucenePerformance.DeleteExistingDocumentsDurationMs,
+            input.stats.LucenePerformance.ConvertToLuceneDocumentsDurationMs,
+            input.stats.LucenePerformance.AddDocumentsDurationMs,
             input.stats.LucenePerformance.FlushToDiskDurationMs,
+            input.stats.LucenePerformance.RecreateSearcherDurationMs,
             input.stats.MapStoragePerformance.DeleteMappedResultsDurationMs,
             input.stats.MapStoragePerformance.PutMappedResultsDurationMs,
+            input.stats.MapStoragePerformance.ScheduleReductionsDurationMs,
             input.stats.MapStoragePerformance.StorageCommitDurationMs
         ];
         for (var i = 0; i < timings.length; i++) {
@@ -310,9 +333,17 @@ class metrics extends viewModelBase {
         var timings = [
             input.LinqExecutionPerformance.MapLinqExecutionDurationMs,
             input.LinqExecutionPerformance.ReduceLinqExecutionDurationMs,
-            input.LucenePerformance.WriteDocumentsDurationMs,
+            input.LucenePerformance.DeleteExistingDocumentsDurationMs,
+            input.LucenePerformance.ConvertToLuceneDocumentsDurationMs,
+            input.LucenePerformance.AddDocumentsDurationMs,
             input.LucenePerformance.FlushToDiskDurationMs,
-            input.ReduceStoragePerformance.GetItemsToReduceDurationMs
+            input.LucenePerformance.RecreateSearcherDurationMs,
+            input.ReduceStoragePerformance.GetItemsToReduceDurationMs,
+            input.ReduceStoragePerformance.DeletePreviouslyScheduledReductionsMs,
+            input.ReduceStoragePerformance.ScheduleReductionsDurationMs,
+            input.ReduceStoragePerformance.GetMappedResultsDurationMs,
+            input.ReduceStoragePerformance.RemoveReduceResultsDurationMs,
+            input.ReduceStoragePerformance.StorageCommitDurationMs
         ];
         for (var i = 0; i < timings.length; i++) {
             var currentWidth = Math.max(timings[i], 0);
@@ -858,7 +889,7 @@ class metrics extends viewModelBase {
         var offset = $(element).offset();
         var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'index-stat-template\' }"></div>'; 
-        nv.tooltip.show([offset.left + element.getBoundingClientRect().width / 2, offset.top], html, 'n', self.yBarHeight + 15, null, "selectable-tooltip");
+        nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
         self.fillTooltip(data, metrics.map_bar_colors);
     }
 
@@ -868,7 +899,7 @@ class metrics extends viewModelBase {
         var offset = $(element).offset();
         var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'reduce-stat-template\' }"></div>';
-        nv.tooltip.show([offset.left + element.getBoundingClientRect().width / 2, offset.top], html, 'n', self.yBarHeight + 15, null, "selectable-tooltip");
+        nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
         self.fillTooltip(data, metrics.reduce_bar_colors);
     }
 
@@ -878,7 +909,7 @@ class metrics extends viewModelBase {
         var offset = $(element).offset();
         var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'map-batch-info-template\' }"></div>'; 
-        nv.tooltip.show([offset.left + element.getBoundingClientRect().width / 2, offset.top], html, 'n', self.yBarHeight + 15, null, "selectable-tooltip");
+        nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
         self.fillTooltip(data, metrics.map_bar_colors);
     }
 
@@ -888,7 +919,7 @@ class metrics extends viewModelBase {
         var offset = $(element).offset();
         var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'reduce-batch-info-template\' }"></div>';
-        nv.tooltip.show([offset.left + element.getBoundingClientRect().width / 2, offset.top], html, 'n', self.yBarHeight + 15, null, "selectable-tooltip");
+        nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
         self.fillTooltip(data, metrics.reduce_bar_colors);
     }
 
