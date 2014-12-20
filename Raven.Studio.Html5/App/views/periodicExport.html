@@ -20,6 +20,48 @@
             </p>
             <div data-bind="visible: !disabled()" id="periodicExportContainer">
                 <div class="form-group">
+                    <label for="onDiskExport" class="col-sm-3 control-label">On disk export:</label>
+                    <div class="col-sm-3">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: onDiskExportEnabled">Yes</span>
+                                <span data-bind="visible: !onDiskExportEnabled()">No</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: onDiskExportEnabled.bind(onDiskExportEnabled, true)">Yes</a></li>
+                                <li><a href="#" data-bind="click: onDiskExportEnabled.bind(onDiskExportEnabled, false)">No</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group" data-bind="if: onDiskExportEnabled, visible: onDiskExportEnabled">
+                    <label for="onDiskLocation" class="col-sm-3 control-label">File System Folder:</label>
+                    <div class="col-sm-3">
+                        <input type="text" id="onDiskLocation" placeholder="full path" required class="form-control" data-bind="value: localFolderName, valueUpdate: 'afterkeydown'" />
+                    </div>
+                </div>
+                
+                
+                <div class="form-group">
+                    <label for="serverUpload" class="col-sm-3 control-label">Upload to remote server:</label>
+                    <div class="col-sm-3">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: remoteUploadEnabled">Yes</span>
+                                <span data-bind="visible: !remoteUploadEnabled()">No</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" data-bind="click: remoteUploadEnabled.bind(remoteUploadEnabled, true)">Yes</a></li>
+                                <li><a href="#" data-bind="click: remoteUploadEnabled.bind(remoteUploadEnabled, false)">No</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" data-bind="if: remoteUploadEnabled, visible: remoteUploadEnabled">
                     <div class="col-sm-3">
                         <select class="form-control" data-bind="options: availablePeriodicExports, optionsText: 'label', optionsValue: 'value', value: type"></select>
                     </div>
