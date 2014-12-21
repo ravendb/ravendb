@@ -143,6 +143,8 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/PluginsDirectory"], @"~\Plugins");
             AssembliesDirectory =
                 new StringSetting(settings["Raven/AssembliesDirectory"], @"~\Assemblies");
+            EmbeddedFilesDirectory =
+                new StringSetting(settings["Raven/EmbeddedFilesDirectory"], (string)null);
 			CompiledIndexCacheDirectory =
 				new StringSetting(settings["Raven/CompiledIndexCacheDirectory"], @"~\Raven\CompiledIndexCache");
 			TaskScheduler =
@@ -312,6 +314,8 @@ namespace Raven.Database.Config
 		public StringSetting CompiledIndexCacheDirectory { get; private set; }
 
         public StringSetting AssembliesDirectory { get; private set; }
+
+        public StringSetting EmbeddedFilesDirectory { get; private set; }
 
 		public StringSetting TaskScheduler { get; private set; }
 

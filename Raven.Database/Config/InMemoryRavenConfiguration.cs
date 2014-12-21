@@ -246,6 +246,8 @@ namespace Raven.Database.Config
 
 		    AssembliesDirectory = ravenSettings.AssembliesDirectory.Value.ToFullPath();
 
+		    EmbeddedFilesDirectory = ravenSettings.EmbeddedFilesDirectory.Value.ToFullPath();
+
 			CompiledIndexCacheDirectory = ravenSettings.CompiledIndexCacheDirectory.Value.ToFullPath();
 
 			var taskSchedulerType = ravenSettings.TaskScheduler.Value;
@@ -796,6 +798,12 @@ namespace Raven.Database.Config
         /// Default: ~\Assemblies
         /// </summary>
         public string AssembliesDirectory { get; set; }
+
+        /// <summary>
+        /// Where we search for embedded files.
+        /// Default: null
+        /// </summary>
+        public string EmbeddedFilesDirectory { get; set; }
 
 		public bool CreatePluginsDirectoryIfNotExisting { get; set; }
 		public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
