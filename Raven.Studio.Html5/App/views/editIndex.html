@@ -116,7 +116,7 @@
                 <div class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <input type="text" class="form-control" id="indexName" placeholder="Index name" accesskey="I" data-bind="value: name, valueUpdate: 'afterkeyup'" />
+                            <input type="text" class="form-control" id="indexName" placeholder="Index name" accesskey="I" data-bind="value: name, valueUpdate: 'afterkeyup', enable: !isTestIndex() && !$parent.isSideBySideIndex()" />
                         </div>
                     </div>
                 </div>
