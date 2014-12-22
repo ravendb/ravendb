@@ -651,7 +651,7 @@ namespace Raven.Database.Indexing
 			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
 		}
 
-		private void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag)
+		internal void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag)
 		{
 			if (context.Configuration.RunInMemory ||
 				context.IndexDefinitionStorage == null) // may happen during index startup
