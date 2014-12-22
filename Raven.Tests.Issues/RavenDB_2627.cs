@@ -817,5 +817,66 @@ namespace Raven.Tests.Issues
 				Assert.False(subscription.IsErrored);
 			}
 		}
+
+		[Fact]
+		public void CanUseNestedPropertiesInSubscriptionCriteria()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					for (int i = 0; i < 10; i++)
+					{
+						session.Store(new PersonWithAddress
+						{
+							Address = new Address()
+							{
+								Street = "1st Street",
+								ZipCode = i % 2 == 0 ? 999 : 12345
+							}
+						});
+
+						session.Store(new PersonWithAddress
+						{
+							Address = new Address()
+							{
+								Street = "2nd Street",
+								ZipCode = 12345
+							}
+						});
+
+						session.Store(new Company());
+					}
+
+					session.SaveChanges();
+				}
+
+				var id = store.Subscriptions.Create(new SubscriptionCriteria
+				{
+					PropertiesMatch = new Dictionary<string, RavenJToken>()
+					{
+						{"Address.Street", "1st Street"}
+					},
+					PropertiesNotMatch = new Dictionary<string, RavenJToken>()
+					{
+						{"Address.ZipCode", 999}
+					}
+				});
+
+				var carolines = store.Subscriptions.Open(id, new SubscriptionConnectionOptions { BatchOptions = new SubscriptionBatchOptions { MaxDocCount = 5 } });
+
+				var docs = new List<RavenJObject>();
+
+				carolines.Subscribe(docs.Add);
+
+				Assert.True(SpinWait.SpinUntil(() => docs.Count >= 5, TimeSpan.FromSeconds(60)));
+
+
+				foreach (var jsonDocument in docs)
+				{
+					Assert.Equal("1st Street", jsonDocument.Value<RavenJObject>("Address").Value<string>("Street"));
+				}
+			}
+		}
 	}
 }

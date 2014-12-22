@@ -269,8 +269,9 @@ namespace Raven.Database.Server.Controllers
 			{
 				foreach (var match in criteria.PropertiesMatch)
 				{
-					RavenJToken value;
-					if (doc.DataAsJson.TryGetValue(match.Key, out value) == false)
+					var value = doc.DataAsJson.SelectToken(match.Key);
+
+					if (value == null)
 						return false;
 
 					if (RavenJToken.DeepEquals(value, match.Value) == false)
@@ -282,8 +283,9 @@ namespace Raven.Database.Server.Controllers
 			{
 				foreach (var notMatch in criteria.PropertiesNotMatch)
 				{
-					RavenJToken value;
-					if (doc.DataAsJson.TryGetValue(notMatch.Key, out value))
+					var value = doc.DataAsJson.SelectToken(notMatch.Key);
+
+					if (value != null)
 					{
 						if (RavenJToken.DeepEquals(value, notMatch.Value))
 							return false;
