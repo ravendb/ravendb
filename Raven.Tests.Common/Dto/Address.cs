@@ -10,5 +10,7 @@ namespace Raven.Tests.Common.Dto
 		public string Id { get; set; }
 
 		public string Street { get; set; }
+
+		public int ZipCode { get; set; }
 	}
 }
