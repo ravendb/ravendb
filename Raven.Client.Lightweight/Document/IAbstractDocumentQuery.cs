@@ -40,6 +40,11 @@ namespace Raven.Client.Document
 		void RandomOrdering();
 
 		/// <summary>
+		/// Sort using custom sorter on the server
+		/// </summary>
+		void CustomSortUsing(string typeName);
+
+		/// <summary>
 		/// Order the search results randomly using the specified seed
 		/// this is useful if you want to have repeatable random queries
 		/// </summary>

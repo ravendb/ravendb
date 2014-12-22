@@ -627,6 +627,8 @@
     <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
     <Compile Include="Smuggler\SmugglerIdentitiesTests.cs" />
     <Compile Include="Smuggler\SmugglerTransformScriptsTests.cs" />
+    <Compile Include="Sorting\CustomSorting.cs" />
+    <Compile Include="Sorting\SortByNumberOfCharactersFromEnd.cs" />
     <Compile Include="Spatial\BoundingBoxIndexTests.cs" />
     <Compile Include="Spatial\CartesianTests.cs" />
     <Compile Include="Spatial\Clustering.cs" />

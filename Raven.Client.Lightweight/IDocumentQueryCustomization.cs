@@ -151,6 +151,12 @@ namespace Raven.Client
 		/// </summary>
 		IDocumentQueryCustomization RandomOrdering();
 
+
+		/// <summary>
+		/// Sort using custom sorter on the server
+		/// </summary>
+		IDocumentQueryCustomization CustomSortUsing(string typeName);
+
 		/// <summary>
 		/// Order the search results randomly using the specified seed
 		/// this is useful if you want to have repeatable random queries
