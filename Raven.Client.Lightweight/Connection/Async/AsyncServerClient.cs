@@ -1563,14 +1563,16 @@ namespace Raven.Client.Connection.Async
 			private bool complete;
 
 			private bool wasInitialized;
+			private Func<JsonTextReaderAsync, bool> customizedEndResult;
 
-			public YieldStreamResults(HttpJsonRequest request, Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
+			public YieldStreamResults(HttpJsonRequest request, Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null, Func<JsonTextReaderAsync, bool> customizedEndResult = null)
 			{
 				this.request = request;
 				this.start = start;
 				this.pageSize = pageSize;
 				this.pagingInformation = pagingInformation;
 				this.stream = stream;
+				this.customizedEndResult = customizedEndResult;
 				streamReader = new StreamReader(stream);
 				reader = new JsonTextReaderAsync(streamReader);
 			}
@@ -1648,6 +1650,9 @@ namespace Raven.Client.Connection.Async
 						var err = await reader.ReadAsString().ConfigureAwait(false);
 						throw new InvalidOperationException("Server error" + Environment.NewLine + err);
 					default:
+						if (customizedEndResult != null && customizedEndResult(reader))
+							break;
+
 						throw new InvalidOperationException("Unexpected property name: " + reader.Value);
 				}
 

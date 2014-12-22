@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Globalization;
 using Raven.Abstractions;
 using Raven.Tests.Common;
 
@@ -298,6 +299,46 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(1, items2.Count);
 					Assert.Equal("key2", items2[0].Key);
 					Assert.Equal("000", items2[0].Data.Value<string>("data"));
+				});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void CanReadWithStartTakeParameters(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				for (int i = 0; i < 10; i++)
+				{
+					storage.Batch(
+						actions => actions.Lists.Set("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
+					{
+						{"i", i}
+					}, UuidType.Indexing));
+
+					storage.Batch(
+						actions => actions.Lists.Set("another", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
+					{
+						{"i", i*2}
+					}, UuidType.Indexing));
+				}
+
+				storage.Batch(actions =>
+				{
+					var list = actions.Lists.Read("items", 0, 5).ToList();
+					Assert.Equal(5, list.Count);
+					for (int i = 0; i < 5; i++)
+					{
+						Assert.Equal(i, list[i].Data.Value<int>("i"));
+					}
+
+					list = actions.Lists.Read("items", 5, 5).ToList();
+					Assert.Equal(5, list.Count);
+					for (int i = 0; i < 5; i++)
+					{
+						Assert.Equal(i + 5, list[i].Data.Value<int>("i"));
+					}
 				});
 			}
 		}

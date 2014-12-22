@@ -8,6 +8,7 @@ using NDesk.Options;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Extensions;
 
 using System;
 using System.IO;
@@ -113,7 +114,9 @@ namespace Raven.Smuggler
 			databaseOptionSet.Add("domain2:", OptionCategory.SmugglerDatabase, "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(databaseOptions.Destination).Domain = value);
 			databaseOptionSet.Add("key|api-key|apikey:", OptionCategory.SmugglerDatabase, "The API-key to use, when using OAuth.", value => databaseOptions.Source.ApiKey = value);
 			databaseOptionSet.Add("key2|api-key2|apikey2:", OptionCategory.SmugglerDatabase, "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => databaseOptions.Destination.ApiKey = value);
-			databaseOptionSet.Add("strip-replication-information", OptionCategory.SmugglerDatabase, "Remove all replication information from metadata (import only)", _ => databaseOptions.StripReplicationInformation = true);
+            databaseOptionSet.Add("strip-replication-information", OptionCategory.SmugglerDatabase, "Remove all replication information from metadata (import only)", _ => databaseOptions.StripReplicationInformation = true);
+            databaseOptionSet.Add("continuation-token:", OptionCategory.SmugglerDatabase, "Activates the usage of a continuation token in case of unreliable connections or huge imports", s => databaseOptions.ContinuationToken = s );
+            databaseOptionSet.Add("skip-conflicted", OptionCategory.SmugglerDatabase, "The database will issue and error when conflicted documents are put. The default is to alert the user, this allows to skip them to continue.", _ => databaseOptions.SkipConflicted = true);
 
 		    filesystemOptionSet = new OptionSet();
 			filesystemOptionSet.Add("timeout:", OptionCategory.SmugglerFileSystem, "The timeout to use for requests", s => filesOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
@@ -199,53 +202,64 @@ namespace Raven.Smuggler
                 return;
             }
 
-
-            switch (this.mode)
+            try
             {
-                case SmugglerMode.Database:
-                    {
-                        try
+                switch (this.mode)
+                {
+                    case SmugglerMode.Database:
                         {
-                            databaseOptionSet.Parse(args);
+                            try
+                            {
+                                databaseOptionSet.Parse(args);
+                            }
+                            catch (Exception e)
+                            {
+                                PrintUsageAndExit(e);
+                            }
+
+                            options.Source.Url = url;
+                            options.BackupPath = args[2];
+
+                            if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
+                                smugglerApi.Options.Incremental = true;
+
+                            ValidateDatabaseParameters(smugglerApi, action);
+                            var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
+                            await databaseDispatcher.Execute(action);
                         }
-                        catch (Exception e)
+                        break;
+                    case SmugglerMode.Filesystem:
                         {
-                            PrintUsageAndExit(e);
+                            try
+                            {
+                                filesystemOptionSet.Parse(args);
+                            }
+                            catch (Exception e)
+                            {
+                                PrintUsageAndExit(e);
+                            }
+
+                            filesOptions.Source.Url = url;
+                            filesOptions.BackupPath = args[2];
+
+                            if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
+                                smugglerFilesApi.Options.Incremental = true;
+
+                            var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
+                            await filesDispatcher.Execute(action);
                         }
-
-                        options.Source.Url = url;
-                        options.BackupPath = args[2];
-
-                        if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
-                            smugglerApi.Options.Incremental = true;
-
-                        ValidateDatabaseParameters(smugglerApi, action);
-                        var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
-                        await databaseDispatcher.Execute(action);
-                    }
-                    break;
-                case SmugglerMode.Filesystem:
-                    {
-                        try
-                        {
-                            filesystemOptionSet.Parse(args);
-                        }
-                        catch (Exception e)
-                        {
-                            PrintUsageAndExit(e);
-                        }
-
-                        filesOptions.Source.Url = url;
-                        filesOptions.BackupPath = args[2];
-
-                        if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
-                            smugglerFilesApi.Options.Incremental = true;
-
-                        var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
-                        await filesDispatcher.Execute(action);
-                    }
-                    break;
+                        break;
+                }
             }
+            catch (Exception e)
+            {
+                if (e is AggregateException)
+                    Console.WriteLine(e.SimplifyError());
+                else
+                    Console.WriteLine(e.Message);
+			
+                Environment.Exit(-1);
+            }            
         }
 
         private void ValidateDatabaseParameters(SmugglerDatabaseApi api, SmugglerAction action)
@@ -266,9 +280,13 @@ namespace Raven.Smuggler
 
 		private void PrintUsageAndExit(Exception e)
 		{
-			ConsoleWriteLineWithColor(ConsoleColor.Red, e.Message);
+            string message = e.Message;
+            if (e is AggregateException)
+                message = e.SimplifyError();
+
+            ConsoleWriteLineWithColor(ConsoleColor.Red, message);
 			PrintUsage();
-			ConsoleWriteLineWithColor(ConsoleColor.Red, e.Message);
+            ConsoleWriteLineWithColor(ConsoleColor.Red, message);
 			Environment.Exit(-1);
 		}
 

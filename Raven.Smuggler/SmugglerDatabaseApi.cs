@@ -45,7 +45,7 @@ namespace Raven.Smuggler
 			return base.ExportAttachments(src, jsonWriter, lastEtag, null);
 		}
 
-		public override Task ExportDeletions(JsonTextWriter jsonWriter, ExportDataResult result, LastEtagsInfo maxEtagsToFetch)
+		public override Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtagsToFetch)
 		{
 			throw new NotSupportedException("Exporting deletions is not supported for Command Line Smuggler");
 		}
@@ -74,7 +74,7 @@ namespace Raven.Smuggler
 			}
 		}
 
-        public override async Task<ExportDataResult> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
+        public override async Task<OperationState> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
 		{
             using (store = CreateStore(exportOptions.From))
             {

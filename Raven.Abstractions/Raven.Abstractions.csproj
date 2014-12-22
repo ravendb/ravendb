@@ -215,6 +215,9 @@
     <Compile Include="Data\StorageStats.cs" />
     <Compile Include="Data\StreamResult.cs" />
     <Compile Include="Data\StringDistanceTypes.cs" />
+    <Compile Include="Data\SubscriptionCriteria.cs" />
+    <Compile Include="Data\SubscriptionConfig.cs" />
+    <Compile Include="Data\SubscriptionConnectionOptions.cs" />
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TaskBasedOperationState.cs" />
@@ -230,6 +233,10 @@
     <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
     <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionClosedException.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionInUseException.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistExeption.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />
     <Compile Include="Exceptions\IndexCompilationException.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />
@@ -360,7 +367,7 @@
     <Compile Include="Replication\ReplicationDocument.cs" />
     <Compile Include="Replication\ReplicationStatistics.cs" />
     <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
-    <Compile Include="Smuggler\Data\ExportDataResult.cs" />
+    <Compile Include="Smuggler\Data\OperationState.cs" />
     <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />
     <Compile Include="Smuggler\Data\ExportFilesResult.cs" />
     <Compile Include="Smuggler\Data\Tombstone.cs" />

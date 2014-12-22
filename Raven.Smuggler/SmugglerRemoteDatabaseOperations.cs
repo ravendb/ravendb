@@ -189,7 +189,7 @@ namespace Raven.Smuggler
 			return buildNumber.ProductVersion;
 		}
 
-		public void PurgeTombstones(ExportDataResult result)
+		public void PurgeTombstones(OperationState result)
 		{
 			throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
 		}

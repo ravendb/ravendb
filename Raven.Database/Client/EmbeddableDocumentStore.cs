@@ -334,6 +334,12 @@ namespace Raven.Client.Embedded
         }
 
         public DocumentSessionListeners Listeners { get; private set; }
+
+	    public IReliableSubscriptions Subscriptions
+	    {
+			get { return Inner.Subscriptions; }
+	    }
+
         public void SetListeners(DocumentSessionListeners listeners)
         {
             this.Listeners = listeners;

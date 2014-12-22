@@ -172,6 +172,8 @@ namespace Raven.Client
 
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 
+		IReliableSubscriptions Subscriptions { get; }
+
         DocumentSessionListeners Listeners { get; }
 
 	    void SetListeners(DocumentSessionListeners listeners);

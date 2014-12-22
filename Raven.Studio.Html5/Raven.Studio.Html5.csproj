@@ -844,6 +844,7 @@
     <Content Include="Scripts\bootstrap-multiselect.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
+    <Content Include="Scripts\d3\dagre.js" />
     <Content Include="Scripts\durandal\activator.js" />
     <Content Include="Scripts\durandal\app.js" />
     <Content Include="Scripts\durandal\binder.js" />
@@ -865,7 +866,7 @@
     <Content Include="Scripts\jszip\jszip.js" />
     <Content Include="Scripts\knockout-3.2.0.js" />
     <Content Include="Scripts\knockout.mapping-2.4.1.js" />
-    <Content Include="Scripts\nvd3\d3.js" />
+    <Content Include="Scripts\d3\d3.js" />
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
     <Content Include="fonts\glyphicons-halflings-regular.ttf" />
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
@@ -907,12 +908,13 @@
     <Content Include="Scripts\moment.js" />
     <Content Include="Scripts\moment.min.js" />
     <Content Include="Scripts\nprogress.js" />
-    <Content Include="Scripts\nvd3\models\timelines.js" />
-    <Content Include="Scripts\nvd3\models\timelinesChart.js" />
-    <Content Include="Scripts\nvd3\nv.js" />
+    <Content Include="Scripts\d3\models\timelines.js" />
+    <Content Include="Scripts\d3\models\timelinesChart.js" />
+    <Content Include="Scripts\d3\nv.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
     <Content Include="Scripts\typings\bootstrap.multiselect\bootstrap.multiselect.d.ts" />
+    <Content Include="Scripts\typings\d3\dagreD3.d.ts" />
     <Content Include="Scripts\typings\d3\d3.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />

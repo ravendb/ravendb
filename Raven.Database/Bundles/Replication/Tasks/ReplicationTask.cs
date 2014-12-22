@@ -935,7 +935,7 @@ namespace Raven.Bundles.Replication.Tasks
 		            result.Documents = new RavenJArray(filteredDocsToReplicate
 		                .Select(x =>
 		                {
-		                    DocumentRetriever.EnsureIdInMetadata(x);
+                            JsonDocument.EnsureIdInMetadata(x);
 															EnsureReplicationInformationInMetadata(x.Metadata, docDb);
 		                    return x;
 		                })
