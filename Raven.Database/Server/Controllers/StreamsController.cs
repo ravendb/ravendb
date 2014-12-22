@@ -6,14 +6,12 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Security.Authentication.ExtendedProtection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
@@ -79,7 +77,7 @@ namespace Raven.Database.Server.Controllers
 							Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, doc =>
 							{
 								timeout.Delay();
-								doc.WriteTo(writer);
+								doc.ToJson().WriteTo(writer);
                                 writer.WriteRaw(Environment.NewLine);
 							});
 						else

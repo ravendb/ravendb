@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -407,11 +407,11 @@ namespace Raven.Database.Actions
         public RavenJArray GetDocuments(int start, int pageSize, Etag etag, CancellationToken token)
         {
             var list = new RavenJArray();
-            GetDocuments(start, pageSize, etag, token, list.Add);
+            GetDocuments(start, pageSize, etag, token, doc => list.Add(doc.ToJson()));
             return list;
         }
 
-        public void GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Action<RavenJObject> addDocument)
+        public void GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Action<JsonDocument> addDocument)
         {
             TransactionalStorage.Batch(actions =>
             {
@@ -437,7 +437,7 @@ namespace Raven.Database.Actions
                         if (document == null)
                             continue;
 
-                        addDocument(document.ToJson());
+                        addDocument(document);
                         returnedDocs = true;
                     }
                     if (returnedDocs || docCount == 0)

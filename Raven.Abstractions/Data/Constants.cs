@@ -149,10 +149,10 @@ namespace Raven.Abstractions.Data
         public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
 		public const string NextPageStart = "Next-Page-Start";
 
-		/// <summary>
-		/// if no encoding information in headers of incoming request, this encoding is assumed
-		/// </summary>
-		public const string DefaultRequestEncoding = "UTF-8";
+/// <summary>
+/// if no encoding information in headers of incoming request, this encoding is assumed
+/// </summary>
+public const string DefaultRequestEncoding = "UTF-8";
         
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 		
@@ -178,16 +178,19 @@ namespace Raven.Abstractions.Data
 
 		// General
 
-		public const string RavenDatabasesPrefix = "Raven/Databases/";		
+		public const string RavenDatabasesPrefix = "Raven/Databases/";
 
         public static partial class FileSystem
         {
-            public const string Prefix = "Raven/FileSystems/";
-            public const string Storage = "Raven/FileSystem/Storage";
+			public const string Prefix = "Raven/FileSystems/";
             public const string DataDirectory = "Raven/FileSystem/DataDir";
             public const string IndexStorageDirectory = "Raven/FileSystem/IndexStoragePath";
             public const string MaximumSynchronizationInterval = "Raven/FileSystem/MaximumSynchronizationInterval";
+            public const string Storage = "Raven/FileSystem/Storage";
         }
+
+		// Subscriptions
+		public const string RavenSubscriptionsPrefix = "Raven/Subscriptions/";
         
         public static partial class Esent
         {
