@@ -9,6 +9,7 @@ using System.Runtime.Serialization;
 
 namespace Raven.Abstractions.Exceptions.Subscriptions
 {
+	[Serializable]
 	public abstract class SubscriptionException : Exception
 	{
 		protected SubscriptionException(HttpStatusCode httpResponseCode)
