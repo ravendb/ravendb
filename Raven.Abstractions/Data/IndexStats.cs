@@ -222,12 +222,14 @@ namespace Raven.Abstractions.Data
 		public MapStoragePerformanceStats()
 		{
 			DeleteMappedResultsDurationMs = -1;
+			ConvertToRavenJObjectDurationMs = -1;
 			PutMappedResultsDurationMs = -1;
 			ScheduleReductionsDurationMs = -1;
 			StorageCommitDurationMs = -1;
 		}
 
 		public long DeleteMappedResultsDurationMs { get; set; }
+		public long ConvertToRavenJObjectDurationMs { get; set; }
 		public long PutMappedResultsDurationMs { get; set; }
 		public long ScheduleReductionsDurationMs { get; set; }
 		public long StorageCommitDurationMs { get; set; }

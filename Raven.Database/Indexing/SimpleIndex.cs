@@ -246,6 +246,7 @@ namespace Raven.Database.Indexing
 				new MapStoragePerformanceStats
 				{
 					DeleteMappedResultsDurationMs = -1,
+					ConvertToRavenJObjectDurationMs = -1,
 					PutMappedResultsDurationMs = -1,
 					ScheduleReductionsDurationMs = -1
 				});

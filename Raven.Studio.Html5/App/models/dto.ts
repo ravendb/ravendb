@@ -168,6 +168,7 @@ interface indexPerformanceDto {
     };
     MapStoragePerformance: {
         DeleteMappedResultsDurationMs: number;
+        ConvertToRavenJObjectDurationMs: number;
         PutMappedResultsDurationMs: number;
         ScheduleReductionsDurationMs: number;
         StorageCommitDurationMs: number

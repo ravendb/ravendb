@@ -114,6 +114,7 @@ namespace Raven.Database.Indexing
 			long putMappedResultsDuration = 0;
 			long scheduleReductionsDuration = 0;
 			long storageCommitDuration = 0;
+			long convertToRavenJObjectDuration = 0;
 
 			var usedStorageAccessors = new ConcurrentSet<IStorageActionsAccessor>();
 
@@ -125,6 +126,7 @@ namespace Raven.Database.Indexing
 				var linqExecution = new Stopwatch();
 				var reduceInMapLinqExecution = new Stopwatch();
 				var putMappedResultsExecution = new Stopwatch();
+				var convertToRavenJObjectExecution = new Stopwatch();
 
 				allState.Enqueue(Tuple.Create(localChanges, localStats, statsPerKey));
 
@@ -158,7 +160,7 @@ namespace Raven.Database.Indexing
 							var documentId = GetDocumentId(currentDoc);
 							if (documentId != currentKey)
 							{
-								count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, reduceInMapLinqExecution, putMappedResultsExecution);
+								count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, reduceInMapLinqExecution, putMappedResultsExecution, convertToRavenJObjectExecution);
 
 								currentDocumentResults.Clear();
 								currentKey = documentId;
@@ -167,7 +169,14 @@ namespace Raven.Database.Indexing
 							{
 								continue;
 							}
-							currentDocumentResults.Add(new DynamicJsonObject(RavenJObject.FromObject(currentDoc, jsonSerializer)));
+
+							RavenJObject currentDocJObject;
+							using (StopwatchScope.For(convertToRavenJObjectExecution))
+							{
+								currentDocJObject = RavenJObject.FromObject(currentDoc, jsonSerializer);
+							}
+
+							currentDocumentResults.Add(new DynamicJsonObject(currentDocJObject));
 
 							if (EnsureValidNumberOfOutputsForDocument(documentId, currentDocumentResults.Count) == false)
 							{
@@ -178,7 +187,7 @@ namespace Raven.Database.Indexing
 
 							Interlocked.Increment(ref localStats.IndexingSuccesses);
 						}
-						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, reduceInMapLinqExecution, putMappedResultsExecution);
+						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, reduceInMapLinqExecution, putMappedResultsExecution, convertToRavenJObjectExecution);
 					});
 					allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
 					allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
@@ -187,6 +196,7 @@ namespace Raven.Database.Indexing
 					Interlocked.Add(ref linqExecutionDuration, linqExecution.ElapsedMilliseconds);
 					Interlocked.Add(ref putMappedResultsDuration, putMappedResultsExecution.ElapsedMilliseconds);
 					Interlocked.Add(ref reduceInMapLinqExecutionDuration, reduceInMapLinqExecution.ElapsedMilliseconds);
+					Interlocked.Add(ref convertToRavenJObjectDuration, convertToRavenJObjectExecution.ElapsedMilliseconds);
 				}
 			});
 
@@ -251,6 +261,7 @@ namespace Raven.Database.Indexing
 				new MapStoragePerformanceStats
 				{
 					DeleteMappedResultsDurationMs = deleteMappedResultsDuration.ElapsedMilliseconds,
+					ConvertToRavenJObjectDurationMs = convertToRavenJObjectDuration,
 					PutMappedResultsDurationMs = putMappedResultsDuration,
 					ScheduleReductionsDurationMs = scheduleReductionsDuration
 				});
@@ -262,7 +273,7 @@ namespace Raven.Database.Indexing
 
 		private int ProcessBatch(AbstractViewGenerator viewGenerator, List<object> currentDocumentResults, string currentKey, HashSet<ReduceKeyAndBucket> changes,
 			IStorageActionsAccessor actions,
-			IDictionary<string, int> statsPerKey, Stopwatch reduceDuringMapLinqExecution, Stopwatch putMappedResultsDuration)
+			IDictionary<string, int> statsPerKey, Stopwatch reduceDuringMapLinqExecution, Stopwatch putMappedResultsDuration, Stopwatch convertToRavenJObjectDuration)
 		{
 			if (currentKey == null || currentDocumentResults.Count == 0)
 			{
@@ -302,7 +313,11 @@ namespace Raven.Database.Indexing
 					}
 					string reduceKey = ReduceKeyToString(reduceValue);
 
-					var data = GetMappedData(doc);
+					RavenJObject data;
+					using (StopwatchScope.For(convertToRavenJObjectDuration))
+					{
+						data = GetMappedData(doc);
+					}
 
 					logIndexing.Debug("Index {0} for document {1} resulted in ({2}): {3}", PublicName, currentKey, reduceKey, data);
 
@@ -705,6 +720,7 @@ namespace Raven.Database.Indexing
 					new MapStoragePerformanceStats
 					{
 						DeleteMappedResultsDurationMs = -1,
+						ConvertToRavenJObjectDurationMs = -1,
 						PutMappedResultsDurationMs = -1,
 						ScheduleReductionsDurationMs = -1
 					});

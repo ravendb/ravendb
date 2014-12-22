@@ -209,6 +209,7 @@ namespace Raven.Database.Indexing
 				stats.LucenePerformance.RecreateSearcherDurationMs = writeToLuceneStats.RecreateSearcherDurationMs;
 
 				stats.MapStoragePerformance.DeleteMappedResultsDurationMs = mapStorageStats.DeleteMappedResultsDurationMs;
+				stats.MapStoragePerformance.ConvertToRavenJObjectDurationMs = mapStorageStats.ConvertToRavenJObjectDurationMs;
 				stats.MapStoragePerformance.PutMappedResultsDurationMs = mapStorageStats.PutMappedResultsDurationMs;
 				stats.MapStoragePerformance.ScheduleReductionsDurationMs = mapStorageStats.ScheduleReductionsDurationMs;
 				// stats.MapStoragePerformance.StorageCommitDurationMs - it's set in MapReduceIndex.IndexDocuments because storage commit can happen after this batch completes
