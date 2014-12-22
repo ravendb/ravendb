@@ -72,6 +72,7 @@ namespace Raven.Database.Backup
 					Thread.Sleep(25);
 					// sometimes it looks like the directory creation didn't "take", but if we 
 					// wait, we can see that this is actually working.
+					Directory.CreateDirectory(dir);
 				}
 			}
 			File.Delete(tempPath);
