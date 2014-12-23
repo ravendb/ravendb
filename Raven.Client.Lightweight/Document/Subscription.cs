@@ -4,8 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -168,7 +166,15 @@ namespace Raven.Client.Document
 			});
 		}
 
+
+		/// <summary>
+		/// It indicates if the subscription is in errored state.
+		/// </summary>
 		public bool IsErrored { get; private set; }
+
+		/// <summary>
+		/// It determines if the subscription is closed.
+		/// </summary>
 		public bool IsClosed { get; private set; }
 
 		private async Task StartPullingDocs()
