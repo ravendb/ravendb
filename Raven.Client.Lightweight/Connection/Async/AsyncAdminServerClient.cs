@@ -150,12 +150,12 @@ namespace Raven.Client.Connection.Async
 
 			serverClient.ForceReadFromMaster();
 
-			var get = await serverClient.GetAsync(doc.Id).ConfigureAwait(false);
-			if (get != null)
-				return;
-
 			try
 			{
+				var get = await serverClient.GetAsync(doc.Id).ConfigureAwait(false);
+				if (get != null)
+					return;
+
 				await serverClient.GlobalAdmin.CreateDatabaseAsync(doc).ConfigureAwait(false);
 			}
 			catch (Exception)
@@ -166,5 +166,12 @@ namespace Raven.Client.Connection.Async
 			await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention()).ConfigureAwait(false);
 		}
 
+		public IAsyncDatabaseCommands Commands
+		{
+			get
+			{
+				return innerAsyncServerClient;
+			}
+		}
 	}
 }

@@ -269,6 +269,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					do
 					{
 						RemoveDocumentReference(iterator.CurrentKey.Clone());
+						currentStorageActionsAccessor.General.MaybePulseTransaction();
 					}
 					while (iterator.MoveNext());
 				}
