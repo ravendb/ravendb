@@ -100,14 +100,17 @@ namespace Raven.Database.Server.Controllers
 			if (replicationDocument == null)
 				return erroResponseMessage;
 
-			if (string.IsNullOrWhiteSpace(transformerName) == false && transformerName != "/")
-				return GetMessageWithString("Invalid transformer name",HttpStatusCode.NotFound);				
+			if (string.IsNullOrWhiteSpace(transformerName) || transformerName.StartsWith("/"))
+				return GetMessageWithString(String.Format("Invalid transformer name! Received : '{0}'",transformerName), HttpStatusCode.NotFound);				
 
 			var transformerDefinition = Database.Transformers.GetTransformerDefinition(transformerName);
 			if (transformerDefinition == null)
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			var serializedTransformerDefinition = RavenJObject.FromObject(transformerDefinition);
+			var clonedTransformerDefinition = transformerDefinition.Clone();
+			clonedTransformerDefinition.TransfomerId = 0;
+			
+			var serializedTransformerDefinition = RavenJObject.FromObject(clonedTransformerDefinition);
 			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
 
 			var failedDestinations = new ConcurrentBag<string>();
@@ -136,7 +139,7 @@ namespace Raven.Database.Server.Controllers
 				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain ?? string.Empty);
 			}
 
-			var urlTemplate = "{0}/databases/{1}/indexes/{2}";
+			var urlTemplate = "{0}/databases/{1}/transformers/{2}";
 			if (destination.Url.Contains("://") == false)
 				urlTemplate = "//" + urlTemplate;
 			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(transformerName));

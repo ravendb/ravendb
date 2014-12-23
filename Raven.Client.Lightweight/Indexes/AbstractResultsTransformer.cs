@@ -139,6 +139,7 @@ namespace Raven.Client.Indexes
 			var serverClient = databaseCommands as ServerClient;
 			if (serverClient == null)
 				return;
+			
 			var replicateIndexUrl = String.Format("/transformers/replicate/{0}", TransformerName);
 			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, "POST"))
 			{
