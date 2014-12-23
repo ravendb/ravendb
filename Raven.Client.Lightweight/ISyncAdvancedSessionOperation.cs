@@ -23,6 +23,7 @@ namespace Raven.Client
 		///     Access the eager operations
 		/// </summary>
 		IEagerSessionOperations Eagerly { get; }
+
 		/// <summary>
 		///     Access the lazy operations
 		/// </summary>
@@ -166,7 +167,7 @@ namespace Raven.Client
 		IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation);
 
 		/// <summary>
-		///     Stream the results of documents searhcto the client, converting them to CLR types along the way.
+		///     Stream the results of documents search to the client, converting them to CLR types along the way.
 		///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
 		/// </summary>
 		/// <param name="fromEtag">ETag of a document from which stream should start</param>

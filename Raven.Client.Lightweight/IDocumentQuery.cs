@@ -23,6 +23,7 @@ namespace Raven.Client
 		///     Whatever we should apply distinct operation to the query on the server side
 		/// </summary>
 		bool IsDistinct { get; }
+
 		/// <summary>
 		///     Gets the query result. Accessing this property for the first time will execute the query.
 		/// </summary>
@@ -80,9 +81,11 @@ namespace Raven.Client
 		IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections);
 
 		/// <summary>
-		///     Selects the projection fields directly from the index.
+		///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value
+		///     will come from document directly.
+		///     <para>Array of fields will be taken from TProjection</para>
 		/// </summary>
-		/// <typeparam name="TProjection">Type of the projection.</typeparam>
+		/// <typeparam name="TProjection">Type of the projection from which fields will be taken.</typeparam>
 		IDocumentQuery<TProjection> SelectFields<TProjection>();
 
 		/// <summary>

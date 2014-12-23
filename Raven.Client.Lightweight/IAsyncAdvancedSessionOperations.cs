@@ -3,165 +3,217 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
-using Raven.Client.Indexes;
 using Raven.Client.Document.Batches;
+using Raven.Client.Indexes;
 
 namespace Raven.Client
 {
 	/// <summary>
-	/// Advanced async session operations
+	///     Advanced async session operations
 	/// </summary>
 	public interface IAsyncAdvancedSessionOperations : IAdvancedDocumentSessionOperations
 	{
-       
-        /// <summary>
-        /// Access the eager operations
-        /// </summary>
-        /// <summary>
-        /// Access the lazy operations
-        /// </summary>
-        IAsyncLazySessionOperations Lazily { get; }
-
-        /// <summary>
-        /// Access the eager operations
-        /// </summary>
-        IAsyncEagerSessionOperations Eagerly { get; }
 		/// <summary>
-		/// Load documents with the specified key prefix
+		///     Access the eager operations
 		/// </summary>
-		Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+		IAsyncEagerSessionOperations Eagerly { get; }
 
 		/// <summary>
-		///  Loads documents with the specified key prefix and applies the specified results transformer against the results
+		///     Access the lazy operations
 		/// </summary>
-		/// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
-		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
-		Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null,
-		                                                                   int start = 0,
-		                                                                   int pageSize = 25, string exclude = null,
-		                                                                   RavenPagingInformation pagingInformation = null,
-																		   Action<ILoadConfiguration> configure = null, 
-																		   string skipAfter = null)
-			where TTransformer : AbstractTransformerCreationTask, new();
+		IAsyncLazySessionOperations Lazily { get; }
 
-	    /// <summary>
-	    /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
-	    /// </summary>
-	    /// <typeparam name="T">The result of the query</typeparam>
-	    /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-	    /// <returns></returns>
-        [Obsolete("Use AsyncDocumentQuery instead")]
-	    IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
+		/// <summary>
+		///     Queries the index specified by <typeparamref name="TIndexCreator" /> using lucene syntax.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+		IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 
-            /// <summary>
-		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+		/// <summary>
+		///     Query the specified index using Lucene syntax
+		/// </summary>
+		/// <param name="index">Name of the index.</param>
+		/// <param name="isMapReduce">Control how we treat identifier properties in map/reduce indexes</param>
+		IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce = false);
+
+		/// <summary>
+		///     Dynamically query RavenDB using Lucene syntax
+		/// </summary>
+		IAsyncDocumentQuery<T> AsyncDocumentQuery<T>();
+
+		/// <summary>
+		///     Queries the index specified by <typeparamref name="TIndexCreator" /> using lucene syntax.
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
 		/// <returns></returns>
-		IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
+		[Obsolete("Use AsyncDocumentQuery instead")]
+		IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 
 		/// <summary>
-		/// Query the specified index using Lucene syntax
+		///     Query the specified index using Lucene syntax
 		/// </summary>
-        [Obsolete("Use AsyncDocumentQuery instead")]
+		/// <param name="index">Name of the index.</param>
+		/// <param name="isMapReduce">Control how we treat identifier properties in map/reduce indexes</param>
+		[Obsolete("Use AsyncDocumentQuery instead")]
 		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce = false);
 
-        /// <summary>
-        /// Query the specified index using Lucene syntax
-        /// </summary>
-        IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce = false);
-
 		/// <summary>
-		/// Dynamically query RavenDB using Lucene syntax
+		///     Dynamically query RavenDB using Lucene syntax
 		/// </summary>
-        [Obsolete("Use AsyncDocumentQuery instead")]
+		[Obsolete("Use AsyncDocumentQuery instead")]
 		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>();
 
-        /// <summary>
-        /// Dynamically query RavenDB using Lucene syntax
-        /// </summary>
-        IAsyncDocumentQuery<T> AsyncDocumentQuery<T>();
+		/// <summary>
+		///     Returns full document url for a given entity
+		/// </summary>
+		/// <param name="entity">Instance of an entity for which url will be returned</param>
+		string GetDocumentUrl(object entity);
 
 		/// <summary>
-		/// Stores the specified entity with the specified etag.
-		/// The entity will be saved when <see cref="IAsyncDocumentSession.SaveChangesAsync"/> is called.
+		///     Loads multiple entities that contain common prefix.
+		/// </summary>
+		/// <param name="keyPrefix">prefix for which documents should be returned e.g. "products/"</param>
+		/// <param name="matches">
+		///     pipe ('|') separated values for which document keys (after 'keyPrefix') should be matched ('?'
+		///     any single character, '*' any characters)
+		/// </param>
+		/// <param name="start">number of documents that should be skipped. By default: 0.</param>
+		/// <param name="pageSize">maximum number of documents that will be retrieved. By default: 25.</param>
+		/// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
+		/// <param name="exclude">
+		///     pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched
+		///     ('?' any single character, '*' any characters)
+		/// </param>
+		/// <param name="skipAfter">
+		///     skip document fetching until given key is found and return documents after that key (default:
+		///     null)
+		/// </param>
+		Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+
+		/// <summary>
+		///     Loads multiple entities that contain common prefix and applies specified transformer.
+		/// </summary>
+		/// <param name="keyPrefix">prefix for which documents should be returned e.g. "products/"</param>
+		/// <param name="matches">
+		///     pipe ('|') separated values for which document keys (after 'keyPrefix') should be matched ('?'
+		///     any single character, '*' any characters)
+		/// </param>
+		/// <param name="start">number of documents that should be skipped. By default: 0.</param>
+		/// <param name="pageSize">maximum number of documents that will be retrieved. By default: 25.</param>
+		/// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
+		/// <param name="exclude">
+		///     pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched
+		///     ('?' any single character, '*' any characters)
+		/// </param>
+		/// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
+		/// <param name="skipAfter">
+		///     skip document fetching until given key is found and return documents after that key (default:
+		///     null)
+		/// </param>
+		Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null, string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new();
+
+		/// <summary>
+		///     Updates entity with latest changes from server
+		/// </summary>
+		/// <param name="entity">Instance of an entity that will be refreshed</param>
+		Task RefreshAsync<T>(T entity);
+
+		/// <summary>
+		///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available and
+		///     forces concurrency check with given Etag
 		/// </summary>
 		void Store(object entity, Etag etag);
 
 		/// <summary>
-		/// Stores the specified entity in the session. The entity will be saved when <see cref="IAsyncDocumentSession.SaveChangesAsync"/> is called.
-		/// </summary>
-		/// <param name="entity">The entity.</param>
-		void Store(object entity);
-
-		/// <summary>
-		/// Stores the specified entity with the specified etag, under the specified id
+		///     Stores entity in session with given id and forces concurrency check with given Etag.
 		/// </summary>
 		void Store(object entity, Etag etag, string id);
 
 		/// <summary>
-		/// Stores the specified dynamic entity, under the specified id
+		///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available.
+		///     <para>Forces concurrency check if the Id is not available during extraction.</para>
 		/// </summary>
-		/// <param name="entity">The entity.</param>
-		/// <param name="id">The id to store this entity under. If other entity exists with the same id it will be overridden.</param>
-		void Store(object entity, string id);
-
+		/// <param name="entity">entity to store.</param>
+		void Store(object entity);
 
 		/// <summary>
-		/// Stream the results on the query to the client, converting them to 
-		/// CLR types along the way.
-		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		///     Stores the specified dynamic entity, under the specified id.
 		/// </summary>
+		/// <param name="entity">entity to store.</param>
+		/// <param name="id">Id to store this entity under. If other entity exists with the same id it will be overridden.</param>
+		void Store(object entity, string id);
+
+		/// <summary>
+		///     Stream the results on the query to the client, converting them to
+		///     CLR types along the way.
+		///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
+		/// </summary>
+		/// <param name="query">Query to stream results for</param>
 		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query);
 
 		/// <summary>
-		/// Stream the results on the query to the client, converting them to 
-		/// CLR types along the way.
-		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		///     Stream the results on the query to the client, converting them to
+		///     CLR types along the way.
+		///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
 		/// </summary>
+		/// <param name="query">Query to stream results for</param>
 		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query);
 
 		/// <summary>
-		/// Stream the results on the query to the client, converting them to 
-		/// CLR types along the way.
-		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		///     Stream the results on the query to the client, converting them to
+		///     CLR types along the way.
+		///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
 		/// </summary>
+		/// <param name="query">Query to stream results for</param>
+		/// <param name="queryHeaderInformation">Information about performed query</param>
 		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
 
 		/// <summary>
-		/// Stream the results on the query to the client, converting them to 
-		/// CLR types along the way.
-		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		///     Stream the results on the query to the client, converting them to
+		///     CLR types along the way.
+		///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
 		/// </summary>
+		/// <param name="query">Query to stream results for</param>
+		/// <param name="queryHeaderInformation">Information about performed query</param>
 		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
 
-
 		/// <summary>
-		/// Stream the results of documents searhcto the client, converting them to CLR types along the way.
-		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		///     Stream the results of documents search to the client, converting them to CLR types along the way.
+		///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
 		/// </summary>
+		/// <param name="fromEtag">ETag of a document from which stream should start</param>
+		/// <param name="start">number of documents that should be skipped</param>
+		/// <param name="pageSize">maximum number of documents that will be retrieved</param>
+		/// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
 		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null);
 
-
 		/// <summary>
-		/// Stream the results of documents searhcto the client, converting them to CLR types along the way.
-		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
+		///     Stream the results of documents search to the client, converting them to CLR types along the way.
+		///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
 		/// </summary>
-		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null);
-
-		/// <summary>
-		/// Refreshes the specified entity from Raven server.
-		/// </summary>
-		/// <param name="entity">The entity.</param>
-		Task RefreshAsync<T>(T entity);
-
+		/// <param name="startsWith">prefix for which documents should be returned e.g. "products/"</param>
+		/// <param name="matches">
+		///     pipe ('|') separated values for which document keys (after 'keyPrefix') should be matched ('?'
+		///     any single character, '*' any characters)
+		/// </param>
+		/// <param name="start">number of documents that should be skipped</param>
+		/// <param name="pageSize">maximum number of documents that will be retrieved</param>
+		/// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
+		/// <param name="skipAfter">
+		///     skip document fetching until given key is found and return documents after that key (default:
+		///     null)
+		/// </param>
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 	}
 }
