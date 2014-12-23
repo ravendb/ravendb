@@ -131,7 +131,6 @@ namespace Raven.Client
 		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
 		/// <param name="id">Id of a document to load</param>
 		/// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
-		/// <returns></returns>
 		TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
@@ -196,7 +195,6 @@ namespace Raven.Client
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-		/// <returns></returns>
 		IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 
 		/// <summary>
@@ -220,13 +218,13 @@ namespace Raven.Client
 		///     <para>Forces concurrency check if the Id is not available during extraction.</para>
 		/// </summary>
 		/// <param name="entity">entity to store.</param>
-		void Store(dynamic entity);
+		void Store(object entity);
 
 		/// <summary>
 		///     Stores the specified dynamic entity, under the specified id.
 		/// </summary>
 		/// <param name="entity">entity to store.</param>
 		/// <param name="id">Id to store this entity under. If other entity exists with the same id it will be overridden.</param>
-		void Store(dynamic entity, string id);
+		void Store(object entity, string id);
 	}
 }
