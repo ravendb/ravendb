@@ -33,6 +33,9 @@ namespace Raven.Abstractions.Data
 
 		/// <summary>
 		/// Method used to check if request has errors.
+		/// <para>Returns:</para>
+		/// <para>- <c>false</c> - if Status is 0, 200, 201, 203, 204, 304 and 404</para>
+		/// <para>- <c>true</c> - otherwise</para>
 		/// </summary>
 		/// <returns><c>false</c> if Status is 0, 200, 201, 203, 204, 304 and 404. <c>True</c> otherwise.</returns>
 		public bool RequestHasErrors()

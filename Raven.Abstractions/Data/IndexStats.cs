@@ -106,9 +106,9 @@ namespace Raven.Abstractions.Data
 
 		/// <summary>
 		/// Indicates current lock mode:
-		/// - Unlock - all index definition changes acceptable
-		/// - LockedIgnore - all index definition changes will be ignored, only log entry will be created
-		/// - LockedError - all index definition changes will raise exception
+		/// <para>- Unlock - all index definition changes acceptable</para>
+		/// <para>- LockedIgnore - all index definition changes will be ignored, only log entry will be created</para>
+		/// <para>- LockedError - all index definition changes will raise exception</para>
 		/// </summary>
 		public IndexLockMode LockMode { get; set; }
 

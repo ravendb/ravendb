@@ -3,99 +3,114 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+
 using Raven.Abstractions.Data;
-using Raven.Client.Linq;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
-using System.Threading.Tasks;
 
 namespace Raven.Client
 {
 	/// <summary>
-	/// A query against a Raven index
+	///     A query against a Raven index
 	/// </summary>
 	public interface IDocumentQuery<T> : IEnumerable<T>, IDocumentQueryBase<T, IDocumentQuery<T>>
 	{
 		/// <summary>
-		/// Selects the specified fields directly from the index
+		///     Whatever we should apply distinct operation to the query on the server side
 		/// </summary>
-		/// <typeparam name="TProjection">The type of the projection.</typeparam>
-		/// <param name="fields">The fields.</param>
-		IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
-
-		/// <summary>
-		/// Selects the specified fields directly from the index
-		/// </summary>
-		/// <typeparam name="TProjection">The type of the projection.</typeparam>
-		IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections);
-
-		/// <summary>
-		/// Selects the projection fields directly from the index
-		/// </summary>
-		/// <typeparam name="TProjection">The type of the projection.</typeparam>
-		IDocumentQuery<TProjection> SelectFields<TProjection>();
-
-		/// <summary>
-		/// User definied inputs that can be used in transformer
-		/// </summary>
-		/// <param name="queryInputs"></param>
-		[Obsolete("Use SetTransformerParameters instead.")]
-		void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
-
-		/// <summary>
-		/// User definied inputs that can be used in transformer
-		/// </summary>
-		/// <param name="transformerParameters"></param>
-		void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
-
-		/// <summary>
-		/// Gets the query result
-		/// Execute the query the first time that this is called.
-		/// </summary>
-		/// <value>The query result.</value>
-		QueryResult QueryResult { get; }
 		bool IsDistinct { get; }
 
 		/// <summary>
-		/// Register the query as a lazy query in the session and return a lazy
-		/// instance that will evaluate the query only when needed
+		///     Gets the query result. Accessing this property for the first time will execute the query.
 		/// </summary>
-		Lazy<IEnumerable<T>> Lazily();
+		QueryResult QueryResult { get; }
 
 		/// <summary>
-		/// Register the query as a lazy query in the session and return a lazy
-		/// instance that will evaluate the query only when needed.
-		/// Also provide a function to execute when the value is evaluated
-		/// </summary>
-		Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval);
-
-		/// <summary>
-		/// Register the query as a lazy-count query in the session and return a lazy
-		/// instance that will evaluate the query only when needed.
+		///     Register the query as a lazy-count query in the session and return a lazy
+		///     instance that will evaluate the query only when needed.
 		/// </summary>
 		Lazy<int> CountLazily();
 
 		/// <summary>
-		/// Create the index query object for this query
-		/// </summary>
-		IndexQuery GetIndexQuery(bool isAsync);
-
-		IDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-		IDocumentQuery<T> Spatial(string name, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-		/// <summary>
-		/// Get the facets as per the specified doc with the given start and pageSize
+		///     Get the facets as per the specified doc with the given start and pageSize
 		/// </summary>
 		FacetResults GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize);
 
 		/// <summary>
-		/// Get the facets as per the specified facets with the given start and pageSize
+		///     Get the facets as per the specified facets with the given start and pageSize
 		/// </summary>
 		FacetResults GetFacets(List<Facet> facets, int facetStart, int? facetPageSize);
 
-    }
+		/// <summary>
+		///     Create the index query object for this query
+		/// </summary>
+		IndexQuery GetIndexQuery(bool isAsync);
+
+		/// <summary>
+		///     Register the query as a lazy query in the session and return a lazy
+		///     instance that will evaluate the query only when needed
+		/// </summary>
+		Lazy<IEnumerable<T>> Lazily();
+
+		/// <summary>
+		///     Register the query as a lazy query in the session and return a lazy
+		///     instance that will evaluate the query only when needed.
+		///     Also provide a function to execute when the value is evaluated
+		/// </summary>
+		Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval);
+
+		/// <summary>
+		///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value
+		///     will come from document directly.
+		/// </summary>
+		/// <typeparam name="TProjection">Type of the projection.</typeparam>
+		/// <param name="fields">Array of fields to load.</param>
+		IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
+
+		/// <summary>
+		///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value
+		///     will come from document directly.
+		/// </summary>
+		/// <typeparam name="TProjection">Type of the projection.</typeparam>
+		/// <param name="fields">Array of fields to load.</param>
+		/// <param name="projections">Array of field projections.</param>
+		IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections);
+
+		/// <summary>
+		///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value
+		///     will come from document directly.
+		///     <para>Array of fields will be taken from TProjection</para>
+		/// </summary>
+		/// <typeparam name="TProjection">Type of the projection from which fields will be taken.</typeparam>
+		IDocumentQuery<TProjection> SelectFields<TProjection>();
+
+		/// <summary>
+		///     Transformer parameters that will be passed to transformer if one is specified.
+		/// </summary>
+		[Obsolete("Use SetTransformerParameters instead.")]
+		void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
+
+		/// <summary>
+		///     Transformer parameters that will be passed to transformer if one is specified.
+		/// </summary>
+		void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
+
+		/// <summary>
+		///     Ability to use one factory to determine spatial shape that will be used in query.
+		/// </summary>
+		/// <param name="path">Spatial field name.</param>
+		/// <param name="clause">function with spatial criteria factory</param>
+		IDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+		/// <summary>
+		///     Ability to use one factory to determine spatial shape that will be used in query.
+		/// </summary>
+		/// <param name="fieldName">Spatial field name.</param>
+		/// <param name="clause">function with spatial criteria factory</param>
+		IDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+	}
 }

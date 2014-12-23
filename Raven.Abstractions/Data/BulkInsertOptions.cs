@@ -28,12 +28,16 @@
 
 		/// <summary>
 		/// Number of documents to send in each bulk insert batch.
+		/// <para>Value:</para>
+		/// <para>512 by default</para>
 		/// </summary>
 		/// <value>512 by default</value>
 		public int BatchSize { get; set; }
 
 		/// <summary>
 		/// Maximum timeout in milliseconds to wait for document write. Exception will be thrown when timeout is elapsed.
+		/// <para>Value:</para>
+		/// <para>15000 milliseconds by default</para>
 		/// </summary>
 		/// <value>15000 milliseconds by default</value>
 		public int WriteTimeoutMilliseconds { get; set; }
