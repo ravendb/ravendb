@@ -77,40 +77,68 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
+		[Route("indexes/replicate-all")]
+		[Route("databases/{databaseName}/indexes/replicate-all")]
+		public HttpResponseMessage IndexReplicate()
+		{
+			//check for replication document before doing work on getting index definitions.
+			//if there is no replication set up --> no point in doing any other work
+			HttpResponseMessage erroResponseMessage;
+			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
+			if (replicationDocument == null)
+				return erroResponseMessage;
+
+			var indexDefinitions = Database.IndexDefinitionStorage
+										   .IndexDefinitions
+										   .Select(x => x.Value)
+										   .ToList();
+
+			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
+
+			var enabledReplicationDestinations = replicationDocument.Destinations
+																	.Where(dest => dest.Disabled == false)
+																	.ToList();
+
+			if (enabledReplicationDestinations.Count == 0)
+				return GetMessageWithString("Replication is configured, but no enabled destinations found.", HttpStatusCode.NotFound);
+
+			var replicationRequestTasks = new List<Task>(enabledReplicationDestinations.Count * indexDefinitions.Count);
+
+			var failedDestinations = new ConcurrentBag<string>();
+			foreach (var definition in indexDefinitions)
+			{
+				replicationRequestTasks.AddRange(
+					enabledReplicationDestinations
+									   .Select(destination => 
+										   Task.Run(() => 
+											   ReplicateIndex(definition.Name, destination, 
+													RavenJObject.FromObject(definition), 
+													failedDestinations, 
+													httpRavenRequestFactory))).ToList());
+			}
+
+			Task.WaitAll(replicationRequestTasks.ToArray());
+
+			return GetMessageWithObject(new
+			{
+				SuccessfulReplicationCount = (replicationDocument.Destinations.Count - failedDestinations.Count),
+				FailedDestinationUrls = failedDestinations
+			});
+		}
+
+		[HttpPost]
 		[Route("indexes/replicate/{*indexName}")]
 		[Route("databases/{databaseName}/indexes/replicate/{*indexName}")]
 		public HttpResponseMessage IndexReplicate(string indexName)
 		{
 			if (String.IsNullOrWhiteSpace(indexName)) throw new ArgumentNullException("indexName");
 
-			JsonDocument replicationDestinationsDocument;
-			try
-			{
-				replicationDestinationsDocument = Database.Documents.Get(Constants.RavenReplicationDestinations, null);
-			}
-			catch (Exception e)
-			{
-				const string errorMessage = "Something very wrong has happened, was unable to retrieve replication destinations.";
-				Log.ErrorException(errorMessage, e);
-				return GetMessageWithObject(new { Message = errorMessage + " Check server logs for more details." }, HttpStatusCode.InternalServerError);
-			}
-
-			if (replicationDestinationsDocument == null)
-			{
-				return GetMessageWithObject(new { Message = "Replication destinations not found. Perhaps no replication is configured? Nothing to do in this case..." },HttpStatusCode.NotFound);
-			}
-
-			var replicationDocument = 
-					replicationDestinationsDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
-			
-			replicationDocument.Destinations.RemoveAll(dest => dest.SkipIndexReplication);
-			if (replicationDocument.Destinations.Count == 0) //precaution
-			{
-				return GetMessageWithObject(new {Message = @"Replication document found, but no destinations configured for index replication. 
-																Maybe all replication destinations have SkipIndexReplication flag equals to true?  
-																Nothing to do in this case..."}, 
-																HttpStatusCode.NoContent);
-			}
+			//check for replication document before doing work on getting index definitions.
+			//if there is no replication set up --> no point in doing any other work
+			HttpResponseMessage erroResponseMessage;
+			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
+			if (replicationDocument == null)
+				return erroResponseMessage;
 
 			if (indexName.EndsWith("/")) //since id is part of the url, perhaps a trailing forward slash appears there
 				indexName = indexName.Substring(0, indexName.Length - 1);
