@@ -1,9 +1,15 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using JetBrains.Annotations;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
@@ -79,6 +85,73 @@ namespace Raven.Database.Server.Controllers
 		{
 			Database.Transformers.DeleteTransform(id);
 			return GetEmptyMessage(HttpStatusCode.NoContent);
+		}
+
+		[HttpPost]
+		[Route("transformers/replicate/{*transformerName}")]
+		[Route("databases/{databaseName}/transformers/replicate/{*transformerName}")]
+		public HttpResponseMessage TransformersReplicate(string transformerName)
+		{
+			if (transformerName == null) 
+				throw new ArgumentNullException("transformerName");
+
+			HttpResponseMessage erroResponseMessage;
+			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
+			if (replicationDocument == null)
+				return erroResponseMessage;
+
+			if (string.IsNullOrWhiteSpace(transformerName) == false && transformerName != "/")
+				return GetMessageWithString("Invalid transformer name",HttpStatusCode.NotFound);				
+
+			var transformerDefinition = Database.Transformers.GetTransformerDefinition(transformerName);
+			if (transformerDefinition == null)
+				return GetEmptyMessage(HttpStatusCode.NotFound);
+
+			var serializedTransformerDefinition = RavenJObject.FromObject(transformerDefinition);
+			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
+
+			var failedDestinations = new ConcurrentBag<string>();
+			Parallel.ForEach(replicationDocument.Destinations,
+				destination => ReplicateTransformer(transformerName, destination, serializedTransformerDefinition, failedDestinations, httpRavenRequestFactory));
+
+			return GetMessageWithObject(new
+			{
+				SuccessfulReplicationCount = (replicationDocument.Destinations.Count - failedDestinations.Count),
+				FailedDestinationUrls = failedDestinations
+			});			
+		}
+
+		private void ReplicateTransformer(string transformerName, ReplicationDestination destination, RavenJObject transformerDefinition, ConcurrentBag<string> failedDestinations, HttpRavenRequestFactory httpRavenRequestFactory)
+		{
+			var connectionOptions = new RavenConnectionStringOptions
+			{
+				ApiKey = destination.ApiKey,
+				Url = destination.Url,
+				DefaultDatabase = destination.Database
+			};
+
+			if (!String.IsNullOrWhiteSpace(destination.Username) &&
+				!String.IsNullOrWhiteSpace(destination.Password))
+			{
+				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain ?? string.Empty);
+			}
+
+			var urlTemplate = "{0}/databases/{1}/indexes/{2}";
+			if (destination.Url.Contains("://") == false)
+				urlTemplate = "//" + urlTemplate;
+			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(transformerName));
+			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
+			replicationRequest.Write(transformerDefinition);
+
+			try
+			{
+				replicationRequest.ExecuteRequest();
+			}
+			catch (Exception e)
+			{
+				Log.ErrorException("failed to replicate index to: " + destination.Url, e);
+				failedDestinations.Add(destination.Url);
+			}
 		}
 	}
 }
