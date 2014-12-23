@@ -104,24 +104,11 @@ namespace Raven.Client.Connection
 			return asyncServerClient.ExecuteGetRequest(requestUrl).ResultUnwrap();
 		}
 
-		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method,
-			bool disableRequestCompression = false)
-		{
-			return asyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method,
-				disableRequestCompression);
-		}
-
 		internal T ExecuteWithReplication<T>(string method, Func<OperationMetadata, T> operation)
 		{
 			return
 				asyncServerClient.ExecuteWithReplication(method,
 					operationMetadata => Task.FromResult(operation(operationMetadata))).ResultUnwrap();
-		}
-
-		public JsonDocument DirectGet(OperationMetadata operationMetadata, string key, string transformer = null)
-		{
-			//TODO: add transformer
-			return asyncServerClient.DirectGetAsync(operationMetadata, key).ResultUnwrap();
 		}
 
 		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
@@ -360,7 +347,7 @@ namespace Raven.Client.Connection
 
 		public IDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new ServerClient((AsyncServerClient)asyncServerClient.With(credentialsForSession)); //TODO This cast is bad
+			return new ServerClient(asyncServerClient.WithInternal(credentialsForSession));
 		}
 
 		public IDisposable ForceReadFromMaster()
@@ -370,12 +357,12 @@ namespace Raven.Client.Connection
 
 		public IDatabaseCommands ForDatabase(string database)
 		{
-			return new ServerClient((AsyncServerClient)asyncServerClient.ForDatabase(database)); //TODO This cast is bad
+			return new ServerClient(asyncServerClient.ForDatabaseInternal(database));
 		}
 
 		public IDatabaseCommands ForSystemDatabase()
 		{
-			return new ServerClient((AsyncServerClient)asyncServerClient.ForSystemDatabase()); //TODO This cast is bad
+			return new ServerClient(asyncServerClient.ForSystemDatabaseInternal());
 		}
 
 		public string Url

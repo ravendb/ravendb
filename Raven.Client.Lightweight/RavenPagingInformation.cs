@@ -24,10 +24,6 @@ namespace Raven.Client
 				throw new InvalidOperationException("PageSize must be greater than 0.");
 
 			Start = start;
-			if (pageSize == 0)
-			{
-				
-			}
 			PageSize = pageSize;
 			NextPageStart = nextPageStart;
 		}

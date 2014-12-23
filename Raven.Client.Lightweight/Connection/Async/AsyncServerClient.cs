@@ -493,30 +493,34 @@ namespace Raven.Client.Connection.Async
 
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
+			return ForDatabaseInternal(database);
+		}
+
+		public IAsyncDatabaseCommands ForSystemDatabase()
+		{
+			return ForSystemDatabaseInternal();
+		}
+
+		internal AsyncServerClient ForDatabaseInternal(string database)
+		{
 			if (database == Constants.SystemDatabase)
-				return ForSystemDatabase();
+				return ForSystemDatabaseInternal();
 
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			databaseUrl = databaseUrl + "/databases/" + database + "/";
 			if (databaseUrl == url)
 				return this;
-			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId,
-										 replicationInformerGetter, database, conflictListeners, false)
-			{
-				operationsHeaders = operationsHeaders
-			};
+
+			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, replicationInformerGetter, database, conflictListeners, false) { operationsHeaders = operationsHeaders };
 		}
 
-		public IAsyncDatabaseCommands ForSystemDatabase()
+		internal AsyncServerClient ForSystemDatabaseInternal()
 		{
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == url)
 				return this;
-			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId,
-										 replicationInformerGetter, databaseName, conflictListeners, false)
-			{
-				operationsHeaders = operationsHeaders
-			};
+
+			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, replicationInformerGetter, databaseName, conflictListeners, false) { operationsHeaders = operationsHeaders };
 		}
 
 		public NameValueCollection OperationsHeaders
@@ -2183,6 +2187,11 @@ namespace Raven.Client.Connection.Async
 		}
 
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
+		{
+			return WithInternal(credentialsForSession);
+		}
+
+		internal AsyncServerClient WithInternal(ICredentials credentialsForSession)
 		{
 			return new AsyncServerClient(url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId,
 										 replicationInformerGetter, databaseName, conflictListeners, false);
