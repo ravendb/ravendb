@@ -990,7 +990,7 @@ namespace Raven.Database.Indexing
 		}
 
 		[CLSCompliant(false)]
-		public void Index(int index,
+		public IndexingPerformanceStats Index(int index,
 			AbstractViewGenerator viewGenerator,
 			IndexingBatch batch,
 			WorkContext context,
@@ -1001,22 +1001,24 @@ namespace Raven.Database.Indexing
 			if (indexes.TryGetValue(index, out value) == false)
 			{
 				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
-				return;
+				return null;
 			}
 			using (EnsureInvariantCulture())
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
-				value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp);
+				var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp);
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = value.PublicName,
 					Type = IndexChangeTypes.MapCompleted
 				});
+
+				return performance;
 			}
 		}
 
 		[CLSCompliant(false)]
-		public void Reduce(
+		public IndexingPerformanceStats Reduce(
 			int index,
 			AbstractViewGenerator viewGenerator,
 			IEnumerable<IGrouping<int, object>> mappedResults,
@@ -1030,23 +1032,27 @@ namespace Raven.Database.Indexing
 			if (value == null)
 			{
 				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
-				return;
+				return null;
 			}
 			var mapReduceIndex = value as MapReduceIndex;
 			if (mapReduceIndex == null)
 			{
 				log.Warn("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
-				return;
+				return null;
 			}
 			using (EnsureInvariantCulture())
 			{
 				var reduceDocuments = new MapReduceIndex.ReduceDocuments(mapReduceIndex, viewGenerator, mappedResults, level, context, actions, reduceKeys, inputCount);
-				reduceDocuments.ExecuteReduction();
+
+				var performance = reduceDocuments.ExecuteReduction();
+
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = value.PublicName,
 					Type = IndexChangeTypes.ReduceCompleted
 				});
+
+				return performance;
 			}
 		}
 
@@ -1433,9 +1439,11 @@ namespace Raven.Database.Indexing
 			return GetIndexInstance(id).IsOnRam;
 		}
 
-		public void ForceWriteToDisk(string index)
+        public void ForceWriteToDiskAndWriteInMemoryIndexToDiskIfNecessary(string indexName)
 		{
-			GetIndexByName(index).ForceWriteToDisk();
+			var index = GetIndexByName(indexName);
+            index.ForceWriteToDisk();
+            index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
 		}
 
 		internal bool ReplaceIndex(string indexName, string indexToReplaceName)

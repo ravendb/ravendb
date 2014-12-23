@@ -15,11 +15,11 @@ using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.Tests.Smuggler
 {
-	public class RavenDB_895 : RavenTest
-	{
-	    private readonly string file;
+    public class SmugglerTransformScriptsTests : RavenTest
+    {
+        private readonly string file;
 
 	    private class Foo
 		{
@@ -30,7 +30,7 @@ namespace Raven.Tests.Issues
 			public string NameImport { get; set; }
 		}
 
-	    public RavenDB_895()
+        public SmugglerTransformScriptsTests()
 	    {
             file = Path.GetTempFileName();
 	    }
@@ -174,5 +174,5 @@ namespace Raven.Tests.Issues
 	            }
 	        }
 		}
-	}
+    }
 }

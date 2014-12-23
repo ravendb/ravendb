@@ -1,45 +1,34 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using Raven.Client;
 using Raven.Client.Embedded;
-using Raven.Database.Config;
+using Raven.SlowTests.Issues;
+using Raven.Tests.Core;
+using Raven.Tests.Core.Querying;
 
 namespace Raven.Tryouts
 {
-	public class Program
+    public class Program
 	{
-		//average - voron 271ms
-		static void Main(string[] args)
+		private static void Main()
 		{
-			var creationTimings = new List<long>();
-			for (var i = 0; i < 100; i++)
+			Console.WriteLine("3.0");
+			for (int i = 0; i < 25; i++)
 			{
-				var sw = Stopwatch.StartNew();
-				using (CreateAndInitStore())
+				var sp = Stopwatch.StartNew();
+				using (var store = new EmbeddableDocumentStore()
 				{
-					long elapsedMilliseconds = sw.ElapsedMilliseconds;
-					Console.WriteLine("{0}ms", elapsedMilliseconds);
-					creationTimings.Add(elapsedMilliseconds);
+					RunInMemory = true,
+					
+				}.Initialize())
+				{
+					store.DatabaseCommands.Get("hello");
 				}
+				Console.WriteLine(sp.ElapsedMilliseconds);
 			}
 
-			Console.WriteLine("Average timing: {0}ms", creationTimings.Average());
-		}
-
-		private static IDocumentStore CreateAndInitStore()
-		{
-			var store = new EmbeddableDocumentStore
-			{
-				RunInMemory = true,				
-			};
-			store.Initialize();
-
-			return store;
 		}
 	}
 
 
-
+	
 }

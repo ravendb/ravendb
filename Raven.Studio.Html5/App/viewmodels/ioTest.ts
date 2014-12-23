@@ -176,7 +176,7 @@ class ioTest extends viewModelBase {
         var diskTestParams = this.ioTestRequest.toDto();
 
         require(["commands/ioTestCommand"], ioTestCommand => {
-            this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams);
+            this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams); 
             this.lastCommand
                 .execute()
                 .done(() => {

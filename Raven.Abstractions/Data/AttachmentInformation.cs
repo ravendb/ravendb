@@ -11,30 +11,30 @@ using Raven.Json.Linq;
 namespace Raven.Database.Data
 {
 	/// <summary>
-	/// Describe an attachment, but without the actual attachment data
+	/// Describes an attachment, but without the actual attachment data
 	/// </summary>
     [Obsolete("Use RavenFS instead.")]
 	public class AttachmentInformation
 	{
 		/// <summary>
-		/// Gets or sets the size.
+		/// Attachment size in bytes.
 		/// </summary>
-		/// <value>The size.</value>
+		/// <remarks>The max size of an attachment can be 2GB.</remarks>
 		public int Size { get; set; }
+
 		/// <summary>
-		/// Gets or sets the key.
+		/// Key of an attachment.
 		/// </summary>
-		/// <value>The key.</value>
 		public string Key { get; set; }
+
 		/// <summary>
-		/// Gets or sets the metadata.
+		/// RavenJObject representing attachment's metadata.
 		/// </summary>
-		/// <value>The metadata.</value>
 		public RavenJObject Metadata { get; set; }
+
 		/// <summary>
-		/// Gets or sets the etag.
+		/// Current attachment etag.
 		/// </summary>
-		/// <value>The etag.</value>
 		public Etag Etag { get; set; }
 	}
 }

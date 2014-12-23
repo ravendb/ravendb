@@ -218,7 +218,7 @@ namespace Raven.Database.Impl
 				return doc;
 				
 			doc = actions.Documents.DocumentByKey(key);
-			EnsureIdInMetadata(doc);
+            JsonDocument.EnsureIdInMetadata(doc);
 
 			if (doc != null && doc.Metadata != null)
 				doc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
@@ -236,19 +236,6 @@ namespace Raven.Database.Impl
 				cache.Clear();
 			}
 			return doc;
-		}
-
-		public static void EnsureIdInMetadata(IJsonDocumentMetadata doc)
-		{
-			if (doc == null || doc.Metadata == null)
-				return;
-
-			if (doc.Metadata.IsSnapshot)
-			{
-				doc.Metadata = (RavenJObject)doc.Metadata.CreateSnapshot();
-			}
-
-			doc.Metadata["@id"] = doc.Key;
 		}
 
 		public bool ShouldIncludeResultInQuery(IndexQueryResult arg, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch, bool skipDuplicateCheck)

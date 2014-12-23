@@ -18,12 +18,11 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Gets or sets the document resulting from this query.
 		/// </summary>
-		/// <value>The results.</value>
 		public List<RavenJObject> Results { get; set; }
+
 		/// <summary>
 		/// Gets or sets the document included in the result.
 		/// </summary>
-		/// <value>The includes.</value>
 		public List<RavenJObject> Includes { get; set; }
 
 		/// <summary>
@@ -41,13 +40,11 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Gets or sets the total results for this query
 		/// </summary>
-		/// <value>The total results.</value>
 		public int TotalResults { get; set; }
 
 		/// <summary>
 		/// Gets or sets the skipped results
 		/// </summary>
-		/// <value>The skipped results.</value>
 		public int SkippedResults { get; set; }
 
 		/// <summary>
@@ -62,18 +59,18 @@ namespace Raven.Abstractions.Data
 		public Etag IndexEtag { get; set; }
 
 		/// <summary>
-		/// The ETag value for this index current state, which include what we docs we indexed,
+		/// The ETag value for this index current state, which include what docs were indexed,
 		/// what document were deleted, etc.
 		/// </summary>
 		public Etag ResultEtag { get; set; }
 
         /// <summary>
-        /// Gets or sets highlighter results 
+        /// Highlighter results (if requested).
         /// </summary>
         public Dictionary<string, Dictionary<string, string[]>> Highlightings { get; set; }
 
 		/// <summary>
-		/// Gets or sets a value indicating whether any of the documents returned by this query
+		/// Indicates whether any of the documents returned by this query
 		/// are non authoritative (modified by uncommitted transaction).
 		/// </summary>
 		public bool NonAuthoritativeInformation { get; set; }
@@ -89,15 +86,14 @@ namespace Raven.Abstractions.Data
 		public long DurationMilliseconds { get; set; }
 
 		/// <summary>
-		/// Gets or sets explanations of document scores 
+		/// Explanations of document scores (if requested).
 		/// </summary>
 		public Dictionary<string, string> ScoreExplanations { get; set; }
 
 		/// <summary>
-		/// Detailed timings for various parts of a query (Lucene search, loading documents, transforming results)
+		/// Detailed timings for various parts of a query (Lucene search, loading documents, transforming results) - if requested.
 		/// </summary>
 		public Dictionary<string, double> TimingsInMilliseconds { get; set; }
-
 
 		/// <summary>
 		/// The size of the request which were sent from the server.

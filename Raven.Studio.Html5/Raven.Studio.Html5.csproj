@@ -338,6 +338,8 @@
     <TypeScriptCompile Include="App\commands\getStatusStorageOnDiskCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusStorageBreakdownCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingBatchStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getReducingBatchStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\persistIndexCommand.ts" />
     <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
@@ -421,6 +423,7 @@
     <TypeScriptCompile Include="App\viewmodels\requests.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexing.ts" />
     <TypeScriptCompile Include="App\viewmodels\replaceIndexDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugPersistAutoIndex.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\adminSettings.html" />
@@ -429,6 +432,7 @@
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
+    <Content Include="App\views\statusDebugPersistAutoIndex.html" />
     <Content Include="App\views\indexing.html" />
     <Content Include="App\views\replaceIndexDialog.html" />
     <Content Include="App\views\statusStorageCollections.html" />
@@ -843,6 +847,7 @@
     <Content Include="Scripts\bootstrap-multiselect.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
+    <Content Include="Scripts\d3\dagre.js" />
     <Content Include="Scripts\durandal\activator.js" />
     <Content Include="Scripts\durandal\app.js" />
     <Content Include="Scripts\durandal\binder.js" />
@@ -864,7 +869,7 @@
     <Content Include="Scripts\jszip\jszip.js" />
     <Content Include="Scripts\knockout-3.2.0.js" />
     <Content Include="Scripts\knockout.mapping-2.4.1.js" />
-    <Content Include="Scripts\nvd3\d3.js" />
+    <Content Include="Scripts\d3\d3.js" />
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
     <Content Include="fonts\glyphicons-halflings-regular.ttf" />
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
@@ -906,12 +911,13 @@
     <Content Include="Scripts\moment.js" />
     <Content Include="Scripts\moment.min.js" />
     <Content Include="Scripts\nprogress.js" />
-    <Content Include="Scripts\nvd3\models\timelines.js" />
-    <Content Include="Scripts\nvd3\models\timelinesChart.js" />
-    <Content Include="Scripts\nvd3\nv.js" />
+    <Content Include="Scripts\d3\models\timelines.js" />
+    <Content Include="Scripts\d3\models\timelinesChart.js" />
+    <Content Include="Scripts\d3\nv.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
     <Content Include="Scripts\typings\bootstrap.multiselect\bootstrap.multiselect.d.ts" />
+    <Content Include="Scripts\typings\d3\dagreD3.d.ts" />
     <Content Include="Scripts\typings\d3\d3.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />

@@ -163,7 +163,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 			if (replicationDestination.Disabled)
                 return ReplicationTopologyDestinationNode.Disabled(targetServerUrl, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 
-			if (from.Contains(destination.ConnectionStringOptions.Url))
+			if (from.Contains(targetServerUrl))
 			{
 				var state = CheckDestinationConnectionState(destination);
 				switch (state)

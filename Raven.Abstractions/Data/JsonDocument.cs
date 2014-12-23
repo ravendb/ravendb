@@ -28,7 +28,7 @@ namespace Raven.Abstractions.Data
 		private RavenJObject metadata;
 
 		/// <summary>
-		/// Gets or sets the document data as json.
+		/// Document data or projection as json.
 		/// </summary>
 		/// <value>The data as json.</value>
 		public RavenJObject DataAsJson
@@ -38,9 +38,8 @@ namespace Raven.Abstractions.Data
 		}
 
 		/// <summary>
-		/// Gets or sets the metadata for the document
+		/// Metadata for the document
 		/// </summary>
-		/// <value>The metadata.</value>
 		public RavenJObject Metadata
 		{
 			get { return metadata ?? (metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase)); }
@@ -48,26 +47,23 @@ namespace Raven.Abstractions.Data
 		}
 
 		/// <summary>
-		/// Gets or sets the key for the document
+		/// Key for the document
 		/// </summary>
-		/// <value>The key.</value>
 		public string Key { get; set; }
 
 		/// <summary>
-		/// Gets or sets a value indicating whether this document is non authoritative (modified by uncommitted transaction).
+		/// Indicates whether this document is non authoritative (modified by uncommitted transaction).
 		/// </summary>
 		public bool? NonAuthoritativeInformation { get; set; }
 
 		/// <summary>
-		/// Gets or sets the etag.
+		/// Current document etag.
 		/// </summary>
-		/// <value>The etag.</value>
 		public Etag Etag { get; set; }
 
 		/// <summary>
-		/// Gets or sets the last modified date for the document
+		/// Last modified date for the document
 		/// </summary>
-		/// <value>The last modified.</value>
 		public DateTime? LastModified { get; set; }
 
 		/// <summary>
@@ -119,5 +115,18 @@ namespace Raven.Abstractions.Data
 		{
 			return Key;
 		}
+
+        public static void EnsureIdInMetadata(IJsonDocumentMetadata doc)
+        {
+            if (doc == null || doc.Metadata == null)
+                return;
+
+            if (doc.Metadata.IsSnapshot)
+            {
+                doc.Metadata = (RavenJObject)doc.Metadata.CreateSnapshot();
+            }
+
+            doc.Metadata["@id"] = doc.Key;
+        }
 	}
 }

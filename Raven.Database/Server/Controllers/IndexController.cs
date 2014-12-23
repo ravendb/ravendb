@@ -35,16 +35,6 @@ namespace Raven.Database.Server.Controllers
 {
 	public class IndexController : RavenDbApiController
 	{
-		private readonly HttpRavenRequestFactory _httpRavenRequestFactory;
-
-		public IndexController()
-		{
-			_httpRavenRequestFactory = new HttpRavenRequestFactory
-			{
-				RequestTimeoutInMs = 5000 //TODO : check from where should this value be taken
-			};
-		}
-
 		[HttpGet]
 		[RavenRoute("indexes")]
 		[RavenRoute("databases/{databaseName}/indexes")]
@@ -100,9 +90,9 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (Exception e)
 			{
-				const string ErrorMessage = "Something very wrong has happened, was unable to retrieve replication destinations.";
-				Log.ErrorException(ErrorMessage,e);
-				return GetMessageWithObject(new { Message = ErrorMessage + "Check server logs for more details." }, HttpStatusCode.InternalServerError);
+				const string errorMessage = "Something very wrong has happened, was unable to retrieve replication destinations.";
+				Log.ErrorException(errorMessage, e);
+				return GetMessageWithObject(new { Message = errorMessage + " Check server logs for more details." }, HttpStatusCode.InternalServerError);
 			}
 
 			if (replicationDestinationsDocument == null)
@@ -116,9 +106,10 @@ namespace Raven.Database.Server.Controllers
 			replicationDocument.Destinations.RemoveAll(dest => dest.SkipIndexReplication);
 			if (replicationDocument.Destinations.Count == 0) //precaution
 			{
-				return GetMessageWithObject(new { Message = @"Replication document found, but no destinations configured for index replication. 
+				return GetMessageWithObject(new {Message = @"Replication document found, but no destinations configured for index replication. 
 																Maybe all replication destinations have SkipIndexReplication flag equals to true?  
-																Nothing to do in this case..." },HttpStatusCode.NoContent);
+																Nothing to do in this case..."}, 
+																HttpStatusCode.NoContent);
 			}
 
 			if (indexName.EndsWith("/")) //since id is part of the url, perhaps a trailing forward slash appears there
@@ -136,9 +127,12 @@ namespace Raven.Database.Server.Controllers
 
 			var serializedIndexDefinition = RavenJObject.FromObject(indexDefinition);
 
+
+			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
+		
 			var failedDestinations = new ConcurrentBag<string>();
-			Parallel.ForEach(replicationDocument.Destinations, 
-				destination => ReplicateIndex(indexName, destination, serializedIndexDefinition, failedDestinations));
+			Parallel.ForEach(replicationDocument.Destinations,
+				destination => ReplicateIndex(indexName, destination, serializedIndexDefinition, failedDestinations, httpRavenRequestFactory));
 
 			return GetMessageWithObject(new
 			{
@@ -204,7 +198,7 @@ namespace Raven.Database.Server.Controllers
 			var index = id;
 			if ("forceWriteToDisk".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
 			{
-				Database.IndexStorage.ForceWriteToDisk(index);
+                Database.IndexStorage.ForceWriteToDiskAndWriteInMemoryIndexToDiskIfNecessary(index);
 				return GetEmptyMessage();
 			}
 
@@ -790,7 +784,7 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(stats);
 		}
 
-		private void ReplicateIndex(string indexName, ReplicationDestination destination, RavenJObject indexDefinition, ConcurrentBag<string> failedDestinations)
+		private void ReplicateIndex(string indexName, ReplicationDestination destination, RavenJObject indexDefinition, ConcurrentBag<string> failedDestinations, HttpRavenRequestFactory httpRavenRequestFactory)
 		{
 			var connectionOptions = new RavenConnectionStringOptions
 			{
@@ -805,11 +799,11 @@ namespace Raven.Database.Server.Controllers
 				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain ?? string.Empty);
 			}
 
-			var urlTemplate = "{0}/databases/{1}/indexes/{2}?definition=yes";
+			var urlTemplate = "{0}/databases/{1}/indexes/{2}";
 			if (destination.Url.Contains("://") == false)
 				urlTemplate = "//" + urlTemplate;
 			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(indexName));
-			var replicationRequest = _httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
+			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
 			replicationRequest.Write(indexDefinition);
 
 			try

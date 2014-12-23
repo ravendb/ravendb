@@ -26,6 +26,7 @@ import saveDocumentCommand = require("commands/saveDocumentCommand");
 import indexReplaceDocument = require("models/indexReplaceDocument");
 import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
 import saveScriptedIndexesCommand = require("commands/saveScriptedIndexesCommand");
+import deleteIndexCommand = require("commands/deleteIndexCommand");
 
 class editIndex extends viewModelBase { 
 
@@ -472,6 +473,7 @@ class editIndex extends viewModelBase {
         if (this.editedIndex().name() && this.editedIndex().isTestIndex()) {
             this.editedIndex().isTestIndex(false);
             // trim Test prefix
+            var indexToDelete = this.editedIndex().name();
             this.editedIndex().name(this.editedIndex().name().substr(index.TestIndexPrefix.length));
             var indexDef = this.editedIndex().toDto();
             if (this.scriptedIndex() !== null) {
@@ -479,7 +481,10 @@ class editIndex extends viewModelBase {
                 delete this.scriptedIndex().__metadata.etag;
             }
 
-            this.saveIndex(indexDef);
+            this.saveIndex(indexDef)
+                .done(() => {
+                    new deleteIndexCommand(indexToDelete, this.activeDatabase()).execute();
+                });
         }
     }
 

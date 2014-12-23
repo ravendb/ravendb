@@ -589,7 +589,6 @@
     <Compile Include="Indexes\WithNullableDateTime.cs" />
     <Compile Include="InflectorTests.cs" />
     <Compile Include="Json\SupportForJsonPropertyAttribute.cs" />
-    <Compile Include="LicenseProviderPluginTest.cs" />
     <Compile Include="Linq\OfTypeSupport2.cs" />
     <Compile Include="Linq\ListIndexOf.cs" />
     <Compile Include="Linq\FlagsEnum.cs" />
@@ -625,6 +624,9 @@
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
     <Compile Include="Smuggler\SmugglerBetweenTests.cs" />
     <Compile Include="Security\ReplicationWithMixedSecurity.cs" />
+    <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
+    <Compile Include="Smuggler\SmugglerIdentitiesTests.cs" />
+    <Compile Include="Smuggler\SmugglerTransformScriptsTests.cs" />
     <Compile Include="Spatial\BoundingBoxIndexTests.cs" />
     <Compile Include="Spatial\CartesianTests.cs" />
     <Compile Include="Spatial\Clustering.cs" />
@@ -970,7 +972,7 @@
       <Name>Raven.Tests.Common</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
-      <Project>{1B88473F-743B-4F6B-8E5E-97BB816E6C68}</Project>
+      <Project>{14f2d508-8e06-407b-9451-97e99538e26b}</Project>
       <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">

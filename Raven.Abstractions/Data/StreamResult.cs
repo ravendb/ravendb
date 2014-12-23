@@ -7,11 +7,26 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
-	public class StreamResult<T>
+	public class StreamResult<TType>
 	{
-		 public string Key { get; set; }
-		 public Etag Etag { get; set; }
-		 public RavenJObject Metadata { get; set; }
-		 public T Document { get; set; }
+		/// <summary>
+		/// Document key.
+		/// </summary>
+		public string Key { get; set; }
+
+		/// <summary>
+		/// Document etag.
+		/// </summary>
+		public Etag Etag { get; set; }
+
+		/// <summary>
+		/// Document metadata.
+		/// </summary>
+		public RavenJObject Metadata { get; set; }
+
+		/// <summary>
+		/// Document deserialized to <c>TType</c>.
+		/// </summary>
+		public TType Document { get; set; }
 	}
 }

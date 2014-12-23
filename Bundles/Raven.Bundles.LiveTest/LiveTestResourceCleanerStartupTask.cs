@@ -77,7 +77,7 @@ namespace Raven.Bundles.LiveTest
 			int nextStart = 0;
 			var fileSystemDocuments = systemDatabase
 				.Documents
-				.GetDocumentsWithIdStartingWith(Constants.RavenFileSystemsPrefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
+                .GetDocumentsWithIdStartingWith(Constants.FileSystem.Prefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
 
 			var fileSystemIds = fileSystemDocuments
 				.Select(x => ((RavenJObject)x)["@metadata"])
@@ -91,8 +91,8 @@ namespace Raven.Bundles.LiveTest
 				try
 				{
 					var key = fileSystemId;
-					if (key.StartsWith(Constants.RavenFileSystemsPrefix))
-						key = key.Substring(Constants.RavenFileSystemsPrefix.Length);
+                    if (key.StartsWith(Constants.FileSystem.Prefix))
+                        key = key.Substring(Constants.FileSystem.Prefix.Length);
 
 					var shouldCleanup = false;
 
@@ -109,7 +109,7 @@ namespace Raven.Bundles.LiveTest
 
 					fileSystemLandlord.Cleanup(key, maxTimeResourceCanBeIdle, database => false);
 
-					var docKey = Constants.RavenFileSystemsPrefix + key;
+                    var docKey = Constants.FileSystem.Prefix + key;
 					systemDatabase.Documents.Delete(docKey, null, null);
 
 					if (configuration == null)

@@ -88,6 +88,18 @@ namespace Raven.Storage.Esent
 			remove { inner.OnStorageCommit -= value; }
 		}
 
+		public event Action BeforeStorageCommit
+		{
+			add { inner.BeforeStorageCommit += value; }
+			remove { inner.BeforeStorageCommit -= value; }
+		}
+
+		public event Action AfterStorageCommit
+		{
+			add { inner.AfterStorageCommit += value; }
+			remove { inner.AfterStorageCommit -= value; }
+		}
+
 		public bool IsWriteConflict(Exception exception)
 		{
 			var esentErrorException = exception as EsentErrorException;

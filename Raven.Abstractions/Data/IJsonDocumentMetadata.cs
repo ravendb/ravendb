@@ -9,32 +9,28 @@ namespace Raven.Abstractions.Data
 	public interface IJsonDocumentMetadata
 	{
 		/// <summary>
-		/// 	Gets or sets the metadata for the document
+		/// RavenJObject representing document's metadata.
 		/// </summary>
-		/// <value>The metadata.</value>
 		RavenJObject Metadata { get; set; }
 
 		/// <summary>
-		/// 	Gets or sets the key for the document
+		/// Key of a document.
 		/// </summary>
-		/// <value>The key.</value>
 		string Key { get; set; }
 
 		/// <summary>
-		/// 	Gets or sets a value indicating whether this document is non authoritative (modified by uncommitted transaction).
+		/// Indicates whether this document is non authoritative (modified by uncommitted transaction).
 		/// </summary>
 		bool? NonAuthoritativeInformation { get; set; }
 
 		/// <summary>
-		/// Gets or sets the etag.
+		/// Current document etag, used for concurrency checks (null to skip check)
 		/// </summary>
-		/// <value>The etag.</value>
 		Etag Etag { get; set; }
 
 		/// <summary>
-		/// 	Gets or sets the last modified date for the document
+		/// Last modified date for the document
 		/// </summary>
-		/// <value>The last modified.</value>
 		DateTime? LastModified { get; set; }
 	}
 }

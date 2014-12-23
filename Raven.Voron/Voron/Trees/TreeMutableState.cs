@@ -76,5 +76,13 @@ namespace Voron.Trees
 				OverflowPages += num;
 			}
 		}
+
+        public override string ToString()
+        {
+            return string.Format(@" Pages: {1:#,#}, Entries: {2:#,#}
+    Depth: {0}, Flags: {3}
+    Root Page: {4}
+    Leaves: {5:#,#} Overflow: {6:#,#} Branches: {7:#,#}", Depth, PageCount, EntriesCount, Flags, RootPageNumber, LeafPages, OverflowPages, BranchPages);
+        }
     }
 }

@@ -14,11 +14,12 @@ namespace Raven.Abstractions.Data
 	public class MultiLoadResult
 	{
 		/// <summary>
-		/// Gets or sets the document results.
+		/// Loaded documents. The results will be in exact same order as in keys parameter.
 		/// </summary>
 		public List<RavenJObject> Results { get; set; }
+
 		/// <summary>
-		/// Gets or sets the included documents
+		/// Included documents.
 		/// </summary>
 		public List<RavenJObject> Includes { get; set; }
 

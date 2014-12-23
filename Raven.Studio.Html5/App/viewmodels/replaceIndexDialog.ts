@@ -13,17 +13,12 @@ import messagePublisher = require("common/messagePublisher");
 
 class replaceIndexDialog extends dialogViewModelBase {
 
-    static ModeEtag = "etag";
-    static ModeTime = "time";
-
     replaceSettingsTask = $.Deferred();
 
-    private replaceMode = ko.observable<string>(replaceIndexDialog.ModeEtag);
+    private etagMode = ko.observable<boolean>(false);
+    private dateMode = ko.observable<boolean>(false);
     private lastIndexedEtag = ko.observable<string>();
 
-    private extraMode = ko.observable<boolean>(false);
-
-    private etag = ko.observable<string>();
     private replaceDate = ko.observable<Moment>(moment(new Date()));
     private replaceDateText = ko.computed(() => {
         return this.replaceDate() != null ? this.replaceDate().format("YYYY/MM/DD H:mm:ss") : "";
@@ -31,7 +26,6 @@ class replaceIndexDialog extends dialogViewModelBase {
 
     constructor(private indexName: string, private db: database, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
-
         datePickerBindingHandler.install();
     }
 
@@ -51,29 +45,22 @@ class replaceIndexDialog extends dialogViewModelBase {
             .done((stats: databaseStatisticsDto) => this.processDbStats(stats));
     }
 
-    changeReplaceMode(newMode: string) {
-        this.replaceMode(newMode);
-    }
-
     processDbStats(stats: databaseStatisticsDto) {
         var oldIndex = stats.Indexes.first(i => i.Name == this.indexName);
         this.lastIndexedEtag(oldIndex.LastIndexedEtag);       
     }
 
     saveReplace() {
-        var replaceDocument: indexReplaceDocument = null;
-        if (this.extraMode()) {
-            replaceDocument = new indexReplaceDocument({ IndexToReplace: this.indexName });
-        } else {
-            switch (this.replaceMode()) {
-                case replaceIndexDialog.ModeTime:
-                    replaceDocument = new indexReplaceDocument({ IndexToReplace: this.indexName, ReplaceTimeUtc: this.replaceDate().toISOString() });
-                    break;
-                case replaceIndexDialog.ModeEtag:
-                    replaceDocument = new indexReplaceDocument({ IndexToReplace: this.indexName, MinimumEtagBeforeReplace: this.etag() });
-                    break;
-            }
+        var replaceDocument: indexReplaceDocument = new indexReplaceDocument({ IndexToReplace: this.indexName });
+
+        if (this.etagMode()) {
+            replaceDocument.minimumEtagBeforeReplace = this.lastIndexedEtag();
         }
+
+        if (this.dateMode()) {
+            replaceDocument.replaceTimeUtc = this.replaceDate().toISOString();
+        }
+
         this.replaceSettingsTask.resolve(replaceDocument);
     }
 
@@ -82,8 +69,12 @@ class replaceIndexDialog extends dialogViewModelBase {
         dialog.close(this);
     }
 
-    toggleExtraModes() {
-        this.extraMode(!this.extraMode());
+    toggleEtagMode() {
+        this.etagMode(!this.etagMode());
+    }
+
+    toggleDateMode() {
+        this.dateMode(!this.dateMode());
     }
 }
 

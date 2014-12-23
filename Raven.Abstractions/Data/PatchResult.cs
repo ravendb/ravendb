@@ -25,6 +25,11 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		Tested,
 		/// <summary>
+		/// The document was not patched, because skipPatchIfEtagMismatch was set
+		/// and the etag did not match
+		/// </summary>
+		Skipped,
+		/// <summary>
 		/// Neither document body not metadata was changed during patch operation
 		/// </summary>
 		NotModified
@@ -32,10 +37,24 @@ namespace Raven.Abstractions.Data
 
 	public class PatchResultData
 	{
+		/// <summary>
+		/// Result of patch operation:
+		/// - DocumentDoesNotExists - document does not exists, operation was a no-op,
+		/// - Patched - document was properly patched,
+		/// - Tested - document was properly tested,
+		/// - Skipped - document was not patched, because skipPatchIfEtagMismatch was set and the etag did not match,
+		/// - NotModified - neither document body not metadata was changed during patch operation
+		/// </summary>
 		public PatchResult PatchResult { get; set; }
 
+		/// <summary>
+		/// Patched document.
+		/// </summary>
 		public RavenJObject Document { get; set; }
 
+		/// <summary>
+		/// Additional debugging information (if requested).
+		/// </summary>
 		public RavenJObject DebugActions { get; set; }
 	}
 }

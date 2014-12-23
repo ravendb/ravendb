@@ -24,6 +24,8 @@ namespace Raven.Database.Storage
 		IMappedResultsStorageAction MapReduce { get; }
 	    bool IsNested { get; set; }
 	    event Action OnStorageCommit;
+		event Action BeforeStorageCommit;
+		event Action AfterStorageCommit;
 		bool IsWriteConflict(Exception exception);
 		T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Tasks.DatabaseTask;
 		void AfterStorageCommitBeforeWorkNotifications(JsonDocument doc, Action<JsonDocument[]> afterCommit);

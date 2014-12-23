@@ -72,10 +72,10 @@ namespace Raven.Database.FileSystem.Search
                 this.filesystem = filesystem;                                
                 indexDirectory = configuration.FileSystem.IndexStoragePath;                
 
-                if (Directory.Exists(indexDirectory) == false)
-                    Directory.CreateDirectory(indexDirectory);
-
                 var filesystemDirectory = configuration.FileSystem.DataDirectory;
+                if (!Directory.Exists(filesystemDirectory))
+                    Directory.CreateDirectory(filesystemDirectory);
+
                 var crashMarkerPath = Path.Combine(filesystemDirectory, "indexing.crash-marker");
 
                 if (File.Exists(crashMarkerPath))
@@ -184,8 +184,10 @@ namespace Raven.Database.FileSystem.Search
             {
                 IOExtensions.DeleteDirectory(indexDirectory);
 
-				var luceneDirectory = OpenOrCreateLuceneDirectory(indexDirectory);
-
+                var luceneDirectory = FSDirectory.Open(new DirectoryInfo(indexDirectory));
+                
+                WriteIndexVersion(luceneDirectory);
+                
                 using ( var indexWriter = new IndexWriter(luceneDirectory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED) )
                 {
                     indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
@@ -193,7 +195,10 @@ namespace Raven.Database.FileSystem.Search
                     filesystem.Storage.Batch(accessor =>
                     {
                         foreach (var file in accessor.GetFilesAfter(Etag.Empty, int.MaxValue))
-                            Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata);
+                        {
+                            if (!file.FullPath.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
+                                Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata);
+                        }                            
                     });
 
                     indexWriter.Flush(true, true, true);
@@ -213,11 +218,8 @@ namespace Raven.Database.FileSystem.Search
             {
                 // We check if the directory already exists
                 if (!IndexReader.IndexExists(luceneDirectory))
-                {
-                    WriteIndexVersion(luceneDirectory);
-
-                    //creating index structure if we need to
-                    new IndexWriter(luceneDirectory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
+                {                    
+                    TryResettingIndex();      
                 }
                 else
                 {

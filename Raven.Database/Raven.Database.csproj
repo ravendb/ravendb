@@ -223,6 +223,7 @@
     <Compile Include="Actions\NotificationActions.cs" />
     <Compile Include="Actions\PatchActions.cs" />
     <Compile Include="Actions\QueryActions.cs" />
+    <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
     <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
@@ -274,8 +275,11 @@
     <Compile Include="FileSystem\Synchronization\Conflictuality\Resolvers\RemoteFileSynchronizationConflictResolver.cs" />
     <Compile Include="FileSystem\Synchronization\Conflictuality\Resolvers\LocalFileSynchronizationConflictResolver.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfig.cs" />
+    <Compile Include="Server\Controllers\SubscriptionsController.cs" />
     <Compile Include="Server\IgnoreSslCertificateErrorsMode.cs" />
     <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
+    <Compile Include="Server\WebApi\RouteCacher.cs" />
+    <Compile Include="Server\WebApi\RavenRouteCollectionRoute .cs" />
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerJintHelper.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
@@ -654,7 +658,6 @@
     <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
     <Compile Include="Linq\PrivateExtensions\DynamicEnumerable.cs" />
     <Compile Include="Linq\StringLiteralExpression.cs" />
-    <Compile Include="Plugins\ILicenseProvider.cs" />
     <Compile Include="Plugins\PluginsStatus.cs" />
     <Compile Include="Queries\MoreLikeThisQueryRunner.cs" />
     <Compile Include="Queries\MoreLikeThisQueryExtensions.cs" />

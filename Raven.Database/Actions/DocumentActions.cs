@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -145,7 +145,7 @@ namespace Raven.Database.Actions
                             if (!WildcardMatcher.Matches(matches, keyTest) || WildcardMatcher.MatchesExclusion(exclude, keyTest))
                                 continue;
 
-                            DocumentRetriever.EnsureIdInMetadata(doc);
+                            JsonDocument.EnsureIdInMetadata(doc);
                             var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
 
                             var document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
@@ -407,11 +407,11 @@ namespace Raven.Database.Actions
         public RavenJArray GetDocuments(int start, int pageSize, Etag etag, CancellationToken token)
         {
             var list = new RavenJArray();
-            GetDocuments(start, pageSize, etag, token, list.Add);
+            GetDocuments(start, pageSize, etag, token, doc => list.Add(doc.ToJson()));
             return list;
         }
 
-        public void GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Action<RavenJObject> addDocument)
+        public void GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Action<JsonDocument> addDocument)
         {
             TransactionalStorage.Batch(actions =>
             {
@@ -429,7 +429,7 @@ namespace Raven.Database.Actions
                         token.ThrowIfCancellationRequested();
                         if (etag != null)
                             etag = doc.Etag;
-                        DocumentRetriever.EnsureIdInMetadata(doc);
+                        JsonDocument.EnsureIdInMetadata(doc);
                         var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
                         var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
                         document = documentRetriever
@@ -437,7 +437,7 @@ namespace Raven.Database.Actions
                         if (document == null)
                             continue;
 
-                        addDocument(document.ToJson());
+                        addDocument(document);
                         returnedDocs = true;
                     }
                     if (returnedDocs || docCount == 0)
@@ -469,7 +469,7 @@ namespace Raven.Database.Actions
                     document = nonAuthoritativeInformationBehavior(document);
             }
 
-            DocumentRetriever.EnsureIdInMetadata(document);
+            JsonDocument.EnsureIdInMetadata(document);
 
             return new DocumentRetriever(null, Database.ReadTriggers, Database.InFlightTransactionalState)
                 .ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
@@ -493,7 +493,7 @@ namespace Raven.Database.Actions
                     document = nonAuthoritativeInformationBehavior(document);
             }
 
-            DocumentRetriever.EnsureIdInMetadata(document);
+            JsonDocument.EnsureIdInMetadata(document);
             return new DocumentRetriever(null, Database.ReadTriggers, Database.InFlightTransactionalState)
                 .ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
         }

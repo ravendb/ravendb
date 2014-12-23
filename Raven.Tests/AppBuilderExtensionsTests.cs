@@ -6,6 +6,7 @@ using Raven.Database.Server;
 using Raven.Tests.Common;
 
 using Xunit;
+using Raven.Abstractions.Data;
 
 namespace Raven.Tests
 {
@@ -18,7 +19,7 @@ namespace Raven.Tests
 			var configuration = new InMemoryRavenConfiguration { Settings =
 			{
 				{ "Raven/DataDir", path },
-				{ "Raven/FileSystem/DataDir", Path.Combine(path, "FileSystem")}
+				{ Constants.FileSystem.DataDirectory, Path.Combine(path, "FileSystem")}
 			} };
 
 			configuration.Initialize();

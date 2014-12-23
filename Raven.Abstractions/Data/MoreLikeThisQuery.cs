@@ -102,14 +102,17 @@ namespace Raven.Abstractions.Data
 		public NameValueCollection MapGroupFields { get; set; }
 
 		/// <summary>
-		/// Gets or sets the results transformer
+		/// Transformer to use on the query results.
 		/// </summary>
 		public string ResultsTransformer { get; set; }
 
+		/// <summary>
+		/// Array of paths under which document Ids can be found. All found documents will be returned with the query results.
+		/// </summary>
 		public string[] Includes { get; set; }
 
 		/// <summary>
-		/// Additional query inputs
+		/// Parameters that will be passed to transformer.
 		/// </summary>
 		public Dictionary<string, RavenJToken> TransformerParameters { get; set; }
 

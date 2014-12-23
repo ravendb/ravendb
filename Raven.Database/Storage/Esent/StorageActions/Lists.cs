@@ -134,6 +134,46 @@ namespace Raven.Storage.Esent.StorageActions
 
 		}
 
+		public IEnumerable<ListItem> Read(string name, int start, int take)
+		{
+			Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
+			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Lists, SeekGrbit.SeekGT) == false)
+				yield break;
+
+			int skipped = 0;
+			while (skipped < start)
+			{
+				if (!Api.TryMoveNext(session, Lists))
+					yield break;
+				skipped++;
+			}
+
+			int count = 0;
+			do
+			{
+				var nameFromDb = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["name"], Encoding.Unicode);
+				if (string.Equals(name, nameFromDb, StringComparison.InvariantCultureIgnoreCase) == false)
+					yield break;
+
+
+				var etag = Etag.Parse(Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]));
+
+				count++;
+
+				using (Stream stream = new BufferedStream(new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"])))
+				{
+					yield return new ListItem
+					{
+						Etag = etag,
+						Data = stream.ToJObject(),
+						Key = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["key"], Encoding.Unicode),
+						CreatedAt = Api.RetrieveColumnAsDateTime(session, Lists, tableColumnsCache.ListsColumns["created_at"]).Value
+					};
+				}
+			} while (Api.TryMoveNext(session, Lists) && count < take);
+		}
+
 		public ListItem Read(string name, string key)
 		{
 			Api.JetSetCurrentIndex(session, Lists, "by_name_and_key");

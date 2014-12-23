@@ -35,7 +35,7 @@ namespace Voron.Impl.Paging
         protected AbstractPager()
         {
             _increaseSize = MinIncreaseSize;
-            MaxNodeSize = 1024;
+	        MaxNodeSize = PageMaxSpace/2 - 1;
             Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
             PageMinSpace = (int)(PageMaxSpace * 0.33);
             PagerState = new PagerState(this);

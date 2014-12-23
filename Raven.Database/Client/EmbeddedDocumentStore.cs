@@ -13,7 +13,6 @@ using Raven.Client.FileSystem;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Database.Config;
-using Raven.Json.Linq;
 using Raven.Server;
 
 namespace Raven.Database.Client
@@ -350,7 +349,12 @@ namespace Raven.Database.Client
             return server.DocumentStore.BulkInsert(database, options);
         }
 
-        public DocumentSessionListeners Listeners { get { return server.DocumentStore.Listeners; } }
+	    public IReliableSubscriptions Subscriptions
+	    {
+		    get { return server.DocumentStore.Subscriptions; }
+	    }
+
+	    public DocumentSessionListeners Listeners { get { return server.DocumentStore.Listeners; } }
         public void SetListeners(DocumentSessionListeners listeners)
         {
             server.DocumentStore.SetListeners(listeners);

@@ -128,12 +128,17 @@ interface indexingBatchInfoDto {
     StartedAt: string; // ISO date string.
     StartedAtDate?: Date;
     TotalDurationMs: number;
-    PerfStats: indexNameAndPerformanceStats[];  
+    PerfStats: indexNameAndMapPerformanceStats[];  
 }
 
-interface indexNameAndPerformanceStats {
+interface indexNameAndMapPerformanceStats {
     indexName: string;
     stats: indexPerformanceDto;
+}
+
+interface indexNameAndMapPerformanceStatsWithCache extends indexNameAndMapPerformanceStats {
+    widths: number[];
+    cumulativeSums: number[];
 }
 
 interface indexPerformanceDto {
@@ -145,13 +150,56 @@ interface indexPerformanceDto {
     Completed: string; // Date
     Duration: string;
     DurationMilliseconds: number;
-    LoadDocumentCount: number;
-    LoadDocumentDurationMs: number;
-    WritingDocumentsToLuceneDurationMs: number;
-    LinqExecutionDurationMs: number;
-    FlushToDiskDurationMs: number;
+
+    LoadDocumentPerformance: { LoadDocumentCount: number; LoadDocumentDurationMs: number };
+    LinqExecutionPerformance: { MapLinqExecutionDurationMs: number; ReduceLinqExecutionDurationMs: number };
+    LucenePerformance: { WriteDocumentsDurationMs: number; FlushToDiskDurationMs: number };
+    MapStoragePerformance: { DeleteMappedResultsDurationMs: number; PutMappedResultsDurationMs: number; StorageCommitDurationMs: number };
+
     WaitingTimeSinceLastBatchCompleted: string;
 }
+
+
+interface reducingBatchInfoDto {
+    IndexesToWorkOn: string[];
+    TotalDurationMs: number;
+    StartedAt: string; // ISO date string.
+    StartedAtDate?: Date;
+    TimeSinceFirstReduceInBatchCompletedMs: number;
+    PerfStats: indexNameAndReducingPerformanceStats[];
+}
+
+interface indexNameAndReducingPerformanceStats {
+    indexName: string;
+    stats: reducePerformanceStatsDto;
+    parent?: reducingBatchInfoDto;
+}
+
+interface reducePerformanceStatsDto {
+    ReduceType?: string;
+    LevelStats: reduceLevelPeformanceStatsDto[];
+}
+
+interface reduceLevelPeformanceStatsDtoWithCache extends reduceLevelPeformanceStatsDto {
+    widths: number[];
+    cumulativeSums: number[];
+}
+
+interface reduceLevelPeformanceStatsDto {
+    Level: number;
+    ItemsCount: number;
+    InputCount: number;
+    OutputCount: number;
+    Started: string; // ISO date string
+    Completed: string; // Date
+    Duration: string;
+    DurationMs: number;
+    LinqExecutionPerformance: { MapLinqExecutionDurationMs: number; ReduceLinqExecutionDurationMs: number };
+    LucenePerformance: { WriteDocumentsDurationMs: number; FlushToDiskDurationMs: number };
+    ReduceStoragePerformance: { GetItemsToReduceDurationMs: number };
+    parent?: indexNameAndReducingPerformanceStats;
+}
+
 
 interface apiKeyDto extends documentDto {
     Name: string;
@@ -1059,18 +1107,6 @@ interface replicationTopologyConnectionDto {
     StoredServerId: string;
 }
 
-interface stringLinkDto {
-    source: string;
-    target: string;
-}
-
-interface replicationTopologyLinkDto extends stringLinkDto {
-    left: boolean;
-    right: boolean;
-    toRightPayload?: replicationTopologyConnectionDto;
-    toLeftPayload?: replicationTopologyConnectionDto;
-}
-
 interface runningTaskDto {
     Id: number;
     TaskStatus: string;
@@ -1097,13 +1133,20 @@ interface fileSystemSettingsDto {
 interface performanceTestRequestDto {
     Path: string;
     FileSize: number;
-    OperationType: string;
-    BufferingType: string;
-    Sequential: boolean;
-    ThreadCount: number;
-    TimeToRunInSeconds: number;
+    TestType: string;
+
+    OperationType?: string;
+    BufferingType?: string;
+    Sequential?: boolean;
+    ThreadCount?: number;
+    TimeToRunInSeconds?: number;
     RandomSeed?: number;
-    ChunkSize: number;
+    ChunkSize?: number;
+
+    NumberOfDocuments?: number;
+    SizeOfDocuments?: number;
+    NumberOfDocumentsInBatch?: number;
+    WaitBetweenBatches?: number;
 }
 
 interface diskPerformanceResultDto {
@@ -1115,6 +1158,7 @@ interface diskPerformanceResultDto {
     WriteLatency: histogramDataDto;
     TotalRead: number;
     TotalWrite: number;
+    TotalTimeMs: number;
 }
 
 interface diskPerformanceResultWrappedDto {

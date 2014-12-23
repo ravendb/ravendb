@@ -307,7 +307,7 @@ namespace Raven.Database.Prefetching
 					.Where(x => x != null)
 					.Select(doc =>
 					{
-						DocumentRetriever.EnsureIdInMetadata(doc);
+                        JsonDocument.EnsureIdInMetadata(doc);
 						return doc;
 					})
 					.ToList();
@@ -505,7 +505,7 @@ namespace Raven.Database.Prefetching
 
 			foreach (var jsonDocument in docs)
 			{
-				DocumentRetriever.EnsureIdInMetadata(jsonDocument);
+                JsonDocument.EnsureIdInMetadata(jsonDocument);
 				prefetchingQueue.Add(jsonDocument);
 
 				if (ShouldHandleUnusedDocumentsAddedAfterCommit && (lowestEtag == null || jsonDocument.Etag.CompareTo(lowestEtag) < 0))
