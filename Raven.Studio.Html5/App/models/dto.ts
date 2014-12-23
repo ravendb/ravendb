@@ -86,7 +86,6 @@ interface databaseStatisticsDto {
     Errors: serverErrorDto[];
     InMemoryIndexingQueueSizes: number[];
     Indexes: indexStatisticsDto[];
-    IndexingBatchInfo: indexingBatchInfoDto[];
     LastAttachmentEtag: string;
     LastDocEtag: string;
     Prefetches: any[];
