@@ -1,5 +1,10 @@
 class periodicExportSetup {
 
+    onDiskExportEnabled = ko.observable<boolean>(false);
+    remoteUploadEnabled = ko.observable<boolean>(false);
+
+    localFolderName = ko.observable<string>();
+
     unsupported = ko.observable<boolean>(false);
     disabled = ko.observable<boolean>(true);
 
@@ -8,7 +13,7 @@ class periodicExportSetup {
 
     mainValueCustomValidity: KnockoutObservable<string>;
 
-    awsAccessKey = ko.observable<string>();
+    awsAccessKey = ko.observable<string>(); 
     awsSecretKey = ko.observable<string>();
     awsRegionEndpoint = ko.observable<string>();
 
@@ -32,7 +37,6 @@ class periodicExportSetup {
     private TU_DAYS = "days";
 
     availablePeriodicExports = [
-        { label: "File System Folder:", value: this.FILE_SYSTEM },
         { label: "Glacier Vault Name:", value: this.GLACIER_VAULT },
         { label: "S3 Bucket Name:", value: this.S3_BUCKET },
         { label: "Azure Storage Container:", value: this.AZURE_STORAGE }
@@ -50,8 +54,6 @@ class periodicExportSetup {
 
 	mainPlaceholder = ko.computed(() => {
 		switch(this.type()) {
-			case this.FILE_SYSTEM:
-				return 'full path';
 			case this.GLACIER_VAULT:
 				return 'vault name only e.g. myvault';
 			case this.S3_BUCKET:
@@ -62,14 +64,16 @@ class periodicExportSetup {
 	}, this);
 
     additionalAwsInfoRequired = ko.computed(() => {
-        return jQuery.inArray(
-            this.type(), [this.GLACIER_VAULT, this.S3_BUCKET]
+        var type = this.type();
+        return this.remoteUploadEnabled() && jQuery.inArray(
+            type, [this.GLACIER_VAULT, this.S3_BUCKET]
             ) !== -1;
     }, this);
 
 
     additionalAzureInfoRequired = ko.computed(() => {
-        return this.type() === this.AZURE_STORAGE;
+        var type = this.type();
+        return this.remoteUploadEnabled() && type === this.AZURE_STORAGE;
     }, this);
 
     constructor() {
@@ -203,14 +207,14 @@ class periodicExportSetup {
             S3BucketName: this.prepareMainValue(this.S3_BUCKET),
             AwsRegionEndpoint: this.awsRegionEndpoint(),
             AzureStorageContainer: this.prepareMainValue(this.AZURE_STORAGE),
-            LocalFolderName: this.prepareMainValue(this.FILE_SYSTEM),
+            LocalFolderName: this.onDiskExportEnabled()? this.localFolderName() : null,
             IntervalMilliseconds: this.convertToMilliseconds(this.incrementalBackupInterval(), this.incrementalBackupIntervalUnit()),
             FullBackupIntervalMilliseconds: this.convertToMilliseconds(this.fullBackupInterval(), this.fullBackupIntervalUnit()),
         };
     }
 
     private prepareMainValue(expectedType: string): string {
-        return ((this.type() === expectedType) ? this.mainValue() : null);
+        return ((this.type() === expectedType && this.remoteUploadEnabled()) ? this.mainValue() : null);
     }
 
     private convertToMilliseconds(value, unit): number {
@@ -254,9 +258,8 @@ class periodicExportSetup {
     private setupTypeAndMainValue(dto: periodicExportSetupDto) {
         var count = 0;
         if (dto.LocalFolderName) {
-            count += 1;
-            this.type(this.FILE_SYSTEM);
-            this.mainValue(dto.LocalFolderName);
+            this.localFolderName(dto.LocalFolderName);
+            this.onDiskExportEnabled(true);
         }
         if (dto.GlacierVaultName) {
             count += 1;
@@ -272,6 +275,9 @@ class periodicExportSetup {
             count += 1;
             this.type(this.AZURE_STORAGE);
             this.mainValue(dto.AzureStorageContainer);
+        }
+        if (count > 0) {
+            this.remoteUploadEnabled(true);
         }
         this.unsupported(count > 1);
     }

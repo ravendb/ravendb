@@ -120,6 +120,36 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
+		public IEnumerable<ListItem> Read(string name, int start, int take)
+		{
+			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
+
+			using (var iterator = listsByName.MultiRead(Snapshot, CreateKey(name)))
+			{
+				if (!iterator.Seek(Slice.BeforeAllKeys))
+					yield break;
+
+				int count = 0;
+
+				int skipped = 0;
+				while (skipped < start)
+				{
+					if(!iterator.MoveNext())
+						yield break;
+					skipped++;
+				}
+
+				do
+				{
+					var etag = Etag.Parse(iterator.CurrentKey.ToString());
+
+					count++;
+					yield return ReadInternal(etag);
+				}
+				while (iterator.MoveNext() && count < take);
+			}
+		}
+
 		public ListItem Read(string name, string key)
 		{
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);

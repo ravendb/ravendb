@@ -108,7 +108,20 @@ namespace Raven.Client.Shard
 		public IAsyncLazySessionOperations Lazily { get; private set; }
 	    public IAsyncEagerSessionOperations Eagerly { get; private set; }
 
-	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
+		public string GetDocumentUrl(object entity)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				throw new ArgumentException("The entity is not part of the session");
+
+			var shardId = value.Metadata.Value<string>(Constants.RavenShardId);
+			IAsyncDatabaseCommands commands;
+			if (shardDbCommands.TryGetValue(shardId, out commands) == false)
+				throw new InvalidOperationException("Could not find matching shard for shard id: " + shardId);
+			return commands.UrlFor(value.Key);
+		}
+
+		Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
 	    {
 	        throw new NotImplementedException();
 	    }
@@ -597,7 +610,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null)
 		{
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}

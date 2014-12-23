@@ -717,42 +717,27 @@ namespace Raven.Client.Connection
 			}).ConfigureAwait(false);
 		}
 
-		public async Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
+		public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
 		{
-            Response = await RunWithAuthRetry(async () =>
-            {
-
-                var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url)
-                {
-                    Content = new CompressedStringContent(data, factory.DisableRequestCompression),
-                };
-
-                CopyHeadersToHttpRequestMessage(rawRequestMessage);
-
-                var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead)
-                    .ConfigureAwait(false);
-
-                if (response.IsSuccessStatusCode == false &&
-                    (response.StatusCode == HttpStatusCode.PreconditionFailed ||
-                    response.StatusCode == HttpStatusCode.Forbidden ||
-                    response.StatusCode == HttpStatusCode.Unauthorized))
-                {
-                    throw new ErrorResponseException(response, "Failed request");
-                }
-                return response;
-            }).ConfigureAwait(false);
-
-
-            ResponseStatusCode = Response.StatusCode;
-
-            return Response;
+			return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression));
 		}
 
-		public async Task<HttpResponseMessage> ExecuteRawResponseAsync()
+		public Task<HttpResponseMessage> ExecuteRawResponseAsync()
+		{
+			return ExecuteRawResponseInternalAsync(null);
+		}
+
+		private async Task<HttpResponseMessage> ExecuteRawResponseInternalAsync(HttpContent content)
 		{
             Response = await RunWithAuthRetry(async () =>
 		    {
                 var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+
+			    if (content != null)
+			    {
+				    rawRequestMessage.Content = content;
+			    }
+
                 CopyHeadersToHttpRequestMessage(rawRequestMessage);
 
                 var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);

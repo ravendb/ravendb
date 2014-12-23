@@ -51,6 +51,9 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public Reference<int> TotalSize { get; private set; }
 
+		/// <summary>
+		/// For internal use only.
+		/// </summary>
 		public Dictionary<string, SortOptions> SortHints { get; set; } 
 
         /// <summary>
@@ -78,9 +81,9 @@ namespace Raven.Abstractions.Data
 
 		/// <summary>
 		/// Array of fields that will be fetched.
-		/// Fetch order:
-		/// 1. Stored index fields
-		/// 2. Document
+		/// <para>Fetch order:</para>
+		/// <para>1. Stored index fields</para>
+		/// <para>2. Document</para>
 		/// </summary>
 		public string[] FieldsToFetch { get; set; }
 
@@ -105,21 +108,19 @@ namespace Raven.Abstractions.Data
 		public bool WaitForNonStaleResults { get; set; }
 
 		/// <summary>
-		/// Gets or sets the cutoff etag
+		/// Gets or sets the cutoff etag.
+		/// <para>Cutoff etag is used to check if the index has already process a document with the given</para>
+		/// <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
+		/// <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
+		/// <para>can work without it.</para>
+		/// <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
+		/// <para>etag belong to is actually considered for the results. </para>
+		/// <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
+		/// <para>Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is </para>
+		/// <para>considered to be an acceptable tradeoff.</para>
+		/// <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
+		/// <para>use the Cutoff date option, instead.</para>
 		/// </summary>
-		/// <remarks>
-		/// Cutoff etag is used to check if the index has already process a document with the given
-		/// etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between
-		/// machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and 
-		/// can work without it.
-		/// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this
-		/// etag belong to is actually considered for the results. 
-		/// What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. 
-		/// Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is 
-		/// considered to be an acceptable tradeoff.
-		/// If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and 
-		/// use the Cutoff date option, instead.
-		/// </remarks>
 		public Etag CutoffEtag { get; set; }
 
 		/// <summary>
@@ -129,17 +130,17 @@ namespace Raven.Abstractions.Data
 
 		/// <summary>
 		/// Changes the default operator mode we use for queries.
-		/// When set to Or a query such as 'Name:John Age:18' will be interpreted as:
-		///  Name:John OR Age:18
-		/// When set to And the query will be interpreted as:
-		///	 Name:John AND Age:18
+		/// <para>When set to Or a query such as 'Name:John Age:18' will be interpreted as:</para>
+		/// <para> Name:John OR Age:18</para>
+		/// <para>When set to And the query will be interpreted as:</para>
+		///	<para> Name:John AND Age:18</para>
 		/// </summary>
 		public QueryOperator DefaultOperator { get; set; }
 
 		/// <summary>
         /// If set to <c>true</c>, this property will send multiple index entries from the same document (assuming the index project them)
-        /// to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be 
-        /// called just once for each document in the result set
+		/// <para>to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be </para>
+		/// <para>called just once for each document in the result set</para>
 		/// </summary>
         public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
 

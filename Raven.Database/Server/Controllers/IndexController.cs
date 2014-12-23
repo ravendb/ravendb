@@ -198,7 +198,7 @@ namespace Raven.Database.Server.Controllers
 			var index = id;
 			if ("forceWriteToDisk".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
 			{
-				Database.IndexStorage.ForceWriteToDisk(index);
+                Database.IndexStorage.ForceWriteToDiskAndWriteInMemoryIndexToDiskIfNecessary(index);
 				return GetEmptyMessage();
 			}
 

@@ -35,16 +35,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private readonly IUuidGenerator generator;
 
 		private readonly Reference<WriteBatch> writeBatch;
+		private readonly IStorageActionsAccessor storageActionsAccessor;
 
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 
-        public MappedResultsStorageActions(TableStorage tableStorage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Reference<SnapshotReader> snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
+        public MappedResultsStorageActions(TableStorage tableStorage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Reference<SnapshotReader> snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool, IStorageActionsAccessor storageActionsAccessor)
 			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;
 			this.generator = generator;
 			this.documentCodecs = documentCodecs;
 			this.writeBatch = writeBatch;
+	        this.storageActionsAccessor = storageActionsAccessor;
 		}
 
 		public IEnumerable<ReduceKeyAndCount> GetKeysStats(int view, int start, int pageSize)
@@ -218,6 +220,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					DeleteMappedResult(id, view, value.Value<string>("docId"), reduceKey, bucket);
 
 					deletedReduceKeys.Add(reduceKey);
+					storageActionsAccessor.General.MaybePulseTransaction();
 				}
 				while (iterator.MoveNext());
 			}
@@ -949,6 +952,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var reduceKey = value.Value<string>("reduceKey");
 
 					DeleteScheduledReduction(id, v, level, reduceKey);
+					storageActionsAccessor.General.MaybePulseTransaction();
+
 				}
 				while (iterator.MoveNext());
 			}
@@ -969,6 +974,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var id = iterator.CurrentKey.Clone();
 
 					RemoveReduceResult(id);
+					storageActionsAccessor.General.MaybePulseTransaction();
 				}
 				while (iterator.MoveNext());
 			}
@@ -984,6 +990,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tableStorage.ScheduledReductions.Delete(writeBatch.Value, id);
 			scheduledReductionsByView.MultiDelete(writeBatch.Value, CreateKey(view), id);
 			scheduledReductionsByViewAndLevelAndReduceKey.MultiDelete(writeBatch.Value, CreateKey(view, level, reduceKey, reduceKeyHash), id);
+
 		}
 
 		private void DeleteMappedResult(Slice id, int view, string documentId, string reduceKey, string bucket)
