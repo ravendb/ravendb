@@ -19,6 +19,6 @@ namespace Raven.Client.Changes
 		IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(Type type);
 		IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType<TEntity>();
 		IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts();
-		IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid operationId);
+		IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid? operationId = null);
 	}
 }

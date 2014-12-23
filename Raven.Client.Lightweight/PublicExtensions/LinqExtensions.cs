@@ -294,6 +294,18 @@ namespace Raven.Client
 			return queryable.GetFacetsAsync(facetSetupDoc, start, pageSize);
 		}
 
+        /// <summary>
+        /// Async Query the facets results for this query using the specified list of facets with the given start and pageSize
+        /// </summary>
+        /// <param name="facets">List of facets</param>
+        /// <param name="start">Start index for paging</param>
+        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+        public static Task<FacetResults> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+        {
+            var facetsList = facets.ToList();
+            return queryable.GetFacetsAsync(facetsList, start, pageSize);
+        }
+
 		/// <summary>
 		/// Project into a different type.
 		/// </summary>

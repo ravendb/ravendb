@@ -101,7 +101,7 @@ namespace Raven.Client.Shard
 			return new ShardedObservableWithTask<ReplicationConflictNotification>(observableWithTasks);
 		}
 
-		public IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid operationId)
+		public IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid? operationId = null)
 		{
 			var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForBulkInsert(operationId)).ToArray();
 			return new ShardedObservableWithTask<BulkInsertChangeNotification>(observableWithTasks);

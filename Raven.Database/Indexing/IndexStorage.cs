@@ -1439,9 +1439,11 @@ namespace Raven.Database.Indexing
 			return GetIndexInstance(id).IsOnRam;
 		}
 
-		public void ForceWriteToDisk(string index)
+        public void ForceWriteToDiskAndWriteInMemoryIndexToDiskIfNecessary(string indexName)
 		{
-			GetIndexByName(index).ForceWriteToDisk();
+			var index = GetIndexByName(indexName);
+            index.ForceWriteToDisk();
+            index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
 		}
 
 		internal bool ReplaceIndex(string indexName, string indexToReplaceName)

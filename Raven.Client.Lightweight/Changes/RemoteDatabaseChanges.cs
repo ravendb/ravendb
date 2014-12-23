@@ -444,9 +444,9 @@ namespace Raven.Client.Changes
             return taskedObservable;
         }
 
-        public IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid operationId)
+        public IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid? operationId = null)
         {
-            var id = operationId.ToString();
+            var id = operationId != null ? operationId.ToString() : string.Empty;
 
             var counter = Counters.GetOrAdd("bulk-operations/" + id, s =>
             {
@@ -468,9 +468,8 @@ namespace Raven.Client.Changes
                     documentSubscriptionTask);
             });
 
-            var taskedObservable = new TaskedObservable<BulkInsertChangeNotification, DatabaseConnectionState>(counter,
-                                                                                      notification =>
-                                                                                      notification.OperationId == operationId);
+	        var taskedObservable = new TaskedObservable<BulkInsertChangeNotification, DatabaseConnectionState>(counter,
+		        notification => operationId == null || notification.OperationId == operationId);
 
             counter.OnBulkInsertChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
