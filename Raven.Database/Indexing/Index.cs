@@ -184,7 +184,7 @@ namespace Raven.Database.Indexing
 			return performanceStats;
 		}
 
-		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, LoadDocumentPerformanceStats loadDocumentStats, LinqExecutionPerformanceStats linqExecutionStats, LucenePerformanceStats writeToLuceneStats, MapStoragePerformanceStats mapStorageStats)
+		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, LoadDocumentPerformanceStats[] loadDocumentStats, LinqExecutionPerformanceStats[] linqExecutionStats, LucenePerformanceStats writeToLuceneStats, MapStoragePerformanceStats mapStorageStats)
 		{
 			IndexingPerformanceStats stats;
 			if (currentlyIndexing.TryRemove(indexingStep, out stats))
@@ -196,22 +196,20 @@ namespace Raven.Database.Indexing
 				stats.InputCount = inputCount;
 				stats.OutputCount = outputCount;
 
-				stats.LoadDocumentPerformance.LoadDocumentCount = loadDocumentStats.LoadDocumentCount;
-				stats.LoadDocumentPerformance.LoadDocumentDurationMs = loadDocumentStats.LoadDocumentDurationMs;
+				stats.LoadDocumentPerformance = loadDocumentStats;
 
-				stats.LinqExecutionPerformance.MapLinqExecutionDurationMs = linqExecutionStats.MapLinqExecutionDurationMs;
-				stats.LinqExecutionPerformance.ReduceLinqExecutionDurationMs = linqExecutionStats.ReduceLinqExecutionDurationMs;
+				stats.LinqExecutionPerformance = linqExecutionStats;
 
 				stats.LucenePerformance.DeleteExistingDocumentsDurationMs = writeToLuceneStats.DeleteExistingDocumentsDurationMs;
-				stats.LucenePerformance.ConvertToLuceneDocumentsDurationMs = writeToLuceneStats.ConvertToLuceneDocumentsDurationMs;
-				stats.LucenePerformance.AddDocumentsDurationMs = writeToLuceneStats.AddDocumentsDurationMs;
+				stats.LucenePerformance.ConvertToLuceneDocuments = writeToLuceneStats.ConvertToLuceneDocuments;
+				stats.LucenePerformance.AddDocuments = writeToLuceneStats.AddDocuments;
 				stats.LucenePerformance.FlushToDiskDurationMs = writeToLuceneStats.FlushToDiskDurationMs;
 				stats.LucenePerformance.RecreateSearcherDurationMs = writeToLuceneStats.RecreateSearcherDurationMs;
 
 				stats.MapStoragePerformance.DeleteMappedResultsDurationMs = mapStorageStats.DeleteMappedResultsDurationMs;
-				stats.MapStoragePerformance.ConvertToRavenJObjectDurationMs = mapStorageStats.ConvertToRavenJObjectDurationMs;
-				stats.MapStoragePerformance.PutMappedResultsDurationMs = mapStorageStats.PutMappedResultsDurationMs;
-				stats.MapStoragePerformance.ScheduleReductionsDurationMs = mapStorageStats.ScheduleReductionsDurationMs;
+				stats.MapStoragePerformance.ConvertToRavenJObjects= mapStorageStats.ConvertToRavenJObjects;
+				stats.MapStoragePerformance.PutMappedResults = mapStorageStats.PutMappedResults;
+				stats.MapStoragePerformance.ScheduleReductions = mapStorageStats.ScheduleReductions;
 				// stats.MapStoragePerformance.StorageCommitDurationMs - it's set in MapReduceIndex.IndexDocuments because storage commit can happen after this batch completes
 
 				AddIndexingPerformanceStats(stats);

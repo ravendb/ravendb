@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Raven.Abstractions.Indexing;
 
 namespace Raven.Abstractions.Data
@@ -184,8 +185,6 @@ namespace Raven.Abstractions.Data
 	{
 	    public IndexingPerformanceStats()
 	    {
-		    LoadDocumentPerformance = new LoadDocumentPerformanceStats();
-			LinqExecutionPerformance = new LinqExecutionPerformanceStats();
 			LucenePerformance = new LucenePerformanceStats();
 			MapStoragePerformance = new MapStoragePerformanceStats();
 	    }
@@ -198,21 +197,46 @@ namespace Raven.Abstractions.Data
 		public DateTime Completed { get; set; }
 	    public TimeSpan Duration { get; set; }
 	    public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
-		public LoadDocumentPerformanceStats LoadDocumentPerformance { get; set; }
-		public LinqExecutionPerformanceStats LinqExecutionPerformance { get; set; }
+		public LoadDocumentPerformanceStats[] LoadDocumentPerformance { get; set; }
+		public LinqExecutionPerformanceStats[] LinqExecutionPerformance { get; set; }
 		public LucenePerformanceStats LucenePerformance { get; set; }
 		public MapStoragePerformanceStats MapStoragePerformance { get; set; }
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
 	}
 
+	public class ParallelExecutionStats
+	{
+		public ParallelExecutionStats()
+		{
+			StartedAt = SystemTime.UtcNow;
+		}
+
+		public DateTime StartedAt { get; set; }
+		public long DurationMs { get; set; }
+	}
+
 	public class LinqExecutionPerformanceStats
 	{
+		public LinqExecutionPerformanceStats()
+		{
+			StartedAt = SystemTime.UtcNow;
+			MapLinqExecutionDurationMs = -1;
+			ReduceLinqExecutionDurationMs = -1;
+		}
+
+		public DateTime StartedAt { get; set; }
 		public long MapLinqExecutionDurationMs { get; set; }
 		public long ReduceLinqExecutionDurationMs { get; set; }
 	}
 
 	public class LoadDocumentPerformanceStats
 	{
+		public LoadDocumentPerformanceStats()
+		{
+			StartedAt = SystemTime.UtcNow;
+		}
+
+		public DateTime StartedAt { get; set; }
 		public int LoadDocumentCount { get; set; }
 		public long LoadDocumentDurationMs { get; set; }
 	}
@@ -222,31 +246,33 @@ namespace Raven.Abstractions.Data
 		public MapStoragePerformanceStats()
 		{
 			DeleteMappedResultsDurationMs = -1;
-			ConvertToRavenJObjectDurationMs = -1;
-			PutMappedResultsDurationMs = -1;
-			ScheduleReductionsDurationMs = -1;
-			StorageCommitDurationMs = -1;
 		}
 
 		public long DeleteMappedResultsDurationMs { get; set; }
-		public long ConvertToRavenJObjectDurationMs { get; set; }
-		public long PutMappedResultsDurationMs { get; set; }
-		public long ScheduleReductionsDurationMs { get; set; }
-		public long StorageCommitDurationMs { get; set; }
+		public ParallelExecutionStats[] ConvertToRavenJObjects { get; set; }
+		public ParallelExecutionStats[] PutMappedResults { get; set; }
+		public ParallelExecutionStats[] ScheduleReductions { get; set; }
+		public ParallelExecutionStats[] StorageCommits { get; set; }
 	}
 
 	public class LucenePerformanceStats
 	{
 		public long DeleteExistingDocumentsDurationMs { get; set; }
-		public long ConvertToLuceneDocumentsDurationMs { get; set; }
-		public long AddDocumentsDurationMs { get; set; }
+		public ParallelExecutionStats[] ConvertToLuceneDocuments { get; set; }
+		public ParallelExecutionStats[] AddDocuments { get; set; }
 		public long FlushToDiskDurationMs { get; set; }
 		public long RecreateSearcherDurationMs { get; set; }
 	}
 
 	public class ReducingPerformanceStats
 	{
-		public ReduceType ReduceType { get; set; }
+		public ReducingPerformanceStats(ReduceType reduceType)
+		{
+			ReduceType = reduceType;
+			LevelStats = new List<ReduceLevelPeformanceStats>();
+		}
+
+		public ReduceType ReduceType { get; private set; }
 		public List<ReduceLevelPeformanceStats> LevelStats { get; set; } 
 	}
 
@@ -254,11 +280,12 @@ namespace Raven.Abstractions.Data
 	{
 		public ReduceLevelPeformanceStats()
 		{
-			LinqExecutionPerformance = new LinqExecutionPerformanceStats()
+			LinqExecutionPerformance = new LinqExecutionPerformanceStats[]{};
+			LucenePerformance = new LucenePerformanceStats()
 			{
-				MapLinqExecutionDurationMs = -1
+				AddDocuments = new ParallelExecutionStats[]{},
+				ConvertToLuceneDocuments = new ParallelExecutionStats[] { }
 			};
-			LucenePerformance = new LucenePerformanceStats();
 			ReduceStoragePerformance = new ReduceStoragePerformanceStats();
 		}
 
@@ -270,7 +297,7 @@ namespace Raven.Abstractions.Data
 		public DateTime Completed { get; set; }
 		public TimeSpan Duration { get; set; }
 		public double DurationMs{ get { return Math.Round(Duration.TotalMilliseconds, 2); } }
-		public LinqExecutionPerformanceStats LinqExecutionPerformance { get; set; }
+		public LinqExecutionPerformanceStats[] LinqExecutionPerformance { get; set; }
 		public LucenePerformanceStats LucenePerformance { get; set; }
 		public ReduceStoragePerformanceStats ReduceStoragePerformance { get; set; }
 
@@ -280,11 +307,11 @@ namespace Raven.Abstractions.Data
 			InputCount += other.InputCount;
 			OutputCount += other.OutputCount;
 
-			LinqExecutionPerformance.ReduceLinqExecutionDurationMs += other.LinqExecutionPerformance.ReduceLinqExecutionDurationMs;
+			LinqExecutionPerformance = LinqExecutionPerformance.Union(other.LinqExecutionPerformance).ToArray();
 
 			LucenePerformance.DeleteExistingDocumentsDurationMs += other.LucenePerformance.DeleteExistingDocumentsDurationMs;
-			LucenePerformance.ConvertToLuceneDocumentsDurationMs += other.LucenePerformance.ConvertToLuceneDocumentsDurationMs;
-			LucenePerformance.AddDocumentsDurationMs += other.LucenePerformance.AddDocumentsDurationMs;
+			LucenePerformance.ConvertToLuceneDocuments = LucenePerformance.ConvertToLuceneDocuments.Union(other.LucenePerformance.ConvertToLuceneDocuments).ToArray();
+			LucenePerformance.AddDocuments = LucenePerformance.AddDocuments.Union(other.LucenePerformance.AddDocuments).ToArray();
 			LucenePerformance.FlushToDiskDurationMs += other.LucenePerformance.FlushToDiskDurationMs;
 			LucenePerformance.RecreateSearcherDurationMs += other.LucenePerformance.RecreateSearcherDurationMs;
 		}
@@ -292,11 +319,11 @@ namespace Raven.Abstractions.Data
 
 	public class ReduceStoragePerformanceStats
 	{
-		public long GetItemsToReduceDurationMs { get; set; }
-		public long DeletePreviouslyScheduledReductionsMs { get; set; }
+		public ParallelExecutionStats[] GetItemsToReduceDurationMs { get; set; }
+		public ParallelExecutionStats[] DeletePreviouslyScheduledReductionsMs { get; set; }
 		public long ScheduleReductionsDurationMs { get; set; }
 		public long GetMappedResultsDurationMs { get; set; }
-		public long RemoveReduceResultsDurationMs { get; set; }
+		public ParallelExecutionStats[] RemoveReduceResultsDurationMs { get; set; }
 		public long StorageCommitDurationMs { get; set; }
 	}
 }
