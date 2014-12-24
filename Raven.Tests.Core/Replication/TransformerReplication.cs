@@ -107,6 +107,40 @@ namespace Raven.Tests.Core.Replication
 		}
 
 		[Fact]
+		public void Should_skip_transformer_replication_if_flag_is_set()
+		{
+			using (var sourceServer = GetNewServer(8077))
+			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer))
+			using (var destinationServer1 = GetNewServer(8078))
+			using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1))
+			using (var destinationServer2 = GetNewServer())
+			using (var destination2 = NewRemoteDocumentStore(ravenDbServer: destinationServer2))
+			using (var destinationServer3 = GetNewServer(8081))
+			using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3))
+			{
+				CreateDatabaseWithReplication(source, "testDB");
+				CreateDatabaseWithReplication(destination1, "testDB");
+				CreateDatabaseWithReplication(destination2, "testDB");
+				CreateDatabaseWithReplication(destination3, "testDB");
+
+				// ReSharper disable once AccessToDisposedClosure
+				SetupReplication(source, "testDB", store => destination2 == store, destination1, destination2, destination3);
+
+				var transformer = new UserWithoutExtraInfoTransformer();
+				transformer.Execute(source.DatabaseCommands.ForDatabase("testDB"), source.Conventions);
+
+				var transformersOnDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				Assert.Equal(1, transformersOnDestination1.Count(x => x.Name == transformer.TransformerName));
+
+				var transformersOnDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				Assert.Equal(0, transformersOnDestination2.Length);
+
+				var transformersOnDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				Assert.Equal(1, transformersOnDestination3.Count(x => x.Name == transformer.TransformerName));
+			}
+		}
+
+		[Fact]
 		public void Transformer_replication_should_respect_skip_replication_flag()
 		{
 			using (var sourceServer = GetNewServer(8077))
