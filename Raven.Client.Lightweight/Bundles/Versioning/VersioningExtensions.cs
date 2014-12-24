@@ -8,6 +8,9 @@ namespace Raven.Client.Bundles.Versioning
 {
 	public static class VersioningExtensions
 	{
+		/// <summary>
+		/// Returns all previous document revisions for specified document (with paging).
+		/// </summary>
 		public static T[] GetRevisionsFor<T>(this ISyncAdvancedSessionOperation session, string id, int start, int pageSize)
 		{
 			var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)session);
@@ -17,6 +20,9 @@ namespace Raven.Client.Bundles.Versioning
 				.ToArray();
 		}
 
+		/// <summary>
+		/// Returns all revision document keys for specified document (with paging).
+		/// </summary>
 		public static string[] GetRevisionIdsFor<T>(this ISyncAdvancedSessionOperation session, string id, int start, int pageSize)
 		{
 			var jsonDocuments = ((DocumentSession)session).DatabaseCommands.StartsWith(id + "/revisions/", null, start, pageSize, metadataOnly: true);
@@ -24,6 +30,10 @@ namespace Raven.Client.Bundles.Versioning
 				.Select(document => document.Key)
 				.ToArray();
 		}
+
+		/// <summary>
+		/// Returns all previous document revisions for specified document (with paging).
+		/// </summary>
 		public static async Task<T[]> GetRevisionsForAsync<T>(this IAsyncAdvancedSessionOperations session, string id, int start, int pageSize)
 		{
 			var inMemoryDocumentSessionOperations = (InMemoryDocumentSessionOperations)session;
@@ -33,6 +43,9 @@ namespace Raven.Client.Bundles.Versioning
 				.ToArray();
 		}
 
+		/// <summary>
+		/// Returns all revision document keys for specified document (with paging).
+		/// </summary>
 		public static async Task<string[]> GetRevisionIdsForAsync<T>(this IAsyncAdvancedSessionOperations session, string id, int start, int pageSize)
 		{
 			var jsonDocuments = await ((AsyncDocumentSession)session).AsyncDatabaseCommands.StartsWithAsync(id + "/revisions/", null, start, pageSize, metadataOnly: true);

@@ -44,8 +44,10 @@ namespace Raven.Abstractions.Data
 
 		/// <summary>
 		/// Indicates if the document was deleted (null if not DELETE operation)
+		/// <para>Value:</para>
+		/// <para>- <c>true</c> - if the document was deleted</para>
+		/// <para>- <c>false</c> - if it did not exist.</para>
 		/// </summary>
-		/// <value>true if the document was deleted, false if it did not exist.</value>
 		public bool? Deleted { get; set; }
 	}
 }

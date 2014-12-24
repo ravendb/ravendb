@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -14,6 +14,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Database.Data;
@@ -35,15 +36,10 @@ using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Listeners;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
-using System.Collections.Specialized;
 
 namespace Raven.Client.Connection.Async
 {
-	/// <summary>
-	/// Access the database commands in async fashion
-	/// </summary>
 	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncInfoDatabaseCommands
 	{
 		private readonly ProfilingInformation profilingInformation;
@@ -79,9 +75,6 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
-		/// </summary>
 		public AsyncServerClient(string url, DocumentConvention convention, OperationCredentials credentials,
 								 HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId,
 								 Func<string, IDocumentStoreReplicationInformer> replicationInformerGetter, string databaseName,
@@ -105,23 +98,15 @@ namespace Raven.Client.Connection.Async
 			this.conflictListeners = conflictListeners;
 			this.replicationInformerGetter = replicationInformerGetter;
 			this.replicationInformer = replicationInformerGetter(databaseName);
-            this.readStripingBase = replicationInformer.GetReadStripingBase(incrementReadStripe);
+			this.readStripingBase = replicationInformer.GetReadStripingBase(incrementReadStripe);
 
 			this.replicationInformer.UpdateReplicationInformationIfNeeded(this);
 		}
 
-		/// <summary>
-		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-		/// </summary>
 		public void Dispose()
 		{
 		}
 
-		/// <summary>
-		/// Gets the index names from the server asynchronously
-		/// </summary>
-		/// <param name="start">Paging start</param>
-		/// <param name="pageSize">Size of the page.</param>
 		public Task<string[]> GetIndexNamesAsync(int start, int pageSize)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
@@ -134,11 +119,6 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		/// <summary>
-		/// Gets the indexes from the server asynchronously
-		/// </summary>
-		/// <param name="start">Paging start</param>
-		/// <param name="pageSize">Size of the page.</param>
 		public Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
@@ -159,9 +139,6 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		/// <summary>
-		/// Gets the transformers from the server asynchronously
-		/// </summary>
 		public Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
@@ -179,11 +156,6 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-
-		/// <summary>
-		/// Resets the specified index asynchronously
-		/// </summary>
-		/// <param name="name">The name.</param>
 		public Task ResetIndexAsync(string name)
 		{
 			return ExecuteWithReplication("RESET", async operationMetadata =>
@@ -196,6 +168,11 @@ namespace Raven.Client.Connection.Async
 					return await request.ReadResponseJsonAsync();
 				}
 			});
+		}
+
+		public Task<string> PutIndexAsync<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
+		{
+			return PutIndexAsync(name, indexDef, false);
 		}
 
 		public Task<string> PutIndexAsync<TDocument, TReduceResult>(string name,
@@ -224,32 +201,21 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		/// <summary>
-		/// Puts the index definition for the specified name asynchronously
-		/// </summary>
-		/// <param name="name">The name.</param>
-		/// <param name="indexDef">The index def.</param>
-		/// <param name="overwrite">Should overwrite index</param>
+		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef)
+		{
+			return PutIndexAsync(name, indexDef, false);
+		}
+
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
 			return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexAsync(name, indexDef, overwrite, operationMetadata));
 		}
 
-		/// <summary>
-		/// Puts the transformer definition for the specified name asynchronously
-		/// </summary>
 		public Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition)
 		{
 			return ExecuteWithReplication("PUT", operationMetadata => DirectPutTransformerAsync(name, transformerDefinition, operationMetadata));
 		}
 
-		/// <summary>
-		/// Puts the index definition for the specified name asynchronously with url
-		/// </summary>
-		/// <param name="name">The name.</param>
-		/// <param name="indexDef">The index def.</param>
-		/// <param name="overwrite">Should overwrite index</param>
-		/// <param name="operationMetadata">The metadata that contains URL and credentials to perform operation</param>
 		public async Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, OperationMetadata operationMetadata)
 		{
 			var requestUri = operationMetadata.Url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
@@ -291,9 +257,6 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		/// <summary>
-		/// Puts the transformer definition for the specified name asynchronously with url
-		/// </summary>
 		public async Task<string> DirectPutTransformerAsync(string name, TransformerDefinition transformerDefinition,
 															OperationMetadata operationMetadata)
 		{
@@ -327,10 +290,6 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		/// <summary>
-		/// Deletes the index definition for the specified name asynchronously
-		/// </summary>
-		/// <param name="name">The name.</param>
 		public Task DeleteIndexAsync(string name)
 		{
 			return ExecuteWithReplication("DELETE", async operationMetadata =>
@@ -342,7 +301,6 @@ namespace Raven.Client.Connection.Async
 				}
 			});
 		}
-
 
 		public Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null)
 		{
@@ -392,28 +350,11 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		/// <summary>
-		/// Deletes the document for the specified id asynchronously
-		/// </summary>
-		/// <param name="id">The id.</param>
-		public Task DeleteDocumentAsync(string id)
+		public Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches)
 		{
-			return ExecuteWithReplication("DELETE", async operationMetadata =>
-			{
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Doc(id), "DELETE", operationMetadata.Credentials, convention).AddOperationHeaders(operationsHeaders)))
-				{
-					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-					await request.ExecuteRequestAsync().ConfigureAwait(false);
-				}
-			});
+			return PatchAsync(key, patches, null);
 		}
 
-		/// <summary>
-		/// Sends a patch request for a specific document, ignoring the document's Etag
-		/// </summary>
-		/// <param name="key">Id of the document to patch</param>
-		/// <param name="patches">Array of patch requests</param>
-		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
 		public async Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, bool ignoreMissing)
 		{
 			var batchResults = await BatchAsync(new ICommandData[]
@@ -430,12 +371,11 @@ namespace Raven.Client.Connection.Async
 			return batchResults[0].AdditionalData;
 		}
 
-		/// <summary>
-		/// Sends a patch request for a specific document
-		/// </summary>
-		/// <param name="key">Id of the document to patch</param>
-		/// <param name="patches">Array of patch requests</param>
-		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		public Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch)
+		{
+			return PatchAsync(key, patch, null);
+		}
+
 		public async Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, Etag etag)
 		{
 			var batchResults = await BatchAsync(new ICommandData[]
@@ -450,13 +390,6 @@ namespace Raven.Client.Connection.Async
 			return batchResults[0].AdditionalData;
 		}
 
-		/// <summary>
-		/// Sends a patch request for a specific document which may or may not currently exist
-		/// </summary>
-		/// <param name="key">Id of the document to patch</param>
-		/// <param name="patchesToExisting">Array of patch requests to apply to an existing document</param>
-		/// <param name="patchesToDefault">Array of patch requests to apply to a default document when the document is missing</param>
-		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
 		public async Task<RavenJObject> PatchAsync(string key, PatchRequest[] patchesToExisting,
 												   PatchRequest[] patchesToDefault, RavenJObject defaultMetadata)
 		{
@@ -473,12 +406,6 @@ namespace Raven.Client.Connection.Async
 			return batchResults[0].AdditionalData;
 		}
 
-		/// <summary>
-		/// Sends a patch request for a specific document, ignoring the document's Etag
-		/// </summary>
-		/// <param name="key">Id of the document to patch</param>
-		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
 		public async Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, bool ignoreMissing)
 		{
 			var batchResults = await BatchAsync(new ICommandData[]
@@ -495,12 +422,6 @@ namespace Raven.Client.Connection.Async
 			return batchResults[0].AdditionalData;
 		}
 
-		/// <summary>
-		/// Sends a patch request for a specific document
-		/// </summary>
-		/// <param name="key">Id of the document to patch</param>
-		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		public async Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, Etag etag)
 		{
 			var batchResults = await BatchAsync(new ICommandData[]
@@ -515,13 +436,6 @@ namespace Raven.Client.Connection.Async
 			return batchResults[0].AdditionalData;
 		}
 
-		/// <summary>
-		/// Sends a patch request for a specific document which may or may not currently exist
-		/// </summary>
-		/// <param name="key">Id of the document to patch</param>
-		/// <param name="patchExisting">The patch request to use (using JavaScript) to an existing document</param>
-		/// <param name="patchDefault">The patch request to use (using JavaScript)  to a default document when the document is missing</param>
-		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
 		public async Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting,
 												   ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata)
 		{
@@ -538,13 +452,6 @@ namespace Raven.Client.Connection.Async
 			return batchResults[0].AdditionalData;
 		}
 
-		/// <summary>
-		/// Puts the document with the specified key in the database
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="etag">The etag.</param>
-		/// <param name="document">The document.</param>
-		/// <param name="metadata">The metadata.</param>
 		public Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			return ExecuteWithReplication("PUT", operationMetadata => DirectPutAsync(operationMetadata, key, etag, document, metadata));
@@ -585,62 +492,48 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		/// <summary>
-		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
-		/// with the specified database
-		/// </summary>
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
+			return ForDatabaseInternal(database);
+		}
+
+		public IAsyncDatabaseCommands ForSystemDatabase()
+		{
+			return ForSystemDatabaseInternal();
+		}
+
+		internal AsyncServerClient ForDatabaseInternal(string database)
+		{
 			if (database == Constants.SystemDatabase)
-				return ForSystemDatabase();
+				return ForSystemDatabaseInternal();
 
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			databaseUrl = databaseUrl + "/databases/" + database + "/";
 			if (databaseUrl == url)
 				return this;
-			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId,
-										 replicationInformerGetter, database, conflictListeners, false)
-			{
-				operationsHeaders = operationsHeaders
-			};
+
+			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, replicationInformerGetter, database, conflictListeners, false) { operationsHeaders = operationsHeaders };
 		}
 
-		/// <summary>
-		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
-		/// with the root database. Useful if the database has works against a tenant database.
-		/// </summary>
-		public IAsyncDatabaseCommands ForSystemDatabase()
+		internal AsyncServerClient ForSystemDatabaseInternal()
 		{
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == url)
 				return this;
-			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId,
-										 replicationInformerGetter, databaseName, conflictListeners, false)
-			{
-				operationsHeaders = operationsHeaders
-			};
+
+			return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, replicationInformerGetter, databaseName, conflictListeners, false) { operationsHeaders = operationsHeaders };
 		}
 
-
-
-
-		/// <summary>
-		/// Gets or sets the operations headers.
-		/// </summary>
-		/// <value>The operations headers.</value>
 		public NameValueCollection OperationsHeaders
 		{
 			get { return operationsHeaders; }
 			set { operationsHeaders = value; }
 		}
+
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin { get { return new AsyncAdminServerClient(this); } }
+
 		public IAsyncAdminDatabaseCommands Admin { get { return new AsyncAdminServerClient(this); } }
 
-		/// <summary>
-		/// Begins an async get operation
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <returns></returns>
 		public Task<JsonDocument> GetAsync(string key)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
@@ -648,13 +541,6 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("GET", operationMetadata => DirectGetAsync(operationMetadata, key));
 		}
 
-
-
-
-		/// <summary>
-		/// Gets the transformer definition for the specified name asynchronously
-		/// </summary>
-		/// <param name="name">The name.</param>
 		public Task<TransformerDefinition> GetTransformerAsync(string name)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
@@ -678,11 +564,6 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-
-		/// <summary>
-		/// Gets the index definition for the specified name asynchronously
-		/// </summary>
-		/// <param name="name">The name.</param>
 		public Task<IndexDefinition> GetIndexAsync(string name)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
@@ -762,9 +643,6 @@ namespace Raven.Client.Connection.Async
 			return await DirectGetAsync(operationMetadata, key).ConfigureAwait(false);
 		}
 
-		/// <summary>
-		/// Begins an async multi get operation
-		/// </summary>
 		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null,
 											  Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false)
 		{
@@ -881,12 +759,6 @@ namespace Raven.Client.Connection.Async
 			throw FetchConcurrencyException(responseException);
 		}
 
-		/// <summary>
-		/// Begins an async get operation for documents
-		/// </summary>
-		/// <remarks>
-		/// This is primarily useful for administration of a database
-		/// </remarks>
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
@@ -1019,14 +891,6 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		/// <summary>
-		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
-		/// </summary>
-		/// <param name="index">Name of the index</param>
-		/// <param name="query">Query to build facet results</param>
-		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
-		/// <param name="start">Start index for paging</param>
-		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc, int start = 0,
 												 int? pageSize = null)
 		{
@@ -1090,14 +954,6 @@ namespace Raven.Client.Connection.Async
 		    return results;
 		}
 
-		/// <summary>
-		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
-		/// </summary>
-		/// <param name="index">Name of the index</param>
-		/// <param name="query">Query to build facet results</param>
-		/// <param name="facets">List of facets</param>
-		/// <param name="start">Start index for paging</param>
-		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0,
 												 int? pageSize = null)
 		{
@@ -1182,6 +1038,7 @@ namespace Raven.Client.Connection.Async
 				return convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(result));
 			}
 		}
+
 		public async Task<IndexMergeResults> GetIndexMergeSuggestionsAsync()
 		{
 			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/debug/suggest-index-merge"), "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)))
@@ -1252,9 +1109,6 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		/// <summary>
-		/// Perform a single POST request containing multiple nested GET requests
-		/// </summary>
 		public Task<GetResponse[]> MultiGetAsync(GetRequest[] requests)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata => // logical GET even though the actual request is a POST
@@ -1286,25 +1140,17 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-
-		/// <summary>
-		/// Begins the async query.
-		/// </summary>
-		/// <param name="index">The index.</param>
-		/// <param name="query">The query.</param>
-		/// <param name="includes">The include paths</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
-		/// <returns></returns>
 		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
 			var method = (query.Query == null || query.Query.Length <= convention.MaxLengthOfQueryUsingGetUrl)
 				? "GET" : "POST";
-
+			
 		    if (method == "POST")
 		    {
                 return QueryAsyncAsPost(index, query, includes);
 		    }
 
+				
 			return QueryAsyncAsGet(index, query, includes, metadataOnly, indexEntriesOnly, method);
 		}
 
@@ -1315,6 +1161,7 @@ namespace Raven.Client.Connection.Async
 	            EnsureIsNotNullOrEmpty(index, "index");
 	            string path = query.GetIndexQueryUrl(operationMetadata.Url, index, "indexes", includeQuery: method == "GET");
 
+
 	            if (metadataOnly)
 	                path += "&metadata-only=true";
 	            if (indexEntriesOnly)
@@ -1324,10 +1171,12 @@ namespace Raven.Client.Connection.Async
 	                path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 	            }
 
+
 	            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention) {AvoidCachingRequest = query.DisableCaching}.AddOperationHeaders(OperationsHeaders)))
 	            {
 	                RavenJObject json = null;
 	                request.AddReplicationStatusHeaders(operationMetadata.Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
 
 	                if (method == "POST")
 	                {
@@ -1335,6 +1184,7 @@ namespace Raven.Client.Connection.Async
 	                }
 
 
+		
 	                json = (RavenJObject) await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
 
@@ -1419,7 +1269,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="e">The exception to handle</param>
 		/// <returns>returns true if the exception is handled, false if it should be thrown</returns>
-		private bool HandleException(ErrorResponseException e)
+private bool HandleException(ErrorResponseException e)
 		{
 			if (e.StatusCode == HttpStatusCode.InternalServerError)
 			{
@@ -1432,11 +1282,6 @@ namespace Raven.Client.Connection.Async
 			return false;
 		}
 
-		/// <summary>
-		/// Returns a list of suggestions based on the specified suggestion query.
-		/// </summary>
-		/// <param name="index">The index to query for suggestions</param>
-		/// <param name="suggestionQuery">The suggestion query.</param>
 		public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery suggestionQuery)
 		{
 			if (suggestionQuery == null)
@@ -1467,11 +1312,6 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		/// <summary>
-		/// Begins the async batch operation
-		/// </summary>
-		/// <param name="commandDatas">The command data.</param>
-		/// <returns></returns>
 		public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas)
 		{
 			return ExecuteWithReplication("POST", async operationMetadata =>
@@ -1543,10 +1383,6 @@ namespace Raven.Client.Connection.Async
 				throw new ArgumentException("Key cannot be null or empty", argName);
 		}
 
-		/// <summary>
-		/// Begins retrieving the statistics for the database
-		/// </summary>
-		/// <returns></returns>
 		public async Task<DatabaseStatistics> GetStatisticsAsync()
 		{
 			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url.Stats(), "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)))
@@ -1571,13 +1407,6 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		/// <summary>
-		/// Puts the attachment with the specified key asynchronously
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="etag">The etag.</param>
-		/// <param name="data">The data stream.</param>
-		/// <param name="metadata">The metadata.</param>
 		[Obsolete("Use RavenFS instead.")]
 		public Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata)
 		{
@@ -1599,11 +1428,6 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		/// <summary>
-		/// Gets the attachment by the specified key asynchronously
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <returns></returns>
 		[Obsolete("Use RavenFS instead.")]
 		public Task<Attachment> GetAttachmentAsync(string key)
 		{
@@ -1686,12 +1510,6 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-
-		/// <summary>
-		/// Deletes the attachment with the specified key asynchronously
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="etag">The etag.</param>
 		[Obsolete("Use RavenFS instead.")]
 		public Task DeleteAttachmentAsync(string key, Etag etag)
 		{
@@ -1717,20 +1535,11 @@ namespace Raven.Client.Connection.Async
 			return url + "/static/" + Uri.EscapeUriString(key);
 		}
 
-		/// <summary>
-		/// Disable all caching within the given scope
-		/// </summary>
 		public IDisposable DisableAllCaching()
 		{
 			return jsonRequestFactory.DisableAllCaching();
 		}
 
-		///<summary>
-		/// Get the possible terms for the specified field in the index asynchronously
-		/// You can page through the results by use fromValue parameter as the 
-		/// starting point for the next query
-		///</summary>
-		///<returns></returns>
 		public Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
@@ -1746,26 +1555,17 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		/// <summary>
-		/// The profiling information
-		/// </summary>
 		public ProfilingInformation ProfilingInformation
 		{
 			get { return profilingInformation; }
 		}
 
-		/// <summary>
-		/// Notify when the failover status changed
-		/// </summary>
 		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
 		{
 			add { replicationInformer.FailoverStatusChanged += value; }
 			remove { replicationInformer.FailoverStatusChanged -= value; }
 		}
 
-		/// <summary>
-		/// Force the database commands to read directly from the master, unless there has been a failover.
-		/// </summary>
 		public IDisposable ForceReadFromMaster()
 		{
 			var old = readStripingBase;
@@ -2114,17 +1914,11 @@ namespace Raven.Client.Connection.Async
 			return url + "/docs/" + documentKey;
 		}
 
-		/// <summary>
-		/// Get the low level bulk insert operation
-		/// </summary>
 		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
 		{
 			return new RemoteBulkInsertOperation(options, this, changes);
 		}
 
-		/// <summary>
-		/// Do a direct HEAD request against the server for the specified document
-		/// </summary>
 		private async Task<JsonDocumentMetadata> DirectHeadAsync(OperationMetadata operationMetadata, string key)
 		{
 			var metadata = new RavenJObject();
@@ -2506,11 +2300,12 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		/// <summary>
-		/// Returns a new <see cref="IAsyncDatabaseCommands"/> using the specified credentials
-		/// </summary>
-		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
+		{
+			return WithInternal(credentialsForSession);
+		}
+
+		internal AsyncServerClient WithInternal(ICredentials credentialsForSession)
 		{
 			return new AsyncServerClient(url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId,
 										 replicationInformerGetter, databaseName, conflictListeners, false);
