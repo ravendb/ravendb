@@ -157,7 +157,15 @@ namespace Raven.Client.Connection.Async
 					return;
 
 				await serverClient.GlobalAdmin.CreateDatabaseAsync(doc).ConfigureAwait(false);
-				await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention()).ConfigureAwait(false);
+
+				try
+				{
+					await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention()).ConfigureAwait(false);
+				}
+				catch (Exception)
+				{
+					// this is a courtesy, not required, and can happen if we don't have permissions to the new db
+				}
 			}
 			catch (Exception)
 			{
