@@ -739,5 +739,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Adds explanations of scores calculated for queried documents to the query result
 		/// </summary>
 		TSelf ExplainScores();
+
+	    /// <summary>
+	    /// Order the search results randomly
+	    /// </summary>
+        TSelf CustomSortUsing(string typeName, bool descending);
 	}
 }

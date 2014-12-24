@@ -42,7 +42,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Sort using custom sorter on the server
 		/// </summary>
-		void CustomSortUsing(string typeName);
+		void CustomSortUsing(string typeName, bool descending);
 
 		/// <summary>
 		/// Order the search results randomly using the specified seed

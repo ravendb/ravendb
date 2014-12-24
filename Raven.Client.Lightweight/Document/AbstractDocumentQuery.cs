@@ -801,9 +801,14 @@ namespace Raven.Client.Document
 			AddOrder(Constants.RandomFieldName + ";" + Guid.NewGuid(), false);
 		}
 
-		public void CustomSortUsing(string typeName)
+        public void CustomSortUsing(string typeName)
+        {
+            CustomSortUsing(typeName, false);
+        }
+
+		public void CustomSortUsing(string typeName, bool descending)
 		{
-			AddOrder(Constants.CustomSortFieldName + ";" + typeName, false);
+			AddOrder(Constants.CustomSortFieldName + (descending?"-":"") +  ";" + typeName, false);
 		}
 
 		/// <summary>
@@ -2210,9 +2215,15 @@ If you really want to do in memory filtering on the data returned from the query
 			return this;
 		}
 
-		IDocumentQueryCustomization IDocumentQueryCustomization.CustomSortUsing(string typeName)
+        IDocumentQueryCustomization IDocumentQueryCustomization.CustomSortUsing(string typeName)
+        {
+            CustomSortUsing(typeName, false);
+            return this;
+        }
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.CustomSortUsing(string typeName, bool descending)
 		{
-			CustomSortUsing(typeName);
+            CustomSortUsing(typeName, descending);
 			return this;
 		}
 

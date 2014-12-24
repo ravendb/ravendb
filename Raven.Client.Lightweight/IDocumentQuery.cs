@@ -43,13 +43,13 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="queryInputs"></param>
 		[Obsolete("Use SetTransformerParameters instead.")]
-		void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
+		IDocumentQuery<T> SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
 
 		/// <summary>
 		/// User definied inputs that can be used in transformer
 		/// </summary>
 		/// <param name="transformerParameters"></param>
-		void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
+		IDocumentQuery<T> SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
 
 		/// <summary>
 		/// Gets the query result

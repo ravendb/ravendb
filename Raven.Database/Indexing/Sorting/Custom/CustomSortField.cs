@@ -7,8 +7,8 @@ namespace Raven.Database.Indexing.Sorting.Custom
 	public class CustomSortField : SortField
 	{
 		private readonly IndexEntriesToComparablesGenerator generator;
-		public CustomSortField(string typeName, IndexQuery indexQuery)
-			: base(String.Empty, INT)
+		public CustomSortField(string typeName, IndexQuery indexQuery, bool reverse)
+			: base(String.Empty, INT,reverse)
 		{
 			var clrType = System.Type.GetType(typeName, throwOnError: true);
 			generator = (IndexEntriesToComparablesGenerator)Activator.CreateInstance(clrType, new object[] {indexQuery});

@@ -846,6 +846,15 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+        /// <summary>
+        /// Order the search results randomly
+        /// </summary>
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.CustomSortUsing(string typeName, bool descending)
+        {
+            CustomSortUsing(typeName, descending);
+            return this;
+        }
+
 		/// <summary>
 		/// Order the search results randomly using the specified seed
 		/// this is useful if you want to have repeatable random queries
