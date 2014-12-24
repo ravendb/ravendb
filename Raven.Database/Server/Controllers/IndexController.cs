@@ -121,7 +121,9 @@ namespace Raven.Database.Server.Controllers
 
 			return GetMessageWithObject(new
 			{
-				SuccessfulReplicationCount = (replicationDocument.Destinations.Count - failedDestinations.Count),
+				IndexesCount = indexDefinitions.Count,
+				EnabledDestinationsCount = enabledReplicationDestinations.Count,
+				SuccessfulReplicationCount = ((enabledReplicationDestinations.Count * indexDefinitions.Count) - failedDestinations.Count),
 				FailedDestinationUrls = failedDestinations
 			});
 		}
@@ -827,9 +829,14 @@ namespace Raven.Database.Server.Controllers
 				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain ?? string.Empty);
 			}
 
-			var urlTemplate = "{0}/databases/{1}/indexes/{2}";
-			if (destination.Url.Contains("://") == false)
-				urlTemplate = "//" + urlTemplate;
+			const string urlTemplate = "{0}/databases/{1}/indexes/{2}";
+			if (Uri.IsWellFormedUriString(destination.Url, UriKind.RelativeOrAbsolute) == false)
+			{
+				const string error = "Invalid destination URL - it is malformed.";
+				Log.Error(error);
+				failedDestinations.Add(destination.Url);
+			} 
+			
 			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(indexName));
 			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
 			replicationRequest.Write(indexDefinition);
