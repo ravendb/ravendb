@@ -178,31 +178,53 @@ namespace Raven.Database.FileSystem.Search
             return etag != null ? etag : Etag.Empty;
         }
 
+        public void ForceIndexReset()
+        {
+            try
+            {
+                if (analyzer != null)
+                    analyzer.Close();
+                if (currentIndexSearcherHolder != null)
+                    currentIndexSearcherHolder.SetIndexSearcher(null);
+
+                SafeDispose(crashMarker);
+                SafeDispose(writer);
+                SafeDispose(directory);
+
+                IOExtensions.DeleteDirectory(indexDirectory);
+            }
+            finally
+            {
+                OpenIndexOnStartup();
+            }
+        }
+
         internal void TryResettingIndex()
         {
             try
             {
                 IOExtensions.DeleteDirectory(indexDirectory);
 
-                var luceneDirectory = FSDirectory.Open(new DirectoryInfo(indexDirectory));
-                
-                WriteIndexVersion(luceneDirectory);
-                
-                using ( var indexWriter = new IndexWriter(luceneDirectory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED) )
+                using ( var luceneDirectory = FSDirectory.Open(new DirectoryInfo(indexDirectory)) )
                 {
-                    indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+                    WriteIndexVersion(luceneDirectory);
 
-                    filesystem.Storage.Batch(accessor =>
+                    using (var indexWriter = new IndexWriter(luceneDirectory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED))
                     {
-                        foreach (var file in accessor.GetFilesAfter(Etag.Empty, int.MaxValue))
-                        {
-                            if (!file.FullPath.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
-                                Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata);
-                        }                            
-                    });
+                        indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
 
-                    indexWriter.Flush(true, true, true);
-                }
+                        filesystem.Storage.Batch(accessor =>
+                        {
+                            foreach (var file in accessor.GetFilesAfter(Etag.Empty, int.MaxValue))
+                            {
+                                if (!file.FullPath.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
+                                    Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata);
+                            }
+                        });
+
+                        indexWriter.Flush(true, true, true);
+                    }
+                }                
 			}
 			catch (Exception exception)
 			{
@@ -480,9 +502,9 @@ namespace Raven.Database.FileSystem.Search
 
             exceptionAggregator.Execute(() => { if (analyzer != null) analyzer.Close(); });
             exceptionAggregator.Execute(() => { if (currentIndexSearcherHolder != null)  currentIndexSearcherHolder.SetIndexSearcher(null); });
-            exceptionAggregator.Execute(() => SafeDispose(crashMarker) );
-            exceptionAggregator.Execute(() => SafeDispose(writer) );
-            exceptionAggregator.Execute(() => SafeDispose(directory) );
+            exceptionAggregator.Execute(() => SafeDispose(crashMarker));
+            exceptionAggregator.Execute(() => SafeDispose(writer));
+            exceptionAggregator.Execute(() => SafeDispose(directory));
 
             exceptionAggregator.ThrowIfNeeded();
 		}
@@ -646,6 +668,5 @@ namespace Raven.Database.FileSystem.Search
             {
             }
         }
-
     }
 }
