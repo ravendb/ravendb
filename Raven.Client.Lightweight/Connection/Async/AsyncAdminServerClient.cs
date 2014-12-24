@@ -157,13 +157,13 @@ namespace Raven.Client.Connection.Async
 					return;
 
 				await serverClient.GlobalAdmin.CreateDatabaseAsync(doc).ConfigureAwait(false);
+				await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention()).ConfigureAwait(false);
 			}
 			catch (Exception)
 			{
 				if (ignoreFailures == false)
 					throw;
 			}
-			await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention()).ConfigureAwait(false);
 		}
 
 		public IAsyncDatabaseCommands Commands
