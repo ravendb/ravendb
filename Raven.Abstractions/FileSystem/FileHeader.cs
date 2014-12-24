@@ -104,7 +104,17 @@ namespace Raven.Abstractions.FileSystem
                 return System.IO.Path.GetDirectoryName(this.FullPath)
                                      .Replace('\\', '/');
             }
-        }        
+        }      
+  
+        public bool IsTombstone
+        {
+            get
+            {                
+                if (Metadata.ContainsKey(Constants.RavenDeleteMarker))
+                    return Metadata[Constants.RavenDeleteMarker].Value<bool>();
+                return false;
+            }
+        }
 
         public FileHeader( string key, RavenJObject metadata )
         {

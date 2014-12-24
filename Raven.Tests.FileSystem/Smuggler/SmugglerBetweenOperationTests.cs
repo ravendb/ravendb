@@ -7,6 +7,7 @@ using Raven.Json.Linq;
 using Raven.Smuggler;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Util;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -389,6 +390,79 @@ namespace Raven.Tests.FileSystem.Smuggler
                         files[i].Position = 0;
                         Assert.Equal(files[i].GetMD5Hash(), stream.GetMD5Hash());
                     }
+                }
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task BetweenOperation_OnlyActiveContentIsPreserved_MultipleDirectories()
+        {
+            using (var store = NewStore())
+            {
+                var server = GetServer();
+
+                var smugglerApi = new SmugglerFilesApi();
+
+                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
+                {
+                    From = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = SourceFilesystem
+                    },
+                    To = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = DestinationFilesystem
+                    }
+                };
+
+                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
+                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
+
+                int total = 10;
+                var files = new string[total];
+                using (var session = store.OpenAsyncSession(SourceFilesystem))
+                {
+                    for (int i = 0; i < total; i++)
+                    {
+                        files[i] = i + "/test.file";
+                        session.RegisterUpload(files[i], CreateRandomFileStream(100 * i + 12));
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                int deletedFiles = 0;
+                var rnd = new Random();
+                using (var session = store.OpenAsyncSession(SourceFilesystem))
+                {
+                    for (int i = 0; i < total; i++)
+                    {
+                        if (rnd.Next(2) == 0)
+                        {
+                            session.RegisterFileDeletion(files[i]);
+                            deletedFiles++;
+                        }
+
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                await smugglerApi.Between(options);
+
+                using (var session = store.OpenAsyncSession(DestinationFilesystem))
+                {
+                    int activeFiles = 0;
+                    for (int i = 0; i < total; i++)
+                    {
+                        var file = await session.LoadFileAsync(files[i]);
+                        if (file != null)
+                            activeFiles++;
+                    }
+
+                    Assert.Equal(total - deletedFiles, activeFiles);
                 }
             }
         }
