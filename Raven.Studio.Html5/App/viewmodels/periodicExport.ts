@@ -35,8 +35,11 @@ class periodicExport extends viewModelBase {
         
         var self = this;
         this.isSaveEnabled = ko.computed(() => {
-            return (self.backupConfigDirtyFlag().isDirty()) &&
-                (!self.backupSetup().disabled() || (self.backupSetup().disabled() && self.backupStatusDirtyFlag().isDirty()));
+            var onDisk = self.backupSetup().onDiskExportEnabled();
+            var remote = self.backupSetup().remoteUploadEnabled();
+            var hasAnyOption = onDisk || remote;
+            return (self.backupConfigDirtyFlag().isDirty() && hasAnyOption) &&
+                (!self.backupSetup().disabled() || self.backupConfigDirtyFlag().isDirty());
         });
 
         this.dirtyFlag = new ko.DirtyFlag([this.isSaveEnabled]);

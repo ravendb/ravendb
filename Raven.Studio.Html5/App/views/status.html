@@ -9,6 +9,9 @@
     <li data-bind="with: activeDatabase">
         <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
     </li>
+     <li class="active">
+        <span>Status</span>
+    </li>
     <li class="active">
         <span data-bind="text: currentRouteTitle"></span>
     </li>
@@ -18,7 +21,7 @@
     <div class="row">
 		<div class="col-md-2">
 			<ul class="nav nav-list nav-pills nav-stacked" data-bind="foreach: router.navigationModel">
-				<li data-bind="css: { active: isActive }">
+				<li data-bind="css: { active: isActive }, visible: $parent.routeIsVisible($data)">
 					<a data-bind="attr: { href: hash }, text: title"></a>
 				</li>
 			</ul>

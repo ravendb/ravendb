@@ -11,32 +11,28 @@ namespace Raven.Abstractions.Data
 	public class JsonDocumentMetadata : IJsonDocumentMetadata
 	{
 		/// <summary>
-		/// Gets or sets the metadata for the document
+		/// Metadata for the document
 		/// </summary>
-		/// <value>The metadata.</value>
 		public RavenJObject Metadata { get; set; }
 
 		/// <summary>
-		/// Gets or sets the key for the document
+		/// Key for the document
 		/// </summary>
-		/// <value>The key.</value>
 		public string Key { get; set; }
 
 		/// <summary>
-		/// Gets or sets a value indicating whether this document is non authoritative (modified by uncommitted transaction).
+		/// Indicates whether this document is non authoritative (modified by uncommitted transaction).
 		/// </summary>
 		public bool? NonAuthoritativeInformation { get; set; }
 
 		/// <summary>
-		/// Gets or sets the etag.
+		/// Current document etag.
 		/// </summary>
-		/// <value>The etag.</value>
 		public Etag Etag { get; set; }
 
 		/// <summary>
-		/// Gets or sets the last modified date for the document
+		/// Last modified date for the document
 		/// </summary>
-		/// <value>The last modified.</value>
 		public DateTime? LastModified { get; set; }
 	}
 }

@@ -18,7 +18,6 @@ class createFilesystem extends viewModelBase {
     storageEngine = ko.observable('');
 
     logsCustomValidityError: KnockoutComputed<string>;
-    fileSystemNameFocus = ko.observable(true);
 
     isEncryptionBundleEnabled = ko.observable(false);
 
@@ -48,10 +47,6 @@ class createFilesystem extends viewModelBase {
             var errorMessage: string = this.isPathLegal(newPath, "Logs");
             return errorMessage;
         });
-    }
-
-    attached() {
-        this.fileSystemNameFocus(true);
     }
 
     deactivate() {

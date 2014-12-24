@@ -33,9 +33,9 @@ namespace Raven.Database.Storage.Voron
             Queue = new QueueStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
             Tasks = new TasksStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
             Staleness = new StalenessStorageActions(storage, snapshotReference, writeBatchReference, bufferPool);
-            MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshotReference, writeBatchReference, bufferPool);
+            MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshotReference, writeBatchReference, bufferPool, this);
             Attachments = new AttachmentsStorageActions(storage.Attachments, writeBatchReference, snapshotReference, generator, storage, transactionalStorage, bufferPool);
-	        var generalStorageActions = new GeneralStorageActions(storage, writeBatchReference, snapshotReference, bufferPool);
+	        var generalStorageActions = new GeneralStorageActions(storage, writeBatchReference, snapshotReference, bufferPool, this);
 	        General = generalStorageActions;
 			Lists = new ListsStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool, generalStorageActions);
 		}
@@ -69,6 +69,8 @@ namespace Raven.Database.Storage.Voron
 
 		public bool IsNested { get; set; }
 		public event Action OnStorageCommit;
+		public event Action BeforeStorageCommit;
+		public event Action AfterStorageCommit;
 
 		public bool IsWriteConflict(Exception exception)
 		{
@@ -97,6 +99,24 @@ namespace Raven.Database.Storage.Voron
 	            OnStorageCommit();
 	        }
 	    }
+
+		internal void ExecuteBeforeStorageCommit()
+		{
+			var before = BeforeStorageCommit;
+			if (before != null)
+			{
+				before();
+			}
+		}
+
+		internal void ExecuteAfterStorageCommit()
+		{
+			var after = AfterStorageCommit;
+			if (after != null)
+			{
+				after();
+			}
+		}
 
 		public void AfterStorageCommitBeforeWorkNotifications(JsonDocument doc, Action<JsonDocument[]> afterCommit)
 		{

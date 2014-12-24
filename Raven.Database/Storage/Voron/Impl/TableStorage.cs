@@ -4,8 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Threading;
+using System.Web.UI;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Indexing.Collation.Cultures;
+using Voron.Impl.Paging;
 
 namespace Raven.Database.Storage.Voron.Impl
 {
@@ -65,16 +67,33 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			var reportData = new Dictionary<string, object>
 	        {
-	            {"MaxNodeSize", _options.DataPager.MaxNodeSize},
 	            {"NumberOfAllocatedPages", _options.DataPager.NumberOfAllocatedPages},
-	           // {"PageMaxSpace", persistenceSource.Options.DataPager.PageMaxSpace},
+                {"UsedPages", env.State.NextPageNumber-1},
+	            {"MaxNodeSize", _options.DataPager.MaxNodeSize},
 	            {"PageMinSpace", _options.DataPager.PageMinSpace},
-	           // {"PageSize", persistenceSource.Options.DataPager.PageSize},
-                {"Documents", GetEntriesCount(Documents)},
-                {"Indexes", GetEntriesCount(IndexingStats)},
-                {"Attachments", GetEntriesCount(Attachments)},
-
+	            {"PageMaxSpace", AbstractPager.PageMaxSpace},
+	            {"PageSize", AbstractPager.PageSize},
+                {"Root",  System.Environment.NewLine + env.State.Root.State},
+                {"FreeSpace", System.Environment.NewLine +  env.State.FreeSpaceRoot.State},
 	        };
+
+		    using (var tx = env.NewTransaction(TransactionFlags.Read))
+		    {
+		        var root = env.State.Root;
+
+
+		        using (var it = root.Iterate())
+		        {
+		            if (it.Seek(Slice.BeforeAllKeys))
+		            {
+		                do
+		                {
+		                    var tree = tx.ReadTree(it.CurrentKey.ToString());
+		                    reportData[tree.Name] = System.Environment.NewLine + tree.State.ToString();
+		                } while (it.MoveNext());
+		            }
+		        }
+		    }
 
 			return reportData;
 		}

@@ -5,10 +5,15 @@ import appUrl = require("common/appUrl");
 
 class status extends viewModelBase {
 
+    static initialVisibleViews = ["Stats", "Indexing", 'Request tracking', 'Logs', 'Running Tasks', 'Alerts', 'Index Errors', 'User Info', 'Map/Reduce Visualizer', 'Debug', 'Storage', 'Gather Debug Info'];
+
     router: DurandalRootRouter;
     static statusRouter: DurandalRouter; //TODO: is it better way of exposing this router to child router?
     currentRouteTitle: KnockoutComputed<string>;
     appUrls: computedAppUrls;
+
+    private bundleMap = { replication: "Replication Stats", sqlreplication: "Sql Replication stats" };
+    userDatabasePages = ko.observableArray(status.initialVisibleViews.slice());
 
 	constructor() {
         super();
@@ -18,8 +23,8 @@ class status extends viewModelBase {
         this.router = durandalRouter.createChildRouter()
             .map([
                 { route: 'databases/status', moduleId: 'viewmodels/statistics', title: 'Stats', nav: true, hash: appUrl.forCurrentDatabase().status },
-                { route: 'databases/status/indexStats', moduleId: 'viewmodels/indexStats', title: 'Index stats', nav: true, hash: appUrl.forCurrentDatabase().indexStats },
-                { route: 'databases/status/metrics*details', moduleId: 'viewmodels/metrics', title: 'Metrics', nav: true, hash: appUrl.forCurrentDatabase().metrics },
+                { route: 'databases/status/indexing*details', moduleId: 'viewmodels/indexing', title: 'Indexing', nav: true, hash: appUrl.forCurrentDatabase().indexPerformance },
+                { route: 'databases/status/requests*details', moduleId: 'viewmodels/requests', title: 'Request tracking', nav: true, hash: appUrl.forCurrentDatabase().requestsCount },
                 { route: 'databases/status/logs', moduleId: 'viewmodels/logs', title: 'Logs', nav: true, hash: appUrl.forCurrentDatabase().logs },
                 { route: 'databases/status/runningTasks', moduleId: 'viewmodels/runningTasks', title: 'Running Tasks', nav: true, hash: appUrl.forCurrentDatabase().runningTasks },
                 { route: 'databases/status/alerts', moduleId: 'viewmodels/alerts', title: 'Alerts', nav: true, hash: appUrl.forCurrentDatabase().alerts },
@@ -36,6 +41,8 @@ class status extends viewModelBase {
 
         status.statusRouter = this.router;
 
+        this.router.guardRoute = (instance: Object, instruction: DurandalRouteInstruction) => this.getValidRoute(instance, instruction);
+
         appUrl.mapUnknownRoutes(this.router);
 
         this.currentRouteTitle = ko.computed(() => {
@@ -43,6 +50,53 @@ class status extends viewModelBase {
             var activeRoute = this.router.navigationModel().first(r => r.isActive());
             return activeRoute != null ? activeRoute.title : "";
         });
+    }
+
+    /**
+    * Checks whether the route can be navigated to. Returns true if it can be navigated to, or a redirect URI if it can't be navigated to.
+    * This is used for preventing a navigating to system-only pages when the current databagse is non-system, and vice-versa.
+    */
+    getValidRoute(instance: Object, instruction: DurandalRouteInstruction): any {
+        var db: database = this.activeDatabase();
+        var pathArr = instruction.fragment.split('/');
+        var bundelName = pathArr[pathArr.length - 1].toLowerCase();
+        var isLegalBundelName = (this.bundleMap[bundelName] != undefined);
+        var isBundleExists = this.userDatabasePages.indexOf(this.bundleMap[bundelName]) > -1;
+
+        if (db.isSystem) {
+            return appUrl.forDocuments(null, db);
+        }
+        else if (isLegalBundelName && isBundleExists == false) {
+            return appUrl.forCurrentDatabase().databaseSettings();
+        }
+
+        return true;
+    }
+
+    activate(args) {
+        super.activate(args);
+
+        this.userDatabasePages(status.initialVisibleViews.slice());
+        var db: database = this.activeDatabase();
+        var bundles: string[] = db.activeBundles();
+
+        bundles.forEach((bundle: string) => {
+            var bundleName = this.bundleMap[bundle.toLowerCase()];
+            if (bundleName != undefined) {
+                this.userDatabasePages.push(bundleName);
+            }
+        });
+    }
+
+    routeIsVisible(route: DurandalRouteConfiguration) {
+        var bundleTitle = route.title;
+
+        if (this.userDatabasePages.indexOf(bundleTitle) !== -1) {
+            // Replication stats and Sql Replication stats are visible only when we're on a user database.
+            return true;
+        }
+
+        return false;
     }
 }
 

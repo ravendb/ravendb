@@ -25,33 +25,31 @@ namespace Raven.Abstractions.Data
 		}
 
 		/// <summary>
-		/// Gets or sets the term. The term is what the user likely entered, and will used as the basis of the suggestions.
+		/// Term is what the user likely entered, and will used as the basis of the suggestions.
 		/// </summary>
-		/// <value>The term.</value>
 		public string Term { get; set; }
 
 		/// <summary>
-		/// Gets or sets the field to be used in conjunction with the index.
+		/// Field to be used in conjunction with the index.
 		/// </summary>
-		/// <value>The field.</value>
 		public string Field { get; set; }
 
 		/// <summary>
-		/// Gets or sets the number of suggestions to return.
+		/// Maximum number of suggestions to return.
+		/// <para>Value:</para>
+		/// <para>Default value is 15.</para>
 		/// </summary>
-		/// <value>The number of suggestions.</value>
+		/// <value>Default value is 15.</value>
 		public int MaxSuggestions { get; set; }
 
 		/// <summary>
-		/// Gets or sets the string distance algorithm.
+		/// String distance algorithm to use. If <c>null</c> then default algorithm is used (Levenshtein).
 		/// </summary>
-		/// <value>The distance.</value>
 		public StringDistanceTypes? Distance { get; set; }
 
 		/// <summary>
-		/// Gets or sets the accuracy.
+		/// Suggestion accuracy. If <c>null</c> then default accuracy is used (0.5f).
 		/// </summary>
-		/// <value>The accuracy.</value>
 		public float? Accuracy { get; set; }
 
 		/// <summary>

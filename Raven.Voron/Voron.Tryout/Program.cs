@@ -20,15 +20,14 @@ namespace Voron.Tryout
 	public unsafe class Program
 	{
 		public static void Main()
-        {
-            Console.WriteLine("pid = " + Process.GetCurrentProcess().Id);
-            using (var test = new PageSplitter())
-            {
-                test.PageSplitterShouldCalculateSeparatorKeyCorrectly2();
-            }
-            Console.WriteLine("done..");
-            //RunAllTests();
-        }
+		{
+			var t = Type.GetType ("Mono.Runtime");
+			var m = t.GetMethod ("GetDisplayName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+			Console.WriteLine ( "Mono runtime: " +  m.Invoke(null, null));
+			using (var f = new Full()) {
+				f.CanBackupAndRestore ();
+			}
+		}
 
 		static void RunAllTests ()
 		{

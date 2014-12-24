@@ -105,6 +105,8 @@ namespace Raven.Database.Config
 			MaxNumberOfParallelProcessingTasks =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfParallelProcessingTasks"] ?? settings["Raven/MaxNumberOfParallelIndexTasks"], Environment.ProcessorCount, 1);
 
+			NewIndexInMemoryMaxTime =
+				new TimeSpanSetting(settings["Raven/NewIndexInMemoryMaxTime"], TimeSpan.FromMinutes(15), TimeSpanArgumentType.FromParse);
 			NewIndexInMemoryMaxMb =
 				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/NewIndexInMemoryMaxMB"], 64, 1), 1024 * 1024);
 			RunInMemory =
@@ -147,6 +149,10 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/WebDir"], GetDefaultWebDir);
 			PluginsDirectory =
 				new StringSetting(settings["Raven/PluginsDirectory"], @"~\Plugins");
+            AssembliesDirectory =
+                new StringSetting(settings["Raven/AssembliesDirectory"], @"~\Assemblies");
+            EmbeddedFilesDirectory =
+                new StringSetting(settings["Raven/EmbeddedFilesDirectory"], (string)null);
 			CompiledIndexCacheDirectory =
 				new StringSetting(settings["Raven/CompiledIndexCacheDirectory"], @"~\Raven\CompiledIndexCache");
 			TaskScheduler =
@@ -187,11 +193,11 @@ namespace Raven.Database.Config
 			Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
 			Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
 
-			Voron.MaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
-			Voron.InitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
-			Voron.MaxScratchBufferSize = new IntegerSetting(settings["Raven/Voron/MaxScratchBufferSize"], 1024);
-			Voron.AllowIncrementalBackups = new BooleanSetting(settings["Raven/Voron/AllowIncrementalBackups"], false);
-			Voron.TempPath = new StringSetting(settings["Raven/Voron/TempPath"], (string)null);
+            Voron.MaxBufferPoolSize = new IntegerSetting(settings[Constants.Voron.MaxBufferPoolSize], 4);
+            Voron.InitialFileSize = new NullableIntegerSetting(settings[Constants.Voron.InitialFileSize], (int?)null);
+			Voron.MaxScratchBufferSize = new IntegerSetting(settings[Constants.Voron.MaxScratchBufferSize], 1024);
+            Voron.AllowIncrementalBackups = new BooleanSetting(settings[Constants.Voron.AllowIncrementalBackups], false);
+            Voron.TempPath = new StringSetting(settings[Constants.Voron.TempPath], (string)null);
 
 			var txJournalPath = settings[Constants.RavenTxJournalPath];
 			var esentLogsPath = settings[Constants.RavenEsentLogsPath];
@@ -203,10 +209,10 @@ namespace Raven.Database.Config
 			Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
 			Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
 
-			FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings["Raven/FileSystem/MaximumSynchronizationInterval"], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
-			FileSystem.IndexStoragePath = new StringSetting(settings["Raven/FileSystem/IndexStoragePath"], string.Empty);
-			FileSystem.DataDir = new StringSetting(settings["Raven/FileSystem/DataDir"], @"~\FileSystems");
-			FileSystem.DefaultStorageTypeName = new StringSetting(settings["Raven/FileSystem/Storage"], string.Empty);
+            FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings[Constants.FileSystem.MaximumSynchronizationInterval], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
+            FileSystem.IndexStoragePath = new StringSetting(settings[Constants.FileSystem.IndexStorageDirectory], string.Empty);
+            FileSystem.DataDir = new StringSetting(settings[Constants.FileSystem.DataDirectory], @"~\FileSystems");
+            FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
 
 			Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
 			Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
@@ -228,7 +234,7 @@ namespace Raven.Database.Config
 
 		private int GetDefaultMemoryCacheLimitMegabytes()
 		{
-			var cacheSizeMaxSetting = new IntegerSetting(settings["Raven/Esent/CacheSizeMax"], 1024);
+            var cacheSizeMaxSetting = new IntegerSetting(settings[Constants.Esent.CacheSizeMax], 1024);
 
 			// we need to leave ( a lot ) of room for other things as well, so we min the cache size
 			var val = (MemoryStatistics.TotalPhysicalMemory / 2) -
@@ -266,7 +272,7 @@ namespace Raven.Database.Config
 		public TimeSpanSetting PrewarmFacetsOnIndexingMaxAge { get; private set; }
 
 		public TimeSpanSetting PrewarmFacetsSyncronousWaitTime { get; private set; }
-
+        
 		public IntegerSettingWithMin MaxNumberOfItemsToProcessInSingleBatch { get; private set; }
 
 		public IntegerSetting AvailableMemoryForRaisingBatchSizeLimit { get; private set; }
@@ -278,6 +284,8 @@ namespace Raven.Database.Config
 		public IntegerSettingWithMin MaxNumberOfParallelProcessingTasks { get; private set; }
 
 		public MultipliedIntegerSetting NewIndexInMemoryMaxMb { get; private set; }
+
+		public TimeSpanSetting NewIndexInMemoryMaxTime { get; private set; }
 
 		public BooleanSetting RunInMemory { get; private set; }
 
@@ -322,6 +330,10 @@ namespace Raven.Database.Config
 		public StringSetting PluginsDirectory { get; private set; }
 
 		public StringSetting CompiledIndexCacheDirectory { get; private set; }
+
+        public StringSetting AssembliesDirectory { get; private set; }
+
+        public StringSetting EmbeddedFilesDirectory { get; private set; }
 
 		public StringSetting TaskScheduler { get; private set; }
 

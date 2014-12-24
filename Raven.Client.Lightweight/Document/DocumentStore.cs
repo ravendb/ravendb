@@ -261,6 +261,9 @@ namespace Raven.Client.Document
 			// try to wait until all the async disposables are completed
 			Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
 
+			if(Subscriptions != null)
+				Subscriptions.Dispose();
+
 			// if this is still going, we continue with disposal, it is for grace only, anyway
 
 			if (jsonRequestFactory != null)
@@ -389,6 +392,7 @@ namespace Raven.Client.Document
 
 #if !MONO
 				RecoverPendingTransactions();
+#endif
 
 				if (ensureDatabaseExists &&
 					string.IsNullOrEmpty(DefaultDatabase) == false &&
@@ -396,7 +400,6 @@ namespace Raven.Client.Document
 				{
 					DatabaseCommands.ForSystemDatabase().GlobalAdmin.EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 				}
-#endif
 			}
 			catch (Exception)
 			{
@@ -612,12 +615,12 @@ namespace Raven.Client.Document
 				}
 				return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
 					currentSessionId, GetReplicationInformerForDatabase, null,
-					Listeners.ConflictListeners));
+					Listeners.ConflictListeners, true));
 			};
 
 			asyncDatabaseCommandsGenerator = () =>
 			{
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, Listeners.ConflictListeners);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, Listeners.ConflictListeners, true);
 
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;

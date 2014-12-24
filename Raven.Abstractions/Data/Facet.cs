@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Linq;
@@ -12,19 +13,60 @@ namespace Raven.Abstractions.Data
 	public class Facet
 	{
 		private string displayName;
+
+		/// <summary>
+		/// Mode of a facet (Default, Ranges).
+		/// </summary>
 		public FacetMode Mode { get; set; }
+
+		/// <summary>
+		/// Flags indicating type of facet aggregation.
+		/// </summary>
         public FacetAggregation Aggregation { get; set; }
+
+		/// <summary>
+		/// Field on which aggregation will be performed.
+		/// </summary>
         public string AggregationField { get; set; }
+
+		/// <summary>
+		/// Type of field on which aggregation will be performed.
+		/// </summary>
 		public string AggregationType { get; set; }
+
+		/// <summary>
+		/// Name of facet.
+		/// </summary>
 		public string Name { get; set; }
+
+		/// <summary>
+		/// Display name of facet. Will return {Name} if null.
+		/// </summary>
 		public string DisplayName
 		{
 			get { return displayName ?? Name; }
 			set { displayName = value; }
 		}
+
+		/// <summary>
+		/// List of facet ranges.
+		/// </summary>
 		public List<string> Ranges { get; set; }
+
+		/// <summary>
+		/// Maximum number of results to return.
+		/// </summary>
 		public int? MaxResults { get; set; }
+
+		/// <summary>
+		/// Indicates how terms should be sorted.
+		/// </summary>
+		/// <value>FacetTermSortMode.ValueAsc by default.</value>
 		public FacetTermSortMode TermSortMode { get; set; }
+
+		/// <summary>
+		/// Indicates if remaining terms should be included in results.
+		/// </summary>
 		public bool IncludeRemainingTerms { get; set; }
 
 		public Facet()
@@ -36,7 +78,14 @@ namespace Raven.Abstractions.Data
 
 	public class Facet<T>
 	{
+		/// <summary>
+		/// Name of facet.
+		/// </summary>
 		public Expression<Func<T, object>> Name { get; set; }
+
+		/// <summary>
+		/// List of facet ranges.
+		/// </summary>
 		public List<Expression<Func<T, bool>>> Ranges { get; set; }
 
 		public Facet()

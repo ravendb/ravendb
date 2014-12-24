@@ -7,12 +7,13 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Counters.Controllers
 {
 	public class CountersController : RavenCountersApiController
 	{
-		[Route("counters/{counterName}/change")]
+		[RavenRoute("counters/{counterName}/change")]
 		[HttpPost]
 		public HttpResponseMessage CounterChange(string group, string counterName, long delta)
 		{
@@ -26,7 +27,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[Route("counters/{counterName}/batch")]
+		[RavenRoute("counters/{counterName}/batch")]
 		[HttpPost]
 		public async Task<HttpResponseMessage> CountersBatch()
 		{
@@ -49,7 +50,7 @@ namespace Raven.Database.Counters.Controllers
 			}	
 		}
 
-		[Route("counters/{counterName}/reset")]
+		[RavenRoute("counters/{counterName}/reset")]
 		[HttpPost]
 		public HttpResponseMessage CounterReset(string group, string counterName)
 		{
@@ -66,7 +67,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[Route("counters/{counterName}/groups")]
+		[RavenRoute("counters/{counterName}/groups")]
 		[HttpGet]
 		public HttpResponseMessage GetCounterGroups()
 		{
@@ -76,7 +77,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[Route("counters/{counterName}/counters")]
+		[RavenRoute("counters/{counterName}/counters")]
 		[HttpGet]
 		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string group = null)
 		{
@@ -101,7 +102,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-        [Route("counters/{counterName}/getCounterOverallTotal")]
+        [RavenRoute("counters/{counterName}/getCounterOverallTotal")]
         [HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string group, string counterName)
         {
@@ -120,7 +121,7 @@ namespace Raven.Database.Counters.Controllers
 			}
         }
 
-        [Route("counters/{counterName}/getCounterServersValues")]
+        [RavenRoute("counters/{counterName}/getCounterServersValues")]
         [HttpGet]
         public HttpResponseMessage GetCounterServersValues(string group, string counterName)
         {
@@ -145,14 +146,14 @@ namespace Raven.Database.Counters.Controllers
             }
         }
 
-        [Route("counters/{counterName}/metrics")]
+        [RavenRoute("counters/{counterName}/metrics")]
         [HttpGet]
         public HttpResponseMessage CounterMetrics()
         {
             return Request.CreateResponse(HttpStatusCode.OK, Storage.CreateMetrics());            
         }
 
-        [Route("counters/{counterName}/stats")]
+        [RavenRoute("counters/{counterName}/stats")]
         [HttpGet]
         public HttpResponseMessage CounterStats()
         {

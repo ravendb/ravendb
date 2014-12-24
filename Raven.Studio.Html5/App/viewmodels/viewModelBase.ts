@@ -31,7 +31,7 @@ class viewModelBase {
 
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
-    private notifications: Array<changeSubscription> = [];
+    notifications: Array<changeSubscription> = [];
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
     public static isConfirmedUsingSystemDatabase: boolean = false;
     dirtyFlag = new ko.DirtyFlag([]);

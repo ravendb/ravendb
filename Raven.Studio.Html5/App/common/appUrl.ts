@@ -44,14 +44,16 @@ class appUrl {
         reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
-        indexStats: ko.computed(() => appUrl.forIndexStats(appUrl.currentDatabase())),
         replicationPerfStats: ko.computed(() => appUrl.forReplicationPerfStats(appUrl.currentDatabase())),
         sqlReplicationPerfStats: ko.computed(() => appUrl.forSqlReplicationPerfStats(appUrl.currentDatabase())),
-        metrics: ko.computed(() => appUrl.forMetrics(appUrl.currentDatabase())),
-        metricsIndexing: ko.computed(() => appUrl.forMetricsIndexing(appUrl.currentDatabase())),
-        metricsRequests: ko.computed(() => appUrl.forMetricsRequests(appUrl.currentDatabase())),
-        metricsIndexBatchSize: ko.computed(() => appUrl.forMetricsIndexBatchSize(appUrl.currentDatabase())),
-        metricsPrefetches: ko.computed(() => appUrl.forMetricsPrefetches(appUrl.currentDatabase())),
+
+        requestsCount: ko.computed(() => appUrl.forRequestsCount(appUrl.currentDatabase())),
+        requestsTracing: ko.computed(() => appUrl.forRequestsTracing(appUrl.currentDatabase())),
+        indexPerformance: ko.computed(() => appUrl.forIndexPerformance(appUrl.currentDatabase())),
+        indexStats: ko.computed(() => appUrl.forIndexStats(appUrl.currentDatabase())),
+        indexBatchSize: ko.computed(() => appUrl.forIndexBatchSize(appUrl.currentDatabase())),
+        indexPrefetches: ko.computed(() => appUrl.forIndexPrefetches(appUrl.currentDatabase())),
+
         settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase())),
         logs: ko.computed(() => appUrl.forLogs(appUrl.currentDatabase())),
         runningTasks: ko.computed(() => appUrl.forRunningTasks(appUrl.currentDatabase())),
@@ -80,11 +82,11 @@ class appUrl {
         statusDebugQueries: ko.computed(() => appUrl.forStatusDebugQueries(appUrl.currentDatabase())),
         statusDebugTasks: ko.computed(() => appUrl.forStatusDebugTasks(appUrl.currentDatabase())),
         statusDebugRoutes: ko.computed(() => appUrl.forStatusDebugRoutes(appUrl.currentDatabase())),
-        statusDebugRequestTracing: ko.computed(() => appUrl.forStatusDebugRequestTracing(appUrl.currentDatabase())),
         statusDebugSqlReplication: ko.computed(() => appUrl.forStatusDebugSqlReplication(appUrl.currentDatabase())),
         statusDebugIndexFields: ko.computed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
         statusDebugIdentities: ko.computed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
         statusDebugWebSocket: ko.computed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
+        statusDebugPersistAutoIndex: ko.computed(() => appUrl.forStatusDebugPersistAutoIndex(appUrl.currentDatabase())),
         infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
 
         statusStorageOnDisk: ko.computed(() => appUrl.forStatusStorageOnDisk(appUrl.currentDatabase())),
@@ -241,10 +243,6 @@ class appUrl {
         return "#databases/status?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forIndexStats(db: database): string {
-        return "#databases/status/indexStats?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forReplicationPerfStats(db: database): string {
         return "#databases/status/replicationPerfStats?" + appUrl.getEncodedDbPart(db);
     }
@@ -253,24 +251,28 @@ class appUrl {
         return "#databases/status/sqlReplicationPerfStats?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forMetrics(db: database): string {
-        return "#databases/status/metrics?" + appUrl.getEncodedDbPart(db);
+    static forRequestsCount(db: database): string {
+        return "#databases/status/requests?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forMetricsRequests(db: database): string {
-        return "#databases/status/metrics?" + appUrl.getEncodedDbPart(db);
+    static forRequestsTracing(db: database): string {
+        return "#databases/status/requests/tracing?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forMetricsIndexing(db: database): string {
-        return "#databases/status/metrics/indexing?" + appUrl.getEncodedDbPart(db);
+    static forIndexPerformance(db: database): string {
+        return "#databases/status/indexing?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forMetricsIndexBatchSize(db: database): string {
-        return "#databases/status/metrics/indexBatchSize?" + appUrl.getEncodedDbPart(db);
+    static forIndexStats(db: database): string {
+        return "#databases/status/indexing/stats?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forMetricsPrefetches(db: database): string {
-        return "#databases/status/metrics/prefetches?" + appUrl.getEncodedDbPart(db);
+    static forIndexBatchSize(db: database): string {
+        return "#databases/status/indexing/batchSize?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forIndexPrefetches(db: database): string {
+        return "#databases/status/indexing/prefetches?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebug(db: database): string {
@@ -309,8 +311,8 @@ class appUrl {
         return "#databases/status/debug/routes?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forStatusDebugRequestTracing(db): string {
-        return "#databases/status/debug/requestTracing?" + appUrl.getEncodedDbPart(db);
+    static forRequestTracing(db): string {
+        return "#databases/status/requests/tracking?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugSqlReplication(db: database): string {
@@ -327,6 +329,10 @@ class appUrl {
 
     static forStatusDebugWebSocket(db: database): string {
         return "#databases/status/debug/webSocket?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugPersistAutoIndex(db: database): string {
+        return "#databases/status/debug/persist?" + appUrl.getEncodedDbPart(db);
     }
 
     static forInfoPackage(db: database): string {

@@ -3,13 +3,15 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 
+using Raven.Database.Server.WebApi.Attributes;
+
 namespace Raven.Database.Server.Controllers
 {
 	public class IdentityController : RavenDbApiController
 	{
 		[HttpPost]
-        [Route("identity/next")]
-        [Route("databases/{databaseName}/identity/next")]
+        [RavenRoute("identity/next")]
+        [RavenRoute("databases/{databaseName}/identity/next")]
 		public HttpResponseMessage IdentityNextPost()
 		{
 			var name = GetQueryStringValue("name");
@@ -31,8 +33,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-        [Route("identity/seed")]
-        [Route("databases/{databaseName}/identity/seed")]
+        [RavenRoute("identity/seed")]
+        [RavenRoute("databases/{databaseName}/identity/seed")]
 		public HttpResponseMessage IdentitySeed()
 		{
 			var name = GetQueryStringValue("name");

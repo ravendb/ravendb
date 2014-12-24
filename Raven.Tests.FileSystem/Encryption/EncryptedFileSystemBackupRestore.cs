@@ -93,7 +93,7 @@ namespace Raven.Tests.FileSystem.Encryption
 					Id = "FS1",
 					Settings =
 					{
-						{"Raven/FileSystem/DataDir", Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS1")},
+						{Constants.FileSystem.DataDirectory, Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS1")},
 						{Constants.ActiveBundles, "Encryption"}
 					},
 					SecuredSettings = new Dictionary<string, string>
@@ -132,7 +132,7 @@ namespace Raven.Tests.FileSystem.Encryption
 
 				using (var session = server.DocumentStore.OpenAsyncSession(Constants.SystemDatabase))
 				{
-					var fs2Doc = await session.LoadAsync<FileSystemDocument>("Raven/FileSystems/FS2");
+					var fs2Doc = await session.LoadAsync<FileSystemDocument>(Constants.FileSystem.Prefix + "FS2");
 
 					Assert.NotEqual(fs1Doc.SecuredSettings["Raven/Encryption/Key"], fs2Doc.SecuredSettings["Raven/Encryption/Key"]);
 					Assert.NotEqual(fs1Doc.SecuredSettings["Raven/Encryption/Algorithm"], fs2Doc.SecuredSettings["Raven/Encryption/Algorithm"]);

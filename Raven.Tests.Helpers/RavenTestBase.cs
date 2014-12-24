@@ -250,6 +250,11 @@ namespace Raven.Tests.Helpers
 			return store;
 		}
 
+        protected RavenDbServer GetServer(int port = 8079)
+        {
+            return servers.First(x => x.SystemDatabase.Configuration.Port == port);
+        }
+
 		private static string GetServerUrl(bool fiddler, string serverUrl)
 		{
 			if (fiddler)
@@ -275,7 +280,7 @@ namespace Raven.Tests.Helpers
 
 		protected bool checkPorts = false;
 
-		protected RavenDbServer GetNewServer(int port = 8079,
+        protected RavenDbServer GetNewServer(int port = 8079,
 			string dataDirectory = null,
 			bool runInMemory = true,
 			string requestedStorage = null,
@@ -426,7 +431,7 @@ namespace Raven.Tests.Helpers
 			PeriodicExportStatus currentStatus = null;
 			var done = SpinWait.SpinUntil(() =>
 			{
-				currentStatus = GetPerodicBackupStatus(db);
+				currentStatus = GetPeriodicBackupStatus(db);
 				return compareSelector(currentStatus) != compareSelector(previousStatus);
 			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
             if (!done) throw new Exception("WaitForPeriodicExport failed");
@@ -449,7 +454,7 @@ namespace Raven.Tests.Helpers
                 throw new Exception("WaitForAllRequestsToComplete failed");
 		}
 
-		protected PeriodicExportStatus GetPerodicBackupStatus(DocumentDatabase db)
+		protected PeriodicExportStatus GetPeriodicBackupStatus(DocumentDatabase db)
 		{
 			return GetPerodicBackupStatus(key => db.Documents.Get(key, null));
 		}
@@ -703,6 +708,7 @@ namespace Raven.Tests.Helpers
 
 		public virtual void Dispose()
 		{
+			Authentication.Disable();
 			GC.SuppressFinalize(this);
 
 			var errors = new List<Exception>();

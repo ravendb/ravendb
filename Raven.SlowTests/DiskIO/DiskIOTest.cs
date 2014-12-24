@@ -18,18 +18,18 @@ namespace Raven.SlowTests.DiskIO
         [Fact]
         public void TestSequentialWrite()
         {
-            var performanceRequest = new PerformanceTestRequest
+            var performanceRequest = new GenericPerformanceTestRequest
             {
                 FileSize = (long)128 * 1024,
                 OperationType = OperationType.Write,
-                Path = Path.Combine(Path.GetTempPath(), "data.ravendb-io-test"),
+                Path = Path.GetTempPath(),
                 Sequential = true,
                 ThreadCount = 4,
                 TimeToRunInSeconds = 5,
                 ChunkSize = 4 * 1024
             };
 
-            var tester = new DiskPerformanceTester(performanceRequest, s => { });
+            var tester = AbstractDiskPerformanceTester.ForRequest(performanceRequest, s => { });
             tester.TestDiskIO();
             var result = tester.Result;
             Assert.Equal(0, result.TotalRead);
@@ -39,18 +39,18 @@ namespace Raven.SlowTests.DiskIO
         [Fact]
         public void TestSequentialRead()
         {
-            var performanceRequest = new PerformanceTestRequest
+            var performanceRequest = new GenericPerformanceTestRequest
             {
                 FileSize = (long)128 * 1024,
                 OperationType = OperationType.Read,
-                Path = Path.Combine(Path.GetTempPath(), "data.ravendb-io-test"),
+                Path = Path.GetTempPath(),
                 Sequential = true,
                 ThreadCount = 4,
                 TimeToRunInSeconds = 5,
                 ChunkSize = 4 * 1024
             };
 
-            var tester = new DiskPerformanceTester(performanceRequest, s => { });
+            var tester = AbstractDiskPerformanceTester.ForRequest(performanceRequest, s => { });
             tester.TestDiskIO();
             var result = tester.Result;
             Assert.Equal(0, result.TotalWrite);
@@ -60,18 +60,18 @@ namespace Raven.SlowTests.DiskIO
         [Fact]
         public void TestRandomWrite()
         {
-            var performanceRequest = new PerformanceTestRequest
+            var performanceRequest = new GenericPerformanceTestRequest
             {
                 FileSize = (long)128 * 1024,
                 OperationType = OperationType.Write,
-                Path = Path.Combine(Path.GetTempPath(), "data.ravendb-io-test"),
+                Path = Path.GetTempPath(),
                 Sequential = false,
                 ThreadCount = 4,
                 TimeToRunInSeconds = 5,
                 ChunkSize = 4 * 1024
             };
 
-            var tester = new DiskPerformanceTester(performanceRequest, s => { });
+            var tester = AbstractDiskPerformanceTester.ForRequest(performanceRequest, s => { });
             tester.TestDiskIO();
             var result = tester.Result;
             Assert.Equal(0, result.TotalRead);
@@ -81,18 +81,18 @@ namespace Raven.SlowTests.DiskIO
         [Fact]
         public void TestRandomRead()
         {
-            var performanceRequest = new PerformanceTestRequest
+            var performanceRequest = new GenericPerformanceTestRequest
             {
                 FileSize = (long)128 * 1024,
                 OperationType = OperationType.Read,
-                Path = Path.Combine(Path.GetTempPath(), "data.ravendb-io-test"),
+                Path = Path.GetTempPath(),
                 Sequential = false,
                 ThreadCount = 4,
                 TimeToRunInSeconds = 5,
                 ChunkSize = 4 * 1024
             };
 
-            var tester = new DiskPerformanceTester(performanceRequest, s => { });
+            var tester = AbstractDiskPerformanceTester.ForRequest(performanceRequest, s => { });
             tester.TestDiskIO();
             var result = tester.Result;
             Assert.Equal(0, result.TotalWrite);
@@ -102,18 +102,18 @@ namespace Raven.SlowTests.DiskIO
         [Fact]
         public void TestRandomReadWrite()
         {
-            var performanceRequest = new PerformanceTestRequest
+            var performanceRequest = new GenericPerformanceTestRequest
             {
                 FileSize = (long)128 * 1024,
                 OperationType = OperationType.Mix,
-                Path = Path.Combine(Path.GetTempPath(), "data.ravendb-io-test"),
+                Path = Path.GetTempPath(),
                 Sequential = false,
                 ThreadCount = 4,
                 TimeToRunInSeconds = 5,
                 ChunkSize = 4 * 1024
             };
 
-            var tester = new DiskPerformanceTester(performanceRequest, s => { });
+            var tester = AbstractDiskPerformanceTester.ForRequest(performanceRequest, s => { });
             tester.TestDiskIO();
             var result = tester.Result;
             Assert.True(result.TotalWrite > 0);
@@ -126,19 +126,39 @@ namespace Raven.SlowTests.DiskIO
             var cts = new CancellationTokenSource();
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 
-            var performanceRequest = new PerformanceTestRequest
+            var performanceRequest = new GenericPerformanceTestRequest
             {
                 FileSize = (long)128 * 1024,
                 OperationType = OperationType.Mix,
-                Path = Path.Combine(Path.GetTempPath(), "data.ravendb-io-test"),
+                Path = Path.GetTempPath(),
                 Sequential = false,
                 ThreadCount = 4,
                 TimeToRunInSeconds = 30,
                 ChunkSize = 4 * 1024
             };
 
-            var tester = new DiskPerformanceTester(performanceRequest, s => { }, cts.Token);
+            var tester = AbstractDiskPerformanceTester.ForRequest(performanceRequest, s => { }, cts.Token);
             Assert.Throws<OperationCanceledException>(() => tester.TestDiskIO());
+        }
+
+        [Fact]
+        public void TestBatchPerformanceTest()
+        {
+            var performanceRequest = new BatchPerformanceTestRequest
+            {
+                FileSize = (long) 1024*1024*1024,
+                NumberOfDocuments = 1000000,
+                NumberOfDocumentsInBatch = 200,
+                Path = Path.GetTempPath(),
+                SizeOfDocuments = 756,
+                WaitBetweenBatches = 5
+            };
+
+            var tester = AbstractDiskPerformanceTester.ForRequest(performanceRequest, s => { });
+            tester.TestDiskIO();
+            var result = tester.Result;
+            Assert.True(result.TotalWrite > 0);
+            Assert.Equal(0, result.TotalRead);
         }
     }
 }

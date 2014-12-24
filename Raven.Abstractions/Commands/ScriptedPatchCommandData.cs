@@ -3,11 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Commands
 {
@@ -17,75 +14,57 @@ namespace Raven.Abstractions.Commands
 	public class ScriptedPatchCommandData : ICommandData
 	{
 		/// <summary>
-		/// Gets or sets the ScriptedPatchRequest (using JavaScript) that is used to patch the document
+		/// ScriptedPatchRequest (using JavaScript) that is used to patch the document
 		/// </summary>
-		/// <value>The Script.</value>
-		public ScriptedPatchRequest Patch 
-		{ 
-			get; set; 
-		}
+		public ScriptedPatchRequest Patch { get; set; }
 
 		/// <summary>
-		/// Gets or sets the ScriptedPatchRequest (using JavaScript) that is used to patch a default document if the document is missing
+		/// ScriptedPatchRequest (using JavaScript) that is used to patch a default document if the document is missing
 		/// </summary>
-		/// <value>The Script.</value>
-		public ScriptedPatchRequest PatchIfMissing
-		{
-			get;
-			set;
-		}
+		public ScriptedPatchRequest PatchIfMissing { get; set; }
 
 		/// <summary>
-		/// Gets the key.
+		/// Key of a document to patch.
 		/// </summary>
-		/// <value>The key.</value>
-		public string Key
-		{
-			get; set;
-		}
+		public string Key { get; set; }
 
 		/// <summary>
-		/// Gets the method.
+		/// Returns operation method. In this case EVAL.
 		/// </summary>
-		/// <value>The method.</value>
 		public string Method
 		{
 			get { return "EVAL"; }
 		}
 
 		/// <summary>
-		/// Gets or sets the etag.
+		/// Current document etag, used for concurrency checks (null to skip check)
 		/// </summary>
-		/// <value>The etag.</value>
-		public Etag Etag
-		{
-			get; set;
-		}
-
-		public TransactionInformation TransactionInformation
-		{
-			get; set;
-		}
-
-		public RavenJObject Metadata
-		{
-			get; set;
-		}
-
-		public bool DebugMode
-		{
-			get; set;
-		}
+		public Etag Etag { get; set; }
 
 		/// <summary>
-		/// Gets the Additional Data.
+		/// Information used to identify a transaction. Contains transaction Id and timeout.
 		/// </summary>
-		/// <value>The Additional Data.</value>
+		public TransactionInformation TransactionInformation { get; set; }
+
+		/// <summary>
+		/// RavenJObject representing document's metadata.
+		/// </summary>
+		public RavenJObject Metadata { get; set; }
+
+		/// <summary>
+		/// Indicates in the operation should be run in debug mode. If set to true, then server will return additional information in response.
+		/// </summary>
+		public bool DebugMode { get; set; }
+
+		/// <summary>
+		/// Additional command data. For internal use only.
+		/// </summary>
 		public RavenJObject AdditionalData { get; set; }
 
 		/// <summary>
-		/// Translate this instance to a Json object.
+		/// Translates this instance to a Json object.
 		/// </summary>
+		/// <returns>RavenJObject representing the command.</returns>
 		public RavenJObject ToJson()
 		{
 			var ret = new RavenJObject

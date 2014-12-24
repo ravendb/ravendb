@@ -10,6 +10,7 @@ using System.Web;
 using Raven.Bundles.Authorization;
 using Raven.Client.Document;
 using Raven.Database;
+using Raven.Database.Server.WebApi;
 using Raven.Server;
 using Raven.Tests.Common;
 
@@ -25,6 +26,8 @@ namespace Raven.Tests.Bundles.Authorization
 		
 		protected AuthorizationTest()
 		{
+			RouteCacher.ClearCache();
+
             server = GetNewServer(configureConfig: configuration => configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly)));
             store = NewRemoteDocumentStore(ravenDbServer: server, databaseName: DatabaseName);
 			

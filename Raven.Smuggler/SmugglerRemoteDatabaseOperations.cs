@@ -68,7 +68,7 @@ namespace Raven.Smuggler
 
 		public Task DeleteDocument(string key)
 		{
-			return Store.AsyncDatabaseCommands.DeleteDocumentAsync(key);
+			return Store.AsyncDatabaseCommands.DeleteAsync(key, null);
 		}
 
         [Obsolete("Use RavenFS instead.")]
@@ -189,7 +189,7 @@ namespace Raven.Smuggler
 			return buildNumber.ProductVersion;
 		}
 
-		public void PurgeTombstones(ExportDataResult result)
+		public void PurgeTombstones(OperationState result)
 		{
 			throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
 		}

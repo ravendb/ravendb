@@ -6,7 +6,7 @@
         transitions: '../Scripts/durandal/transitions',
         ace: '../Scripts/ace',
         moment: '../Scripts/moment',
-        'd3': '../Scripts/nvd3',
+        'd3': '../Scripts/d3',
         forge: '../Scripts/forge',
         jszip: '../Scripts/jszip'
     }
@@ -14,7 +14,8 @@
 
 define('jquery', function() { return jQuery; });
 define('knockout', ko);
-define('nvd3', ['d3/d3', 'd3/nv'], function (d3, nv) { return nv; });
+define('nvd3', ['d3/d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], function (d3, nv, timelines, chart) { return nv; });
+define('dagre', ['d3/d3', 'd3/dagre'], function (d3, dagre) { return dagre; });
 
 // Do not remove the below comment, as it's used by the optimized build to inline Durandal scripts.
 // OPTIMIZED BUILD INLINE DURANDAL HERE

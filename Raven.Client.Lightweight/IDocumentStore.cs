@@ -4,20 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Net;
+using System.Collections.Specialized;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
-using Raven.Client.Listeners;
-
-using System.Collections.Specialized;
 using Raven.Client.Indexes;
 using Raven.Client.Connection.Async;
-
 
 namespace Raven.Client
 {
@@ -175,6 +171,8 @@ namespace Raven.Client
 		Etag GetLastWrittenEtag();
 
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
+
+		IReliableSubscriptions Subscriptions { get; }
 
         DocumentSessionListeners Listeners { get; }
 

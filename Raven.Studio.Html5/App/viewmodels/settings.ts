@@ -8,7 +8,7 @@ class settings extends viewModelBase {
     router: DurandalRootRouter = null;
     appUrls: computedAppUrls;
 
-    private bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "Scripted Index" };
+    private bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicexport: "Periodic Export", scriptedindexresults: "Scripted Index", periodicbackup: "Periodic Export" };
     private sqlSubBundles = ["sqlreplicationconnectionstringsmanagement", "editsqlreplication"];
     userDatabasePages = ko.observableArray(["Database Settings", "Custom Functions"]);
     activeSubViewTitle: KnockoutComputed<string>;

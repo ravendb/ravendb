@@ -14,44 +14,39 @@ namespace Raven.Abstractions.Commands
 	public interface ICommandData
 	{
 		/// <summary>
-		/// Gets the key.
+		/// Key of a document.
 		/// </summary>
-		/// <value>The key.</value>
 		string Key { get; }
 
 		/// <summary>
-		/// Gets the method.
+		/// Returns operation method.
 		/// </summary>
-		/// <value>The method.</value>
 		string Method { get; }
 
 		/// <summary>
-		/// Gets the etag.
+		/// Current document etag, used for concurrency checks (null to skip check)
 		/// </summary>
-		/// <value>The etag.</value>
 		Etag Etag { get; }
 
 		/// <summary>
-		/// Gets the transaction information.
+		/// Information used to identify a transaction. Contains transaction Id and timeout.
 		/// </summary>
-		/// <value>The transaction information.</value>
 		TransactionInformation TransactionInformation { get; set; }
 
 		/// <summary>
-		/// Gets the metadata.
+		/// RavenJObject representing document's metadata.
 		/// </summary>
-		/// <value>The metadata.</value>
 		RavenJObject Metadata { get; }
 
 		/// <summary>
-		/// Gets the Additional Data.
+		/// Additional command data. For internal use only.
 		/// </summary>
-		/// <value>The Additional Data.</value>
 		RavenJObject AdditionalData { get; set; }
 
 		/// <summary>
-		/// Translate this instance to a Json object.
+		/// Translates this instance to a Json object.
 		/// </summary>
+		/// <returns>RavenJObject representing the command.</returns>
 		RavenJObject ToJson();
 	}
 }

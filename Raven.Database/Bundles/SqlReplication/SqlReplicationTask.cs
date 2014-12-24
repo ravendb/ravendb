@@ -243,7 +243,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					{
 						var itemsToReplicate = documents.Select(x =>
 						{
-							DocumentRetriever.EnsureIdInMetadata(x);
+                            JsonDocument.EnsureIdInMetadata(x);
 							var doc = x.ToJson();
 							doc[Constants.DocumentIdFieldName] = x.Key;
 
@@ -601,7 +601,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				var stats = new SqlReplicationStatistics(sqlReplication.Name);
 
 				var jsonDocument = Database.Documents.Get(strDocumentId, null);
-				DocumentRetriever.EnsureIdInMetadata(jsonDocument);
+                JsonDocument.EnsureIdInMetadata(jsonDocument);
 				var doc = jsonDocument.ToJson();
 				doc[Constants.DocumentIdFieldName] = jsonDocument.Key;
 

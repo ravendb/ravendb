@@ -46,9 +46,6 @@
     <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Mono.Posix">
-      <HintPath>..\..\SharedLibs\Mono.Posix.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
@@ -78,6 +75,7 @@
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
     <Compile Include="Impl\Journal\ShipppedTransactionsApplicator.cs" />
     <Compile Include="Impl\Journal\TransactionToShip.cs" />
+    <Compile Include="Platform\Posix\AllowBuildOnWindows.cs" />
     <Compile Include="Platform\Posix\PosixHelper.cs" />
     <Compile Include="Platform\Posix\PosixJournalWriter.cs" />
     <Compile Include="Platform\Posix\PosixMemoryMapPager.cs" />

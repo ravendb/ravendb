@@ -14,6 +14,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -73,7 +74,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPut]
-        [Route("admin/fs/{*id}")]
+        [RavenRoute("admin/fs/{*id}")]
         public async Task<HttpResponseMessage> FileSystemPut(string id, bool update = false)
         {
 			
@@ -94,7 +95,7 @@ namespace Raven.Database.FileSystem.Controllers
 				}, HttpStatusCode.BadRequest);
 	        }
 
-            var docKey = "Raven/FileSystems/" + id;
+            var docKey = Constants.FileSystem.Prefix + id;
            
             // There are 2 possible ways to call this put. We either want to update a filesystem configuration or we want to create a new one.            
             if (!update)
@@ -106,8 +107,9 @@ namespace Raven.Database.FileSystem.Controllers
             }
 
             var fsDoc = await ReadJsonObjectAsync<FileSystemDocument>();
+            EnsureFileSystemHasRequiredSettings(id, fsDoc);
 
-			if (fsDoc.Settings.ContainsKey(Constants.ActiveBundles) && fsDoc.Settings[Constants.ActiveBundles].Contains("Encryption"))
+			if (fsDoc.Settings[Constants.ActiveBundles].Contains("Encryption"))
 			{
 				if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
 					!fsDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
@@ -125,8 +127,17 @@ namespace Raven.Database.FileSystem.Controllers
             return GetEmptyMessage(HttpStatusCode.Created);
         }
 
+        private void EnsureFileSystemHasRequiredSettings(string id, FileSystemDocument fsDoc)
+        {
+            if (!fsDoc.Settings.ContainsKey(Constants.ActiveBundles))
+                fsDoc.Settings[Constants.ActiveBundles] = string.Empty;
+
+            if (!fsDoc.Settings.ContainsKey(Constants.FileSystem.DataDirectory))
+                fsDoc.Settings[Constants.FileSystem.DataDirectory] = "~/Filesystems/" + id;
+        }
+
 		[HttpDelete]
-		[Route("admin/fs/{*id}")]
+		[RavenRoute("admin/fs/{*id}")]
 		public HttpResponseMessage FileSystemDelete(string id)
 		{
 			bool result;
@@ -142,7 +153,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpDelete]
-		[Route("admin/fs/batch-delete")]
+		[RavenRoute("admin/fs/batch-delete")]
 		public HttpResponseMessage FileSystemBatchDelete()
 		{
 			string[] fileSystemsToDelete = GetQueryStringValues("ids");
@@ -169,7 +180,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/fs/{*id}")]
+		[RavenRoute("admin/fs/{*id}")]
 		public HttpResponseMessage FileSystemToggleDisable(string id, bool isSettingDisabled)
 		{
 			var message = ToggleFileSystemDisabled(id, isSettingDisabled);
@@ -182,7 +193,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPost]
-		[Route("admin/fs/batch-toggle-disable")]
+		[RavenRoute("admin/fs/batch-toggle-disable")]
 		public HttpResponseMessage FileSystemBatchToggleDisable(bool isSettingDisabled)
 		{
 			string[] databasesToToggle = GetQueryStringValues("ids");
@@ -214,7 +225,7 @@ namespace Raven.Database.FileSystem.Controllers
 			if (configuration == null)
 				return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "File system wasn't found" };
 
-			var docKey = "Raven/FileSystems/" + fileSystemId;
+            var docKey = Constants.FileSystem.Prefix + fileSystemId;
 			Database.Documents.Delete(docKey, null, null);
 
 			if (isHardDeleteNeeded)
@@ -253,8 +264,8 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
         [HttpPost]
-        [Route("admin/fs/backup")]
-        [Route("fs/{fileSystemName}/admin/fs/backup")]
+        [RavenRoute("admin/fs/backup")]
+        [RavenRoute("fs/{fileSystemName}/admin/fs/backup")]
         public async Task<HttpResponseMessage> Backup()
         {
             var backupRequest = await ReadJsonObjectAsync<FilesystemBackupRequest>();
@@ -319,8 +330,8 @@ namespace Raven.Database.FileSystem.Controllers
                 IsRunning = true,
             })));
 
-            if (filesystemDocument.Settings.ContainsKey("Raven/StorageTypeName") == false)
-                filesystemDocument.Settings["Raven/StorageTypeName"] = transactionalStorage.FriendlyName ?? transactionalStorage.GetType().AssemblyQualifiedName;
+            if (filesystemDocument.Settings.ContainsKey(Constants.FileSystem.Storage) == false)
+                filesystemDocument.Settings[Constants.FileSystem.Storage] = transactionalStorage.FriendlyName.ToLower() ?? transactionalStorage.GetType().AssemblyQualifiedName;
 
             transactionalStorage.StartBackupOperation(DatabasesLandlord.SystemDatabase, FileSystem, backupDestinationDirectory, incrementalBackup, filesystemDocument);
 
@@ -328,7 +339,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPost]
-        [Route("admin/fs/compact")]
+        [RavenRoute("admin/fs/compact")]
         public HttpResponseMessage Compact()
         {
             var fs = InnerRequest.RequestUri.ParseQueryString()["filesystem"];
@@ -341,7 +352,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             var task = Task.Factory.StartNew(() =>
             {
-                // as we perform compact async we don't catch exceptions here - they will be propaged to operation
+                // as we perform compact async we don't catch exceptions here - they will be propagated to operation
                 var targetFs = FileSystemsLandlord.GetFileSystemInternal(fs).ResultUnwrap();
                 FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration));
                 return GetEmptyMessage();
@@ -361,8 +372,8 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPost]
-        [Route("admin/fs/restore")]
-        [Route("fs/{fileSystemName}/admin/fs/restore")]
+        [RavenRoute("admin/fs/restore")]
+        [RavenRoute("fs/{fileSystemName}/admin/fs/restore")]
         public async Task<HttpResponseMessage> Restore()
         {
             if (EnsureSystemDatabase() == false)
@@ -480,7 +491,7 @@ namespace Raven.Database.FileSystem.Controllers
                 if (filesystemDocument == null)
                     return;
 
-                filesystemDocument.Settings["Raven/FileSystem/DataDir"] = documentDataDir;
+                filesystemDocument.Settings[Constants.FileSystem.DataDirectory] = documentDataDir;
 
                 if (restoreRequest.IndexesLocation != null)
                     filesystemDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
@@ -490,7 +501,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 				FileSystemsLandlord.Protect(filesystemDocument);
 
-                DatabasesLandlord.SystemDatabase.Documents.Put("Raven/FileSystems/" + filesystemName, null, RavenJObject.FromObject(filesystemDocument), new RavenJObject(), null);
+                DatabasesLandlord.SystemDatabase.Documents.Put(Constants.FileSystem.Prefix + filesystemName, null, RavenJObject.FromObject(filesystemDocument), new RavenJObject(), null);
 
                 restoreStatus.Messages.Add("The new filesystem was created");
                 DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);

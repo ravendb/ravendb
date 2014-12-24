@@ -383,9 +383,12 @@ class editDocument extends viewModelBase {
                 }
 
                 var newTokenValue = curToken.value
-                    .replace(/(\\n|\\r\\n)/g, '\\\\r\\\\n')
-                    .replace(/(\n|\r\n)/g, '\\r\\n')
-                    .replace(/(\\t)/g, '\\\\t')
+                    //.replace(/(\\n|\\r\\n)/g, '\\\\r\\\\n')
+                    //.replace(/(\n|\r\n)/g, '\\r\\n')
+                    //.replace(/(\\t)/g, '\\\\t')
+                    //.replace(/(\t)/g, '\\t');                    
+                    .replace(/(\r\n)/g, '\\r\\n')
+                    .replace(/(\n)/g, '\\n')
                     .replace(/(\t)/g, '\\t');
                 text += newTokenValue;
                 //text += curToken.value.replace(/(\n|\r\n)/g, '\\r\\n');

@@ -13,14 +13,13 @@ namespace Raven.Abstractions.Data
 	public class PutResult
 	{
 		/// <summary>
-		/// Gets or sets the key.
+		/// Key of the document that was PUT.
 		/// </summary>
-		/// <value>The key.</value>
 		public string Key { get; set; }
+
 		/// <summary>
-		/// Gets or sets the generated Etag for the PUT operation
+		/// Etag of the document after PUT operation.
 		/// </summary>
-		/// <value>The Etag.</value>
 		public Etag ETag { get; set; }
 	}
 }

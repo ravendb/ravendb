@@ -12,17 +12,45 @@ namespace Raven.Abstractions.Data
 	{
 		public const string RavenDocumentKey = "Raven/Backup/Periodic/Setup";
 
+		/// <summary>
+		/// Indicates if periodic export is disabled.
+		/// </summary>
 		public bool Disabled { get; set; }
+
+		/// <summary>
+		/// Amazon Glacier Vaul name.
+		/// </summary>
 		public string GlacierVaultName { get; set; }
+
+		/// <summary>
+		/// Amazon S3 Bucket name.
+		/// </summary>
 		public string S3BucketName { get; set; }
+
+		/// <summary>
+		/// Amazon Web Services (AWS) region.
+		/// </summary>
 		public string AwsRegionEndpoint { get; set; }
+
+		/// <summary>
+		/// Microsoft Azure Storage Container name.
+		/// </summary>
         public string AzureStorageContainer { get; set; }
 
+		/// <summary>
+		/// Path to local folder. If not empty, backups will be held in this folder and not deleted. Otherwise, backups will be created in DataDir of a database and deleted after successful upload to Glacier/S3/Azure.
+		/// </summary>
 		public string LocalFolderName { get; set; }
 
-		public int IntervalMilliseconds { get; set; }
+		/// <summary>
+		/// Interval between incremental backups in milliseconds. If set to null or 0 then incremental periodic export will be disabled.
+		/// </summary>
+		public int? IntervalMilliseconds { get; set; }
 
-        public int FullBackupIntervalMilliseconds { get; set; }
+		/// <summary>
+		/// Interval between full backups in milliseconds. If set to null or 0 then full periodic export will be disabled.
+		/// </summary>
+        public int? FullBackupIntervalMilliseconds { get; set; }
 
 		protected bool Equals(PeriodicExportSetup other)
 		{
@@ -52,8 +80,8 @@ namespace Raven.Abstractions.Data
 				hashCode = (hashCode*397) ^ (AwsRegionEndpoint != null ? AwsRegionEndpoint.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ (AzureStorageContainer != null ? AzureStorageContainer.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ (LocalFolderName != null ? LocalFolderName.GetHashCode() : 0);
-				hashCode = (hashCode*397) ^ IntervalMilliseconds;
-			    hashCode = (hashCode*397) ^ FullBackupIntervalMilliseconds;
+				hashCode = (hashCode*397) ^ IntervalMilliseconds.GetValueOrDefault();
+			    hashCode = (hashCode*397) ^ FullBackupIntervalMilliseconds.GetValueOrDefault();
 				return hashCode;
 			}
 		}

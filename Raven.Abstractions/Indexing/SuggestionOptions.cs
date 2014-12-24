@@ -11,15 +11,13 @@ namespace Raven.Abstractions.Indexing
 		}
 
 		/// <summary>
-		/// Gets or sets the string distance algorithm.
+		/// String distance algorithm to use. Default algorithm is Levenshtein.
 		/// </summary>
-		/// <value>The distance. The default value is StringDistanceTypes.Levenshtein.</value>
 		public StringDistanceTypes Distance { get; set; }
 
 		/// <summary>
-		/// Gets or sets the accuracy.
+		/// Suggestion accuracy. If <c>null</c> then default accuracy is used (0.5f).
 		/// </summary>
-		/// <value>The accuracy. The default value is 0.5f.</value>
 		public float Accuracy { get; set; }
 
 		protected bool Equals(SuggestionOptions other)

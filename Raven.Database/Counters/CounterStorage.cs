@@ -217,19 +217,19 @@ namespace Raven.Database.Counters
                 ReplicationTask.StartReplication();
 			}
 		}
-
+        
 		private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
 		{
 			bool allowIncrementalBackupsSetting;
-			if (bool.TryParse(settings["Raven/Voron/AllowIncrementalBackups"] ?? "false", out allowIncrementalBackupsSetting) == false)
-				throw new ArgumentException("Raven/Voron/AllowIncrementalBackups settings key contains invalid value");
+            if (bool.TryParse(settings[Constants.Voron.AllowIncrementalBackups] ?? "false", out allowIncrementalBackupsSetting) == false)
+				throw new ArgumentException(Constants.Voron.AllowIncrementalBackups + " settings key contains invalid value");
 
 			var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
 			var filePathFolder = new DirectoryInfo(directoryPath);
 			if (filePathFolder.Exists == false)
 				filePathFolder.Create();
 
-			var tempPath = settings["Raven/Voron/TempPath"];
+            var tempPath = settings[Constants.Voron.TempPath];
 			var journalPath = settings[Constants.RavenTxJournalPath];
 			var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
 			options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;

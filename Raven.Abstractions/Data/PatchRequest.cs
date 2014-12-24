@@ -16,41 +16,40 @@ namespace Raven.Abstractions.Data
 	public class PatchRequest
 	{
 		/// <summary>
-		/// Gets or sets the type of the operation
+		/// Type of patch operation.
 		/// </summary>
-		/// <value>The type.</value>
 		public PatchCommandType Type { get; set; }
+
 		/// <summary>
 		/// Gets or sets the previous value, which is compared against the current value to verify a
 		/// change isn't overwriting new values.
-		/// If the value is null, the operation is always successful
+		/// <para>If the value is <c>null</c>, the operation is always successful</para>
 		/// </summary>
-		/// <value>The previous value.</value>
 		public RavenJToken PrevVal { get; set; }
+
 		/// <summary>
-		/// Gets or sets the value.
+		/// New value.
 		/// </summary>
-		/// <value>The value.</value>
 		public RavenJToken Value { get; set; }
+
 		/// <summary>
-		/// Gets or sets the nested operations to perform. This is only valid when the <see cref="Type"/> is <see cref="PatchCommandType.Modify"/>.
+		/// Nested operations to perform. This is only valid when the <see cref="Type"/> is <see cref="PatchCommandType.Modify"/>.
 		/// </summary>
-		/// <value>The nested.</value>
 		public PatchRequest[] Nested { get; set; }
+
 		/// <summary>
-		/// Gets or sets the name.
+		/// Property/field name to patch.
 		/// </summary>
-		/// <value>The name.</value>
 		public string Name { get; set; }
+
 		/// <summary>
-		/// Gets or sets the position.
+		/// Only valid for collection types. Position in collection to patch.
 		/// </summary>
-		/// <value>The position.</value>
 		public int? Position { get; set; }
+
 		/// <summary>
-		/// Get or sets AllPositions. Set this property to true if you want to modify all items in an collection.
+		/// Only valid for collections. Set this property to true if you want to modify all items in an collection.
 		/// </summary>
-		/// <value>AllPositions true/false</value>
 		public bool? AllPositions { get; set; }
 
 		/// <summary>
@@ -78,7 +77,6 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Create an instance from a json object
 		/// </summary>
-		/// <param name="patchRequestJson">The patch request json.</param>
 		public static PatchRequest FromJson(RavenJObject patchRequestJson)
 		{
 			PatchRequest[] nested = null;

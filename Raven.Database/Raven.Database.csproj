@@ -223,7 +223,10 @@
     <Compile Include="Actions\NotificationActions.cs" />
     <Compile Include="Actions\PatchActions.cs" />
     <Compile Include="Actions\QueryActions.cs" />
+    <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
+    <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
     <Compile Include="DiskIO\DiskPerformanceTester.cs" />
     <Compile Include="DiskIO\PerformanceTestRequest.cs" />
     <Compile Include="FileSystem\Bundles\Encryption\Plugin\FileEncryption.cs" />
@@ -232,6 +235,7 @@
     <Compile Include="FileSystem\Storage\Esent\Schema\IFileSystemSchemaUpdate.cs" />
     <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From03To04.cs" />
     <Compile Include="Indexing\IndexReplacer.cs" />
+    <Compile Include="Impl\Generators\JsonCodeGenerator.cs" />
     <Compile Include="Indexing\WriteIndexStats.cs" />
     <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
     <Compile Include="Plugins\Builtins\CheckIncrementalBackupStatus.cs" />
@@ -251,6 +255,7 @@
     <Compile Include="Server\Connections\HttpTracePushContent.cs" />
     <Compile Include="Server\Connections\WebSocketsRequestParser.cs" />
     <Compile Include="Server\Connections\WebSocketRequest.cs" />
+    <Compile Include="Server\Controllers\GeneratorsController.cs" />
     <Compile Include="Server\Controllers\HttpTraceController.cs" />
     <Compile Include="Server\Connections\ILogsTransport.cs" />
     <Compile Include="Server\Connections\LogPushContent.cs" />
@@ -270,8 +275,11 @@
     <Compile Include="FileSystem\Synchronization\Conflictuality\Resolvers\RemoteFileSynchronizationConflictResolver.cs" />
     <Compile Include="FileSystem\Synchronization\Conflictuality\Resolvers\LocalFileSynchronizationConflictResolver.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfig.cs" />
+    <Compile Include="Server\Controllers\SubscriptionsController.cs" />
     <Compile Include="Server\IgnoreSslCertificateErrorsMode.cs" />
     <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
+    <Compile Include="Server\WebApi\RouteCacher.cs" />
+    <Compile Include="Server\WebApi\RavenRouteCollectionRoute .cs" />
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerJintHelper.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
@@ -650,7 +658,6 @@
     <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
     <Compile Include="Linq\PrivateExtensions\DynamicEnumerable.cs" />
     <Compile Include="Linq\StringLiteralExpression.cs" />
-    <Compile Include="Plugins\ILicenseProvider.cs" />
     <Compile Include="Plugins\PluginsStatus.cs" />
     <Compile Include="Queries\MoreLikeThisQueryRunner.cs" />
     <Compile Include="Queries\MoreLikeThisQueryExtensions.cs" />

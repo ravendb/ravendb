@@ -20,6 +20,7 @@ using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Server.Controllers;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
@@ -74,8 +75,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpGet]
-		[Route("replication/topology")]
-		[Route("databases/{databaseName}/replication/topology")]
+		[RavenRoute("replication/topology")]
+		[RavenRoute("databases/{databaseName}/replication/topology")]
 		public HttpResponseMessage TopologyGet()
 		{
 			var documentsController = new DocumentsController();
@@ -117,8 +118,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
-		[Route("replication/replicateDocs")]
-		[Route("databases/{databaseName}/replication/replicateDocs")]
+		[RavenRoute("replication/replicateDocs")]
+		[RavenRoute("databases/{databaseName}/replication/replicateDocs")]
 		public async Task<HttpResponseMessage> DocReplicatePost()
 		{
 			const int BatchSize = 512;
@@ -210,8 +211,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
-		[Route("replication/replicateAttachments")]
-		[Route("databases/{databaseName}/replication/replicateAttachments")]
+		[RavenRoute("replication/replicateAttachments")]
+		[RavenRoute("databases/{databaseName}/replication/replicateAttachments")]
 		[Obsolete("Use RavenFS instead.")]
 		public async Task<HttpResponseMessage> AttachmentReplicatePost()
 		{
@@ -276,8 +277,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 		[HttpGet]
 		[HttpPost]
-		[Route("replication/info")]
-		[Route("databases/{databaseName}/replication/info")]
+		[RavenRoute("replication/info")]
+		[RavenRoute("databases/{databaseName}/replication/info")]
 		public HttpResponseMessage ReplicationInfoGet()
 		{
 			var replicationStatistics = ReplicationUtils.GetReplicationInformation(Database);
@@ -285,8 +286,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpGet]
-		[Route("replication/lastEtag")]
-		[Route("databases/{databaseName}/replication/lastEtag")]
+		[RavenRoute("replication/lastEtag")]
+		[RavenRoute("databases/{databaseName}/replication/lastEtag")]
 		public HttpResponseMessage ReplicationLastEtagGet()
 		{
 			string src;
@@ -324,8 +325,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPut]
-		[Route("replication/lastEtag")]
-		[Route("databases/{databaseName}/replication/lastEtag")]
+		[RavenRoute("replication/lastEtag")]
+		[RavenRoute("databases/{databaseName}/replication/lastEtag")]
 		public HttpResponseMessage ReplicationLastEtagPut()
 		{
 			string src;
@@ -394,8 +395,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpPost]
-		[Route("replication/heartbeat")]
-		[Route("databases/{databaseName}/replication/heartbeat")]
+		[RavenRoute("replication/heartbeat")]
+		[RavenRoute("databases/{databaseName}/replication/heartbeat")]
 		public HttpResponseMessage HeartbeatPost()
 		{
 			var src = GetQueryStringValue("from");

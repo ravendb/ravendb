@@ -9,34 +9,35 @@ class searchLastModifiedBetweenClause extends searchDialogViewModel {
     public applyFilterTask = $.Deferred();
     fromDate = ko.observable<Moment>();
     toDate = ko.observable<Moment>();
-    fromDateText: KnockoutComputed<string>;
-    toDateText: KnockoutComputed<string>;
+
+    fromDateText = ko.observable<string>();
+    toDateText = ko.observable<string>();
 
     constructor() {
         super([]);
 
-        this.inputs.push(<KnockoutComputed<string>> ko.computed(function () {
-            $("#fromDate").focus();
-            return this.fromDate() != null ? this.fromDate().format("YYYY/MM/DD H:mm:ss") : "";
-        }, this));
+        this.inputs.push(this.fromDateText);
+        this.inputs.push(this.toDateText);
 
-        this.inputs.push(<KnockoutComputed<string>> ko.computed(function () {
-            $("#toDate").focus();
-            return this.toDate() != null ? this.toDate().format("YYYY/MM/DD H:mm:ss") : "";
-        }, this));
+        this.fromDate.subscribe(v =>
+            this.fromDateText(this.fromDate() != null ? this.fromDate().format("YYYY-MM-DD HH-mm-ss") : ""));
+
+        this.toDate.subscribe(v =>
+            this.toDateText(this.toDate() != null ? this.toDate().format("YYYY-MM-DD HH-mm-ss") : ""));
 
         datePickerBindingHandler.install();
     }
 
     applyFilter() {
-        if (this.fromDate() == null || this.toDate() == null)
+        if (!this.fromDateText() || !this.toDateText())
             return false;
-        var dates = "__modified:[" + this.fromDate().format("YYYY/MM/DD_H:mm:ss").replaceAll("/", "-").replaceAll(":", "-")
-            + " TO " + this.toDate().format("YYYY/MM/DD_H:mm:ss").replaceAll("/", "-").replaceAll(":", "-") + "]";
+        var dates = "__modified:[" + this.fromDateText().trim().replaceAll(" ", "_")
+            + " TO " + this.toDateText().trim().replaceAll(" ", "_") + "]";
         this.applyFilterTask.resolve(dates);
         
         this.close()
     }
+
 }
 
 export = searchLastModifiedBetweenClause;

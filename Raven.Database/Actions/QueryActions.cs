@@ -177,8 +177,8 @@ namespace Raven.Database.Actions
                   
                     if (queryResult.Highligtings != null && (queryResult.Key != null || queryResult.HighlighterKey != null))
 						highlightings.Add(queryResult.Key ?? queryResult.HighlighterKey, queryResult.Highligtings);
-                    if (queryResult.Key != null && queryResult.ScoreExplanation != null)
-						scoreExplanations.Add(queryResult.Key, queryResult.ScoreExplanation);
+                    if ((queryResult.Key != null || queryResult.ReduceVal != null) && queryResult.ScoreExplanation != null)
+						scoreExplanations.Add(queryResult.Key ?? queryResult.ReduceVal, queryResult.ScoreExplanation);
 					return null;
 				};
 				stale = false;

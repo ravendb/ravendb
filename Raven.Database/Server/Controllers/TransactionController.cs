@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -10,8 +11,8 @@ namespace Raven.Database.Server.Controllers
 	public class TransactionController : RavenDbApiController
 	{
 		[HttpPost]
-		[Route("transaction/rollback")]
-		[Route("databases/{databaseName}/transaction/rollback")]
+		[RavenRoute("transaction/rollback")]
+		[RavenRoute("databases/{databaseName}/transaction/rollback")]
 		public HttpResponseMessage Rollback()
 		{
 			var txId = GetQueryStringValue("tx");
@@ -20,8 +21,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("transaction/status")]
-		[Route("databases/{databaseName}/transaction/status")]
+		[RavenRoute("transaction/status")]
+		[RavenRoute("databases/{databaseName}/transaction/status")]
 		public HttpResponseMessage Status()
 		{
 			var txId = GetQueryStringValue("tx");
@@ -29,8 +30,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("transaction/prepare")]
-		[Route("databases/{databaseName}/transaction/prepare")]
+		[RavenRoute("transaction/prepare")]
+		[RavenRoute("databases/{databaseName}/transaction/prepare")]
 		public async Task<HttpResponseMessage> Prepare()
 		{
 			var txId = GetQueryStringValue("tx");
@@ -55,8 +56,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("transaction/commit")]
-		[Route("databases/{databaseName}/transaction/commit")]
+		[RavenRoute("transaction/commit")]
+		[RavenRoute("databases/{databaseName}/transaction/commit")]
 		public HttpResponseMessage Commit()
 		{
 			var txId = GetQueryStringValue("tx");

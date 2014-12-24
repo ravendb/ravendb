@@ -3,11 +3,34 @@ namespace Raven.Abstractions.Data
 {
     public class DocumentsChanges
     {
+		/// <summary>
+		/// Previous field value.
+		/// </summary>
         public string FieldOldValue { get; set; }
+
+		/// <summary>
+		/// Current field value.
+		/// </summary>
         public string FieldNewValue { get; set; }
+
+		/// <summary>
+		/// Previous field type.
+		/// </summary>
         public string FieldOldType { get; set; }
+
+		/// <summary>
+		/// Current field type.
+		/// </summary>
         public string FieldNewType { get; set; }
+
+		/// <summary>
+		/// Type of change that occured.
+		/// </summary>
         public ChangeType Change { get; set; }
+
+		/// <summary>
+		/// Name of field on which the change occured.
+		/// </summary>
         public string FieldName { get; set; }
 
 	    public enum ChangeType

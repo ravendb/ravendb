@@ -12,34 +12,32 @@ namespace Raven.Abstractions.Data
 	/// <summary>
 	/// Attachment data and metadata
 	/// </summary>
-    [Obsolete("Use RavenFS instead.")]
+	[Obsolete("Use RavenFS instead.")]
 	public class Attachment
 	{
 		/// <summary>
-		/// Gets or sets the data.
+		/// Function returning the content of an attachment.
 		/// </summary>
-		/// <value>The data.</value>
 		public Func<Stream> Data { get; set; }
 
 		/// <summary>
-		/// The size of the attachment.
+		/// Attachment size in bytes.
 		/// </summary>
 		/// <remarks>The max size of an attachment can be 2GB.</remarks>
 		public int Size { get; set; }
 
 		/// <summary>
-		/// Gets or sets the metadata.
+		/// RavenJObject representing attachment's metadata.
 		/// </summary>
-		/// <value>The metadata.</value>
 		public RavenJObject Metadata { get; set; }
+
 		/// <summary>
-		/// Gets or sets the etag.
+		/// Current attachment etag, used for concurrency checks (null to skip check)
 		/// </summary>
-		/// <value>The etag.</value>
 		public Etag Etag { get; set; }
 
 		/// <summary>
-		/// The attachment name
+		/// Key of an attachment.
 		/// </summary>
 		public string Key { get; set; }
 	}

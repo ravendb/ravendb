@@ -4,13 +4,14 @@ using System.Net.Http;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
 
 namespace Raven.Database.Server.Controllers
 {
-    [Route("databases/{databaseName}/logs/{action=logsget}")]
-	[Route("logs/{action=logsget}")]
-	[Route("logs/fs/{action=RavenFSLogsGet}")]
+    [RavenRoute("databases/{databaseName}/logs/{action=logsget}")]
+	[RavenRoute("logs/{action=logsget}")]
+	[RavenRoute("logs/fs/{action=RavenFSLogsGet}")]
 	public class LogsController : RavenDbApiController
 	{
 		[HttpGet]		

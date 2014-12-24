@@ -74,7 +74,7 @@
             <button type="button" class="btn btn-default" data-bind="click: selectColumns" title="Choose columns...">
                 <i class="fa fa-table"></i>
             </button>
-            <a href="#" target="_blank" data-bind="attr: { href: exportUrl }, visible: hasSelectedIndex" class="btn btn-default" title="Export CSV" download>
+            <a href="#" target="_blank" data-bind="attr: { href: exportUrl }, visible: isStaticIndexSelected" class=" btn btn-default" title="Export CSV" download>
                 <i class="fa fa-file-excel-o"></i>
             </a>
             <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, visible: isIndexMapReduce" title="Map-Reduce visualizer">
@@ -133,6 +133,7 @@
         </div>
     </div>
     <br />
+    <div class="alert alert-warning" data-bind="visible: isTestIndex()" role="alert">This is test index which operates on limited data set.</div>
 
     <form class="form-horizontal" role="form" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
         <div class="form-group">
@@ -239,8 +240,8 @@
                 <li class="list-group-item"><a data-bind="text:$data.id, attr:{href:$data.href}"></a></li>
             </ul>-->
         <div class="form-group">
-            <div class="form-group" data-bind="if:(!!$root.queryStats() && $root.queryStats().IsStale == true)">
-                <span class="col-md-offset-1 text-danger">Index Is Stale, possibly not all results presented</span>
+            <div class="form-group" data-bind="if:(isTestIndex() == false && !!$root.queryStats() && $root.queryStats().IsStale == true)">
+                <span class="col-md-offset-1 text-danger">Index is stale, possibly not all results presented</span>
             </div>
         </div>
         <div class="form-group">

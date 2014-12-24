@@ -18,14 +18,14 @@ namespace Raven.Tests.FileSystem
         {
             using (var store = this.NewStore())
             {
-                store.Conventions.MaxNumberOfRequestsPerSession = 30;
+                store.Conventions.MaxNumberOfRequestsPerSession = 100;
 
                 Etag fromEtag;
 
                 using (var session = store.OpenAsyncSession())
-                {                    
-                    for (int i = 0; i < 20; i++)
-                        session.RegisterUpload( i + ".file", CreateUniformFileStream(10));
+                {
+                    for (int i = 0; i < 50; i++)
+                        session.RegisterUpload(i + ".file", CreateUniformFileStream(10));
 
                     await session.SaveChangesAsync();
 
@@ -36,7 +36,7 @@ namespace Raven.Tests.FileSystem
                 int count = 0;
                 using (var session = store.OpenAsyncSession())
                 {
-                    using ( var reader = await session.Commands.StreamFilesAsync(fromEtag: fromEtag))
+                    using (var reader = await session.Commands.StreamFilesAsync(fromEtag: fromEtag))
                     {
                         while (await reader.MoveNextAsync())
                         {
@@ -45,7 +45,40 @@ namespace Raven.Tests.FileSystem
                         }
                     }
                 }
-                Assert.Equal(10, count);
+                Assert.Equal(40, count);
+            }
+        }
+
+        [Fact]
+        public async Task CanStreamFilesFromSpecifiedEtagWithPages()
+        {
+            using (var store = this.NewStore())
+            {
+                store.Conventions.MaxNumberOfRequestsPerSession = 100;
+
+                Etag fromEtag = Etag.Empty;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                        session.RegisterUpload(i + ".file", CreateUniformFileStream(10));
+
+                    await session.SaveChangesAsync();
+                }
+
+                int count = 0;
+                using (var session = store.OpenAsyncSession())
+                {
+                    using (var reader = await session.Commands.StreamFilesAsync(fromEtag: fromEtag, pageSize: 10))
+                    {
+                        while (await reader.MoveNextAsync())
+                        {
+                            count++;
+                            Assert.IsType<FileHeader>(reader.Current);
+                        }
+                    }
+                }
+                Assert.Equal(50, count);
             }
         }
     }

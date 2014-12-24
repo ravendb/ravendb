@@ -15,87 +15,105 @@ using System.Security;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Voron.Platform.Win32;
 using metrics.Core;
 using Raven.Database.Extensions;
 
 namespace Raven.Database.DiskIO
 {
-    public class DiskPerformanceTester : IDisposable
+    public abstract class AbstractDiskPerformanceTester : IDisposable
     {
         public const string PerformanceResultDocumentKey = "Raven/Disk/Performance";
 
         public const string TemporaryFileName = "data.ravendb-io-test";
 
-        private readonly PerformanceTestRequest testRequest;
+        public const string TemporaryJournalFileName = "journal.ravendb-io-test";
 
-        private readonly Action<string> onInfo;
+        public abstract void TestDiskIO();
 
-        private readonly CancellationTokenSource testTimerCts;
+        public abstract DiskPerformanceResult Result { get; }
 
-        private readonly CancellationTokenSource linkedCts;
+        public static AbstractDiskPerformanceTester ForRequest(AbstractPerformanceTestRequest ioTestRequest, Action<string> add, CancellationToken token = new CancellationToken())
+        {
+            var genericPerformanceRequest = ioTestRequest as GenericPerformanceTestRequest;
+            if (genericPerformanceRequest != null)
+            {
+                return new GenericDiskPerformanceTester(genericPerformanceRequest, add, token);
+            }
+            var batchPerformanceRequest = ioTestRequest as BatchPerformanceTestRequest;
+            if (batchPerformanceRequest != null)
+            {
+                return new BatchDiskPerformanceTester(batchPerformanceRequest, add, token);
+            }
+            throw new ArgumentException("Invalid ioTestRequest type", "ioTestRequest");
+        }
 
-        private readonly CancellationToken taskKillToken;
+        public abstract void Dispose();
+        public abstract void DescribeTestParameters();
+    }
 
-        private readonly List<Thread> threads;
+    public abstract class AbstractDiskPerformanceTester<TRequest> : AbstractDiskPerformanceTester where TRequest : AbstractPerformanceTestRequest
+    {
+        protected readonly TRequest testRequest;
 
-        private readonly DiskPerformanceStorage dataStorage;
+        protected readonly Action<string> onInfo;
 
-        private readonly List<Random> perThreadRandom;
+        protected readonly CancellationTokenSource testTimerCts;
 
-        private Timer secondTimer;
+        protected readonly CancellationTokenSource linkedCts;
 
-        private long statCounter;
+        protected readonly CancellationToken taskKillToken;
 
-        public DiskPerformanceResult Result
+        protected readonly DiskPerformanceStorage dataStorage;
+        
+        protected Timer secondTimer;
+
+        protected long statCounter;
+
+        protected long testTime;
+
+        public override DiskPerformanceResult Result
         {
             get
             {
-                return new DiskPerformanceResult(dataStorage);
+                return new DiskPerformanceResult(dataStorage, testTime);
             }
         }
 
-        public DiskPerformanceTester(PerformanceTestRequest testRequest, Action<string> onInfo, CancellationToken taskKillToken = default(CancellationToken))
+        protected IDisposable TestTimeMeasure()
+        {
+            var sw = new Stopwatch();
+            sw.Start();
+            return new DisposableAction(() =>
+            {
+                sw.Stop();
+                testTime = sw.ElapsedMilliseconds;
+            });
+        }
+
+        protected AbstractDiskPerformanceTester(TRequest testRequest, Action<string> onInfo, CancellationToken taskKillToken = default(CancellationToken))
         {
             this.testRequest = testRequest;
             this.onInfo = onInfo;
             this.taskKillToken = taskKillToken;
+            dataStorage = new DiskPerformanceStorage();
             testTimerCts = new CancellationTokenSource();
             linkedCts = CancellationTokenSource.CreateLinkedTokenSource(taskKillToken, testTimerCts.Token);
-            threads = new List<Thread>(testRequest.ThreadCount);
-            dataStorage = new DiskPerformanceStorage();
-            perThreadRandom = Enumerable.Range(1, testRequest.ThreadCount)
-                .Select(i => testRequest.RandomSeed.HasValue ? new Random(testRequest.RandomSeed.Value) : new Random()).ToList();
-
-            if (testRequest.Sequential && testRequest.OperationType == OperationType.Mix)
-            {
-                onInfo("Sequential test with mixed read/write mode is not supported. Changing to random access");
-                testRequest.Sequential = false;
-            }
         }
 
-        public void TestDiskIO()
-        {
-            PrepareTestFile();
-            onInfo("Starting test...");
-            StartWorkers();
-            onInfo("Waiting for all workers to complete");
-            threads.ForEach(t => t.Join());
-            taskKillToken.ThrowIfCancellationRequested();
-        }
-
-        private void PrepareTestFile()
+        protected void PrepareTestFile(string path)
         {
             var sw = new Stopwatch();
             sw.Start();
            
-            if (File.Exists(testRequest.Path))
+            if (File.Exists(path))
             {
-                var fInfo = new FileInfo(testRequest.Path);
+                var fInfo = new FileInfo(path);
                 if (fInfo.Length < testRequest.FileSize)
                 {
                     onInfo(string.Format("Expanding test file to {0}", testRequest.FileSize));
-                    using (var fs = new FileStream(testRequest.Path, FileMode.Append, FileAccess.Write))
+                    using (var fs = new FileStream(path, FileMode.Append, FileAccess.Write))
                     {
                         const int bufferSize = 4 * 1024;
                         var buffer = new byte[bufferSize];
@@ -118,7 +136,7 @@ namespace Raven.Database.DiskIO
             else
             {
                 onInfo(string.Format("Creating test file with size = {0}", testRequest.FileSize));
-                using (var fs = new FileStream(testRequest.Path, FileMode.OpenOrCreate, FileAccess.Write))
+                using (var fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write))
                 {
                     const int bufferSize = 4 * 1024;
                     var buffer = new byte[bufferSize];
@@ -135,6 +153,76 @@ namespace Raven.Database.DiskIO
             }
         }
 
+        protected long LongRandom(long min, long max, int mutlipleOf, Random rand)
+        {
+            var buf = new byte[8];
+            rand.NextBytes(buf);
+            var longRand = BitConverter.ToInt64(buf, 0);
+            var value = (Math.Abs(longRand % (max - min)) + min);
+            return value/mutlipleOf*mutlipleOf;
+        }
+        
+        protected static void ValidateHandle(SafeFileHandle handle)
+        {
+            if (handle.IsInvalid)
+            {
+                int lastWin32ErrorCode = Marshal.GetLastWin32Error();
+                throw new IOException("Failed to open test file",
+                                      new Win32Exception(lastWin32ErrorCode));
+            }
+        }
+
+	    public override void Dispose()
+	    {
+		    DisposeTimer();
+	    }
+
+	    protected void DisposeTimer()
+	    {
+			if (secondTimer == null)
+				return;
+
+			secondTimer.Dispose();
+			secondTimer = null;
+	    }
+
+    }
+
+    public class GenericDiskPerformanceTester : AbstractDiskPerformanceTester<GenericPerformanceTestRequest>
+    {
+
+        private readonly string filePath;
+
+        private readonly List<Thread> threads;
+        private readonly List<Random> perThreadRandom;
+
+        public GenericDiskPerformanceTester(GenericPerformanceTestRequest testRequest, Action<string> onInfo, CancellationToken taskKillToken = new CancellationToken()) : base(testRequest, onInfo, taskKillToken)
+        {
+            filePath = Path.Combine(testRequest.Path, TemporaryFileName);
+            threads = new List<Thread>(testRequest.ThreadCount);
+            perThreadRandom = Enumerable.Range(1, testRequest.ThreadCount)
+                .Select(i => testRequest.RandomSeed.HasValue ? new Random(testRequest.RandomSeed.Value) : new Random()).ToList();
+
+            if (testRequest.Sequential && testRequest.OperationType == OperationType.Mix)
+            {
+                onInfo("Sequential test with mixed read/write mode is not supported. Changing to random access");
+                testRequest.Sequential = false;
+            }
+        }
+
+        public override void TestDiskIO()
+        {
+            PrepareTestFile(filePath);
+            onInfo("Starting test...");
+            using (TestTimeMeasure())
+            {
+                StartWorkers();
+                onInfo("Waiting for all workers to complete");
+                threads.ForEach(t => t.Join());
+                taskKillToken.ThrowIfCancellationRequested();
+            }
+        }
+
         private void StartWorkers()
         {
             var stripeSize = testRequest.FileSize / testRequest.ThreadCount;
@@ -147,7 +235,7 @@ namespace Raven.Database.DiskIO
             threads.ForEach(t => t.Start());
         }
 
-        private void SecondTicked(object state)
+        protected void SecondTicked(object state)
         {
             statCounter++;
 
@@ -156,7 +244,7 @@ namespace Raven.Database.DiskIO
             if (statCounter >= testRequest.TimeToRunInSeconds)
             {
                 testTimerCts.Cancel();
-				DisposeTimer();
+                DisposeTimer();
             }
         }
 
@@ -197,15 +285,7 @@ namespace Raven.Database.DiskIO
             }
         }
 
-        long LongRandom(long min, long max, int mutlipleOf, Random rand)
-        {
-            var buf = new byte[8];
-            rand.NextBytes(buf);
-            var longRand = BitConverter.ToInt64(buf, 0);
-            var value = (Math.Abs(longRand % (max - min)) + min);
-            return value/mutlipleOf*mutlipleOf;
-        }
-        
+
         /// <summary>
         /// Each thread write to individual section
         /// Each thread reads from any section
@@ -216,15 +296,15 @@ namespace Raven.Database.DiskIO
         /// <param name="end"></param>
         private void TestRandomReadWrite(CancellationToken token, Random random, long start, long end)
         {
-            
-            using (var readHandle = Win32NativeFileMethods.CreateFile(testRequest.Path,
-                                                                  Win32NativeFileAccess.GenericWrite | Win32NativeFileAccess.GenericRead, 
+
+            using (var readHandle = Win32NativeFileMethods.CreateFile(filePath,
+                                                                  Win32NativeFileAccess.GenericWrite | Win32NativeFileAccess.GenericRead,
                                                                   Win32NativeFileShare.Read | Win32NativeFileShare.Write, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
-                                                                  testRequest.BufferedReads ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering, 
+                                                                  testRequest.BufferedReads ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering,
                                                                   IntPtr.Zero))
 
-            using (var writeHandle = Win32NativeFileMethods.CreateFile(testRequest.Path,
+            using (var writeHandle = Win32NativeFileMethods.CreateFile(filePath,
                                                                   Win32NativeFileAccess.GenericWrite | Win32NativeFileAccess.GenericRead,
                                                                   Win32NativeFileShare.Read | Win32NativeFileShare.Write, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
@@ -261,7 +341,7 @@ namespace Raven.Database.DiskIO
                 }
             }
         }
-        
+
         /// <summary>
         ///  Each thread write to individual section
         /// </summary>
@@ -271,7 +351,7 @@ namespace Raven.Database.DiskIO
         /// <param name="end"></param>
         private void TestRandomWrite(CancellationToken token, Random random, long start, long end)
         {
-            using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
+            using (var handle = Win32NativeFileMethods.CreateFile(filePath,
                                                                   Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.Write, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
                                                                   testRequest.BufferedWrites ? Win32NativeFileAttributes.None : (Win32NativeFileAttributes.NoBuffering | Win32NativeFileAttributes.Write_Through),
@@ -303,7 +383,7 @@ namespace Raven.Database.DiskIO
         /// <param name="random"></param>
         private void TestRandomRead(CancellationToken token, Random random)
         {
-            using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
+            using (var handle = Win32NativeFileMethods.CreateFile(filePath,
                                                      Win32NativeFileAccess.GenericRead, Win32NativeFileShare.Read, IntPtr.Zero,
                                                      Win32NativeFileCreationDisposition.OpenExisting,
                                                      testRequest.BufferedReads ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering,
@@ -336,13 +416,13 @@ namespace Raven.Database.DiskIO
         /// <param name="end"></param>
         private void TestSequentialWrite(CancellationToken token, Random random, long start, long end)
         {
-            using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
+            using (var handle = Win32NativeFileMethods.CreateFile(filePath,
                                                                   Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.Write, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
-                                                                  testRequest.BufferedWrites ? Win32NativeFileAttributes.None : (Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering), 
+                                                                  testRequest.BufferedWrites ? Win32NativeFileAttributes.None : (Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering),
                                                                   IntPtr.Zero))
             {
-               ValidateHandle(handle);
+                ValidateHandle(handle);
                 using (var fs = new FileStream(handle, FileAccess.ReadWrite))
                 {
                     var buffer = new byte[testRequest.ChunkSize];
@@ -372,10 +452,10 @@ namespace Raven.Database.DiskIO
         /// <param name="token"></param>
         private void TestSequentialRead(CancellationToken token)
         {
-            using (var handle = Win32NativeFileMethods.CreateFile(testRequest.Path,
+            using (var handle = Win32NativeFileMethods.CreateFile(filePath,
                                                                   Win32NativeFileAccess.GenericRead, Win32NativeFileShare.Read, IntPtr.Zero,
                                                                   Win32NativeFileCreationDisposition.OpenExisting,
-                                                                  testRequest.BufferedReads ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering, 
+                                                                  testRequest.BufferedReads ? Win32NativeFileAttributes.None : Win32NativeFileAttributes.NoBuffering,
                                                                   IntPtr.Zero))
             {
                 ValidateHandle(handle);
@@ -402,46 +482,168 @@ namespace Raven.Database.DiskIO
             }
         }
 
-        private static void ValidateHandle(SafeFileHandle handle)
-        {
-            if (handle.IsInvalid)
-            {
-                int lastWin32ErrorCode = Marshal.GetLastWin32Error();
-                throw new IOException("Failed to open test file",
-                                      new Win32Exception(lastWin32ErrorCode));
-            }
-        }
-
-        public void DescribeTestParameters()
+        public override void DescribeTestParameters()
         {
             var action = "read/write";
             if (testRequest.OperationType == OperationType.Write)
             {
                 action = "write";
-            } else if (testRequest.OperationType == OperationType.Read)
+            }
+            else if (testRequest.OperationType == OperationType.Read)
             {
                 action = "read";
             }
 
-            Console.WriteLine("{0} threads {1} {2} {3} {4} for {5} seconds from file {6} (size = {7} MB) in {8} kb chunks.", 
-                testRequest.ThreadCount, action, testRequest.BufferedReads ? "buffered reads" : "unbuffered reads", testRequest.BufferedWrites ? "buffered writes" : "unbuffered writes" ,
+            Console.WriteLine("{0} threads {1} {2} {3} {4} for {5} seconds from file {6} (size = {7} MB) in {8} kb chunks.",
+                testRequest.ThreadCount, action, testRequest.BufferedReads ? "buffered reads" : "unbuffered reads", testRequest.BufferedWrites ? "buffered writes" : "unbuffered writes",
                 testRequest.Sequential ? "sequential" : "random", testRequest.TimeToRunInSeconds,
-                testRequest.Path, testRequest.FileSize / 1024 / 1024, testRequest.ChunkSize / 1024);
+                filePath, testRequest.FileSize / 1024 / 1024, testRequest.ChunkSize / 1024);
+        }
+    }
+
+    public class BatchDiskPerformanceTester : AbstractDiskPerformanceTester<BatchPerformanceTestRequest>
+    {
+        private readonly String dataPath;
+        private readonly String journalPath;
+
+        private SafeFileHandle dataHandle;
+        private SafeFileHandle journalHandle;
+
+        private FileStream dataFs;
+        private FileStream journalFs;
+
+        public BatchDiskPerformanceTester(BatchPerformanceTestRequest testRequest, Action<string> onInfo, CancellationToken token = new CancellationToken()) : base(testRequest, onInfo, token)
+        {
+            dataPath = Path.Combine(testRequest.Path, TemporaryFileName);
+            journalPath = Path.Combine(testRequest.Path, TemporaryJournalFileName);
         }
 
-	    public void Dispose()
-	    {
-		    DisposeTimer();
-	    }
+        public override void TestDiskIO()
+        {
+            PrepareTestFile(dataPath);
+            if (File.Exists(journalPath))
+            {
+                File.Delete(journalPath);
+            }
 
-	    private void DisposeTimer()
-	    {
-			if (secondTimer == null)
-				return;
+            using (TestTimeMeasure())
+            {
+                onInfo("Starting test...");
+                taskKillToken.ThrowIfCancellationRequested();
 
-			secondTimer.Dispose();
-			secondTimer = null;
-	    }
+                try
+                {
+                    secondTimer = new Timer(SecondTicked, null, 1000, 1000);
+
+                    using (dataHandle = Win32NativeFileMethods.CreateFile(dataPath,
+                                                                          Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.None, IntPtr.Zero,
+                                                                          Win32NativeFileCreationDisposition.OpenExisting,
+                                                                          Win32NativeFileAttributes.Write_Through,
+                                                                          IntPtr.Zero))
+                    {
+                        ValidateHandle(dataHandle);
+                        using (dataFs = new FileStream(dataHandle, FileAccess.Write))
+                        using (journalHandle = Win32NativeFileMethods.CreateFile(journalPath,
+                                                                                 Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.None, IntPtr.Zero,
+                                                                                 Win32NativeFileCreationDisposition.CreateAlways,
+                                                                                 Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering,
+                                                                                 IntPtr.Zero))
+                        {
+                            ValidateHandle(journalHandle);
+                            using (journalFs = new FileStream(journalHandle, FileAccess.Write))
+                            {
+                                MeasurePerformance();
+                            }
+                        }
+                    }
+                }
+                finally
+                {
+                    if (File.Exists(journalPath))
+                    {
+                        File.Delete(journalPath);
+                    }
+                }
+            }
+        }
+
+        private int RoundToMultipleOf(int number, int multiple)
+        {
+            var rounded = (int) Math.Round(number*1.0/multiple);
+            return rounded*multiple;
+        }
+
+        private void MeasurePerformance()
+        {
+            var remainingDocuments = testRequest.NumberOfDocuments;
+
+            var buffer = new byte[RoundToMultipleOf(4 * 1024 + testRequest.NumberOfDocumentsInBatch * testRequest.SizeOfDocuments, 4 * 1024)];
+
+            var dataFileWriteCounter = 0;
+            var random = new Random();
+
+            var sw = new Stopwatch();
+
+            while (remainingDocuments > 0)
+            {
+                taskKillToken.ThrowIfCancellationRequested();
+                var documentsToProcessInCurrentBatch = Math.Min(remainingDocuments, testRequest.NumberOfDocumentsInBatch);
+
+                // Write 4 KB + (Size of documents + number  of docs in batch - rounded to 4KB) to a "journal" file (no buffering, write through)
+                int bytesToWrite = RoundToMultipleOf(4 * 1024 + documentsToProcessInCurrentBatch * testRequest.SizeOfDocuments, 4 * 1024);
+                sw.Restart();
+                journalFs.Write(buffer, 0, bytesToWrite);
+                dataStorage.MarkWrite(bytesToWrite, sw.ElapsedMilliseconds);
+
+                // Write 4 KB to a position in "data" file (buffering, write through)
+                bytesToWrite = 4*1024;
+                var dataStartPosition = LongRandom(0, dataFs.Length - 4 * 1024, 4 * 1024, random);
+                dataFs.Seek(dataStartPosition, SeekOrigin.Begin);
+                sw.Restart();
+                dataFs.Write(buffer, 0, bytesToWrite);
+                dataStorage.MarkWrite(bytesToWrite, sw.ElapsedMilliseconds);
+                dataFileWriteCounter++;
+                FsyncIfNeeded(dataFileWriteCounter);
+
+                // Write (Size of documents + number  of docs in batch - rounded to 4KB) to a different position in the "data" file (buffering, write through)
+                bytesToWrite = RoundToMultipleOf(documentsToProcessInCurrentBatch*testRequest.SizeOfDocuments, 4*1024);
+                dataStartPosition = LongRandom(0, dataFs.Length - bytesToWrite, 4*1024, random);
+                dataFs.Seek(dataStartPosition, SeekOrigin.Begin);
+                sw.Restart();
+                dataFs.Write(buffer, 0, bytesToWrite);
+                dataStorage.MarkWrite(bytesToWrite, sw.ElapsedMilliseconds);
+                dataFileWriteCounter++;
+                FsyncIfNeeded(dataFileWriteCounter);
+
+                remainingDocuments -= documentsToProcessInCurrentBatch;
+                if (testRequest.WaitBetweenBatches > 0)
+                {
+                    Thread.Sleep(testRequest.WaitBetweenBatches);
+                }
+            }
+        }
+
+        private void FsyncIfNeeded(int dataFileWriteCounter)
+        {
+            if (dataFileWriteCounter%500 == 0)
+            {
+                dataFs.Flush(true);
+                journalFs.Flush(true);
+                Win32NativeFileMethods.FlushFileBuffers(dataHandle);
+                Win32NativeFileMethods.FlushFileBuffers(journalHandle);
+            }
+        }
+
+        protected void SecondTicked(object state)
+        {
+            statCounter++;
+            dataStorage.Update();
+        }
+
+        public override void DescribeTestParameters()
+        {
+            throw new NotSupportedException();
+        }
     }
 
     public class DiskPerformanceStorage
@@ -532,8 +734,9 @@ namespace Raven.Database.DiskIO
 
         public long TotalRead { get; private set; }
         public long TotalWrite { get; private set; }
+        public long TotalTimeMs { get; private set; }
 
-        public DiskPerformanceResult(DiskPerformanceStorage storage)
+        public DiskPerformanceResult(DiskPerformanceStorage storage, long totalTimeMs)
         {
             ReadPerSecondHistory = new List<long>(storage.ReadPerSecondHistory);
             WritePerSecondHistory = new List<long>(storage.WritePerSecondHistory);
@@ -543,6 +746,7 @@ namespace Raven.Database.DiskIO
             TotalWrite = storage.TotalWrite;
             ReadLatency = storage.ReadLatencyHistogram.CreateHistogramData();
             WriteLatency = storage.WriteLatencyHistogram.CreateHistogramData();
+            TotalTimeMs = totalTimeMs;
         }
     }
 }

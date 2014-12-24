@@ -159,6 +159,7 @@
     <Compile Include="CanReduceAndTransform.cs" />
     <Compile Include="CanRetrieveFacetCountsOfQueryResults.cs" />
     <Compile Include="CanRetrieveFacetCountsOfQueryResults2.cs" />
+    <Compile Include="CanSupportDynamicArrayProperties.cs" />
     <Compile Include="chad.cs" />
     <Compile Include="ChangeTrackingDoesntWorkForDecimalsWithSmallChanges.cs" />
     <Compile Include="Chirea.cs" />

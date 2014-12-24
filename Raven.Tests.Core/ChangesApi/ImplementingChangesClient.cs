@@ -176,7 +176,7 @@ namespace Raven.Tests.Core.ChangesApi
                 throw new NotImplementedException();
             }
 
-            public int GetReadStripingBase()
+            public int GetReadStripingBase(bool increment)
             {
                 throw new NotImplementedException();
             }
