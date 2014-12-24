@@ -22,6 +22,7 @@ namespace Raven.Tests.Common
 {
     public class RavenTest : RavenTestBase
     {
+        
 		protected bool ShowLogs { get; set; }
 
         static RavenTest()

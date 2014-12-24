@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions;
@@ -1042,6 +1043,10 @@ namespace Raven.Client.Connection.Async
 				{
 					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
+                    var cachedRequestDetails = jsonRequestFactory.ConfigureCaching(requestUri, (key, val) => request.AddHeader(key, val));
+                    request.CachedRequestDetails = cachedRequestDetails.CachedRequest;
+                    request.SkipServerCheck = cachedRequestDetails.SkipServerCheck;
+
 					var json = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 					return json.JsonDeserialization<FacetResults>();
 				}
@@ -1050,21 +1055,39 @@ namespace Raven.Client.Connection.Async
 
 		public Task<FacetResults[]> GetMultiFacetsAsync(FacetQuery[] facetedQueries)
 		{
-			return ExecuteWithReplication("POST", async operationMetadata =>
-			{
-				var requestUri = operationMetadata.Url + "/facets/multisearch";
+            var multiGetReuestItems = facetedQueries.Select(x =>
+            {
+                string addition;
+                if (x.FacetSetupDoc != null)
+                    addition = "facetDoc=" + x.FacetSetupDoc;
+                else
+                    addition = "facets=" + Uri.EscapeDataString(JsonConvert.SerializeObject(x.Facets));
 
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "POST", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
-				{
-					request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                return new GetRequest()
+                {
 
-					var data = JsonConvert.SerializeObject(facetedQueries);
-					await request.WriteAsync(data).ConfigureAwait(false);
-					var response = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                    Url = "/facets/" + x.IndexName,
+                    Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
+                        x.Query.GetMinimalQueryString(),
+                        x.Query.Start,
+                        x.Query.PageSize,
+                        addition)
+                };
+            }).ToArray();
 
-					return convention.CreateSerializer().Deserialize<FacetResults[]>(new RavenJTokenReader(response));
-				}
-			});
+		    var results =  MultiGetAsync(multiGetReuestItems).ContinueWith(x =>
+		    {
+                var facetResults = new FacetResults[x.Result.Length];
+
+		        for (var facetResultCounter = 0; facetResultCounter < facetResults.Length; facetResultCounter++)
+		        {
+                    var curFacetDoc = x.Result[facetResultCounter].Result;
+                    facetResults[facetResultCounter] = curFacetDoc.JsonDeserialization<FacetResults>();
+		        }
+
+		        return facetResults;
+		    });
+		    return results;
 		}
 
 		/// <summary>
@@ -1081,6 +1104,20 @@ namespace Raven.Client.Connection.Async
 
 			string facetsJson = JsonConvert.SerializeObject(facets);
 			var method = facetsJson.Length > 1024 ? "POST" : "GET";
+		    if (method == "POST")
+		    {
+		        return GetMultiFacetsAsync(new []
+		        {
+                    new FacetQuery
+                    {
+                        Facets =  facets,
+                        IndexName = index,
+                        Query = query,
+                        PageSize = pageSize,
+                        PageStart = start
+                    }
+		        }).ContinueWith(x=>x.Result.FirstOrDefault());
+		    }
 			return ExecuteWithReplication(method, async operationMetadata =>
 			{
 				var requestUri = operationMetadata.Url + string.Format("/facets/{0}?{1}&facetStart={2}&facetPageSize={3}",
@@ -1091,14 +1128,16 @@ namespace Raven.Client.Connection.Async
 
 				if (method == "GET")
 					requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
-
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, method, operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)).AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
+			    using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, method, operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)).AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
 				{
-					if (method != "GET")
-						request.WriteAsync(facetsJson).Wait();
+				    if (method != "GET")
+				    {
+                        await request.WriteAsync(facetsJson).ConfigureAwait(false);
+				    }
 
-					var json = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-					return json.JsonDeserialization<FacetResults>();
+                    var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+
+                    return json.JsonDeserialization<FacetResults>();
 				}
 			});
 		}
@@ -1261,56 +1300,121 @@ namespace Raven.Client.Connection.Async
 			var method = (query.Query == null || query.Query.Length <= convention.MaxLengthOfQueryUsingGetUrl)
 				? "GET" : "POST";
 
-			return ExecuteWithReplication(method, async operationMetadata =>
-			{
-				EnsureIsNotNullOrEmpty(index, "index");
-				string path = query.GetIndexQueryUrl(operationMetadata.Url, index, "indexes", includeQuery: method == "GET");
+		    if (method == "POST")
+		    {
+                return QueryAsyncAsPost(index, query, includes);
+		    }
 
-				if (metadataOnly)
-					path += "&metadata-only=true";
-				if (indexEntriesOnly)
-					path += "&debug=entries";
-				if (includes != null && includes.Length > 0)
-				{
-					path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
-				}
-
-				if (method == "POST")
-					path += "&postQuery=true";
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention) { AvoidCachingRequest = query.DisableCaching }.AddOperationHeaders(OperationsHeaders)))
-				{
-					request.AddReplicationStatusHeaders(operationMetadata.Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-					if (method == "POST") await request.WriteAsync(query.Query).ConfigureAwait(false);
-
-					ErrorResponseException responseException;
-					try
-					{
-						var result = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						if (result == null) throw new InvalidOperationException("Got empty response from the server for the following request: " + request.Url);
-
-						var queryResult = SerializationHelper.ToQueryResult(result, request.ResponseHeaders.GetEtagHeader(), request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
-
-						var docResults = queryResult.Results.Concat(queryResult.Includes);
-						return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult, () => QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly), conflictedResultId => new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) + ", conflict must be resolved before the document will be accessible", true) { ConflictedVersionIds = new[] { conflictedResultId } }).ConfigureAwait(false);
-					}
-					catch (ErrorResponseException e)
-					{
-						if (e.StatusCode == HttpStatusCode.NotFound)
-						{
-							var text = e.ResponseString;
-							if (text.Contains("maxQueryString")) throw new ErrorResponseException(e, text);
-							throw new ErrorResponseException(e, "There is no index named: " + index);
-						}
-						responseException = e;
-					}
-					if (HandleException(responseException)) return null;
-					throw responseException;
-				}
-			});
+			return QueryAsyncAsGet(index, query, includes, metadataOnly, indexEntriesOnly, method);
 		}
 
-		/// <summary>
+	    private Task<QueryResult> QueryAsyncAsGet(string index, IndexQuery query, string[] includes, bool metadataOnly, bool indexEntriesOnly, string method)
+	    {
+	        return ExecuteWithReplication(method, async operationMetadata =>
+	        {
+	            EnsureIsNotNullOrEmpty(index, "index");
+	            string path = query.GetIndexQueryUrl(operationMetadata.Url, index, "indexes", includeQuery: method == "GET");
+
+	            if (metadataOnly)
+	                path += "&metadata-only=true";
+	            if (indexEntriesOnly)
+	                path += "&debug=entries";
+	            if (includes != null && includes.Length > 0)
+	            {
+	                path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
+	            }
+
+	            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention) {AvoidCachingRequest = query.DisableCaching}.AddOperationHeaders(OperationsHeaders)))
+	            {
+	                RavenJObject json = null;
+	                request.AddReplicationStatusHeaders(operationMetadata.Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+	                if (method == "POST")
+	                {
+	                    await request.WriteAsync(query.Query).ConfigureAwait(false);
+	                }
+
+
+	                json = (RavenJObject) await request.ReadResponseJsonAsync().ConfigureAwait(false);
+
+
+	                ErrorResponseException responseException;
+	                try
+	                {
+	                    if (json == null) throw new InvalidOperationException("Got empty response from the server for the following request: " + request.Url);
+
+	                    var queryResult = SerializationHelper.ToQueryResult(json, request.ResponseHeaders.GetEtagHeader(), request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
+
+	                    var docResults = queryResult.Results.Concat(queryResult.Includes);
+	                    return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult, () => QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly), conflictedResultId => new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) + ", conflict must be resolved before the document will be accessible", true) {ConflictedVersionIds = new[] {conflictedResultId}}).ConfigureAwait(false);
+	                }
+	                catch (ErrorResponseException e)
+	                {
+	                    if (e.StatusCode == HttpStatusCode.NotFound)
+	                    {
+	                        var text = e.ResponseString;
+	                        if (text.Contains("maxQueryString")) throw new ErrorResponseException(e, text);
+	                        throw new ErrorResponseException(e, "There is no index named: " + index);
+	                    }
+	                    responseException = e;
+	                }
+	                if (HandleException(responseException)) return null;
+	                throw responseException;
+	            }
+	        });
+	    }
+
+	    private Task<QueryResult> QueryAsyncAsPost(string index, IndexQuery query, string[] includes)
+	    {
+	        var stringBuilder = new StringBuilder();
+	        query.AppendQueryString(stringBuilder);
+
+	        foreach (var include in includes)
+	        {
+	            stringBuilder.Append("&include=").Append(include);
+	        }
+
+	        var result = MultiGetAsync(new[]
+	        {
+	            new GetRequest
+	            {
+	                Query = stringBuilder.ToString(),
+	                Url = "/indexes/" + index
+	            }
+	        }).ContinueWith(x =>
+	        {
+	            if (x.IsFaulted || x.IsCanceled)
+	            {
+	                if (x.Exception == null)
+	                    throw new TaskCanceledException(string.Format("Canceled Index {0} Query", index));
+	                AggregateException aggregateException = x.Exception;
+	                var e = aggregateException.InnerException;
+	                var errorResponseException = e as ErrorResponseException;
+
+	                if (errorResponseException != null)
+	                {
+	                    if (errorResponseException.StatusCode == HttpStatusCode.NotFound)
+	                    {
+	                        var text = errorResponseException.ResponseString;
+	                        if (text.Contains("maxQueryString")) throw new ErrorResponseException(errorResponseException, text);
+	                        throw new ErrorResponseException(errorResponseException, "There is no index named: " + index);
+	                    }
+
+	                    if (HandleException(errorResponseException)) return null;
+	                }
+
+	                throw e;
+	            }
+
+	            var getResponse = x.Result.FirstOrDefault();
+	            var json = (RavenJObject) getResponse.Result;
+	            var queryResult = SerializationHelper.ToQueryResult(json, getResponse.GetEtagHeader(), getResponse.Headers["Temp-Request-Time"], -1);
+	            return queryResult;
+	        });
+	        return result;
+	    }
+
+	    /// <summary>
 		/// Attempts to handle an exception raised when receiving a response from the server
 		/// </summary>
 		/// <param name="e">The exception to handle</param>

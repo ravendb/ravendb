@@ -69,7 +69,7 @@ namespace Raven.Client.Connection
 		private string operationUrl;
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
-
+        
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -85,6 +85,7 @@ namespace Raven.Client.Connection
 
 			Url = requestParams.Url;
 			Method = requestParams.Method;
+		    
 
 			if (requestParams.Timeout.HasValue)
 			{
@@ -465,7 +466,7 @@ namespace Raven.Client.Connection
 				var data = RavenJToken.TryLoad(countingStream);
 				Size = countingStream.NumberOfReadBytes;
 
-				if (Method == "GET" && ShouldCacheRequest)
+				if (ShouldCacheRequest)
 				{
 					factory.CacheResponse(Url, data, ResponseHeaders);
 				}
@@ -716,7 +717,7 @@ namespace Raven.Client.Connection
 				return request;
 			}).ConfigureAwait(false);
 		}
-
+        
 		public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
 		{
 			return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression));
