@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -98,6 +100,55 @@ namespace Raven.Tests.Core.Replication
 				session.Store(replicationDocument,Constants.RavenReplicationDestinations);
 				session.SaveChanges();
 			}
+		}
+
+		[Fact]
+		public void Should_replicate_indexes_periodically()
+		{
+			const int latencyBetweenServersideIndexReplicationsInSec = 10;
+			using (var sourceServer = GetNewServer(8077, configureConfig: config =>
+			{
+				config.IndexAndTransformerReplicationLatencyInSec = latencyBetweenServersideIndexReplicationsInSec;
+			}))
+			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer))
+			using (var destinationServer1 = GetNewServer(8078))
+			using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1))
+			using (var destinationServer2 = GetNewServer())
+			using (var destination2 = NewRemoteDocumentStore(ravenDbServer: destinationServer2))
+			using (var destinationServer3 = GetNewServer(8081))
+			using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3))
+			{
+				CreateDatabaseWithReplication(source, "testDB");
+				CreateDatabaseWithReplication(destination1, "testDB");
+				CreateDatabaseWithReplication(destination2, "testDB");
+				CreateDatabaseWithReplication(destination3, "testDB");
+
+				//turn-off automatic index replication - precaution
+				source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+				// ReSharper disable once AccessToDisposedClosure
+				SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
+
+				//make sure not to replicate the index automatically
+				var userIndex = new UserIndex();
+				var anotherUserIndex = new AnotherUserIndex();
+				var yetAnotherUserIndex = new YetAnotherUserIndex();
+				source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
+				source.DatabaseCommands.ForDatabase("testDB").PutIndex(anotherUserIndex.IndexName, anotherUserIndex.CreateIndexDefinition());
+				source.DatabaseCommands.ForDatabase("testDB").PutIndex(yetAnotherUserIndex.IndexName, yetAnotherUserIndex.CreateIndexDefinition());
+
+				Thread.Sleep(TimeSpan.FromSeconds(latencyBetweenServersideIndexReplicationsInSec + 1));
+
+				var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
+				var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
+				Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication1));
+
+
+				var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
+				Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication3));
+
+				var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
+				Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication2));
+			}					
 		}
 
 		[Fact]

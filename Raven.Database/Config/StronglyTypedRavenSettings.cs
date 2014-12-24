@@ -45,6 +45,7 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+			IndexAndTransformerReplicationLatencyInSec = new IntegerSetting(settings[Constants.RavenIndexAndTransformerReplicationLatencyInSec], Constants.DefaultRavenIndexAndTransformerReplicationLatencyInSec);
 
 			PrefetchingDurationLimit = new IntegerSetting(settings[Constants.RavenPrefetchingDurationLimit], Constants.DefaultPrefetchingDurationLimit);
 
@@ -246,6 +247,8 @@ namespace Raven.Database.Config
 
 			return val;
 		}
+
+		public IntegerSetting IndexAndTransformerReplicationLatencyInSec { get; private set; }
 
 		public IntegerSetting MemoryLimitForProcessing { get; private set; }
 

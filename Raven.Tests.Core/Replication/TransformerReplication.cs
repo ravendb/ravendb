@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -173,6 +174,57 @@ namespace Raven.Tests.Core.Replication
 				Assert.Equal(1, transformersOnDestination3.Count(x => x.Name == transformer.TransformerName));
 			}
 			
+		}
+
+		[Fact]
+		public void Should_replicate_all_transformers_periodically()
+		{
+			const int latencyBetweenServersideIndexReplicationsInSec = 10;
+			using (var sourceServer = GetNewServer(8077, configureConfig: config =>
+			{
+				config.IndexAndTransformerReplicationLatencyInSec = latencyBetweenServersideIndexReplicationsInSec;
+			}))
+			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer))
+			using (var destinationServer1 = GetNewServer(8078))
+			using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1))
+			using (var destinationServer2 = GetNewServer())
+			using (var destination2 = NewRemoteDocumentStore(ravenDbServer: destinationServer2))
+			using (var destinationServer3 = GetNewServer(8081))
+			using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3))
+			{
+				CreateDatabaseWithReplication(source, "testDB");
+				CreateDatabaseWithReplication(destination1, "testDB");
+				CreateDatabaseWithReplication(destination2, "testDB");
+				CreateDatabaseWithReplication(destination3, "testDB");
+
+				//turn-off automatic index replication - precaution
+				source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+				// ReSharper disable once AccessToDisposedClosure
+				SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
+
+				var userTransformer = new UserWithoutExtraInfoTransformer();
+				var anotherTransformer = new AnotherTransformer();
+				var yetAnotherTransformer = new YetAnotherTransformer();
+
+				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(userTransformer.TransformerName, userTransformer.CreateTransformerDefinition());
+				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(anotherTransformer.TransformerName, anotherTransformer.CreateTransformerDefinition());
+				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(yetAnotherTransformer.TransformerName, yetAnotherTransformer.CreateTransformerDefinition());
+
+				Thread.Sleep(TimeSpan.FromSeconds(latencyBetweenServersideIndexReplicationsInSec + 1));
+
+				var expectedTransformerNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
+						{ userTransformer.TransformerName, 
+							anotherTransformer.TransformerName, 
+							yetAnotherTransformer.TransformerName };
+
+				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+
+				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination1.Select(x => x.Name).ToArray()));
+				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination2.Select(x => x.Name).ToArray()));
+				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination3.Select(x => x.Name).ToArray()));
+			}
 		}
 
 		[Fact]

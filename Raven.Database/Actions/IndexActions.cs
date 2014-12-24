@@ -41,6 +41,11 @@ namespace Raven.Database.Actions
         {
         }
 
+	    internal IndexDefinition[] Definitions
+	    {
+		    get { return Database.IndexDefinitionStorage.IndexDefinitions.Select(inx => inx.Value).ToArray(); }
+	    }
+
         public string[] GetIndexFields(string index)
         {
             var abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
