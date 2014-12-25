@@ -536,7 +536,7 @@ namespace Raven.Tests.FileSystem
         [Fact]
         public async Task CanCreateAndDeleteFileSystem()
         {
-            var client = (IAsyncFilesCommandsImpl) NewAsyncClient();
+            var client = (IAsyncFilesCommandsImpl)NewAsyncClient();
             var adminClient = client.Admin;
 
             const string newFileSystemName = "testName_CanDeleteFileSystem";
@@ -568,6 +568,30 @@ namespace Raven.Tests.FileSystem
             names = await adminClient.GetNamesAsync();
 
             Assert.DoesNotContain(newFileSystemName, names);
+        }
+
+        [Fact]
+        public async Task CanCreateFileSystemWithDefaultValues()
+        {
+            var client = (IAsyncFilesCommandsImpl)NewAsyncClient();
+            var adminClient = client.Admin;
+
+            const string newFileSystemName = "testName_CanCreateFileSystemWithDefaultValues";
+
+            await adminClient.CreateOrUpdateFileSystemAsync(new FileSystemDocument(), newFileSystemName);
+
+            using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, newFileSystemName))
+            {
+                await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] { 1 }));
+            }
+
+            var names = await adminClient.GetNamesAsync();
+
+            Assert.Contains(newFileSystemName, names);
+
+            var stats = await adminClient.GetStatisticsAsync();
+
+            Assert.NotNull(stats.FirstOrDefault(x => x.Name == newFileSystemName));
         }
 
         [Fact]

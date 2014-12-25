@@ -30,7 +30,6 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Document data or projection as json.
 		/// </summary>
-		/// <value>The data as json.</value>
 		public RavenJObject DataAsJson
 		{
 			get { return dataAsJson ?? (dataAsJson = new RavenJObject()); }
@@ -86,7 +85,6 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Translate the json document to a <see cref = "RavenJObject" />
 		/// </summary>
-		/// <returns></returns>
 		public RavenJObject ToJson()
 		{
 			DataAsJson.EnsureCannotBeChangeAndEnableSnapshotting();

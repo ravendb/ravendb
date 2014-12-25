@@ -392,6 +392,7 @@ namespace Raven.Client.Document
 
 #if !MONO
 				RecoverPendingTransactions();
+#endif
 
 				if (ensureDatabaseExists &&
 					string.IsNullOrEmpty(DefaultDatabase) == false &&
@@ -399,7 +400,6 @@ namespace Raven.Client.Document
 				{
 					DatabaseCommands.ForSystemDatabase().GlobalAdmin.EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 				}
-#endif
 			}
 			catch (Exception)
 			{

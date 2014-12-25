@@ -32,6 +32,18 @@ namespace Raven.Abstractions.Smuggler
         {
             public string Key;
             public RavenJObject Metadata;
+
+            [JsonIgnore]
+            public bool IsTombstone
+            {
+                get 
+                {
+                    if ( Metadata.ContainsKey( Constants.RavenDeleteMarker ))
+                        return Metadata[Constants.RavenDeleteMarker].Value<bool>();
+
+                    return false;
+                }
+            }
         }
 
         public SmugglerFilesOptions Options { get; private set; }
@@ -165,6 +177,8 @@ namespace Raven.Abstractions.Smuggler
                         while (await files.MoveNextAsync())
                         {
                             var file = files.Current;
+                            if (file.IsTombstone)
+                                continue;
 
                             var tempLastEtag = file.Etag;
                             if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
@@ -328,13 +342,16 @@ namespace Raven.Abstractions.Smuggler
                         // For each entry in the metadata file.                        
                         var container = serializer.Deserialize<FileContainer>(new StringReader(json));
 
+                        var header = new FileHeader(container.Key, container.Metadata);
+                        if (header.IsTombstone)
+                            continue;
+
                         var entry = filesLookup[container.Key];
                         using (var dataStream = entry.Open())
                         {
 	                        if (Options.StripReplicationInformation) 
 								container.Metadata = Operations.StripReplicationInformationFromMetadata(container.Metadata);
-
-                            var header = new FileHeader(container.Key, container.Metadata);
+                                                        
                             await Operations.PutFiles(header, dataStream, entry.Length);
                         }
 
@@ -419,6 +436,8 @@ namespace Raven.Abstractions.Smuggler
                     while (await files.MoveNextAsync())
                     {
                         var file = files.Current;
+                        if (file.IsTombstone)
+                            continue; // Skip if the file has been deleted.
 
                         var tempLastEtag = file.Etag;
                         if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)

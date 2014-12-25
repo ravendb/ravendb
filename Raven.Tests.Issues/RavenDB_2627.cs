@@ -179,7 +179,7 @@ namespace Raven.Tests.Issues
 				{
 					BatchOptions = new SubscriptionBatchOptions()
 					{
-						AcknowledgmentTimeout = TimeSpan.FromSeconds(0) // the client won't be able to acknowledge in 0 seconds
+						AcknowledgmentTimeout = TimeSpan.FromMilliseconds(-10) // the client won't be able to acknowledge in negative time
 					}
 				});
 				store.Changes().WaitForAllPendingSubscriptions();

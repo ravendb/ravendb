@@ -32,11 +32,16 @@ namespace Raven.Client.Connection
 			asyncAdminServerClient.DeleteDatabaseAsync(databaseName, hardDelete).WaitUnwrap();
 		}
 
+		public void EnsureDatabaseExists(string name, bool ignoreFailures = false)
+		{
+			asyncAdminServerClient.EnsureDatabaseExistsAsync(name, ignoreFailures).WaitUnwrap();
+		}
+
 		public IDatabaseCommands Commands { get { return new ServerClient(asyncServerClient); } }
 
 		public Operation CompactDatabase(string databaseName)
 		{
-		    return asyncAdminServerClient.CompactDatabaseAsync(databaseName).ResultUnwrap();
+			return asyncAdminServerClient.CompactDatabaseAsync(databaseName).ResultUnwrap();
 		}
 
 		public void StopIndexing()
@@ -44,19 +49,19 @@ namespace Raven.Client.Connection
 			asyncAdminServerClient.StopIndexingAsync().WaitUnwrap();
 		}
 
-        public void StartIndexing(int? maxNumberOfParallelIndexTasks)
+		public void StartIndexing(int? maxNumberOfParallelIndexTasks)
 		{
-            asyncAdminServerClient.StartIndexingAsync(maxNumberOfParallelIndexTasks).WaitUnwrap();
+			asyncAdminServerClient.StartIndexingAsync(maxNumberOfParallelIndexTasks).WaitUnwrap();
 		}
 
 		public void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
 		{
-            asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument, incremental, databaseName).WaitUnwrap();
+			asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument, incremental, databaseName).WaitUnwrap();
 		}
 
 		public Operation StartRestore(DatabaseRestoreRequest restoreRequest)
 		{
-		    return asyncAdminServerClient.StartRestoreAsync(restoreRequest).ResultUnwrap();
+			return asyncAdminServerClient.StartRestoreAsync(restoreRequest).ResultUnwrap();
 		}
 
 		public string GetIndexingStatus()

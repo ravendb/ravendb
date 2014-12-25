@@ -19,6 +19,7 @@ namespace Raven.Abstractions.FileSystem
         public FileSystemDocument()
         {
             Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
     }
 }
