@@ -31,28 +31,19 @@ namespace Raven.Database.Server.WebApi
 
         public IHttpRouteData GetRouteData(string virtualPathRoot, HttpRequestMessage request)
         {
-            try
-            {
-                var route = new SubRoute(request.RequestUri.LocalPath);
-                while (!route.AtEnd())
-                {
-                    var key = Tuple.Create(request.Method.Method, route);
-                    IHttpRoute[] data;
-                    if (routDataCache.TryGetValue(key, out data))
-                    {
-                        var httpRouteDatas = data.Select(x => x.GetRouteData(virtualPathRoot, request)).ToArray();
-                        return new RavenRouteCollectionRouteData(this, httpRouteDatas);
-                    }
-                    route.NextSubRoute();
-                }
-                return LocateRouteData(virtualPathRoot, request);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-                throw e;
-            }
-            
+	        var route = new SubRoute(request.RequestUri.LocalPath);
+	        while (!route.AtEnd())
+	        {
+		        var key = Tuple.Create(request.Method.Method, route);
+		        IHttpRoute[] data;
+		        if (routDataCache.TryGetValue(key, out data))
+		        {
+			        var httpRouteDatas = data.Select(x => x.GetRouteData(virtualPathRoot, request)).ToArray();
+			        return new RavenRouteCollectionRouteData(this, httpRouteDatas);
+		        }
+		        route.NextSubRoute();
+	        }
+	        return LocateRouteData(virtualPathRoot, request);
         }
 
         private RavenRouteCollectionRouteData LocateRouteData(string virtualPathRoot, HttpRequestMessage request)
@@ -150,11 +141,15 @@ namespace Raven.Database.Server.WebApi
         private class SubRoute
         {
             private readonly string fullRoute;
-            private int subRouteLength;
+			private bool isOriginalRoute;
+			private int subRouteLength;
             public SubRoute(String fullRoute)
             {
                 this.fullRoute = fullRoute;
                 subRouteLength = fullRoute.Length;
+	            if (fullRoute.EndsWith("/", StringComparison.OrdinalIgnoreCase))
+		            subRouteLength--;
+	            isOriginalRoute = true;
             }
 
             public override string ToString()
@@ -164,6 +159,12 @@ namespace Raven.Database.Server.WebApi
 
             public void NextSubRoute()
             {
+	            isOriginalRoute = false;
+	            if (subRouteLength <= 0)
+	            {
+		            subRouteLength = -1;
+		            return;
+	            }
                 subRouteLength = fullRoute.LastIndexOf('/', subRouteLength - 1, subRouteLength - 1);
             }
 
@@ -176,22 +177,20 @@ namespace Raven.Database.Server.WebApi
                 var subRoute = obj as SubRoute;
                 if (subRoute == null) return false;
                 if (subRoute.subRouteLength != subRouteLength) return false;
-                if (IsOriginalRoute() != subRoute.IsOriginalRoute()) return false;
+                if (isOriginalRoute != subRoute.isOriginalRoute) return false;
                 return string.Compare(fullRoute, 0, subRoute.fullRoute, 0, subRouteLength) == 0;
             }
 
-            public bool IsOriginalRoute()
-            {
-                return subRouteLength == fullRoute.Length;
-            }
-            public override int GetHashCode()
+	       
+
+	        public override int GetHashCode()
             {
                 int code = 0;
                 for (int index = 0; index < subRouteLength; index++)
                 {
                     code = code * 397 ^ fullRoute[index];
                 }
-                if (IsOriginalRoute())
+                if (isOriginalRoute)
                     code = code * 397 ^ 7;
                 return code;
             }
@@ -204,12 +203,16 @@ namespace Raven.Database.Server.WebApi
                 while (AtEnd() == false)
                 {
                     var length = lastIndexOfStar - lastIndexOfDash;
-                    var match = string.Compare(fullRoute, subRouteLength - length, templateRoute, lastIndexOfDash, length) == 0;
-                    if (match && (IsOriginalRoute() || fullRoute[subRouteLength] == '/'))
-                    {
-                        break;
-                    }
-                    NextSubRoute();
+	                var fullRouteIndex = subRouteLength - length;
+	                if (fullRouteIndex > 0)
+	                {
+		                var match = string.Compare(fullRoute, fullRouteIndex, templateRoute, lastIndexOfDash, length) == 0;
+		                if (match && (isOriginalRoute || fullRoute[subRouteLength] == '/'))
+		                {
+			                break;
+		                }
+	                }
+	                NextSubRoute();
                 }
                 if (AtEnd()) throw new IndexOutOfRangeException(String.Format("Could not match route template: {0}, with route: {1}, this should not happen!", templateRoute, fullRoute));
             }
