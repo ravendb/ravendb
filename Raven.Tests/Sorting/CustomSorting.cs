@@ -85,21 +85,7 @@ namespace Raven.Tests.Sorting
 
 				new User_Search().Execute(store);
 				WaitForIndexing(store);
-
-				using (var session = store.OpenSession())
-				{
-                    var users = session.Query<User, User_Search>()
-						.Customize(x => x.CustomSortUsing(typeof (SortByDynamicFields).AssemblyQualifiedName))
-                        .AddTransformerParameter("customTagId", 1)
-                        .AddTransformerParameter("cityId", 2)
-						.ToList();
-
-                    Assert.Equal(users[0].Name, "Michael");
-                    Assert.Equal(users[1].Name, "Oren");
-                    Assert.Equal(users[2].Name, "Grisha");
-                    Assert.Equal(users[3].Name, "Maxim");
-				}
-
+                
                 using (var session = store.OpenSession())
                 {
                     var users = session.Query<User, User_Search>()
@@ -169,7 +155,7 @@ namespace Raven.Tests.Sorting
         [Fact]
         public void CustomSortByDynamicFields()
         {
-            using (var store = NewDocumentStore(runInMemory: false))
+            using (var store = NewDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

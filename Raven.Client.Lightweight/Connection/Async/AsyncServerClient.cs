@@ -1176,15 +1176,7 @@ namespace Raven.Client.Connection.Async
 	            {
 	                RavenJObject json = null;
 	                request.AddReplicationStatusHeaders(operationMetadata.Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-	                if (method == "POST")
-	                {
-	                    await request.WriteAsync(query.Query).ConfigureAwait(false);
-	                }
-
-
-		
+                    
 	                json = (RavenJObject) await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
 

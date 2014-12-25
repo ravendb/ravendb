@@ -466,7 +466,7 @@ namespace Raven.Client.Connection
 				var data = RavenJToken.TryLoad(countingStream);
 				Size = countingStream.NumberOfReadBytes;
 
-				if (ShouldCacheRequest)
+				if (Method == "GET" && ShouldCacheRequest)
 				{
 					factory.CacheResponse(Url, data, ResponseHeaders);
 				}
