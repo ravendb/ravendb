@@ -109,7 +109,8 @@ namespace Raven.Database.FileSystem.Controllers
             var fsDoc = await ReadJsonObjectAsync<FileSystemDocument>();
             EnsureFileSystemHasRequiredSettings(id, fsDoc);
 
-			if (fsDoc.Settings[Constants.ActiveBundles].Contains("Encryption"))
+	        string bundles;
+	        if (fsDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.IndexOf("Encryption", StringComparison.OrdinalIgnoreCase) != -1)
 			{
 				if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
 					!fsDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
@@ -129,9 +130,6 @@ namespace Raven.Database.FileSystem.Controllers
 
         private void EnsureFileSystemHasRequiredSettings(string id, FileSystemDocument fsDoc)
         {
-            if (!fsDoc.Settings.ContainsKey(Constants.ActiveBundles))
-                fsDoc.Settings[Constants.ActiveBundles] = string.Empty;
-
             if (!fsDoc.Settings.ContainsKey(Constants.FileSystem.DataDirectory))
                 fsDoc.Settings[Constants.FileSystem.DataDirectory] = "~/Filesystems/" + id;
         }
