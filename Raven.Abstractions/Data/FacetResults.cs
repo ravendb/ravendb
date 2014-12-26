@@ -15,6 +15,8 @@ namespace Raven.Abstractions.Data
 		/// </summary>
         public TimeSpan Duration { get; set; }
 
+        public Etag IndexStateEtag { get; set; }
+
 		public FacetResults()
 		{
 			Results = new Dictionary<string, FacetResult>();

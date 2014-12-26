@@ -38,12 +38,15 @@ namespace Raven.Client
 		/// <summary>
 		///     Get the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		FacetResults GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize);
+		/// <param name="queryInputs"></param>
+		[Obsolete("Use SetTransformerParameters instead.")]
+		IDocumentQuery<T> SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
 
 		/// <summary>
 		///     Get the facets as per the specified facets with the given start and pageSize
 		/// </summary>
-		FacetResults GetFacets(List<Facet> facets, int facetStart, int? facetPageSize);
+		/// <param name="transformerParameters"></param>
+		IDocumentQuery<T> SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
 
 		/// <summary>
 		///     Create the index query object for this query
@@ -87,18 +90,7 @@ namespace Raven.Client
 		/// </summary>
 		/// <typeparam name="TProjection">Type of the projection from which fields will be taken.</typeparam>
 		IDocumentQuery<TProjection> SelectFields<TProjection>();
-
-		/// <summary>
-		///     Transformer parameters that will be passed to transformer if one is specified.
-		/// </summary>
-		[Obsolete("Use SetTransformerParameters instead.")]
-		void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
-
-		/// <summary>
-		///     Transformer parameters that will be passed to transformer if one is specified.
-		/// </summary>
-		void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
-
+        
 		/// <summary>
 		///     Ability to use one factory to determine spatial shape that will be used in query.
 		/// </summary>

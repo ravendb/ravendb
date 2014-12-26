@@ -231,6 +231,7 @@
     <Compile Include="Bugs\AvoidRaceConditionWhenWeLoadTheDataNotPatched.cs" />
     <Compile Include="Bugs\BackwardCompatibility.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
+    <Compile Include="Bugs\Caching\CachingOfPostQueries.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
     <Compile Include="Bugs\CanDeserializeWhenWeHaveLastModifiedTwiceInMetadata.cs" />
     <Compile Include="Bugs\CannotChangeId.cs" />
@@ -615,6 +616,7 @@
     <Compile Include="PreFetching.cs" />
     <Compile Include="Properties\TestAssemblyInfo.cs" />
     <Compile Include="Queries\CommentsInQueries.cs" />
+    <Compile Include="Querying\CachingOfLongQueries.cs" />
     <Compile Include="Querying\SkipDuplicates.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
     <Compile Include="ResultsTransformer\TransformerParametersToResultTransformer.cs" />
@@ -627,6 +629,9 @@
     <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
     <Compile Include="Smuggler\SmugglerIdentitiesTests.cs" />
     <Compile Include="Smuggler\SmugglerTransformScriptsTests.cs" />
+    <Compile Include="Sorting\SortByDynamicFields.cs" />
+    <Compile Include="Sorting\CustomSorting.cs" />
+    <Compile Include="Sorting\SortByNumberOfCharactersFromEnd.cs" />
     <Compile Include="Spatial\BoundingBoxIndexTests.cs" />
     <Compile Include="Spatial\CartesianTests.cs" />
     <Compile Include="Spatial\Clustering.cs" />

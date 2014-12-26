@@ -27,6 +27,7 @@ namespace Raven.Abstractions.Data
 		public const string SystemDatabase = "<system>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
 		public const string RandomFieldName = "__random";
+		public const string CustomSortFieldName = "__customSort";
 		public const string NullValueNotAnalyzed = "[[NULL_VALUE]]";
 		public const string EmptyStringNotAnalyzed = "[[EMPTY_STRING]]";
 		public const string NullValue = "NULL_VALUE";
