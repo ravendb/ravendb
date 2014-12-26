@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.Caching;
@@ -214,7 +215,7 @@ namespace Raven.Database.Server.WebApi
 	                }
 	                NextSubRoute();
                 }
-                if (AtEnd()) throw new IndexOutOfRangeException(String.Format("Could not match route template: {0}, with route: {1}, this should not happen!", templateRoute, fullRoute));
+                if (AtEnd()) throw new InvalidOperationException(String.Format("Could not match route template: {0}, with route: {1}, this should not happen!", templateRoute, fullRoute));
             }
         }
 
