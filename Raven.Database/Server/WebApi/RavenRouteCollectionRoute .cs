@@ -179,7 +179,7 @@ namespace Raven.Database.Server.WebApi
                 if (subRoute == null) return false;
                 if (subRoute.subRouteLength != subRouteLength) return false;
                 if (isOriginalRoute != subRoute.isOriginalRoute) return false;
-                return string.Compare(fullRoute, 0, subRoute.fullRoute, 0, subRouteLength) == 0;
+                return string.Compare(fullRoute, 0, subRoute.fullRoute, 0, subRouteLength, StringComparison.OrdinalIgnoreCase) == 0;
             }
 
 	       
