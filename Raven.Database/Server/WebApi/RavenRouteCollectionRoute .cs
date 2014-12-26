@@ -207,7 +207,7 @@ namespace Raven.Database.Server.WebApi
 	                var fullRouteIndex = subRouteLength - length;
 	                if (fullRouteIndex > 0)
 	                {
-		                var match = string.Compare(fullRoute, fullRouteIndex, templateRoute, lastIndexOfDash, length) == 0;
+		                var match = string.Compare(fullRoute, fullRouteIndex, templateRoute, lastIndexOfDash, length,StringComparison.OrdinalIgnoreCase) == 0;
 		                if (match && (isOriginalRoute || fullRoute[subRouteLength] == '/'))
 		                {
 			                break;
