@@ -68,10 +68,8 @@ namespace Raven.Database.Plugins.Builtins
 					                                                                         indexStats.Priority != IndexingPriority.Error &&
 					                                                                         indexStats.Priority != IndexingPriority.Disabled &&
 					                                                                         indexStats.LastQueryTimestamp.HasValue)						 
-						
-
 // ReSharper disable once PossibleInvalidOperationException
-						.ToDictionary(indexStats => indexStats.Name, indexStats => indexStats.LastQueryTimestamp.GetValueOrDefault());
+																		.ToDictionary(indexStats => indexStats.Name, indexStats => indexStats.LastQueryTimestamp.GetValueOrDefault());
 
 					if (relevantIndexLastQueries.Count == 0) continue;
 
@@ -154,7 +152,6 @@ namespace Raven.Database.Plugins.Builtins
 						if (db.Transformers.Definitions.Length > 0)
 							ReplicateTransformers(db.Transformers.Definitions, destination);
 					}
-				
 				}
 			}
 			finally
