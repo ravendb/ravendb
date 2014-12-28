@@ -67,7 +67,7 @@ namespace Raven.Database.Backup
 				}
 				catch (UnauthorizedAccessException e)
 				{
-					if (retries-- > 0)
+					if (retries-- < 0)
 						throw new InvalidOperationException("Cannot write to " + dir, e);
 					Thread.Sleep(25);
 					// sometimes it looks like the directory creation didn't "take", but if we 

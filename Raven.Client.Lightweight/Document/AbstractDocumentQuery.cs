@@ -801,6 +801,16 @@ namespace Raven.Client.Document
 			AddOrder(Constants.RandomFieldName + ";" + Guid.NewGuid(), false);
 		}
 
+        public void CustomSortUsing(string typeName)
+        {
+            CustomSortUsing(typeName, false);
+        }
+
+		public void CustomSortUsing(string typeName, bool descending)
+		{
+			AddOrder(Constants.CustomSortFieldName + (descending?"-":"") +  ";" + typeName, false);
+		}
+
 		/// <summary>
 		/// Order the search results randomly using the specified seed
 		/// this is useful if you want to have repeatable random queries
@@ -2202,6 +2212,18 @@ If you really want to do in memory filtering on the data returned from the query
 		IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering()
 		{
 			RandomOrdering();
+			return this;
+		}
+
+        IDocumentQueryCustomization IDocumentQueryCustomization.CustomSortUsing(string typeName)
+        {
+            CustomSortUsing(typeName, false);
+            return this;
+        }
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.CustomSortUsing(string typeName, bool descending)
+		{
+            CustomSortUsing(typeName, descending);
 			return this;
 		}
 
