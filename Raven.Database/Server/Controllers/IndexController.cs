@@ -129,6 +129,39 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
+		[Route("indexes/last-queried")]
+		[Route("databases/{databaseName}/indexes/last-queried")]
+		public HttpResponseMessage IndexUpdateLastQueried([FromBody] Dictionary<string, DateTime> lastQueriedByIndexId)
+		{
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				foreach (var timestamp in lastQueriedByIndexId)
+				{
+					var indexInstance = Database.IndexStorage.GetIndexInstance(timestamp.Key);
+					if (indexInstance == null) continue;
+
+					if (indexInstance.LastQueryTime.HasValue == false ||
+					    indexInstance.LastQueryTime < timestamp.Value)
+					{
+						indexInstance.MarkQueried(timestamp.Value);
+						var persistedIndexQueryTime = accessor.Lists.Read("Raven/Indexes/QueryTime", timestamp.Key);
+						if (persistedIndexQueryTime != null)
+						{
+							persistedIndexQueryTime.Data["LastQueryTime"] = timestamp.Value;
+							accessor.Lists.Set("Raven/Indexes/QueryTime", timestamp.Key, persistedIndexQueryTime.Data, UuidType.Indexing);
+						}
+						else
+						{
+							accessor.Lists.Set("Raven/Indexes/QueryTime", timestamp.Key,
+								RavenJObject.FromObject(new { LastQueryTime = timestamp.Value }), UuidType.Indexing);
+						}
+					}
+				}
+			});
+			return GetEmptyMessage();
+		}
+
+		[HttpPost]
 		[Route("indexes/replicate/{*indexName}")]
 		[Route("databases/{databaseName}/indexes/replicate/{*indexName}")]
 		public HttpResponseMessage IndexReplicate(string indexName)

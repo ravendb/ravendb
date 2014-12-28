@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -149,6 +151,72 @@ namespace Raven.Tests.Core.Replication
 				var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
 				Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication2));
 			}					
+		}
+
+		[Fact] 
+		public void Should_send_last_queried_index_time_periodically()
+		{
+			const int latencyBetweenServersideIndexReplicationsInSec = 5;
+			using (var sourceServer = GetNewServer(8077, configureConfig: config =>
+			{
+				config.IndexAndTransformerReplicationLatencyInSec = latencyBetweenServersideIndexReplicationsInSec;
+				config.TimeToWaitBeforeRunningIdleIndexes = TimeSpan.FromSeconds(10);
+			}))
+			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer))
+			using (var destinationServer1 = GetNewServer(8078))
+			using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1))
+			using (var destinationServer2 = GetNewServer())
+			using (var destination2 = NewRemoteDocumentStore(ravenDbServer: destinationServer2))
+			using (var destinationServer3 = GetNewServer(8081))
+			using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3))
+			{
+				CreateDatabaseWithReplication(source, "testDB");
+				CreateDatabaseWithReplication(destination1, "testDB");
+				CreateDatabaseWithReplication(destination2, "testDB");
+				CreateDatabaseWithReplication(destination3, "testDB");
+
+				//turn-off automatic index replication - precaution
+				source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+				// ReSharper disable once AccessToDisposedClosure
+				SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
+
+				//make sure not to replicate the index automatically
+				var userIndex = new UserIndex();
+				var anotherUserIndex = new AnotherUserIndex();
+				var yetAnotherUserIndex = new YetAnotherUserIndex();
+				source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
+				source.DatabaseCommands.ForDatabase("testDB").PutIndex(anotherUserIndex.IndexName, anotherUserIndex.CreateIndexDefinition());
+				source.DatabaseCommands.ForDatabase("testDB").PutIndex(yetAnotherUserIndex.IndexName, yetAnotherUserIndex.CreateIndexDefinition());
+
+				using (var session = source.OpenSession())
+				{
+// ReSharper disable ReturnValueOfPureMethodIsNotUsed
+					session.Query<UserIndex>().ToList(); //update last queried time
+					session.Query<AnotherUserIndex>().ToList(); //update last queried time
+					session.Query<YetAnotherUserIndex>().ToList(); //update last queried time
+// ReSharper restore ReturnValueOfPureMethodIsNotUsed
+				}
+
+				Thread.Sleep(TimeSpan.FromSeconds(latencyBetweenServersideIndexReplicationsInSec * 3));
+
+				var sourceIndexStats = source.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Where(x => x.Name != Constants.DocumentsByEntityNameIndex).ToList();
+				var destination1IndexStats = source.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Where(x => x.Name != Constants.DocumentsByEntityNameIndex).ToList();
+				var destination2IndexStats = source.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Where(x => x.Name != Constants.DocumentsByEntityNameIndex).ToList();
+				var destination3IndexStats = source.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Where(x => x.Name != Constants.DocumentsByEntityNameIndex).ToList();
+
+				Assert.Equal(sourceIndexStats.First(x => x.Name == userIndex.IndexName).LastQueryTimestamp, destination1IndexStats.First(x => x.Name == userIndex.IndexName).LastQueryTimestamp);
+				Assert.Equal(sourceIndexStats.First(x => x.Name == anotherUserIndex.IndexName).LastQueryTimestamp, destination1IndexStats.First(x => x.Name == anotherUserIndex.IndexName).LastQueryTimestamp);
+				Assert.Equal(sourceIndexStats.First(x => x.Name == yetAnotherUserIndex.IndexName).LastQueryTimestamp, destination1IndexStats.First(x => x.Name == yetAnotherUserIndex.IndexName).LastQueryTimestamp);
+
+				Assert.Equal(sourceIndexStats.First(x => x.Name == userIndex.IndexName).LastQueryTimestamp, destination2IndexStats.First(x => x.Name == userIndex.IndexName).LastQueryTimestamp);
+				Assert.Equal(sourceIndexStats.First(x => x.Name == anotherUserIndex.IndexName).LastQueryTimestamp, destination2IndexStats.First(x => x.Name == anotherUserIndex.IndexName).LastQueryTimestamp);
+				Assert.Equal(sourceIndexStats.First(x => x.Name == yetAnotherUserIndex.IndexName).LastQueryTimestamp, destination2IndexStats.First(x => x.Name == yetAnotherUserIndex.IndexName).LastQueryTimestamp);
+
+				Assert.Equal(sourceIndexStats.First(x => x.Name == userIndex.IndexName).LastQueryTimestamp, destination3IndexStats.First(x => x.Name == userIndex.IndexName).LastQueryTimestamp);
+				Assert.Equal(sourceIndexStats.First(x => x.Name == anotherUserIndex.IndexName).LastQueryTimestamp, destination3IndexStats.First(x => x.Name == anotherUserIndex.IndexName).LastQueryTimestamp);
+				Assert.Equal(sourceIndexStats.First(x => x.Name == yetAnotherUserIndex.IndexName).LastQueryTimestamp, destination3IndexStats.First(x => x.Name == yetAnotherUserIndex.IndexName).LastQueryTimestamp);
+	
+			}
 		}
 
 		[Fact]

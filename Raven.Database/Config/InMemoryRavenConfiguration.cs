@@ -331,7 +331,7 @@ namespace Raven.Database.Config
 		/// </summary>
 		public TimeSpan DatabaseOperationTimeout { get; private set; }
 
-		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
+		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; internal set; }
 
 		public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
 

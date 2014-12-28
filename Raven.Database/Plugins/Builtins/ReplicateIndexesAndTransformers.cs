@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
-using Raven.Abstractions;
+using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
-using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Server.Tenancy;
 using Raven.Json.Linq;
 using Raven.Server;
@@ -20,27 +18,154 @@ namespace Raven.Database.Plugins.Builtins
 {
 	public class ReplicateIndexesAndTransformers : IServerStartupTask
 	{
-		private RavenDbServer server;
-		private TimeSpan frequency;
-		private readonly HttpRavenRequestFactory requestFactory = new HttpRavenRequestFactory();
+		private RavenDbServer _server;
+		private TimeSpan _replicationFrequency;
+		private TimeSpan _lastQueriedFrequency;
+		private readonly HttpRavenRequestFactory _requestFactory = new HttpRavenRequestFactory();
+		private readonly object _lastQuerySendingSyncObject = new object();
+		private readonly object _replicationTaskSyncObject = new object();
+
+		private Timer replicationTaskTimer;
+		private Timer lastQueriedTaskTimer;
 
 		public void Execute(RavenDbServer ravenServer)
 		{
-			server = ravenServer;
-			frequency = TimeSpan.FromSeconds(server.Configuration.IndexAndTransformerReplicationLatencyInSec); //by default 10 min
-			server.SystemDatabase.TimerManager.NewTimer(ReplicateIndexesAndTransformersIfNeeded, TimeSpan.Zero, frequency);
+			_server = ravenServer;
+			_replicationFrequency = TimeSpan.FromSeconds(_server.Configuration.IndexAndTransformerReplicationLatencyInSec); //by default 10 min
+			_lastQueriedFrequency = TimeSpan.FromSeconds(_server.Configuration.TimeToWaitBeforeRunningIdleIndexes.TotalSeconds / 2);
+
+			replicationTaskTimer = _server.SystemDatabase.TimerManager.NewTimer(ReplicateIndexesAndTransformersIfNeeded, TimeSpan.Zero, _replicationFrequency);
+			lastQueriedTaskTimer = _server.SystemDatabase.TimerManager.NewTimer(SendLastQueriedIfNeeded, TimeSpan.Zero, _lastQueriedFrequency);
+		}
+
+		private void SendLastQueriedIfNeeded(object state)
+		{
+			//since the latency of these requests is configurable, prevent
+			//concurrent execution of this method - in case small execution time is configured
+			if (Monitor.TryEnter(_lastQuerySendingSyncObject) == false) //precaution
+				return;
+			try
+			{
+				if (_server.Disposed)
+				{
+					Dispose();
+					return;
+				}
+
+				var databaseLandLord = _server.Options.DatabaseLandlord;
+				var databasesWithReplicationEnabled = FindDatabasesWithReplicationEnabled(databaseLandLord);
+				if (databasesWithReplicationEnabled == null) return;
+
+				foreach (var databaseName in databasesWithReplicationEnabled)
+				{
+					var getDatabaseTask = databaseLandLord.GetDatabaseInternal(databaseName);
+					getDatabaseTask.Wait();
+					var db = getDatabaseTask.Result;
+
+					if (db == null) //precaution - should never happen
+						continue;
+					var relevantIndexLastQueries = db.Statistics.Indexes.Where(indexStats => indexStats.IsInvalidIndex == false &&
+					                                                                         indexStats.Priority != IndexingPriority.Error &&
+					                                                                         indexStats.Priority != IndexingPriority.Disabled &&
+					                                                                         indexStats.LastQueryTimestamp.HasValue)						 
+						
+
+// ReSharper disable once PossibleInvalidOperationException
+						.ToDictionary(indexStats => indexStats.Name, indexStats => indexStats.LastQueryTimestamp.GetValueOrDefault());
+
+					if (relevantIndexLastQueries.Count == 0) continue;
+
+					var destinations = GetReplicationDestinations(db);
+					foreach (var destination in destinations.Where(d => d.SkipIndexReplication == false))
+						SendLastQueriedToReplicationDestination(destination, relevantIndexLastQueries);
+				}
+			}
+			finally
+			{
+				Monitor.Exit(_lastQuerySendingSyncObject);
+			}
+		}
+
+		private void SendLastQueriedToReplicationDestination(ReplicationDestination destination, Dictionary<string, DateTime> relevantIndexLastQueries)
+		{
+			var connectionOptions = new RavenConnectionStringOptions
+			{
+				ApiKey = destination.ApiKey,
+				Url = destination.Url,
+				DefaultDatabase = destination.Database
+			};
+
+			var urlTemplate = "{0}/databases/{1}/indexes/last-queried";
+			if (!destination.Url.StartsWith("http://", true, CultureInfo.CurrentCulture) &&
+				!destination.Url.StartsWith("https://", true, CultureInfo.CurrentCulture))
+			{
+				urlTemplate = "http://" + urlTemplate;
+			}
+
+			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database);
+			var replicationRequest = _requestFactory.Create(operationUrl, "POST", connectionOptions);
+			replicationRequest.Write(RavenJObject.FromObject(relevantIndexLastQueries));
+			try
+			{
+				replicationRequest.ExecuteRequest();
+			}
+			catch
+			{
+			}
 		}
 
 		private void ReplicateIndexesAndTransformersIfNeeded(object state)
 		{
-			var databaseLandLord = server.Options.DatabaseLandlord;
-			var systemDatabase = databaseLandLord.SystemDatabase;
-			if (server.Disposed)
-			{
-				Dispose();
+			//since the latency of these requests is configurable, prevent
+			//concurrent execution of this method
+			if (Monitor.TryEnter(_replicationTaskSyncObject) == false)
 				return;
-			}
 
+			try
+			{
+				if (_server.Disposed)
+				{
+					Dispose();
+					return;
+				}
+
+				var databaseLandLord = _server.Options.DatabaseLandlord;
+				var databasesWithReplicationEnabled = FindDatabasesWithReplicationEnabled(databaseLandLord);
+				if (databasesWithReplicationEnabled == null) return;
+
+				foreach (var databaseName in databasesWithReplicationEnabled)
+				{
+					var getDatabaseTask = databaseLandLord.GetDatabaseInternal(databaseName);
+					getDatabaseTask.Wait();
+					var db = getDatabaseTask.Result;
+				
+					if(db == null) //precaution - should never happen
+						continue;				
+
+					if (db.Indexes.Definitions.Length <= 0 && db.Transformers.Definitions.Length <= 0)
+						return;
+
+					var destinations = GetReplicationDestinations(db);
+					foreach (var destination in destinations.Where(d => d.SkipIndexReplication == false))
+					{
+						if (db.Indexes.Definitions.Length > 0)
+							ReplicateIndexes(db.Indexes.Definitions, destination);
+
+						if (db.Transformers.Definitions.Length > 0)
+							ReplicateTransformers(db.Transformers.Definitions, destination);
+					}
+				
+				}
+			}
+			finally
+			{
+				Monitor.Exit(_replicationTaskSyncObject);
+			}
+		}
+
+		private IEnumerable<string> FindDatabasesWithReplicationEnabled(DatabasesLandlord databaseLandLord)
+		{
+			var systemDatabase = databaseLandLord.SystemDatabase;
 			var databasesWithReplicationEnabled = new HashSet<string>();
 			int nextStart = 0;
 			var databaseDocuments = systemDatabase.Documents
@@ -52,42 +177,19 @@ namespace Raven.Database.Plugins.Builtins
 				var dbName = database.Value<RavenJObject>(Constants.Metadata).Value<string>("@id").Split('/').Last();
 
 				string bundlesList;
-				if (db.Settings.TryGetValue(Constants.ActiveBundles, out bundlesList))				    
+				if (db.Settings.TryGetValue(Constants.ActiveBundles, out bundlesList))
 				{
-					if(bundlesList.IndexOf("Replication", StringComparison.InvariantCultureIgnoreCase) >= 0)
+					if (bundlesList.IndexOf("Replication", StringComparison.InvariantCultureIgnoreCase) >= 0)
 						databasesWithReplicationEnabled.Add(dbName);
 				}
 			}
-
-			foreach (var databaseName in databasesWithReplicationEnabled)
-			{
-				var getDatabaseTask = databaseLandLord.GetDatabaseInternal(databaseName);
-				getDatabaseTask.Wait();
-				var db = getDatabaseTask.Result;
-				
-				if(db == null) //precaution - should never happen
-					continue;				
-
-				if (db.Indexes.Definitions.Length <= 0 && db.Transformers.Definitions.Length <= 0)
-					return;
-
-				var destinations = GetReplicationDestinations(db);
-				foreach (var destination in destinations.Where(d => d.SkipIndexReplication == false))
-				{
-					if (db.Indexes.Definitions.Length > 0)
-						ReplicateIndexes(db.Indexes.Definitions, destination);
-
-					if (db.Transformers.Definitions.Length > 0)
-						ReplicateTransformers(db.Transformers.Definitions, destination);
-				}
-				
-			}
+			return databasesWithReplicationEnabled;
 		}
 
 		private void ReplicateIndexes(IEnumerable<IndexDefinition> definitions, ReplicationDestination destination)
 		{
 			foreach (var definition in definitions)
-				ReplicateIndex(definition.Name, destination, RavenJObject.FromObject(definition), requestFactory);
+				ReplicateIndex(definition.Name, destination, RavenJObject.FromObject(definition), _requestFactory);
 		}
 
 		private void ReplicateTransformers(IEnumerable<TransformerDefinition> definitions, ReplicationDestination destination)
@@ -96,7 +198,7 @@ namespace Raven.Database.Plugins.Builtins
 			{
 				var clonedTransformer = definition.Clone();
 				clonedTransformer.TransfomerId = 0;
-				ReplicateTransformer(definition.Name, destination, RavenJObject.FromObject(clonedTransformer), requestFactory);
+				ReplicateTransformer(definition.Name, destination, RavenJObject.FromObject(clonedTransformer), _requestFactory);
 			}
 		}
 
@@ -115,7 +217,13 @@ namespace Raven.Database.Plugins.Builtins
 				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain ?? string.Empty);
 			}
 
-			const string urlTemplate = "{0}/databases/{1}/indexes/{2}";
+			var urlTemplate = "{0}/databases/{1}/indexes/{2}";
+			if (!destination.Url.StartsWith("http://", true, CultureInfo.CurrentCulture) &&
+			    !destination.Url.StartsWith("https://", true, CultureInfo.CurrentCulture))
+			{
+				urlTemplate = "http://" + urlTemplate;
+			}
+
 			if (Uri.IsWellFormedUriString(destination.Url, UriKind.RelativeOrAbsolute) == false)
 			{
 				return;
@@ -149,7 +257,13 @@ namespace Raven.Database.Plugins.Builtins
 				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain ?? string.Empty);
 			}
 
-			const string urlTemplate = "{0}/databases/{1}/transformers/{2}";
+			var urlTemplate = "{0}/databases/{1}/transformers/{2}";
+			if (!destination.Url.StartsWith("http://", true, CultureInfo.CurrentCulture) &&
+				!destination.Url.StartsWith("https://", true, CultureInfo.CurrentCulture))
+			{
+				urlTemplate = "http://" + urlTemplate;
+			}
+
 			if (Uri.IsWellFormedUriString(destination.Url, UriKind.RelativeOrAbsolute) == false)
 			{
 				return;
@@ -203,10 +317,10 @@ namespace Raven.Database.Plugins.Builtins
 			return deserializedReplicationDocument.Destinations;
 		}
 
-		public
-			void Dispose
-			()
+		public void Dispose()
 		{
+			replicationTaskTimer.Dispose();
+			lastQueriedTaskTimer.Dispose();
 		}
 	}
 }
