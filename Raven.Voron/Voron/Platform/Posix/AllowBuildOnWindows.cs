@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-#if !MONO
 // ReSharper disable once CheckNamespace
 namespace Mono.Unix.Native
 {
@@ -748,4 +747,3 @@ namespace Mono.Unix.Native
 
 
 }
-#endif
