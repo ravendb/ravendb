@@ -20,7 +20,7 @@ namespace Raven.Tests.Bundles.Authorization.Bugs
 						Id = "Raven/Databases/Testing",
 						Settings =
 						   {
-							   { "Raven/RunInMemory", "false" },
+							   { Constants.RunInMemory, "false" },
 							   { "Raven/DataDir", "~\\Testing" }
 						   }
 					}

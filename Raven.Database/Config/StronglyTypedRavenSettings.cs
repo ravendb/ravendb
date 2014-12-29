@@ -111,7 +111,7 @@ namespace Raven.Database.Config
 			NewIndexInMemoryMaxMb =
 				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/NewIndexInMemoryMaxMB"], 64, 1), 1024 * 1024);
 			RunInMemory =
-				new BooleanSetting(settings["Raven/RunInMemory"], false);
+                new BooleanSetting(settings[Constants.RunInMemory], false);
 			CreateAutoIndexesForAdHocQueriesIfNeeded =
 				new BooleanSetting(settings["Raven/CreateAutoIndexesForAdHocQueriesIfNeeded"], true);
 			ResetIndexOnUncleanShutdown =

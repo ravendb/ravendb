@@ -52,6 +52,7 @@ namespace Raven.Abstractions.Data
 
 		public const string MemoryLimitForProcessing_BackwardCompatibility = "Raven/MemoryLimitForIndexing";
 		public const string MemoryLimitForProcessing = "Raven/MemoryLimitForProcessing";
+        public const string RunInMemory = "Raven/RunInMemory";
 
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
@@ -152,10 +153,10 @@ namespace Raven.Abstractions.Data
         public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
 		public const string NextPageStart = "Next-Page-Start";
 
-/// <summary>
-/// if no encoding information in headers of incoming request, this encoding is assumed
-/// </summary>
-public const string DefaultRequestEncoding = "UTF-8";
+        /// <summary>
+        /// if no encoding information in headers of incoming request, this encoding is assumed
+        /// </summary>
+        public const string DefaultRequestEncoding = "UTF-8";
         
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 		

@@ -739,7 +739,7 @@ namespace Raven.Database.Config
 			set
 			{
 				runInMemory = value;
-				Settings["Raven/RunInMemory"] = value.ToString();
+                Settings[Constants.RunInMemory] = value.ToString();
 			}
 		}
 
