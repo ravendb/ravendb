@@ -6,6 +6,7 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Client.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
@@ -23,9 +24,19 @@ namespace Raven.Client.Document
 			return innerAsync.CreateAsync(criteria, database).ResultUnwrap();
 		}
 
-		public Subscription Open(long id, SubscriptionConnectionOptions options, string database = null)
+		public long Create<T>(SubscriptionCriteria<T> criteria, string database = null)
+		{
+			return innerAsync.CreateAsync(criteria, database).ResultUnwrap();
+		}
+
+		public Subscription<RavenJObject> Open(long id, SubscriptionConnectionOptions options, string database = null)
 		{
 			return innerAsync.OpenAsync(id, options, database).ResultUnwrap();
+		}
+
+		public Subscription<T> Open<T>(long id, SubscriptionConnectionOptions options, string database = null)
+		{
+			return innerAsync.OpenAsync<T>(id, options, database).ResultUnwrap();
 		}
 
 		public List<SubscriptionConfig> GetSubscriptions(int start, int take, string database = null)

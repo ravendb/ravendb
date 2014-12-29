@@ -11,6 +11,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Client.Connection.Async;
+using Raven.Client.Util;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -18,12 +19,27 @@ namespace Raven.Client.Document
 {
 	public class AsyncDocumentSubscriptions : IAsyncReliableSubscriptions
 	{
-		 private readonly IDocumentStore documentStore;
-		private readonly ConcurrentSet<Subscription> subscriptions = new ConcurrentSet<Subscription>();
+		private readonly IDocumentStore documentStore;
+		private readonly ConcurrentSet<IDisposableAsync> subscriptions = new ConcurrentSet<IDisposableAsync>();
 
 		public AsyncDocumentSubscriptions(IDocumentStore documentStore)
 		{
 			this.documentStore = documentStore;
+		}
+
+		public Task<long> CreateAsync<T>(SubscriptionCriteria<T> criteria, string database = null)
+		{
+			if (criteria == null)
+				throw new InvalidOperationException("Cannot create a subscription if criteria is null");
+
+			var nonGenericCriteria = new SubscriptionCriteria();
+
+			nonGenericCriteria.BelongsToCollection = documentStore.Conventions.GetTypeTagName(typeof (T));
+			nonGenericCriteria.KeyStartsWith = criteria.KeyStartsWith;
+			nonGenericCriteria.PropertiesMatch = criteria.GetPropertiesMatchStrings();
+			nonGenericCriteria.PropertiesNotMatch = criteria.GetPropertiesNotMatchStrings();
+
+			return CreateAsync(nonGenericCriteria, database);
 		}
 
 		public async Task<long> CreateAsync(SubscriptionCriteria criteria, string database = null)
@@ -43,7 +59,12 @@ namespace Raven.Client.Document
 			}
 		}
 
-		public async Task<Subscription> OpenAsync(long id, SubscriptionConnectionOptions options, string database = null)
+		public Task<Subscription<RavenJObject>> OpenAsync(long id, SubscriptionConnectionOptions options, string database = null)
+		{
+			return OpenAsync<RavenJObject>(id, options, database);
+		}
+
+		public async Task<Subscription<T>> OpenAsync<T>(long id, SubscriptionConnectionOptions options, string database = null)
 		{
 			if(options == null)
 				throw new InvalidOperationException("Cannot open a subscription if options are null");
@@ -60,7 +81,7 @@ namespace Raven.Client.Document
 
 			await SendOpenSubscriptionRequest(commands, id, options).ConfigureAwait(false);
 
-			var subscription = new Subscription(id, options, commands, documentStore.Changes(database), () => 
+			var subscription = new Subscription<T>(id, options, commands, documentStore.Changes(database), documentStore.Conventions, () => 
 				SendOpenSubscriptionRequest(commands, id, options)); // to ensure that subscription is open try to call it with the same connection id
 
 			subscriptions.Add(subscription);

@@ -17,12 +17,13 @@ using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
-	public class Subscription : IObservable<RavenJObject>, IDisposable
+	public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable
 	{
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
@@ -30,10 +31,12 @@ namespace Raven.Client.Document
 		private readonly ManualResetEvent anySubscriber = new ManualResetEvent(false);
 		private readonly IAsyncDatabaseCommands commands;
 		private readonly IDatabaseChanges changes;
+		private readonly DocumentConvention conventions;
 		private readonly Func<Task> ensureOpenSubscription;
-		private readonly ConcurrentSet<IObserver<RavenJObject>> subscribers = new ConcurrentSet<IObserver<RavenJObject>>();
+		private readonly ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<IObserver<T>>();
 		private readonly SubscriptionConnectionOptions options;
 		private readonly CancellationTokenSource cts = new CancellationTokenSource();
+		private readonly bool isStronglyTyped;
 		private bool completed;
 		private readonly long id;
 		private bool disposed;
@@ -41,13 +44,17 @@ namespace Raven.Client.Document
 		public event Action BeforeBatch = delegate { };
 		public event Action AfterBatch = delegate { };
 
-		internal Subscription(long id, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, Func<Task> ensureOpenSubscription)
+		internal Subscription(long id, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, DocumentConvention conventions, Func<Task> ensureOpenSubscription)
 		{
 			this.id = id;
 			this.options = options;
 			this.commands = commands;
 			this.changes = changes;
+			this.conventions = conventions;
 			this.ensureOpenSubscription = ensureOpenSubscription;
+
+			if (typeof (T) != typeof (RavenJObject))
+				isStronglyTyped = true;
 
 			StartWatchingDocs();
 			StartPullingTask = StartPullingDocs();
@@ -103,7 +110,15 @@ namespace Raven.Client.Document
 									{
 										try
 										{
-											subscriber.OnNext(jsonDoc);
+											if (isStronglyTyped)
+											{
+												var instance = jsonDoc.Deserialize<T>(conventions);
+												subscriber.OnNext(instance);
+											}
+											else
+											{
+												subscriber.OnNext((T) (object) jsonDoc);
+											}
 										}
 										catch (Exception ex)
 										{
@@ -252,7 +267,7 @@ namespace Raven.Client.Document
 			});
 		}
 
-		public IDisposable Subscribe(IObserver<RavenJObject> observer)
+		public IDisposable Subscribe(IObserver<T> observer)
 		{
 			if(IsErrored)
 				throw new InvalidOperationException("Subscription encountered errors and stopped. Cannot add any subscriber.");
