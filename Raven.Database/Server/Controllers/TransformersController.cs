@@ -104,7 +104,7 @@ namespace Raven.Database.Server.Controllers
 			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
 
 			var enabledReplicationDestinations = replicationDocument.Destinations
-																	.Where(dest => dest.Disabled == false)
+																	.Where(dest => dest.Disabled == false || dest.SkipIndexReplication == false)
 																	.ToList();
 
 			if (enabledReplicationDestinations.Count == 0)
@@ -170,7 +170,7 @@ namespace Raven.Database.Server.Controllers
 			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
 
 			var failedDestinations = new ConcurrentBag<string>();
-			Parallel.ForEach(replicationDocument.Destinations,
+			Parallel.ForEach(replicationDocument.Destinations.Where(x=>x.Disabled == false && x.SkipIndexReplication == false),
 				destination => ReplicateTransformer(transformerName, destination, serializedTransformerDefinition, failedDestinations, httpRavenRequestFactory));
 
 			return GetMessageWithObject(new

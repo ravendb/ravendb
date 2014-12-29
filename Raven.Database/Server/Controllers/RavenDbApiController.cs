@@ -132,7 +132,6 @@ namespace Raven.Database.Server.Controllers
 
 			var replicationDocument = replicationDestinationsDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
 
-			replicationDocument.Destinations.RemoveAll(dest => dest.SkipIndexReplication);
 			if (replicationDocument.Destinations.Count != 0) 
 				return replicationDocument;
 
