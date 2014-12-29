@@ -1,6 +1,3 @@
-using Raven.Abstractions;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
 //-----------------------------------------------------------------------
 // <copyright file="ReplicationTask.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -9,6 +6,7 @@ using Raven.Abstractions.Data;
 
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
@@ -16,13 +14,14 @@ using Raven.Bundles.Replication.Data;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
-using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-
+using System.Globalization;
+using Raven.Abstractions;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -60,6 +59,12 @@ namespace Raven.Bundles.Replication.Tasks
         private bool wrongReplicationSourceAlertSent = false;
 		private readonly ConcurrentDictionary<string, SemaphoreSlim> activeReplicationTasks = new ConcurrentDictionary<string, SemaphoreSlim>();
 
+		private TimeSpan _replicationFrequency;
+		private TimeSpan _lastQueriedFrequency;
+		private Timer replicationTaskTimer;
+		private Timer lastQueriedTaskTimer;
+
+
 		public ConcurrentDictionary<string, DestinationStats> DestinationStats
 		{
 			get { return destinationStats; }
@@ -95,6 +100,14 @@ namespace Raven.Bundles.Replication.Tasks
 			var disposableAction = new DisposableAction(task.Wait);
 			// make sure that the doc db waits for the replication task shutdown
 			docDb.ExtensionsState.GetOrAdd(Guid.NewGuid().ToString(), s => disposableAction);
+
+			_replicationFrequency = TimeSpan.FromSeconds(database.Configuration.IndexAndTransformerReplicationLatencyInSec); //by default 10 min
+			_lastQueriedFrequency = TimeSpan.FromSeconds(database.Configuration.TimeToWaitBeforeRunningIdleIndexes.TotalSeconds / 2);
+
+			replicationTaskTimer = database.TimerManager.NewTimer(ReplicateIndexesAndTransformersTask, TimeSpan.Zero, _replicationFrequency);
+			lastQueriedTaskTimer = database.TimerManager.NewTimer(SendLastQueriedTask, TimeSpan.Zero, _lastQueriedFrequency);
+
+
 			task.Start();
 		}
 
@@ -789,7 +802,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var response = e.Response as HttpWebResponse;
 				if (response != null)
 				{
-					Stream responseStream = response.GetResponseStream();
+					var responseStream = response.GetResponseStream();
 					if (responseStream != null)
 					{
 						using (var streamReader = new StreamReader(responseStream))
@@ -817,6 +830,224 @@ namespace Raven.Bundles.Replication.Tasks
 				return false;
 			}
 		}
+
+		private void ReplicateIndexesAndTransformersIfNeeded(DocumentDatabase database)
+		{
+			if (database.Indexes.Definitions.Length <= 0 && database.Transformers.Definitions.Length <= 0)
+				return;
+
+			var destinations = GetReplicationDestinations(database);
+			foreach (var destination in destinations.Where(d => d.SkipIndexReplication == false && d.Disabled == false))
+			{
+				if (database.Indexes.Definitions.Length > 0)
+					ReplicateIndexes(database.Indexes.Definitions, destination);
+
+				if (database.Transformers.Definitions.Length > 0)
+					ReplicateTransformers(database.Transformers.Definitions, destination);
+			}
+		}
+
+
+		private void ReplicateIndexes(IEnumerable<IndexDefinition> definitions, ReplicationDestination destination)
+		{
+			foreach (var definition in definitions)
+				ReplicateIndex(definition.Name, destination, RavenJObject.FromObject(definition), nonBufferedHttpRavenRequestFactory);
+		}
+
+		private void ReplicateTransformers(IEnumerable<TransformerDefinition> definitions, ReplicationDestination destination)
+		{
+			foreach (var definition in definitions)
+			{
+				var clonedTransformer = definition.Clone();
+				clonedTransformer.TransfomerId = 0;
+				ReplicateTransformer(definition.Name, destination, RavenJObject.FromObject(clonedTransformer), nonBufferedHttpRavenRequestFactory);
+			}
+		}
+
+		private void ReplicateIndex(string indexName, ReplicationDestination destination, RavenJObject indexDefinition, HttpRavenRequestFactory httpRavenRequestFactory)
+		{
+			var connectionOptions = new RavenConnectionStringOptions
+			{
+				ApiKey = destination.ApiKey,
+				Url = destination.Url,
+				DefaultDatabase = destination.Database
+			};
+
+			if (!String.IsNullOrWhiteSpace(destination.Username) &&
+				!String.IsNullOrWhiteSpace(destination.Password))
+			{
+				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain ?? string.Empty);
+			}
+
+			const string urlTemplate = "{0}/databases/{1}/indexes/{2}";
+			if (!destination.Url.StartsWith("http://", true, CultureInfo.CurrentCulture) &&
+				!destination.Url.StartsWith("https://", true, CultureInfo.CurrentCulture))
+			{
+				throw new ArgumentException("Invalid replication destination URL : it must have 'http://' or 'https://' prefix");
+			}
+
+			if (Uri.IsWellFormedUriString(destination.Url, UriKind.RelativeOrAbsolute) == false)
+			{
+				return;
+			}
+
+			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(indexName));
+			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
+			replicationRequest.Write(indexDefinition);
+			replicationRequest.ExecuteRequest();
+		}
+
+		private void ReplicateTransformer(string transformerName, ReplicationDestination destination, RavenJObject transformerDefinition, HttpRavenRequestFactory httpRavenRequestFactory)
+		{
+			var connectionOptions = new RavenConnectionStringOptions
+			{
+				ApiKey = destination.ApiKey,
+				Url = destination.Url,
+				DefaultDatabase = destination.Database
+			};
+
+			if (!String.IsNullOrWhiteSpace(destination.Username) &&
+				!String.IsNullOrWhiteSpace(destination.Password))
+			{
+				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain ?? string.Empty);
+			}
+
+			const string urlTemplate = "{0}/databases/{1}/transformers/{2}";
+			if (!destination.Url.StartsWith("http://", true, CultureInfo.CurrentCulture) &&
+				!destination.Url.StartsWith("https://", true, CultureInfo.CurrentCulture))
+			{
+				throw new ArgumentException("Invalid replication destination URL : it must have 'http://' or 'https://' prefix");
+			}
+
+			if (Uri.IsWellFormedUriString(destination.Url, UriKind.RelativeOrAbsolute) == false)
+			{
+				return;
+			}
+
+			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(transformerName));
+			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
+			replicationRequest.Write(transformerDefinition);
+			replicationRequest.ExecuteRequest();
+		}
+
+		private IEnumerable<ReplicationDestination> GetReplicationDestinations(DocumentDatabase database)
+		{
+			var document = database.Documents.Get(Constants.RavenReplicationDestinations, null);
+			if (document == null)
+			{
+				return new ReplicationDestination[0];
+			}
+			ReplicationDocument deserializedReplicationDocument;
+			try
+			{
+				deserializedReplicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
+			}
+			catch (Exception)
+			{
+				return new ReplicationDestination[0];
+			}
+
+			if (string.IsNullOrWhiteSpace(deserializedReplicationDocument.Source))
+			{
+				deserializedReplicationDocument.Source = database.TransactionalStorage.Id.ToString();
+				try
+				{
+					var ravenJObject = RavenJObject.FromObject(deserializedReplicationDocument);
+					ravenJObject.Remove("Id");
+					database.Documents.Put(Constants.RavenReplicationDestinations, document.Etag, ravenJObject, document.Metadata, null);
+				}
+				catch (ConcurrencyException)
+				{
+					// we will get it next time
+				}
+			}
+
+			return deserializedReplicationDocument.Destinations;
+		}
+
+		private void SendLastQueriedToDatabaseReplicationDestinationIfNeeded(DocumentDatabase database, Dictionary<string, DateTime> relevantIndexLastQueries)
+		{
+			var destinations = GetReplicationDestinations(database);
+			foreach (var destination in destinations.Where(d => d.SkipIndexReplication == false))
+				SendLastQueriedToReplicationDestination(destination, relevantIndexLastQueries);
+		}
+
+		private void SendLastQueriedToReplicationDestination(ReplicationDestination destination, Dictionary<string, DateTime> relevantIndexLastQueries)
+		{
+			var connectionOptions = new RavenConnectionStringOptions
+			{
+				ApiKey = destination.ApiKey,
+				Url = destination.Url,
+				DefaultDatabase = destination.Database
+			};
+
+			const string urlTemplate = "{0}/databases/{1}/indexes/last-queried";
+			if (!destination.Url.StartsWith("http://", true, CultureInfo.CurrentCulture) &&
+				!destination.Url.StartsWith("https://", true, CultureInfo.CurrentCulture))
+			{
+				throw new ArgumentException("Invalid replication destination URL : it must have 'http://' or 'https://' prefix");
+			}
+
+			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database);
+			var replicationRequest = nonBufferedHttpRavenRequestFactory.Create(operationUrl, "POST", connectionOptions);
+			replicationRequest.Write(RavenJObject.FromObject(relevantIndexLastQueries));
+			replicationRequest.ExecuteRequest();
+		}
+
+		public void SendLastQueriedTask(object state)
+		{
+			try
+			{
+				if (docDb.Disposed)
+					return;
+				var relevantIndexLastQueries = docDb.Statistics.Indexes.Where(indexStats => indexStats.IsInvalidIndex == false &&
+				                                                                            indexStats.Priority != IndexingPriority.Error &&
+				                                                                            indexStats.Priority != IndexingPriority.Disabled &&
+				                                                                            indexStats.LastQueryTimestamp.HasValue)						 
+// ReSharper disable once PossibleInvalidOperationException
+									.ToDictionary(indexStats => indexStats.Name, indexStats => indexStats.LastQueryTimestamp.GetValueOrDefault());
+
+				if (relevantIndexLastQueries.Count == 0)
+					return;
+				SendLastQueriedToDatabaseReplicationDestinationIfNeeded(docDb, relevantIndexLastQueries);
+			}
+			catch (Exception e)
+			{
+				log.ErrorException("Failed to send last queried timestamp of indexes",e);
+				docDb.AddAlert(new Alert
+				{
+					AlertLevel = AlertLevel.Error,
+					CreatedAt = SystemTime.UtcNow,
+					Message = string.Format("During sending last queried index timestamps, an exception was thrown. See logs for exception details. (Reason {0})", e.Message),
+					Title = "Error thrown while sending 'last queried timestamp' of the indexes",
+					UniqueKey = Guid.NewGuid().ToString()
+				});
+			}
+		}
+
+		public void ReplicateIndexesAndTransformersTask(object state)
+		{
+			try
+			{
+				if (docDb.Disposed)
+					return;
+				
+				ReplicateIndexesAndTransformersIfNeeded(docDb);
+			}
+			catch (Exception e)
+			{
+				log.ErrorException("Failed to replicate indexes and transformers",e);
+				docDb.AddAlert(new Alert
+				{
+					AlertLevel = AlertLevel.Error,
+					CreatedAt = SystemTime.UtcNow,
+					Message = string.Format("During replication of indexes and/or transformers, an exception was thrown. See logs for exception details. (Reason {0})", e.Message),
+					Title = "Error thrown while replicating indexes and transformers",
+					UniqueKey = Guid.NewGuid().ToString()
+				});
+			}
+		}
+
 
 		private class JsonDocumentsToReplicate
 		{
@@ -1277,6 +1508,9 @@ namespace Raven.Bundles.Replication.Tasks
 
 		public void Dispose()
 		{
+			replicationTaskTimer.Dispose();
+			lastQueriedTaskTimer.Dispose();
+
 			Task task;
 			while (activeTasks.TryDequeue(out task))
 			{
