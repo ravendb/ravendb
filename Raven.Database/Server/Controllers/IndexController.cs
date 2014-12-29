@@ -139,23 +139,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					var indexInstance = Database.IndexStorage.GetIndexInstance(timestamp.Key);
 					if (indexInstance == null) continue;
-
-					if (indexInstance.LastQueryTime.HasValue == false ||
-					    indexInstance.LastQueryTime < timestamp.Value)
-					{
-						indexInstance.MarkQueried(timestamp.Value);
-						var persistedIndexQueryTime = accessor.Lists.Read("Raven/Indexes/QueryTime", timestamp.Key);
-						if (persistedIndexQueryTime != null)
-						{
-							persistedIndexQueryTime.Data["LastQueryTime"] = timestamp.Value;
-							accessor.Lists.Set("Raven/Indexes/QueryTime", timestamp.Key, persistedIndexQueryTime.Data, UuidType.Indexing);
-						}
-						else
-						{
-							accessor.Lists.Set("Raven/Indexes/QueryTime", timestamp.Key,
-								RavenJObject.FromObject(new { LastQueryTime = timestamp.Value }), UuidType.Indexing);
-						}
-					}
+					indexInstance.MarkQueried(timestamp.Value);
 				}
 			});
 			return GetEmptyMessage();
