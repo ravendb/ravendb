@@ -131,9 +131,22 @@ namespace Raven.Client.Indexes
 			databaseCommands.PutTransformer(TransformerName, transformerDefinition);
 
 			if (documentConvention.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Transformers))
+				ReplicateTransformerIfNeeded(databaseCommands);
+		}
+
+		internal void ReplicateTransformerIfNeeded(IDatabaseCommands databaseCommands)
+		{
+			var serverClient = databaseCommands as ServerClient;
+			if (serverClient == null)
+				return;
+			
+			var replicateIndexUrl = String.Format("/transformers/replicate/{0}", TransformerName);
+			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, "POST"))
 			{
-				UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
-					commands.PutTransformer(TransformerName, transformerDefinition));
+				var requestTask = replicateIndexRequest.ExecuteRawResponseAsync();
+				requestTask.Wait();
+				var responseHttpMessage = requestTask.Result;
+				var status = responseHttpMessage.StatusCode;
 			}
 		}
 

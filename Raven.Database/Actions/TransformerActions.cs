@@ -24,12 +24,22 @@ namespace Raven.Database.Actions
         {
         }
 
+	    internal string[] Names
+	    {
+		    get { return IndexDefinitionStorage.TransformerNames; }
+	    }
+
+	    internal TransformerDefinition[] Definitions
+	    {
+		    get { return IndexDefinitionStorage.GetAllTransformerDefinitions().ToArray(); }
+	    }
+
         public RavenJArray GetTransformerNames(int start, int pageSize)
         {
-            return new RavenJArray(
-            IndexDefinitionStorage.TransformerNames.Skip(start).Take(pageSize)
-                .Select(s => new RavenJValue(s))
-            );
+	        return new RavenJArray(
+		        IndexDefinitionStorage.TransformerNames.Skip(start).Take(pageSize)
+			        .Select(s => new RavenJValue(s))
+		        );
         }
 
         public RavenJArray GetTransformers(int start, int pageSize)

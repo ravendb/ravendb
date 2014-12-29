@@ -107,6 +107,8 @@ namespace Raven.Abstractions.Data
 		public const string SizeSoftLimitInKB = "Raven/Quotas/Size/SoftMarginInKB";
 
 		//Replications
+	    public const string RavenIndexAndTransformerReplicationLatencyInSec = "Raven/Replication/IndexAndTransformerReplicationLatency"; //in seconds
+	    public const int DefaultRavenIndexAndTransformerReplicationLatencyInSec = 600;
 		public const string RavenReplicationSource = "Raven-Replication-Source";
 		public const string RavenReplicationVersion = "Raven-Replication-Version";
 		public const string RavenReplicationHistory = "Raven-Replication-History";

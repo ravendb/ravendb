@@ -10,6 +10,7 @@ class replicationDestination {
     ignoredClient = ko.observable<boolean>().extend({ required: true });
     disabled = ko.observable<boolean>().extend({ required: true });
     clientVisibleUrl = ko.observable<string>().extend({ required: true });
+    skipIndexReplication = ko.observable<boolean>().extend({ required: true });
 
     name = ko.computed(() => {
         var prefix = this.disabled() ? "[disabled]" : null;
@@ -68,6 +69,7 @@ class replicationDestination {
         this.ignoredClient(dto.IgnoredClient);
         this.disabled(dto.Disabled);
         this.clientVisibleUrl(dto.ClientVisibleUrl);
+        this.skipIndexReplication(dto.SkipIndexReplication);
 
         if (this.username()) {
             this.isUserCredentials(true);
@@ -87,7 +89,8 @@ class replicationDestination {
             TransitiveReplicationBehavior: "Replicate",
             IgnoredClient: false,
             Disabled: false,
-            ClientVisibleUrl: null
+            ClientVisibleUrl: null,
+            SkipIndexReplication: false
         });
     }
 
@@ -118,7 +121,8 @@ class replicationDestination {
             TransitiveReplicationBehavior: this.transitiveReplicationBehavior(),
             IgnoredClient: this.ignoredClient(),
             Disabled: this.disabled(),
-            ClientVisibleUrl: this.clientVisibleUrl()
+            ClientVisibleUrl: this.clientVisibleUrl(),
+            SkipIndexReplication: this.skipIndexReplication()
         };
     }
 
