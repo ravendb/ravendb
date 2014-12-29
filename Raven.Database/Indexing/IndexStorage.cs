@@ -1407,6 +1407,11 @@ namespace Raven.Database.Indexing
 			GetIndexByName(indexName).MarkQueried();
 		}
 
+		internal void SetLastQueryTime(string indexName,DateTime lastQueryTime)
+		{
+			GetIndexByName(indexName).MarkQueried(lastQueryTime);
+		}
+
 		public DateTime? GetLastQueryTime(int index)
 		{
 			return GetIndexInstance(index).LastQueryTime;

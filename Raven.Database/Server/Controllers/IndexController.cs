@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using JetBrains.Annotations;
+using Lucene.Net.Search;
 using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
@@ -94,9 +95,8 @@ namespace Raven.Database.Server.Controllers
 										   .ToList();
 
 			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
-
 			var enabledReplicationDestinations = replicationDocument.Destinations
-																	.Where(dest => dest.Disabled == false || dest.SkipIndexReplication == false)
+																	.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false)
 																	.ToList();
 
 			if (enabledReplicationDestinations.Count == 0)
@@ -178,7 +178,7 @@ namespace Raven.Database.Server.Controllers
 			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
 		
 			var failedDestinations = new ConcurrentBag<string>();
-			Parallel.ForEach(replicationDocument.Destinations.Where(dest => dest.Disabled == false || dest.SkipIndexReplication == false),
+			Parallel.ForEach(replicationDocument.Destinations.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false),
 				destination => ReplicateIndex(indexName, destination, serializedIndexDefinition, failedDestinations, httpRavenRequestFactory));
 
 			return GetMessageWithObject(new
@@ -534,8 +534,9 @@ namespace Raven.Database.Server.Controllers
 	    }
 
 	    private QueryResultWithIncludes PerformQueryAgainstExistingIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg, CancellationToken token)
-		{
+	    {
 			indexEtag = Database.Indexes.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
+
 			if (MatchEtag(indexEtag))
 			{
 				Database.IndexStorage.MarkCachedQuery(index);
@@ -545,6 +546,8 @@ namespace Raven.Database.Server.Controllers
 
 			var queryResult = Database.Queries.Query(index, indexQuery, token);
 			indexEtag = Database.Indexes.GetIndexEtag(index, queryResult.ResultEtag, indexQuery.ResultsTransformer);
+
+			Database.IndexStorage.SetLastQueryTime(queryResult.IndexName, queryResult.LastQueryTime);
 			return queryResult;
 		}
 
@@ -553,6 +556,8 @@ namespace Raven.Database.Server.Controllers
 			string entityName;
 			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
 
+			if (index.Contains("UserIndex"))
+				Debugger.Launch();
 			if (dynamicIndexName != null && Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
 				indexEtag = Database.Indexes.GetIndexEtag(dynamicIndexName, null, indexQuery.ResultsTransformer);
@@ -595,6 +600,7 @@ namespace Raven.Database.Server.Controllers
 							? Database.Indexes.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag, indexQuery.ResultsTransformer)
 							: Etag.InvalidEtag;
 
+			Database.IndexStorage.SetLastQueryTime(queryResult.IndexName, queryResult.LastQueryTime);
 			return queryResult;
 		}
 

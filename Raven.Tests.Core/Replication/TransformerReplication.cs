@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
@@ -177,13 +178,9 @@ namespace Raven.Tests.Core.Replication
 		}
 
 		[Fact]
-		public void Should_replicate_all_transformers_periodically()
+		public async Task Should_replicate_all_transformers_periodically()
 		{
-			const int latencyBetweenServersideIndexReplicationsInSec = 10;
-			using (var sourceServer = GetNewServer(8077, configureConfig: config =>
-			{
-				config.IndexAndTransformerReplicationLatencyInSec = latencyBetweenServersideIndexReplicationsInSec;
-			}))
+			using (var sourceServer = GetNewServer(8077))
 			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer))
 			using (var destinationServer1 = GetNewServer(8078))
 			using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1))
@@ -210,7 +207,9 @@ namespace Raven.Tests.Core.Replication
 				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(anotherTransformer.TransformerName, anotherTransformer.CreateTransformerDefinition());
 				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(yetAnotherTransformer.TransformerName, yetAnotherTransformer.CreateTransformerDefinition());
 
-				Thread.Sleep(TimeSpan.FromSeconds(latencyBetweenServersideIndexReplicationsInSec + 1));
+				var sourceDB = await sourceServer.Server.GetDatabaseInternal("testDB");
+				var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
+				replicationTask.ReplicateIndexesAndTransformersTask(null);
 
 				var expectedTransformerNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
 						{ userTransformer.TransformerName, 

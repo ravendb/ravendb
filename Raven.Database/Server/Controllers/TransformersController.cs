@@ -104,7 +104,7 @@ namespace Raven.Database.Server.Controllers
 			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
 
 			var enabledReplicationDestinations = replicationDocument.Destinations
-																	.Where(dest => dest.Disabled == false || dest.SkipIndexReplication == false)
+																	.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false)
 																	.ToList();
 
 			if (enabledReplicationDestinations.Count == 0)
