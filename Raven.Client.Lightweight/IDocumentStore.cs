@@ -172,6 +172,14 @@ namespace Raven.Client
 
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 
+		/// <summary>
+		/// Provides methods to manage data subscriptions in async manner.
+		/// </summary>
+		IAsyncReliableSubscriptions AsyncSubscriptions { get; }
+
+		/// <summary>
+		/// Provides methods to manage data subscriptions.
+		/// </summary>
 		IReliableSubscriptions Subscriptions { get; }
 
         DocumentSessionListeners Listeners { get; }
