@@ -101,6 +101,7 @@
     <Compile Include="Connection\ReplicationInformer.cs" />
     <Compile Include="Counters\Connections\CounterConvention.cs" />
     <Compile Include="Counters\RavenCountersClient.cs" />
+    <Compile Include="Document\AsyncDocumentSubscriptions.cs" />
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />
     <Compile Include="Document\Batches\LazyTransformerLoadOperation.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryContext.cs" />
@@ -109,6 +110,7 @@
     <Compile Include="Document\DTC\ITransactionRecoveryStorageContext.cs" />
     <Compile Include="Document\DTC\LocalDirectoryTransactionRecoveryStorage.cs" />
     <Compile Include="Document\DTC\VolatileOnlyTransactionRecoveryStorage.cs" />
+    <Compile Include="Document\IAsyncReliableSubscriptions.cs" />
     <Compile Include="Document\IReliableSubscriptions.cs" />
     <Compile Include="Document\ReplicationBehavior.cs" />
     <Compile Include="Document\ResponseTimeInformation.cs" />
