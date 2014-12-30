@@ -345,9 +345,9 @@ namespace Raven.Database.Indexing
 
 					ResetWriteErrors();
 				}
-				catch (Exception)
+				catch (Exception e)
 				{
-					IncrementWriteErrors();
+					IncrementWriteErrors(e);
 					throw;
 				}
 				finally
@@ -540,7 +540,7 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception e)
 				{
-					IncrementWriteErrors();
+					IncrementWriteErrors(e);
 
 					throw new InvalidOperationException("Could not properly write to index " + PublicName, e);
 				}
@@ -1807,8 +1807,11 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-		public void IncrementWriteErrors()
+		public void IncrementWriteErrors(Exception e)
 		{
+			if(e is OutOfMemoryException) // Don't count transient errors
+				return;
+
 			writeErrors = Interlocked.Increment(ref writeErrors);
 
 			if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error) 
