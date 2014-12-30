@@ -400,6 +400,7 @@
     <Compile Include="RDoc_76.cs" />
     <Compile Include="ReplicationAlerts.cs" />
     <Compile Include="ReplicationBehavior.cs" />
+    <Compile Include="ShardedIdGenerationTest.cs" />
     <Compile Include="SlowIndex.cs" />
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
   </ItemGroup>
