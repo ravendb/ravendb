@@ -439,7 +439,12 @@ namespace Raven.Database.Server.Controllers
 		protected bool GetOverwriteExisting()
 		{
 			bool result;
-			bool.TryParse(GetQueryStringValue("overwriteExisting"), out result);
+			if (!bool.TryParse(GetQueryStringValue("overwriteExisting"), out result))
+            {
+                // Check legacy key.
+                bool.TryParse(GetQueryStringValue("checkForUpdates"), out result);         
+            }
+
 			return result;
 		}
 
