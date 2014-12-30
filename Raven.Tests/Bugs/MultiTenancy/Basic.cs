@@ -187,7 +187,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 						Id = "Raven/Databases/Northwind",
 						Settings =
 							{
-								{"Raven/RunInMemory", "true"},
+								{ Constants.RunInMemory, "true"},
 								{"Raven/DataDir", "Northwind"}
 							}
 					});

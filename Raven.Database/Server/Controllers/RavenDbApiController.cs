@@ -4,6 +4,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Config;
@@ -105,6 +106,43 @@ namespace Raven.Database.Server.Controllers
 			AddRavenHeader(result, sp);
 
 			return result;
+		}
+
+		protected ReplicationDocument GetReplicationDocument(out HttpResponseMessage erroResponseMessage)
+		{
+			JsonDocument replicationDestinationsDocument;
+			erroResponseMessage = null;
+			try
+			{
+				replicationDestinationsDocument = Database.Documents.Get(Constants.RavenReplicationDestinations, null);
+			}
+			catch (Exception e)
+			{
+				const string errorMessage = "Something very wrong has happened, was unable to retrieve replication destinations.";
+				Log.ErrorException(errorMessage, e);
+				erroResponseMessage = GetMessageWithObject(new { Message = errorMessage + " Check server logs for more details." }, HttpStatusCode.InternalServerError);
+				return null;
+			}
+
+			if (replicationDestinationsDocument == null)
+			{
+				erroResponseMessage = GetMessageWithObject(new { Message = "Replication destinations not found. Perhaps no replication is configured? Nothing to do in this case..." }, HttpStatusCode.NotFound);
+				return null;
+			}
+
+			var replicationDocument = replicationDestinationsDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
+
+			if (replicationDocument.Destinations.Count != 0) 
+				return replicationDocument;
+
+			erroResponseMessage = GetMessageWithObject(new
+			{
+				Message = @"Replication document found, but no destinations configured for index replication. 
+																Maybe all replication destinations have SkipIndexReplication flag equals to true?  
+																Nothing to do in this case..."
+			},
+				HttpStatusCode.NoContent);
+			return null;
 		}
 
 		protected override void InnerInitialization(HttpControllerContext controllerContext)

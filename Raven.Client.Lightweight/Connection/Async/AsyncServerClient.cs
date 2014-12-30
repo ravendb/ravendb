@@ -1731,14 +1731,20 @@ private bool HandleException(ErrorResponseException e)
 
 					await TryReadNextPageStart().ConfigureAwait(false);
 
-					await EnsureValidEndOfResponse();
+					await EnsureValidEndOfResponse().ConfigureAwait(false);
 
 					return false;
 				}
-
+				if (i == 221)
+				{
+					
+				}
+				i++;
 				Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader).ConfigureAwait(false);
 				return true;
 			}
+
+			private int i;
 
 			private async Task TryReadNextPageStart()
 			{
@@ -1776,7 +1782,7 @@ private bool HandleException(ErrorResponseException e)
 				if (reader.TokenType != JsonToken.EndObject)
 					throw new InvalidOperationException(string.Format("Unexpected token type at the end of the response: {0}. Error: {1}", reader.TokenType, streamReader.ReadToEnd()));
 
-				var remainingContent = streamReader.ReadToEnd();
+				var remainingContent = await streamReader.ReadToEndAsync().ConfigureAwait(false);
 
 				if (string.IsNullOrEmpty(remainingContent) == false)
 					throw new InvalidOperationException("Server error: " + remainingContent);
@@ -2083,10 +2089,10 @@ private bool HandleException(ErrorResponseException e)
 				if (recoveryInformation != null)
 				{
 					var ms = new MemoryStream(recoveryInformation);
-					await request.WriteAsync(ms);
+					await request.WriteAsync(ms).ConfigureAwait(false);
 				}
 
-				await request.ReadResponseJsonAsync();
+				await request.ReadResponseJsonAsync().ConfigureAwait(false);
 			}
 		}
 

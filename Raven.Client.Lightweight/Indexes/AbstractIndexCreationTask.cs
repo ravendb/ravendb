@@ -225,10 +225,10 @@ namespace Raven.Client.Indexes
 			databaseCommands.PutIndex(IndexName, indexDefinition, true);
 
 			if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
-				ReplicateIfNeeded(databaseCommands);
+				ReplicateIndexesIfNeeded(databaseCommands);
 		}
 
-		internal void ReplicateIfNeeded(IDatabaseCommands databaseCommands)
+		internal void ReplicateIndexesIfNeeded(IDatabaseCommands databaseCommands)
 		{
 			var serverClient = databaseCommands as ServerClient;
 			if (serverClient == null)

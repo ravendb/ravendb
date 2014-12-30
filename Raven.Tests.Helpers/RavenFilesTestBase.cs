@@ -81,7 +81,7 @@ namespace Raven.Tests.Helpers
             {
                 Port = port,
                 DataDirectory = directory,
-                RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+                RunInMemory = runInMemory,
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif                

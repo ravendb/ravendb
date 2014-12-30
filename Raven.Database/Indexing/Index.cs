@@ -924,6 +924,10 @@ namespace Raven.Database.Indexing
 
 		public void MarkQueried(DateTime time)
 		{
+			if (lastQueryTime != null && 
+				lastQueryTime.Value >= time) 
+				return;
+
 			lastQueryTime = time;
 		}
 
