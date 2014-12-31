@@ -116,6 +116,7 @@
     <Compile Include="BulkInsertClient.cs" />
     <Compile Include="BulkInsertDatabaseUrl.cs" />
     <Compile Include="BulkInsertTests.cs" />
+    <Compile Include="RavenDB3075.cs" />
     <Compile Include="RavenDB_2627.cs" />
     <Compile Include="RavenDB_2867.cs" />
     <Compile Include="RavenDB_2879.cs" />
@@ -401,7 +402,6 @@
     <Compile Include="RDoc_76.cs" />
     <Compile Include="ReplicationAlerts.cs" />
     <Compile Include="ReplicationBehavior.cs" />
-    <Compile Include="ShardedIdGenerationTest.cs" />
     <Compile Include="SlowIndex.cs" />
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
   </ItemGroup>
