@@ -704,7 +704,7 @@ namespace Raven.Client.Document
 					Conventions,
 					GetReplicationInformerForDatabase(database),
 					() => databaseChanges.Remove(database),
-						((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
+					(key, etag, conflictIds, metadata) => ((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
 			}
 		}
 

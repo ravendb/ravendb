@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Commands;
@@ -62,13 +63,13 @@ namespace Raven.Client.Connection.Async
 		///     to share same transaction
 		/// </summary>
 		/// <param name="commandDatas">Commands to process</param>
-		Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas);
+		Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Commits the specified tx id
 		/// </summary>
 		/// <param name="txId">transaction identifier</param>
-		Task CommitAsync(string txId);
+		Task CommitAsync(string txId, CancellationToken token = default (CancellationToken));
 
 		HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 
@@ -82,7 +83,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">key of a document to be deleted</param>
 		/// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
-		Task DeleteAsync(string key, Etag etag);
+		Task DeleteAsync(string key, Etag etag, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Removes an attachment from a database.
@@ -90,7 +91,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="key">key of an attachment to delete</param>
 		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
 		[Obsolete("Use RavenFS instead.")]
-		Task DeleteAttachmentAsync(string key, Etag etag);
+		Task DeleteAttachmentAsync(string key, Etag etag, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Perform a set based deletes using the specified index
@@ -98,19 +99,19 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexName">name of an index to perform a query on</param>
 		/// <param name="queryToDelete">Tquery that will be performed</param>
 		/// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
-		Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null);
+		Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Deletes the specified index
 		/// </summary>
 		/// <param name="name">name of an index to delete</param>
-		Task DeleteIndexAsync(string name);
+		Task DeleteIndexAsync(string name, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Deletes the specified transformer
 		/// </summary>
 		/// <param name="name">name of a transformer to delete</param>
-		Task DeleteTransformerAsync(string name);
+		Task DeleteTransformerAsync(string name, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Disable all caching within the given scope
@@ -138,7 +139,7 @@ namespace Raven.Client.Connection.Async
 		///     Retrieve a single document for a specified key.
 		/// </summary>
 		/// <param name="key">key of the document you want to retrieve</param>
-		Task<JsonDocument> GetAsync(string key);
+		Task<JsonDocument> GetAsync(string key, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the
@@ -248,35 +249,35 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="start">number of index names that should be skipped</param>
 		/// <param name="pageSize">maximum number of index names that will be retrieved</param>
-		Task<string[]> GetIndexNamesAsync(int start, int pageSize);
+		Task<string[]> GetIndexNamesAsync(int start, int pageSize, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Retrieves multiple index definitions from a database
 		/// </summary>
 		/// <param name="start">number of indexes that should be skipped</param>
 		/// <param name="pageSize">maximum number of indexes that will be retrieved</param>
-		Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize);
+		Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Gets the license status
 		/// </summary>
-		Task<LicensingStatus> GetLicenseStatusAsync();
+		Task<LicensingStatus> GetLicenseStatusAsync(CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Gets the Logs
 		/// </summary>
-		Task<LogItem[]> GetLogsAsync(bool errorsOnly);
+		Task<LogItem[]> GetLogsAsync(bool errorsOnly, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Sends a multiple faceted queries in a single request and calculates the facet results for each of them
 		/// </summary>
 		/// <param name="facetedQueries">List of the faceted queries that will be executed on the server-side</param>
-		Task<FacetResults[]> GetMultiFacetsAsync(FacetQuery[] facetedQueries);
+		Task<FacetResults[]> GetMultiFacetsAsync(FacetQuery[] facetedQueries, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Retrieve the statistics for the database
 		/// </summary>
-		Task<DatabaseStatistics> GetStatisticsAsync();
+		Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Get the all terms stored in the index for the specified field
@@ -287,20 +288,20 @@ namespace Raven.Client.Connection.Async
 		/// <param name="field">index field</param>
 		/// <param name="fromValue">starting point for a query, used for paging</param>
 		/// <param name="pageSize">maximum number of terms that will be returned</param>
-		Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize);
+		Task<string[]> GetTermsAsync(string index, string field, string fromValue, int pageSize, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Gets the transformer definition for the specified name
 		/// </summary>
 		/// <param name="name">transformer name</param>
-		Task<TransformerDefinition> GetTransformerAsync(string name);
+		Task<TransformerDefinition> GetTransformerAsync(string name, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Gets the transformers from the server
 		/// </summary>
 		/// <param name="start">number of transformers that should be skipped</param>
 		/// <param name="pageSize">maximum number of transformers that will be retrieved</param>
-		Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize);
+		Task<TransformerDefinition[]> GetTransformersAsync(int start, int pageSize, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Retrieves the document metadata for the specified document key.
@@ -309,14 +310,14 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">key of a document to get metadata for</param>
 		/// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
-		Task<JsonDocumentMetadata> HeadAsync(string key);
+		Task<JsonDocumentMetadata> HeadAsync(string key, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Download attachment metadata for a single attachment.
 		/// </summary>
 		/// <param name="key">key of the attachment you want to download metadata for</param>
 		[Obsolete("Use RavenFS instead.")]
-		Task<Attachment> HeadAttachmentAsync(string key);
+		Task<Attachment> HeadAttachmentAsync(string key, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Lets you check if the given index definition differs from the one on a server.
@@ -335,30 +336,30 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="name">name of an index to check</param>
 		/// <param name="indexDef">index definition</param>
-		Task<bool> IndexHasChangedAsync(string name, IndexDefinition indexDef);
+		Task<bool> IndexHasChangedAsync(string name, IndexDefinition indexDef, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Return a list of documents that based on the MoreLikeThisQuery.
 		/// </summary>
 		/// <param name="query">more like this query definition that will be executed</param>
-		Task<MultiLoadResult> MoreLikeThisAsync(MoreLikeThisQuery query);
+		Task<MultiLoadResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Perform a single POST request containing multiple nested GET requests
 		/// </summary>
-		Task<GetResponse[]> MultiGetAsync(GetRequest[] requests);
+		Task<GetResponse[]> MultiGetAsync(GetRequest[] requests, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Generate the next identity value from the server
 		/// </summary>
-		Task<long> NextIdentityForAsync(string name);
+		Task<long> NextIdentityForAsync(string name, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Sends a patch request for a specific document, ignoring the document's Etag and if the document is missing
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
-		Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches);
+		Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Sends a patch request for a specific document, ignoring the document's Etag
@@ -369,14 +370,14 @@ namespace Raven.Client.Connection.Async
 		///     true if the patch request should ignore a missing document, false to throw
 		///     DocumentDoesNotExistException
 		/// </param>
-		Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, bool ignoreMissing);
+		Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, bool ignoreMissing, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Sends a patch request for a specific document, ignoring the document's Etag and  if the document is missing
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch);
+		Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Sends a patch request for a specific document, ignoring the document's Etag
@@ -387,7 +388,7 @@ namespace Raven.Client.Connection.Async
 		///     true if the patch request should ignore a missing document, false to throw
 		///     DocumentDoesNotExistException
 		/// </param>
-		Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, bool ignoreMissing);
+		Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, bool ignoreMissing, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Sends a patch request for a specific document
@@ -395,7 +396,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, Etag etag);
+		Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, Etag etag, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Sends a patch request for a specific document which may or may not currently exist
@@ -404,7 +405,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="patchesToExisting">Array of patch requests to apply to an existing document</param>
 		/// <param name="patchesToDefault">Array of patch requests to apply to a default document when the document is missing</param>
 		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
-		Task<RavenJObject> PatchAsync(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata);
+		Task<RavenJObject> PatchAsync(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Sends a patch request for a specific document
@@ -412,7 +413,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, Etag etag);
+		Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, Etag etag, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Sends a patch request for a specific document which may or may not currently exist
@@ -424,7 +425,7 @@ namespace Raven.Client.Connection.Async
 		///     missing
 		/// </param>
 		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
-		Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata);
+		Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Prepares the transaction on the server.
@@ -441,7 +442,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
 		/// <param name="document">document data</param>
 		/// <param name="metadata">document metadata</param>
-		Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata);
+		Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Puts a byte array as attachment with the specified key

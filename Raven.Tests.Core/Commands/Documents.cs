@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -17,6 +19,24 @@ namespace Raven.Tests.Core.Commands
 {
     public class Documents : RavenCoreTestBase
     {
+	    [Fact]
+	    public void CanCancelPutDocument()
+	    {
+		    var random = new Random();
+		    var largeArray = new byte[1024*1024*2]; //2mb
+			random.NextBytes(largeArray);
+			var largeDocument = new { Data = largeArray };
+
+		    var cts = new CancellationTokenSource();
+		    using (var store = GetDocumentStore())
+		    {
+			    var ravenJObject = RavenJObject.FromObject(largeDocument);
+				cts.Cancel();
+				var putTask = store.AsyncDatabaseCommands.PutAsync("test/1", null, ravenJObject, new RavenJObject(), cts.Token);								
+				Assert.True(putTask.IsCanceled);
+		    }
+	    }
+
         [Fact]
         public async Task CanPutGetUpdateAndDeleteDocument()
         {
