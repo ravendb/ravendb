@@ -23,7 +23,9 @@ namespace Raven.Tests.Core.Commands
 	    public void CanCancelPutDocument()
 	    {
 		    var random = new Random();
-		    var largeArray = new byte[1024*1024*2]; //2mb
+		    var largeArray = new byte[1024*1024*2]; 
+			//2mb - document large enough for PUT to take a while, so
+			//we will be able to cancel the operation BEFORE the PUT completes
 			random.NextBytes(largeArray);
 			var largeDocument = new { Data = largeArray };
 
@@ -36,7 +38,7 @@ namespace Raven.Tests.Core.Commands
 				Assert.True(putTask.IsCanceled);
 		    }
 	    }
-
+		
         [Fact]
         public async Task CanPutGetUpdateAndDeleteDocument()
         {

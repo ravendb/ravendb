@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
@@ -153,7 +154,7 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
-		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
+		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
 		{
 			Conventions = documentConvention;
 			var transformerDefinition = CreateTransformerDefinition(documentConvention.PrettifyGeneratedLinqExpressions);
@@ -162,7 +163,7 @@ namespace Raven.Client.Indexes
 			// the new definition.
 			return asyncDatabaseCommands.PutTransformerAsync(TransformerName, transformerDefinition)
 				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, url) =>
-					client.DirectPutTransformerAsync(TransformerName, transformerDefinition, url)))
+					client.DirectPutTransformerAsync(TransformerName, transformerDefinition, url, token)), token)
 				.Unwrap();
 		}
 	}

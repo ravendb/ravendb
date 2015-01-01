@@ -452,14 +452,14 @@ namespace Raven.Client.Connection.Async
 		/// <param name="data">attachment data</param>
 		/// <param name="metadata">attachment metadata</param>
 		[Obsolete("Use RavenFS instead.")]
-		Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata);
+		Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Creates an index with the specified name, based on an index definition
 		/// </summary>
 		/// <param name="name">name of an index</param>
 		/// <param name="indexDef">definition of an index</param>
-		Task<string> PutIndexAsync(string name, IndexDefinition indexDef);
+		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Creates an index with the specified name, based on an index definition
@@ -467,7 +467,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="name">name of an index</param>
 		/// <param name="indexDef">definition of an index</param>
 		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
-		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite);
+		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Creates an index with the specified name, based on an index definition that is created by the supplied
@@ -477,7 +477,7 @@ namespace Raven.Client.Connection.Async
 		/// <typeparam name="TReduceResult">Type of reduce result</typeparam>
 		/// <param name="name">name of an index</param>
 		/// <param name="indexDef">definition of an index</param>
-		Task<string> PutIndexAsync<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef);
+		Task<string> PutIndexAsync<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Creates an index with the specified name, based on an index definition that is created by the supplied
@@ -488,14 +488,14 @@ namespace Raven.Client.Connection.Async
 		/// <param name="name">name of an index</param>
 		/// <param name="indexDef">definition of an index</param>
 		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
-		Task<string> PutIndexAsync<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite);
+		Task<string> PutIndexAsync<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Creates a transformer with the specified name, based on an transformer definition
 		/// </summary>
 		/// <param name="name">name of a transformer</param>
 		/// <param name="transformerDefinition">definition of a transformer</param>
-		Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition);
+		Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Queries the specified index in the Raven-flavored Lucene query syntax
@@ -508,24 +508,24 @@ namespace Raven.Client.Connection.Async
 		/// </param>
 		/// <param name="metadataOnly">true if returned documents should include only metadata without a document body.</param>
 		/// <param name="indexEntriesOnly">true if query results should contain only index entries.</param>
-		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false);
+		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Removes all indexing data from a server for a given index so the indexation can start from scratch for that index.
 		/// </summary>
 		/// <param name="name">name of an index to reset</param>
-		Task ResetIndexAsync(string name);
+		Task ResetIndexAsync(string name, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Rollbacks the specified tx id
 		/// </summary>
 		/// <param name="txId">transaction identifier</param>
-		Task RollbackAsync(string txId);
+		Task RollbackAsync(string txId, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Seeds the next identity value on the server
 		/// </summary>
-		Task<long> SeedIdentityForAsync(string name, long value);
+		Task<long> SeedIdentityForAsync(string name, long value, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Retrieves documents for the specified key prefix.
@@ -549,7 +549,7 @@ namespace Raven.Client.Connection.Async
 		///     skip document fetching until given key is found and return documents after that key (default:
 		///     null)
 		/// </param>
-		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, string skipAfter = null);
+		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, string skipAfter = null, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Streams the documents by etag OR starts with the prefix and match the matches
@@ -572,7 +572,7 @@ namespace Raven.Client.Connection.Async
 		///     skip document fetching until given key is found and return documents after that key (default:
 		///     null)
 		/// </param>
-		Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+		Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
@@ -581,7 +581,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="index">name of an index to query</param>
 		/// <param name="query">query definition containing all information required to query a specified index</param>
 		/// <param name="queryHeaderInfo">information about performed query</param>
-		Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo);
+		Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Returns a list of suggestions based on the specified suggestion query
@@ -591,7 +591,7 @@ namespace Raven.Client.Connection.Async
 		///     suggestion query definition containing all information required to query a specified
 		///     index
 		/// </param>
-		Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery suggestionQuery);
+		Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery suggestionQuery, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Updates attachments metadata only.
@@ -609,7 +609,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="queryToUpdate">query that will be performed</param>
 		/// <param name="patch">JavaScript patch that will be executed on query results</param>
 		/// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
-		Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null);
+		Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Perform a set based update using the specified index
@@ -618,7 +618,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="queryToUpdate">query that will be performed</param>
 		/// <param name="patchRequests">array of patches that will be executed on a query results</param>
 		/// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
-		Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null);
+		Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null, CancellationToken token = default(CancellationToken));
 
 		/// <summary>
 		///     Get the full URL for the given document key
