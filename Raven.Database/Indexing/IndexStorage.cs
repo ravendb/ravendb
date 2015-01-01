@@ -1090,9 +1090,9 @@ namespace Raven.Database.Indexing
 				{
                 value.Flush(value.GetLastEtagFromStats());
 			}
-				catch (Exception)
+				catch (Exception e)
 				{
-					value.IncrementWriteErrors();
+					value.IncrementWriteErrors(e);
 					throw;
 				}
 			}
@@ -1351,9 +1351,9 @@ namespace Raven.Database.Indexing
 				{
                 value.Flush(value.GetLastEtagFromStats());
 			}
-				catch (Exception)
+				catch (Exception e)
 				{
-					value.IncrementWriteErrors();
+					value.IncrementWriteErrors(e);
 					throw;
 		}
 			}
@@ -1367,9 +1367,9 @@ namespace Raven.Database.Indexing
 				{
                 value.Flush(value.GetLastEtagFromStats());
 			}
-				catch (Exception)
+				catch (Exception e)
 				{
-					value.IncrementWriteErrors();
+					value.IncrementWriteErrors(e);
 					throw;
 		}
 			}
