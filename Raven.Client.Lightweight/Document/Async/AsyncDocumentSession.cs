@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -345,16 +346,16 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null)
+		 public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken))
 		{
-			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation, skipAfter: skipAfter)
-										.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation, skipAfter: skipAfter, token: token)
+										.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList(), token);
 		}
 
 		public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
 		                                                    string exclude = null, RavenPagingInformation pagingInformation = null,
 		                                                    Action<ILoadConfiguration> configure = null,
-															string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
+															string skipAfter = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer().TransformerName;
 
@@ -367,30 +368,30 @@ namespace Raven.Client.Document.Async
 			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude,
 			                                             pagingInformation: pagingInformation, transformer: transformer,
 			                                             transformerParameters: configuration.TransformerParameters,
-														 skipAfter: skipAfter)
+														 skipAfter: skipAfter, token: token)
 			                            .ContinueWith(
-				                            task => (IEnumerable<TResult>) task.Result.Select(TrackEntity<TResult>).ToList());
+				                            task => (IEnumerable<TResult>) task.Result.Select(TrackEntity<TResult>).ToList(), token);
 		}
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query)
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default (CancellationToken))
 		{
-			return StreamAsync(query, new Reference<QueryHeaderInformation>());
+			return StreamAsync(query, new Reference<QueryHeaderInformation>(), token);
 		}
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query)
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default (CancellationToken))
 		{
-			return StreamAsync(query, new Reference<QueryHeaderInformation>());
+			return StreamAsync(query, new Reference<QueryHeaderInformation>(), token);
 		}
 
 
-		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
+		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation, CancellationToken token = default (CancellationToken))
 		{
 			var queryInspector = (IRavenQueryProvider)query.Provider;
 			var indexQuery = queryInspector.ToAsyncDocumentQuery<T>(query.Expression);
-            return await StreamAsync(indexQuery, queryHeaderInformation).ConfigureAwait(false);
+            return await StreamAsync(indexQuery, queryHeaderInformation, token).ConfigureAwait(false);
 		}
 
-		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
+		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation, CancellationToken token = default (CancellationToken))
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)query);
 			var indexQuery = ravenQueryInspector.GetIndexQuery(true);
@@ -400,37 +401,38 @@ namespace Raven.Client.Document.Async
                     "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
 
 
-            var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation).ConfigureAwait(false);
+            var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation, token).ConfigureAwait(false);
 			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation(null);
 			queryOperation.DisableEntitiesTracking = true;
 
-			return new QueryYieldStream<T>(this, enumerator, queryOperation);
+			return new QueryYieldStream<T>(this, enumerator, queryOperation, token);
 		}
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0,
-																	 int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
+																	 int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, CancellationToken token = default (CancellationToken))
 		{
-			return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation);
+			return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation, token: token);
 		}
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
-								   int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null)
+								   int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken))
 		{
-			return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter);
+			return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter, token: token);
 		}
 
-		private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, string skipAfter = null)
+		private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken))
 		{
-			var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter).ConfigureAwait(false);
-			return new DocsYieldStream<T>(this, enumerator);
+			var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter, token: token).ConfigureAwait(false);
+			return new DocsYieldStream<T>(this, enumerator, token);
 		}
 
 		public abstract class YieldStream<T> : IAsyncEnumerator<StreamResult<T>>
 		{
 			protected readonly AsyncDocumentSession parent;
 			protected readonly IAsyncEnumerator<RavenJObject> enumerator;
+			protected CancellationToken token;
 
-			protected YieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator)
+			protected YieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, CancellationToken token)
 			{
 				this.parent = parent;
 				this.enumerator = enumerator;
@@ -443,7 +445,7 @@ namespace Raven.Client.Document.Async
 
 			public async Task<bool> MoveNextAsync()
 			{
-                if (await enumerator.MoveNextAsync().ConfigureAwait(false) == false)
+                if (await enumerator.MoveNextAsync().WithCancellation(token).ConfigureAwait(false) == false)
 					return false;
 
 				SetCurrent();
@@ -455,12 +457,13 @@ namespace Raven.Client.Document.Async
 
 			public StreamResult<T> Current { get; protected set; }
 		}
+
 		public class QueryYieldStream<T> : YieldStream<T>
 		{
 			private readonly QueryOperation queryOperation;
 
-			public QueryYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, QueryOperation queryOperation)
-				: base(parent, enumerator)
+			public QueryYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, QueryOperation queryOperation, CancellationToken token = default (CancellationToken))
+				: base(parent, enumerator, token)
 			{
 				this.queryOperation = queryOperation;
 			}
@@ -491,8 +494,8 @@ namespace Raven.Client.Document.Async
 
 		public class DocsYieldStream<T> : YieldStream<T>
 		{
-			public DocsYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator)
-				: base(parent, enumerator)
+			public DocsYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, CancellationToken token)
+				: base(parent, enumerator, token)
 			{
 			}
 
@@ -769,7 +772,7 @@ namespace Raven.Client.Document.Async
 			return await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
 		}
 
-		public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+		public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
 		{
 		    if (transformer == null) 
                 throw new ArgumentNullException("transformer");
@@ -779,16 +782,16 @@ namespace Raven.Client.Document.Async
 			IncrementRequestCount();
 
 		    string[] includeNames = includes != null ? includes.Select(x=>x.Key).ToArray() : new string[0];
-		    var multiLoadResult = await AsyncDatabaseCommands.GetAsync(ids, includeNames, transformer, transformerParameters);
+		    var multiLoadResult = await AsyncDatabaseCommands.GetAsync(ids, includeNames, transformer, transformerParameters, token: token);
             return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
       
 		}
 
-	    public Lazy<Task<T[]>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
+		public Lazy<Task<T[]>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval, CancellationToken token = default (CancellationToken))
 	    {
             if (CheckIfIdAlreadyIncluded(ids, includes))
             {
-                return new Lazy<Task<T[]>>(async () => await Task.WhenAll(ids.Select(LoadAsync<T>).ToArray()));
+                return new Lazy<Task<T[]>>(async () => await Task.WhenAll(ids.Select(LoadAsync<T>).ToArray()).WithCancellation(token));
             }
             var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
             var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
@@ -798,12 +801,12 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Begins the async multi load operation
 		/// </summary>
-		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes,CancellationToken token = default (CancellationToken))
 		{
             if (CheckIfIdAlreadyIncluded(ids, includes))
             {                
                 var loadTasks = ids.Select(LoadAsync<T>).ToArray();
-                var loadedData = await Task.WhenAll(loadTasks);
+                var loadedData = await Task.WhenAll(loadTasks).WithCancellation(token);
                 return loadedData;
             }
 
@@ -818,7 +821,7 @@ namespace Raven.Client.Document.Async
 				multiLoadOperation.LogOperation();
 				using (multiLoadOperation.EnterMultiLoadContext())
 				{
-                    result = await AsyncDatabaseCommands.GetAsync(ids, includePaths).ConfigureAwait(false);
+                    result = await AsyncDatabaseCommands.GetAsync(ids, includePaths, token: token).ConfigureAwait(false);
 				}
 			} while (multiLoadOperation.SetResult(result));
 			return multiLoadOperation.Complete<T>();
@@ -830,9 +833,9 @@ namespace Raven.Client.Document.Async
 		/// Begins the async save changes operation
 		/// </summary>
 		/// <returns></returns>
-		public async Task SaveChangesAsync()
+		public async Task SaveChangesAsync(CancellationToken token = default (CancellationToken))
 		{
-			await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges();
+			await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().WithCancellation(token);
 
 			using (EntityToJson.EntitiesToJsonCachingScope())
 			{
@@ -842,7 +845,7 @@ namespace Raven.Client.Document.Async
 
 				IncrementRequestCount();
 
-				var result = await AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray());
+				var result = await AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray(), token);
 				UpdateBatchResults(result, data);
 			}
 		}
@@ -935,13 +938,13 @@ namespace Raven.Client.Document.Async
 			return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
 		}
 
-		public async Task RefreshAsync<T>(T entity)
+		public async Task RefreshAsync<T>(T entity, CancellationToken token = default (CancellationToken))
 		{
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
 				throw new InvalidOperationException("Cannot refresh a transient instance");
 			IncrementRequestCount();
-			var jsonDocument = await AsyncDatabaseCommands.GetAsync(value.Key);
+			var jsonDocument = await AsyncDatabaseCommands.GetAsync(value.Key, token);
 			RefreshInternal(entity, jsonDocument, value);
 		}
 

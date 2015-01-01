@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -201,7 +202,7 @@ namespace Raven.Client
 		/// <summary>
 		///     Saves all the pending changes to the server.
 		/// </summary>
-		Task SaveChangesAsync();
+		Task SaveChangesAsync(CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available and

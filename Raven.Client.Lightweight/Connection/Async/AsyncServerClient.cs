@@ -954,7 +954,7 @@ namespace Raven.Client.Connection.Async
 		}
 
 		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0,
-												 int? pageSize = null)
+												 int? pageSize = null, CancellationToken token = default (CancellationToken))
 		{
 
 			string facetsJson = JsonConvert.SerializeObject(facets);
