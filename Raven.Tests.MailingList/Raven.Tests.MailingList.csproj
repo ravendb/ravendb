@@ -206,6 +206,7 @@
     <Compile Include="FailingIndex.cs" />
     <Compile Include="FailingProjection.cs" />
     <Compile Include="Failing_lucene_query_where_in_tests.cs" />
+    <Compile Include="Fail_test.cs" />
     <Compile Include="FilteredIndexTest.cs" />
     <Compile Include="FirstOrDefaultNullableDate.cs" />
     <Compile Include="FormOpensByDateAndMediaSourceAndVersionTest.cs" />
