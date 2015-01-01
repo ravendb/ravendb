@@ -702,12 +702,12 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		///     Gets configuration for current database.
 		/// </summary>
-		Task<RavenJObject> GetDatabaseConfigurationAsync();
+		Task<RavenJObject> GetDatabaseConfigurationAsync(CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Get the indexing status
 		/// </summary>
-		Task<string> GetIndexingStatusAsync();
+		Task<string> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Enables indexing.
@@ -716,12 +716,12 @@ namespace Raven.Client.Connection.Async
 		///     if set then maximum number of parallel indexing tasks will be set to this
 		///     value.
 		/// </param>
-		Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null);
+		Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Disables all indexing.
 		/// </summary>
-		Task StopIndexingAsync();
+		Task StopIndexingAsync(CancellationToken token = default (CancellationToken));
 	}
 
 	public interface IAsyncInfoDatabaseCommands
@@ -729,6 +729,6 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		///     Get replication info
 		/// </summary>
-		Task<ReplicationStatistics> GetReplicationInfoAsync();
+		Task<ReplicationStatistics> GetReplicationInfoAsync(CancellationToken token = default (CancellationToken));
 	}
 }

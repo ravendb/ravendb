@@ -2304,11 +2304,11 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 			get { return this; }
 		}
 
-		async Task<ReplicationStatistics> IAsyncInfoDatabaseCommands.GetReplicationInfoAsync()
+		async Task<ReplicationStatistics> IAsyncInfoDatabaseCommands.GetReplicationInfoAsync(CancellationToken token)
 		{
 			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url.ReplicationInfo(), "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)))
 			{
-				var json = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				return json.Deserialize<ReplicationStatistics>(convention);
 			}
 		}
