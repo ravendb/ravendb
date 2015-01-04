@@ -1599,9 +1599,8 @@ namespace Raven.Database.Indexing
 			}
 
 			bool hasSnapshot = false;
-			bool throwOnFinallyException = true;
 			try
-			{
+			{                
 				var existingFiles = new HashSet<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
@@ -1648,7 +1647,6 @@ namespace Raven.Database.Indexing
 						TryDelete(neededFilePath);
 						return;
 					}
-
 					var commit = snapshotter.Snapshot();
 					hasSnapshot = true;
 					foreach (var fileName in commit.FileNames)
@@ -1686,10 +1684,22 @@ namespace Raven.Database.Indexing
 					neededFilesWriter.Flush();
 				}
 			}
-			catch
+			catch (Exception e)
 			{
-				throwOnFinallyException = false;
-				throw;
+                logIndexing.WarnException(
+                            "Could not backup index " + indexId +
+                            " because an unexpected exception was thrown. Skipping the index, will force index reset on restore", e);
+			    try
+			    {
+			        var fileInfo = new FileInfo(Path.Combine(backupDirectory, String.Format("{0}.backup_failed", indexId)));
+			        fileInfo.Create();
+			    }
+			    catch (Exception fe)
+			    {
+                    logIndexing.WarnException(
+                            "failed to create fail index file for index " + indexId +
+                            " because an unexpected exception was thrown. This error may prevent auto reseting of the index on restore.", fe);
+			    }
 			}
 			finally
 			{
@@ -1699,10 +1709,10 @@ namespace Raven.Database.Indexing
 					{
 						snapshotter.Release();
 					}
-					catch
+					catch (Exception e)
 					{
-						if (throwOnFinallyException)
-							throw;
+                        logIndexing.WarnException(
+                            "Failed to release snapshotter while backing-up index " + indexId, e);
 					}
 				}
 			}

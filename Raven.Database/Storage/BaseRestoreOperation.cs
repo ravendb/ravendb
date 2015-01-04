@@ -138,6 +138,7 @@ namespace Raven.Database.Storage
 
         protected void CopyIndexes()
         {
+            var badIndexId = Directory.GetFiles(backupLocation, "*.backup_failed", SearchOption.TopDirectoryOnly).Select(Path.GetFileNameWithoutExtension).ToList();
             var directories = Directory.GetDirectories(backupLocation, "Inc*")
                                        .OrderByDescending(dir => dir)
                                        .ToList();
@@ -146,8 +147,14 @@ namespace Raven.Database.Storage
             {
                 foreach (var backupIndex in Directory.GetDirectories(Path.Combine(backupLocation, IndexesSubfolder)))
                 {
-                    var indexName = Path.GetFileName(backupIndex);
+                    var indexName = Path.GetFileName(backupIndex);                    
                     var indexPath = Path.Combine(indexLocation, indexName);
+                    if (badIndexId.Contains(indexName))
+                    {
+                        output(String.Format("Detected a corrupt index - {0}, forcing index reset",indexName));
+                        ForceIndexReset(indexPath, indexName, null);
+                        continue;
+                    }
 
                     try
                     {
@@ -168,12 +175,17 @@ namespace Raven.Database.Storage
                 return;
 
             directories.Add(backupLocation); // add the root (first full backup) to the end of the list (last place to look for)
-
+            badIndexId = Directory.GetFiles(latestIncrementalBackupDirectory, "*.backup_failed", SearchOption.TopDirectoryOnly).Select(Path.GetFileNameWithoutExtension).ToList();
             foreach (var index in Directory.GetDirectories(Path.Combine(latestIncrementalBackupDirectory, IndexesSubfolder)))
             {
                 var indexName = Path.GetFileName(index);
                 var indexPath = Path.Combine(indexLocation, indexName);
-
+                if (badIndexId.Contains(indexName))
+                {
+                    output(String.Format("Detected a corrupt index - {0}, forcing index reset", indexName));
+                    ForceIndexReset(indexPath, indexName, null);
+                    continue;
+                }
                 try
                 {
                     var filesList = File.ReadAllLines(Path.Combine(index, "index-files.required-for-index-restore"))
@@ -211,7 +223,7 @@ namespace Raven.Database.Storage
             }
         }
 
-        protected string BackupFilenamePath(string backupFilename)
+	    protected string BackupFilenamePath(string backupFilename)
         {
             var directories = Directory.GetDirectories(backupLocation, "Inc*")
                 .OrderByDescending(dir => dir)
