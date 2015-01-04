@@ -56,52 +56,52 @@ namespace Raven.Client.Shard
 
 		#region Load and Include
 
-	    public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
+		public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id)
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, CancellationToken token)
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    public Lazy<Task<TResult>> LoadAsync<TResult>(string id, Action<TResult> onEval)
+		public Lazy<Task<TResult>> LoadAsync<TResult>(string id, Action<TResult> onEval, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(ValueType id)
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(ValueType id, CancellationToken token)
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    public Lazy<Task<TResult>> LoadAsync<TResult>(ValueType id, Action<TResult> onEval)
+		public Lazy<Task<TResult>> LoadAsync<TResult>(ValueType id, Action<TResult> onEval, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(params ValueType[] ids)
+	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(CancellationToken token,params ValueType[] ids)
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<ValueType> ids)
+		Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<ValueType> ids, CancellationToken token)
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval)
+		public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
 
-		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval)
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval, CancellationToken token)
 		{
 			throw new NotImplementedException();
 		}
 
-		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval, CancellationToken token)
 		{
 			throw new NotImplementedException();
 		}
@@ -122,12 +122,12 @@ namespace Raven.Client.Shard
 			return commands.UrlFor(value.Key);
 		}
 
-		Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
+		Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    public Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query)
+		public Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
@@ -193,14 +193,14 @@ namespace Raven.Client.Shard
 	        throw new NotImplementedException();
 	    }
 
-	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<string> ids)
+		Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<string> ids, CancellationToken token)
 	    {
 	        throw new NotImplementedException();
 	    }
 
 		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
 		{
-			return LoadAsyncInternal<T>(ids.ToArray());
+			return LoadAsyncInternal<T>(ids.ToArray(), token);
 		}
 
 		public Task<T> LoadAsync<T>(ValueType id, CancellationToken token = default (CancellationToken))
@@ -744,7 +744,7 @@ namespace Raven.Client.Shard
 			return Conventions.GenerateDocumentKeyAsync(dbName, value, entity);
 		}
 
-	    public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync()
+		public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync(CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotSupportedException("Async kazy requests are not supported for sharded store");
 	    }

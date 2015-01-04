@@ -87,9 +87,9 @@ namespace Raven.Client.Document.Async
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
-        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<string> ids)
+		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
         {
-            return Lazily.LoadAsync<T>(ids, null);
+            return Lazily.LoadAsync<T>(ids, null, token);
         }
 
         /// <summary>
@@ -98,17 +98,17 @@ namespace Raven.Client.Document.Async
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The id.</param>
         /// <returns></returns>
-        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id)
+		Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
         {
-            return Lazily.LoadAsync(id, (Action<T>)null);
+            return Lazily.LoadAsync(id, (Action<T>)null, token);
         }
 
         /// <summary>
         /// Loads the specified ids and a function to call when it is evaluated
         /// </summary>
-        public Lazy<Task<T[]>> LoadAsync<T>(IEnumerable<string> ids, Action<T[]> onEval)
+		public Lazy<Task<T[]>> LoadAsync<T>(IEnumerable<string> ids, Action<T[]> onEval, CancellationToken token = default (CancellationToken))
         {
-            return LazyLoadInternal(ids.ToArray(), new KeyValuePair<string, Type>[0], onEval);
+            return LazyLoadInternal(ids.ToArray(), new KeyValuePair<string, Type>[0], onEval, token);
         }
 
 
@@ -116,13 +116,13 @@ namespace Raven.Client.Document.Async
 		/// <summary>
         /// Loads the specified id and a function to call when it is evaluated
         /// </summary>
-        public Lazy<Task<T>> LoadAsync<T>(string id, Action<T> onEval)
+		public Lazy<Task<T>> LoadAsync<T>(string id, Action<T> onEval, CancellationToken token = default (CancellationToken))
         {
             if (IsLoaded(id))
-                 return new Lazy<Task<T>>(() => LoadAsync<T>(id));
+                 return new Lazy<Task<T>>(() => LoadAsync<T>(id, token));
                
             var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id), handleInternalMetadata: HandleInternalMetadata);
-            return AddLazyOperation(lazyLoadOperation, onEval);
+            return AddLazyOperation(lazyLoadOperation, onEval, token);
         }
 
         /// <summary>
@@ -137,36 +137,36 @@ namespace Raven.Client.Document.Async
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id, Action<T> onEval)
+		Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id, Action<T> onEval, CancellationToken token)
         {
             var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-            return Lazily.LoadAsync(documentKey, onEval);
+            return Lazily.LoadAsync(documentKey, onEval, token);
         }
 
-        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(params ValueType[] ids)
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(CancellationToken token,params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Lazily.LoadAsync<T>(documentKeys, null);
+            return Lazily.LoadAsync<T>(documentKeys, null, token);
         }
 
-        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<ValueType> ids)
+		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token)
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Lazily.LoadAsync<T>(documentKeys, null);
+            return Lazily.LoadAsync<T>(documentKeys, null, token);
         }
 
-        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<ValueType> ids, Action<T[]> onEval)
+		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<ValueType> ids, Action<T[]> onEval, CancellationToken token)
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return LazyLoadInternal(documentKeys.ToArray(), new KeyValuePair<string, Type>[0], onEval);
+            return LazyLoadInternal(documentKeys.ToArray(), new KeyValuePair<string, Type>[0], onEval, token);
         }
 
-		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval)
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval, CancellationToken token)
 		{
-			return Lazily.LoadAsync(id, typeof(TTransformer), configure, onEval);
+			return Lazily.LoadAsync(id, typeof(TTransformer), configure, onEval, token);
 		}
 
-		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval, CancellationToken token)
 		{
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 			var ids = new[] { id };
@@ -182,14 +182,14 @@ namespace Raven.Client.Document.Async
 				new LoadTransformerOperation(this, transformer, ids),
 				singleResult: true);
 
-			return AddLazyOperation(lazyLoadOperation, onEval);
+			return AddLazyOperation(lazyLoadOperation, onEval, token);
 		}
 
-		public Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query)
+		public Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = default (CancellationToken))
         {
             var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, null, null);
             var lazyOp = new LazyMoreLikeThisOperation<TResult>(multiLoadOperation, query);
-            return AddLazyOperation<TResult[]>(lazyOp, null);
+            return AddLazyOperation<TResult[]>(lazyOp, null, token);
         }
 
 		public string GetDocumentUrl(object entity)
@@ -201,11 +201,11 @@ namespace Raven.Client.Document.Async
 			return AsyncDatabaseCommands.UrlFor(value.Key);
 		}
 
-		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
+		Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token = default (CancellationToken))
         {
 			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
 
-            return AddLazyOperation<T[]>(operation, null);
+            return AddLazyOperation<T[]>(operation, null, token);
         }
 
 		/// <summary>
@@ -220,15 +220,16 @@ namespace Raven.Client.Document.Async
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-         Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id)
+		Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id, CancellationToken token)
         {
             return Lazily.LoadAsync(id, (Action<T>)null);
         }
 
-         internal  Lazy<Task<T>> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval)
+		internal Lazy<Task<T>> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval, CancellationToken token = default (CancellationToken))
          {
              pendingLazyOperations.Add(operation);
-             var lazyValue = new Lazy<Task<T>>(() => ExecuteAllPendingLazyOperationsAsync()  
+             var lazyValue = new Lazy<Task<T>>(() => 
+				 ExecuteAllPendingLazyOperationsAsync(token)  
                  .ContinueWith(t =>
              {
                    if(t.Exception != null)
@@ -243,10 +244,10 @@ namespace Raven.Client.Document.Async
              return  lazyValue;
          }
 
-         internal Lazy<Task<int>> AddLazyCountOperation(ILazyOperation operation)
+		internal Lazy<Task<int>> AddLazyCountOperation(ILazyOperation operation, CancellationToken token = default (CancellationToken))
          {
              pendingLazyOperations.Add(operation);
-             var lazyValue = new Lazy<Task<int>>(() => ExecuteAllPendingLazyOperationsAsync()
+             var lazyValue = new Lazy<Task<int>>(() => ExecuteAllPendingLazyOperationsAsync(token)
                  .ContinueWith(t =>
                  {
                      if(t.Exception != null)
@@ -256,7 +257,7 @@ namespace Raven.Client.Document.Async
 
              return lazyValue;
          }
-         public async Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync()
+         public async Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync(CancellationToken token = default (CancellationToken))
          {
              if (pendingLazyOperations.Count == 0)
                  return new ResponseTimeInformation();
@@ -269,9 +270,9 @@ namespace Raven.Client.Document.Async
 
                  var responseTimeDuration = new ResponseTimeInformation();
 
-                 while (await ExecuteLazyOperationsSingleStep(responseTimeDuration))
+                 while (await ExecuteLazyOperationsSingleStep(responseTimeDuration).WithCancellation(token))
                  {
-                     await Task.Delay(100);
+                     await Task.Delay(100).WithCancellation(token);
                  }
 
                  responseTimeDuration.ComputeServerTotal();
@@ -334,11 +335,11 @@ namespace Raven.Client.Document.Async
          /// <summary>
          /// Register to lazily load documents and include
          /// </summary>
-         public Lazy<Task<T[]>> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
+		 public Lazy<Task<T[]>> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval, CancellationToken token = default (CancellationToken))
          {
              var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
              var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
-             return AddLazyOperation(lazyOp, onEval);
+             return AddLazyOperation(lazyOp, onEval,token);
          }
 
 
