@@ -1326,7 +1326,7 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 					ErrorResponseException responseException;
 					try
 					{
-						await request.WriteAsync(jArray).ConfigureAwait(false);
+						await request.WriteAsync(jArray).WithCancellation(token).ConfigureAwait(false);
 						var response = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 						if (response == null)
 						{

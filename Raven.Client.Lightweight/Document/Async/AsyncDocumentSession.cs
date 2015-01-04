@@ -625,10 +625,10 @@ namespace Raven.Client.Document.Async
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		public Task<T> LoadAsync<T>(ValueType id)
+		public Task<T> LoadAsync<T>(ValueType id, CancellationToken token = default (CancellationToken))
 		{
 			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-			return LoadAsync<T>(documentKey);
+			return LoadAsync<T>(documentKey, token);
 		}
 
 		/// <summary>
@@ -643,10 +643,10 @@ namespace Raven.Client.Document.Async
 		/// 
 		/// Or whatever your conventions specify.
 		/// </remarks>
-		public Task<T[]> LoadAsync<T>(params ValueType[] ids)
+		public Task<T[]> LoadAsync<T>(CancellationToken token = default (CancellationToken),params ValueType[] ids)
 		{
 			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-			return LoadAsync<T>(documentKeys);
+			return LoadAsync<T>(documentKeys, token);
 		}
 
 		/// <summary>
@@ -663,8 +663,25 @@ namespace Raven.Client.Document.Async
 		/// </remarks>
 		public Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids)
 		{
+			return LoadAsync<T>(ids, new CancellationToken());
+		}
+
+		/// <summary>
+		/// Begins the async multi-load operation, with the specified ids after applying
+		/// conventions on the provided ids to get the real document ids.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// LoadAsync{Post}(new List&lt;int&gt;(){1,2,3})
+		/// And that call will internally be translated to 
+		/// LoadAsync{Post}("posts/1","posts/2","posts/3");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
+		public Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token = default (CancellationToken))
+		{
 			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-			return LoadAsync<T>(documentKeys);
+			return LoadAsync<T>(documentKeys, token);
 		}
 
 		/// <summary>
@@ -672,7 +689,7 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
-		public async Task<T> LoadAsync<T>(string id)
+		public async Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
 		{
 			if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
 			object entity;
@@ -691,65 +708,65 @@ namespace Raven.Client.Document.Async
 
 			IncrementRequestCount();
 			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
-			return await CompleteLoadAsync<T>(id, loadOperation);
+			return await CompleteLoadAsync<T>(id, loadOperation, token);
 		}
 
-		private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
+		private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation, CancellationToken token = default (CancellationToken))
 		{
 			loadOperation.LogOperation();
 			using (loadOperation.EnterLoadContext())
 			{
-				var result = await AsyncDatabaseCommands.GetAsync(id);
+				var result = await AsyncDatabaseCommands.GetAsync(id, token);
 
 				if (loadOperation.SetResult(result) == false)
 					return loadOperation.Complete<T>();
 
-				return await CompleteLoadAsync<T>(id, loadOperation);
+				return await CompleteLoadAsync<T>(id, loadOperation, token).WithCancellation(token);
 			}
 		}
 
-		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids)
+		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
 		{
-			return LoadAsyncInternal<T>(ids.ToArray(), new KeyValuePair<string, Type>[0]);
+			return LoadAsyncInternal<T>(ids.ToArray(), new KeyValuePair<string, Type>[0], token);
 		}
 
-		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
 		{
-            var result = await LoadAsync<TTransformer, T>(new[] { id }.AsEnumerable(), configure).ConfigureAwait(false);
+            var result = await LoadAsync<TTransformer, T>(new[] { id }.AsEnumerable(), configure, token).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
-		public async Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer();
 			var configuration = new RavenLoadConfiguration();
 			if (configure != null)
 				configure(configuration);
 
-			var result = await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer.TransformerName, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer.TransformerName, configuration.TransformerParameters, token).ConfigureAwait(false);
 			return result;
 		}
 
-		public async Task<TResult> LoadAsync<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
+		public async Task<TResult> LoadAsync<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken))
 		{
 			var configuration = new RavenLoadConfiguration();
 			if (configure != null)
 				configure(configuration);
 
-			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters, token).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
-		public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
+		public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken))
 		{
 			var configuration = new RavenLoadConfiguration();
 			if (configure != null)
 				configure(configuration);
 
-			return await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			return await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters, token).ConfigureAwait(false);
 		}
 
-		public async Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
+		public async Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken))
 		{
 			var configuration = new RavenLoadConfiguration();
 			if (configure != null)
@@ -757,11 +774,11 @@ namespace Raven.Client.Document.Async
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters, token).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
-		public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
+		public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken))
 		{
 			var configuration = new RavenLoadConfiguration();
 			if (configure != null)
@@ -769,7 +786,7 @@ namespace Raven.Client.Document.Async
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			return await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			return await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters, token).ConfigureAwait(false);
 		}
 
 		public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
@@ -781,7 +798,7 @@ namespace Raven.Client.Document.Async
 
 			IncrementRequestCount();
 
-		    string[] includeNames = includes != null ? includes.Select(x=>x.Key).ToArray() : new string[0];
+		    var includeNames = includes != null ? includes.Select(x=>x.Key).ToArray() : new string[0];
 		    var multiLoadResult = await AsyncDatabaseCommands.GetAsync(ids, includeNames, transformer, transformerParameters, token: token);
             return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
       
@@ -791,7 +808,7 @@ namespace Raven.Client.Document.Async
 	    {
             if (CheckIfIdAlreadyIncluded(ids, includes))
             {
-                return new Lazy<Task<T[]>>(async () => await Task.WhenAll(ids.Select(LoadAsync<T>).ToArray()).WithCancellation(token));
+                return new Lazy<Task<T[]>>(async () => await Task.WhenAll(ids.Select(id => LoadAsync<T>(id,token)).ToArray()).WithCancellation(token));
             }
             var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
             var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
@@ -805,7 +822,7 @@ namespace Raven.Client.Document.Async
 		{
             if (CheckIfIdAlreadyIncluded(ids, includes))
             {                
-                var loadTasks = ids.Select(LoadAsync<T>).ToArray();
+                var loadTasks = ids.Select(id => LoadAsync<T>(id,token)).ToArray();
                 var loadedData = await Task.WhenAll(loadTasks).WithCancellation(token);
                 return loadedData;
             }

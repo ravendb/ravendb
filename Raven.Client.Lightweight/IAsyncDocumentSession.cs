@@ -83,13 +83,13 @@ namespace Raven.Client
 		///     Loads the specified entity with the specified id.
 		/// </summary>
 		/// <param name="id">Identifier of a entity that will be loaded.</param>
-		Task<T> LoadAsync<T>(string id);
+		Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Loads the specified entities with the specified ids.
 		/// </summary>
 		/// <param name="ids">Enumerable of Ids that should be loaded</param>
-		Task<T[]> LoadAsync<T>(IEnumerable<string> ids);
+		Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Loads the specified entity with the specified id after applying
@@ -100,7 +100,7 @@ namespace Raven.Client
 		///     <para>LoadAsync&lt;Post&gt;("posts/1");</para>
 		///     <para>Or whatever your conventions specify.</para>
 		/// </summary>
-		Task<T> LoadAsync<T>(ValueType id);
+		Task<T> LoadAsync<T>(ValueType id, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Loads the specified entities with the specified id after applying
@@ -111,7 +111,7 @@ namespace Raven.Client
 		///     <para>LoadAsync&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
 		///     <para>Or whatever your conventions specify.</para>
 		/// </summary>
-		Task<T[]> LoadAsync<T>(params ValueType[] ids);
+		Task<T[]> LoadAsync<T>(CancellationToken token = default (CancellationToken),params ValueType[] ids);
 
 		/// <summary>
 		///     Loads the specified entities with the specified id after applying
@@ -124,7 +124,7 @@ namespace Raven.Client
 		///     <para>LoadAsync&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
 		///     <para>Or whatever your conventions specify.</para>
 		/// </remarks>
-		Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids);
+		Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Performs a load that will use the specified results transformer against the specified id
@@ -133,14 +133,14 @@ namespace Raven.Client
 		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
 		/// <param name="id">Id of a document to load</param>
 		/// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
-		Task<TResult> LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
+		Task<TResult> LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		///     Performs a load that will use the specified results transformer against the specified id
 		/// </summary>
 		/// <param name="ids">Enumerable of ids of documents to load</param>
 		/// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
-		Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
+		Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		///     Performs a load that will use the specified results transformer against the specified id
@@ -149,7 +149,7 @@ namespace Raven.Client
 		/// <param name="id">Id of a document to load</param>
 		/// <param name="transformer">The transformer to use in this load operation</param>
 		/// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
-		Task<TResult> LoadAsync<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null);
+		Task<TResult> LoadAsync<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Performs a load that will use the specified results transformer against the specified ids
@@ -158,7 +158,7 @@ namespace Raven.Client
 		/// <param name="ids">Enumerable of ids of documents to load</param>
 		/// <param name="transformer">The transformer to use in this load operation</param>
 		/// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
-		Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null);
+		Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Performs a load that will use the specified results transformer against the specified id
@@ -167,7 +167,7 @@ namespace Raven.Client
 		/// <param name="id">Id of a entity to load</param>
 		/// <param name="transformerType">The transformer to use in this load operation</param>
 		/// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
-		Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null);
+		Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Performs a load that will use the specified results transformer against the specified ids
@@ -176,7 +176,7 @@ namespace Raven.Client
 		/// <param name="ids">Enumerable of ids of documents to load</param>
 		/// <param name="transformerType">The transformer to use in this load operation</param>
 		/// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
-		Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null);
+		Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Queries the specified index using Linq.
@@ -208,25 +208,25 @@ namespace Raven.Client
 		///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available and
 		///     forces concurrency check with given Etag
 		/// </summary>
-		Task StoreAsync(object entity, Etag etag);
+		Task StoreAsync(object entity, Etag etag, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available.
 		///     <para>Forces concurrency check if the Id is not available during extraction.</para>
 		/// </summary>
 		/// <param name="entity">entity to store.</param>
-		Task StoreAsync(object entity);
+		Task StoreAsync(object entity, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Stores entity in session with given id and forces concurrency check with given Etag.
 		/// </summary>
-		Task StoreAsync(object entity, Etag etag, string id);
+		Task StoreAsync(object entity, Etag etag, string id, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Stores the specified dynamic entity, under the specified id.
 		/// </summary>
 		/// <param name="entity">entity to store.</param>
 		/// <param name="id">Id to store this entity under. If other entity exists with the same id it will be overridden.</param>
-		Task StoreAsync(object entity, string id);
+		Task StoreAsync(object entity, string id, CancellationToken token = default (CancellationToken));
 	}
 }
