@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
@@ -94,7 +95,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Convert the Linq query to a lazy-count Lucene query and provide a function to execute when it is being evaluated
 		/// </summary>
-		Lazy<Task<int>> CountLazilyAsync<T>(Expression expression);
+		Lazy<Task<int>> CountLazilyAsync<T>(Expression expression, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		/// Move the registered after query actions
