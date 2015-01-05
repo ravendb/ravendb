@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.SlowTests.Issues;
 using Raven.Tests.Common;
 using Raven.Tests.Core;
@@ -15,17 +18,49 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			/*for (int i = 0; i < 100; i++)
-			{
-				using (var s = new RavenDB_1359())
-				{
-					Console.WriteLine(i);
-					s.IndexThatLoadAttachmentsShouldIndexAllDocuments();
-				}
-			
-			}*/
+			List<Facet> fcets = new List<Facet>(){  
+						new Facet
+                      {
+                          Name ="TotalCount"
+                      },
+					  new Facet
+					  {
+					  	Name ="Tag_40062491"
+					  },
+					  new Facet
+					  {
+					  	Name ="Tag_40062492"
+					  },
+					  new Facet
+					  {
+					  	Name ="Tag_40062493"
+					  },
+					  new Facet
+					  {
+					  	Name ="Tag_40062494"
+					  }
+					  ,new Facet
+					  {
+					  	Name ="Tag_40062495"
+					  },
+					  new Facet
+					  {
+					  	Name ="Tag_40062496"
+					  }
+               };
 
-            new OrdinaryQueryTest2().Execute();
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8080",
+				DefaultDatabase = "zap"
+			}.Initialize())
+			using (var session = store.OpenSession())
+			{
+				var f = session.Advanced.DocumentQuery<Object>("idxD").Where("IsPayingCustomer:true").SelectFields<Object>("CustomerId").Distinct().ToFacets(fcets);
+
+				Console.WriteLine(JsonConvert.SerializeObject(f,Formatting.Indented));
+			}
+ 
 
 		}
 	}

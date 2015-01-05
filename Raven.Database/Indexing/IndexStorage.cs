@@ -1427,10 +1427,10 @@ namespace Raven.Database.Indexing
 			return GetIndexInstance(index).GetIndexingPerformance();
 		}
 
-		public void Backup(string directory, string incrementalTag = null)
+		public void Backup(string directory, string incrementalTag = null, Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback = null)
 		{
 			Parallel.ForEach(indexes.Values, index =>
-				index.Backup(directory, path, incrementalTag));
+                index.Backup(directory, path, incrementalTag, notifyCallback));
 		}
 
 		public void MergeAllIndexes()

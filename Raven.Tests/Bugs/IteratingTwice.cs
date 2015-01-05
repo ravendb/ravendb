@@ -1,7 +1,15 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using FizzWare.NBuilder;
+using Raven.Client;
 using Raven.Client.Document;
+using Raven.Client.Linq;
 using Raven.Tests.Common;
-
+using Rhino.Mocks.Constraints;
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -66,6 +74,37 @@ namespace Raven.Tests.Bugs
 							Assert.NotNull(user.Id);
 						}
 					}
+				}
+			}
+		}
+
+		[Fact]
+		public void CanCancelToListAsync()
+		{
+			var users = Builder<User>.CreateListOfSize(5000).Build();			
+
+			using (var store = NewRemoteDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					foreach(var user in users)
+						session.Store(user);
+
+					session.SaveChanges();
+				}
+
+				using(var cts = new CancellationTokenSource())
+				using (var asyncSession = store.OpenAsyncSession())
+				{
+					var query = asyncSession.Query<User>()
+											.Where(x => x.Age > 10);
+
+					cts.Cancel(); //cancellation token is already marked as canceled.
+					var queryEnumerationTask = query.ToListAsync(cts.Token);
+
+					var ae = Assert.Throws<AggregateException>(() => Assert.True(queryEnumerationTask.Wait(1000)));
+					Assert.True(queryEnumerationTask.IsCanceled);					
+					Assert.Equal(1, ae.InnerExceptions.Count);					
 				}
 			}
 		}
