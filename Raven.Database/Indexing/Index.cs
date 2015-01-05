@@ -64,7 +64,6 @@ namespace Raven.Database.Indexing
 		private long writeErrors;
 
 		public IndexingPriority Priority { get; set; }
-
 		/// <summary>
 		/// Note, this might be written to be multiple threads at the same time
 		/// We don't actually care for exact timing, it is more about general feeling
@@ -1586,7 +1585,7 @@ namespace Raven.Database.Indexing
 			return currentlyIndexing.Values.ToArray();
 		}
 
-		public void Backup(string backupDirectory, string path, string incrementalTag)
+        public void Backup(string backupDirectory, string path, string incrementalTag, Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback)
 		{
 			if (directory is RAMDirectory)
 			{
@@ -1599,8 +1598,9 @@ namespace Raven.Database.Indexing
 			}
 
 			bool hasSnapshot = false;
+            bool throwOnFinallyException = true;
 			try
-			{                
+			{   
 				var existingFiles = new HashSet<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
@@ -1640,10 +1640,9 @@ namespace Raven.Database.Indexing
 					}
 					catch (CorruptIndexException e)
 					{
-						logIndexing.WarnException(
-							"Could not backup index " + indexId +
-							" because it is corrupted. Skipping the index, will force index reset on restore", e);
-						neededFilesWriter.Dispose();
+					    var failureMessage = "Could not backup index " + PublicName + " because it is corrupted. Skipping the index, will force index reset on restore";
+                        LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
+					    neededFilesWriter.Dispose();
 						TryDelete(neededFilePath);
 						return;
 					}
@@ -1667,10 +1666,10 @@ namespace Raven.Database.Indexing
 								File.Copy(fullPath, destFileName);
 							}
 							catch (Exception e)
-							{
-								logIndexing.WarnException(
-									"Could not backup index " + indexId +
-									" because failed to copy file : " + fullPath + ". Skipping the index, will force index reset on restore", e);
+							{								
+                                var failureMessage = "Could not backup index " + PublicName + " because failed to copy file : " + fullPath +
+                                    ". Skipping the index, will force index reset on restore";
+                                LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
 								neededFilesWriter.Dispose();
 								TryDelete(neededFilePath);
 								return;
@@ -1686,19 +1685,20 @@ namespace Raven.Database.Indexing
 			}
 			catch (Exception e)
 			{
-                logIndexing.WarnException(
-                            "Could not backup index " + indexId +
-                            " because an unexpected exception was thrown. Skipping the index, will force index reset on restore", e);
+			    var failureMessage = "Could not backup index " + PublicName +
+			                         " because an unexpected exception was thrown. Skipping the index, will force index reset on restore";
+                LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
 			    try
 			    {
-			        var fileInfo = new FileInfo(Path.Combine(backupDirectory, String.Format("{0}.backup_failed", indexId)));
-			        fileInfo.Create();
+			        File.WriteAllText(Path.Combine(backupDirectory, String.Format("{0}.backup_failed", indexId)), e.ToString());
 			    }
 			    catch (Exception fe)
 			    {
-                    logIndexing.WarnException(
-                            "failed to create fail index file for index " + indexId +
-                            " because an unexpected exception was thrown. This error may prevent auto reseting of the index on restore.", fe);
+			        failureMessage = "failed to create fail index file for index " + PublicName +
+			                             " because an unexpected exception was thrown. This error may prevent auto reseting of the index on restore.";
+                    LogErrorAndNotifyStudio(notifyCallback, failureMessage, fe);
+			        throwOnFinallyException = false;
+			        throw;
 			    }
 			}
 			finally
@@ -1711,14 +1711,22 @@ namespace Raven.Database.Indexing
 					}
 					catch (Exception e)
 					{
-                        logIndexing.WarnException(
-                            "Failed to release snapshotter while backing-up index " + indexId, e);
+                        var failureMessage = "Failed to release snapshotter while backing-up index " + indexId;
+                        LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
+                        if (throwOnFinallyException)  throw;
 					}
 				}
 			}
 		}
 
-		public Etag GetLastEtagFromStats()
+	    private static void LogErrorAndNotifyStudio(Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback, string failureMessage, Exception e)
+	    {
+	        logIndexing.WarnException(failureMessage, e);
+            if (notifyCallback != null) 
+                notifyCallback(failureMessage, null, BackupStatus.BackupMessageSeverity.Error);
+	    }
+
+	    public Etag GetLastEtagFromStats()
 		{
 			return context.IndexStorage.GetLastEtagForIndex(this);
 		}
