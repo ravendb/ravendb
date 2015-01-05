@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection;
@@ -331,11 +332,11 @@ namespace Raven.Client.Linq
 		/// Register the query as a lazy-count query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public Lazy<Task<int>> CountLazilyAsync<S>(Expression expression)
+		public Lazy<Task<int>> CountLazilyAsync<S>(Expression expression, CancellationToken token = default (CancellationToken))
 		{
 			var processor = GetQueryProviderProcessor<S>();
 			var query = processor.GetAsyncDocumentQueryFor(expression);
-			return query.CountLazilyAsync();
+			return query.CountLazilyAsync(token);
 		}
 
 		protected virtual RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
