@@ -97,7 +97,7 @@ namespace Raven.Client
 			indexCreationTask.Execute(DatabaseCommands, Conventions);
 		}
 
-	    public Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
+	    public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
 	    {
 	        return indexCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
 	    }
