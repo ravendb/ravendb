@@ -931,7 +931,7 @@ namespace Raven.Client.Connection.Async
 
                     Url = "/facets/" + x.IndexName,
                     Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
-                        x.Query.GetMinimalQueryString(),
+                        x.Query.GetQueryString(),
                         x.Query.Start,
                         x.Query.PageSize,
                         addition)
@@ -957,8 +957,20 @@ namespace Raven.Client.Connection.Async
 												 int? pageSize = null,
 												 CancellationToken token = default(CancellationToken))
 		{
-
-			string facetsJson = JsonConvert.SerializeObject(facets);
+			var ravenJArray = (RavenJArray) RavenJToken.FromObject(facets, new JsonSerializer
+			{
+				NullValueHandling = NullValueHandling.Ignore,
+				DefaultValueHandling = DefaultValueHandling.Ignore,
+			});
+			foreach (var facet in ravenJArray)
+			{
+				var obj = (RavenJObject) facet;
+				if (obj.Value<string>("Name") == obj.Value<string>("DisplayName"))
+					obj.Remove("DisplayName");
+				if (obj.Value<RavenJArray>("Ranges").Length == 0)
+					obj.Remove("Ranges");
+			}
+			string facetsJson = ravenJArray.ToString(Formatting.None);
 			var method = facetsJson.Length > 1024 ? "POST" : "GET";
 		    if (method == "POST")
 		    {
@@ -1327,7 +1339,7 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 					ErrorResponseException responseException;
 					try
 					{
-						await request.WriteAsync(jArray).ConfigureAwait(false);
+						await request.WriteAsync(jArray).WithCancellation(token).ConfigureAwait(false);
 						var response = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 						if (response == null)
 						{
