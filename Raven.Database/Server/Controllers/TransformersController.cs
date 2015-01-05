@@ -90,58 +90,21 @@ namespace Raven.Database.Server.Controllers
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
-		[HttpPost]
+		[HttpPost]		
 		[Route("transformers/replicate-all")]
 		[Route("databases/{databaseName}/transformers/replicate-all")]
-		public HttpResponseMessage TransformersReplicate()
+		public HttpResponseMessage TransformersReplicateAll()
 		{
-			HttpResponseMessage erroResponseMessage;
-			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
-			if (replicationDocument == null)
-				return erroResponseMessage;
-			
-
-			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
-
-			var enabledReplicationDestinations = replicationDocument.Destinations
-																	.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false)
-																	.ToList();
-
-			if (enabledReplicationDestinations.Count == 0)
-				return GetMessageWithString("Replication is configured, but no enabled destinations found.", HttpStatusCode.NotFound);
-
-			var allTransformerDefinitions = Database.Transformers.Definitions;
-			if (allTransformerDefinitions.Length == 0)
-				return GetMessageWithString("No transformers to replicate. Nothing to do.. ", HttpStatusCode.NotFound);
-
-			var replicationRequestTasks = new List<Task>(enabledReplicationDestinations.Count * allTransformerDefinitions.Length);
-
-			var failedDestinations = new ConcurrentBag<string>();
-			foreach (var definition in allTransformerDefinitions)
-			{
-				var clonedDefinition = definition.Clone();
-				clonedDefinition.TransfomerId = 0;
-				replicationRequestTasks.AddRange(
-					enabledReplicationDestinations
-									   .Select(destination =>
-										   Task.Run(() =>
-											   ReplicateTransformer(definition.Name, destination,
-													RavenJObject.FromObject(clonedDefinition),
-													failedDestinations,
-													httpRavenRequestFactory))).ToList());
-			}
-
-			Task.WaitAll(replicationRequestTasks.ToArray());
-
-			return GetMessageWithObject(new
-			{
-				TransformerCount = allTransformerDefinitions.Length,
-				EnabledDestinationsCount = enabledReplicationDestinations.Count,
-				SuccessfulReplicationCount = ((enabledReplicationDestinations.Count * allTransformerDefinitions.Length) - failedDestinations.Count),
-				FailedDestinationUrls = failedDestinations
-			});
+			return ReplicateAllTransformers();
 		}
 
+		[HttpPost]
+		[Route("transformers/replicate-all-to-destination")]
+		[Route("databases/{databaseName}/transformers/replicate-all-to-destination")]
+		public HttpResponseMessage TransformersReplicateAllToDestination([FromBody] ReplicationDestination replicationDestination)
+		{
+			return ReplicateAllTransformers(dest => dest.Equals(replicationDestination));
+		}
 
 		[HttpPost]
 		[Route("transformers/replicate/{*transformerName}")]
@@ -178,6 +141,57 @@ namespace Raven.Database.Server.Controllers
 				SuccessfulReplicationCount = (replicationDocument.Destinations.Count - failedDestinations.Count),
 				FailedDestinationUrls = failedDestinations
 			});			
+		}
+
+		private HttpResponseMessage ReplicateAllTransformers(Func<ReplicationDestination, bool> destinationPredicate = null)
+		{
+			HttpResponseMessage erroResponseMessage;
+			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
+			if (replicationDocument == null)
+				return erroResponseMessage;
+
+			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
+
+			var enabledReplicationDestinations = replicationDocument.Destinations
+				.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false)
+				.ToList();
+
+			if (destinationPredicate != null)
+				enabledReplicationDestinations = enabledReplicationDestinations.Where(destinationPredicate).ToList();
+
+			if (enabledReplicationDestinations.Count == 0)
+				return GetMessageWithString("Replication is configured, but no enabled destinations found.", HttpStatusCode.NotFound);
+
+			var allTransformerDefinitions = Database.Transformers.Definitions;
+			if (allTransformerDefinitions.Length == 0)
+				return GetMessageWithString("No transformers to replicate. Nothing to do.. ", HttpStatusCode.NotFound);
+
+			var replicationRequestTasks = new List<Task>(enabledReplicationDestinations.Count * allTransformerDefinitions.Length);
+
+			var failedDestinations = new ConcurrentBag<string>();
+			foreach (var definition in allTransformerDefinitions)
+			{
+				var clonedDefinition = definition.Clone();
+				clonedDefinition.TransfomerId = 0;
+				replicationRequestTasks.AddRange(
+					enabledReplicationDestinations
+						.Select(destination =>
+							Task.Run(() =>
+								ReplicateTransformer(definition.Name, destination,
+									RavenJObject.FromObject(clonedDefinition),
+									failedDestinations,
+									httpRavenRequestFactory))).ToList());
+			}
+
+			Task.WaitAll(replicationRequestTasks.ToArray());
+
+			return GetMessageWithObject(new
+			{
+				TransformerCount = allTransformerDefinitions.Length,
+				EnabledDestinationsCount = enabledReplicationDestinations.Count,
+				SuccessfulReplicationCount = ((enabledReplicationDestinations.Count * allTransformerDefinitions.Length) - failedDestinations.Count),
+				FailedDestinationUrls = failedDestinations
+			});
 		}
 
 		private void ReplicateTransformer(string transformerName, ReplicationDestination destination, RavenJObject transformerDefinition, ConcurrentBag<string> failedDestinations, HttpRavenRequestFactory httpRavenRequestFactory)

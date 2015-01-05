@@ -78,11 +78,24 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
+		[Route("indexes/replicate-all-to-destination")]
+		[Route("databases/{databaseName}/indexes/replicate-all-to-destination")]
+		public HttpResponseMessage IndexReplicateAllToDestination([FromBody] ReplicationDestination replicationDestination)
+		{
+			return ReplicateAllIndexes(dest => dest.Equals(replicationDestination));
+		}
+
+		[HttpPost]
 		[Route("indexes/replicate-all")]
 		[Route("databases/{databaseName}/indexes/replicate-all")]
-		public HttpResponseMessage IndexReplicate()
+		public HttpResponseMessage IndexReplicateAll()
 		{
-			//check for replication document before doing work on getting index definitions.
+			return ReplicateAllIndexes();
+		}
+
+		private HttpResponseMessage ReplicateAllIndexes(Func<ReplicationDestination,bool> additionalDestinationPredicate = null)
+		{
+//check for replication document before doing work on getting index definitions.
 			//if there is no replication set up --> no point in doing any other work
 			HttpResponseMessage erroResponseMessage;
 			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
@@ -90,31 +103,34 @@ namespace Raven.Database.Server.Controllers
 				return erroResponseMessage;
 
 			var indexDefinitions = Database.IndexDefinitionStorage
-										   .IndexDefinitions
-										   .Select(x => x.Value)
-										   .ToList();
+				.IndexDefinitions
+				.Select(x => x.Value)
+				.ToList();
 
-			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
+			var httpRavenRequestFactory = new HttpRavenRequestFactory {RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds};
 			var enabledReplicationDestinations = replicationDocument.Destinations
-																	.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false)
-																	.ToList();
+				.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false)
+				.ToList();
+
+			if (additionalDestinationPredicate != null)
+				enabledReplicationDestinations = enabledReplicationDestinations.Where(additionalDestinationPredicate).ToList();
 
 			if (enabledReplicationDestinations.Count == 0)
 				return GetMessageWithString("Replication is configured, but no enabled destinations found.", HttpStatusCode.NotFound);
 
-			var replicationRequestTasks = new List<Task>(enabledReplicationDestinations.Count * indexDefinitions.Count);
+			var replicationRequestTasks = new List<Task>(enabledReplicationDestinations.Count*indexDefinitions.Count);
 
 			var failedDestinations = new ConcurrentBag<string>();
 			foreach (var definition in indexDefinitions)
 			{
 				replicationRequestTasks.AddRange(
 					enabledReplicationDestinations
-									   .Select(destination => 
-										   Task.Run(() => 
-											   ReplicateIndex(definition.Name, destination, 
-													RavenJObject.FromObject(definition), 
-													failedDestinations, 
-													httpRavenRequestFactory))).ToList());
+						.Select(destination =>
+							Task.Run(() =>
+								ReplicateIndex(definition.Name, destination,
+									RavenJObject.FromObject(definition),
+									failedDestinations,
+									httpRavenRequestFactory))).ToList());
 			}
 
 			Task.WaitAll(replicationRequestTasks.ToArray());
@@ -123,7 +139,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				IndexesCount = indexDefinitions.Count,
 				EnabledDestinationsCount = enabledReplicationDestinations.Count,
-				SuccessfulReplicationCount = ((enabledReplicationDestinations.Count * indexDefinitions.Count) - failedDestinations.Count),
+				SuccessfulReplicationCount = ((enabledReplicationDestinations.Count*indexDefinitions.Count) - failedDestinations.Count),
 				FailedDestinationUrls = failedDestinations
 			});
 		}
