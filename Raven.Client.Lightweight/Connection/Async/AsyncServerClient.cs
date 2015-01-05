@@ -967,7 +967,8 @@ namespace Raven.Client.Connection.Async
 				var obj = (RavenJObject) facet;
 				if (obj.Value<string>("Name") == obj.Value<string>("DisplayName"))
 					obj.Remove("DisplayName");
-				if (obj.Value<RavenJArray>("Ranges").Length == 0)
+				var jArray = obj.Value<RavenJArray>("Ranges");
+				if (jArray != null && jArray.Length == 0)
 					obj.Remove("Ranges");
 			}
 			string facetsJson = ravenJArray.ToString(Formatting.None);
