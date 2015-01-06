@@ -259,6 +259,13 @@ namespace Raven.Client.Indexes
 			}
 			return legacyIndexDefinition;
 		}
+        /// <summary>
+        /// Executes the index creation against the specified document store.
+        /// </summary>
+        public Task ExecuteAsync(IDocumentStore store)
+        {
+            return store.ExecuteIndexAsync(this);
+        }
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.

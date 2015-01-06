@@ -2152,7 +2152,6 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 			var currentRequest = Interlocked.Increment(ref requestCount);
 			if (currentlyExecuting && convention.AllowMultipuleAsyncOperations == false)
 				throw new InvalidOperationException("Only a single concurrent async request is allowed per async client instance.");
-
 			currentlyExecuting = true;
 			try
 			{
