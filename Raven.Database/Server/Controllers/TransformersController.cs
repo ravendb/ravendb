@@ -103,7 +103,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/transformers/replicate-all-to-destination")]
 		public HttpResponseMessage TransformersReplicateAllToDestination([FromBody] ReplicationDestination replicationDestination)
 		{
-			return ReplicateAllTransformers(dest => dest.Equals(replicationDestination));
+			return ReplicateAllTransformers(dest => dest.IsEqualTo(replicationDestination));
 		}
 
 		[HttpPost]

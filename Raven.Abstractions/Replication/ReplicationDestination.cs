@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.ComponentModel;
 
 namespace Raven.Abstractions.Replication
@@ -88,13 +89,20 @@ namespace Raven.Abstractions.Replication
 
 		protected bool Equals(ReplicationDestination other)
 		{
+			return IsEqualTo(other);
+		}
+
+		public bool IsEqualTo(ReplicationDestination other)
+		{
 			return string.Equals(Username, other.Username) && string.Equals(Password, other.Password) &&
 			       string.Equals(Domain, other.Domain) && string.Equals(ApiKey, other.ApiKey) &&
-			       string.Equals(Database, other.Database) &&
-			       TransitiveReplicationBehavior == other.TransitiveReplicationBehavior &&
+			       string.Equals(Database, other.Database, StringComparison.InvariantCultureIgnoreCase) &&
+			       TransitiveReplicationBehavior == other.TransitiveReplicationBehavior &&				   
 			       IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
-			       string.Equals(ClientVisibleUrl, other.ClientVisibleUrl);
+				   ((string.Equals(Url, other.Url, StringComparison.InvariantCultureIgnoreCase) && string.IsNullOrWhiteSpace(ClientVisibleUrl)) ||
+				   (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.InvariantCultureIgnoreCase)));
 		}
+
 
 		public override bool Equals(object obj)
 		{

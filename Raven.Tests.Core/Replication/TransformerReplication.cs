@@ -11,6 +11,7 @@ using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Json.Linq;
 using Raven.Tests.Helpers;
 using Xunit;
 
@@ -227,6 +228,61 @@ namespace Raven.Tests.Core.Replication
 		}
 
 		[Fact]
+		public void Should_replicate_all_transformers_only_to_specific_destination_if_relevant_endpoint_is_hit()
+		{
+			var requestFactory = new HttpRavenRequestFactory();
+			using (var sourceServer = GetNewServer(8077))
+			using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer, fiddler: true))
+			using (var destinationServer1 = GetNewServer(8078))
+			using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1, fiddler: true))
+			using (var destinationServer2 = GetNewServer())
+			using (var destination2 = NewRemoteDocumentStore(ravenDbServer: destinationServer2, fiddler: true))
+			using (var destinationServer3 = GetNewServer(8081))
+			using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3, fiddler: true))
+			{
+				CreateDatabaseWithReplication(source, "testDB");
+				CreateDatabaseWithReplication(destination1, "testDB");
+				CreateDatabaseWithReplication(destination2, "testDB");
+				CreateDatabaseWithReplication(destination3, "testDB");
+
+				//make sure replication is off for indexes/transformers
+				source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+
+				var userTransformer = new UserWithoutExtraInfoTransformer();
+				var anotherTransformer = new AnotherTransformer();
+				var yetAnotherTransformer = new YetAnotherTransformer();
+
+				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(userTransformer.TransformerName, userTransformer.CreateTransformerDefinition());
+				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(anotherTransformer.TransformerName, anotherTransformer.CreateTransformerDefinition());
+				source.DatabaseCommands.ForDatabase("testDB").PutTransformer(yetAnotherTransformer.TransformerName, yetAnotherTransformer.CreateTransformerDefinition());
+
+				var expectedTransformerNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase)
+						{ userTransformer.TransformerName, 
+							anotherTransformer.TransformerName, 
+							yetAnotherTransformer.TransformerName };
+
+				// ReSharper disable once AccessToDisposedClosure
+				var destinations = SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
+
+				var replicationRequestUrl = string.Format("{0}/databases/testDB/transformers/replicate-all-to-destination", source.Url);
+				var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
+				{
+					Url = source.Url
+				});
+				replicationRequest.Write(RavenJObject.FromObject(destinations[1]));
+				replicationRequest.ExecuteRequest();
+
+				var transformerNamesAtDestination1 = destination1.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				var transformerNamesAtDestination2 = destination2.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+				var transformerNamesAtDestination3 = destination3.DatabaseCommands.ForDatabase("testDB").GetTransformers(0, 1024);
+
+				Assert.Equal(0, transformerNamesAtDestination1.Length);
+				Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination2.Select(x => x.Name).ToArray()));
+				Assert.Equal(0, transformerNamesAtDestination3.Length);
+			}
+		}
+
+		[Fact]
 		public void Should_replicate_all_transformers_if_relevant_endpoint_is_hit()
 		{
 			var requestFactory = new HttpRavenRequestFactory();
@@ -347,7 +403,7 @@ namespace Raven.Tests.Core.Replication
 			});
 		}
 
-		private static void SetupReplication(IDocumentStore source, string databaseName, Func<IDocumentStore, bool> shouldSkipIndexReplication, params IDocumentStore[] destinations)
+		private static List<ReplicationDestination> SetupReplication(IDocumentStore source, string databaseName, Func<IDocumentStore, bool> shouldSkipIndexReplication, params IDocumentStore[] destinations)
 		{
 			var replicationDocument = new ReplicationDocument
 			{
@@ -366,6 +422,8 @@ namespace Raven.Tests.Core.Replication
 				session.Store(replicationDocument, Constants.RavenReplicationDestinations);
 				session.SaveChanges();
 			}
+
+			return replicationDocument.Destinations;
 		}
 	}
 }

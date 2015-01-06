@@ -82,7 +82,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/indexes/replicate-all-to-destination")]
 		public HttpResponseMessage IndexReplicateAllToDestination([FromBody] ReplicationDestination replicationDestination)
 		{
-			return ReplicateAllIndexes(dest => dest.Equals(replicationDestination));
+			return ReplicateAllIndexes(dest => dest.IsEqualTo(replicationDestination));
 		}
 
 		[HttpPost]
