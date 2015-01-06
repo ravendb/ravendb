@@ -48,7 +48,7 @@ namespace Raven.Database.Server.WebApi
 				}
 				route.NextSubRoute();
 			}
-		
+
 			return LocateRouteData(virtualPathRoot, request);
 		}
 

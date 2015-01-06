@@ -9,7 +9,7 @@ class replicateAllTransformersCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
         var promise = $.Deferred();
-        var transformersUrl = '/databases/' + this.db.name + '/transformers/replicate-all';
+        var transformersUrl = '/databases/' + this.db.name + '/replication/replicate-transformers?op=replicate-all';
 
         this.post(transformersUrl, null, appUrl.getSystemDatabase())
             .fail((response: JQueryXHR) => {
