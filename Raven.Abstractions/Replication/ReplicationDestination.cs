@@ -87,6 +87,16 @@ namespace Raven.Abstractions.Replication
 		/// </summary>
 		public string ClientVisibleUrl { get; set; }
 
+		public string Humane
+		{
+			get
+			{
+				if (string.IsNullOrEmpty(url))
+					return null;
+				return url + " " + Database;
+			}
+		}
+
 		protected bool Equals(ReplicationDestination other)
 		{
 			return IsEqualTo(other);

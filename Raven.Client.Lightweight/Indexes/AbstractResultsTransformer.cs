@@ -141,13 +141,11 @@ namespace Raven.Client.Indexes
 			if (serverClient == null)
 				return;
 
-			var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", TransformerName);
+			var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
 			using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, "POST"))
 			{
 				var requestTask = replicateTransformerRequest.ExecuteRawResponseAsync();
-				requestTask.Wait();
-				var responseHttpMessage = requestTask.Result;
-				var status = responseHttpMessage.StatusCode;
+				requestTask.Result.EnsureSuccessStatusCode();
 			}
 		}
 

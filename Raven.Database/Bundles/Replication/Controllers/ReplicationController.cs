@@ -454,17 +454,27 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			var serializedIndexDefinition = RavenJObject.FromObject(indexDefinition);
 
-
 			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
 
-			var failedDestinations = new ConcurrentBag<string>();
+			var failedDestinations = new ConcurrentDictionary<string, Exception>();
 			Parallel.ForEach(replicationDocument.Destinations.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false),
-				destination => ReplicateIndex(indexName, destination, serializedIndexDefinition, failedDestinations, httpRavenRequestFactory));
+				destination =>
+				{
+					try
+					{
+						ReplicateIndex(indexName, destination, serializedIndexDefinition, httpRavenRequestFactory);
+					}
+					catch (Exception e)
+					{
+						failedDestinations.TryAdd(destination.Humane ?? "<null?>", e);
+						log.WarnException("Could not replicate index " + indexName + " to " + destination.Humane, e);
+					}
+				});
 
 			return GetMessageWithObject(new
 			{
 				SuccessfulReplicationCount = (replicationDocument.Destinations.Count - failedDestinations.Count),
-				FailedDestinationUrls = failedDestinations
+				FailedDestinationUrls = failedDestinations.Select(x => new { Server = x.Key, Error = x.Value.ToString() }).ToArray()
 			});
 		}
 
@@ -592,17 +602,26 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			var replicationRequestTasks = new List<Task>(enabledReplicationDestinations.Count * indexDefinitions.Count);
 
-			var failedDestinations = new ConcurrentBag<string>();
+			var failedDestinations = new ConcurrentDictionary<string, Exception>();
 			foreach (var definition in indexDefinitions)
 			{
 				replicationRequestTasks.AddRange(
 					enabledReplicationDestinations
 						.Select(destination =>
 							Task.Run(() =>
-								ReplicateIndex(definition.Name, destination,
-									RavenJObject.FromObject(definition),
-									failedDestinations,
-									httpRavenRequestFactory))).ToList());
+							{
+								try
+								{
+									ReplicateIndex(definition.Name, destination,
+										RavenJObject.FromObject(definition),
+										httpRavenRequestFactory);
+								}
+								catch (Exception e)
+								{
+									failedDestinations.TryAdd(destination.Humane ?? "<null?>", e);
+									log.WarnException("Could not replicate " + definition.Name + " to " + destination.Humane, e);
+								}
+							})));
 			}
 
 			Task.WaitAll(replicationRequestTasks.ToArray());
@@ -612,7 +631,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				IndexesCount = indexDefinitions.Count,
 				EnabledDestinationsCount = enabledReplicationDestinations.Count,
 				SuccessfulReplicationCount = ((enabledReplicationDestinations.Count * indexDefinitions.Count) - failedDestinations.Count),
-				FailedDestinationUrls = failedDestinations
+				FailedDestinationUrls = failedDestinations.Select(x=>new{ Server = x.Key, Error = x.Value.ToString()}).ToArray()
 			});
 		}
 
@@ -656,7 +675,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			}
 		}
 
-		private void ReplicateIndex(string indexName, ReplicationDestination destination, RavenJObject indexDefinition, ConcurrentBag<string> failedDestinations, HttpRavenRequestFactory httpRavenRequestFactory)
+		private void ReplicateIndex(string indexName, ReplicationDestination destination, RavenJObject indexDefinition, HttpRavenRequestFactory httpRavenRequestFactory)
 		{
 			var connectionOptions = new RavenConnectionStringOptions
 			{
@@ -672,26 +691,12 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			}
 
 			const string urlTemplate = "{0}/databases/{1}/indexes/{2}";
-			if (Uri.IsWellFormedUriString(destination.Url, UriKind.RelativeOrAbsolute) == false)
-			{
-				const string error = "Invalid destination URL - it is malformed.";
-				Log.Error(error);
-				failedDestinations.Add(destination.Url);
-			}
 
 			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(indexName));
 			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
 			replicationRequest.Write(indexDefinition);
 
-			try
-			{
-				replicationRequest.ExecuteRequest();
-			}
-			catch (Exception e)
-			{
-				Log.ErrorException("failed to replicate index to: " + destination.Url, e);
-				failedDestinations.Add(destination.Url);
-			}
+			replicationRequest.ExecuteRequest();
 		}
 
 
