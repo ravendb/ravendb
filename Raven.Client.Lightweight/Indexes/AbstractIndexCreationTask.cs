@@ -14,7 +14,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
@@ -22,8 +21,6 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
 {
-	using System.Net;
-
 	/// <summary>
 	/// Base class for creating indexes
 	/// </summary>
@@ -234,7 +231,7 @@ namespace Raven.Client.Indexes
 			var serverClient = databaseCommands as ServerClient;
 			if (serverClient == null)
 				return;
-			var replicateIndexUrl = String.Format("/indexes/replicate/{0}", IndexName);
+			var replicateIndexUrl = String.Format("/replication/replicate-indexes?indexName={0}", IndexName);
 			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, "POST"))
 			{
 				var requestTask = replicateIndexRequest.ExecuteRawResponseAsync();

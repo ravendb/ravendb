@@ -140,11 +140,11 @@ namespace Raven.Client.Indexes
 			var serverClient = databaseCommands as ServerClient;
 			if (serverClient == null)
 				return;
-			
-			var replicateIndexUrl = String.Format("/transformers/replicate/{0}", TransformerName);
-			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, "POST"))
+
+			var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", TransformerName);
+			using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, "POST"))
 			{
-				var requestTask = replicateIndexRequest.ExecuteRawResponseAsync();
+				var requestTask = replicateTransformerRequest.ExecuteRawResponseAsync();
 				requestTask.Wait();
 				var responseHttpMessage = requestTask.Result;
 				var status = responseHttpMessage.StatusCode;
@@ -161,9 +161,9 @@ namespace Raven.Client.Indexes
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
-			return asyncDatabaseCommands.PutTransformerAsync(TransformerName, transformerDefinition)
+			return asyncDatabaseCommands.PutTransformerAsync(TransformerName, transformerDefinition, token)
 				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, url) =>
-					client.DirectPutTransformerAsync(TransformerName, transformerDefinition, url, token)), token)
+					client.DirectPutTransformerAsync(TransformerName, transformerDefinition, url, token), token), token)
 				.Unwrap();
 		}
 	}
