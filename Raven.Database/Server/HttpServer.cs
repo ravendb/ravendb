@@ -69,7 +69,7 @@ namespace Raven.Database.Server
 			new AtomicDictionary<Task<DocumentDatabase>>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
-		private readonly SemaphoreSlim _maxNumberOfThreadsForDatabaseToLoad = new SemaphoreSlim(5);
+		private readonly SemaphoreSlim _maxNumberOfThreadsForDatabaseToLoad;
 
 		private readonly ConcurrentDictionary<string, TransportState> databaseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
 
@@ -125,6 +125,7 @@ namespace Raven.Database.Server
 
 		public HttpServer(InMemoryRavenConfiguration configuration, DocumentDatabase resourceStore)
 		{
+			_maxNumberOfThreadsForDatabaseToLoad = new SemaphoreSlim(configuration.MaxConcurrentServerRequests);
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
 			if (configuration.RunInMemory == false)
