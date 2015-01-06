@@ -69,7 +69,7 @@ namespace Raven.Database.Server
 			new AtomicDictionary<Task<DocumentDatabase>>(StringComparer.OrdinalIgnoreCase);
 
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
-		private readonly SemaphoreSlim _maxNumberOfThreadsForDatabaseToLoad = new SemaphoreSlim(5);
+		private readonly SemaphoreSlim _maxNumberOfThreadsForDatabaseToLoad;
 
 		private readonly ConcurrentDictionary<string, TransportState> databaseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
 
@@ -125,6 +125,7 @@ namespace Raven.Database.Server
 
 		public HttpServer(InMemoryRavenConfiguration configuration, DocumentDatabase resourceStore)
 		{
+			_maxNumberOfThreadsForDatabaseToLoad = new SemaphoreSlim(configuration.MaxConcurrentServerRequests);
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
 			if (configuration.RunInMemory == false)
@@ -1082,6 +1083,18 @@ namespace Raven.Database.Server
 		{
 			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
 			{
+				if (database.IsFaulted && database.Exception != null)
+				{
+					// if we are here, there is an error, and if there is an error, we need to clear it from the 
+					// resource store cache so we can try to reload it.
+					// Note that we return the faulted task anyway, because we need the user to look at the error
+					if (database.Exception.Data.Contains("Raven/KeepInResourceStore") == false)
+					{
+						Task<DocumentDatabase> val;
+						ResourcesStoresCache.TryRemove(tenantId, out val);
+					}
+				}
+
 				return true;
 			}
 
@@ -1122,17 +1135,6 @@ namespace Raven.Database.Server
 				return task;
 			}).Unwrap());
 
-			if (database.IsFaulted && database.Exception != null)
-			{
-				// if we are here, there is an error, and if there is an error, we need to clear it from the 
-				// resource store cache so we can try to reload it.
-				// Note that we return the faulted task anyway, because we need the user to look at the error
-				if (database.Exception.Data.Contains("Raven/KeepInResourceStore") == false)
-				{
-					Task<DocumentDatabase> val;
-					ResourcesStoresCache.TryRemove(tenantId, out val);
-				}
-			}
 			return true;
 		}
 

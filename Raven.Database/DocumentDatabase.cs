@@ -170,11 +170,11 @@ namespace Raven.Database
             {
                 log.Debug("Start loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
 
-                if (configuration.IsTenantDatabase == false)
-                {
-                    validateLicense = new ValidateLicense();
-                    validateLicense.Execute(configuration);
-                }
+	            if (configuration.IsTenantDatabase == false)
+	            {
+		            validateLicense = new ValidateLicense();
+		            validateLicense.Execute(configuration);
+	            }
                 AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
                 AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
 
@@ -245,9 +245,17 @@ namespace Raven.Database
                     ExecuteStartupTasks();
                     log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    Dispose();
+	                log.ErrorException("Could not create database", e);
+	                try
+	                {
+		                Dispose();
+	                }
+	                catch (Exception ex)
+	                {
+						log.FatalException("Failed to disposed when already getting an error during ctor", ex);
+	                }
                     throw;
                 }
             }

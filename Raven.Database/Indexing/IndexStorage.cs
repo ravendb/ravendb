@@ -97,9 +97,17 @@ namespace Raven.Database.Indexing
 				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext,
 					indexDefinitionStorage.IndexNames, OpenIndexOnStartup);
 			}
-			catch
+			catch(Exception e)
 			{
-				Dispose();
+				log.WarnException("Could not create index storage", e);
+				try
+				{
+					Dispose();
+				}
+				catch (Exception ex)
+				{
+					log.FatalException("Failed to disposed when already getting an error during ctor", ex);
+				}
 				throw;
 			}
 		}
@@ -1223,6 +1231,8 @@ namespace Raven.Database.Indexing
 
 		public void FlushMapIndexes()
 		{
+			if (indexes == null)
+				return;
 			foreach (var value in indexes.Values.Where(value => value != null &&  !value.IsMapReduce))
 			{
         			value.Flush(value.GetLastEtagFromStats());
@@ -1231,6 +1241,8 @@ namespace Raven.Database.Indexing
 
 		public void FlushReduceIndexes()
 		{
+			if (indexes == null)
+				return;
 			foreach (var value in indexes.Values.Where(value => value != null && value.IsMapReduce))
 			{
                 		value.Flush(value.GetLastEtagFromStats());
