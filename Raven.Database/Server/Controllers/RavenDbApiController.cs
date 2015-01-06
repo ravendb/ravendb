@@ -553,7 +553,7 @@ namespace Raven.Database.Server.Controllers
             }
             catch (Exception e)
             {
-                var msg = "Could not open database named: " + tenantId;
+                var msg = "Could not open database named: " + tenantId + " "  + e.Message;
                 Logger.WarnException(msg, e);
                 throw new HttpException(503, msg, e);
             }
