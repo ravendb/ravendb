@@ -37,22 +37,18 @@ namespace Raven.Database.Server.WebApi
 		public IHttpRouteData GetRouteData(string virtualPathRoot, HttpRequestMessage request)
 		{
 			var route = new SubRoute(request.RequestUri.LocalPath);
-			var httpRouteDatas = new IHttpRouteData[] {};
 			while (!route.AtEnd())
 			{
 				var key = Tuple.Create(request.Method.Method, route);
 				IHttpRoute[] data;
 				if (routDataCache.TryGetValue(key, out data))
 				{
-					httpRouteDatas = data.Select(x => x.GetRouteData(virtualPathRoot, request)).Where(x => x != null).ToArray();
-					break;
+					var httpRouteDatas = data.Select(x => x.GetRouteData(virtualPathRoot, request)).Where(x => x != null).ToArray();
+					return new RavenRouteCollectionRouteData(this, httpRouteDatas);
 				}
 				route.NextSubRoute();
 			}
-
-			if(httpRouteDatas.Contains(request.GetRouteData()))
-				return new RavenRouteCollectionRouteData(this, httpRouteDatas);
-
+		
 			return LocateRouteData(virtualPathRoot, request);
 		}
 
