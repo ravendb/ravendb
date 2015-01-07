@@ -573,29 +573,30 @@ namespace Voron.Impl.Journal
 
 						FreeScratchPages(unusedJournals, txw ?? transaction);
 
-						if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
-							DateTime.Now - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit)
-						{
-							_waj._dataPager.Sync();
-
-							UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
-
-							foreach (var toDelete in _journalsToDelete.Values)
-							{
-								if (_waj._env.Options.IncrementalBackupEnabled == false)
-									toDelete.DeleteOnClose = true;
-
-								toDelete.Release();
-							}
-
-							_journalsToDelete.Clear();
-							_totalWrittenButUnsyncedBytes = 0;
-							_lastDataFileSyncTime = DateTime.Now;
-						}
-
 						if (txw != null)
 							txw.Commit();
 					}
+					
+					if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
+						DateTime.Now - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit)
+					{
+						_waj._dataPager.Sync();
+
+						UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
+
+						foreach (var toDelete in _journalsToDelete.Values)
+						{
+							if (_waj._env.Options.IncrementalBackupEnabled == false)
+								toDelete.DeleteOnClose = true;
+
+							toDelete.Release();
+						}
+
+						_journalsToDelete.Clear();
+						_totalWrittenButUnsyncedBytes = 0;
+						_lastDataFileSyncTime = DateTime.Now;
+					}
+
 				}
 				finally
 				{
