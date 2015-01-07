@@ -48,11 +48,6 @@ class editIndex extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     indexAutoCompleter: indexAceAutoCompleteProvider;
     loadedIndexName = ko.observable<string>();
-    isSideBySideIndex = ko.computed(() => {
-        console.log(this.editedIndex() != null ? this.editedIndex().name() : "null");
-
-        return this.editedIndex() != null && this.editedIndex().name().startsWith(index.SideBySideIndexPrefix);
-        });
 
     // Scripted Index Part
     isScriptedIndexBundleActive = ko.observable<boolean>(false);
@@ -537,8 +532,9 @@ class editIndex extends viewModelBase {
         var replaceDialog = new replaceIndexDialog(indexToReplaceName, this.activeDatabase());
 
         replaceDialog.replaceSettingsTask.done((replaceDocument) => {
-            if (!this.editedIndex().name().startsWith(index.SideBySideIndexPrefix)) {
+            if (!this.editedIndex().isSideBySideIndex()) {
                 this.editedIndex().name(index.SideBySideIndexPrefix + this.editedIndex().name());
+                this.editedIndex().isSideBySideIndex(true);
             }
 
             var indexDef = this.editedIndex().toDto();
