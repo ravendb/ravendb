@@ -7,7 +7,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
-using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Server;
@@ -40,28 +39,28 @@ namespace Raven.SlowTests.Issues
 
 			store1 = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
-				Url = "http://" + Environment.MachineName + ":8079",
+				DefaultDatabase = "Northwind1",
+				Url = server1.SystemDatabase.ServerUrl
 			};
 			store1.Initialize(false);
 
 			store2 = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
-				Url = "http://" + Environment.MachineName + ":8078"
+				DefaultDatabase = "Northwind2",
+				Url = server2.SystemDatabase.ServerUrl
 			};
 			store2.Initialize(false);
 
 
 			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 			{
-				Id = "Northwind",
+				Id = "Northwind1",
 				Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\Databases1\Northwind" } }
 			});
 
 			store2.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 			{
-				Id = "Northwind",
+				Id = "Northwind2",
 				Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\Databases2\Northwind" } }
 			});
 		}
@@ -69,14 +68,14 @@ namespace Raven.SlowTests.Issues
 		[Fact]
 		public async Task ClientShouldGetInformationFromSecondaryServerThatItsPrimaryServerMightBeUp()
 		{
-			var db1Url = store1.Url + "/databases/Northwind";
-			var db2Url = store2.Url + "/databases/Northwind";
+			var db1Url = store1.Url + "/databases/Northwind1";
+			var db2Url = store2.Url + "/databases/Northwind2";
 
 			SetupReplication(store1.DatabaseCommands, db2Url);
 
 			using (var store = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
+				DefaultDatabase = "Northwind1",
 				Url = store1.Url,
 				Conventions =
 				{
@@ -86,8 +85,8 @@ namespace Raven.SlowTests.Issues
 			{
 
 				store.Initialize();
-				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
-			    replicationInformerForDatabase.DelayTimeInMiliSec = 0;
+				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind1");
+				replicationInformerForDatabase.DelayTimeInMiliSec = 0;
 				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands);
 
 				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
@@ -112,7 +111,7 @@ namespace Raven.SlowTests.Issues
 
 				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
 
-				var replicationTask = (await server2.Server.GetDatabaseInternal("Northwind")).StartupTasks.OfType<ReplicationTask>().First();
+				var replicationTask = (await server2.Server.GetDatabaseInternal("Northwind2")).StartupTasks.OfType<ReplicationTask>().First();
 				replicationTask.Heartbeats.Clear();
 
 				server1 = CreateServer(8079, server1DataDir);
@@ -122,7 +121,7 @@ namespace Raven.SlowTests.Issues
 				while (true)
 				{
 					var name = db1Url.Replace("localhost", Environment.MachineName.ToLowerInvariant())
-					                 .Replace(".fiddler", "");
+									 .Replace(".fiddler", "");
 					DateTime time;
 					if (replicationTask.Heartbeats.TryGetValue(name, out time))
 					{
@@ -132,7 +131,7 @@ namespace Raven.SlowTests.Issues
 				}
 
 				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
-				
+
 				Assert.NotNull(store.DatabaseCommands.Get("items/1"));
 
 				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
@@ -146,14 +145,14 @@ namespace Raven.SlowTests.Issues
 		[Fact]
 		public async Task ClientShouldGetInformationFromSecondaryServerThatItsPrimaryServerMightBeUpAsync()
 		{
-			var db1Url = store1.Url + "/databases/Northwind";
-			var db2Url = store2.Url + "/databases/Northwind";
+			var db1Url = store1.Url + "/databases/Northwind1";
+			var db2Url = store2.Url + "/databases/Northwind2";
 
 			SetupReplication(store1.DatabaseCommands, db2Url);
 
 			using (var store = new DocumentStore
 			{
-				DefaultDatabase = "Northwind",
+				DefaultDatabase = "Northwind1",
 				Url = store1.Url,
 				Conventions =
 				{
@@ -163,8 +162,8 @@ namespace Raven.SlowTests.Issues
 			{
 				store.Initialize();
 
-				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
-                replicationInformerForDatabase.DelayTimeInMiliSec = 0;
+				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind1");
+				replicationInformerForDatabase.DelayTimeInMiliSec = 0;
 				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store.AsyncDatabaseCommands);
 
 				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
@@ -179,7 +178,7 @@ namespace Raven.SlowTests.Issues
 
 				Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
 
-                StopServer(server1);
+				StopServer(server1);
 
 				// Fail few times so we will be sure that client does not try its primary url
 				for (int i = 0; i < 2; i++)
@@ -188,7 +187,7 @@ namespace Raven.SlowTests.Issues
 				}
 				Assert.True(replicationInformerForDatabase.GetFailureCount(db1Url) > 0);
 
-				var database = await server2.Server.GetDatabaseInternal("Northwind");
+				var database = await server2.Server.GetDatabaseInternal("Northwind2");
 				var replicationTask = database.StartupTasks.OfType<ReplicationTask>().First();
 				replicationTask.Heartbeats.Clear();
 
@@ -199,7 +198,7 @@ namespace Raven.SlowTests.Issues
 				while (true)
 				{
 					var name = db1Url.Replace("localhost", Environment.MachineName.ToLowerInvariant())
-					                 .Replace(".fiddler", "");
+									 .Replace(".fiddler", "");
 					DateTime time;
 					if (replicationTask.Heartbeats.TryGetValue(name, out time))
 					{
@@ -221,11 +220,11 @@ namespace Raven.SlowTests.Issues
 			return GetNewServer(port, dataDirectory, activeBundles: "replication", requestedStorage: "esent", runInMemory: false);
 		}
 
-        private void StopServer(RavenDbServer server)
-        {
-            server.Dispose();
-            SystemTime.UtcDateTime = () => DateTime.UtcNow.AddSeconds(4); // just to prevent Raven-Client-Primary-Server-LastCheck to have same second
-        }
+		private void StopServer(RavenDbServer server)
+		{
+			server.Dispose();
+			SystemTime.UtcDateTime = () => DateTime.UtcNow.AddSeconds(4); // just to prevent Raven-Client-Primary-Server-LastCheck to have same second
+		}
 
 		public override void Dispose()
 		{
