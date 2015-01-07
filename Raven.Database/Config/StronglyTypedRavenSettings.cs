@@ -53,7 +53,7 @@ namespace Raven.Database.Config
 
 			MaxConcurrentServerRequests = new IntegerSetting(settings[Constants.MaxConcurrentServerRequests], 512);
 
-			MaxConcurrentRequestsForDatabaseDuringLoad = new IntegerSetting(settings["Raven/MaxConcurrentRequestsForDatabaseDuringLoad"], 10);
+			MaxConcurrentRequestsForDatabaseDuringLoad = new IntegerSetting(settings[Constants.MaxConcurrentRequestsForDatabaseDuringLoad], 10);
 
 			MaxConcurrentMultiGetRequests = new IntegerSetting(settings[Constants.MaxConcurrentMultiGetRequests], 192);
 
