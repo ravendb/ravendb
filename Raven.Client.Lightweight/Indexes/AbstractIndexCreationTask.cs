@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -225,10 +226,10 @@ namespace Raven.Client.Indexes
 			databaseCommands.PutIndex(IndexName, indexDefinition, true);
 
 			if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
-				ReplicateIfNeeded(databaseCommands);
+				ReplicateIndexesIfNeeded(databaseCommands);
 		}
 
-		internal void ReplicateIfNeeded(IDatabaseCommands databaseCommands)
+		internal void ReplicateIndexesIfNeeded(IDatabaseCommands databaseCommands)
 		{
 			var serverClient = databaseCommands as ServerClient;
 			if (serverClient == null)
@@ -258,17 +259,24 @@ namespace Raven.Client.Indexes
 			}
 			return legacyIndexDefinition;
 		}
+        /// <summary>
+        /// Executes the index creation against the specified document store.
+        /// </summary>
+        public Task ExecuteAsync(IDocumentStore store)
+        {
+            return store.ExecuteIndexAsync(this);
+        }
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
-		public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
+		public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default (CancellationToken))
 		{
 			Conventions = documentConvention;
 			var indexDefinition = CreateIndexDefinition();
 			if (documentConvention.PrettifyGeneratedLinqExpressions)
 			{
-				var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName);
+				var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName, token);
 				if (serverDef != null)
 				{
 					if (serverDef.Equals(indexDefinition))
@@ -284,8 +292,8 @@ namespace Raven.Client.Indexes
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
-			await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true);
-			await UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, operationMetadata) => client.DirectPutIndexAsync(IndexName, indexDefinition, true, operationMetadata));				
+			await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true, token);
+			await UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, operationMetadata) => client.DirectPutIndexAsync(IndexName, indexDefinition, true, operationMetadata, token), token);				
 		}
 	}
 
@@ -473,16 +481,16 @@ namespace Raven.Client.Indexes
 		}
 
 		internal async Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
-												   DocumentConvention documentConvention, 
-                                                    Func<AsyncServerClient, OperationMetadata, Task> action)
+												   DocumentConvention documentConvention,
+													Func<AsyncServerClient, OperationMetadata, Task> action, CancellationToken token = default (CancellationToken))
 		{
 		    var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
 		    if (asyncServerClient == null)
 		        return;
-            var replicationDocument = await asyncServerClient.ExecuteWithReplication("GET", asyncServerClient.DirectGetReplicationDestinationsAsync);
+            var replicationDocument = await asyncServerClient.ExecuteWithReplication("GET", asyncServerClient.DirectGetReplicationDestinationsAsync, token);
             if (replicationDocument == null)
 		        return;
-            if (replicationDocument == null || replicationDocument.Destinations == null || replicationDocument.Destinations.Count == 0)
+            if (replicationDocument.Destinations == null || replicationDocument.Destinations.Count == 0)
 		        return;
 		    var tasks = (
                          from replicationDestination in replicationDocument.Destinations
@@ -499,7 +507,7 @@ namespace Raven.Client.Indexes
 		                Logger.WarnException("Could not put index in replication server", indexTask.Exception);
 		            }
 		        }
-		    });
+		    }, token);
 		}
 
 	    private OperationMetadata GetReplicationOperation(ReplicationDestination replicationDestination)

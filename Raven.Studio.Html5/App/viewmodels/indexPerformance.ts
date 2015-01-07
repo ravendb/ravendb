@@ -98,13 +98,13 @@ class metrics extends viewModelBase {
         ['load_bar',
         'linq_map_bar', 'linq_reduce_bar',
         'l_delete_bar', 'l_convert_bar', 'l_add_bar', 'l_flush_bar', 'l_recreate_bar',
-        'map_del_bar', 'map_put_bar', 'map_schedule_bar', 'map_commit_bar'];
+        'map_del_bar', 'map_convert_bar', 'map_put_bar', 'map_schedule_bar', 'map_commit_bar'];
 
     static map_bar_colors = [
         '#17becf',
         '#1f77b4', '#ff7f0e',
         '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2',
-        '#aec7e8', '#ffbb78', '#98df8a', '#ff9896'];
+        '#aec7e8', '#e0e5a3', '#98df8a', '#ffbb78', '#ff9896'];
 
     static reduce_bar_names = 
         ['linq_map_bar', 'linq_reduce_bar',
@@ -310,6 +310,7 @@ class metrics extends viewModelBase {
             input.stats.LucenePerformance.FlushToDiskDurationMs,
             input.stats.LucenePerformance.RecreateSearcherDurationMs,
             input.stats.MapStoragePerformance.DeleteMappedResultsDurationMs,
+            input.stats.MapStoragePerformance.ConvertToRavenJObjectDurationMs,
             input.stats.MapStoragePerformance.PutMappedResultsDurationMs,
             input.stats.MapStoragePerformance.ScheduleReductionsDurationMs,
             input.stats.MapStoragePerformance.StorageCommitDurationMs

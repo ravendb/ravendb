@@ -45,6 +45,7 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+			IndexAndTransformerReplicationLatencyInSec = new IntegerSetting(settings[Constants.RavenIndexAndTransformerReplicationLatencyInSec], Constants.DefaultRavenIndexAndTransformerReplicationLatencyInSec);
 
 			PrefetchingDurationLimit = new IntegerSetting(settings[Constants.RavenPrefetchingDurationLimit], Constants.DefaultPrefetchingDurationLimit);
 
@@ -110,7 +111,7 @@ namespace Raven.Database.Config
 			NewIndexInMemoryMaxMb =
 				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/NewIndexInMemoryMaxMB"], 64, 1), 1024 * 1024);
 			RunInMemory =
-				new BooleanSetting(settings["Raven/RunInMemory"], false);
+                new BooleanSetting(settings[Constants.RunInMemory], false);
 			CreateAutoIndexesForAdHocQueriesIfNeeded =
 				new BooleanSetting(settings["Raven/CreateAutoIndexesForAdHocQueriesIfNeeded"], true);
 			ResetIndexOnUncleanShutdown =
@@ -151,6 +152,8 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/PluginsDirectory"], @"~\Plugins");
             AssembliesDirectory =
                 new StringSetting(settings["Raven/AssembliesDirectory"], @"~\Assemblies");
+            EmbeddedFilesDirectory =
+                new StringSetting(settings["Raven/EmbeddedFilesDirectory"], (string)null);
 			CompiledIndexCacheDirectory =
 				new StringSetting(settings["Raven/CompiledIndexCacheDirectory"], @"~\Raven\CompiledIndexCache");
 			TaskScheduler =
@@ -245,6 +248,8 @@ namespace Raven.Database.Config
 			return val;
 		}
 
+		public IntegerSetting IndexAndTransformerReplicationLatencyInSec { get; private set; }
+
 		public IntegerSetting MemoryLimitForProcessing { get; private set; }
 
 		public IntegerSetting MaxConcurrentServerRequests { get; private set; }
@@ -330,6 +335,8 @@ namespace Raven.Database.Config
 		public StringSetting CompiledIndexCacheDirectory { get; private set; }
 
         public StringSetting AssembliesDirectory { get; private set; }
+
+        public StringSetting EmbeddedFilesDirectory { get; private set; }
 
 		public StringSetting TaskScheduler { get; private set; }
 

@@ -93,14 +93,16 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+        public IDocumentQuery<T> SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
 	    {
 	        SetTransformerParameters(queryInputs);
+            return this;
 	    }
 
-		public void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
+        public IDocumentQuery<T> SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
 	    {
 	        this.transformerParameters = transformerParameters;
+            return this;
 	    }
 
 		public bool IsDistinct { get { return isDistinct; } }
@@ -211,6 +213,15 @@ namespace Raven.Client.Document
 			RandomOrdering();
 			return this;
 		}
+
+        /// <summary>
+        /// Order the search results randomly
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.CustomSortUsing(string typeName, bool descending)
+        {
+            CustomSortUsing(typeName, descending);
+            return this;
+        }
 
 		/// <summary>
 		/// Order the search results randomly using the specified seed

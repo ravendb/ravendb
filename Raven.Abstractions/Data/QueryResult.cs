@@ -27,6 +27,9 @@ namespace Raven.Abstractions.Data
 
 		/// <summary>
 		/// Gets or sets a value indicating whether the index is stale.
+		/// <para>Value:</para>
+		/// <para>- <c>true</c> - if index is stale</para>
+		/// <para>- <c>false</c> - otherwise</para>
 		/// </summary>
 		/// <value><c>true</c> if the index is stale; otherwise, <c>false</c>.</value>
 		public bool IsStale { get; set; }

@@ -45,16 +45,11 @@ namespace Raven.Database.Indexing
 		{
 			var count = 0;
 			var sourceCount = 0;
-			int loadDocumentCount = 0;
-			long loadDocumentDuration = 0;
-			long linqExecutionDutation = 0;
-			var addDocumentDutation = new Stopwatch();
-			var convertToLuceneDocumentDuration = new Stopwatch();
 			var flushToDiskDuration = new Stopwatch();
 			var recreateSeatcherDuration = new Stopwatch();
-			var deleteExistingDocumentsDuration = new Stopwatch();
 
 			IndexingPerformanceStats performance = null;
+			var performanceStats = new List<BasePefromanceStats>();
 
 			Write((indexWriter, analyzer, stats) =>
 			{
@@ -66,7 +61,8 @@ namespace Raven.Database.Indexing
 				try
 				{
 					performance = RecordCurrentBatch("Current", batch.Docs.Count);
-					
+
+					var deleteExistingDocumentsDuration = new Stopwatch();
 					var docIdTerm = new Term(Constants.DocumentIdFieldName);
 					var documentsWrapped = batch.Docs.Select((doc, i) =>
 					{
@@ -95,11 +91,26 @@ namespace Raven.Database.Indexing
 					.Where(x => x is FilteredDocument == false)
 					.ToList();
 
+					performanceStats.Add(new PerformanceStats
+					{
+						Name = IndexingOperation.Lucene_DeleteExistingDocument,
+						DurationMs = deleteExistingDocumentsDuration.ElapsedMilliseconds
+					});
+
 					var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 					var allReferenceEtags = new ConcurrentQueue<IDictionary<string, Etag>>();
 
+					var parallelOperations = new ConcurrentQueue<ParallelBatchStats>();
+
+					var parallelProcessingStart = SystemTime.UtcNow;
+
 					BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
 					{
+						var parallelStats = new ParallelBatchStats
+						{
+							StartDelay = (long) (SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
+						};
+
 						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(context.Database, indexDefinition, viewGenerator, logIndexing);
 						var luceneDoc = new Document();
 						var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
@@ -111,8 +122,12 @@ namespace Raven.Database.Indexing
 							int outputPerDocId = 0;
 							Action<Exception, object> onErrorFunc;
 							bool skipDocument = false;
-							var linqExecution = new Stopwatch();
-							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats, out onErrorFunc, linqExecution))
+
+							var linqExecutionDuration = new Stopwatch();
+							var addDocumentDutation = new Stopwatch();
+							var convertToLuceneDocumentDuration = new Stopwatch();
+
+							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats, out onErrorFunc, linqExecutionDuration))
 							{
 								float boost;
 								IndexingResult indexingResult;
@@ -190,11 +205,22 @@ namespace Raven.Database.Indexing
 							allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
 							allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
 
-							Interlocked.Add(ref loadDocumentCount, CurrentIndexingScope.Current.LoadDocumentCount);
-							Interlocked.Add(ref loadDocumentDuration, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds);
-							Interlocked.Add(ref linqExecutionDutation, linqExecution.ElapsedMilliseconds);
+							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.LoadDocument, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds));
+
+							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_MapExecution, linqExecutionDuration.ElapsedMilliseconds));
+							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Lucene_ConvertToLuceneDocument, convertToLuceneDocumentDuration.ElapsedMilliseconds));
+
+							parallelOperations.Enqueue(parallelStats);
 						}
 					});
+
+					performanceStats.Add(new ParallelPefromanceStats
+					{
+						NumberOfThreads = parallelOperations.Count,
+						DurationMs = (long) (SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds,
+						BatchedOperations = parallelOperations.ToList()
+					});
+
 					UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
 				}
 				catch (Exception e)
@@ -224,31 +250,7 @@ namespace Raven.Database.Indexing
 				};
 			}, flushToDiskDuration, recreateSeatcherDuration);
 
-			BatchCompleted("Current", "Index", sourceCount, count, 
-				new LoadDocumentPerformanceStats
-				{
-					LoadDocumentCount = loadDocumentCount,
-					LoadDocumentDurationMs = loadDocumentDuration
-				},
-				new LinqExecutionPerformanceStats
-				{
-					MapLinqExecutionDurationMs = linqExecutionDutation,
-					ReduceLinqExecutionDurationMs = -1
-				},
-				new LucenePerformanceStats
-				{
-					DeleteExistingDocumentsDurationMs = deleteExistingDocumentsDuration.ElapsedMilliseconds,
-					ConvertToLuceneDocumentsDurationMs = convertToLuceneDocumentDuration.ElapsedMilliseconds,
-					AddDocumentsDurationMs = addDocumentDutation.ElapsedMilliseconds,
-					FlushToDiskDurationMs = flushToDiskDuration.ElapsedMilliseconds,
-					RecreateSearcherDurationMs = recreateSeatcherDuration.ElapsedMilliseconds
-				}, 
-				new MapStoragePerformanceStats
-				{
-					DeleteMappedResultsDurationMs = -1,
-					PutMappedResultsDurationMs = -1,
-					ScheduleReductionsDurationMs = -1
-				});
+			BatchCompleted("Current", "Index", sourceCount, count, performanceStats);
 
 			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
 

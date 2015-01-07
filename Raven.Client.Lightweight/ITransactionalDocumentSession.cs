@@ -8,37 +8,35 @@ using System;
 namespace Raven.Client
 {
 	/// <summary>
-	/// Implementers of this interface provide transactional operations
-	/// Note that this interface is mostly useful only for expert usage
+	///     Implementers of this interface provide transactional operations
+	///     Note that this interface is mostly useful only for expert usage
 	/// </summary>
 	public interface ITransactionalDocumentSession
 	{
 		/// <summary>
-		/// The transaction resource manager identifier
+		///     The database name for this session
+		/// </summary>
+		string DatabaseName { get; }
+		/// <summary>
+		///     The transaction resource manager identifier
 		/// </summary>
 		Guid ResourceManagerId { get; }
 
 		/// <summary>
-		/// The db name for this session
+		///     Commits the specified tx id
 		/// </summary>
-		string DatabaseName { get; }
+		/// <param name="txId">transaction identifier</param>
+		void Commit(string txId);
 
-	    /// <summary>
-	    /// Commits the transaction specified.
-	    /// </summary>
-	    /// <param name="txId">The tx id.</param>
-	    void Commit(string txId);
+		/// <summary>
+		///     Prepares the transaction on the server.
+		/// </summary>
+		void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
 
-	    /// <summary>
-	    /// Rollbacks the transaction specified.
-	    /// </summary>
-	    /// <param name="txId">The tx id.</param>
-	    void Rollback(string txId);
-
-	    /// <summary>
-	    /// Prepares the transaction on the server.
-	    /// </summary>
-	    /// <param name="txId">The tx id.</param>
-	    void PrepareTransaction(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null);
+		/// <summary>
+		///     Rollbacks the specified tx id
+		/// </summary>
+		/// <param name="txId">transaction identifier</param>
+		void Rollback(string txId);
 	}
 }

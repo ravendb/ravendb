@@ -18,8 +18,9 @@ namespace Raven.Database.Data
 	{
 		/// <summary>
 		/// Attachment size in bytes.
+		/// <para>Remarks:</para>
+		/// <para>- max size of an attachment can be 2GB</para>
 		/// </summary>
-		/// <remarks>The max size of an attachment can be 2GB.</remarks>
 		public int Size { get; set; }
 
 		/// <summary>

@@ -154,6 +154,7 @@ namespace Raven.Database
 					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
 					Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
 					Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
+					Subscriptions = new SubscriptionActions(this, Log);
 					Patches = new PatchActions(this, recentTouches, uuidGenerator, Log);
 					Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
 					Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
@@ -327,6 +328,8 @@ namespace Raven.Database
 
 		public NotificationActions Notifications { get; private set; }
 
+		public SubscriptionActions Subscriptions { get; private set; }
+
 		public PatchActions Patches { get; private set; }
 
 		public Prefetcher Prefetcher
@@ -429,7 +432,6 @@ namespace Raven.Database
 					StorageEngine = TransactionalStorage.FriendlyName,
 					CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
 					CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
-					IndexingBatchInfo = workContext.LastActualIndexingBatchInfo.ToArray(),
 					InMemoryIndexingQueueSizes = prefetcher.GetInMemoryIndexingQueueSizes(PrefetchingUser.Indexer),
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,

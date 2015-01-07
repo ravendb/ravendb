@@ -15,6 +15,7 @@ namespace Raven.Abstractions.Data
         Queue = 7,
         Tasks = 8,
         Indexing = 9,
-		DocumentReferences = 11
+		DocumentReferences = 11,
+		Subscriptions = 12,
     }
 }

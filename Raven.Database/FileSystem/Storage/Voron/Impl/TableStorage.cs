@@ -14,11 +14,12 @@ using System.IO;
 using Voron;
 using Voron.Debugging;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using Voron.Util;
 
 namespace Raven.Database.FileSystem.Storage.Voron.Impl
 {
-	internal class TableStorage : IDisposable
+    internal class TableStorage : IDisposable
     {
         private readonly StorageEnvironmentOptions _options;
         private readonly IBufferPool bufferPool;
@@ -42,11 +43,12 @@ namespace Raven.Database.FileSystem.Storage.Voron.Impl
         {
             var reportData = new Dictionary<string, object>
 	        {
-	            {"MaxNodeSize", _options.DataPager.MaxNodeSize},
 	            {"NumberOfAllocatedPages", _options.DataPager.NumberOfAllocatedPages},
-	           // {"PageMaxSpace", _options.DataPager.PageMaxSpace},
+                {"UsedPages", env.State.NextPageNumber-1},
+	            {"MaxNodeSize", _options.DataPager.MaxNodeSize},
 	            {"PageMinSpace", _options.DataPager.PageMinSpace},
-	           // {"PageSize", _options.DataPager.PageSize},
+	            {"PageMaxSpace", AbstractPager.PageMaxSpace},
+	            {"PageSize", AbstractPager.PageSize},
                 {"Files", GetEntriesCount(Files)},
 	        };
 
@@ -143,15 +145,15 @@ namespace Raven.Database.FileSystem.Storage.Voron.Impl
             Details = new Table(Tables.Details.TableName, bufferPool);
         }
 
-		public void SetDatabaseIdAndSchemaVersion(Guid id, string schemaVersion)
-		{
-			Id = id;
-			SchemaVersion = schemaVersion;
-		}
+        public void SetDatabaseIdAndSchemaVersion(Guid id, string schemaVersion)
+        {
+            Id = id;
+            SchemaVersion = schemaVersion;
+        }
 
-		public string SchemaVersion { get; private set; }
+        public string SchemaVersion { get; private set; }
 
-		public Guid Id { get; private set; }
+        public Guid Id { get; private set; }
 
     }
 }

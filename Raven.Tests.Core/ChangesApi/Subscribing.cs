@@ -236,10 +236,49 @@ namespace Raven.Tests.Core.ChangesApi
 
 	            }
 
-				// perform the check after dispose of bulk insert operation to make sure that we already flushed everyting to the server to the notification shold already arrive
+				// perform the check after dispose of bulk insert operation to make sure that we already flushed everything to the server to the notification should already arrive
 				WaitUntilOutput("passed_bulkInsert");
             }
         }
+
+		[Fact]
+		public void CanSubscribeToAnyBulkInsert()
+		{
+			using (var store = GetDocumentStore())
+			{
+				var bulkEndedCount = 0;
+				var bulkStartedCount = 0;
+
+				store.Changes().Task.Result
+						.ForBulkInsert().Task.Result
+						.Subscribe(changes =>
+						{
+							if(changes.Type == DocumentChangeTypes.BulkInsertEnded)
+								Interlocked.Increment(ref bulkEndedCount);
+							else if (changes.Type == DocumentChangeTypes.BulkInsertStarted)
+								Interlocked.Increment(ref bulkStartedCount);
+						});
+
+				using (var bulkInsert = store.BulkInsert())
+				{
+					bulkInsert.Store(new User
+					{
+						Name = "User"
+					});
+				}
+
+				using (var bulkInsert = store.BulkInsert())
+				{
+					bulkInsert.Store(new User
+					{
+						Name = "User"
+					});
+				}
+
+				// perform the check after dispose of bulk insert operation to make sure that we already flushed everything to the server to the notification should already arrive
+				Assert.True(SpinWait.SpinUntil(() => bulkStartedCount == 2 && bulkEndedCount == 2, TimeSpan.FromSeconds(20)));
+			}
+		}
 
         [Fact]
         public void CanSubscribeToAllTransformers()

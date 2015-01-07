@@ -287,14 +287,14 @@ namespace Raven.Json.Linq
 		{
 			if (reader.TokenType == JsonToken.None)
 			{
-				if (!await reader.ReadAsync())
+				if (!await reader.ReadAsync().ConfigureAwait(false))
 					throw new Exception("Error reading RavenJArray from JsonReader.");
 			}
 
 			if (reader.TokenType != JsonToken.StartArray)
 				throw new Exception("Error reading RavenJArray from JsonReader. Current JsonReader item is not an array: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
 
-			if (await reader.ReadAsync() == false)
+			if (await reader.ReadAsync().ConfigureAwait(false) == false)
 				throw new Exception("Unexpected end of json array");
 
 			var ar = new RavenJArray();
@@ -309,11 +309,11 @@ namespace Raven.Json.Linq
 					case JsonToken.EndArray:
 						return ar;
 					case JsonToken.StartObject:
-						val = await RavenJObject.LoadAsync(reader);
+						val = await RavenJObject.LoadAsync(reader).ConfigureAwait(false);
 						ar.Items.Add(val);
 						break;
 					case JsonToken.StartArray:
-						val = await RavenJArray.LoadAsync(reader);
+						val = await LoadAsync(reader).ConfigureAwait(false);
 						ar.Items.Add(val);
 						break;
 					default:
@@ -321,7 +321,7 @@ namespace Raven.Json.Linq
 						ar.Items.Add(val);
 						break;
 				}
-			} while (await reader.ReadAsync());
+			} while (await reader.ReadAsync().ConfigureAwait(false));
 
 			throw new Exception("Error reading RavenJArray from JsonReader.");
 		}

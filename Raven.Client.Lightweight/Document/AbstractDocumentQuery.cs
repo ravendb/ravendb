@@ -613,16 +613,16 @@ namespace Raven.Client.Document
 			return DatabaseCommands.GetFacets(indexName, q, facets, facetStart, facetPageSize);
 		}
 
-		public Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize)
+		public Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default (CancellationToken))
 		{
 			var q = GetIndexQuery(true);
-			return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facetSetupDoc, facetStart, facetPageSize);
+			return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facetSetupDoc, facetStart, facetPageSize, token);
 		}
 
-		public Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize)
+		public Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default (CancellationToken))
 		{
 			var q = GetIndexQuery(true);
-			return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facets, facetStart, facetPageSize);
+			return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facets, facetStart, facetPageSize, token);
 		}
 
 		/// <summary>
@@ -759,9 +759,9 @@ namespace Raven.Client.Document
 		///   Execute the query the first time that this is called.
 		/// </summary>
 		/// <value>The query result.</value>
-		public async Task<QueryResult> QueryResultAsync()
+		public async Task<QueryResult> QueryResultAsync(CancellationToken token = default (CancellationToken))
 		{
-			var result = await InitAsync();
+			var result = await InitAsync().WithCancellation(token);
 			return result.CurrentQueryResults.CreateSnapshot();
 			}
 
@@ -799,6 +799,16 @@ namespace Raven.Client.Document
 		public void RandomOrdering()
 		{
 			AddOrder(Constants.RandomFieldName + ";" + Guid.NewGuid(), false);
+		}
+
+        public void CustomSortUsing(string typeName)
+        {
+            CustomSortUsing(typeName, false);
+        }
+
+		public void CustomSortUsing(string typeName, bool descending)
+		{
+			AddOrder(Constants.CustomSortFieldName + (descending?"-":"") +  ";" + typeName, false);
 		}
 
 		/// <summary>
@@ -2205,6 +2215,18 @@ If you really want to do in memory filtering on the data returned from the query
 			return this;
 		}
 
+        IDocumentQueryCustomization IDocumentQueryCustomization.CustomSortUsing(string typeName)
+        {
+            CustomSortUsing(typeName, false);
+            return this;
+        }
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.CustomSortUsing(string typeName, bool descending)
+		{
+            CustomSortUsing(typeName, descending);
+			return this;
+		}
+
 		/// <summary>
 		/// Order the search results randomly using the specified seed
 		/// this is useful if you want to have repeatable random queries
@@ -2218,20 +2240,20 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
-		public async Task<IList<T>> ToListAsync()
+		public async Task<IList<T>> ToListAsync(CancellationToken token = default (CancellationToken))
 		{
-			var currentQueryOperation = await InitAsync();
-			var tuple = await ProcessEnumerator(currentQueryOperation);
+			var currentQueryOperation = await InitAsync().WithCancellation(token);
+			var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token);
 			return tuple.Item2;
 		}
 
 		/// <summary>
 		/// Gets the total count of records for this query
 		/// </summary>
-		public async Task<int> CountAsync()
+		public async Task<int> CountAsync(CancellationToken token = default (CancellationToken))
 		{
 			Take(0);
-			var result = await QueryResultAsync();
+			var result = await QueryResultAsync(token);
 			return result.TotalResults;
 		}
 

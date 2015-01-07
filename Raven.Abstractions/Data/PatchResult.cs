@@ -39,11 +39,11 @@ namespace Raven.Abstractions.Data
 	{
 		/// <summary>
 		/// Result of patch operation:
-		/// - DocumentDoesNotExists - document does not exists, operation was a no-op,
-		/// - Patched - document was properly patched,
-		/// - Tested - document was properly tested,
-		/// - Skipped - document was not patched, because skipPatchIfEtagMismatch was set and the etag did not match,
-		/// - NotModified - neither document body not metadata was changed during patch operation
+		/// <para>- DocumentDoesNotExists - document does not exists, operation was a no-op,</para>
+		/// <para>- Patched - document was properly patched,</para>
+		/// <para>- Tested - document was properly tested,</para>
+		/// <para>- Skipped - document was not patched, because skipPatchIfEtagMismatch was set and the etag did not match,</para>
+		/// <para>- NotModified - neither document body not metadata was changed during patch operation</para>
 		/// </summary>
 		public PatchResult PatchResult { get; set; }
 

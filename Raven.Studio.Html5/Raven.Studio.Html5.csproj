@@ -339,6 +339,7 @@
     <TypeScriptCompile Include="App\commands\getStatusStorageBreakdownCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingBatchStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReducingBatchStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\persistIndexCommand.ts" />
     <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
@@ -422,6 +423,7 @@
     <TypeScriptCompile Include="App\viewmodels\requests.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexing.ts" />
     <TypeScriptCompile Include="App\viewmodels\replaceIndexDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugPersistAutoIndex.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <Content Include="App\views\adminSettings.html" />
@@ -430,6 +432,7 @@
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
+    <Content Include="App\views\statusDebugPersistAutoIndex.html" />
     <Content Include="App\views\indexing.html" />
     <Content Include="App\views\replaceIndexDialog.html" />
     <Content Include="App\views\statusStorageCollections.html" />
@@ -1016,7 +1019,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>49940</DevelopmentServerPort>
+          <DevelopmentServerPort>31052</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>

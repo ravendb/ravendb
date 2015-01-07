@@ -86,7 +86,6 @@ interface databaseStatisticsDto {
     Errors: serverErrorDto[];
     InMemoryIndexingQueueSizes: number[];
     Indexes: indexStatisticsDto[];
-    IndexingBatchInfo: indexingBatchInfoDto[];
     LastAttachmentEtag: string;
     LastDocEtag: string;
     Prefetches: any[];
@@ -168,6 +167,7 @@ interface indexPerformanceDto {
     };
     MapStoragePerformance: {
         DeleteMappedResultsDurationMs: number;
+        ConvertToRavenJObjectDurationMs: number;
         PutMappedResultsDurationMs: number;
         ScheduleReductionsDurationMs: number;
         StorageCommitDurationMs: number
@@ -469,6 +469,7 @@ interface replicationDestinationDto {
     IgnoredClient: boolean;
     Disabled: boolean;
     ClientVisibleUrl: string;
+    SkipIndexReplication: boolean;
 }
 
 interface replicationsDto {

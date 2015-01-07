@@ -383,6 +383,11 @@ namespace Raven.Database.Storage
             return null;
         }
 
+		public IEnumerable<TransformerDefinition> GetAllTransformerDefinitions()
+		{
+			return transformDefinitions.Select(definition => definition.Value);
+		}
+
         public IndexMergeResults ProposeIndexMergeSuggestions()
         {
             var indexMerger = new IndexMerger(IndexDefinitions.ToDictionary(x=>x.Key,x=>x.Value));

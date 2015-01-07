@@ -129,6 +129,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.CountersDataDir.Value.ToFullPath(null)), actual => actual.CountersDataDirectory);
 			configurationComparer.Assert(expected => expected.PluginsDirectory.Value.ToFullPath(null), actual => actual.PluginsDirectory);
             configurationComparer.Assert(expected => expected.AssembliesDirectory.Value.ToFullPath(null), actual => actual.AssembliesDirectory);
+            configurationComparer.Assert(expected => expected.EmbeddedFilesDirectory.Value.ToFullPath(null), actual => actual.EmbeddedFilesDirectory);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.FileSystem.DataDir.Value.ToFullPath(null)), actual => actual.FileSystem.DataDirectory);
 			configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.FileSystem.DataDir.Value.ToFullPath(null)) + @"Indexes", actual => actual.FileSystem.IndexStoragePath);
 			configurationComparer.Assert(expected => expected.FileSystem.DefaultStorageTypeName.Value, actual => actual.FileSystem.DefaultStorageTypeName);
@@ -140,7 +141,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.TombstoneRetentionTime.Value, actual => actual.TombstoneRetentionTime);
 			configurationComparer.Assert(expected => expected.Replication.ReplicationRequestTimeoutInMilliseconds.Value, actual => actual.Replication.ReplicationRequestTimeoutInMilliseconds);
 			configurationComparer.Assert(expected => expected.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value, actual => actual.Indexing.MaxNumberOfItemsToProcessInTestIndexes);
-
+			configurationComparer.Assert(expected => expected.IndexAndTransformerReplicationLatencyInSec.Value, actual => actual.IndexAndTransformerReplicationLatencyInSec);
 			configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
 			configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
 
