@@ -354,6 +354,11 @@ namespace Raven.Database.Client
 		    get { return server.DocumentStore.Subscriptions; }
 	    }
 
+	    public IAsyncReliableSubscriptions AsyncSubscriptions
+	    {
+			get { return server.DocumentStore.AsyncSubscriptions; }
+	    }
+
 	    public DocumentSessionListeners Listeners { get { return server.DocumentStore.Listeners; } }
         public void SetListeners(DocumentSessionListeners listeners)
         {

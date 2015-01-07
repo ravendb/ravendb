@@ -14,6 +14,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Shard;
 
 namespace Raven.Client.Indexes
 {
@@ -91,27 +92,55 @@ namespace Raven.Client.Indexes
 				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
 		}
 
-		/// <summary>
-		/// Creates the indexes found in the specified assembly.
-		/// </summary>
-		/// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
-		/// <param name="documentStore">The document store.</param>
-		public static Task CreateIndexesAsync(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore)
-		{
-			var catalog = new CompositionContainer(new AssemblyCatalog(assemblyToScanForIndexingTasks));
-			return CreateIndexesAsync(catalog, documentStore);
-		}
+        /// <summary>
+        /// Creates the indexes found in the specified assembly.
+        /// </summary>
+        /// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
+        /// <param name="documentStore">The document store.</param>
+        public static Task CreateIndexesAsync(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore)
+        {
+            var catalog = new CompositionContainer(new AssemblyCatalog(assemblyToScanForIndexingTasks));
+            if (documentStore is ShardedDocumentStore) return ShardedCreateIndexesAsync(catalog, documentStore as ShardedDocumentStore);
+            return CreateIndexesAsync(catalog, documentStore);
+        }        
 
-		/// <summary>
-		/// Creates the indexes found in the specified catalog
-		/// </summary>
-		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
-		/// <param name="documentStore">The document store.</param>
-		public static Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
-		{
-			return CreateIndexesAsync(catalogToGetnIndexingTasksFrom, documentStore.AsyncDatabaseCommands,
-									  documentStore.Conventions);
-		}
+        /// <summary>
+        /// Creates the indexes found in the specified catalog
+        /// </summary>
+        /// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
+        /// <param name="documentStore">The document store.</param>
+        public static Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
+        {
+            if (documentStore is ShardedDocumentStore) return ShardedCreateIndexesAsync(catalogToGetnIndexingTasksFrom, documentStore as ShardedDocumentStore);
+            return CreateIndexesAsync(catalogToGetnIndexingTasksFrom, documentStore.AsyncDatabaseCommands,
+                                      documentStore.Conventions);
+        }
+
+        /// <summary>
+        /// Creates the indexes found in the specified catalog
+        /// </summary>
+        public async static Task ShardedCreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, ShardedDocumentStore shardedDocumentStore)
+        {
+            var indexCompilationExceptions = new List<IndexCompilationException>();
+            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+            {
+                try
+                {
+                    await task.ExecuteAsync(shardedDocumentStore);
+                }
+                catch (IndexCompilationException e)
+                {
+                    indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
+                }
+            }
+            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+            {
+                await task.ExecuteAsync(shardedDocumentStore);
+            }
+
+            if (indexCompilationExceptions.Any())
+                throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+        }
 
 		/// <summary>
 		/// Creates the indexes found in the specified catalog

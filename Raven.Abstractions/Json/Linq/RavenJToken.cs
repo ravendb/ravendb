@@ -908,16 +908,16 @@ namespace Raven.Json.Linq
         {
             if (reader.TokenType == JsonToken.None)
             {
-                if (!await reader.ReadAsync())
+                if (!await reader.ReadAsync().ConfigureAwait(false))
                     throw new Exception("Error reading RavenJToken from JsonReader.");
             }
 
             switch (reader.TokenType)
             {
                 case JsonToken.StartObject:
-                    return await RavenJObject.LoadAsync(reader);
+					return await RavenJObject.LoadAsync(reader).ConfigureAwait(false);
                 case JsonToken.StartArray:
-                    return await RavenJArray.LoadAsync(reader);
+					return await RavenJArray.LoadAsync(reader).ConfigureAwait(false);
                 case JsonToken.String:
                 case JsonToken.Integer:
                 case JsonToken.Float:

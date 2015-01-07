@@ -4,17 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Specialized;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
-
-using System.Collections.Specialized;
 using Raven.Client.Indexes;
 using Raven.Client.Connection.Async;
-
 
 namespace Raven.Client
 {
@@ -173,6 +172,14 @@ namespace Raven.Client
 
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 
+		/// <summary>
+		/// Provides methods to manage data subscriptions in async manner.
+		/// </summary>
+		IAsyncReliableSubscriptions AsyncSubscriptions { get; }
+
+		/// <summary>
+		/// Provides methods to manage data subscriptions.
+		/// </summary>
 		IReliableSubscriptions Subscriptions { get; }
 
         DocumentSessionListeners Listeners { get; }

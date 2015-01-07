@@ -32,6 +32,7 @@ namespace Raven.Client
 
 			LastEtagHolder = new GlobalLastEtagHolder();
 			TransactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
+			AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
 			Subscriptions = new DocumentSubscriptions(this);
 		}
 
@@ -39,9 +40,10 @@ namespace Raven.Client
 	    {
 	        get { return listeners; }
 	    }
+
 	    public void SetListeners(DocumentSessionListeners newListeners)
 	    {
-            this.listeners = newListeners;
+            listeners = newListeners;
 	    }
 
 	    public abstract void Dispose();
@@ -95,7 +97,7 @@ namespace Raven.Client
 			indexCreationTask.Execute(DatabaseCommands, Conventions);
 		}
 
-	    public Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
+	    public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
 	    {
 	        return indexCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
 	    }
@@ -176,6 +178,8 @@ namespace Raven.Client
 		}
 
 		public abstract BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
+
+		public IAsyncReliableSubscriptions AsyncSubscriptions { get; private set; }
 		public IReliableSubscriptions Subscriptions { get; private set; }
 
 		protected void EnsureNotClosed()

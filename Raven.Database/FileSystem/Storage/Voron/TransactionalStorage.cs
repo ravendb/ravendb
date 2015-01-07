@@ -121,7 +121,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 			fileCodecs = codecs;
 
             bool runInMemory;
-            bool.TryParse(settings["Raven/RunInMemory"], out runInMemory);
+            bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
 
             var persistenceSource = runInMemory ? StorageEnvironmentOptions.CreateMemoryOnly() :
                 CreateStorageOptionsFromConfiguration(path, settings);

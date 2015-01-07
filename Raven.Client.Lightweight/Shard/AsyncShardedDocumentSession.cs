@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -55,52 +56,52 @@ namespace Raven.Client.Shard
 
 		#region Load and Include
 
-	    public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
+		public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id)
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, CancellationToken token)
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    public Lazy<Task<TResult>> LoadAsync<TResult>(string id, Action<TResult> onEval)
+		public Lazy<Task<TResult>> LoadAsync<TResult>(string id, Action<TResult> onEval, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(ValueType id)
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(ValueType id, CancellationToken token)
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    public Lazy<Task<TResult>> LoadAsync<TResult>(ValueType id, Action<TResult> onEval)
+		public Lazy<Task<TResult>> LoadAsync<TResult>(ValueType id, Action<TResult> onEval, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(params ValueType[] ids)
+	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(CancellationToken token,params ValueType[] ids)
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<ValueType> ids)
+		Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<ValueType> ids, CancellationToken token)
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval)
+		public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
 
-		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval)
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval, CancellationToken token)
 		{
 			throw new NotImplementedException();
 		}
 
-		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval, CancellationToken token)
 		{
 			throw new NotImplementedException();
 		}
@@ -108,17 +109,30 @@ namespace Raven.Client.Shard
 		public IAsyncLazySessionOperations Lazily { get; private set; }
 	    public IAsyncEagerSessionOperations Eagerly { get; private set; }
 
-	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
+		public string GetDocumentUrl(object entity)
+		{
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				throw new ArgumentException("The entity is not part of the session");
+
+			var shardId = value.Metadata.Value<string>(Constants.RavenShardId);
+			IAsyncDatabaseCommands commands;
+			if (shardDbCommands.TryGetValue(shardId, out commands) == false)
+				throw new InvalidOperationException("Could not find matching shard for shard id: " + shardId);
+			return commands.UrlFor(value.Key);
+		}
+
+		Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    public Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query)
+		public Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
 
-	    public Task<T> LoadAsync<T>(string id)
+		public Task<T> LoadAsync<T>(string id, CancellationToken token = default (CancellationToken))
 		{
 			object existingEntity;
 			if (entitiesByKey.TryGetValue(id, out existingEntity))
@@ -144,7 +158,7 @@ namespace Raven.Client.Shard
 					loadOperation.LogOperation();
 
 					var loadContext = loadOperation.EnterLoadContext();
-					return commands.GetAsync(id).ContinueWith(task =>
+					return commands.GetAsync(id, token).ContinueWith(task =>
 					{
 						if (loadContext != null)
 							loadContext.Dispose();
@@ -158,7 +172,7 @@ namespace Raven.Client.Shard
 				{
 					_.AssertNotFailed();
 					return loadOperation.Complete<T>();
-				});
+				}).WithCancellation(token);
 			});
 
 			return results.ContinueWith(task =>
@@ -171,7 +185,7 @@ namespace Raven.Client.Shard
 				}
 
 				return shardsContainThisDocument.FirstOrDefault();
-			});
+			}).WithCancellation(token);
 		}
 
 	    IAsyncLazyLoaderWithInclude<TResult> IAsyncLazySessionOperations.Include<TResult>(Expression<Func<TResult, object>> path)
@@ -179,79 +193,79 @@ namespace Raven.Client.Shard
 	        throw new NotImplementedException();
 	    }
 
-	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<string> ids)
+		Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<string> ids, CancellationToken token)
 	    {
 	        throw new NotImplementedException();
 	    }
 
-		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids)
+		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
 		{
-			return LoadAsyncInternal<T>(ids.ToArray());
+			return LoadAsyncInternal<T>(ids.ToArray(), token);
 		}
 
-		public Task<T> LoadAsync<T>(ValueType id)
+		public Task<T> LoadAsync<T>(ValueType id, CancellationToken token = default (CancellationToken))
 		{
 			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-			return LoadAsync<T>(documentKey);
+			return LoadAsync<T>(documentKey, token);
 		}
 
-		public Task<T[]> LoadAsync<T>(params ValueType[] ids)
+		public Task<T[]> LoadAsync<T>(CancellationToken token = default (CancellationToken),params ValueType[] ids)
 		{
 			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-			return LoadAsyncInternal<T>(documentKeys.ToArray());
+			return LoadAsyncInternal<T>(documentKeys.ToArray(), token);
 		}
 
-		public Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids)
+		public Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token = default (CancellationToken))
 		{
 			var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-			return LoadAsyncInternal<T>(documentKeys.ToArray());
+			return LoadAsyncInternal<T>(documentKeys.ToArray(), token);
 		}
 
-		public Task<T[]> LoadAsyncInternal<T>(string[] ids)
+		public Task<T[]> LoadAsyncInternal<T>(string[] ids, CancellationToken token = default (CancellationToken))
 		{
-			return LoadAsyncInternal<T>(ids, null);
+			return LoadAsyncInternal<T>(ids, null, token);
 		}
 
-		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var configuration = new RavenLoadConfiguration();
 			if (configure != null)
 				configure(configuration);
 
-            var result = await LoadUsingTransformerInternalAsync<T>(new[] { id }, null, new TTransformer().TransformerName, configuration.TransformerParameters).ConfigureAwait(false);
+            var result = await LoadUsingTransformerInternalAsync<T>(new[] { id }, null, new TTransformer().TransformerName, configuration.TransformerParameters, token).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
-		public async Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var configuration = new RavenLoadConfiguration();
 			if (configure != null)
 				configure(configuration);
 
-			var result = await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, configuration.TransformerParameters, token).ConfigureAwait(false);
 			return result;
 		}
 
-		public async Task<TResult> LoadAsync<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
+		public async Task<TResult> LoadAsync<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken))
 		{
 			var configuration = new RavenLoadConfiguration();
 			if (configure != null)
 				configure(configuration);
 
-			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters, token).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
-		public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
+		public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken))
 		{
 			var configuration = new RavenLoadConfiguration();
 			if (configure != null)
 				configure(configuration);
 
-			return await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			return await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters, token).ConfigureAwait(false);
 		}
 
-		public async Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
+		public async Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken))
 		{
 			var configuration = new RavenLoadConfiguration();
 			if (configure != null)
@@ -259,11 +273,11 @@ namespace Raven.Client.Shard
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters, token).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
-		public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
+		public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken))
 		{
 			var configuration = new RavenLoadConfiguration();
 			if (configure != null)
@@ -271,11 +285,11 @@ namespace Raven.Client.Shard
 
 			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-			var result = await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters).ConfigureAwait(false);
+			var result = await LoadUsingTransformerInternalAsync<TResult>(ids.ToArray(), null, transformer, configuration.TransformerParameters, token).ConfigureAwait(false);
 			return result;
 		}
 
-		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
+		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, CancellationToken token = default (CancellationToken))
 		{
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
@@ -302,13 +316,14 @@ namespace Raven.Client.Shard
 						multiLoadOperation.LogOperation();
 						using (multiLoadOperation.EnterMultiLoadContext())
 						{
-                            multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths).ConfigureAwait(false);
+                            multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths, token: token).ConfigureAwait(false);
 						}
 					} while (multiLoadOperation.SetResult(multiLoadResult));
 					return multiLoadOperation;
-                }).ConfigureAwait(false);
+                }).WithCancellation(token).ConfigureAwait(false);
 				foreach (var multiLoadOperation in multiLoadOperations)
 				{
+					token.ThrowIfCancellationRequested();
 					var loadResults = multiLoadOperation.Complete<T>();
 					for (int i = 0; i < loadResults.Length; i++)
 					{
@@ -333,8 +348,10 @@ namespace Raven.Client.Shard
 			}).ToArray();
 		}
 
-		public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+		public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, 
+			Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
 		{
+			token.ThrowIfCancellationRequested(); //if cancel already requested prevent incrementing request count
 			var results = new T[ids.Length];
 			var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
 			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer).ToList();
@@ -348,6 +365,7 @@ namespace Raven.Client.Shard
 			{
 				foreach (var shard in idsToLoad)
 				{
+					token.ThrowIfCancellationRequested();
 					var currentShardIds = shard.Select(x => x.Id).ToArray();
 					var shardResults = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key,
 							new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
@@ -355,7 +373,7 @@ namespace Raven.Client.Shard
 							{
 								// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
 								// With a single Id
-                                var arrayOfArrays = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters).ConfigureAwait(false))
+                                var arrayOfArrays = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters, token: token).ConfigureAwait(false))
 															.Results
 															.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
 															.Select(values =>
@@ -373,7 +391,7 @@ namespace Raven.Client.Shard
 															.ToArray();
 
 								return arrayOfArrays;
-							});
+							}).WithCancellation(token);
 
 					return shardResults.SelectMany(x => x).ToArray();
 				}
@@ -381,12 +399,13 @@ namespace Raven.Client.Shard
 
 			foreach (var shard in idsToLoad)
 			{
+				token.ThrowIfCancellationRequested();
 				var currentShardIds = shard.Select(x => x.Id).ToArray();
 				var shardResults = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key,
 						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
 						async (dbCmd, i) =>
 						{
-                            var items = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters).ConfigureAwait(false))
+                            var items = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters, token: token).ConfigureAwait(false))
 								.Results
 								.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
 								.Select(JsonExtensions.ToJObject)
@@ -409,12 +428,13 @@ namespace Raven.Client.Shard
 							}
 
 							return items;
-                        }).ConfigureAwait(false);
+                        }).WithCancellation(token).ConfigureAwait(false);
 
 				foreach (var shardResult in shardResults)
 				{
 					for (int i = 0; i < shardResult.Length; i++)
 					{
+						token.ThrowIfCancellationRequested();
 						if (ReferenceEquals(shardResult[i], null))
 							continue;
 						var id = currentShardIds[i];
@@ -430,7 +450,7 @@ namespace Raven.Client.Shard
 			return results;
 		}
 
-	    public Lazy<Task<T[]>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
+	    public Lazy<Task<T[]>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval, CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotImplementedException();
 	    }
@@ -478,7 +498,7 @@ namespace Raven.Client.Shard
 			return AsyncDocumentQuery<T>(indexName);
 		}
 
-		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null)
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken))
 		{
 			IncrementRequestCount();
 			var shards = GetCommandsToOperateOn(new ShardRequestData
@@ -491,13 +511,14 @@ namespace Raven.Client.Shard
 			{
 				EntityType = typeof(T),
 				Keys = { keyPrefix }
-			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, skipAfter:skipAfter))
-								.ContinueWith(task => (IEnumerable<T>)task.Result.SelectMany(x => x).Select(TrackEntity<T>).ToList());
+			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, skipAfter:skipAfter, token: token))
+								  .ContinueWith(task => (IEnumerable<T>)task.Result.SelectMany(x => x).Select(TrackEntity<T>).ToList())
+								  .WithCancellation(token);
 		}
 
 		public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
 		                                                    string exclude = null, RavenPagingInformation pagingInformation = null,
-															Action<ILoadConfiguration> configure = null, string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
+															Action<ILoadConfiguration> configure = null, string skipAfter = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer().TransformerName;
 
@@ -520,8 +541,9 @@ namespace Raven.Client.Shard
 				Keys = { keyPrefix }
 			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, transformer: transformer,
 														 transformerParameters: configuration.TransformerParameters,
-														 skipAfter: skipAfter))
-								.ContinueWith(task => (IEnumerable<TResult>)task.Result.SelectMany(x => x).Select(TrackEntity<TResult>).ToList());
+														 skipAfter: skipAfter, token: token))
+								.ContinueWith(task => (IEnumerable<TResult>)task.Result.SelectMany(x => x).Select(TrackEntity<TResult>).ToList())
+								.WithCancellation(token);
 		}
 
 		/// <summary>
@@ -571,38 +593,38 @@ namespace Raven.Client.Shard
             return AsyncDocumentQuery<T>(GetDynamicIndexName<T>());
         }
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query)
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default (CancellationToken))
 		{
-			return StreamAsync(query, new Reference<QueryHeaderInformation>());
+			return StreamAsync(query, new Reference<QueryHeaderInformation>(), token);
 		}
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query)
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default (CancellationToken))
 		{
-			return StreamAsync(query, new Reference<QueryHeaderInformation>());
+			return StreamAsync(query, new Reference<QueryHeaderInformation>(), token);
 		}
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
-		{
-			throw new NotSupportedException("Streams are currently not supported by sharded document store");
-		}
-
-
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation, CancellationToken token = default (CancellationToken))
 		{
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
+
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation, CancellationToken token = default (CancellationToken))
 		{
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, CancellationToken token = default (CancellationToken))
 		{
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-		public async Task RefreshAsync<T>(T entity)
+		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken))
+		{
+			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
+
+		public async Task RefreshAsync<T>(T entity, CancellationToken token = default (CancellationToken))
 		{
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
@@ -618,13 +640,13 @@ namespace Raven.Client.Shard
 
 			var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands, shardRequestData, async (dbCmd, i) =>
 			{
-				var jsonDocument = await dbCmd.GetAsync(value.Key);
+				var jsonDocument = await dbCmd.GetAsync(value.Key, token);
 				if (jsonDocument == null)
 					return false;
 
 				RefreshInternal(entity, jsonDocument, value);
 				return true;
-			});
+			}).WithCancellation(token);
 
 			if (results.All(x => x == false))
 			{
@@ -637,7 +659,7 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
-		Task IAsyncDocumentSession.SaveChangesAsync()
+		Task IAsyncDocumentSession.SaveChangesAsync(CancellationToken token = default (CancellationToken))
 		{
 			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
 											 .ContinueWith(keysTask =>
@@ -665,6 +687,7 @@ namespace Raven.Client.Shard
 													 // execute on all shards
 													 foreach (var shardAndObjects in saveChangesPerShard)
 													 {
+														 token.ThrowIfCancellationRequested();
 														 var shardId = shardAndObjects.Key;
 
 														 IAsyncDatabaseCommands databaseCommands;
@@ -674,7 +697,7 @@ namespace Raven.Client.Shard
 
 														 var localCopy = shardAndObjects.Value;
 														 saveChanges.Add(localCopy);
-														 saveTasks.Add(() => databaseCommands.BatchAsync(localCopy.Commands.ToArray()));
+														 saveTasks.Add(() => databaseCommands.BatchAsync(localCopy.Commands.ToArray(), token));
 													 }
 
 													 return saveTasks.StartInParallel().ContinueWith(task =>
@@ -684,6 +707,7 @@ namespace Raven.Client.Shard
 															 var results = task.Result;
 															 for (int index = 0; index < results.Length; index++)
 															 {
+																 token.ThrowIfCancellationRequested();
 																 UpdateBatchResults(results[index], saveChanges[index]);
 															 }
 														 }
@@ -691,14 +715,14 @@ namespace Raven.Client.Shard
 														 {
 															 cachingScope.Dispose();
 														 }
-													 });
+													 }, token);
 												 }
 												 catch
 												 {
 													 cachingScope.Dispose();
 													 throw;
 												 }
-											 }).Unwrap();
+											 }, token).Unwrap();
 		}
 
 		protected override string GenerateKey(object entity)
@@ -720,7 +744,7 @@ namespace Raven.Client.Shard
 			return Conventions.GenerateDocumentKeyAsync(dbName, value, entity);
 		}
 
-	    public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync()
+		public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync(CancellationToken token = default (CancellationToken))
 	    {
 	        throw new NotSupportedException("Async kazy requests are not supported for sharded store");
 	    }

@@ -27,6 +27,7 @@ namespace Raven.Abstractions.Data
 		public const string SystemDatabase = "<system>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
 		public const string RandomFieldName = "__random";
+		public const string CustomSortFieldName = "__customSort";
 		public const string NullValueNotAnalyzed = "[[NULL_VALUE]]";
 		public const string EmptyStringNotAnalyzed = "[[EMPTY_STRING]]";
 		public const string NullValue = "NULL_VALUE";
@@ -51,6 +52,7 @@ namespace Raven.Abstractions.Data
 
 		public const string MemoryLimitForProcessing_BackwardCompatibility = "Raven/MemoryLimitForIndexing";
 		public const string MemoryLimitForProcessing = "Raven/MemoryLimitForProcessing";
+        public const string RunInMemory = "Raven/RunInMemory";
 
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
@@ -106,6 +108,8 @@ namespace Raven.Abstractions.Data
 		public const string SizeSoftLimitInKB = "Raven/Quotas/Size/SoftMarginInKB";
 
 		//Replications
+	    public const string RavenIndexAndTransformerReplicationLatencyInSec = "Raven/Replication/IndexAndTransformerReplicationLatency"; //in seconds
+	    public const int DefaultRavenIndexAndTransformerReplicationLatencyInSec = 600;
 		public const string RavenReplicationSource = "Raven-Replication-Source";
 		public const string RavenReplicationVersion = "Raven-Replication-Version";
 		public const string RavenReplicationHistory = "Raven-Replication-History";
@@ -149,10 +153,10 @@ namespace Raven.Abstractions.Data
         public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
 		public const string NextPageStart = "Next-Page-Start";
 
-/// <summary>
-/// if no encoding information in headers of incoming request, this encoding is assumed
-/// </summary>
-public const string DefaultRequestEncoding = "UTF-8";
+        /// <summary>
+        /// if no encoding information in headers of incoming request, this encoding is assumed
+        /// </summary>
+        public const string DefaultRequestEncoding = "UTF-8";
         
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 		

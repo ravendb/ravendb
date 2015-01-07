@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Lucene.Net.Index;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using System.Linq;
@@ -223,7 +224,8 @@ namespace Raven.Database.Queries
 								var normalizedFieldName = DynamicQueryMapping.ReplaceInvalidCharactersForFields(sortedField.Field);
 							    if (normalizedFieldName.EndsWith("_Range"))
 							        normalizedFieldName = normalizedFieldName.Substring(0, normalizedFieldName.Length - "_Range".Length);
-							    if (normalizedFieldName.StartsWith(Constants.RandomFieldName))
+							    if (normalizedFieldName.StartsWith(Constants.RandomFieldName) ||
+									normalizedFieldName.StartsWith(Constants.CustomSortFieldName))
 							        continue; // virtual field that we don't sort by
 
 							    // if the field is not in the output, then we can't sort on it. 

@@ -1,7 +1,14 @@
 ﻿using System;
-using System.Diagnostics;
-using Raven.Client.Embedded;
+using System.Collections.Generic;
+using System.Linq;
+using Raven.Abstractions.Data;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Client.Linq;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.SlowTests.Issues;
+using Raven.Tests.Common;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Querying;
 
@@ -11,23 +18,103 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			Console.WriteLine("3.0");
-			for (int i = 0; i < 25; i++)
+			List<Facet> fcets = new List<Facet>(){  
+						new Facet
+                      {
+                          Name ="TotalCount"
+                      },
+					  new Facet
+					  {
+					  	Name ="Tag_40062491"
+					  },
+					  new Facet
+					  {
+					  	Name ="Tag_40062492"
+					  },
+					  new Facet
+					  {
+					  	Name ="Tag_40062493"
+					  },
+					  new Facet
+					  {
+					  	Name ="Tag_40062494"
+					  }
+					  ,new Facet
+					  {
+					  	Name ="Tag_40062495"
+					  },
+					  new Facet
+					  {
+					  	Name ="Tag_40062496"
+					  }
+               };
+
+			using (var store = new DocumentStore
 			{
-				var sp = Stopwatch.StartNew();
-				using (var store = new EmbeddableDocumentStore()
-				{
-					RunInMemory = true,
-					
-				}.Initialize())
-				{
-					store.DatabaseCommands.Get("hello");
-				}
-				Console.WriteLine(sp.ElapsedMilliseconds);
+				Url = "http://localhost:8080",
+				DefaultDatabase = "zap"
+			}.Initialize())
+			using (var session = store.OpenSession())
+			{
+				var f = session.Advanced.DocumentQuery<Object>("idxD").Where("IsPayingCustomer:true").SelectFields<Object>("CustomerId").Distinct().ToFacets(fcets);
+
+				Console.WriteLine(JsonConvert.SerializeObject(f,Formatting.Indented));
 			}
+ 
 
 		}
 	}
+
+    public class OrdinaryQueryTest2 : RavenTest
+    {
+        public class Ob
+        {
+            public string Name { get; set; }
+            public int Age { get; set; }
+        }
+    
+        public void Execute()
+        {
+            using (var store = NewDocumentStore())
+            {
+                store.Conventions.MaxLengthOfQueryUsingGetUrl = 10;
+                new ObsIndex().Execute(store);
+                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Ob
+                    {
+                        Name = "A",
+                        Age=1
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Queryable.Where(session.Query<Ob>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A" && x.Name != "B" && x.Name != "C" && x.Name != "D" && x.Name != "E" && x.Name != "F" && x.Name != "G" && x.Name != "H" && x.Name != "I" && x.Name != "J" && x.Name != "K" && x.Name != "L" && x.Name != "M" && x.Name != "N" ).ToListAsync().GetAwaiter().GetResult();
+                    Queryable.Where(session.Query<Ob>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A" && x.Name != "B" && x.Name != "C" && x.Name != "D" && x.Name != "E" && x.Name != "F" && x.Name != "G" && x.Name != "H" && x.Name != "I" && x.Name != "J" && x.Name != "K" && x.Name != "L" && x.Name != "M" && x.Name != "N").ToListAsync().GetAwaiter().GetResult();
+                    /*Queryable.Where(session.Query<Ob>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A").ToListAsync().GetAwaiter().GetResult();*/
+                    Queryable.Where(session.Query<Ob,ObsIndex>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A").ToFacetsAsync(Enumerable.Repeat(1,1).Select(x=> new Facet() { Name = "Age" }).ToArray()).GetAwaiter().GetResult();
+                    Queryable.Where(session.Query<Ob, ObsIndex>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A").ToFacetsAsync(Enumerable.Repeat(1, 1).Select(x => new Facet() { Name = "Age" }).ToArray()).GetAwaiter().GetResult();
+                    //Queryable.Where(session.Query<Ob,ObsIndex>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A").ToFacetsAsync(new[] { new Facet() { Name = "Age" } }).GetAwaiter().GetResult();
+                }
+
+            }
+        }
+
+        public class ObsIndex : AbstractIndexCreationTask<Ob>
+        {
+            public ObsIndex()
+            {
+                Map = results => from result in results
+                    select new Ob
+                    {
+                        Name = result.Name
+                    };
+            }
+        }
+    }
 
 
 	

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -781,7 +782,7 @@ namespace Raven.Client.Document
 		/// Register the query as a lazy-count query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public Lazy<Task<int>> CountLazilyAsync()
+		public Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default (CancellationToken))
 		{
 			var headers = new Dictionary<string, string>();
 			if (queryOperation == null)
@@ -794,7 +795,7 @@ namespace Raven.Client.Document
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
 			lazyQueryOperation.SetHeaders(headers);
 
-			return ((AsyncDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
+			return ((AsyncDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation,token);
 		}
 
 		/// <summary>
@@ -845,6 +846,15 @@ namespace Raven.Client.Document
 			RandomOrdering();
 			return this;
 		}
+
+        /// <summary>
+        /// Order the search results randomly
+        /// </summary>
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.CustomSortUsing(string typeName, bool descending)
+        {
+            CustomSortUsing(typeName, descending);
+            return this;
+        }
 
 		/// <summary>
 		/// Order the search results randomly using the specified seed

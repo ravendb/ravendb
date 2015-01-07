@@ -335,6 +335,11 @@ namespace Raven.Client.Embedded
 
         public DocumentSessionListeners Listeners { get; private set; }
 
+		public IAsyncReliableSubscriptions AsyncSubscriptions
+		{
+			get { return Inner.AsyncSubscriptions; }
+		}
+
 	    public IReliableSubscriptions Subscriptions
 	    {
 			get { return Inner.Subscriptions; }

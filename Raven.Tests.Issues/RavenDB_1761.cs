@@ -128,7 +128,7 @@ namespace Raven.Tests.Issues
 
         public void CreateFacets(EmbeddableDocumentStore store)
         {
-            DateTime todayDate = DateTime.Now.Date;
+            DateTime todayDate = new DateTime(2013,9,3);
 
             var facets = new List<Facet>
               {

@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
@@ -179,7 +180,7 @@ namespace Raven.Tests.Issues
 				{
 					BatchOptions = new SubscriptionBatchOptions()
 					{
-						AcknowledgmentTimeout = TimeSpan.FromSeconds(0) // the client won't be able to acknowledge in 0 seconds
+						AcknowledgmentTimeout = TimeSpan.FromMilliseconds(-10) // the client won't be able to acknowledge in negative time
 					}
 				});
 				store.Changes().WaitForAllPendingSubscriptions();
@@ -750,7 +751,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void SouldStopPullingDocsAndCloseSubscriptionOnSubscriberErrorByDefault()
+		public void ShouldStopPullingDocsAndCloseSubscriptionOnSubscriberErrorByDefault()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -759,23 +760,20 @@ namespace Raven.Tests.Issues
 
 				var docs = new BlockingCollection<RavenJObject>();
 
-				Exception subscriberException = null;
+				var subscriberException = new TaskCompletionSource<object>();
 
 				subscription.Subscribe(docs.Add);
 				subscription.Subscribe(x =>
 				{
 					throw new Exception("Fake exception");
 				},
-				ex =>
-				{
-					subscriberException = ex;
-				});
+				ex => subscriberException.TrySetResult(ex));
 
 				store.Changes().WaitForAllPendingSubscriptions();
 
 				store.DatabaseCommands.Put("items/1", null, new RavenJObject(), new RavenJObject());
 
-				Assert.True(SpinWait.SpinUntil(() => subscriberException != null, waitForDocTimeout));
+				Assert.True(subscriberException.Task.Wait(waitForDocTimeout));
 				Assert.True(subscription.IsErrored);
 
 				Assert.True(SpinWait.SpinUntil(() => subscription.IsClosed, waitForDocTimeout));

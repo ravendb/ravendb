@@ -111,7 +111,7 @@ namespace Raven.Database.Storage
                                         Path.Combine(backupSourceDirectory, "Temp" + Guid.NewGuid().ToString("N")), incrementalBackup)
 				};
 
-                database.IndexStorage.Backup(backupDestinationDirectory);
+                database.IndexStorage.Backup(backupDestinationDirectory,null, UpdateBackupStatus);
 
                 var progressNotifier = new ProgressNotifier();
                 foreach (var directoryBackup in directoryBackups)

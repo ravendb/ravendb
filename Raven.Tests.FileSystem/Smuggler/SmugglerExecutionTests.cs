@@ -159,16 +159,16 @@ namespace Raven.Tests.FileSystem.Smuggler
 					// now perform full backup
 					var dumper = new SmugglerFilesApi {Options = {Incremental = true}};
 
-					var export = await dumper.ExportData(
-						new SmugglerExportOptions<FilesConnectionStringOptions>
-						{
-							ToFile = outputDirectory,
-							From = new FilesConnectionStringOptions
-							{
-								Url = server.Url,
-								DefaultFileSystem = store.DefaultFileSystem,
-							}
-						});
+                    var export = await dumper.ExportData(
+                        new SmugglerExportOptions<FilesConnectionStringOptions>
+                        {
+                            ToFile = outputDirectory,
+                            From = new FilesConnectionStringOptions
+                            {
+                                Url = server.Url,
+                                DefaultFileSystem = store.DefaultFileSystem,
+                            }
+                        });
 
 					await VerifyDump(store, export.FilePath, s =>
 					{
@@ -192,7 +192,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 			using (var store = NewStore())
 			{
 				var server = GetServer();
-				var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
 
 				var alreadyReset = false;
 				var proxyPort = 8070;
@@ -274,6 +274,80 @@ namespace Raven.Tests.FileSystem.Smuggler
 				}
 			}
 		}
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task OnlyActiveContentIsPreserved_MultipleDirectories()
+        {
+            using (var store = NewStore())
+            {
+                var server = GetServer();
+                var outputDirectory = Path.Combine(server.Configuration.DataDirectory, "Export");
+
+                var smugglerApi = new SmugglerFilesApi();
+
+                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
+                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
+
+                int total = 10;
+                var files = new string[total];
+                using (var session = store.OpenAsyncSession(SourceFilesystem))
+                {
+                    for (int i = 0; i < total; i++)
+                    {
+                        files[i] = i + "/test.file";
+                        session.RegisterUpload(files[i], CreateRandomFileStream(100 * i + 12));
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                int deletedFiles = 0;
+                var rnd = new Random();
+                using (var session = store.OpenAsyncSession(SourceFilesystem))
+                {
+                    for (int i = 0; i < total; i++)
+                    {
+                        if (rnd.Next(2) == 0)
+                        {
+                            session.RegisterFileDeletion(files[i]);
+                            deletedFiles++;
+                        }
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                // now perform full backup
+                var dumper = new SmugglerFilesApi { Options = { Incremental = true } };
+
+                var export = await dumper.ExportData(
+                        new SmugglerExportOptions<FilesConnectionStringOptions>
+                        {
+                            ToFile = outputDirectory,
+                            From = new FilesConnectionStringOptions
+                            {
+                                Url = server.Url,
+                                DefaultFileSystem = SourceFilesystem,
+                            }
+                        });
+
+                await VerifyDump(store, export.FilePath, s =>
+                {
+                    using (var session = s.OpenAsyncSession())
+                    {
+                        int activeFiles = 0;
+                        for (int i = 0; i < total; i++)
+                        {
+                            var file = session.LoadFileAsync(files[i]).Result;
+                            if (file != null)
+                                activeFiles++;
+                        }
+
+                        Assert.Equal(total - deletedFiles, activeFiles);
+                    }
+                });
+            }
+        }
 
         [Fact, Trait("Category", "Smuggler")]
         public async Task ContentIsPreserved_SingleFile()

@@ -469,6 +469,7 @@ interface replicationDestinationDto {
     IgnoredClient: boolean;
     Disabled: boolean;
     ClientVisibleUrl: string;
+    SkipIndexReplication: boolean;
 }
 
 interface replicationsDto {

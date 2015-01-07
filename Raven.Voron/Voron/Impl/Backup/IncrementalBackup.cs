@@ -224,7 +224,7 @@ namespace Voron.Impl.Backup
 						env.FlushLogToDataFile(txw);
 					}
 
-					using (var package = ZipFile.Open(singleBackupFile, ZipArchiveMode.Read))
+					using (var package = ZipFile.Open(singleBackupFile, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
 					{
 						if (package.Entries.Count == 0)
 							return;

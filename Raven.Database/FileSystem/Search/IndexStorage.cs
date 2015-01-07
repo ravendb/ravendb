@@ -21,6 +21,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using Directory = System.IO.Directory;
+using LuceneDirectory = Lucene.Net.Store.Directory;
 
 namespace Raven.Database.FileSystem.Search
 {
@@ -43,7 +44,7 @@ namespace Raven.Database.FileSystem.Search
         private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
 		private string indexDirectory;
-		private FSDirectory directory;
+        private LuceneDirectory directory;
         private RavenFileSystem filesystem;
         
 		private LowerCaseKeywordAnalyzer analyzer;		
@@ -70,28 +71,32 @@ namespace Raven.Database.FileSystem.Search
             try
             {
                 this.filesystem = filesystem;                                
-                indexDirectory = configuration.FileSystem.IndexStoragePath;                
-
-                var filesystemDirectory = configuration.FileSystem.DataDirectory;
-                if (!Directory.Exists(filesystemDirectory))
-                    Directory.CreateDirectory(filesystemDirectory);
-
-                var crashMarkerPath = Path.Combine(filesystemDirectory, "indexing.crash-marker");
-
-                if (File.Exists(crashMarkerPath))
+                indexDirectory = configuration.FileSystem.IndexStoragePath;         
+       
+                // Skip crash markers setup when running in memory.
+                if ( configuration.RunInMemory == false )
                 {
-                    // the only way this can happen is if we crashed because of a power outage
-                    // in this case, we consider open indexes to be corrupt and force them
-                    // to be reset. This is because to get better perf, we don't flush the files to disk,
-                    // so in the case of a power outage, we can't be sure that there wasn't still stuff in
-                    // the OS buffer that wasn't written yet.
+                    var filesystemDirectory = configuration.FileSystem.DataDirectory;
+                    if (!Directory.Exists(filesystemDirectory))
+                        Directory.CreateDirectory(filesystemDirectory);
 
-                    resetIndexOnUncleanShutdown = true;
+                    var crashMarkerPath = Path.Combine(filesystemDirectory, "indexing.crash-marker");
+
+                    if (File.Exists(crashMarkerPath))
+                    {
+                        // the only way this can happen is if we crashed because of a power outage
+                        // in this case, we consider open indexes to be corrupt and force them
+                        // to be reset. This is because to get better perf, we don't flush the files to disk,
+                        // so in the case of a power outage, we can't be sure that there wasn't still stuff in
+                        // the OS buffer that wasn't written yet.
+
+                        resetIndexOnUncleanShutdown = true;
+                    }
+
+                    // The delete on close ensures that the only way this file will exists is if there was
+                    // a power outage while the server was running.
+                    crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
                 }
-
-                // The delete on close ensures that the only way this file will exists is if there was
-                // a power outage while the server was running.
-                crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
                                 
                 OpenIndexOnStartup();
             }
@@ -111,12 +116,13 @@ namespace Raven.Database.FileSystem.Search
             bool recoveryTried = false;
             while (true)
             {
-                FSDirectory luceneDirectory = null;
+                LuceneDirectory luceneDirectory = null;
                 try
                 {
 					luceneDirectory = OpenOrCreateLuceneDirectory(indexDirectory);
 
-                    if (!IsIndexStateValid(luceneDirectory))
+                    // Skip sanity test if we are running in memory. Index will not exist anyways.
+                    if (!configuration.RunInMemory && !IsIndexStateValid(luceneDirectory))
                         throw new InvalidOperationException("Sanity check on the index failed.");
 
                     directory = luceneDirectory;
@@ -149,7 +155,7 @@ namespace Raven.Database.FileSystem.Search
             }          
         }
 
-        private bool IsIndexStateValid(FSDirectory luceneDirectory)
+        private bool IsIndexStateValid(LuceneDirectory luceneDirectory)
         {
             // 1. If commitData is null it means that there were no commits, so just in case we are resetting to Etag.Empty
             // 2. If no 'LastEtag' in commitData then we consider it an invalid index
@@ -183,9 +189,8 @@ namespace Raven.Database.FileSystem.Search
             try
             {
                 IOExtensions.DeleteDirectory(indexDirectory);
+                LuceneDirectory luceneDirectory = FSDirectory.Open(new DirectoryInfo(indexDirectory));
 
-                var luceneDirectory = FSDirectory.Open(new DirectoryInfo(indexDirectory));
-                
                 WriteIndexVersion(luceneDirectory);
                 
                 using ( var indexWriter = new IndexWriter(luceneDirectory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED) )
@@ -210,52 +215,59 @@ namespace Raven.Database.FileSystem.Search
 			}
         }
 
-		private FSDirectory OpenOrCreateLuceneDirectory(string path)
+        private LuceneDirectory OpenOrCreateLuceneDirectory(string path)
         {
-			var luceneDirectory = FSDirectory.Open(new DirectoryInfo(path));
-
-            try
+            if (configuration.RunInMemory)
+			{
+				return new RAMDirectory();
+			}
+			else
             {
-                // We check if the directory already exists
-                if (!IndexReader.IndexExists(luceneDirectory))
-                {                    
-                    TryResettingIndex();      
-                }
-                else
+                var luceneDirectory = FSDirectory.Open(new DirectoryInfo(path));
+
+                try
                 {
-                    // We prepare in case we have to change the index definition to have a proper upgrade path.
-                    EnsureIndexVersionMatches(luceneDirectory);
-
-                    if (luceneDirectory.FileExists("write.lock")) // force lock release, because it was still open when we shut down
+                    // We check if the directory already exists
+                    if (!IndexReader.IndexExists(luceneDirectory))
                     {
-                        IndexWriter.Unlock(luceneDirectory);
+                        TryResettingIndex();
+                    }
+                    else
+                    {
+                        // We prepare in case we have to change the index definition to have a proper upgrade path.
+                        EnsureIndexVersionMatches(luceneDirectory);
 
-                        // for some reason, just calling unlock doesn't remove this file
-                        luceneDirectory.DeleteFile("write.lock");
+                        if (luceneDirectory.FileExists("write.lock")) // force lock release, because it was still open when we shut down
+                        {
+                            IndexWriter.Unlock(luceneDirectory);
+
+                            // for some reason, just calling unlock doesn't remove this file
+                            luceneDirectory.DeleteFile("write.lock");
+                        }
+
+                        if (luceneDirectory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
+                        {
+                            if (resetIndexOnUncleanShutdown)
+                                throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", name, path));
+
+                            CheckIndexAndTryToFix(luceneDirectory);
+                            luceneDirectory.DeleteFile("writing-to-index.lock");
+                        }
                     }
 
-                    if (luceneDirectory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
-                    {
-                        if (resetIndexOnUncleanShutdown)
-                            throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", name, path));
-
-                        CheckIndexAndTryToFix(luceneDirectory);
-                        luceneDirectory.DeleteFile("writing-to-index.lock");
-                    }
+                    return luceneDirectory;
                 }
-
-                return luceneDirectory;
-            }
-            catch
-            {
-                luceneDirectory.Dispose();
-                throw;
+                catch
+                {
+                    luceneDirectory.Dispose();
+                    throw;
+                }
             }
         }
 
         private const string IndexVersionFilename = "index.version";
 
-        private void EnsureIndexVersionMatches(FSDirectory directory)
+        private void EnsureIndexVersionMatches(LuceneDirectory directory)
         {
             if (directory.FileExists(IndexVersionFilename) == false)
                 throw new InvalidOperationException("Could not find " + IndexVersionFilename + " for '" + name + "', resetting index");
@@ -270,7 +282,7 @@ namespace Raven.Database.FileSystem.Search
             }
         }
 
-        private void WriteIndexVersion(FSDirectory directory)
+        private void WriteIndexVersion(LuceneDirectory directory)
         {
             using (var indexOutput = directory.CreateOutput(IndexVersionFilename))
             {
@@ -279,7 +291,7 @@ namespace Raven.Database.FileSystem.Search
             }
         }
 
-        private void CheckIndexAndTryToFix(FSDirectory directory)
+        private void CheckIndexAndTryToFix(LuceneDirectory directory)
         {
             StartupLog.Warn(string.Format("Unclean shutdown detected on file system '{0}', checking the index for errors. This may take a while.", name));
 
