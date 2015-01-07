@@ -27,20 +27,21 @@ namespace Raven.Client.Linq
 	/// </summary>
 	public class RavenQueryInspector<T> : IRavenQueryable<T>, IRavenQueryInspector
 	{
-		private readonly Expression expression;
-		private readonly IRavenQueryProvider provider;
-		private readonly RavenQueryStatistics queryStats;
-		private readonly RavenQueryHighlightings highlightings;
-		private readonly string indexName;
-		private readonly IDatabaseCommands databaseCommands;
-		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+		private Expression expression;
+		private IRavenQueryProvider provider;
+		private RavenQueryStatistics queryStats;
+		private RavenQueryHighlightings highlightings;
+		private string indexName;
+		private IDatabaseCommands databaseCommands;
+		private IAsyncDatabaseCommands asyncDatabaseCommands;
 		private InMemoryDocumentSessionOperations session;
-		private readonly bool isMapReduce;
+		private bool isMapReduce;
+
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
 		/// </summary>
-		public RavenQueryInspector(
+		public void Init(
 			IRavenQueryProvider provider, 
 			RavenQueryStatistics queryStats,
 			RavenQueryHighlightings highlightings,
