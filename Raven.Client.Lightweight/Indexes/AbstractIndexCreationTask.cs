@@ -241,6 +241,21 @@ namespace Raven.Client.Indexes
 
 		}
 
+		internal async Task ReplicateIndexesIfNeededAsync(IAsyncDatabaseCommands databaseCommands)
+		{
+			var serverClient = databaseCommands as AsyncServerClient;
+			if (serverClient == null)
+				return;
+			var replicateIndexUrl = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(IndexName));
+			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, "POST"))
+			{
+				var requestResult = await replicateIndexRequest.ExecuteRawResponseAsync();
+				requestResult.EnsureSuccessStatusCode();
+			}
+
+		}
+
+
 		private IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
 		{
 			IndexDefinition legacyIndexDefinition;
@@ -284,12 +299,13 @@ namespace Raven.Client.Indexes
 						return; // if it matches the legacy definition, do not change that (to avoid re-indexing)
 				}
 			}
-
+			
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
 			await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true, token);
-			await UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, operationMetadata) => client.DirectPutIndexAsync(IndexName, indexDefinition, true, operationMetadata, token), token);				
+			if (Conventions.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Indexes))
+				await ReplicateIndexesIfNeededAsync(asyncDatabaseCommands);
 		}
 	}
 
@@ -369,7 +385,7 @@ namespace Raven.Client.Indexes
 
 	public abstract class AbstractCommonApiForIndexesAndTransformers
 	{
-		private ILog Logger = LogManager.GetCurrentClassLogger();
+		private readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
 		/// <summary>
 		/// Allows to use lambdas recursively
