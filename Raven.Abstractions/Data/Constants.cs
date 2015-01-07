@@ -57,6 +57,7 @@ namespace Raven.Abstractions.Data
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
 		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
+	    public const string MaxConcurrentRequestsForDatabaseDuringLoad = "Raven/MaxConcurrentRequestsForDatabaseDuringLoad";
 	    public const string RejectClientsModeEnabled = "Raven/RejectClientsModeEnabled";
 	    public const string RavenServerBuild = "Raven-Server-Build";
 

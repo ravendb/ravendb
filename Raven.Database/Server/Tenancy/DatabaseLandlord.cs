@@ -167,6 +167,19 @@ namespace Raven.Database.Server.Tenancy
                 }
                 return task;
             }).Unwrap());
+
+			if (database.IsFaulted && database.Exception != null)
+			{
+				// if we are here, there is an error, and if there is an error, we need to clear it from the 
+				// resource store cache so we can try to reload it.
+				// Note that we return the faulted task anyway, because we need the user to look at the error
+				if (database.Exception.Data.Contains("Raven/KeepInResourceStore") == false)
+				{
+					Task<DocumentDatabase> val;
+					ResourcesStoresCache.TryRemove(tenantId, out val);
+				}
+			}
+
             return true;
         }
 
@@ -368,7 +381,13 @@ namespace Raven.Database.Server.Tenancy
 				{
 					var tcs = new TaskCompletionSource<DocumentDatabase>();
 					tcs.SetException(new ObjectDisposedException(dbName, "Database named " + dbName + " is being disposed right now and cannot be accessed.\r\n" +
-																 "Access will be available when the dispose process will end"));
+																 "Access will be available when the dispose process will end")
+					{
+						Data =
+						{
+							{"Raven/KeepInResourceStore", "true"}
+						}
+					});
 					return tcs.Task;
 				});
 			}

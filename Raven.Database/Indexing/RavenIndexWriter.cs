@@ -69,7 +69,7 @@ namespace Raven.Database.Indexing
 		    _indexReaderWarmer = indexReaderWarmer;
 			this.maximumNumberOfWritesBeforeRecreate = maximumNumberOfWritesBeforeRecreate;
 
-			RecreateIfNecessary();
+			RecreateIfNecessary(force: true);
 		}
 
 		public void AddDocument(Document doc)
@@ -113,8 +113,19 @@ namespace Raven.Database.Indexing
 			if (lastEtag != null)
 				commitData.Add("LastEtag", lastEtag);
 
-			indexWriter.Commit(commitData);
-			RecreateIfNecessary();
+			try
+			{
+				indexWriter.Commit(commitData);
+			}
+			catch (SystemException e)
+			{
+				if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
+					RecreateIfNecessary(force: true);
+
+				throw;
+			}
+			
+			RecreateIfNecessary(force: false);
 		}
 
 		public long RamSizeInBytes()
@@ -127,9 +138,9 @@ namespace Raven.Database.Indexing
 			indexWriter.Optimize();
 		}
 
-		private void RecreateIfNecessary()
+		private void RecreateIfNecessary(bool force)
 		{
-			if (currentNumberOfWrites >= maximumNumberOfWritesBeforeRecreate)
+			if (force || currentNumberOfWrites >= maximumNumberOfWritesBeforeRecreate)
 				DisposeIndexWriter();
 
 			if (indexWriter == null)

@@ -698,12 +698,9 @@ namespace Raven.Client.Shard
 
 		#region Queries
 
-		protected override RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce, RavenQueryProvider<T> provider,
-																			RavenQueryStatistics ravenQueryStatistics,
-																			RavenQueryHighlightings highlightings)
+	    public override RavenQueryInspector<T> CreateRavenQueryInspector<T>()
 		{
-			return new ShardedRavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this,
-													 isMapReduce, shardStrategy,
+			return new ShardedRavenQueryInspector<T>(shardStrategy,
 													 shardDbCommands.Values.ToList(),
 													 null);
 		}
@@ -718,7 +715,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("The synchronous sharded document store doesn't support async operations");
 		}
 
-        [Obsolete("Use DocumentQuery instead.")]
+	    [Obsolete("Use DocumentQuery instead.")]
 		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
             return DocumentQuery<T, TIndexCreator>();
