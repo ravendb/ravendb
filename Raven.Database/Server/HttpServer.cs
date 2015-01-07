@@ -125,7 +125,7 @@ namespace Raven.Database.Server
 
 		public HttpServer(InMemoryRavenConfiguration configuration, DocumentDatabase resourceStore)
 		{
-			_maxNumberOfThreadsForDatabaseToLoad = new SemaphoreSlim(configuration.MaxConcurrentServerRequests);
+			_maxNumberOfThreadsForDatabaseToLoad = new SemaphoreSlim(configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
 			if (configuration.RunInMemory == false)
