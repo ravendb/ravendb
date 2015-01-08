@@ -77,11 +77,11 @@ namespace Raven.Database.Server.Controllers
             }
 		}
 
-	
+		
 
 		[HttpPost]
-		[Route("indexes/last-queried")]
-		[Route("databases/{databaseName}/indexes/last-queried")]
+		[RavenRoute("indexes/last-queried")]
+		[RavenRoute("databases/{databaseName}/indexes/last-queried")]
 		public HttpResponseMessage IndexUpdateLastQueried([FromBody] Dictionary<string, DateTime> lastQueriedByIndexId)
 		{
 			Database.TransactionalStorage.Batch(accessor =>
