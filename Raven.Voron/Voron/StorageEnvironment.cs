@@ -574,7 +574,7 @@ namespace Voron
 	        ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages);
         }
 
-		internal void ForceLogFlushToDataFile(Transaction tx, bool allowToFlushOverwrittenPages)
+		internal void ForceLogFlushToDataFile(Transaction tx, bool allowToFlushOverwrittenPages, bool forceDataFileSync = false)
 	    {
 		    if (IsDebugRecording)
 		    {

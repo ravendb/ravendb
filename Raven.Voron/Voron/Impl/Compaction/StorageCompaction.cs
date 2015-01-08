@@ -3,17 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using Voron.Trees;
 
 namespace Voron.Impl.Compaction
 {
 	public unsafe static class StorageCompaction
 	{
-		public static void Execute(string srcPath, string compactPath)
+		public static void Execute(StorageEnvironmentOptions srcOptions, StorageEnvironmentOptions compactOptions, long maxTransactionSizeInBytes = 8 * 1024 * 1024)
 		{
-			using(var existingEnv = new StorageEnvironment(StorageEnvironmentOptions.ForPath(srcPath))) // TODO arek - temp path, journal's path
-			using (var compactedEnv = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactPath)))
+			using(var existingEnv = new StorageEnvironment(srcOptions))
+			using (var compactedEnv = new StorageEnvironment(compactOptions))
 			{
 				using (var rootIterator = existingEnv.State.Root.Iterate())
 				{
@@ -28,46 +27,58 @@ namespace Voron.Impl.Compaction
 						{
 							var existingTree = existingEnv.State.GetTree(txr, treeName);
 
-							using (var treeIterator = existingTree.Iterate())
+							using (var existingTreeIterator = existingTree.Iterate())
 							{
-								if (treeIterator.Seek(Slice.BeforeAllKeys) == false)
+								if (existingTreeIterator.Seek(Slice.BeforeAllKeys) == false)
 									continue;
 
 								using (var txw = compactedEnv.NewTransaction(TransactionFlags.ReadWrite))
 								{
-									var newTree = compactedEnv.CreateTree(txw, treeName);
-
-									do
-									{
-										var key = treeIterator.CurrentKey;
-
-										if (treeIterator.Current->Flags == NodeFlags.MultiValuePageRef)
-										{
-											using (var multiTreeIterator = existingTree.MultiRead(key))
-											{
-												if (multiTreeIterator.Seek(Slice.BeforeAllKeys) == false)
-													continue;
-
-												do
-												{
-													var multiValue = multiTreeIterator.CurrentKey;
-
-													newTree.MultiAdd(key, multiValue);
-
-												} while (multiTreeIterator.MoveNext());
-											}
-										}
-										else
-										{
-											using (var value = existingTree.Read(key).Reader.AsStream())
-											{
-												newTree.Add(key, value);
-											}
-										}
-									} while (treeIterator.MoveNext());
-
-									txw.Commit(); // TODO do not commit the entire tree in a single transaction
+									compactedEnv.CreateTree(txw, treeName);
+									txw.Commit();
 								}
+
+								do
+								{
+									var transactionDataSize = 0L;
+
+									using (var txw = compactedEnv.NewTransaction(TransactionFlags.ReadWrite))
+									{
+										var newTree = txw.ReadTree(treeName);
+
+										do
+										{
+											var key = existingTreeIterator.CurrentKey;
+
+											if (existingTreeIterator.Current->Flags == NodeFlags.MultiValuePageRef)
+											{
+												using (var multiTreeIterator = existingTree.MultiRead(key))
+												{
+													if (multiTreeIterator.Seek(Slice.BeforeAllKeys) == false)
+														continue;
+
+													do
+													{
+														var multiValue = multiTreeIterator.CurrentKey;
+														newTree.MultiAdd(key, multiValue);
+														transactionDataSize += multiValue.Size;
+
+													} while (multiTreeIterator.MoveNext());
+												}
+											}
+											else
+											{
+												using (var value = existingTree.Read(key).Reader.AsStream())
+												{
+													newTree.Add(key, value);
+													transactionDataSize += value.Length;
+												}
+											}
+										} while (transactionDataSize < maxTransactionSizeInBytes && existingTreeIterator.MoveNext());
+
+										txw.Commit();
+									}
+								} while (existingTreeIterator.MoveNext());
 							}
 						}
 
@@ -75,8 +86,6 @@ namespace Voron.Impl.Compaction
 				}
 				compactedEnv.ForceLogFlushToDataFile(null, true);
 			}
-
-
 		}
 	}
 }

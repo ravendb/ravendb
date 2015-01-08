@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Xunit;
 using Voron.Impl.Compaction;
 
@@ -14,7 +15,7 @@ namespace Voron.Tests.Compaction
 	public class StorageCompactionTests : IDisposable
 	{
 		public const string CompactionTestsData = "Data";
-		public const string CompactedData = "Data.Compact";
+		public const string CompactedData = "Data.Compacted";
 
 		public StorageCompactionTests()
 		{
@@ -35,7 +36,7 @@ namespace Voron.Tests.Compaction
 			random.NextBytes(value1);
 			random.NextBytes(value2);
 
-			const int treeCount = 5;// TODO arek - change counts later
+			const int treeCount = 5;
 			const int recordCount = 6;
 			const int multiValueTreeCount = 7;
 			const int multiValueRecordsCount = 4;
@@ -83,7 +84,7 @@ namespace Voron.Tests.Compaction
 				}
 			}
 
-			StorageCompaction.Execute(CompactionTestsData, CompactedData);
+			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), StorageEnvironmentOptions.ForPath(CompactedData), maxTransactionSizeInBytes: 256);
 
 			using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactedData)))
 			{
@@ -138,7 +139,60 @@ namespace Voron.Tests.Compaction
 					}
 				}
 			}
+		}
 
+		[Fact]
+		public void AfterCompactionStorageShouldTakeLessSpace()
+		{
+			var r = new Random();
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactionTestsData)))
+			{
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = env.CreateTree(tx, "records");
+
+					for (int i = 0; i < 100; i++)
+					{
+						var bytes = new byte[r.Next(10, 2*1024*1024)];
+						r.NextBytes(bytes);
+
+						tree.Add("record/" + i, bytes);
+					}
+
+					tx.Commit();
+				}
+
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = env.CreateTree(tx, "records");
+
+					for (int i = 0; i < 50; i++)
+					{
+						tree.Delete("record/" + r.Next(0, 100));
+					}
+
+					tx.Commit();
+				}
+			}
+
+			var oldSize = DirectorySize(new DirectoryInfo(CompactionTestsData));
+
+			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), StorageEnvironmentOptions.ForPath(CompactedData), maxTransactionSizeInBytes: 256);
+
+			var newSize = DirectorySize(new DirectoryInfo(CompactedData));
+
+			Assert.True(newSize < oldSize);
+		}
+
+		public static long DirectorySize(DirectoryInfo d)
+		{
+			var files = d.GetFiles();
+			var size = files.Sum(fi => fi.Length);
+
+			var dis = d.GetDirectories();
+			size += dis.Sum(di => DirectorySize(di));
+
+			return size;
 		}
 
 		public void Dispose()
