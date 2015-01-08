@@ -878,21 +878,35 @@ namespace Raven.Bundles.Replication.Tasks
 			var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(result.LastEtag);
 			Etag lastEtag = null;
 			if (docsToReplicate.Count > 0)
-			{
 				lastEtag = docsToReplicate[docsToReplicate.Count - 1].Etag;
+
+			var maxNumberOfTombstones = Math.Max(1024, docsToReplicate.Count);
+			var tombstones = actions
+				.Lists
+				.Read(Constants.RavenReplicationDocsTombstones, result.LastEtag, lastEtag, maxNumberOfTombstones + 1)
+				.Select(x => new JsonDocument
+				{
+					Etag = x.Etag,
+					Key = x.Key,
+					Metadata = x.Data,
+					DataAsJson = new RavenJObject()
+				})
+				.ToList();
+
+			var results = docsToReplicate.Concat(tombstones);
+
+			if (tombstones.Count >= maxNumberOfTombstones + 1)
+			{
+				var lastTombstoneEtag = tombstones[tombstones.Count - 1].Etag;
+				log.Info("Replication batch trimmed. Found more than '{0}' document tombstones. Last etag from prefetcher: '{1}'. Last tombstone etag: '{2}'.", maxNumberOfTombstones, lastEtag, lastTombstoneEtag);
+
+				results = results.Where(x => EtagUtil.IsGreaterThan(x.Etag, lastTombstoneEtag) == false);
 			}
-			return docsToReplicate.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", result.LastEtag, lastEtag, 1024)
-							.Select(x => new JsonDocument
-							{
-								Etag = x.Etag,
-								Key = x.Key,
-								Metadata = x.Data,
-								DataAsJson = new RavenJObject()
-							}))
+
+			return results
 				.OrderBy(x => x.Etag)
 				.ToList();
 		}
-
 
 		private Tuple<RavenJArray, Etag> GetAttachments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
 		{
@@ -991,16 +1005,31 @@ namespace Raven.Bundles.Replication.Tasks
 			if (attachmentInformations.Count > 0)
 				lastEtag = attachmentInformations[attachmentInformations.Count - 1].Etag;
 
-			return attachmentInformations
-				.Concat(actions.Lists.Read(Constants.RavenReplicationAttachmentsTombstones, lastAttachmentEtag, lastEtag, 100)
-							.Select(x => new AttachmentInformation
-							{
-								Key = x.Key,
-								Etag = x.Etag,
-								Metadata = x.Data,
-								Size = 0,
-							}))
-				.OrderBy(x => new ComparableByteArray(x.Etag))
+			var maxNumberOfTombstones = Math.Max(100, attachmentInformations.Count);
+			var tombstones = actions
+				.Lists
+				.Read(Constants.RavenReplicationAttachmentsTombstones, lastAttachmentEtag, lastEtag, maxNumberOfTombstones + 1)
+				.Select(x => new AttachmentInformation
+				{
+					Key = x.Key,
+					Etag = x.Etag,
+					Metadata = x.Data,
+					Size = 0,
+				})
+				.ToList();
+
+			var results = attachmentInformations.Concat(tombstones);
+
+			if (tombstones.Count >= maxNumberOfTombstones + 1)
+			{
+				var lastTombstoneEtag = tombstones[tombstones.Count - 1].Etag;
+				log.Info("Replication batch trimmed. Found more than '{0}' attachment tombstones. Last attachment etag: '{1}'. Last tombstone etag: '{2}'.", maxNumberOfTombstones, lastEtag, lastTombstoneEtag);
+
+				results = results.Where(x => EtagUtil.IsGreaterThan(x.Etag, lastTombstoneEtag) == false);
+			}
+
+			return results
+				.OrderBy(x => x.Etag)
 				.ToList();
 		}
 
