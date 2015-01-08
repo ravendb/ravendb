@@ -6,11 +6,16 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client.Embedded;
+using Raven.Client.Indexes;
+using Raven.Database;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Util;
 using Raven.Tests.Common;
@@ -18,6 +23,7 @@ using Raven.Tests.Common.Attributes;
 
 using Xunit;
 using Xunit.Extensions;
+using Xunit.Sdk;
 
 namespace Raven.Tests.Bundles.SqlReplication
 {
@@ -329,6 +335,104 @@ var nameArr = this.StepName.split('.');");
 			}
 		}
 
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task RavenDB_3106(string requestedStorage)
+		{
+			CreateRdbmsSchema();
+			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
+			{
+				new RavenDocumentsByEntityName().Execute(store);
+
+				var eventSlim = new ManualResetEventSlim(false);
+				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
+					 .First().AfterReplicationCompleted += successCount =>
+					 {
+						 if (successCount != 0)
+							 eventSlim.Set();
+					 };
+
+				using (var session = store.OpenSession())
+				{
+					for (var i = 0; i < 2048; i++)
+					{
+						session.Store(new Order
+						{
+							OrderLines = new List<OrderLine>
+							{
+								new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+								new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+							}
+						});
+					}
+
+					session.SaveChanges();
+				}
+
+				SetupSqlReplication(store, defaultScript);
+
+				eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+				AssertCountsWithTimeout(2048, 4096, TimeSpan.FromMinutes(1));
+
+				eventSlim.Reset();
+
+				PauseReplication(0, store.DocumentDatabase);
+
+				WaitForIndexing(store);
+
+				store
+					.DatabaseCommands
+					.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Orders OR Tag:OrderLines" })
+					.WaitForCompletion();
+
+				WaitForIndexing(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Order
+					{
+						OrderLines = new List<OrderLine>
+						{
+							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+						}
+					});
+
+					session.SaveChanges();
+				}
+
+				ContinueReplication(0, store.DocumentDatabase);
+
+				eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+				AssertCountsWithTimeout(1, 2, TimeSpan.FromMinutes(1));
+			}
+		}
+
+		private static void AssertCountsWithTimeout(int ordersCount, int orderLineCounts, TimeSpan timeout)
+		{
+			Exception lastException = null;
+
+			var stopWatch = Stopwatch.StartNew();
+			while (stopWatch.Elapsed <= timeout)
+			{
+				try
+				{
+					AssertCounts(ordersCount, orderLineCounts);
+					return;
+				}
+				catch (AssertException e)
+				{
+					lastException = e;
+				}
+
+				Thread.Sleep(500);
+			}
+
+			throw lastException;
+		}
+
 		private static void AssertCounts(int ordersCount, int orderLineCounts)
 		{
 			var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
@@ -367,6 +471,26 @@ var nameArr = this.StepName.split('.');");
 				});
 				session.SaveChanges();
 			}
+		}
+
+		protected void PauseReplication(int serverIndex, DocumentDatabase database, bool waitToStop = true)
+		{
+			var replicationTask = database.StartupTasks.OfType<SqlReplicationTask>().First();
+
+			replicationTask.Pause();
+
+			if (waitToStop)
+				SpinWait.SpinUntil(() => replicationTask.IsRunning == false, TimeSpan.FromSeconds(10));
+		}
+
+		protected void ContinueReplication(int serverIndex, DocumentDatabase database, bool waitToStart = true)
+		{
+			var replicationTask = database.StartupTasks.OfType<SqlReplicationTask>().First();
+
+			replicationTask.Continue();
+
+			if (waitToStart)
+				SpinWait.SpinUntil(() => replicationTask.IsRunning, TimeSpan.FromSeconds(10));
 		}
 
 		public class Order
