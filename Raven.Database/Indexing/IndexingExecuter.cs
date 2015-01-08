@@ -168,7 +168,7 @@ namespace Raven.Database.Indexing
 								jsonDocs.Count, indexingGroup.LastIndexedEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
 						}
 
-						context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexesToWorkOn.Select(x => x.Index.PublicName).ToList(), out batchInfo);
+						batchInfo = context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexesToWorkOn.Select(x => x.Index.PublicName).ToList());
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 
@@ -202,8 +202,8 @@ namespace Raven.Database.Indexing
 						}
 
 						prefetchingBehavior.BatchProcessingComplete();
-						if(batchInfo != null)
-							batchInfo.BatchCompleted();
+						if (batchInfo != null)
+							context.ReportIndexingBatchCompleted(batchInfo);
 					}
 				}
 			});
@@ -314,10 +314,10 @@ namespace Raven.Database.Indexing
 		        IndexingPerformanceStats performance = null;
 		        try
 		        {
-			        context.ReportIndexingBatchStarted(precomputedBatch.Documents.Count, precomputedBatch.Documents.Sum(x => x.SerializedSizeOnDisk), new List<string>()
+					batchInfo = context.ReportIndexingBatchStarted(precomputedBatch.Documents.Count, precomputedBatch.Documents.Sum(x => x.SerializedSizeOnDisk), new List<string>()
 			        {
 				        indexToWorkOn.Index.PublicName
-			        }, out batchInfo);
+			        });
 
 			        batchInfo.BatchType = BatchType.Precomputed;
 
@@ -336,7 +336,7 @@ namespace Raven.Database.Indexing
 				        if (performance != null)
 					        batchInfo.PerformanceStats.TryAdd(indexingBatchForIndex.Index.PublicName, performance);
 
-				        batchInfo.BatchCompleted();
+				        context.ReportIndexingBatchCompleted(batchInfo);
 			        }
 		        }
 	        }
