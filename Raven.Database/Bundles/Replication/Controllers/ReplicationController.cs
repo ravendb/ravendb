@@ -87,35 +87,44 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			if (string.IsNullOrEmpty(databaseName))
 				return GetMessageWithString("Destination database name is required.", HttpStatusCode.BadRequest);
 
+			var result = new ReplicationExplanationForDocument
+			{
+				Key = docId,
+				Destination = new ReplicationExplanationForDocument.DestinationInformation
+				{
+					Url = destinationUrl,
+					DatabaseName = databaseName
+				}
+			};
+
 			var destinations = ReplicationTask.GetReplicationDestinations(x => string.Equals(x.Url, destinationUrl, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Database, databaseName, StringComparison.OrdinalIgnoreCase));
 			if (destinations == null || destinations.Length == 0)
-				return GetMessageWithString(string.Format("Could not find replication destination for a given url ('{0}') and database ('{1}').", destinationUrl, databaseName), HttpStatusCode.BadRequest);
+			{
+				result.Message = string.Format("Could not find replication destination for a given url ('{0}') and database ('{1}').", destinationUrl, databaseName);
+				return GetMessageWithObject(result);
+			}
 
 			if (destinations.Length > 1)
-				return GetMessageWithString(string.Format("There is more than one replication destination for a given url ('{0}') and database ('{1}').", destinationUrl, databaseName), HttpStatusCode.BadRequest);
+			{
+				result.Message = string.Format("There is more than one replication destination for a given url ('{0}') and database ('{1}').", destinationUrl, databaseName);
+				return GetMessageWithObject(result);
+			}
 
 			var destination = destinations[0];
 			var destinationsReplicationInformationForSource = ReplicationTask.GetLastReplicatedEtagFrom(destination);
 			if (destinationsReplicationInformationForSource == null)
-				return GetMessageWithString("Could not connect to destination server.", HttpStatusCode.BadRequest);
+			{
+				result.Message = "Could not connect to destination server.";
+				return GetMessageWithObject(result);
+			}
 
 			var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
-
-			var result = new ReplicationExplanationForDocument
-			{
-				Destination = new ReplicationExplanationForDocument.DestinationInformation
-				{
-					DatabaseName = databaseName,
-					Url = destinationUrl,
-					ServerInstanceId = destinationsReplicationInformationForSource.ServerInstanceId,
-					LastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag
-				}
-			};
+			result.Destination.ServerInstanceId = destinationId;
+			result.Destination.LastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 
 			var document = Database.Documents.Get(docId, null);
 			if (document == null)
 			{
-				result.Key = docId;
 				result.Message = string.Format("Document with given key ('{0}') does not exist.", docId);
 				return GetMessageWithObject(result);
 			}
@@ -555,7 +564,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 				public string DatabaseName { get; set; }
 
-				public Guid ServerInstanceId { get; set; }
+				public string ServerInstanceId { get; set; }
 
 				public Etag LastDocumentEtag { get; set; }
 			}
