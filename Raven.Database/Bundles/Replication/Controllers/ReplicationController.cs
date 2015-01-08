@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Mono.CSharp;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Bundles.Replication.Responders;
@@ -22,7 +20,6 @@ using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Controllers
@@ -72,6 +69,71 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 				return withConfiguredResolvers;
 			}
+		}
+
+		[HttpGet]
+		[RavenRoute("replication/explain/{*docId}")]
+		[RavenRoute("databases/{databaseName}/replication/explain/{*docId}")]
+		public HttpResponseMessage ExplainGet(string docId)
+		{
+			if (string.IsNullOrEmpty(docId)) 
+				return GetMessageWithString("Document key is required.", HttpStatusCode.BadRequest);
+
+			var destinationUrl = GetQueryStringValue("destinationUrl");
+			if (string.IsNullOrEmpty(destinationUrl))
+				return GetMessageWithString("Destination url is required.", HttpStatusCode.BadRequest);
+
+			var databaseName = GetQueryStringValue("databaseName");
+			if (string.IsNullOrEmpty(databaseName))
+				return GetMessageWithString("Destination database name is required.", HttpStatusCode.BadRequest);
+
+			var destinations = ReplicationTask.GetReplicationDestinations(x => string.Equals(x.Url, destinationUrl, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Database, databaseName, StringComparison.OrdinalIgnoreCase));
+			if (destinations == null || destinations.Length == 0)
+				return GetMessageWithString(string.Format("Could not find replication destination for a given url ('{0}') and database ('{1}').", destinationUrl, databaseName), HttpStatusCode.BadRequest);
+
+			if (destinations.Length > 1)
+				return GetMessageWithString(string.Format("There is more than one replication destination for a given url ('{0}') and database ('{1}').", destinationUrl, databaseName), HttpStatusCode.BadRequest);
+
+			var destination = destinations[0];
+			var destinationsReplicationInformationForSource = ReplicationTask.GetLastReplicatedEtagFrom(destination);
+			if (destinationsReplicationInformationForSource == null)
+				return GetMessageWithString("Could not connect to destination server.", HttpStatusCode.BadRequest);
+
+			var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
+
+			var result = new ReplicationExplanationForDocument
+			{
+				Destination = new ReplicationExplanationForDocument.DestinationInformation
+				{
+					DatabaseName = databaseName,
+					Url = destinationUrl,
+					ServerInstanceId = destinationsReplicationInformationForSource.ServerInstanceId,
+					LastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag
+				}
+			};
+
+			var document = Database.Documents.Get(docId, null);
+			if (document == null)
+			{
+				result.Key = docId;
+				result.Message = string.Format("Document with given key ('{0}') does not exist.", docId);
+				return GetMessageWithObject(result);
+			}
+
+			result.Key = document.Key;
+			result.Etag = document.Etag;
+
+			string reason;
+			if (destination.FilterDocuments(destinationId, document.Key, document.Metadata, out reason) == false)
+			{
+				result.Message = reason;
+				return GetMessageWithObject(result);
+			}
+
+			reason = EtagUtil.IsGreaterThan(document.Etag, destinationsReplicationInformationForSource.LastDocumentEtag) ? "Document will be replicated." : "Document should have been replicated.";
+			result.Message = reason;
+
+			return GetMessageWithObject(result);
 		}
 
 		[HttpGet]
@@ -474,6 +536,28 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			{
 				Log.Warn("Could not deserialize a replication config", e);
 				return null;
+			}
+		}
+
+		private class ReplicationExplanationForDocument
+		{
+			public string Key { get; set; }
+
+			public Etag Etag { get; set; }
+
+			public DestinationInformation Destination { get; set; }
+
+			public string Message { get; set; }
+
+			public class DestinationInformation
+			{
+				public string Url { get; set; }
+
+				public string DatabaseName { get; set; }
+
+				public Guid ServerInstanceId { get; set; }
+
+				public Etag LastDocumentEtag { get; set; }
 			}
 		}
 	}

@@ -82,7 +82,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private HttpRavenRequestFactory nonBufferedHttpRavenRequestFactory;
 
 		private IndependentBatchSizeAutoTuner autoTuner;
-		private readonly ConcurrentDictionary<string, PrefetchingBehavior> prefetchingBehaviors = new ConcurrentDictionary<string, PrefetchingBehavior>();
+		internal readonly ConcurrentDictionary<string, PrefetchingBehavior> prefetchingBehaviors = new ConcurrentDictionary<string, PrefetchingBehavior>();
 
 		public void Execute(DocumentDatabase database)
 		{
@@ -995,7 +995,8 @@ namespace Raven.Bundles.Replication.Tasks
 										}
 									}
 
-									return destination.FilterDocuments(destinationId, document.Key, document.Metadata) &&
+									string reason;
+									return destination.FilterDocuments(destinationId, document.Key, document.Metadata, out reason) &&
 										   prefetchingBehavior.FilterDocuments(document);
 								})
 								.ToList();
@@ -1226,7 +1227,7 @@ namespace Raven.Bundles.Replication.Tasks
 				.ToList();
 		}
 
-		private SourceReplicationInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)
+		internal SourceReplicationInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)
 		{
 			try
 			{
@@ -1261,7 +1262,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return Uri.EscapeDataString(docDb.ServerUrl);
 		}
 
-		private ReplicationStrategy[] GetReplicationDestinations(Predicate<ReplicationDestination> predicate = null)
+		internal ReplicationStrategy[] GetReplicationDestinations(Predicate<ReplicationDestination> predicate = null)
 		{
 			var document = docDb.Documents.Get(Constants.RavenReplicationDestinations, null);
 			if (document == null)
