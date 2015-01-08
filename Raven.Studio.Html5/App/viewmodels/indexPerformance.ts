@@ -90,7 +90,6 @@ class gapFinder {
         }
     }
 }
-
 class metrics extends viewModelBase { 
 
 
@@ -295,35 +294,38 @@ class metrics extends viewModelBase {
         return currentData;
     }
 
-    computeMapCache(input: indexNameAndMapPerformanceStatsWithCache) {
-        var widths = [];
-        var sums = [];
+    computeMapCache(input: indexNameAndMapPerformanceStats) {
         var currentOffset = 0;
 
-        var timings = [
-            input.stats.LoadDocumentPerformance.LoadDocumentDurationMs,
-            input.stats.LinqExecutionPerformance.MapLinqExecutionDurationMs,
-            input.stats.LinqExecutionPerformance.ReduceLinqExecutionDurationMs,
-            input.stats.LucenePerformance.DeleteExistingDocumentsDurationMs,
-            input.stats.LucenePerformance.ConvertToLuceneDocumentsDurationMs,
-            input.stats.LucenePerformance.AddDocumentsDurationMs,
-            input.stats.LucenePerformance.FlushToDiskDurationMs,
-            input.stats.LucenePerformance.RecreateSearcherDurationMs,
-            input.stats.MapStoragePerformance.DeleteMappedResultsDurationMs,
-            input.stats.MapStoragePerformance.ConvertToRavenJObjectDurationMs,
-            input.stats.MapStoragePerformance.PutMappedResultsDurationMs,
-            input.stats.MapStoragePerformance.ScheduleReductionsDurationMs,
-            input.stats.MapStoragePerformance.StorageCommitDurationMs
-        ];
+        var timings = input.stats.Operations.map(o => o.DurationMs);
+
         for (var i = 0; i < timings.length; i++) {
             var currentWidth = Math.max(timings[i], 0);
-            widths.push(currentWidth);
-            sums.push(currentOffset);
+
+            var op = input.stats.Operations[i];
+            op.CacheWidth = currentWidth;
+            op.CacheCumulativeSum = currentOffset;
+            op.CacheIsSingleThread = "Name" in op;
+
+            if (!op.CacheIsSingleThread) {
+                var mtGroup = <parallelPefromanceStatsDto>op;
+                for (var thread = 0; thread < mtGroup.BatchedOperations.length; thread++) {
+                    var perThreadInfo = mtGroup.BatchedOperations[thread];
+                    var currentPerThreadOffset = perThreadInfo.StartDelay;
+
+                    for (var j = 0; j < perThreadInfo.Operations.length; j++) {
+                        var innerOp = perThreadInfo.Operations[j];
+                        var w = Math.max(innerOp.DurationMs, 0);
+                        innerOp.CacheWidth = w;
+                        innerOp.CacheCumulativeSum = currentPerThreadOffset;
+                        innerOp.CacheIsSingleThread = true;
+                        currentPerThreadOffset += w;
+                    }
+                }
+            }
+
             currentOffset += currentWidth;
         }
-
-        input.widths = widths;
-        input.cumulativeSums = sums;
     }
 
     computeReduceCache(input: reduceLevelPeformanceStatsDtoWithCache) {
@@ -331,21 +333,7 @@ class metrics extends viewModelBase {
         var sums = [];
         var currentOffset = 0;
 
-        var timings = [
-            input.LinqExecutionPerformance.MapLinqExecutionDurationMs,
-            input.LinqExecutionPerformance.ReduceLinqExecutionDurationMs,
-            input.LucenePerformance.DeleteExistingDocumentsDurationMs,
-            input.LucenePerformance.ConvertToLuceneDocumentsDurationMs,
-            input.LucenePerformance.AddDocumentsDurationMs,
-            input.LucenePerformance.FlushToDiskDurationMs,
-            input.LucenePerformance.RecreateSearcherDurationMs,
-            input.ReduceStoragePerformance.GetItemsToReduceDurationMs,
-            input.ReduceStoragePerformance.DeletePreviouslyScheduledReductionsMs,
-            input.ReduceStoragePerformance.ScheduleReductionsDurationMs,
-            input.ReduceStoragePerformance.GetMappedResultsDurationMs,
-            input.ReduceStoragePerformance.RemoveReduceResultsDurationMs,
-            input.ReduceStoragePerformance.StorageCommitDurationMs
-        ];
+        var timings = input.Operations.map(o => o.DurationMs);
         for (var i = 0; i < timings.length; i++) {
             var currentWidth = Math.max(timings[i], 0);
             widths.push(currentWidth);
@@ -705,15 +693,20 @@ class metrics extends viewModelBase {
                 (d: indexNameAndMapPerformanceStats) =>
                     "translate(" + self.xScale(self.isoFormat.parse(d.stats.Started)) + "," + self.yMapScale(d.indexName) + ")");
 
+        
         opTransition.select('.main_bar')
             .attr('width', (d: indexNameAndMapPerformanceStats) => self.xScaleExtent(d.stats.DurationMilliseconds));
-
-        for (var i = 0; i < metrics.map_bar_names.length; i++) {
-            var barName = metrics.map_bar_names[i];
-            opTransition.select('.' + barName)
-                .attr('x', (d: indexNameAndMapPerformanceStatsWithCache) => self.xScaleExtent(d.cumulativeSums[i]))
-                .attr('width', (d: indexNameAndMapPerformanceStatsWithCache) => self.xScaleExtent(d.widths[i]));
-        }
+        
+        opTransition.selectAll('.sto_item')
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
+        
+        opTransition.selectAll('.mto_items')
+            .attr("transform", (d: parallelPefromanceStatsDto) => "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)")
+        
+        opTransition.selectAll('.mto_item')
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
 
         var enteringOps = op.enter()
             .append('g')
@@ -736,19 +729,47 @@ class metrics extends viewModelBase {
             .transition()
             .attr('width', (d: indexNameAndMapPerformanceStats) => self.xScaleExtent(d.stats.DurationMilliseconds));
 
-        for (var i = 0; i < metrics.map_bar_names.length; i++) {
-            var barName = metrics.map_bar_names[i];
-            var barColor = metrics.map_bar_colors[i];
-            enteringOps.append('rect')
-                .attr('class', barName)
-                .attr('x', (d: indexNameAndMapPerformanceStatsWithCache) => self.xScaleExtent(d.cumulativeSums[i]))
-                .attr('y', self.yBarMargin + 3)
-                .attr('width', 0)
-                .attr('height', self.yBarHeight - 6)
-                .style('fill', barColor)
-                .transition()
-                .attr('width', (d: indexNameAndMapPerformanceStatsWithCache) => self.xScaleExtent(d.widths[i]));
-        }
+        enteringOps.selectAll('.sto_item')
+            .data((d: indexNameAndMapPerformanceStats) => d.stats.Operations.filter(o => o.CacheIsSingleThread))
+            .enter()
+            .append('rect')
+            .attr('class', (d: performanceStatsDto) => 'sto_item ' + d.Name)
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('y', self.yBarMargin)
+            .attr('width', 0)
+            .attr('height', self.yBarHeight)
+            .transition()
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
+
+        var mtoItems = enteringOps.selectAll('.mto_items')
+            .data((d: indexNameAndMapPerformanceStats) => d.stats.Operations.filter(o => !o.CacheIsSingleThread))
+            .enter()
+            .append('g')
+            .attr('class', 'mto_items')
+            .attr("transform",
+            (d: parallelPefromanceStatsDto) =>
+                "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)");
+
+        var mtoThreadItems = mtoItems.selectAll('.mto_thread_item')
+            .data(d => d.BatchedOperations)
+            .enter()
+            .append('g')
+            .attr('class', 'mto_thread_item')
+            .attr("transform",
+            (d: parallelBatchStatsDto, i) =>
+                "translate(0," + (i *self.yBarHeight / d.Parent.NumberOfThreads + self.yBarMargin) + ")");
+
+        mtoThreadItems.selectAll('.mto_item')
+            .data(d => d.Operations)
+            .enter()
+            .append('rect')
+            .attr('class', (d: performanceStatsDto) => 'mto_item ' + d.Name)
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('y', 0)
+            .attr('width', 0)
+            .attr('height', (d:performanceStatsDto) => self.yBarHeight / d.ParallelParent.Parent.NumberOfThreads)
+            .transition()
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
     }
 
     private updateReduceOperations() {
@@ -891,6 +912,11 @@ class metrics extends viewModelBase {
 
     }
 
+    private findMaxThreadCountInMap(data: indexNameAndMapPerformanceStats) {
+        var parallelOps = <parallelPefromanceStatsDto[]>data.stats.Operations.filter(x => "NumberOfThreads" in x);
+        return d3.max(parallelOps.map(p => p.NumberOfThreads));
+    }
+
     private indexStatClicked(data: indexNameAndMapPerformanceStats, element: Element) {
         var self = this;
         nv.tooltip.cleanup();
@@ -898,6 +924,7 @@ class metrics extends viewModelBase {
         var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'index-stat-template\' }"></div>'; 
         nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
+        data.CacheThreadCount = self.findMaxThreadCountInMap(data);
         self.fillTooltip(data, metrics.map_bar_colors);
     }
 

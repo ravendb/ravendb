@@ -133,11 +133,7 @@ interface indexingBatchInfoDto {
 interface indexNameAndMapPerformanceStats {
     indexName: string;
     stats: indexPerformanceDto;
-}
-
-interface indexNameAndMapPerformanceStatsWithCache extends indexNameAndMapPerformanceStats {
-    widths: number[];
-    cumulativeSums: number[];
+    CacheThreadCount?: number;
 }
 
 interface indexPerformanceDto {
@@ -149,33 +145,9 @@ interface indexPerformanceDto {
     Completed: string; // Date
     Duration: string;
     DurationMilliseconds: number;
-
-    LoadDocumentPerformance: {
-        LoadDocumentCount: number;
-        LoadDocumentDurationMs: number
-    };
-    LinqExecutionPerformance: {
-        MapLinqExecutionDurationMs: number;
-        ReduceLinqExecutionDurationMs: number
-    };
-    LucenePerformance: {
-        DeleteExistingDocumentsDurationMs: number;
-        ConvertToLuceneDocumentsDurationMs: number;
-        AddDocumentsDurationMs: number;
-        FlushToDiskDurationMs: number;
-		RecreateSearcherDurationMs: number
-    };
-    MapStoragePerformance: {
-        DeleteMappedResultsDurationMs: number;
-        ConvertToRavenJObjectDurationMs: number;
-        PutMappedResultsDurationMs: number;
-        ScheduleReductionsDurationMs: number;
-        StorageCommitDurationMs: number
-    };
-
+    Operations: basePerformanceStatsDto[];
     WaitingTimeSinceLastBatchCompleted: string;
 }
-
 
 interface reducingBatchInfoDto {
     IndexesToWorkOn: string[];
@@ -211,28 +183,32 @@ interface reduceLevelPeformanceStatsDto {
     Completed: string; // Date
     Duration: string;
     DurationMs: number;
-    LinqExecutionPerformance: {
-        MapLinqExecutionDurationMs: number;
-        ReduceLinqExecutionDurationMs: number
-    };
-    LucenePerformance: {
-        DeleteExistingDocumentsDurationMs: number;
-        ConvertToLuceneDocumentsDurationMs: number;
-        AddDocumentsDurationMs: number;
-        FlushToDiskDurationMs: number;
-        RecreateSearcherDurationMs: number
-    };
-    ReduceStoragePerformance: {
-        GetItemsToReduceDurationMs: number;
-        DeletePreviouslyScheduledReductionsMs: number;
-        ScheduleReductionsDurationMs: number;
-        GetMappedResultsDurationMs: number;
-        RemoveReduceResultsDurationMs: number;
-        StorageCommitDurationMs: number;
-    };
+    Operations: basePerformanceStatsDto[];
     parent?: indexNameAndReducingPerformanceStats;
 }
 
+interface basePerformanceStatsDto {
+    DurationMs: number;
+    CacheWidth?: number;
+    CacheCumulativeSum?: number;
+    CacheIsSingleThread?: boolean;
+}
+
+interface performanceStatsDto extends basePerformanceStatsDto {
+    Name: string;
+    ParallelParent?: parallelBatchStatsDto;
+}
+
+interface parallelPefromanceStatsDto extends basePerformanceStatsDto {
+    NumberOfThreads: number;
+    BatchedOperations: parallelBatchStatsDto[];
+}
+
+interface parallelBatchStatsDto {
+    StartDelay: number;
+    Operations: performanceStatsDto[];
+    Parent?: parallelPefromanceStatsDto;
+}
 
 interface apiKeyDto extends documentDto {
     Name: string;

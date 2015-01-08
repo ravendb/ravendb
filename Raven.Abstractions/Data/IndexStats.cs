@@ -227,13 +227,13 @@ namespace Raven.Abstractions.Data
 
 	public abstract class BasePefromanceStats
 	{
-		
+        public long DurationMs { get; set; }
 	}
 
 	public class PerformanceStats : BasePefromanceStats
 	{
 		public IndexingOperation Name { get; set; }
-		public long DurationMs { get; set; }
+		
 
 		public static PerformanceStats From(IndexingOperation name, long durationMs)
 		{
@@ -251,8 +251,6 @@ namespace Raven.Abstractions.Data
 		{
 			BatchedOperations = new List<ParallelBatchStats>();
 		}
-
-		public long DurationMs { get; set; }
 
 		public long NumberOfThreads { get; set; }
 
