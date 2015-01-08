@@ -17,6 +17,7 @@ using Raven.Abstractions.Util;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -25,8 +26,8 @@ namespace Raven.Database.Server.Controllers
 	public class SubscriptionsController : RavenDbApiController
 	{
 		[HttpPost]
-		[Route("subscriptions/create")]
-		[Route("databases/{databaseName}/subscriptions/create")]
+		[RavenRoute("subscriptions/create")]
+		[RavenRoute("databases/{databaseName}/subscriptions/create")]
 		public async Task<HttpResponseMessage> Create()
 		{
 			var subscriptionCriteria = await ReadJsonObjectAsync<SubscriptionCriteria>();
@@ -43,8 +44,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpDelete]
-		[Route("subscriptions")]
-		[Route("databases/{databaseName}/subscriptions")]
+		[RavenRoute("subscriptions")]
+		[RavenRoute("databases/{databaseName}/subscriptions")]
 		public HttpResponseMessage Delete(long id)
 		{
 			Database.Subscriptions.DeleteSubscription(id);
@@ -53,8 +54,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("subscriptions/open")]
-		[Route("databases/{databaseName}/subscriptions/open")]
+		[RavenRoute("subscriptions/open")]
+		[RavenRoute("databases/{databaseName}/subscriptions/open")]
 		public async Task<HttpResponseMessage> Open(long id)
 		{
 			try
@@ -77,8 +78,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("subscriptions/pull")]
-		[Route("databases/{databaseName}/subscriptions/pull")]
+		[RavenRoute("subscriptions/pull")]
+		[RavenRoute("databases/{databaseName}/subscriptions/pull")]
 		public HttpResponseMessage Pull(long id, string connection)
 		{
 			Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
@@ -101,8 +102,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("subscriptions/acknowledgeBatch")]
-		[Route("databases/{databaseName}/subscriptions/acknowledgeBatch")]
+		[RavenRoute("subscriptions/acknowledgeBatch")]
+		[RavenRoute("databases/{databaseName}/subscriptions/acknowledgeBatch")]
 		public HttpResponseMessage AcknowledgeBatch(long id, string lastEtag, string connection)
 		{
 			Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
@@ -120,8 +121,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("subscriptions/close")]
-		[Route("databases/{databaseName}/subscriptions/close")]
+		[RavenRoute("subscriptions/close")]
+		[RavenRoute("databases/{databaseName}/subscriptions/close")]
 		public HttpResponseMessage Close(long id, string connection, bool force = false)
 		{
 			if (force == false)
@@ -143,8 +144,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPatch]
-		[Route("subscriptions/client-alive")]
-		[Route("databases/{databaseName}/subscriptions/client-alive")]
+		[RavenRoute("subscriptions/client-alive")]
+		[RavenRoute("databases/{databaseName}/subscriptions/client-alive")]
 		public HttpResponseMessage ClientAlive(long id, string connection)
 		{
 			Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
@@ -155,8 +156,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("subscriptions")]
-		[Route("databases/{databaseName}/subscriptions")]
+		[RavenRoute("subscriptions")]
+		[RavenRoute("databases/{databaseName}/subscriptions")]
 		public HttpResponseMessage Get()
 		{
 			var start = GetStart();

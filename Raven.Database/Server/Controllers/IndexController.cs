@@ -78,8 +78,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("indexes/replicate-all")]
-		[Route("databases/{databaseName}/indexes/replicate-all")]
+		[RavenRoute("indexes/replicate-all")]
+		[RavenRoute("databases/{databaseName}/indexes/replicate-all")]
 		public HttpResponseMessage IndexReplicate()
 		{
 			//check for replication document before doing work on getting index definitions.
@@ -129,8 +129,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("indexes/last-queried")]
-		[Route("databases/{databaseName}/indexes/last-queried")]
+		[RavenRoute("indexes/last-queried")]
+		[RavenRoute("databases/{databaseName}/indexes/last-queried")]
 		public HttpResponseMessage IndexUpdateLastQueried([FromBody] Dictionary<string, DateTime> lastQueriedByIndexId)
 		{
 			Database.TransactionalStorage.Batch(accessor =>

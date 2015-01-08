@@ -91,8 +91,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("transformers/replicate-all")]
-		[Route("databases/{databaseName}/transformers/replicate-all")]
+		[RavenRoute("transformers/replicate-all")]
+		[RavenRoute("databases/{databaseName}/transformers/replicate-all")]
 		public HttpResponseMessage TransformersReplicate()
 		{
 			HttpResponseMessage erroResponseMessage;
@@ -144,8 +144,8 @@ namespace Raven.Database.Server.Controllers
 
 
 		[HttpPost]
-		[Route("transformers/replicate/{*transformerName}")]
-		[Route("databases/{databaseName}/transformers/replicate/{*transformerName}")]
+		[RavenRoute("transformers/replicate/{*transformerName}")]
+		[RavenRoute("databases/{databaseName}/transformers/replicate/{*transformerName}")]
 		public HttpResponseMessage TransformersReplicate(string transformerName)
 		{
 			if (transformerName == null) 
