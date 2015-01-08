@@ -35,6 +35,12 @@ namespace Raven.Database.Bundles.SqlReplication
 	[ExportMetadata("Bundle", "sqlReplication")]
 	public class SqlReplicationTask : IStartupTask, IDisposable
 	{
+		private const int MaxNumberOfDeletionsToReplicate = 1024;
+
+		private bool shouldPause;
+
+		public bool IsRunning { get; private set; }
+
 		private class ReplicatedDoc
 		{
 			public RavenJObject Document;
@@ -102,6 +108,16 @@ namespace Raven.Database.Bundles.SqlReplication
 			database.ExtensionsState.GetOrAdd(typeof(SqlReplicationTask).FullName, k => new DisposableAction(task.Wait));
 		}
 
+		public void Pause()
+		{
+			shouldPause = true;
+		}
+
+		public void Continue()
+		{
+			shouldPause = false;
+		}
+
 		private void RecordDelete(string id, RavenJObject metadata)
 		{
 			Database.TransactionalStorage.Batch(accessor =>
@@ -135,6 +151,11 @@ namespace Raven.Database.Bundles.SqlReplication
 			int workCounter = 0;
 			while (Database.WorkContext.DoWork)
 			{
+				IsRunning = !shouldPause;
+
+				if (!IsRunning)
+					continue;
+
 				var config = GetConfiguredReplicationDestinations();
 				if (config.Count == 0)
 				{
@@ -192,7 +213,7 @@ namespace Raven.Database.Bundles.SqlReplication
 						deletedDocsByConfig[cfg] = accessor.Lists.Read(GetSqlReplicationDeletionName(cfg),
 														  GetLastEtagFor(localReplicationStatus, cfg),
 														  latestEtag,
-														  1024)
+														  MaxNumberOfDeletionsToReplicate + 1)
 											  .ToList();
 					});
 				}
@@ -260,15 +281,19 @@ namespace Raven.Database.Bundles.SqlReplication
                                         }
                                     }
 	                                return true;
-                                })
-								.ToList();
+                                });
 
-							var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
-							if (currentLatestEtag == null && itemsToReplicate.Count > 0 && docsToReplicate.Count == 0)
+							if (deletedDocs.Count >= MaxNumberOfDeletionsToReplicate + 1)
+								docsToReplicate = docsToReplicate.Where(x => EtagUtil.IsGreaterThan(x.Etag, deletedDocs[deletedDocs.Count - 1].Etag) == false);
+
+							var docsToReplicateAsList = docsToReplicate.ToList();
+
+							var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicateAsList);
+							if (currentLatestEtag == null && itemsToReplicate.Count > 0 && docsToReplicateAsList.Count == 0)
 								currentLatestEtag = lastBatchEtag;
 
 							if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
-								ReplicateChangesToDestination(replicationConfig, docsToReplicate))
+								ReplicateChangesToDestination(replicationConfig, docsToReplicateAsList))
 							{
 								if (deletedDocs.Count > 0)
 								{
