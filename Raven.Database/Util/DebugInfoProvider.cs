@@ -10,8 +10,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Management;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Utils;
@@ -38,7 +40,10 @@ namespace Raven.Database.Util
                 databaseName = Constants.SystemDatabase;
 
             var jsonSerializer = new JsonSerializer { Formatting = Formatting.Indented };
-            jsonSerializer.Converters.Add(new EtagJsonConverter());
+			foreach (var jsonConverter in Default.Converters)
+			{
+				jsonSerializer.Converters.Add(jsonConverter);
+			}
 
             if (database.StartupTasks.OfType<ReplicationTask>().Any())
             {
