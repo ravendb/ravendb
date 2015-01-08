@@ -3,14 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.IO;
+using Voron.Impl.Paging;
 using Voron.Trees;
 
 namespace Voron.Impl.Compaction
 {
 	public unsafe static class StorageCompaction
 	{
-		public static void Execute(StorageEnvironmentOptions srcOptions, StorageEnvironmentOptions compactOptions, long maxTransactionSizeInBytes = 8 * 1024 * 1024)
+		public static void Execute(StorageEnvironmentOptions srcOptions, StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions, long maxTransactionSizeInBytes = 8 * 1024 * 1024)
 		{
+			long minimalCompactedDataFileSize;
+
 			using(var existingEnv = new StorageEnvironment(srcOptions))
 			using (var compactedEnv = new StorageEnvironment(compactOptions))
 			{
@@ -84,7 +88,14 @@ namespace Voron.Impl.Compaction
 
 					} while (rootIterator.MoveNext());
 				}
-				compactedEnv.ForceLogFlushToDataFile(null, true);
+				compactedEnv.ForceLogFlushToDataFile(null, allowToFlushOverwrittenPages: true, forceDataFileSync: true);
+
+				minimalCompactedDataFileSize = compactedEnv.NextPageNumber*AbstractPager.PageSize;
+			}
+
+			using (var compactedDataFile = new FileStream(Path.Combine(compactOptions.BasePath, Constants.DatabaseFilename), FileMode.Open, FileAccess.ReadWrite))
+			{
+				compactedDataFile.SetLength(minimalCompactedDataFileSize);
 			}
 		}
 	}

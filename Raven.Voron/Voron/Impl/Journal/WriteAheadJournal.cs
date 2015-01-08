@@ -421,7 +421,7 @@ namespace Voron.Impl.Journal
 				});
 			}
 
-			public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, Transaction transaction = null, bool allowToFlushOverwrittenPages = false)
+			public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, Transaction transaction = null, bool allowToFlushOverwrittenPages = false, bool forceDataFileSync = false)
 			{
 				if (token.IsCancellationRequested)
 					return;
@@ -531,7 +531,7 @@ namespace Voron.Impl.Journal
 
 							using (ForceFlushingPagesOlderThan(oldestActiveTransaction))
 							{
-								ApplyLogsToDataFile(oldestActiveTransaction, token, transaction, allowToFlushOverwrittenPages: false);
+								ApplyLogsToDataFile(oldestActiveTransaction, token, transaction, false, forceDataFileSync);
 							}
 						}
 
@@ -578,7 +578,8 @@ namespace Voron.Impl.Journal
 					}
 					
 					if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
-						DateTime.UtcNow - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit)
+						DateTime.UtcNow - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit ||
+						forceDataFileSync)
 					{
 						_waj._dataPager.Sync();
 

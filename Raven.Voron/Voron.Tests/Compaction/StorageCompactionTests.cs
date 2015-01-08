@@ -84,7 +84,7 @@ namespace Voron.Tests.Compaction
 				}
 			}
 
-			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), StorageEnvironmentOptions.ForPath(CompactedData), maxTransactionSizeInBytes: 256);
+			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData), maxTransactionSizeInBytes: 256);
 
 			using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactedData)))
 			{
@@ -175,22 +175,22 @@ namespace Voron.Tests.Compaction
 				}
 			}
 
-			var oldSize = DirectorySize(new DirectoryInfo(CompactionTestsData));
+			var oldSize = GetDirSize(new DirectoryInfo(CompactionTestsData));
 
-			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), StorageEnvironmentOptions.ForPath(CompactedData), maxTransactionSizeInBytes: 256);
+			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions) StorageEnvironmentOptions.ForPath(CompactedData), maxTransactionSizeInBytes: 512);
 
-			var newSize = DirectorySize(new DirectoryInfo(CompactedData));
+			var newSize = GetDirSize(new DirectoryInfo(CompactedData));
 
-			Assert.True(newSize < oldSize);
+			Assert.True(newSize < oldSize, string.Format("Old size: {0:#,#;;0} MB, new size {1:#,#;;0} MB", oldSize / 1024 / 1024, newSize / 1024 / 1024));
 		}
 
-		public static long DirectorySize(DirectoryInfo d)
+		public static long GetDirSize(DirectoryInfo d)
 		{
 			var files = d.GetFiles();
-			var size = files.Sum(fi => fi.Length);
+			var size = files.Sum(x => x.Length);
 
-			var dis = d.GetDirectories();
-			size += dis.Sum(di => DirectorySize(di));
+			var directories = d.GetDirectories();
+			size += directories.Sum(x => GetDirSize(x));
 
 			return size;
 		}

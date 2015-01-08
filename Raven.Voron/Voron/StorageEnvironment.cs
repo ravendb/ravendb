@@ -568,7 +568,7 @@ namespace Voron
 			    _debugJournal.RecordFlushAction(DebugActionType.FlushStart, tx);
 		    }
 
-		    _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx, allowToFlushOverwrittenPages);
+		    _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx, allowToFlushOverwrittenPages, forceDataFileSync);
 
 		    if (IsDebugRecording)
 		    {
