@@ -535,7 +535,7 @@ namespace Raven.Database.Indexing
 
 	        try
 	        {
-		        context.ReportReducingBatchStarted(indexesToWorkOn.Select(x => x.Index.PublicName).ToList(), out reducingBatchInfo);
+				reducingBatchInfo = context.ReportReducingBatchStarted(indexesToWorkOn.Select(x => x.Index.PublicName).ToList());
 
 		        BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn, index =>
 		        {
@@ -550,7 +550,7 @@ namespace Raven.Database.Indexing
 	        finally
 	        {
 		        if(reducingBatchInfo != null)
-					reducingBatchInfo.BatchCompleted();
+					context.ReportReducingBatchCompleted(reducingBatchInfo);
 	        }
 		}
 

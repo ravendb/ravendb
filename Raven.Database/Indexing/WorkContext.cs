@@ -328,30 +328,38 @@ namespace Raven.Database.Indexing
 		[CLSCompliant(false)]
         public MetricsCountersManager MetricsCounters { get; private set; }
 
-		public void ReportIndexingBatchStarted(int documentsCount, long documentsSize, List<string> indexesToWorkOn, out IndexingBatchInfo indexingBatchInfo)
+		public IndexingBatchInfo ReportIndexingBatchStarted(int documentsCount, long documentsSize, List<string> indexesToWorkOn)
 		{
-			indexingBatchInfo = new IndexingBatchInfo
+			return new IndexingBatchInfo
 			{
 				IndexesToWorkOn = indexesToWorkOn,
 				TotalDocumentCount = documentsCount,
 				TotalDocumentSize = documentsSize,
 				StartedAt = SystemTime.UtcNow,
-				PerformanceStats = new ConcurrentDictionary<string, IndexingPerformanceStats>()
+				PerformanceStats = new ConcurrentDictionary<string, IndexingPerformanceStats>(),
 			};
-
-			lastActualIndexingBatchInfo.Add(indexingBatchInfo);
 		}
 
-		public void ReportReducingBatchStarted(List<string> indexesToWorkOn, out ReducingBatchInfo reducingBatchInfo)
+		public void ReportIndexingBatchCompleted(IndexingBatchInfo batchInfo)
 		{
-			reducingBatchInfo = new ReducingBatchInfo
+			batchInfo.BatchCompleted();
+			lastActualIndexingBatchInfo.Add(batchInfo);
+		}
+
+		public ReducingBatchInfo ReportReducingBatchStarted(List<string> indexesToWorkOn)
+		{
+			return new ReducingBatchInfo
 			{
 				IndexesToWorkOn = indexesToWorkOn,
 				StartedAt = SystemTime.UtcNow,
 				PerformanceStats = new ConcurrentDictionary<string, ReducingPerformanceStats>()
 			};
+		}
 
-			lastActualReducingBatchInfo.Add(reducingBatchInfo);
+		public void ReportReducingBatchCompleted(ReducingBatchInfo batchInfo)
+		{
+			batchInfo.BatchCompleted();
+			lastActualReducingBatchInfo.Add(batchInfo);
 		}
 
 		public ConcurrentSet<FutureBatchStats> FutureBatchStats
