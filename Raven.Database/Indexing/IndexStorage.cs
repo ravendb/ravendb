@@ -99,9 +99,17 @@ namespace Raven.Database.Indexing
 				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext,
 					indexDefinitionStorage.IndexNames, OpenIndexOnStartup);
 			}
-			catch
+			catch(Exception e)
 			{
+				log.WarnException("Could not create index storage", e);
+				try
+				{
 				Dispose();
+				}
+				catch (Exception ex)
+				{
+					log.FatalException("Failed to disposed when already getting an error during ctor", ex);
+				}
 				throw;
 			}
 		}
@@ -200,7 +208,7 @@ namespace Raven.Database.Indexing
 			// 2. If no 'LastEtag' in commitData then we consider it an invalid index
 			// 3. If 'LastEtag' is present (and valid), then resetting to it (if it is lower than lastStoredEtag)
 
-            var commitData = IndexReader.GetCommitUserData(directory);
+			var commitData = IndexReader.GetCommitUserData(directory);
 
 		    if (index.IsMapReduce)
 				CheckMapReduceIndexState(commitData, resetTried);
@@ -1090,9 +1098,9 @@ namespace Raven.Database.Indexing
 				{
                 value.Flush(value.GetLastEtagFromStats());
 			}
-				catch (Exception)
+				catch (Exception e)
 				{
-					value.IncrementWriteErrors();
+					value.IncrementWriteErrors(e);
 					throw;
 				}
 			}
@@ -1345,15 +1353,17 @@ namespace Raven.Database.Indexing
 
 		public void FlushMapIndexes()
 		{
-			foreach (var value in indexes.Values.Where(value => value != null && !value.IsMapReduce))
+			if (indexes == null)
+				return;
+			foreach (var value in indexes.Values.Where(value => value != null &&  !value.IsMapReduce))
 			{
 				try
 				{
-                value.Flush(value.GetLastEtagFromStats());
+        			value.Flush(value.GetLastEtagFromStats());
 			}
-				catch (Exception)
+				catch (Exception e)
 				{
-					value.IncrementWriteErrors();
+					value.IncrementWriteErrors(e);
 					throw;
 		}
 			}
@@ -1361,15 +1371,17 @@ namespace Raven.Database.Indexing
 
 		public void FlushReduceIndexes()
 		{
+			if (indexes == null)
+				return;
 			foreach (var value in indexes.Values.Where(value => value != null && value.IsMapReduce))
 			{
 				try
 				{
-                value.Flush(value.GetLastEtagFromStats());
+                		value.Flush(value.GetLastEtagFromStats());
 			}
-				catch (Exception)
+				catch (Exception e)
 				{
-					value.IncrementWriteErrors();
+					value.IncrementWriteErrors(e);
 					throw;
 		}
 			}
@@ -1427,10 +1439,10 @@ namespace Raven.Database.Indexing
 			return GetIndexInstance(index).GetIndexingPerformance();
 		}
 
-		public void Backup(string directory, string incrementalTag = null)
+		public void Backup(string directory, string incrementalTag = null, Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback = null)
 		{
 			Parallel.ForEach(indexes.Values, index =>
-				index.Backup(directory, path, incrementalTag));
+                index.Backup(directory, path, incrementalTag, notifyCallback));
 		}
 
 		public void MergeAllIndexes()
@@ -1465,6 +1477,6 @@ namespace Raven.Database.Indexing
 			documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false);
 
 			return true;
-		}
 	}
+}
 }

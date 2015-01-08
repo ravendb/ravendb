@@ -39,7 +39,7 @@ namespace Raven.Client.Shard
 			ShardAccessStrategy = new SequentialShardAccessStrategy();
 			ShardResolutionStrategy = new DefaultShardResolutionStrategy(shards.Keys, this);
 			MergeQueryResults = DefaultMergeQueryResults;
-			ModifyDocumentId = (convention, shardId, documentId) => shardId + convention.IdentityPartsSeparator + documentId;
+            ModifyDocumentId = (convention, shardId, documentId) => documentId.StartsWith(shardId + convention.IdentityPartsSeparator)?documentId:shardId + convention.IdentityPartsSeparator + documentId;
 		}
 
 		public DocumentConvention Conventions { get; set; }

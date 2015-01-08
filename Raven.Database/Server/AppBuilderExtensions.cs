@@ -11,7 +11,9 @@ using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
 using System.Web.Http.Routing;
 using Microsoft.Owin;
+
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
@@ -110,6 +112,7 @@ namespace Owin
 			cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
 			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
+			cfg.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad] = new SemaphoreSlim(options.SystemDatabase.Configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 			cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
 			cfg.Services.Replace(typeof(IAssembliesResolver), new RavenAssemblyResolver());

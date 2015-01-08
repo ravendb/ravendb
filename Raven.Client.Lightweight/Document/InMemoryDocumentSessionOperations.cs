@@ -721,37 +721,37 @@ more responsive application.
 			StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
 		}
 
-		public Task StoreAsync(object entity)
+		public Task StoreAsync(object entity, CancellationToken token = default (CancellationToken))
 		{
 			string id;
 			var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
 
-			return StoreAsyncInternal(entity, null, null, forceConcurrencyCheck: hasId == false);
+			return StoreAsyncInternal(entity, null, null, forceConcurrencyCheck: hasId == false, token: token);
 		}
 
-		public Task StoreAsync(object entity, Etag etag)
+		public Task StoreAsync(object entity, Etag etag, CancellationToken token = default (CancellationToken))
 		{
-			return StoreAsyncInternal(entity, etag, null, forceConcurrencyCheck: true);
+			return StoreAsyncInternal(entity, etag, null, forceConcurrencyCheck: true, token: token);
 		}
 
-		public Task StoreAsync(object entity, Etag etag, string id)
+		public Task StoreAsync(object entity, Etag etag, string id, CancellationToken token = default (CancellationToken))
 		{
-			return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck: true);
+			return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck: true, token: token);
 		}
 
-		public Task StoreAsync(object entity, string id)
+		public Task StoreAsync(object entity, string id, CancellationToken token = default (CancellationToken))
 		{
-			return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false);
+			return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false, token: token);
 		}
 
-		private async Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck)
+		private async Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck, CancellationToken token = default (CancellationToken))
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
 
 			if (id == null)
 			{
-				id = await GenerateDocumentKeyForStorageAsync(entity);
+				id = await GenerateDocumentKeyForStorageAsync(entity).WithCancellation(token);
 			}
 
 			StoreInternal(entity, etag, id, forceConcurrencyCheck);
@@ -1486,12 +1486,10 @@ more responsive application.
 			foreach (var property in ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
 			{
 				var prop = property;
+
 				if (prop.DeclaringType != type && prop.DeclaringType != null)
-				{
-					prop = prop.DeclaringType.GetProperty(prop.Name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-					if (prop == null)
-						prop = property; // shouldn't happen ever...
-				}
+					prop = prop.DeclaringType.GetProperty(prop.Name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) ?? property;
+
 				if (!prop.CanWrite() || !prop.CanRead() || prop.GetIndexParameters().Length != 0)
 					continue;
 				prop.SetValue(entity, prop.GetValue(newEntity));
