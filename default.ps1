@@ -699,10 +699,7 @@ task CreateNugetPackages -depends Compile, InitNuget {
 }
 
 task PushSymbolSources -depends InitNuget {
-	
-	if ($global:uploadMode -ne "Stable") {
-		return; # this takes 20 minutes to run
-	}
+		return; # this brake the build
 
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
@@ -740,9 +737,9 @@ task PushSymbolSources -depends InitNuget {
 
 task CreateSymbolSources -depends CreateNugetPackages {
 	
-	if ($global:uploadMode -ne "Stable") {
+	
 		return; # this takes 20 minutes to run
-	}
+	
 
 	$nuget_dir = "$build_dir\NuGet"
 	
