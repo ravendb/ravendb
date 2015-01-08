@@ -578,7 +578,7 @@ namespace Voron.Impl.Journal
 					}
 					
 					if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
-						DateTime.Now - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit)
+						DateTime.UtcNow - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit)
 					{
 						_waj._dataPager.Sync();
 
@@ -594,7 +594,7 @@ namespace Voron.Impl.Journal
 
 						_journalsToDelete.Clear();
 						_totalWrittenButUnsyncedBytes = 0;
-						_lastDataFileSyncTime = DateTime.Now;
+						_lastDataFileSyncTime = DateTime.UtcNow;
 					}
 
 				}
