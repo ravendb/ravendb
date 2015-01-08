@@ -9,6 +9,10 @@ import saveReplicationDocumentCommand = require("commands/saveReplicationDocumen
 import getAutomaticConflictResolutionDocumentCommand = require("commands/getAutomaticConflictResolutionDocumentCommand");
 import saveAutomaticConflictResolutionDocument = require("commands/saveAutomaticConflictResolutionDocument");
 import getServerPrefixForHiLoCommand = require("commands/getServerPrefixForHiLoCommand");
+import replicateAllIndexesCommand = require("commands/replicateAllIndexesCommand");
+import replicateAllTransformersCommand = require("commands/replicateAllTransformersCommand");
+import replicateIndexesCommand = require("commands/replicateIndexesCommand");
+import replicateTransformersCommand = require("commands/replicateTransformersCommand");
 import appUrl = require("common/appUrl");
 
 class replications extends viewModelBase {
@@ -24,6 +28,7 @@ class replications extends viewModelBase {
     isServerPrefixForHiLoSaveEnabled: KnockoutComputed<boolean>;
     isConfigSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
+    isReplicateIndexesToAllEnabled : KnockoutComputed<boolean>;
 
     readFromAllAllowWriteToSecondaries = ko.computed(() => {
         var behaviour = this.replicationsSetup().clientFailoverBehaviour();
@@ -55,6 +60,7 @@ class replications extends viewModelBase {
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour]);
         this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
 
+        this.isReplicateIndexesToAllEnabled = ko.computed(() => this.replicationsSetup().destinations().length > 0);
         var combinedFlag = ko.computed(() => {
             return (this.replicationConfigDirtyFlag().isDirty() || this.replicationsSetupDirtyFlag().isDirty() || this.serverPrefixForHiLoDirtyFlag().isDirty());
         });
@@ -128,6 +134,27 @@ class replications extends viewModelBase {
                 .execute()
                 .done(() => this.replicationsSetupDirtyFlag().reset() );
         }
+    }
+
+    sendReplicateCommand(destination: replicationDestination,parentClass: replications) {        
+        var db = parentClass.activeDatabase();
+        if (db) {
+            new replicateIndexesCommand(db, destination).execute();
+            new replicateTransformersCommand(db, destination).execute();
+        } else {
+            alert('No database selected! This error should not be seen.'); //precaution to ease debugging - in case something bad happens
+        }        
+    }
+
+    sendReplicateAllCommand() {
+        var db = this.activeDatabase();
+        if (db) {
+            new replicateAllIndexesCommand(db).execute();
+            new replicateAllTransformersCommand(db).execute();
+        } else {
+            alert('No database selected! This error should not be seen.'); //precaution to ease debugging - in case something bad happens
+        }
+
     }
 
     saveServerPrefixForHiLo() {
