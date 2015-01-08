@@ -479,14 +479,12 @@ namespace Raven.Client.Shard
 
 		#region Queries
 
-		protected override RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce, RavenQueryProvider<T> provider,
-																			RavenQueryStatistics ravenQueryStatistics,
-																			RavenQueryHighlightings highlightings)
-		{
-			return new ShardedRavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, isMapReduce, shardStrategy,
-				 null,
-				 shardDbCommands.Values.ToList());
-		}
+        public override RavenQueryInspector<T> CreateRavenQueryInspector<T>()
+        {
+            return new ShardedRavenQueryInspector<T>(shardStrategy,
+                 null,
+                 shardDbCommands.Values.ToList());
+        }
 
 		protected override IDocumentQuery<T> DocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce)
 		{

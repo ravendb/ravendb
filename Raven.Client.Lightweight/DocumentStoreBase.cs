@@ -110,7 +110,7 @@ namespace Raven.Client
 			transformerCreationTask.Execute(DatabaseCommands, Conventions);
 		}
 
-	    public Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask)
+	    public virtual Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask)
 	    {
 	        return transformerCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
 	    }

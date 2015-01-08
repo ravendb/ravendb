@@ -541,6 +541,7 @@ namespace Raven.Database.Storage
 			int _;
 			indexNameToId.TryRemove(index.Name, out _);
 
+		    index.IsSideBySideIndex = false;
 			index.Name = indexToSwap != null ? indexToSwap.Name : indexToSwapName;
 			CreateAndPersistIndex(index);
 			AddIndex(index.IndexId, index);

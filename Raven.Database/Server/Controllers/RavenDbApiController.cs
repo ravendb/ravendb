@@ -9,7 +9,6 @@ using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Config;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 using System;
@@ -24,7 +23,6 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
-
 
 namespace Raven.Database.Server.Controllers
 {
@@ -561,13 +559,31 @@ namespace Raven.Database.Server.Controllers
             {
                 try
                 {
-                    if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
-                    {
-                        var msg = "The database " + tenantId +
-                                  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.";
-                        Logger.Warn(msg);
-                        throw new TimeoutException(msg);
-                    }
+					const int TimeToWaitForDatabaseToLoad = 5;
+					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
+					{
+						if (MaxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
+						{
+							var msg = string.Format("The database {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.", tenantId);
+							Logger.Warn(msg);
+							throw new TimeoutException(msg);
+						}
+
+						try
+						{
+							if (resourceStoreTask.Wait(TimeSpan.FromSeconds(TimeToWaitForDatabaseToLoad)) == false)
+							{
+								var msg = string.Format("The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.", tenantId, TimeToWaitForDatabaseToLoad);
+								Logger.Warn(msg);
+								throw new TimeoutException(msg);
+							}
+						}
+						finally
+						{
+							MaxNumberOfThreadsForDatabaseToLoad.Release();
+						}
+					}
+
                     var args = new BeforeRequestWebApiEventArgs()
                     {
                         Controller = this,
@@ -575,6 +591,7 @@ namespace Raven.Database.Server.Controllers
                         TenantId = tenantId,
                         Database = resourceStoreTask.Result
                     };
+
                     rm.OnBeforeRequest(args);
                     if (args.IgnoreRequest)
                         return false;

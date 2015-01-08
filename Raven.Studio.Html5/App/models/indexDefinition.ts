@@ -8,6 +8,7 @@ class indexDefinition {
     reduce = ko.observable<string>().extend({ required: true });
     luceneFields = ko.observableArray<luceneField>();
     isTestIndex = ko.observable<boolean>(false);
+    isSideBySideIndex = ko.observable<boolean>(false);
     numOfLuceneFields = ko.computed(() => this.luceneFields().length).extend({ required: true });
 
     // This is an amalgamation of several properties from the index (Fields, Stores, Indexes, SortOptions, Analyzers, Suggestions, TermVectors) 
@@ -38,6 +39,7 @@ class indexDefinition {
         this.indexes = dto.Indexes;
         this.internalFieldsMapping = dto.InternalFieldsMapping;
         this.isTestIndex(dto.IsTestIndex);
+        this.isSideBySideIndex(dto.IsSideBySideIndex);
         this.isCompiled = dto.IsCompiled;
         this.isMapReduce = dto.IsMapReduce;
         this.lockMode = dto.LockMode;
@@ -65,6 +67,7 @@ class indexDefinition {
             Indexes: this.makeFieldObject(f => f.indexing() !== "Default", f => f.indexing()),
             InternalFieldsMapping: this.internalFieldsMapping,
             IsTestIndex: this.isTestIndex(),
+            IsSideBySideIndex: this.isSideBySideIndex(),
             IsCompiled: this.isCompiled,
             IsMapReduce: this.isMapReduce,
             LockMode: this.lockMode,
@@ -89,6 +92,7 @@ class indexDefinition {
             Indexes: {},
             InternalFieldsMapping: {},
             IsTestIndex: false,
+            IsSideBySideIndex: false,
             IsCompiled: false,
             IsMapReduce: false,
             LockMode: "Unlock",
