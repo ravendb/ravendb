@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -144,25 +145,49 @@ namespace Raven.Client.Indexes
 			var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
 			using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, "POST"))
 			{
-				var requestTask = replicateTransformerRequest.ExecuteRawResponseAsync();
-				requestTask.Result.EnsureSuccessStatusCode();
+				try
+				{
+					replicateTransformerRequest.ExecuteRawResponseAsync().Wait();
+				}
+				catch (Exception)
+				{
+					// ignoring errors
+				}
+			}
+		}
+
+		internal async Task ReplicateTransformerIfNeededAsync(IAsyncDatabaseCommands databaseCommands)
+		{
+			var serverClient = databaseCommands as AsyncServerClient;
+			if (serverClient == null)
+				return;
+
+			var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
+			using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, "POST"))
+			{
+				try
+				{
+					await replicateTransformerRequest.ExecuteRawResponseAsync();
+				}
+				catch (Exception)
+				{
+					// ignoring error
+				}
 			}
 		}
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
-		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
+		public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
 		{
 			Conventions = documentConvention;
 			var transformerDefinition = CreateTransformerDefinition(documentConvention.PrettifyGeneratedLinqExpressions);
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
-			return asyncDatabaseCommands.PutTransformerAsync(TransformerName, transformerDefinition, token)
-				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, url) =>
-					client.DirectPutTransformerAsync(TransformerName, transformerDefinition, url, token), token), token)
-				.Unwrap();
+			await asyncDatabaseCommands.PutTransformerAsync(TransformerName, transformerDefinition, token);
+			await ReplicateTransformerIfNeededAsync(asyncDatabaseCommands);
 		}
 	}
 

@@ -235,8 +235,14 @@ namespace Raven.Client.Indexes
 			var replicateIndexUrl = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(IndexName));
 			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, "POST"))
 			{
-				var requestTask = replicateIndexRequest.ExecuteRawResponseAsync();
-				requestTask.Result.EnsureSuccessStatusCode();
+				try
+				{
+					replicateIndexRequest.ExecuteRawResponseAsync().Wait();
+				}
+				catch (Exception)
+				{
+					//ignore errors
+				}
 			}
 
 		}
@@ -249,8 +255,14 @@ namespace Raven.Client.Indexes
 			var replicateIndexUrl = String.Format("/replication/replicate-indexes?indexName={0}", Uri.EscapeDataString(IndexName));
 			using (var replicateIndexRequest = serverClient.CreateRequest(replicateIndexUrl, "POST"))
 			{
-				var requestResult = await replicateIndexRequest.ExecuteRawResponseAsync();
-				requestResult.EnsureSuccessStatusCode();
+				try
+				{
+					await replicateIndexRequest.ExecuteRawResponseAsync();
+				}
+				catch (Exception )
+				{
+					// ignore errors
+				}
 			}
 
 		}
@@ -492,36 +504,6 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This is here as a marker only");
 		}
 
-		internal async Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
-												   DocumentConvention documentConvention,
-													Func<AsyncServerClient, OperationMetadata, Task> action, CancellationToken token = default (CancellationToken))
-		{
-		    var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
-		    if (asyncServerClient == null)
-		        return;
-            var replicationDocument = await asyncServerClient.ExecuteWithReplication("GET", asyncServerClient.DirectGetReplicationDestinationsAsync, token);
-            if (replicationDocument == null)
-		        return;
-            if (replicationDocument.Destinations == null || replicationDocument.Destinations.Count == 0)
-		        return;
-		    var tasks = (
-                         from replicationDestination in replicationDocument.Destinations
-		                 where !replicationDestination.Disabled && !replicationDestination.IgnoredClient
-		                 select action(asyncServerClient, GetReplicationOperation(replicationDestination))
-                         )
-                         .ToArray();
-		    await Task.Factory.ContinueWhenAll(tasks, indexingTask =>
-		    {
-		        foreach (var indexTask in indexingTask)
-		        {
-		            if (indexTask.IsFaulted)
-		            {
-		                Logger.WarnException("Could not put index in replication server", indexTask.Exception);
-		            }
-		        }
-		    }, token);
-		}
-
 	    private OperationMetadata GetReplicationOperation(ReplicationDestination replicationDestination)
 		{
 			var replicationUrl = replicationDestination.ClientVisibleUrl ?? replicationDestination.Url;
@@ -530,31 +512,6 @@ namespace Raven.Client.Indexes
 				: replicationUrl + "/databases/" + replicationDestination.Database;
 
 			return new OperationMetadata(url, replicationDestination.Username, replicationDestination.Password, replicationDestination.Domain, replicationDestination.ApiKey);
-		}
-
-		internal void UpdateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention,
-			Action<ServerClient, OperationMetadata> action)
-		{
-			var serverClient = databaseCommands as ServerClient;
-			if (serverClient == null)
-				return;
-            var replicationDocument = serverClient.ExecuteWithReplication("GET", serverClient.DirectGetReplicationDestinations);
-            if (replicationDocument == null)
-				return;
-
-			foreach (var replicationDestination in replicationDocument.Destinations)
-			{
-				try
-				{
-					if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
-						continue;
-					action(serverClient, GetReplicationOperation(replicationDestination));
-				}
-				catch (Exception e)
-				{
-					Logger.WarnException("Could not put index in replication server", e);
-				}
-			}
 		}
 	}
 }
