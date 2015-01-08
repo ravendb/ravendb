@@ -273,6 +273,11 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public bool IsTestIndex { get; set; }
 
+        /// <summary>
+        /// Whatever this is a side by side index
+        /// </summary>
+        public bool IsSideBySideIndex { get; set; }
+
 		/// <summary>
 		/// Remove the default values that we don't actually need
 		/// </summary>

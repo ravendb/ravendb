@@ -916,13 +916,15 @@ namespace Raven.Client.Document.Async
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var highlightings = new RavenQueryHighlightings();
-			return new RavenQueryInspector<T>(
-				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, AsyncDatabaseCommands, isMapReduce),
+		    var ravenQueryInspector = new RavenQueryInspector<T>();
+		    var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, AsyncDatabaseCommands, isMapReduce);
+		    ravenQueryInspector.Init(ravenQueryProvider,
 				ravenQueryStatistics,
 				highlightings,
 				indexName,
 				null,
 				this, null, AsyncDatabaseCommands, isMapReduce);
+            return ravenQueryInspector;
 		}
 
 		/// <summary>
@@ -941,7 +943,12 @@ namespace Raven.Client.Document.Async
 			return AsyncDocumentQuery<T>(indexName, isMapReduce);
 		}
 
-		protected override string GenerateKey(object entity)
+	    public RavenQueryInspector<S> CreateRavenQueryInspector<S>()
+	    {
+	        return new RavenQueryInspector<S>();
+	    }
+
+	    protected override string GenerateKey(object entity)
 		{
 			throw new NotSupportedException("Async session cannot generate keys synchronously");
 		}

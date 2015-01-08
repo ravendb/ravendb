@@ -1827,7 +1827,7 @@ namespace Raven.Database.Indexing
 
 		public void IncrementWriteErrors(Exception e)
 		{
-			if(e is OutOfMemoryException) // Don't count transient errors
+			if(e is SystemException) // Don't count transient errors
 				return;
 
 			writeErrors = Interlocked.Increment(ref writeErrors);

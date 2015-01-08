@@ -403,7 +403,9 @@
     <Compile Include="RDoc_76.cs" />
     <Compile Include="ReplicationAlerts.cs" />
     <Compile Include="ReplicationBehavior.cs" />
+    <Compile Include="RavenDB_3096.cs" />
     <Compile Include="SlowIndex.cs" />
+    <Compile Include="RavenDB_3106.cs" />
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
   </ItemGroup>
   <ItemGroup>
