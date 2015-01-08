@@ -50,7 +50,6 @@ namespace Voron
 	    private int _sizeOfUnflushedTransactionsInJournalFile;
 
 		private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
-	    private Transaction _currentWriteTransaction;
 
 	    public TransactionMergingWriter Writer { get; private set; }
 
@@ -363,18 +362,12 @@ namespace Voron
 		        {
 			        var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
 
-			        do
-			        {
-						if (_txWriter.Wait(wait) == false)
-						{
-							if(_currentWriteTransaction != null && _currentWriteTransaction.CreatedByJournalApplicator)
-								continue; // wait for journal applicator
-
-							throw new TimeoutException("Waited for " + wait +
-													   " for transaction write lock, but could not get it");
-						}
-						txLockTaken = true;
-			        } while (txLockTaken == false);
+					if (_txWriter.Wait(wait) == false)
+					{
+						throw new TimeoutException("Waited for " + wait +
+													" for transaction write lock, but could not get it");
+					}
+					txLockTaken = true;
 					
 			        if (_endOfDiskSpace != null)
 			        {
@@ -396,11 +389,6 @@ namespace Voron
 		        {
 			        long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
 			        tx = new Transaction(this, txId, flags, _freeSpaceHandling);
-
-			        if (flags == TransactionFlags.ReadWrite)
-			        {
-				        _currentWriteTransaction = tx;
-			        }
 
 			        if (IsDebugRecording)
 			        {
@@ -475,7 +463,6 @@ namespace Voron
             if (tx.Flags != (TransactionFlags.ReadWrite))
                 return;
 
-	        _currentWriteTransaction = null;
             _txWriter.Release();
         }
 
