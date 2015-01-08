@@ -3,21 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Threading.Tasks;
+using System.IO;
+using System.Linq;
 
 using Raven.Abstractions.Data;
+using Raven.Client.Indexes;
+using Raven.Json.Linq;
+using Raven.Tests.Common;
 
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	using System.IO;
-	using System.Linq;
-
-	using Raven.Client.Indexes;
-	using Raven.Json.Linq;
-	using Raven.Tests.Bundles.Replication;
-
 	public class RavenDB_3106 : ReplicationBase
 	{
 		private class Item
