@@ -89,12 +89,14 @@ namespace Raven.Tests.Issues
 
 		private static Etag GetReplicatedEtag(DocumentStore source, DocumentStore dest)
 		{
+			var sourceStatistics = source.DatabaseCommands.GetStatistics();
+
 		    var sourceUrl = source.Url + "/databases/" + source.DefaultDatabase;
 		    var destinationUrl = dest.Url + "/databases/" + dest.DefaultDatabase;
 
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
 				null,
-                sourceUrl.LastReplicatedEtagFor(destinationUrl),
+                sourceUrl.LastReplicatedEtagFor(destinationUrl, sourceStatistics.DatabaseId.ToString()),
 				"GET",
 				new OperationCredentials(source.ApiKey, source.Credentials),
 				source.Conventions);
