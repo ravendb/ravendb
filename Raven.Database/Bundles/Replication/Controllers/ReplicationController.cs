@@ -300,20 +300,29 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 				SourceReplicationInformation sourceReplicationInformation;
 
-				var serverInstanceId = Database.TransactionalStorage.Id; // this is my id, sent to the remote serve
+				var localServerInstanceId = Database.TransactionalStorage.Id; // this is my id, sent to the remote server
 
 				if (document == null)
 				{
-					sourceReplicationInformation = new SourceReplicationInformation()
+					sourceReplicationInformation = new SourceReplicationInformation
 					{
 						Source = src,
-						ServerInstanceId = serverInstanceId
+						ServerInstanceId = localServerInstanceId
 					};
 				}
 				else
 				{
+					var remoteServerInstanceId = Guid.Parse(dbid);
+
 					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
+					if (sourceReplicationInformation.ServerInstanceId != remoteServerInstanceId)
+					{
+						log.Info(string.Format("Server instance Id mismatch. Stored: {0}. Remote: {1}.", sourceReplicationInformation.ServerInstanceId, remoteServerInstanceId));
+						sourceReplicationInformation.LastAttachmentEtag = Etag.Empty;
+						sourceReplicationInformation.LastDocumentEtag = Etag.Empty;
+					}
+
+					sourceReplicationInformation.ServerInstanceId = localServerInstanceId;
 				}
 
 				var currentEtag = GetQueryStringValue("currentEtag");
@@ -356,9 +365,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				{
 
 				}
-				Guid serverInstanceId;
-				if (Guid.TryParse(dbid, out serverInstanceId) == false)
-					serverInstanceId = Database.TransactionalStorage.Id;
+
+				Guid serverInstanceId = Guid.Parse(dbid);
 
 				if (document == null)
 				{
