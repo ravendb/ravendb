@@ -553,15 +553,15 @@ namespace Voron
 		        }, TaskCreationOptions.LongRunning);
         }
 
-        public void FlushLogToDataFile(Transaction tx = null, bool allowToFlushOverwrittenPages = false)
+		public void FlushLogToDataFile(Transaction tx = null, bool allowToFlushOverwrittenPages = false, bool forceDataFileSync = false)
         {
 	        if (_options.ManualFlushing == false)
 				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 
-	        ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages);
+	        ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages, forceDataFileSync);
         }
 
-		internal void ForceLogFlushToDataFile(Transaction tx, bool allowToFlushOverwrittenPages, bool forceDataFileSync = false)
+		internal void ForceLogFlushToDataFile(Transaction tx, bool allowToFlushOverwrittenPages, bool forceDataFileSync)
 	    {
 		    if (IsDebugRecording)
 		    {

@@ -11,84 +11,21 @@ namespace Voron.Impl.Compaction
 {
 	public unsafe static class StorageCompaction
 	{
-		public static void Execute(StorageEnvironmentOptions srcOptions, StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions, long maxTransactionSizeInBytes = 8 * 1024 * 1024)
+		public static void Execute(StorageEnvironmentOptions srcOptions, StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions)
 		{
 			long minimalCompactedDataFileSize;
+
+			srcOptions.ManualFlushing = true; // prevent from flushing during compaction - we shouldn't touch any source files
+			compactOptions.ManualFlushing = true; // let us flush manually during data copy
 
 			using(var existingEnv = new StorageEnvironment(srcOptions))
 			using (var compactedEnv = new StorageEnvironment(compactOptions))
 			{
-				using (var rootIterator = existingEnv.State.Root.Iterate())
-				{
-					if (rootIterator.Seek(Slice.BeforeAllKeys) == false)
-						return;
+				CopyTrees(existingEnv, compactedEnv);
 
-					do
-					{
-						var treeName = rootIterator.CurrentKey.ToString();
+				compactedEnv.FlushLogToDataFile(allowToFlushOverwrittenPages: true, forceDataFileSync: true);
 
-						using (var txr = existingEnv.NewTransaction(TransactionFlags.Read))
-						{
-							var existingTree = existingEnv.State.GetTree(txr, treeName);
-
-							using (var existingTreeIterator = existingTree.Iterate())
-							{
-								if (existingTreeIterator.Seek(Slice.BeforeAllKeys) == false)
-									continue;
-
-								using (var txw = compactedEnv.NewTransaction(TransactionFlags.ReadWrite))
-								{
-									compactedEnv.CreateTree(txw, treeName);
-									txw.Commit();
-								}
-
-								do
-								{
-									var transactionDataSize = 0L;
-
-									using (var txw = compactedEnv.NewTransaction(TransactionFlags.ReadWrite))
-									{
-										var newTree = txw.ReadTree(treeName);
-
-										do
-										{
-											var key = existingTreeIterator.CurrentKey;
-
-											if (existingTreeIterator.Current->Flags == NodeFlags.MultiValuePageRef)
-											{
-												using (var multiTreeIterator = existingTree.MultiRead(key))
-												{
-													if (multiTreeIterator.Seek(Slice.BeforeAllKeys) == false)
-														continue;
-
-													do
-													{
-														var multiValue = multiTreeIterator.CurrentKey;
-														newTree.MultiAdd(key, multiValue);
-														transactionDataSize += multiValue.Size;
-
-													} while (multiTreeIterator.MoveNext());
-												}
-											}
-											else
-											{
-												using (var value = existingTree.Read(key).Reader.AsStream())
-												{
-													newTree.Add(key, value);
-													transactionDataSize += value.Length;
-												}
-											}
-										} while (transactionDataSize < maxTransactionSizeInBytes && existingTreeIterator.MoveNext());
-
-										txw.Commit();
-									}
-								} while (existingTreeIterator.MoveNext());
-							}
-						}
-
-					} while (rootIterator.MoveNext());
-				}
-				compactedEnv.ForceLogFlushToDataFile(null, allowToFlushOverwrittenPages: true, forceDataFileSync: true);
+				compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 
 				minimalCompactedDataFileSize = compactedEnv.NextPageNumber*AbstractPager.PageSize;
 			}
@@ -96,6 +33,81 @@ namespace Voron.Impl.Compaction
 			using (var compactedDataFile = new FileStream(Path.Combine(compactOptions.BasePath, Constants.DatabaseFilename), FileMode.Open, FileAccess.ReadWrite))
 			{
 				compactedDataFile.SetLength(minimalCompactedDataFileSize);
+			}
+		}
+
+		private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv)
+		{
+			using (var rootIterator = existingEnv.State.Root.Iterate())
+			{
+				if (rootIterator.Seek(Slice.BeforeAllKeys) == false)
+					return;
+
+				do
+				{
+					var treeName = rootIterator.CurrentKey.ToString();
+
+					using (var txr = existingEnv.NewTransaction(TransactionFlags.Read))
+					{
+						var existingTree = existingEnv.State.GetTree(txr, treeName);
+
+						using (var existingTreeIterator = existingTree.Iterate())
+						{
+							if (existingTreeIterator.Seek(Slice.BeforeAllKeys) == false)
+								continue;
+
+							using (var txw = compactedEnv.NewTransaction(TransactionFlags.ReadWrite))
+							{
+								compactedEnv.CreateTree(txw, treeName);
+								txw.Commit();
+							}
+
+							do
+							{
+								var transactionSize = 0L;
+
+								using (var txw = compactedEnv.NewTransaction(TransactionFlags.ReadWrite))
+								{
+									var newTree = txw.ReadTree(treeName);
+
+									do
+									{
+										var key = existingTreeIterator.CurrentKey;
+
+										if (existingTreeIterator.Current->Flags == NodeFlags.MultiValuePageRef)
+										{
+											using (var multiTreeIterator = existingTree.MultiRead(key))
+											{
+												if (multiTreeIterator.Seek(Slice.BeforeAllKeys) == false)
+													continue;
+
+												do
+												{
+													var multiValue = multiTreeIterator.CurrentKey;
+													newTree.MultiAdd(key, multiValue);
+													transactionSize += multiValue.Size;
+												} while (multiTreeIterator.MoveNext());
+											}
+										}
+										else
+										{
+											using (var value = existingTree.Read(key).Reader.AsStream())
+											{
+												newTree.Add(key, value);
+												transactionSize += value.Length;
+											}
+										}
+									} while (transactionSize < compactedEnv.Options.MaxLogFileSize/2 && existingTreeIterator.MoveNext());
+
+									txw.Commit();
+								}
+
+								compactedEnv.FlushLogToDataFile();
+
+							} while (existingTreeIterator.MoveNext());
+						}
+					}
+				} while (rootIterator.MoveNext());
 			}
 		}
 	}

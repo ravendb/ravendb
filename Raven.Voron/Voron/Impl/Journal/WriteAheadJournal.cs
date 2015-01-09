@@ -782,6 +782,34 @@ namespace Voron.Impl.Journal
 						Monitor.Exit(_flushingLock);
 				});
 			}
+
+			internal void DeleteCurrentAlreadyFlushedJournal()
+			{
+				if (_waj._env.Options.IncrementalBackupEnabled)
+					return;
+
+				if (_waj._files.Count == 0)
+					return;
+
+				if (_waj._files.Count != 1)
+					throw new InvalidOperationException("Cannot delete current journal because there is more journals being in use");
+
+				var current = _waj._files.First();
+
+				if (current.Number != _lastSyncedJournal)
+					throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile.Number, _lastSyncedJournal));
+
+				if(_waj._env.NextWriteTransactionId - 1 != _lastSyncedTransactionId)
+					throw new InvalidOperationException();
+					
+				_waj._files = _waj._files.RemoveFront(1);
+				_waj.CurrentFile = null;
+
+				current.DeleteOnClose = true;
+				current.Release();
+
+				_waj._headerAccessor.Modify(header => _waj._updateLogInfo(header));
+			}
 		}
 
 		public void WriteToJournal(Transaction tx, int pageCount)

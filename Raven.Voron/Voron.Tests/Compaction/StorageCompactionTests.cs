@@ -84,7 +84,7 @@ namespace Voron.Tests.Compaction
 				}
 			}
 
-			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData), maxTransactionSizeInBytes: 256);
+			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData));
 
 			using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactedData)))
 			{
@@ -142,7 +142,7 @@ namespace Voron.Tests.Compaction
 		}
 
 		[Fact]
-		public void AfterCompactionStorageShouldTakeLessSpace()
+		public void ShouldOccupyLessSpace()
 		{
 			var r = new Random();
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactionTestsData)))
@@ -177,11 +177,88 @@ namespace Voron.Tests.Compaction
 
 			var oldSize = GetDirSize(new DirectoryInfo(CompactionTestsData));
 
-			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions) StorageEnvironmentOptions.ForPath(CompactedData), maxTransactionSizeInBytes: 512);
+			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions) StorageEnvironmentOptions.ForPath(CompactedData));
 
 			var newSize = GetDirSize(new DirectoryInfo(CompactedData));
 
 			Assert.True(newSize < oldSize, string.Format("Old size: {0:#,#;;0} MB, new size {1:#,#;;0} MB", oldSize / 1024 / 1024, newSize / 1024 / 1024));
+		}
+
+		[Fact]
+		public void ShouldNotDeleteJournalsIfCompactedStorageSupportsIncrementalBackup()
+		{
+			var r = new Random();
+
+			var envOptions = StorageEnvironmentOptions.ForPath(CompactionTestsData);
+			envOptions.IncrementalBackupEnabled = true;
+			using (var env = new StorageEnvironment(envOptions))
+			{
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = env.CreateTree(tx, "records");
+
+					for (int i = 0; i < 100; i++)
+					{
+						var bytes = new byte[r.Next(10, 2 * 1024 * 1024)];
+						r.NextBytes(bytes);
+
+						tree.Add("record/" + i, bytes);
+					}
+
+					tx.Commit();
+				}
+			}
+
+			var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData);
+			compactOptions.IncrementalBackupEnabled = true;
+
+			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), compactOptions);
+
+			var compactedDir = new DirectoryInfo(CompactedData);
+
+			var journalsAfterCompaction = compactedDir.GetFiles("*.journal").Select(x => x.Name).ToList();
+
+			for (int i = 0; i < journalsAfterCompaction.Count; i++)
+			{
+				Assert.Equal(StorageEnvironmentOptions.JournalName(i), journalsAfterCompaction[i]);
+			}
+		}
+
+		[Fact]
+		public void ShouldDeleteCurrentJournalEvenThoughItHasAvailableSpace()
+		{
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactionTestsData)))
+			{
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = env.CreateTree(tx, "fruits");
+
+					tree.Add("apple", new byte[123]);
+					tree.Add("orange", new byte[99]);
+
+					tx.Commit();
+				}
+			}
+
+			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData));
+
+			var compactedDir = new DirectoryInfo(CompactedData);
+
+			var journalsAfterCompaction = compactedDir.GetFiles("*.journal").Select(x => x.Name).ToList();
+
+			Assert.Equal(0, journalsAfterCompaction.Count);
+
+			// ensure it can write more data
+
+			using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactedData)))
+			{
+				using (var tx = compacted.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = compacted.CreateTree(tx, "fruits");
+
+					tree.Add("peach", new byte[144]);
+				}
+			}
 		}
 
 		public static long GetDirSize(DirectoryInfo d)
