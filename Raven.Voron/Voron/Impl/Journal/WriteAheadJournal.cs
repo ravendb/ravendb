@@ -421,7 +421,7 @@ namespace Voron.Impl.Journal
 				});
 			}
 
-			public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, Transaction transaction = null, bool allowToFlushOverwrittenPages = false, bool forceDataFileSync = false)
+			public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, Transaction transaction = null, bool allowToFlushOverwrittenPages = false)
 			{
 				if (token.IsCancellationRequested)
 					return;
@@ -531,7 +531,7 @@ namespace Voron.Impl.Journal
 
 							using (ForceFlushingPagesOlderThan(oldestActiveTransaction))
 							{
-								ApplyLogsToDataFile(oldestActiveTransaction, token, transaction, false, forceDataFileSync);
+								ApplyLogsToDataFile(oldestActiveTransaction, token, transaction, false);
 							}
 						}
 
@@ -578,24 +578,9 @@ namespace Voron.Impl.Journal
 					}
 					
 					if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
-						DateTime.UtcNow - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit ||
-						forceDataFileSync)
+						DateTime.UtcNow - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit)
 					{
-						_waj._dataPager.Sync();
-
-						UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
-
-						foreach (var toDelete in _journalsToDelete.Values)
-						{
-							if (_waj._env.Options.IncrementalBackupEnabled == false)
-								toDelete.DeleteOnClose = true;
-
-							toDelete.Release();
-						}
-
-						_journalsToDelete.Clear();
-						_totalWrittenButUnsyncedBytes = 0;
-						_lastDataFileSyncTime = DateTime.UtcNow;
+						SyncDataFile(oldestActiveTransaction);
 					}
 
 				}
@@ -604,6 +589,25 @@ namespace Voron.Impl.Journal
 					if(lockTaken)
 						Monitor.Exit(_flushingLock);
 				}
+			}
+
+			internal void SyncDataFile(long oldestActiveTransaction)
+			{
+				_waj._dataPager.Sync();
+
+				UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
+
+				foreach (var toDelete in _journalsToDelete.Values)
+				{
+					if (_waj._env.Options.IncrementalBackupEnabled == false)
+						toDelete.DeleteOnClose = true;
+
+					toDelete.Release();
+				}
+
+				_journalsToDelete.Clear();
+				_totalWrittenButUnsyncedBytes = 0;
+				_lastDataFileSyncTime = DateTime.UtcNow;
 			}
 
 			public Dictionary<long, int> writtenPages = new Dictionary<long, int>();
