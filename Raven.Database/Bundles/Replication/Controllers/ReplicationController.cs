@@ -4,9 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -16,6 +19,7 @@ using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Bundles.Replication.Responders;
 using Raven.Bundles.Replication.Tasks;
+using Raven.Client.Connection;
 using Raven.Database.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Server.Controllers;
@@ -177,18 +181,14 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 		private void SaveReplicationSource(string src, string lastEtag)
 		{
-			var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
+			Guid remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
+
+			var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + remoteServerInstanceId;
 			var replicationDocument = Database.Documents.Get(replicationDocKey, null);
 			var lastAttachmentId = Etag.Empty;
 			if (replicationDocument != null)
 			{
 				lastAttachmentId = replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().LastAttachmentEtag;
-			}
-
-			Guid serverInstanceId;
-			if (Guid.TryParse(GetQueryStringValue("dbid"), out serverInstanceId) == false)
-			{
-				serverInstanceId = Database.TransactionalStorage.Id;
 			}
 
 			Database
@@ -202,7 +202,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 							Source = src,
 							LastDocumentEtag = Etag.Parse(lastEtag),
 							LastAttachmentEtag = lastAttachmentId,
-							ServerInstanceId = serverInstanceId
+							ServerInstanceId = remoteServerInstanceId,
+							LastModified = SystemTime.UtcNow
 						}),
 					new RavenJObject(),
 					null);
@@ -245,7 +246,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), src);
 					}
 
-					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
+					Guid remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
+
+					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + remoteServerInstanceId;
 					var replicationDocument = Database.Documents.Get(replicationDocKey, null);
 					Etag lastDocId = null;
 					if (replicationDocument != null)
@@ -255,16 +258,14 @@ namespace Raven.Database.Bundles.Replication.Controllers
 								LastDocumentEtag;
 					}
 
-					Guid serverInstanceId;
-					if (Guid.TryParse(GetQueryStringValue("dbid"), out serverInstanceId) == false)
-						serverInstanceId = Database.TransactionalStorage.Id;
 					Database.Documents.Put(replicationDocKey, null,
 								 RavenJObject.FromObject(new SourceReplicationInformation
 								 {
 									 Source = src,
 									 LastDocumentEtag = lastDocId,
 									 LastAttachmentEtag = lastEtag,
-									 ServerInstanceId = serverInstanceId
+									 ServerInstanceId = remoteServerInstanceId,
+									 LastModified = SystemTime.UtcNow
 								 }),
 								 new RavenJObject(), null);
 				});
@@ -296,30 +297,69 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
-
-				SourceReplicationInformation sourceReplicationInformation;
+				JsonDocument document = null;
+				SourceReplicationInformation sourceReplicationInformation = null;
 
 				var localServerInstanceId = Database.TransactionalStorage.Id; // this is my id, sent to the remote server
+
+				if (string.IsNullOrEmpty(dbid))
+				{
+					// backward compatibility for replication behavior
+					int nextStart = 0;
+					var replicationSources = Database.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
+					foreach (RavenJObject replicationSource in replicationSources)
+					{
+						sourceReplicationInformation = replicationSource.JsonDeserialization<SourceReplicationInformation>();
+						if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false)
+							continue;
+
+						document = replicationSource.ToJsonDocument();
+						break;
+					}
+				}
+				else
+				{
+					var remoteServerInstanceId = Guid.Parse(dbid);
+
+					document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + remoteServerInstanceId, null);
+					if (document == null)
+					{
+						// migrate
+						document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
+						if (document != null)
+						{
+							sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+							Database.Documents.Put(Constants.RavenReplicationSourcesBasePath + "/" + sourceReplicationInformation.ServerInstanceId, Etag.Empty, document.DataAsJson, document.Metadata, null);
+							Database.Documents.Delete(Constants.RavenReplicationSourcesBasePath + "/" + src, document.Etag, null);
+
+							if (remoteServerInstanceId != sourceReplicationInformation.ServerInstanceId) 
+								document = null;
+						}
+					}
+				}
 
 				if (document == null)
 				{
 					sourceReplicationInformation = new SourceReplicationInformation
 					{
 						Source = src,
-						ServerInstanceId = localServerInstanceId
+						ServerInstanceId = localServerInstanceId,
+						LastModified = SystemTime.UtcNow
 					};
 				}
 				else
 				{
-					var remoteServerInstanceId = Guid.Parse(dbid);
+					if (sourceReplicationInformation == null)
+						sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
 
-					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-					if (sourceReplicationInformation.ServerInstanceId != remoteServerInstanceId)
+					if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false 
+						&& sourceReplicationInformation.LastModified.HasValue 
+						&& (SystemTime.UtcNow - sourceReplicationInformation.LastModified.Value).TotalMinutes < 10)
 					{
-						log.Info(string.Format("Server instance Id mismatch. Stored: {0}. Remote: {1}.", sourceReplicationInformation.ServerInstanceId, remoteServerInstanceId));
-						sourceReplicationInformation.LastAttachmentEtag = Etag.Empty;
-						sourceReplicationInformation.LastDocumentEtag = Etag.Empty;
+						log.Info(string.Format("Replication source mismatch. Stored: {0}. Remote: {1}.", sourceReplicationInformation.Source, src));
+
+						sourceReplicationInformation.LastAttachmentEtag = Etag.InvalidEtag;
+						sourceReplicationInformation.LastDocumentEtag = Etag.InvalidEtag;
 					}
 
 					sourceReplicationInformation.ServerInstanceId = localServerInstanceId;
@@ -344,7 +384,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
+				var document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + dbid, null);
 
 				SourceReplicationInformation sourceReplicationInformation;
 
@@ -355,15 +395,14 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				}
 				catch
 				{
-
 				}
+
 				try
 				{
 					attachmentEtag = Etag.Parse(GetQueryStringValue("attachmentEtag"));
 				}
 				catch
 				{
-
 				}
 
 				Guid serverInstanceId = Guid.Parse(dbid);
@@ -375,7 +414,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						ServerInstanceId = serverInstanceId,
 						LastAttachmentEtag = attachmentEtag ?? Etag.Empty,
 						LastDocumentEtag = docEtag ?? Etag.Empty,
-						Source = src
+						Source = src,
+						LastModified = SystemTime.UtcNow
 					};
 				}
 				else
@@ -384,6 +424,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
 					sourceReplicationInformation.LastDocumentEtag = docEtag ?? sourceReplicationInformation.LastDocumentEtag;
 					sourceReplicationInformation.LastAttachmentEtag = attachmentEtag ?? sourceReplicationInformation.LastAttachmentEtag;
+					sourceReplicationInformation.LastModified = SystemTime.UtcNow;
 				}
 
 				var etag = document == null ? Etag.Empty : document.Etag;
@@ -394,7 +435,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 								  sourceReplicationInformation.LastDocumentEtag,
 								  sourceReplicationInformation.LastAttachmentEtag);
 
-				Database.Documents.Put(Constants.RavenReplicationSourcesBasePath + "/" + src, etag, newDoc, metadata, null);
+				Database.Documents.Put(Constants.RavenReplicationSourcesBasePath + "/" + dbid, etag, newDoc, metadata, null);
 			}
 
 			return GetEmptyMessage();

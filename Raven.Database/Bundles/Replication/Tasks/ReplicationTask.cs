@@ -65,6 +65,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private object _indexReplicationTaskLock = new object();
 		private object _lastQueriedTaskLock = new object();
 
+		private readonly ConcurrentDictionary<string, DateTime> destinationAlertSent = new ConcurrentDictionary<string, DateTime>(); 
 
 		public ConcurrentDictionary<string, DestinationStats> DestinationStats
 		{
@@ -421,6 +422,28 @@ namespace Raven.Bundles.Replication.Tasks
 							}
 
 							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
+
+							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.InvalidEtag && destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.InvalidEtag)
+							{
+								DateTime lastSent;
+								if (destinationAlertSent.TryGetValue(destination.ConnectionStringOptions.Url, out lastSent) && (SystemTime.UtcNow - lastSent).TotalMinutes < 1)
+									return false;
+
+								var lastModifiedDate = destinationsReplicationInformationForSource.LastModified.HasValue ? destinationsReplicationInformationForSource.LastModified.Value.ToLocalTime() : DateTime.MinValue;
+
+								docDb.AddAlert(new Alert
+								{
+									AlertLevel = AlertLevel.Error,
+									CreatedAt = SystemTime.UtcNow,
+									Message = string.Format(@"Destination server is forbidding replication due to a possibility of having multiple instances with same DatabaseId replicating to it. After 10 minutes from '{2}' another instance will start replicating. Destination Url: {0}. DatabaseId: {1}. Current source: {3}. Stored source on destination: {4}.", destination.ConnectionStringOptions.Url, docDb.TransactionalStorage.Id, lastModifiedDate, docDb.ServerUrl, destinationsReplicationInformationForSource.Source),
+									Title = string.Format("Replication error. Multiple databases replicating at the same time with same DatabaseId ('{0}') detected.", docDb.TransactionalStorage.Id),
+									UniqueKey = "Replication to " + destination.ConnectionStringOptions.Url + " errored. Wrong DatabaseId: " + docDb.TransactionalStorage.Id
+								});
+
+								destinationAlertSent.AddOrUpdate(destination.ConnectionStringOptions.Url, SystemTime.UtcNow, (_, __) => SystemTime.UtcNow);
+
+								return false;
+							}
 						}
 						catch (Exception e)
 						{
