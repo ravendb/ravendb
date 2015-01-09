@@ -74,7 +74,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
     <OutputPath>bin\Profiling\</OutputPath>
-    <DefineConstants>TRACE;NET_4_0</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;NET_4_0 NET45</DefineConstants>
     <Optimize>true</Optimize>
     <NoWarn>1607, 1591</NoWarn>
     <DebugType>pdbonly</DebugType>
