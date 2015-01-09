@@ -312,10 +312,10 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				}
 				else
 				{
-					var remoteServerInstanceId = Guid.Parse(dbid);
-
 					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-					if (sourceReplicationInformation.ServerInstanceId != remoteServerInstanceId)
+
+					Guid remoteServerInstanceId;
+					if (Guid.TryParse(dbid, out remoteServerInstanceId) && sourceReplicationInformation.ServerInstanceId != remoteServerInstanceId)
 					{
 						log.Info(string.Format("Server instance Id mismatch. Stored: {0}. Remote: {1}.", sourceReplicationInformation.ServerInstanceId, remoteServerInstanceId));
 						sourceReplicationInformation.LastAttachmentEtag = Etag.Empty;
