@@ -83,7 +83,7 @@ class metricsIndexBatchSize extends viewModelBase {
         }
     }
 
-    fetchStats(): JQueryPromise<databaseStatisticsDto> {
+    fetchStats(): JQueryPromise<indexingBatchInfoDto[]> {
         var db = this.activeDatabase();
         if (db) {
             var command = new getIndexingBatchStatsCommand(db);

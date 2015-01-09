@@ -429,7 +429,7 @@ class metrics extends viewModelBase {
             .attr('patternUnits', 'userSpaceOnUse')
             .append('path')
             .attr('d', 'M 0 0 L 6 6 M 0 6 L 6 0')
-            .attr('stroke', 'grey')
+            .attr('stroke', '#333')
             .attr('fill', 'transparent')
             .attr('stroke-width', 0.25)
             .attr('stroke-linecap', 'square')
@@ -693,6 +693,9 @@ class metrics extends viewModelBase {
         opTransition.select('.main_bar')
             .attr('width', (d: indexNameAndMapPerformanceStats) => self.xScaleExtent(d.stats.DurationMilliseconds));
         
+        opTransition.selectAll('.mto_hatch')
+            .attr('width', (d: parallelPefromanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
+
         opTransition.selectAll('.sto_item')
             .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
             .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
@@ -746,6 +749,18 @@ class metrics extends viewModelBase {
             (d: parallelPefromanceStatsDto) =>
                 "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)");
 
+        mtoItems
+            .append('rect')
+            .attr('class', 'mto_hatch')
+            .attr('x', 0)
+            .attr('y', self.yBarMargin)
+            .attr('width', 0)
+            .attr('height', self.yBarHeight) 
+            .style('fill', 'url(#hash)')
+            .transition()
+            .attr('width', (d: parallelPefromanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
+            
+
         var mtoThreadItems = mtoItems.selectAll('.mto_thread_item')
             .data(d => d.BatchedOperations)
             .enter()
@@ -795,6 +810,9 @@ class metrics extends viewModelBase {
 
         opTransition.select('.main_bar')
             .attr('width', (d: reduceLevelPeformanceStatsDto) => self.xScaleExtent(d.DurationMs));
+
+        opTransition.selectAll('.mto_hatch')
+            .attr('width', (d: parallelPefromanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
 
         opTransition.selectAll('.sto_item')
             .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
@@ -859,6 +877,17 @@ class metrics extends viewModelBase {
             .attr("transform",
             (d: parallelPefromanceStatsDto) =>
                 "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)");
+
+        mtoItems
+            .append('rect')
+            .attr('class', 'mto_hatch')
+            .attr('x', 0)
+            .attr('y', self.yBarMargin)
+            .attr('width', 0)
+            .attr('height', self.yBarHeight)
+            .style('fill', 'url(#hash)')
+            .transition()
+            .attr('width', (d: parallelPefromanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
 
         var mtoThreadItems = mtoItems.selectAll('.mto_thread_item')
             .data(d => d.BatchedOperations)
