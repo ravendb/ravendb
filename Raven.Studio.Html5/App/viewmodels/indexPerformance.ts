@@ -92,19 +92,6 @@ class gapFinder {
 }
 class metrics extends viewModelBase { 
 
-
-    static map_bar_names =
-        ['load_bar',
-        'linq_map_bar', 'linq_reduce_bar',
-        'l_delete_bar', 'l_convert_bar', 'l_add_bar', 'l_flush_bar', 'l_recreate_bar',
-        'map_del_bar', 'map_convert_bar', 'map_put_bar', 'map_schedule_bar', 'map_commit_bar'];
-
-    static map_bar_colors = [
-        '#17becf',
-        '#1f77b4', '#ff7f0e',
-        '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2',
-        '#aec7e8', '#e0e5a3', '#98df8a', '#ffbb78', '#ff9896'];
-
     static reduce_bar_names = 
         ['linq_map_bar', 'linq_reduce_bar',
         'l_delete_bar', 'l_convert_bar', 'l_add_bar', 'l_flush_bar', 'l_recreate_bar',
@@ -261,7 +248,7 @@ class metrics extends viewModelBase {
 
         incomingData.forEach(d => {
 
-            d.PerfStats.forEach(self.computeMapCache);
+            d.PerfStats.forEach(self.computeMapCache.bind(self));
 
             if (dateLookup.has(d.StartedAt)) {
                 var index = dateLookup.get(d.StartedAt);
@@ -282,7 +269,7 @@ class metrics extends viewModelBase {
         });
 
         incomingData.forEach(d => {
-            d.PerfStats.forEach(s => s.stats.LevelStats.forEach(self.computeReduceCache));
+            d.PerfStats.forEach(s => s.stats.LevelStats.forEach(self.computeReduceCache.bind(self)));
 
             if (dateLookup.has(d.StartedAt)) {
                 var index = dateLookup.get(d.StartedAt);
@@ -296,6 +283,7 @@ class metrics extends viewModelBase {
 
     computeMapCache(input: indexNameAndMapPerformanceStats) {
         var currentOffset = 0;
+        var self = this;
 
         var timings = input.stats.Operations.map(o => o.DurationMs);
 
@@ -309,40 +297,48 @@ class metrics extends viewModelBase {
 
             if (!op.CacheIsSingleThread) {
                 var mtGroup = <parallelPefromanceStatsDto>op;
-                for (var thread = 0; thread < mtGroup.BatchedOperations.length; thread++) {
-                    var perThreadInfo = mtGroup.BatchedOperations[thread];
-                    var currentPerThreadOffset = perThreadInfo.StartDelay;
-
-                    for (var j = 0; j < perThreadInfo.Operations.length; j++) {
-                        var innerOp = perThreadInfo.Operations[j];
-                        var w = Math.max(innerOp.DurationMs, 0);
-                        innerOp.CacheWidth = w;
-                        innerOp.CacheCumulativeSum = currentPerThreadOffset;
-                        innerOp.CacheIsSingleThread = true;
-                        currentPerThreadOffset += w;
-                    }
-                }
+                self.computeParallelOpsCache(mtGroup);
             }
 
             currentOffset += currentWidth;
         }
     }
 
-    computeReduceCache(input: reduceLevelPeformanceStatsDtoWithCache) {
-        var widths = [];
-        var sums = [];
+    computeReduceCache(input: reduceLevelPeformanceStatsDto) {
         var currentOffset = 0;
+        var self = this;
 
         var timings = input.Operations.map(o => o.DurationMs);
         for (var i = 0; i < timings.length; i++) {
             var currentWidth = Math.max(timings[i], 0);
-            widths.push(currentWidth);
-            sums.push(currentOffset); 
+            var op = input.Operations[i];
+            op.CacheWidth = currentWidth;
+            op.CacheCumulativeSum = currentOffset;
+            op.CacheIsSingleThread = "Name" in op;
+
+            if (!op.CacheIsSingleThread) {
+                var mtGroup = <parallelPefromanceStatsDto>op;
+                self.computeParallelOpsCache(mtGroup);
+            }
+
             currentOffset += currentWidth;
         }
+    }
 
-        input.widths = widths;
-        input.cumulativeSums = sums;
+    computeParallelOpsCache(mtGroup: parallelPefromanceStatsDto) {
+        for (var thread = 0; thread < mtGroup.BatchedOperations.length; thread++) {
+            var perThreadInfo = mtGroup.BatchedOperations[thread];
+            var currentPerThreadOffset = perThreadInfo.StartDelay;
+
+            for (var j = 0; j < perThreadInfo.Operations.length; j++) {
+                var innerOp = perThreadInfo.Operations[j];
+                var w = Math.max(innerOp.DurationMs, 0);
+                innerOp.CacheWidth = w;
+                innerOp.CacheCumulativeSum = currentPerThreadOffset;
+                innerOp.CacheIsSingleThread = true;
+                currentPerThreadOffset += w;
+            }
+        }
     }
 
     graphScrolled() {
@@ -789,7 +785,7 @@ class metrics extends viewModelBase {
 
         op.exit().remove();
 
-        var opTransition = 
+        var opTransition =
             op
                 .selectAll('.op')
                 .transition()
@@ -799,13 +795,17 @@ class metrics extends viewModelBase {
 
         opTransition.select('.main_bar')
             .attr('width', (d: reduceLevelPeformanceStatsDto) => self.xScaleExtent(d.DurationMs));
-        
-        for (var i = 0; i < metrics.reduce_bar_names.length; i++) {
-            var barName = metrics.reduce_bar_names[i];
-            opTransition.select('.' + barName)
-                .attr('x', (d: reduceLevelPeformanceStatsDtoWithCache) => self.xScaleExtent(d.cumulativeSums[i]))
-                .attr('width', (d: reduceLevelPeformanceStatsDtoWithCache) => self.xScaleExtent(d.widths[i]));
-        }
+
+        opTransition.selectAll('.sto_item')
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
+
+        opTransition.selectAll('.mto_items')
+            .attr("transform", (d: parallelPefromanceStatsDto) => "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)")
+
+        opTransition.selectAll('.mto_item')
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
 
         var enteringOps = op.enter()
             .append('g')
@@ -839,19 +839,47 @@ class metrics extends viewModelBase {
             .transition()
                 .attr('width', (d: reduceLevelPeformanceStatsDto) => self.xScaleExtent(d.DurationMs));
 
-        for (var i = 0; i < metrics.reduce_bar_names.length; i++) {
-            var barName = metrics.reduce_bar_names[i];
-            var barColor = metrics.reduce_bar_colors[i];
-            enteringOps.append('rect')
-                .attr('class', barName)
-                .attr('x', (d: reduceLevelPeformanceStatsDtoWithCache) => self.xScaleExtent(d.cumulativeSums[i]))
-                .attr('y', self.yBarMargin + 3)
-                .attr('width', 0)
-                .attr('height', self.yBarHeight - 6)
-                .style('fill', barColor)
-                .transition()
-                .attr('width', (d: reduceLevelPeformanceStatsDtoWithCache) => self.xScaleExtent(d.widths[i]));
-        }
+        enteringOps.selectAll('.sto_item')
+            .data((d: reduceLevelPeformanceStatsDto) => d.Operations.filter(o => o.CacheIsSingleThread))
+            .enter()
+            .append('rect')
+            .attr('class', (d: performanceStatsDto) => 'sto_item ' + d.Name)
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('y', self.yBarMargin)
+            .attr('width', 0)
+            .attr('height', self.yBarHeight)
+            .transition()
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth));
+
+        var mtoItems = enteringOps.selectAll('.mto_items')
+            .data((d: reduceLevelPeformanceStatsDto) => d.Operations.filter(o => !o.CacheIsSingleThread))
+            .enter()
+            .append('g')
+            .attr('class', 'mto_items')
+            .attr("transform",
+            (d: parallelPefromanceStatsDto) =>
+                "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)");
+
+        var mtoThreadItems = mtoItems.selectAll('.mto_thread_item')
+            .data(d => d.BatchedOperations)
+            .enter()
+            .append('g')
+            .attr('class', 'mto_thread_item')
+            .attr("transform",
+            (d: parallelBatchStatsDto, i) =>
+                "translate(0," + (i * self.yBarHeight / d.Parent.NumberOfThreads + self.yBarMargin) + ")");
+
+        mtoThreadItems.selectAll('.mto_item')
+            .data(d => d.Operations)
+            .enter()
+            .append('rect')
+            .attr('class', (d: performanceStatsDto) => 'mto_item ' + d.Name)
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('y', 0)
+            .attr('width', 0)
+            .attr('height', (d: performanceStatsDto) => self.yBarHeight / d.ParallelParent.Parent.NumberOfThreads)
+            .transition()
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
     }
 
     private updateGaps(gapsPositions: timeGap[]) {
@@ -917,6 +945,11 @@ class metrics extends viewModelBase {
         return d3.max(parallelOps.map(p => p.NumberOfThreads));
     }
 
+    private findMaxThreadCountInReduce(data: reduceLevelPeformanceStatsDto) {
+        var parallelOps = <parallelPefromanceStatsDto[]>data.Operations.filter(x => "NumberOfThreads" in x);
+        return d3.max(parallelOps.map(p => p.NumberOfThreads));
+    }
+
     private indexStatClicked(data: indexNameAndMapPerformanceStats, element: Element) {
         var self = this;
         nv.tooltip.cleanup();
@@ -925,17 +958,18 @@ class metrics extends viewModelBase {
         var html = '<div data-bind="template: { name : \'index-stat-template\' }"></div>'; 
         nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
         data.CacheThreadCount = self.findMaxThreadCountInMap(data);
-        self.fillTooltip(data, metrics.map_bar_colors);
+        self.fillTooltip(data);
     }
 
-    private reduceStatClicked(data: indexNameAndReducingPerformanceStats, element: Element) {
+    private reduceStatClicked(data: reduceLevelPeformanceStatsDto, element: Element) {
         var self = this;
         nv.tooltip.cleanup();
         var offset = $(element).offset();
         var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'reduce-stat-template\' }"></div>';
         nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
-        self.fillTooltip(data, metrics.reduce_bar_colors);
+        data.CacheThreadCount = self.findMaxThreadCountInReduce(data);
+        self.fillTooltip(data);
     }
 
     private mapBatchInfoClicked(data: indexingBatchInfoDto, element: Element) {
@@ -945,7 +979,7 @@ class metrics extends viewModelBase {
         var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'map-batch-info-template\' }"></div>'; 
         nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
-        self.fillTooltip(data, metrics.map_bar_colors);
+        self.fillTooltip(data);
     }
 
     private reduceBatchInfoClicked(data: indexingBatchInfoDto, element: Element) {
@@ -955,12 +989,12 @@ class metrics extends viewModelBase {
         var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'reduce-batch-info-template\' }"></div>';
         nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
-        self.fillTooltip(data, metrics.reduce_bar_colors);
+        self.fillTooltip(data);
     }
 
-    private fillTooltip(model: any, colors: string[]) {
+    private fillTooltip(model: any) {
         var node = $(".nvtooltip")[0];
-        ko.applyBindings({ data: model, colors: colors, tooltipClose:  nv.tooltip.cleanup }, node);
+        ko.applyBindings({ data: model, tooltipClose:  nv.tooltip.cleanup }, node);
     }
 
     onWindowHeightChanged() {

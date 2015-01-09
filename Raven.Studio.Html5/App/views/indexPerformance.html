@@ -156,7 +156,7 @@
             <thead>
                 <tr>
                     <th>Index stats:</th>
-                    <th data-bind="text: indexName, attr: { colspan: $parent.CacheThreadCount }"></th>
+                    <th data-bind="text: indexName, attr: { colspan: $root.data.CacheThreadCount }"></th>
                 </tr>
             </thead>
             <tbody data-bind="with: stats">
@@ -227,87 +227,59 @@
             <thead>
                 <tr>
                     <th>Reduce of index stats:</th>
-                    <th data-bind="text: parent.indexName"></th>
+                    <th data-bind="text: parent.indexName, attr: { colspan: $root.data.CacheThreadCount }"></th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td>Reduce type</td>
-                    <td data-bind="text: parent.stats.ReduceType"></td>
+                    <td data-bind="text: parent.stats.ReduceType, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Level</td>
-                    <td data-bind="text: Level"></td>
+                    <td data-bind="text: Level, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Items count</td>
-					<td data-bind="text: ItemsCount.toLocaleString(2)"></td>
+					<td data-bind="text: ItemsCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Output count</td>
-					<td data-bind="text: OutputCount.toLocaleString(2)"></td>
+					<td data-bind="text: OutputCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Duration</td>
-                    <td data-bind="text: Duration"></td>
+                    <td data-bind="text: Duration, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Started</td>
-                    <td data-bind="text: Started"></td>
+                    <td data-bind="text: Started, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
-
-                <tr data-bind="visible: LinqExecutionPerformance.MapLinqExecutionDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[0] }" class="rect_legend"></span> Linq: map execution [ms]</td>
-					<td data-bind="text: LinqExecutionPerformance.MapLinqExecutionDurationMs.toLocaleString(2)"></td>
+                <!-- ko foreach: Operations -->
+                <!-- ko if:CacheIsSingleThread -->
+                <tr class="sto">
+                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="    text: Name + ' [ms]'"></span></td>
+                    <td data-bind="text: DurationMs, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
-                <tr data-bind="visible: LinqExecutionPerformance.ReduceLinqExecutionDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[1] }" class="rect_legend"></span> Linq: reduce execution [ms]</td>
-					<td data-bind="text: LinqExecutionPerformance.ReduceLinqExecutionDurationMs.toLocaleString(2)"></td>
+                <!-- /ko -->
+                <!-- ko if:!CacheIsSingleThread -->
+                <tr>
+                    <td>Parallel block</td>
+                    <!-- ko foreach: BatchedOperations -->
+                    <td data-bind="text: 'Thread #' + (1 + $index())"></td>
+                    <!-- /ko -->
                 </tr>
-                <tr data-bind="visible: LucenePerformance.DeleteExistingDocumentsDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[2] }" class="rect_legend"></span> Lucene: delete existing documents [ms]</td>
-					<td data-bind="text: LucenePerformance.DeleteExistingDocumentsDurationMs.toLocaleString(2)"></td>
+                <!-- ko foreach: BatchedOperations[0].Operations -->
+                <tr class="mto">
+                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="    text: Name + ' [ms]'"></span></td>
+                    <!-- ko foreach: $parent.BatchedOperations -->
+                    <td data-bind="text: Operations[$parentContext.$index()].DurationMs"></td>
+                    <!-- /ko -->
                 </tr>
-                <tr data-bind="visible: LucenePerformance.ConvertToLuceneDocumentsDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[3] }" class="rect_legend"></span> Lucene: convert to Lucene documents [ms]</td>
-					<td data-bind="text: LucenePerformance.ConvertToLuceneDocumentsDurationMs.toLocaleString(2)"></td>
-                </tr>
-                <tr data-bind="visible: LucenePerformance.AddDocumentsDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[4] }" class="rect_legend"></span> Lucene: add documents [ms]</td>
-					<td data-bind="text: LucenePerformance.AddDocumentsDurationMs.toLocaleString(2)"></td>
-                </tr>
-                <tr data-bind="visible: LucenePerformance.FlushToDiskDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[5] }" class="rect_legend"></span> Lucene: flush to disk [ms]</td>
-					<td data-bind="text: LucenePerformance.FlushToDiskDurationMs.toLocaleString(2)"></td>
-                </tr>
-                <tr data-bind="visible: LucenePerformance.RecreateSearcherDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[6] }" class="rect_legend"></span> Lucene: recreate searcher [ms]</td>
-					<td data-bind="text: LucenePerformance.RecreateSearcherDurationMs.toLocaleString(2)"></td>
-                </tr>
-                <tr data-bind="visible:  ReduceStoragePerformance.GetItemsToReduceDurationMs>= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[7] }" class="rect_legend"></span> Reduce: get items to reduce [ms]</td>
-					<td data-bind="text: ReduceStoragePerformance.GetItemsToReduceDurationMs.toLocaleString(2)"></td>
-                </tr>
-                <tr data-bind="visible:  ReduceStoragePerformance.DeletePreviouslyScheduledReductionsMs>= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[8] }" class="rect_legend"></span> Reduce: delete previously scheduled reductions [ms]</td>
-					<td data-bind="text: ReduceStoragePerformance.DeletePreviouslyScheduledReductionsMs.toLocaleString(2)"></td>
-                </tr>
-                <tr data-bind="visible:  ReduceStoragePerformance.ScheduleReductionsDurationMs>= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[9] }" class="rect_legend"></span> Reduce: schedule reductions [ms]</td>
-					<td data-bind="text: ReduceStoragePerformance.ScheduleReductionsDurationMs.toLocaleString(2)"></td>
-                </tr>
-                <tr data-bind="visible:  ReduceStoragePerformance.GetMappedResultsDurationMs>= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[10] }" class="rect_legend"></span> Reduce: get mapped results [ms]</td>
-					<td data-bind="text: ReduceStoragePerformance.GetMappedResultsDurationMs.toLocaleString(2)"></td>
-                </tr>
-                <tr data-bind="visible:  ReduceStoragePerformance.RemoveReduceResultsDurationMs>= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[11] }" class="rect_legend"></span> Reduce: remove reduce results [ms]</td>
-					<td data-bind="text: ReduceStoragePerformance.RemoveReduceResultsDurationMs.toLocaleString(2)"></td>
-                </tr>
-                <tr data-bind="visible:  ReduceStoragePerformance.StorageCommitDurationMs>= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[12] }" class="rect_legend"></span> Reduce: storage commit [ms]</td>
-					<td data-bind="text: ReduceStoragePerformance.StorageCommitDurationMs.toLocaleString(2)"></td>
-                </tr>
+                <!-- /ko -->
+                <!-- /ko -->
+                <!-- /ko -->
+                
             </tbody>
         </table>
     </div>

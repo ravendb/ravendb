@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import d3 = require("d3/d3");
+import appUrl = require("common/appUrl");
 
 class getIndexingBatchStatsCommand extends commandBase {
 
@@ -47,6 +48,14 @@ class getIndexingBatchStatsCommand extends commandBase {
 
             return mappedResult;
         });
+    }
+
+    getQueryUrl(): string {
+        return appUrl.forResourceQuery(this.db) + this.getQueryUrlFragment();
+    }
+
+    private getQueryUrlFragment(): string {
+        return "/debug/indexing-perf-stats";
     }
 }
 

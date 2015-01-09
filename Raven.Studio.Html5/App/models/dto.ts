@@ -151,9 +151,9 @@ interface indexPerformanceDto {
 
 interface reducingBatchInfoDto {
     IndexesToWorkOn: string[];
-    TotalDurationMs: number;
     StartedAt: string; // ISO date string.
     StartedAtDate?: Date;
+    TotalDurationMs: number;
     TimeSinceFirstReduceInBatchCompletedMs: number;
     PerfStats: indexNameAndReducingPerformanceStats[];
 }
@@ -169,11 +169,6 @@ interface reducePerformanceStatsDto {
     LevelStats: reduceLevelPeformanceStatsDto[];
 }
 
-interface reduceLevelPeformanceStatsDtoWithCache extends reduceLevelPeformanceStatsDto {
-    widths: number[];
-    cumulativeSums: number[];
-}
-
 interface reduceLevelPeformanceStatsDto {
     Level: number;
     ItemsCount: number;
@@ -185,6 +180,7 @@ interface reduceLevelPeformanceStatsDto {
     DurationMs: number;
     Operations: basePerformanceStatsDto[];
     parent?: indexNameAndReducingPerformanceStats;
+    CacheThreadCount?: number;
 }
 
 interface basePerformanceStatsDto {
