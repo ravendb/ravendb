@@ -23,9 +23,8 @@ namespace Voron.Impl.Compaction
 			{
 				CopyTrees(existingEnv, compactedEnv);
 
-				compactedEnv.FlushLogToDataFile(allowToFlushOverwrittenPages: true);
+				compactedEnv.FlushLogToDataFile(allowToFlushOverwrittenPages: true);	
 				compactedEnv.Journal.Applicator.SyncDataFile(compactedEnv.OldestTransaction);
-
 				compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 
 				minimalCompactedDataFileSize = compactedEnv.NextPageNumber*AbstractPager.PageSize;

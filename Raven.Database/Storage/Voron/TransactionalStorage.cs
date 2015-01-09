@@ -379,6 +379,9 @@ namespace Raven.Storage.Voron
 
 	    public void Compact(InMemoryRavenConfiguration ravenConfiguration)
 	    {
+			if (ravenConfiguration.RunInMemory)
+				throw new InvalidOperationException("Cannot compact in-memory running Voron storage");
+
 			tableStorage.Dispose();
 
 			var sourcePath = ravenConfiguration.DataDirectory;
@@ -389,9 +392,7 @@ namespace Raven.Storage.Voron
 
 			RecoverFromFailedCompact(sourcePath);
 
-			var sourceOptions = ravenConfiguration.RunInMemory ?
-			   CreateMemoryStorageOptionsFromConfiguration(ravenConfiguration) :
-			   CreateStorageOptionsFromConfiguration(ravenConfiguration);
+			var sourceOptions = CreateStorageOptionsFromConfiguration(ravenConfiguration);
 
 		    var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions) StorageEnvironmentOptions.ForPath(compactPath);
 		    compactOptions.IncrementalBackupEnabled = sourceOptions.IncrementalBackupEnabled;
@@ -439,7 +440,7 @@ namespace Raven.Storage.Voron
 			if (File.Exists(Path.Combine(sourcePath, VoronConstants.DatabaseFilename)) &&
 				File.Exists(Path.Combine(sourcePath, "headers.one")) &&
 				File.Exists(Path.Combine(sourcePath, "headers.two")) &&
-				Directory.EnumerateFiles(sourcePath, "*.journal").Any() == false)
+				Directory.EnumerateFiles(sourcePath, "*.journal").Any() == false) // after a successful compaction there is no journal file
 			{
 				// we successfully moved new files and crashed before we could remove the old backup
 				// just complete the op and we are good (committed)
