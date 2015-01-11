@@ -225,6 +225,7 @@
     <Compile Include="Bugs\DyanmicId.cs" />
     <Compile Include="Bugs\DynamicId.cs" />
     <Compile Include="Bugs\EtagIssue.cs" />
+    <Compile Include="Bugs\Facets\RavenDB_3096.cs" />
     <Compile Include="Bugs\LazilyLoadWithTransformerWhileUsingSharding.cs" />
     <Compile Include="Bugs\LazyBug.cs" />
     <Compile Include="Bugs\LoadDocumentWithSelectMany.cs" />
