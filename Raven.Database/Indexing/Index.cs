@@ -164,7 +164,7 @@ namespace Raven.Database.Indexing
 		public volatile bool IsMapIndexingInProgress;
 		private DateTime _indexCreationTime;
 
-		protected IndexingPerformanceStats RecordCurrentBatch(string indexingStep, int itemsCount)
+		protected IndexingPerformanceStats RecordCurrentBatch(string indexingStep, string operation, int itemsCount)
 		{
 			var performanceStats = new IndexingPerformanceStats
 			{
@@ -174,7 +174,7 @@ namespace Raven.Database.Indexing
 				Operations = new List<BasePefromanceStats>()
 			};
 
-			var lastStats = indexingPerformanceStats.LastOrDefault(x => x.Operation.Equals(indexingStep, StringComparison.OrdinalIgnoreCase));
+			var lastStats = indexingPerformanceStats.LastOrDefault(x => x.Operation.Equals(operation, StringComparison.OrdinalIgnoreCase));
 
 			if (lastStats != null)
 				performanceStats.WaitingTimeSinceLastBatchCompleted = performanceStats.Started - lastStats.Completed;

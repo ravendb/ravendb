@@ -46,7 +46,7 @@ namespace Raven.Database.Indexing
 			var count = 0;
 			var sourceCount = 0;
 			var flushToDiskDuration = new Stopwatch();
-			var recreateSeatcherDuration = new Stopwatch();
+			var recreateSearcherDuration = new Stopwatch();
 
 			IndexingPerformanceStats performance = null;
 			var performanceStats = new List<BasePefromanceStats>();
@@ -60,7 +60,7 @@ namespace Raven.Database.Indexing
 
 				try
 				{
-					performance = RecordCurrentBatch("Current", batch.Docs.Count);
+					performance = RecordCurrentBatch("Current", "Index", batch.Docs.Count);
 
 					var deleteExistingDocumentsDuration = new Stopwatch();
 					var docIdTerm = new Term(Constants.DocumentIdFieldName);
@@ -209,6 +209,7 @@ namespace Raven.Database.Indexing
 
 							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_MapExecution, linqExecutionDuration.ElapsedMilliseconds));
 							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Lucene_ConvertToLuceneDocument, convertToLuceneDocumentDuration.ElapsedMilliseconds));
+							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Lucene_AddDocument, addDocumentDutation.ElapsedMilliseconds));
 
 							parallelOperations.Enqueue(parallelStats);
 						}
@@ -248,7 +249,10 @@ namespace Raven.Database.Indexing
 				{
 					ChangedDocs = sourceCount
 				};
-			}, flushToDiskDuration, recreateSeatcherDuration);
+			}, flushToDiskDuration, recreateSearcherDuration);
+
+			performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_FlushToDisk, flushToDiskDuration.ElapsedMilliseconds));
+			performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_RecreateSearcher, recreateSearcherDuration.ElapsedMilliseconds));
 
 			BatchCompleted("Current", "Index", sourceCount, count, performanceStats);
 

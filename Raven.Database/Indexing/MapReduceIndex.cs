@@ -86,7 +86,7 @@ namespace Raven.Database.Indexing
 			var count = 0;
 			var sourceCount = 0;
 			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
-			var performance = RecordCurrentBatch("Current Map", batch.Docs.Count);
+			var performance = RecordCurrentBatch("Current Map", "Map", batch.Docs.Count);
 			var performanceStats = new List<BasePefromanceStats>();
 
 			var deleteMappedResultsDuration = new Stopwatch();
@@ -639,7 +639,7 @@ namespace Raven.Database.Indexing
 					stats.Operation = IndexingWorkStats.Status.Reduce;
 					try
 					{
-						performance = parent.RecordCurrentBatch("Current Reduce #" + Level, MappedResultsByBucket.Sum(x => x.Count()));
+						performance = parent.RecordCurrentBatch("Current Reduce #" + Level, "Reduce Level " + Level, MappedResultsByBucket.Sum(x => x.Count()));
 						if (Level == 2)
 						{
 							RemoveExistingReduceKeysFromIndex(indexWriter, deleteExistingDocumentsDuration);
