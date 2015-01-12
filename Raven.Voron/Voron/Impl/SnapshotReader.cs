@@ -58,7 +58,7 @@ namespace Voron.Impl
 
 		public bool Contains(string treeName, Slice key, out ushort? version, WriteBatch writeBatch = null)
 		{
-			if (writeBatch != null)
+            if (writeBatch != null && writeBatch.IsEmpty == false)
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
