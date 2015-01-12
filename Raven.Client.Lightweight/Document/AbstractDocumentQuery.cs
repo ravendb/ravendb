@@ -415,6 +415,24 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+        /// <summary>
+        /// When using spatial queries, instruct the query to sort by the distance from the origin point
+        /// </summary>
+        IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng)
+        {
+            OrderBy(string.Format("{0};{1};{2}",Constants.DistanceFieldName,lat,lng));
+            return this;
+        }
+
+        /// <summary>
+        /// When using spatial queries, instruct the query to sort by the distance from the origin point
+        /// </summary>
+        IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng, string sortedFieldName)
+        {
+            OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat, lng,sortedFieldName));
+            return this;
+        }
+
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>

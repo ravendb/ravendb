@@ -8,12 +8,8 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Runtime.Caching;
-using System.Text;
 using System.Web.Http.Routing;
 
 namespace Raven.Database.Server.WebApi
@@ -31,6 +27,13 @@ namespace Raven.Database.Server.WebApi
 			this.subRoutes = subRoutes;
 		}
 
+		/// <summary>
+		/// Determine whether this route is a match for the incoming request by looking up the &lt;see cref="!:IRouteData" /&gt; for the route. 
+		/// </summary>
+		/// <returns>
+		/// The &lt;see cref="!:RouteData" /&gt; for a route if matches; otherwise null.
+		/// </returns>
+		/// <param name="virtualPathRoot">The virtual path root.</param><param name="request">The request.</param>
 		public IHttpRouteData GetRouteData(string virtualPathRoot, HttpRequestMessage request)
 		{
 			var route = new SubRoute(request.RequestUri.LocalPath);
@@ -45,6 +48,7 @@ namespace Raven.Database.Server.WebApi
 				}
 				route.NextSubRoute();
 			}
+
 			return LocateRouteData(virtualPathRoot, request);
 		}
 
@@ -74,11 +78,24 @@ namespace Raven.Database.Server.WebApi
 			throw new NotImplementedException();
 		}
 
+		/// <summary>
+		/// Gets a virtual path data based on the route and the values provided.
+		/// </summary>
+		/// <returns>
+		/// The virtual path data.
+		/// </returns>
+		/// <param name="request">The request message.</param><param name="values">The values.</param>
 		public IHttpVirtualPathData GetVirtualPath(HttpRequestMessage request, IDictionary<string, object> values)
 		{
 			return null;
 		}
 
+		/// <summary>
+		/// Gets the route template describing the URI pattern to match against.  
+		/// </summary>
+		/// <returns>
+		/// The route template.
+		/// </returns>
 		public string RouteTemplate
 		{
 			get
@@ -87,6 +104,12 @@ namespace Raven.Database.Server.WebApi
 			}
 		}
 
+		/// <summary>
+		/// Gets the default values for route parameters if not provided by the incoming <see cref="T:System.Net.Http.HttpRequestMessage"/>. 
+		/// </summary>
+		/// <returns>
+		/// The default values for route parameters.
+		/// </returns>
 		public IDictionary<string, object> Defaults
 		{
 			get
@@ -95,6 +118,12 @@ namespace Raven.Database.Server.WebApi
 			}
 		}
 
+		/// <summary>
+		/// Gets the constraints for the route parameters. 
+		/// </summary>
+		/// <returns>
+		/// The constraints for the route parameters.
+		/// </returns>
 		public IDictionary<string, object> Constraints
 		{
 			get
@@ -103,6 +132,12 @@ namespace Raven.Database.Server.WebApi
 			}
 		}
 
+		/// <summary>
+		/// Gets any additional data tokens not used directly to determine whether a route matches an incoming <see cref="T:System.Net.Http.HttpRequestMessage"/>. 
+		/// </summary>
+		/// <returns>
+		/// The additional data tokens.
+		/// </returns>
 		public IDictionary<string, object> DataTokens
 		{
 			get
@@ -111,6 +146,12 @@ namespace Raven.Database.Server.WebApi
 			}
 		}
 
+		/// <summary>
+		/// Gets the message handler that will be the recipient of the request.
+		/// </summary>
+		/// <returns>
+		/// The message handler.
+		/// </returns>
 		public HttpMessageHandler Handler
 		{
 			get
@@ -119,16 +160,36 @@ namespace Raven.Database.Server.WebApi
 			}
 		}
 
+		/// <summary>
+		/// Returns an enumerator that iterates through the collection.
+		/// </summary>
+		/// <returns>
+		/// A <see cref="T:System.Collections.Generic.IEnumerator`1"/> that can be used to iterate through the collection.
+		/// </returns>
+		/// <filterpriority>1</filterpriority>
 		public IEnumerator<IHttpRoute> GetEnumerator()
 		{
 			return subRoutes.GetEnumerator();
 		}
 
+		/// <summary>
+		/// Returns an enumerator that iterates through a collection.
+		/// </summary>
+		/// <returns>
+		/// An <see cref="T:System.Collections.IEnumerator"/> object that can be used to iterate through the collection.
+		/// </returns>
+		/// <filterpriority>2</filterpriority>
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return subRoutes.GetEnumerator();
 		}
 
+		/// <summary>
+		/// Gets the number of elements in the collection.
+		/// </summary>
+		/// <returns>
+		/// The number of elements in the collection. 
+		/// </returns>
 		public int Count
 		{
 			get

@@ -65,6 +65,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private object _indexReplicationTaskLock = new object();
 		private object _lastQueriedTaskLock = new object();
 
+		private readonly ConcurrentDictionary<string, DateTime> destinationAlertSent = new ConcurrentDictionary<string, DateTime>(); 
 
 		public ConcurrentDictionary<string, DestinationStats> DestinationStats
 		{
@@ -421,6 +422,28 @@ namespace Raven.Bundles.Replication.Tasks
 							}
 
 							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
+
+							if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.InvalidEtag && destinationsReplicationInformationForSource.LastAttachmentEtag == Etag.InvalidEtag)
+							{
+								DateTime lastSent;
+								if (destinationAlertSent.TryGetValue(destination.ConnectionStringOptions.Url, out lastSent) && (SystemTime.UtcNow - lastSent).TotalMinutes < 1)
+									return false;
+
+								var lastModifiedDate = destinationsReplicationInformationForSource.LastModified.HasValue ? destinationsReplicationInformationForSource.LastModified.Value.ToLocalTime() : DateTime.MinValue;
+
+								docDb.AddAlert(new Alert
+								{
+									AlertLevel = AlertLevel.Error,
+									CreatedAt = SystemTime.UtcNow,
+									Message = string.Format(@"Destination server is forbidding replication due to a possibility of having multiple instances with same DatabaseId replicating to it. After 10 minutes from '{2}' another instance will start replicating. Destination Url: {0}. DatabaseId: {1}. Current source: {3}. Stored source on destination: {4}.", destination.ConnectionStringOptions.Url, docDb.TransactionalStorage.Id, lastModifiedDate, docDb.ServerUrl, destinationsReplicationInformationForSource.Source),
+									Title = string.Format("Replication error. Multiple databases replicating at the same time with same DatabaseId ('{0}') detected.", docDb.TransactionalStorage.Id),
+									UniqueKey = "Replication to " + destination.ConnectionStringOptions.Url + " errored. Wrong DatabaseId: " + docDb.TransactionalStorage.Id
+								});
+
+								destinationAlertSent.AddOrUpdate(destination.ConnectionStringOptions.Url, SystemTime.UtcNow, (_, __) => SystemTime.UtcNow);
+
+								return false;
+							}
 						}
 						catch (Exception e)
 						{
@@ -844,9 +867,9 @@ namespace Raven.Bundles.Replication.Tasks
 
 				var relevantIndexLastQueries = new Dictionary<string, DateTime>();
 				var relevantIndexes = docDb.Statistics.Indexes.Where(indexStats => indexStats.IsInvalidIndex == false &&
-				                                                                   indexStats.Priority != IndexingPriority.Error &&
-				                                                                   indexStats.Priority != IndexingPriority.Disabled &&
-				                                                                   indexStats.LastQueryTimestamp.HasValue);
+																				   indexStats.Priority != IndexingPriority.Error &&
+																				   indexStats.Priority != IndexingPriority.Disabled &&
+																				   indexStats.LastQueryTimestamp.HasValue);
 				foreach (var relevantIndex in relevantIndexes)
 				{
 					relevantIndexLastQueries[relevantIndex.Name] = relevantIndex.LastQueryTimestamp.GetValueOrDefault();
@@ -1084,17 +1107,32 @@ namespace Raven.Bundles.Replication.Tasks
 			var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(result.LastEtag);
 			Etag lastEtag = null;
 			if (docsToReplicate.Count > 0)
-			{
 				lastEtag = docsToReplicate[docsToReplicate.Count - 1].Etag;
-			}
-			return docsToReplicate.Concat(actions.Lists.Read(Constants.RavenReplicationDocsTombstones, result.LastEtag, lastEtag, 1024)
+
+			var maxNumberOfTombstones = Math.Max(1024, docsToReplicate.Count);
+			var tombstones = actions
+				.Lists
+				.Read(Constants.RavenReplicationDocsTombstones, result.LastEtag, lastEtag, maxNumberOfTombstones + 1)
 							.Select(x => new JsonDocument
 							{
 								Etag = x.Etag,
 								Key = x.Key,
 								Metadata = x.Data,
 								DataAsJson = new RavenJObject()
-							}))
+							})
+				.ToList();
+
+			var results = docsToReplicate.Concat(tombstones);
+
+			if (tombstones.Count >= maxNumberOfTombstones + 1)
+			{
+				var lastTombstoneEtag = tombstones[tombstones.Count - 1].Etag;
+				log.Info("Replication batch trimmed. Found more than '{0}' document tombstones. Last etag from prefetcher: '{1}'. Last tombstone etag: '{2}'.", maxNumberOfTombstones, lastEtag, lastTombstoneEtag);
+
+				results = results.Where(x => EtagUtil.IsGreaterThan(x.Etag, lastTombstoneEtag) == false);
+			}
+
+			return results
 				.OrderBy(x => x.Etag)
 				.ToList();
 		}
@@ -1213,16 +1251,31 @@ namespace Raven.Bundles.Replication.Tasks
 			if (attachmentInformations.Count > 0)
 				lastEtag = attachmentInformations[attachmentInformations.Count - 1].Etag;
 
-			return attachmentInformations
-				.Concat(actions.Lists.Read(Constants.RavenReplicationAttachmentsTombstones, lastAttachmentEtag, lastEtag, 100)
+			var maxNumberOfTombstones = Math.Max(100, attachmentInformations.Count);
+			var tombstones = actions
+				.Lists
+				.Read(Constants.RavenReplicationAttachmentsTombstones, lastAttachmentEtag, lastEtag, maxNumberOfTombstones + 1)
 							.Select(x => new AttachmentInformation
 							{
 								Key = x.Key,
 								Etag = x.Etag,
 								Metadata = x.Data,
 								Size = 0,
-							}))
-				.OrderBy(x => new ComparableByteArray(x.Etag))
+							})
+				.ToList();
+
+			var results = attachmentInformations.Concat(tombstones);
+
+			if (tombstones.Count >= maxNumberOfTombstones + 1)
+			{
+				var lastTombstoneEtag = tombstones[tombstones.Count - 1].Etag;
+				log.Info("Replication batch trimmed. Found more than '{0}' attachment tombstones. Last attachment etag: '{1}'. Last tombstone etag: '{2}'.", maxNumberOfTombstones, lastEtag, lastTombstoneEtag);
+
+				results = results.Where(x => EtagUtil.IsGreaterThan(x.Etag, lastTombstoneEtag) == false);
+			}
+
+			return results
+				.OrderBy(x => x.Etag)
 				.ToList();
 		}
 
