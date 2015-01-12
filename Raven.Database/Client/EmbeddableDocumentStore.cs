@@ -97,8 +97,6 @@ namespace Raven.Client.Embedded
 
         public IDocumentStore Initialize()
         {
-			Configuration.PostInit();
-
             if (_inner != null)
                 return this;
 
@@ -133,6 +131,8 @@ namespace Raven.Client.Embedded
             }
 
             _inner.SetListeners(Listeners);
+
+			Configuration.PostInit();
             _inner.Initialize();	        
 
             return this;
