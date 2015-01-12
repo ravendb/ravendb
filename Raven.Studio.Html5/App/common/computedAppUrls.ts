@@ -2,6 +2,8 @@
 interface computedAppUrls {
     adminSettings: KnockoutComputed<string>;
 
+    hasApiKey: KnockoutComputed<string>;
+
     resources: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
