@@ -356,7 +356,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public abstract IndexingPerformanceStats IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp);
+		public abstract IndexingPerformanceStats IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp, CancellationToken token);
 
 		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
@@ -1062,7 +1062,7 @@ namespace Raven.Database.Indexing
 					}
 					if (f.StartsWith(Constants.RandomFieldName) || f.StartsWith(Constants.CustomSortFieldName))
 						continue;
-					if (viewGenerator.ContainsField(f) == false && f != Constants.DistanceFieldName
+					if (viewGenerator.ContainsField(f) == false && ! f.StartsWith(Constants.DistanceFieldName)
 							&& viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
 						throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
 				}

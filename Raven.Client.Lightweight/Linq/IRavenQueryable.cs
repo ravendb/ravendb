@@ -6,6 +6,7 @@
 using System;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
@@ -56,5 +57,7 @@ namespace Raven.Client.Linq
 	    IRavenQueryable<T> AddTransformerParameter(string name, RavenJToken value);
 
 		IRavenQueryable<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+	    IRavenQueryable<T> OrderByDistance(SpatialSort sortParamsClause);
 	}
 }

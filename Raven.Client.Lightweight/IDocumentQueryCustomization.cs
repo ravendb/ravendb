@@ -310,5 +310,15 @@ namespace Raven.Client
 		/// <param name="longitude">Longitude poiting to a circle center.</param>
 		/// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
 		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits);
+
+	    /// <summary>
+	    /// When using spatial queries, instruct the query to sort by the distance from the origin point
+	    /// </summary>
+        IDocumentQueryCustomization SortByDistance(double lat, double lng);
+
+        /// <summary>
+        /// When using spatial queries, instruct the query to sort by the distance from the origin point
+        /// </summary>
+        IDocumentQueryCustomization SortByDistance(double lat, double lng, string fieldName);
 	}
 }

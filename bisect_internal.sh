@@ -14,7 +14,7 @@ TEST_PROJECTS=(
 "${BASE_DIR}\Raven.SlowTests\bin\\${CONFIGURATION}\Raven.SlowTests.dll"
 "${BASE_DIR}\Raven.DtcTests\bin\\${CONFIGURATION}\Raven.DtcTests.dll"
 "${BASE_DIR}\Raven.Voron\Voron.Tests\bin\\${CONFIGURATION}\Voron.Tests.dll"
-"${BASE_DIR}\RavenFS.Tests\bin\\${CONFIGURATION}\RavenFS.Tests.dll")
+"${BASE_DIR}\Raven.Tests.FileSystem\bin\\${CONFIGURATION}\Raven.Tests.FileSystem.dll")
 
 V4_NET_VERSION=`ls -l "${WINDIR}\Microsoft.NET\Framework" | egrep '^d' | awk '{print $9}' | egrep 'v4.0'`
 

@@ -77,60 +77,11 @@ namespace Raven.Database.Server.Controllers
             }
 		}
 
-		[HttpPost]
-		[Route("indexes/replicate-all")]
-		[Route("databases/{databaseName}/indexes/replicate-all")]
-		public HttpResponseMessage IndexReplicate()
-		{
-			//check for replication document before doing work on getting index definitions.
-			//if there is no replication set up --> no point in doing any other work
-			HttpResponseMessage erroResponseMessage;
-			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
-			if (replicationDocument == null)
-				return erroResponseMessage;
-
-			var indexDefinitions = Database.IndexDefinitionStorage
-										   .IndexDefinitions
-										   .Select(x => x.Value)
-										   .ToList();
-
-			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
-			var enabledReplicationDestinations = replicationDocument.Destinations
-																	.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false)
-																	.ToList();
-
-			if (enabledReplicationDestinations.Count == 0)
-				return GetMessageWithString("Replication is configured, but no enabled destinations found.", HttpStatusCode.NotFound);
-
-			var replicationRequestTasks = new List<Task>(enabledReplicationDestinations.Count * indexDefinitions.Count);
-
-			var failedDestinations = new ConcurrentBag<string>();
-			foreach (var definition in indexDefinitions)
-			{
-				replicationRequestTasks.AddRange(
-					enabledReplicationDestinations
-									   .Select(destination => 
-										   Task.Run(() => 
-											   ReplicateIndex(definition.Name, destination, 
-													RavenJObject.FromObject(definition), 
-													failedDestinations, 
-													httpRavenRequestFactory))).ToList());
-			}
-
-			Task.WaitAll(replicationRequestTasks.ToArray());
-
-			return GetMessageWithObject(new
-			{
-				IndexesCount = indexDefinitions.Count,
-				EnabledDestinationsCount = enabledReplicationDestinations.Count,
-				SuccessfulReplicationCount = ((enabledReplicationDestinations.Count * indexDefinitions.Count) - failedDestinations.Count),
-				FailedDestinationUrls = failedDestinations
-			});
-		}
+		
 
 		[HttpPost]
-		[Route("indexes/last-queried")]
-		[Route("databases/{databaseName}/indexes/last-queried")]
+		[RavenRoute("indexes/last-queried")]
+		[RavenRoute("databases/{databaseName}/indexes/last-queried")]
 		public HttpResponseMessage IndexUpdateLastQueried([FromBody] Dictionary<string, DateTime> lastQueriedByIndexId)
 		{
 			Database.TransactionalStorage.Batch(accessor =>
@@ -145,48 +96,7 @@ namespace Raven.Database.Server.Controllers
 			return GetEmptyMessage();
 		}
 
-		[HttpPost]
-		[Route("indexes/replicate/{*indexName}")]
-		[Route("databases/{databaseName}/indexes/replicate/{*indexName}")]
-		public HttpResponseMessage IndexReplicate(string indexName)
-		{
-			if (String.IsNullOrWhiteSpace(indexName)) throw new ArgumentNullException("indexName");
 
-			//check for replication document before doing work on getting index definitions.
-			//if there is no replication set up --> no point in doing any other work
-			HttpResponseMessage erroResponseMessage;
-			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
-			if (replicationDocument == null)
-				return erroResponseMessage;
-
-			if (indexName.EndsWith("/")) //since id is part of the url, perhaps a trailing forward slash appears there
-				indexName = indexName.Substring(0, indexName.Length - 1);
-			indexName = HttpUtility.UrlDecode(indexName);
-
-			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
-			if (indexDefinition == null)
-			{
-				return GetMessageWithObject(new
-				{
-					Message = string.Format("Index with name: {0} not found. Cannot proceed with replication...", indexName)
-				}, HttpStatusCode.NotFound);
-			}
-
-			var serializedIndexDefinition = RavenJObject.FromObject(indexDefinition);
-
-
-			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
-		
-			var failedDestinations = new ConcurrentBag<string>();
-			Parallel.ForEach(replicationDocument.Destinations.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false),
-				destination => ReplicateIndex(indexName, destination, serializedIndexDefinition, failedDestinations, httpRavenRequestFactory));
-
-			return GetMessageWithObject(new
-			{
-				SuccessfulReplicationCount = (replicationDocument.Destinations.Count - failedDestinations.Count),
-				FailedDestinationUrls = failedDestinations
-			});
-		}
 
 		[HttpPut]
 		[RavenRoute("indexes/{*id}")]
@@ -837,43 +747,6 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(stats);
 		}
 
-		private void ReplicateIndex(string indexName, ReplicationDestination destination, RavenJObject indexDefinition, ConcurrentBag<string> failedDestinations, HttpRavenRequestFactory httpRavenRequestFactory)
-		{
-			var connectionOptions = new RavenConnectionStringOptions
-			{
-				ApiKey = destination.ApiKey,
-				Url = destination.Url,
-				DefaultDatabase = destination.Database
-			};
-
-			if (!String.IsNullOrWhiteSpace(destination.Username) &&
-				!String.IsNullOrWhiteSpace(destination.Password))
-			{
-				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain ?? string.Empty);
-			}
-
-			const string urlTemplate = "{0}/databases/{1}/indexes/{2}";
-			if (Uri.IsWellFormedUriString(destination.Url, UriKind.RelativeOrAbsolute) == false)
-			{
-				const string error = "Invalid destination URL - it is malformed.";
-				Log.Error(error);
-				failedDestinations.Add(destination.Url);
-			} 
-			
-			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(indexName));
-			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
-			replicationRequest.Write(indexDefinition);
-
-			try
-			{
-				replicationRequest.ExecuteRequest();
-			}
-			catch (Exception e)
-			{
-				Log.ErrorException("failed to replicate index to: " + destination.Url, e);
-				failedDestinations.Add(destination.Url);
-			}
-		}
 
 	}
 }

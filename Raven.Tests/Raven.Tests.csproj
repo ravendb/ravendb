@@ -655,6 +655,7 @@
     <Compile Include="Spatial\SimonBartlett.cs" />
     <Compile Include="Spatial\Spatial.cs" />
     <Compile Include="Spatial\ShapeConverterTests.cs" />
+    <Compile Include="Spatial\SpatialSorting.cs" />
     <Compile Include="Spatial\SpatialTest2.cs" />
     <Compile Include="Bugs\spokeypokey.cs" />
     <Compile Include="Bugs\Stacey\Aspects.cs" />

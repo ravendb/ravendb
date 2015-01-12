@@ -341,6 +341,7 @@
     <Compile Include="RavenDB_3042.cs" />
     <Compile Include="RavenDB_3071.cs" />
     <Compile Include="RavenDB_3082.cs" />
+    <Compile Include="RavenDB_3109.cs" />
     <Compile Include="Ravendb_334.cs" />
     <Compile Include="RavenDB_349.cs" />
     <Compile Include="RavenDB_367.cs" />
@@ -406,6 +407,7 @@
     <Compile Include="RavenDB_3096.cs" />
     <Compile Include="SlowIndex.cs" />
     <Compile Include="RavenDB_3113.cs" />
+    <Compile Include="RavenDB_3106.cs" />
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
   </ItemGroup>
   <ItemGroup>

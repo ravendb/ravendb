@@ -158,6 +158,16 @@ namespace Raven.Client.Linq
 			return Customize(x => x.Spatial(path.ToPropertyPath(), clause));
 		}
 
+        public IRavenQueryable<T> OrderByDistance(SpatialSort sortParamsClause)
+        {
+            if (string.IsNullOrEmpty(sortParamsClause.FieldName))
+                return Customize(x => x.SortByDistance(sortParamsClause.Latitude, sortParamsClause.Longitude));
+
+            return Customize(x => x.SortByDistance(sortParamsClause.Latitude, sortParamsClause.Longitude, sortParamsClause.FieldName));
+        }
+
+        
+
 		/// <summary>
 		/// Returns a <see cref="System.String"/> that represents this instance.
 		/// </summary>
