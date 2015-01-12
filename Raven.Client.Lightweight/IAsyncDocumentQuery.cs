@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -17,17 +18,17 @@ namespace Raven.Client
 		/// <summary>
 		/// Register the query as a lazy-count query and return a lazy instance that will evaluate the query when needed.
 		/// </summary>
-		Lazy<Task<int>> CountLazilyAsync();
+		Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Get the facets as per the specified doc with the given start and pageSize
 		/// </summary>
-		Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize);
+		Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Get the facets as per the specified facets with the given start and pageSize
 		/// </summary>
-		Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize);
+		Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Create the index query object for this query
@@ -44,7 +45,7 @@ namespace Raven.Client
 		/// <summary>
 		///     Gets the query result. Executing this method for the first time will execute the query.
 		/// </summary>
-		Task<QueryResult> QueryResultAsync();
+		Task<QueryResult> QueryResultAsync(CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value
@@ -99,6 +100,6 @@ namespace Raven.Client
 		/// <summary>
 		///     Executed the query and returns the results.
 		/// </summary>
-		Task<IList<T>> ToListAsync();
+		Task<IList<T>> ToListAsync(CancellationToken token = default (CancellationToken));
 	}
 }

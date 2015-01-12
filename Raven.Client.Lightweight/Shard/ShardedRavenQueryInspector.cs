@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -16,22 +18,17 @@ namespace Raven.Client.Shard
 		private readonly List<IDatabaseCommands> shardDbCommands;
 		private readonly List<IAsyncDatabaseCommands> asyncShardDbCommands;
 
-		public ShardedRavenQueryInspector(IRavenQueryProvider provider,
-		 RavenQueryStatistics queryStats, RavenQueryHighlightings highlightings, string indexName, Expression expression, InMemoryDocumentSessionOperations session, bool isMapReduce,
+		public ShardedRavenQueryInspector(
 			ShardStrategy shardStrategy, 
 			List<IDatabaseCommands> shardDbCommands,
 			 List<IAsyncDatabaseCommands> asyncShardDbCommands)
-			: base(provider, queryStats, highlightings, indexName, expression, session,
-			 null,
-			 null, 
-			 isMapReduce)
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardDbCommands = shardDbCommands;
 			this.asyncShardDbCommands = asyncShardDbCommands;
 		}
 
-		public override Abstractions.Data.FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize)
+		public override FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize)
 		{
 			var indexQuery = GetIndexQuery(false);
 			var results = shardStrategy.ShardAccessStrategy.Apply(shardDbCommands, new ShardRequestData
@@ -44,7 +41,7 @@ namespace Raven.Client.Shard
 			return MergeFacets(results);
 		}
 
-		public override Abstractions.Data.FacetResults GetFacets(List<Abstractions.Data.Facet> facets, int start, int? pageSize)
+		public override FacetResults GetFacets(List<Facet> facets, int start, int? pageSize)
 		{
 			var indexQuery = GetIndexQuery(false);
 			var results = shardStrategy.ShardAccessStrategy.Apply(shardDbCommands, new ShardRequestData
@@ -57,7 +54,7 @@ namespace Raven.Client.Shard
 			return MergeFacets(results);
 		}
 
-		public override async System.Threading.Tasks.Task<Abstractions.Data.FacetResults> GetFacetsAsync(List<Abstractions.Data.Facet> facets, int start, int? pageSize)
+		public override async Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
 		{
 			var indexQuery = GetIndexQuery(false);
 			var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(asyncShardDbCommands, new ShardRequestData
@@ -65,12 +62,12 @@ namespace Raven.Client.Shard
 				IndexName = IndexQueried,
 				EntityType = typeof(T),
 				Query = indexQuery
-            }, (commands, i) => commands.GetFacetsAsync(IndexQueried, indexQuery, facets, start, pageSize)).ConfigureAwait(false);
+            }, (commands, i) => commands.GetFacetsAsync(IndexQueried, indexQuery, facets, start, pageSize, token)).ConfigureAwait(false);
 
 			return MergeFacets(results);
 		}
 
-		public override async System.Threading.Tasks.Task<Abstractions.Data.FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize)
+		public override async Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
 		{
 			var indexQuery = GetIndexQuery(false);
 			var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(asyncShardDbCommands, new ShardRequestData
@@ -78,7 +75,7 @@ namespace Raven.Client.Shard
 				IndexName = IndexQueried,
 				EntityType = typeof(T),
 				Query = indexQuery
-            }, (commands, i) => commands.GetFacetsAsync(IndexQueried, indexQuery, facetSetupDoc, start, pageSize)).ConfigureAwait(false);
+            }, (commands, i) => commands.GetFacetsAsync(IndexQueried, indexQuery, facetSetupDoc, start, pageSize, token)).ConfigureAwait(false);
 
 			return MergeFacets(results);
 		}

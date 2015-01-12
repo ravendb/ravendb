@@ -177,9 +177,17 @@ namespace Raven.Database
 
 					Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
 				}
-				catch (Exception)
+				catch (Exception e)
 				{
-					Dispose();
+					Log.ErrorException("Could not create database", e);
+					try
+					{
+						Dispose();
+					}
+					catch (Exception ex)
+					{
+						Log.FatalException("Failed to disposed when already getting an error during ctor", ex);
+					}
 					throw;
 				}
 			}
@@ -379,25 +387,25 @@ namespace Raven.Database
 			get
 			{
 				var triggerInfos = PutTriggers.Select(x => new TriggerInfo
-			{
-				Name = x.ToString(),
-				Type = "Put"
-			})
-				   .Concat(DeleteTriggers.Select(x => new TriggerInfo
-		{
-			Name = x.ToString(),
-			Type = "Delete"
-		}))
-				   .Concat(ReadTriggers.Select(x => new TriggerInfo
-			{
-				Name = x.ToString(),
-				Type = "Read"
-			}))
-				   .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
 				{
 					Name = x.ToString(),
-					Type = "Index Update"
-				})).ToList();
+					Type = "Put"
+				})
+				   .Concat(DeleteTriggers.Select(x => new TriggerInfo
+					{
+						Name = x.ToString(),
+						Type = "Delete"
+					}))
+				   .Concat(ReadTriggers.Select(x => new TriggerInfo
+					{
+						Name = x.ToString(),
+						Type = "Read"
+					}))
+				   .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
+						{
+							Name = x.ToString(),
+							Type = "Index Update"
+						})).ToList();
 
 				var extensions = Configuration.ReportExtensions(
 					typeof(IStartupTask),
@@ -416,10 +424,10 @@ namespace Raven.Database
 					typeof(AbstractBackgroundTask),
 					typeof(IAlterConfiguration)).ToList();
 				return new PluginsInfo
-		{
-			Triggers = triggerInfos,
-			Extensions = extensions,
-		};
+							{
+								Triggers = triggerInfos,
+								Extensions = extensions,
+							};
 			}
 		}
 
@@ -455,20 +463,20 @@ namespace Raven.Database
 
 					result.StaleIndexes = IndexStorage.Indexes.Where(indexId => IndexStorage.IsIndexStale(indexId, LastCollectionEtags))
 					.Select(indexId =>
-					{
-						Index index = IndexStorage.GetIndexInstance(indexId);
-						return index == null ? null : index.PublicName;
-					}).ToArray();
+		{
+			Index index = IndexStorage.GetIndexInstance(indexId);
+			return index == null ? null : index.PublicName;
+		}).ToArray();
 
 					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-					{
-						Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-						if (indexInstance == null)
-							return null;
-						x.Name = indexInstance.PublicName;
-						x.SetLastDocumentEtag(result.LastDocEtag);
-						return x;
-					})
+		{
+			Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+			if (indexInstance == null)
+				return null;
+			x.Name = indexInstance.PublicName;
+			x.SetLastDocumentEtag(result.LastDocEtag);
+			return x;
+		})
 						.Where(x => x != null)
 						.ToArray();
 				});
@@ -482,7 +490,7 @@ namespace Raven.Database
 							IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
 							index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
 							index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
-						    index.IsTestIndex = indexDefinition.IsTestIndex;
+							index.IsTestIndex = indexDefinition.IsTestIndex;
 							index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
 							if (indexDefinition != null)
 								index.LockMode = indexDefinition.LockMode;

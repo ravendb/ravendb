@@ -39,6 +39,12 @@ namespace Raven.Database.Bundles.SqlReplication
 	[CLSCompliant(false)]
 	public class SqlReplicationTask : IStartupTask, IDisposable
 	{
+		private const int MaxNumberOfDeletionsToReplicate = 1024;
+
+		private bool shouldPause;
+
+		public bool IsRunning { get; private set; }
+
 		private class ReplicatedDoc
 		{
 			public RavenJObject Document;
@@ -112,6 +118,16 @@ namespace Raven.Database.Bundles.SqlReplication
 			database.ExtensionsState.GetOrAdd(typeof(SqlReplicationTask).FullName, k => new DisposableAction(task.Wait));
 		}
 
+		public void Pause()
+		{
+			shouldPause = true;
+		}
+
+		public void Continue()
+		{
+			shouldPause = false;
+		}
+
 		private void RecordDelete(string id, RavenJObject metadata)
 		{
 			Database.TransactionalStorage.Batch(accessor =>
@@ -152,6 +168,11 @@ namespace Raven.Database.Bundles.SqlReplication
 			int workCounter = 0;
 			while (Database.WorkContext.DoWork)
 			{
+				IsRunning = !shouldPause;
+
+				if (!IsRunning)
+					continue;
+
 				var config = GetConfiguredReplicationDestinations();
 				if (config.Count == 0)
 				{
@@ -211,7 +232,7 @@ namespace Raven.Database.Bundles.SqlReplication
 							deletedDocsByConfig[cfg] = accessor.Lists.Read(GetSqlReplicationDeletionName(cfg),
 															  GetLastEtagFor(localReplicationStatus, cfg),
 															  latestEtag,
-															  1024)
+															  MaxNumberOfDeletionsToReplicate + 1)
 												  .ToList();
 						});
 					}
@@ -243,7 +264,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					{
 						var itemsToReplicate = documents.Select(x =>
 						{
-                            JsonDocument.EnsureIdInMetadata(x);
+							JsonDocument.EnsureIdInMetadata(x);
 							var doc = x.ToJson();
 							doc[Constants.DocumentIdFieldName] = x.Key;
 
@@ -282,16 +303,20 @@ namespace Raven.Database.Bundles.SqlReplication
 											}
 										}
 										return true;
-									})
-									.ToList();
+									});
 
-								var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
-								if (currentLatestEtag == null && itemsToReplicate.Count > 0 && docsToReplicate.Count == 0)
+								if (deletedDocs.Count >= MaxNumberOfDeletionsToReplicate + 1)
+									docsToReplicate = docsToReplicate.Where(x => EtagUtil.IsGreaterThan(x.Etag, deletedDocs[deletedDocs.Count - 1].Etag) == false);
+
+								var docsToReplicateAsList = docsToReplicate.ToList();
+
+								var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicateAsList);
+								if (currentLatestEtag == null && itemsToReplicate.Count > 0 && docsToReplicateAsList.Count == 0)
 									currentLatestEtag = lastBatchEtag;
 
 								int countOfReplicatedItems = 0;
 								if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
-										ReplicateChangesToDestination(replicationConfig, docsToReplicate, out countOfReplicatedItems))
+																					ReplicateChangesToDestination(replicationConfig, docsToReplicateAsList, out countOfReplicatedItems))
 								{
 									if (deletedDocs.Count > 0)
 									{
@@ -309,7 +334,7 @@ namespace Raven.Database.Bundles.SqlReplication
 								sqlReplicationMetricsCounters.SqlReplicationBatchSizeHistogram.Update(countOfReplicatedItems);
 								sqlReplicationMetricsCounters.SqlReplicationDurationHistogram.Update(elapsedMicroseconds);
 
-								UpdateReplicationPerformance(replicationConfig, startTime, spRepTime.Elapsed, docsToReplicate.Count);
+								UpdateReplicationPerformance(replicationConfig, startTime, spRepTime.Elapsed, docsToReplicateAsList.Count);
 
 							}
 							catch (Exception e)
@@ -601,7 +626,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				var stats = new SqlReplicationStatistics(sqlReplication.Name);
 
 				var jsonDocument = Database.Documents.Get(strDocumentId, null);
-                JsonDocument.EnsureIdInMetadata(jsonDocument);
+				JsonDocument.EnsureIdInMetadata(jsonDocument);
 				var doc = jsonDocument.ToJson();
 				doc[Constants.DocumentIdFieldName] = jsonDocument.Key;
 
@@ -740,7 +765,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					if (writeToLog)
 						log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
 							cfg.ConnectionStringName,
-				sqlReplicationConfigDocumentKey);
+			sqlReplicationConfigDocumentKey);
 
 					replicationStats.LastAlert = new Alert()
 					{
@@ -762,8 +787,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					if (writeToLog)
 						log.Warn("Could not find setting named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
-				cfg.ConnectionStringSettingName,
-				sqlReplicationConfigDocumentKey);
+			cfg.ConnectionStringSettingName,
+			sqlReplicationConfigDocumentKey);
 					replicationStats.LastAlert = new Alert()
 					{
 						AlertLevel = AlertLevel.Error,

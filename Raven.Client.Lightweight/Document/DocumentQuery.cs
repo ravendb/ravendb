@@ -93,14 +93,16 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+        public IDocumentQuery<T> SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
 	    {
 	        SetTransformerParameters(queryInputs);
+            return this;
 	    }
 
-		public void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
+        public IDocumentQuery<T> SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
 	    {
 	        this.transformerParameters = transformerParameters;
+            return this;
 	    }
 
 		public bool IsDistinct { get { return isDistinct; } }
@@ -211,6 +213,15 @@ namespace Raven.Client.Document
 			RandomOrdering();
 			return this;
 		}
+
+        /// <summary>
+        /// Order the search results randomly
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.CustomSortUsing(string typeName, bool descending)
+        {
+            CustomSortUsing(typeName, descending);
+            return this;
+        }
 
 		/// <summary>
 		/// Order the search results randomly using the specified seed
@@ -770,6 +781,24 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng)
+        {
+            OrderBy(string.Format("{0};{1};{2}", Constants.DistanceFieldName, lat, lng));
+            return this;
+        }
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng, string sortedFieldName)
+        {
+            OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat, lng, sortedFieldName));
+            return this;
+        }
+        
 		/// <summary>
 		/// Order the results by the specified fields
 		/// The fields are the names of the fields to sort, defaulting to sorting by ascending.

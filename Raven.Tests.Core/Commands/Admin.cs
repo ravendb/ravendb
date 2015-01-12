@@ -110,7 +110,7 @@ namespace Raven.Tests.Core.Commands
         [Fact]
         public void CanDoBackupAndRestore()
         {
-			using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add("Raven/RunInMemory", "false")))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add(Constants.RunInMemory, "false")))
 			{
 				store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
 
@@ -118,7 +118,7 @@ namespace Raven.Tests.Core.Commands
 				{
 					Settings = new Dictionary<string, string>()
 					{
-						{"Raven/RunInMemory", "false"}
+						{ Constants.RunInMemory, "false" }
 					}
 				}, false, store.DefaultDatabase);
 				WaitForBackup(store.DatabaseCommands, true);

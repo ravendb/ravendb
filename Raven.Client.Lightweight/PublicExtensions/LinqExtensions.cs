@@ -8,20 +8,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
 using Raven.Client.Linq;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Client
 {
 	///<summary>
 	/// Extensions to the linq syntax
 	///</summary>
-	public static partial class LinqExtensions
+	public static class LinqExtensions
 	{
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
@@ -259,10 +259,10 @@ namespace Raven.Client
 		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
+		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null, CancellationToken token = default (CancellationToken))
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			return ravenQueryInspector.GetFacetsAsync(facetSetupDoc, start, pageSize );
+			return ravenQueryInspector.GetFacetsAsync(facetSetupDoc, start, pageSize, token);
 		}
 
 		/// <summary>
@@ -271,7 +271,7 @@ namespace Raven.Client
 		/// <param name="facets">List of facets</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null, CancellationToken token = default (CancellationToken))
 		{
 			var facetsList = facets.ToList();
 
@@ -280,7 +280,7 @@ namespace Raven.Client
 
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 
-			return ravenQueryInspector.GetFacetsAsync(facetsList, start, pageSize);
+			return ravenQueryInspector.GetFacetsAsync(facetsList, start, pageSize, token);
 		}
 
 		/// <summary>
@@ -289,9 +289,9 @@ namespace Raven.Client
 		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		public static Task<FacetResults> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
+		public static Task<FacetResults> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null, CancellationToken token = default (CancellationToken))
 		{
-			return queryable.GetFacetsAsync(facetSetupDoc, start, pageSize);
+			return queryable.GetFacetsAsync(facetSetupDoc, start, pageSize, token);
 		}
 
         /// <summary>
@@ -300,10 +300,10 @@ namespace Raven.Client
         /// <param name="facets">List of facets</param>
         /// <param name="start">Start index for paging</param>
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-        public static Task<FacetResults> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+		public static Task<FacetResults> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null, CancellationToken token = default (CancellationToken))
         {
             var facetsList = facets.ToList();
-            return queryable.GetFacetsAsync(facetsList, start, pageSize);
+            return queryable.GetFacetsAsync(facetsList, start, pageSize, token);
         }
 
 		/// <summary>
@@ -403,20 +403,20 @@ namespace Raven.Client
 		/// <summary>
 		/// Suggest alternative values for the queried term
 		/// </summary>
-		public static Task<SuggestionQueryResult> SuggestAsync(this IQueryable queryable, SuggestionQuery query)
+		public static Task<SuggestionQueryResult> SuggestAsync(this IQueryable queryable, SuggestionQuery query, CancellationToken token = default (CancellationToken))
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query, true);
 
-			return ravenQueryInspector.AsyncDatabaseCommands.SuggestAsync(ravenQueryInspector.AsyncIndexQueried, query);
+			return ravenQueryInspector.AsyncDatabaseCommands.SuggestAsync(ravenQueryInspector.AsyncIndexQueried, query, token);
 		}
 
 		/// <summary>
 		/// Suggest alternative values for the queried term
 		/// </summary>
-		public static Task<SuggestionQueryResult> SuggestAsync(this IQueryable queryable)
+		public static Task<SuggestionQueryResult> SuggestAsync(this IQueryable queryable, CancellationToken token = default (CancellationToken))
 		{
-			return SuggestAsync(queryable, new SuggestionQuery());
+			return SuggestAsync(queryable, new SuggestionQuery(), token);
 		}
 
         /// <summary>
@@ -488,7 +488,7 @@ namespace Raven.Client
 		/// Register the query as a lazy-count query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public static Lazy<Task<int>> CountLazilyAsync<T>(this IQueryable<T> source)
+		public static Lazy<Task<int>> CountLazilyAsync<T>(this IQueryable<T> source, CancellationToken token = default (CancellationToken))
 		{
 			if (source == null)
 				throw new ArgumentNullException("source");
@@ -498,13 +498,13 @@ namespace Raven.Client
 			if (provider == null)
 				throw new InvalidOperationException("CountLazily only be used with IRavenQueryable");
 
-			return provider.CountLazilyAsync<T>(source.Expression);
+			return provider.CountLazilyAsync<T>(source.Expression,token);
 		}
 
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
-		public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> source)
+		public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> source,CancellationToken token = default (CancellationToken))
 		{
 			var provider = source.Provider as IRavenQueryProvider;
 			if (provider == null)
@@ -512,7 +512,7 @@ namespace Raven.Client
 
 			var documentQuery = provider.ToAsyncDocumentQuery<T>(source.Expression);
 			provider.MoveAfterQueryExecuted(documentQuery);
-			return documentQuery.ToListAsync();
+			return documentQuery.ToListAsync(token);
 		}
 
         /// <summary>
@@ -534,7 +534,7 @@ namespace Raven.Client
         /// <exception cref="ArgumentNullException">
         /// source is null.
         /// </exception>
-        public static async Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source)
+		public static async Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default (CancellationToken))
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -551,7 +551,7 @@ namespace Raven.Client
 	        RavenQueryStatistics stats;
 	        query.Statistics(out stats);
 
-            await query.ToListAsync().ConfigureAwait(false);
+            await query.ToListAsync(token).ConfigureAwait(false);
 
             return stats.TotalResults > 0;
         }
@@ -580,7 +580,7 @@ namespace Raven.Client
         /// <exception cref="ArgumentNullException">
         /// source or predicate is null.
         /// </exception>
-        public static async Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+		public static async Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default (CancellationToken))
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -599,7 +599,7 @@ namespace Raven.Client
 			RavenQueryStatistics stats;
 			query.Statistics(out stats);
 
-			await query.ToListAsync().ConfigureAwait(false);
+			await query.ToListAsync(token).ConfigureAwait(false);
 
 			return stats.TotalResults > 0;
         }
@@ -627,7 +627,7 @@ namespace Raven.Client
         /// <exception cref="OverflowException">
         /// The number of elements in source is larger than <see cref="Int32.MaxValue"/>.
         /// </exception>
-        public static async Task<int> CountAsync<TSource>(this IQueryable<TSource> source)
+		public static async Task<int> CountAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default (CancellationToken))
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -645,7 +645,7 @@ namespace Raven.Client
 			RavenQueryStatistics stats;
 			query.Statistics(out stats);
 
-            await query.ToListAsync().ConfigureAwait(false);
+            await query.ToListAsync(token).ConfigureAwait(false);
 
 			return stats.TotalResults;
         }
@@ -678,7 +678,7 @@ namespace Raven.Client
         /// <exception cref="OverflowException">
         /// The number of elements in source is larger than <see cref="Int32.MaxValue"/>.
         /// </exception>
-        public static async Task<int> CountAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+		public static async Task<int> CountAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default (CancellationToken))
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -696,7 +696,7 @@ namespace Raven.Client
 			RavenQueryStatistics stats;
 			query.Statistics(out stats);
 
-            await query.ToListAsync().ConfigureAwait(false);
+            await query.ToListAsync(token).ConfigureAwait(false);
 
 			return stats.TotalResults;
         }
@@ -725,7 +725,7 @@ namespace Raven.Client
         /// The source sequence is empty or source
         /// is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source)
+		public static async Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default (CancellationToken))
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -740,7 +740,7 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            var result = await query.ToListAsync().ConfigureAwait(false);
+            var result = await query.ToListAsync(token).ConfigureAwait(false);
 
             return result.First();
         }
@@ -774,7 +774,7 @@ namespace Raven.Client
         /// the source sequence is empty or source
         /// is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+		public static async Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default (CancellationToken))
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -790,7 +790,7 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            var result = await query.ToListAsync().ConfigureAwait(false);
+            var result = await query.ToListAsync(token).ConfigureAwait(false);
 
             return result.First();
         }
@@ -819,7 +819,7 @@ namespace Raven.Client
         /// <exception cref="InvalidOperationException">
         /// source is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source)
+		public static async Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default (CancellationToken))
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -834,7 +834,7 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            var result = await query.ToListAsync().ConfigureAwait(false);
+            var result = await query.ToListAsync(token).ConfigureAwait(false);
 
             return result.FirstOrDefault();
         }
@@ -870,7 +870,7 @@ namespace Raven.Client
         /// <exception cref="InvalidOperationException">
         /// source is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+		public static async Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default (CancellationToken))
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -886,7 +886,7 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            var result = await query.ToListAsync().ConfigureAwait(false);
+            var result = await query.ToListAsync(token).ConfigureAwait(false);
 
             return result.FirstOrDefault();
         }
@@ -916,7 +916,7 @@ namespace Raven.Client
         /// The source sequence is empty, has more than one element or
         /// is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source)
+		public static async Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default (CancellationToken))
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -931,7 +931,7 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            var result = await query.ToListAsync().ConfigureAwait(false);
+            var result = await query.ToListAsync(token).ConfigureAwait(false);
 
             return result.Single();
         }
@@ -966,7 +966,7 @@ namespace Raven.Client
         /// one element satisfies the condition, the source sequence is empty or
         /// source is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+		public static async Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default (CancellationToken))
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -982,7 +982,7 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            var result = await query.ToListAsync().ConfigureAwait(false);
+            var result = await query.ToListAsync(token).ConfigureAwait(false);
 
             return result.Single();
         }
@@ -1014,7 +1014,7 @@ namespace Raven.Client
         /// source has more than one element or
         /// is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source)
+		public static async Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default (CancellationToken))
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -1029,7 +1029,7 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            var result = await query.ToListAsync().ConfigureAwait(false);
+            var result = await query.ToListAsync(token).ConfigureAwait(false);
 
             return result.SingleOrDefault();
         }
@@ -1065,7 +1065,7 @@ namespace Raven.Client
         /// More than one element satisfies the condition in predicate
         /// or source is not of type <see cref="IRavenQueryable{T}"/>.
         /// </exception>
-        public static async Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+		public static async Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default (CancellationToken))
         {
             if (source == null)
                 throw new ArgumentNullException("source");
@@ -1081,7 +1081,7 @@ namespace Raven.Client
 
             provider.MoveAfterQueryExecuted(query);
 
-            var result = await query.ToListAsync().ConfigureAwait(false);
+            var result = await query.ToListAsync(token).ConfigureAwait(false);
 
             return result.SingleOrDefault();
         }

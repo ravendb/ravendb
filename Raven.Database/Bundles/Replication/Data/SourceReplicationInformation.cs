@@ -16,7 +16,10 @@ namespace Raven.Bundles.Replication.Data
 		public Etag LastAttachmentEtag { get; set; }
 
 		public Guid ServerInstanceId { get; set; }
+
 		public string Source { get; set; }
+
+		public DateTime? LastModified { get; set; }
 
 		public override string ToString()
 		{

@@ -72,9 +72,9 @@ namespace Raven.Tests.Common
 				EnableAuthentication(ravenDbServer.SystemDatabase);
             }
 
-			var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, configureStore: configureStore, fiddler: useFiddler, databaseName: databaseName);
-
 			ConfigureDatabase(ravenDbServer.SystemDatabase, databaseName: databaseName);
+
+			var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, configureStore: configureStore, fiddler: useFiddler, databaseName: databaseName);
 
             return documentStore;
         }

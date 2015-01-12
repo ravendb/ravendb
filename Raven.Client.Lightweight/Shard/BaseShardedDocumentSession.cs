@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
@@ -19,11 +20,11 @@ namespace Raven.Client.Shard
 		protected new readonly List<Tuple<ILazyOperation, IList<TDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<TDatabaseCommands>>>();
 		protected new readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 		protected readonly IDictionary<string, List<ICommandData>> deferredCommandsByShard = new Dictionary<string, List<ICommandData>>();
-		protected readonly ShardStrategy shardStrategy;
+		public readonly ShardStrategy shardStrategy;
 		protected readonly IDictionary<string, TDatabaseCommands> shardDbCommands;
 
 
-		public BaseShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
+		protected BaseShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
 			ShardStrategy shardStrategy, IDictionary<string, TDatabaseCommands> shardDbCommands)
 			: base(dbName, documentStore, listeners, id)
 		{
@@ -235,14 +236,12 @@ namespace Raven.Client.Shard
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var highlightings = new RavenQueryHighlightings();
 			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, null, isMapReduce);
-			return CreateRavenQueryInspector(indexName, isMapReduce, provider, ravenQueryStatistics, highlightings);
+		    var ravenQueryInspector = CreateRavenQueryInspector<T>();
+		    ravenQueryInspector.Init(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, null, isMapReduce);
+		    return ravenQueryInspector;
 		}
 
-		protected abstract RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce,
-		                                                                              RavenQueryProvider<T> provider,
-		                                                                              RavenQueryStatistics
-			                                                                              ravenQueryStatistics,
-		                                                                              RavenQueryHighlightings highlightings);
+		public abstract RavenQueryInspector<T> CreateRavenQueryInspector<T>();
 
 		/// <summary>
 		/// Query RavenDB dynamically using LINQ
@@ -292,7 +291,7 @@ namespace Raven.Client.Shard
 			return DocumentQueryGeneratorAsyncQuery<T>(indexName, isMapReduce);
 		}
 
-		#endregion
+	    #endregion
 
 		internal class DbCmdsListComparer : IEqualityComparer<IList<TDatabaseCommands>>
 		{

@@ -350,6 +350,7 @@ interface indexDefinitionDto {
     Maps: string[];
     Reduce: string;
     IsTestIndex: boolean;
+    IsSideBySideIndex: boolean;
     IsMapReduce: boolean;
     IsCompiled: boolean;
     Stores: any;
@@ -436,6 +437,7 @@ interface replicationDestinationDto {
     IgnoredClient: boolean;
     Disabled: boolean;
     ClientVisibleUrl: string;
+    SkipIndexReplication: boolean;
 }
 
 interface replicationsDto {

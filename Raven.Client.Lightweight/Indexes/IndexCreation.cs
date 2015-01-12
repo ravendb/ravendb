@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 
 namespace Raven.Client.Indexes
@@ -107,23 +106,14 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
 		/// <param name="documentStore">The document store.</param>
-		public static Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
-		{
-			return CreateIndexesAsync(catalogToGetnIndexingTasksFrom, documentStore.AsyncDatabaseCommands,
-									  documentStore.Conventions);
-		}
-
-		/// <summary>
-		/// Creates the indexes found in the specified catalog
-		/// </summary>
-		public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention conventions)
+		public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 			{
 				try
 				{
-					await task.ExecuteAsync(asyncDatabaseCommands, conventions);
+					await task.ExecuteAsync(documentStore);
 				}
 				catch (IndexCompilationException e)
 				{
@@ -132,7 +122,7 @@ namespace Raven.Client.Indexes
 			}
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
 			{
-				await task.ExecuteAsync(asyncDatabaseCommands, conventions);
+				await task.ExecuteAsync(documentStore);
 			}
 
 			if (indexCompilationExceptions.Any())
