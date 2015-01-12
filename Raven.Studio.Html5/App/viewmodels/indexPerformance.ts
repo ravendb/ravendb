@@ -90,14 +90,17 @@ class gapFinder {
         }
     }
 }
-
 class metrics extends viewModelBase { 
 
-    static map_bar_names = ['load_bar', 'map_linq_bar', 'reduce_linq_bar', 'write_bar', 'flush_bar', 'del_mr_bar', 'put_mr_bar', 'commit_bar'];
-    static map_bar_colors = ['#FFF200', '#ED1C24', '#00227A', '#167232', '#C44F00', '#FFFFFF', '#DDDDDD', '#880015']; 
+    static reduce_bar_names = 
+        ['linq_map_bar', 'linq_reduce_bar',
+        'l_delete_bar', 'l_convert_bar', 'l_add_bar', 'l_flush_bar', 'l_recreate_bar',
+        'red_get_items_bar', 'red_delete_bar', 'red_schedule_bar', 'red_get_mapped_bar', 'red_remove_bar', 'red_commit_bar'];
 
-    static reduce_bar_names = ['map_linq_bar', 'reduce_linq_bar', 'write_bar', 'flush_bar', 'get_items_bar'];
-    static reduce_bar_colors = ['#ED1C24', '#00227A', '#167232', '#C44F00', '#000000'];
+    static reduce_bar_colors = [
+        '#1f77b4', '#ff7f0e',
+        '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2',
+        '#c5b0d5', '#c49c94', '#f7b6d2', '#bcbd22', '#dbdb8d', '#9edae5'];
 
     static minGapTime = 1000 * 10;
 
@@ -119,7 +122,9 @@ class metrics extends viewModelBase {
     selectedMapIndexNames = ko.computed(() => this.selectedIndexNames().filter(x => this.mapAllIndexNames().contains(x)));
     selectedReduceIndexes = ko.computed(() => this.selectedIndexNames().filter(x => this.reduceAllIndexNames().contains(x)));
 
-    color = d3.scale.category10();
+    static batchesColors = ['#ececec', '#c2c2c2', '#959595'];
+
+    color = d3.scale.ordinal().range(metrics.batchesColors);
     margin = { top: 40, right: 20, bottom: 40, left: 200, between: 10 };
 
     private pixelsPerSecond = ko.observable<number>(100);
@@ -243,7 +248,7 @@ class metrics extends viewModelBase {
 
         incomingData.forEach(d => {
 
-            d.PerfStats.forEach(self.computeMapCache);
+            d.PerfStats.forEach(self.computeMapCache.bind(self));
 
             if (dateLookup.has(d.StartedAt)) {
                 var index = dateLookup.get(d.StartedAt);
@@ -264,7 +269,7 @@ class metrics extends viewModelBase {
         });
 
         incomingData.forEach(d => {
-            d.PerfStats.forEach(s => s.stats.LevelStats.forEach(self.computeReduceCache));
+            d.PerfStats.forEach(s => s.stats.LevelStats.forEach(self.computeReduceCache.bind(self)));
 
             if (dateLookup.has(d.StartedAt)) {
                 var index = dateLookup.get(d.StartedAt);
@@ -276,53 +281,64 @@ class metrics extends viewModelBase {
         return currentData;
     }
 
-    computeMapCache(input: indexNameAndMapPerformanceStatsWithCache) {
-        var widths = [];
-        var sums = [];
+    computeMapCache(input: indexNameAndMapPerformanceStats) {
         var currentOffset = 0;
+        var self = this;
 
-        var timings = [
-            input.stats.LoadDocumentPerformance.LoadDocumentDurationMs,
-            input.stats.LinqExecutionPerformance.MapLinqExecutionDurationMs,
-            input.stats.LinqExecutionPerformance.ReduceLinqExecutionDurationMs,
-            input.stats.LucenePerformance.WriteDocumentsDurationMs,
-            input.stats.LucenePerformance.FlushToDiskDurationMs,
-            input.stats.MapStoragePerformance.DeleteMappedResultsDurationMs,
-            input.stats.MapStoragePerformance.PutMappedResultsDurationMs,
-            input.stats.MapStoragePerformance.StorageCommitDurationMs
-        ];
+        var timings = input.stats.Operations.map(o => o.DurationMs);
+
         for (var i = 0; i < timings.length; i++) {
             var currentWidth = Math.max(timings[i], 0);
-            widths.push(currentWidth);
-            sums.push(currentOffset);
+
+            var op = input.stats.Operations[i];
+            op.CacheWidth = currentWidth;
+            op.CacheCumulativeSum = currentOffset;
+            op.CacheIsSingleThread = "Name" in op;
+
+            if (!op.CacheIsSingleThread) {
+                var mtGroup = <parallelPefromanceStatsDto>op;
+                self.computeParallelOpsCache(mtGroup);
+            }
+
             currentOffset += currentWidth;
         }
-
-        input.widths = widths;
-        input.cumulativeSums = sums;
     }
 
-    computeReduceCache(input: reduceLevelPeformanceStatsDtoWithCache) {
-        var widths = [];
-        var sums = [];
+    computeReduceCache(input: reduceLevelPeformanceStatsDto) {
         var currentOffset = 0;
+        var self = this;
 
-        var timings = [
-            input.LinqExecutionPerformance.MapLinqExecutionDurationMs,
-            input.LinqExecutionPerformance.ReduceLinqExecutionDurationMs,
-            input.LucenePerformance.WriteDocumentsDurationMs,
-            input.LucenePerformance.FlushToDiskDurationMs,
-            input.ReduceStoragePerformance.GetItemsToReduceDurationMs
-        ];
+        var timings = input.Operations.map(o => o.DurationMs);
         for (var i = 0; i < timings.length; i++) {
             var currentWidth = Math.max(timings[i], 0);
-            widths.push(currentWidth);
-            sums.push(currentOffset); 
+            var op = input.Operations[i];
+            op.CacheWidth = currentWidth;
+            op.CacheCumulativeSum = currentOffset;
+            op.CacheIsSingleThread = "Name" in op;
+
+            if (!op.CacheIsSingleThread) {
+                var mtGroup = <parallelPefromanceStatsDto>op;
+                self.computeParallelOpsCache(mtGroup);
+            }
+
             currentOffset += currentWidth;
         }
+    }
 
-        input.widths = widths;
-        input.cumulativeSums = sums;
+    computeParallelOpsCache(mtGroup: parallelPefromanceStatsDto) {
+        for (var thread = 0; thread < mtGroup.BatchedOperations.length; thread++) {
+            var perThreadInfo = mtGroup.BatchedOperations[thread];
+            var currentPerThreadOffset = perThreadInfo.StartDelay;
+
+            for (var j = 0; j < perThreadInfo.Operations.length; j++) {
+                var innerOp = perThreadInfo.Operations[j];
+                var w = Math.max(innerOp.DurationMs, 0);
+                innerOp.CacheWidth = w;
+                innerOp.CacheCumulativeSum = currentPerThreadOffset;
+                innerOp.CacheIsSingleThread = true;
+                currentPerThreadOffset += w;
+            }
+        }
     }
 
     graphScrolled() {
@@ -336,6 +352,10 @@ class metrics extends viewModelBase {
 
         this.svg.select('#dataClip rect')
             .attr('x', leftScroll);
+
+        this.svg.select('.left_texts')
+            .attr("transform", "translate(" + leftScroll + ",0)");
+
         nv.tooltip.cleanup();
     }
 
@@ -409,7 +429,22 @@ class metrics extends viewModelBase {
             .attr('patternUnits', 'userSpaceOnUse')
             .append('path')
             .attr('d', 'M 0 0 L 6 6 M 0 6 L 6 0')
-            .attr('stroke', 'grey')
+            .attr('stroke', '#333')
+            .attr('fill', 'transparent')
+            .attr('stroke-width', 0.25)
+            .attr('stroke-linecap', 'square')
+            .attr('stroke-linejoin', 'miter');
+
+        defs.append('pattern')
+            .attr('id', 'lines')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', 5)
+            .attr('height', 5)
+            .attr('patternUnits', 'userSpaceOnUse')
+            .append('path')
+            .attr('d', 'M 0 5 L 5 0')
+            .attr('stroke', '#333')
             .attr('fill', 'transparent')
             .attr('stroke-width', 0.25)
             .attr('stroke-linecap', 'square')
@@ -478,7 +513,10 @@ class metrics extends viewModelBase {
             .attr('x', -self.reduceGroupOffset - reduceHeight / 2)
             .style('opacity', reduceHeight > 0 ? 1 : 0);
 
-        controllsEnter.append('text')
+        var textsEnter = controllsEnter.append('g')
+            .attr('class', 'left_texts');
+
+        textsEnter.append('text')
             .attr('class', 'map_text')
             .attr("transform", "rotate(-90)")
             .attr("dy", ".71em")
@@ -488,7 +526,7 @@ class metrics extends viewModelBase {
             .text('Map')
             .style('opacity', mapHeight > 0 ? 1 : 0);
 
-        controllsEnter.append('text')
+        textsEnter.append('text')
             .attr('class', 'reduce_text')
             .attr("transform", "rotate(-90)")
             .attr("dy", ".71em")
@@ -593,7 +631,7 @@ class metrics extends viewModelBase {
         batches.enter()
             .append('g')
                 .attr('class', 'batchRange')
-                .on('click', function (d) { return self.mapBatchInfoClicked(d, this); })
+                .on('click', function (d) { return self.mapBatchInfoClicked(d); })
             .append('rect')
                 .attr('x', (d: indexingBatchInfoDto) => self.xScale(d.StartedAtDate))
                 .attr('y', (d: indexingBatchInfoDto) => d3.min(d.PerfStats, v => self.yMapScale(v.indexName)))
@@ -628,7 +666,7 @@ class metrics extends viewModelBase {
         batches.enter()
             .append('g')
             .attr('class', 'batchRange')
-            .on('click', function (d) { return self.reduceBatchInfoClicked(d, this); })
+            .on('click', function (d) { return self.reduceBatchInfoClicked(d); })
             .append('rect')
             .attr('x', (d: reducingBatchInfoDto) => self.xScale(d.StartedAtDate))
             .attr('y', (d: reducingBatchInfoDto) => d3.min(d.PerfStats, v => self.yReduceScale(v.indexName)))
@@ -666,20 +704,28 @@ class metrics extends viewModelBase {
                 (d: indexNameAndMapPerformanceStats) =>
                     "translate(" + self.xScale(self.isoFormat.parse(d.stats.Started)) + "," + self.yMapScale(d.indexName) + ")");
 
+        
         opTransition.select('.main_bar')
             .attr('width', (d: indexNameAndMapPerformanceStats) => self.xScaleExtent(d.stats.DurationMilliseconds));
+        
+        opTransition.selectAll('.mto_hatch')
+            .attr('width', (d: parallelPefromanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
 
-        for (var i = 0; i < metrics.map_bar_names.length; i++) {
-            var barName = metrics.map_bar_names[i];
-            opTransition.select('.' + barName)
-                .attr('x', (d: indexNameAndMapPerformanceStatsWithCache) => self.xScaleExtent(d.cumulativeSums[i]))
-                .attr('width', (d: indexNameAndMapPerformanceStatsWithCache) => self.xScaleExtent(d.widths[i]));
-        }
+        opTransition.selectAll('.sto_item')
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
+        
+        opTransition.selectAll('.mto_items')
+            .attr("transform", (d: parallelPefromanceStatsDto) => "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)")
+        
+        opTransition.selectAll('.mto_item')
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
 
         var enteringOps = op.enter()
             .append('g')
             .attr('class', 'op')
-            .on('click', function (d) { return self.indexStatClicked(d, this); })
+            .on('click', function (d) { return self.indexStatClicked(d); })
             .attr("transform",
             (d: indexNameAndMapPerformanceStats) =>
                 "translate(" + self.xScale(self.isoFormat.parse(d.stats.Started)) + "," + self.yMapScale(d.indexName) + ")");
@@ -697,19 +743,59 @@ class metrics extends viewModelBase {
             .transition()
             .attr('width', (d: indexNameAndMapPerformanceStats) => self.xScaleExtent(d.stats.DurationMilliseconds));
 
-        for (var i = 0; i < metrics.map_bar_names.length; i++) {
-            var barName = metrics.map_bar_names[i];
-            var barColor = metrics.map_bar_colors[i];
-            enteringOps.append('rect')
-                .attr('class', barName)
-                .attr('x', (d: indexNameAndMapPerformanceStatsWithCache) => self.xScaleExtent(d.cumulativeSums[i]))
-                .attr('y', self.yBarMargin + 3)
-                .attr('width', 0)
-                .attr('height', self.yBarHeight - 6)
-                .style('fill', barColor)
-                .transition()
-                .attr('width', (d: indexNameAndMapPerformanceStatsWithCache) => self.xScaleExtent(d.widths[i]));
-        }
+        enteringOps.selectAll('.sto_item')
+            .data((d: indexNameAndMapPerformanceStats) => d.stats.Operations.filter(o => o.CacheIsSingleThread))
+            .enter()
+            .append('rect')
+            .attr('class', (d: performanceStatsDto) => 'sto_item ' + d.Name)
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('y', self.yBarMargin)
+            .attr('width', 0)
+            .attr('height', self.yBarHeight)
+            .transition()
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
+
+        var mtoItems = enteringOps.selectAll('.mto_items')
+            .data((d: indexNameAndMapPerformanceStats) => d.stats.Operations.filter(o => !o.CacheIsSingleThread))
+            .enter()
+            .append('g')
+            .attr('class', 'mto_items')
+            .attr("transform",
+            (d: parallelPefromanceStatsDto) =>
+                "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)");
+
+        mtoItems
+            .append('rect')
+            .attr('class', 'mto_hatch')
+            .attr('x', 0)
+            .attr('y', self.yBarMargin)
+            .attr('width', 0)
+            .attr('height', self.yBarHeight) 
+            .style('fill', 'url(#lines)')
+            .transition()
+            .attr('width', (d: parallelPefromanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
+            
+
+        var mtoThreadItems = mtoItems.selectAll('.mto_thread_item')
+            .data(d => d.BatchedOperations)
+            .enter()
+            .append('g')
+            .attr('class', 'mto_thread_item')
+            .attr("transform",
+            (d: parallelBatchStatsDto, i) =>
+                "translate(0," + (i *self.yBarHeight / d.Parent.NumberOfThreads + self.yBarMargin) + ")");
+
+        mtoThreadItems.selectAll('.mto_item')
+            .data(d => d.Operations)
+            .enter()
+            .append('rect')
+            .attr('class', (d: performanceStatsDto) => 'mto_item ' + d.Name)
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('y', 0)
+            .attr('width', 0)
+            .attr('height', (d:performanceStatsDto) => self.yBarHeight / d.ParallelParent.Parent.NumberOfThreads)
+            .transition()
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
     }
 
     private updateReduceOperations() {
@@ -729,7 +815,7 @@ class metrics extends viewModelBase {
 
         op.exit().remove();
 
-        var opTransition = 
+        var opTransition =
             op
                 .selectAll('.op')
                 .transition()
@@ -739,13 +825,20 @@ class metrics extends viewModelBase {
 
         opTransition.select('.main_bar')
             .attr('width', (d: reduceLevelPeformanceStatsDto) => self.xScaleExtent(d.DurationMs));
-        
-        for (var i = 0; i < metrics.reduce_bar_names.length; i++) {
-            var barName = metrics.reduce_bar_names[i];
-            opTransition.select('.' + barName)
-                .attr('x', (d: reduceLevelPeformanceStatsDtoWithCache) => self.xScaleExtent(d.cumulativeSums[i]))
-                .attr('width', (d: reduceLevelPeformanceStatsDtoWithCache) => self.xScaleExtent(d.widths[i]));
-        }
+
+        opTransition.selectAll('.mto_hatch')
+            .attr('width', (d: parallelPefromanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
+
+        opTransition.selectAll('.sto_item')
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
+
+        opTransition.selectAll('.mto_items')
+            .attr("transform", (d: parallelPefromanceStatsDto) => "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)")
+
+        opTransition.selectAll('.mto_item')
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
 
         var enteringOps = op.enter()
             .append('g')
@@ -755,7 +848,7 @@ class metrics extends viewModelBase {
             .enter()
             .append('g')
             .attr('class', 'op')
-            .on('click', function (d) { return self.reduceStatClicked(d, this); })
+            .on('click', function (d) { return self.reduceStatClicked(d); })
             .attr("transform",
             (d: reduceLevelPeformanceStatsDto) =>
                 "translate(" + self.xScale(self.isoFormat.parse(d.Started)) + "," + self.yReduceScale(d.parent.indexName) + ")");
@@ -779,19 +872,58 @@ class metrics extends viewModelBase {
             .transition()
                 .attr('width', (d: reduceLevelPeformanceStatsDto) => self.xScaleExtent(d.DurationMs));
 
-        for (var i = 0; i < metrics.reduce_bar_names.length; i++) {
-            var barName = metrics.reduce_bar_names[i];
-            var barColor = metrics.reduce_bar_colors[i];
-            enteringOps.append('rect')
-                .attr('class', barName)
-                .attr('x', (d: reduceLevelPeformanceStatsDtoWithCache) => self.xScaleExtent(d.cumulativeSums[i]))
-                .attr('y', self.yBarMargin + 3)
-                .attr('width', 0)
-                .attr('height', self.yBarHeight - 6)
-                .style('fill', barColor)
-                .transition()
-                .attr('width', (d: reduceLevelPeformanceStatsDtoWithCache) => self.xScaleExtent(d.widths[i]));
-        }
+        enteringOps.selectAll('.sto_item')
+            .data((d: reduceLevelPeformanceStatsDto) => d.Operations.filter(o => o.CacheIsSingleThread))
+            .enter()
+            .append('rect')
+            .attr('class', (d: performanceStatsDto) => 'sto_item ' + d.Name)
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('y', self.yBarMargin)
+            .attr('width', 0)
+            .attr('height', self.yBarHeight)
+            .transition()
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth));
+
+        var mtoItems = enteringOps.selectAll('.mto_items')
+            .data((d: reduceLevelPeformanceStatsDto) => d.Operations.filter(o => !o.CacheIsSingleThread))
+            .enter()
+            .append('g')
+            .attr('class', 'mto_items')
+            .attr("transform",
+            (d: parallelPefromanceStatsDto) =>
+                "translate(" + self.xScaleExtent(d.CacheCumulativeSum) + ",0)");
+
+        mtoItems
+            .append('rect')
+            .attr('class', 'mto_hatch')
+            .attr('x', 0)
+            .attr('y', self.yBarMargin)
+            .attr('width', 0)
+            .attr('height', self.yBarHeight)
+            .style('fill', 'url(#lines)')
+            .transition()
+            .attr('width', (d: parallelPefromanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
+
+        var mtoThreadItems = mtoItems.selectAll('.mto_thread_item')
+            .data(d => d.BatchedOperations)
+            .enter()
+            .append('g')
+            .attr('class', 'mto_thread_item')
+            .attr("transform",
+            (d: parallelBatchStatsDto, i) =>
+                "translate(0," + (i * self.yBarHeight / d.Parent.NumberOfThreads + self.yBarMargin) + ")");
+
+        mtoThreadItems.selectAll('.mto_item')
+            .data(d => d.Operations)
+            .enter()
+            .append('rect')
+            .attr('class', (d: performanceStatsDto) => 'mto_item ' + d.Name)
+            .attr('x', (d: performanceStatsDto) => self.xScaleExtent(d.CacheCumulativeSum))
+            .attr('y', 0)
+            .attr('width', 0)
+            .attr('height', (d: performanceStatsDto) => self.yBarHeight / d.ParallelParent.Parent.NumberOfThreads)
+            .transition()
+            .attr('width', (d: performanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
     }
 
     private updateGaps(gapsPositions: timeGap[]) {
@@ -852,49 +984,57 @@ class metrics extends viewModelBase {
 
     }
 
-    private indexStatClicked(data: indexNameAndMapPerformanceStats, element: Element) {
+    private findMaxThreadCountInMap(data: indexNameAndMapPerformanceStats) {
+        var parallelOps = <parallelPefromanceStatsDto[]>data.stats.Operations.filter(x => "NumberOfThreads" in x);
+        return d3.max(parallelOps.map(p => p.NumberOfThreads));
+    }
+
+    private findMaxThreadCountInReduce(data: reduceLevelPeformanceStatsDto) {
+        var parallelOps = <parallelPefromanceStatsDto[]>data.Operations.filter(x => "NumberOfThreads" in x);
+        return d3.max(parallelOps.map(p => p.NumberOfThreads));
+    }
+
+    private indexStatClicked(data: indexNameAndMapPerformanceStats) {
         var self = this;
         nv.tooltip.cleanup();
-        var offset = $(element).offset();
-        var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'index-stat-template\' }"></div>'; 
-        nv.tooltip.show([offset.left + element.getBoundingClientRect().width / 2, offset.top], html, 'n', self.yBarHeight + 15, null, "selectable-tooltip");
-        self.fillTooltip(data, metrics.map_bar_colors);
+        var event = d3.event;
+        nv.tooltip.show([event.x, event.y], html, 'n', 0, null, "selectable-tooltip");
+        data.CacheThreadCount = self.findMaxThreadCountInMap(data);
+        self.fillTooltip(data);
     }
 
-    private reduceStatClicked(data: indexNameAndReducingPerformanceStats, element: Element) {
+    private reduceStatClicked(data: reduceLevelPeformanceStatsDto) {
         var self = this;
         nv.tooltip.cleanup();
-        var offset = $(element).offset();
-        var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'reduce-stat-template\' }"></div>';
-        nv.tooltip.show([offset.left + element.getBoundingClientRect().width / 2, offset.top], html, 'n', self.yBarHeight + 15, null, "selectable-tooltip");
-        self.fillTooltip(data, metrics.reduce_bar_colors);
+        var event = d3.event;
+        nv.tooltip.show([event.x, event.y], html, 'n', 0, null, "selectable-tooltip");
+        data.CacheThreadCount = self.findMaxThreadCountInReduce(data);
+        self.fillTooltip(data);
     }
 
-    private mapBatchInfoClicked(data: indexingBatchInfoDto, element: Element) {
+    private mapBatchInfoClicked(data: indexingBatchInfoDto) {
         var self = this;
         nv.tooltip.cleanup();
-        var offset = $(element).offset();
-        var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'map-batch-info-template\' }"></div>'; 
-        nv.tooltip.show([offset.left + element.getBoundingClientRect().width / 2, offset.top], html, 'n', self.yBarHeight + 15, null, "selectable-tooltip");
-        self.fillTooltip(data, metrics.map_bar_colors);
+        var event = d3.event;
+        nv.tooltip.show([event.x, event.y], html, 'n', 0, null, "selectable-tooltip");
+        self.fillTooltip(data);
     }
 
-    private reduceBatchInfoClicked(data: indexingBatchInfoDto, element: Element) {
+    private reduceBatchInfoClicked(data: indexingBatchInfoDto) {
         var self = this;
         nv.tooltip.cleanup();
-        var offset = $(element).offset();
-        var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'reduce-batch-info-template\' }"></div>';
-        nv.tooltip.show([offset.left + element.getBoundingClientRect().width / 2, offset.top], html, 'n', self.yBarHeight + 15, null, "selectable-tooltip");
-        self.fillTooltip(data, metrics.reduce_bar_colors);
+        var event = d3.event;
+        nv.tooltip.show([event.x, event.y], html, 'n', 0, null, "selectable-tooltip");
+        self.fillTooltip(data);
     }
 
-    private fillTooltip(model: any, colors: string[]) {
+    private fillTooltip(model: any) {
         var node = $(".nvtooltip")[0];
-        ko.applyBindings({ data: model, colors: colors, tooltipClose:  nv.tooltip.cleanup }, node);
+        ko.applyBindings({ data: model, tooltipClose:  nv.tooltip.cleanup }, node);
     }
 
     onWindowHeightChanged() {

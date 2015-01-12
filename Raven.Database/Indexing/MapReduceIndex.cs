@@ -84,7 +84,8 @@ namespace Raven.Database.Indexing
 			var count = 0;
 			var sourceCount = 0;
 			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
-			var performanceStats = RecordCurrentBatch("Current Map", batch.Docs.Count);
+			var performance = RecordCurrentBatch("Current Map", "Map", batch.Docs.Count);
+			var performanceStats = new List<BasePefromanceStats>();
 
 			var deleteMappedResultsDuration = new Stopwatch();
 			var documentsWrapped = batch.Docs.Select(doc =>
@@ -94,37 +95,48 @@ namespace Raven.Database.Indexing
 				sourceCount++;
 				var documentId = doc.__document_id;
 
-				deleteMappedResultsDuration.Start();
-				actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, indexId, deleted);
-				deleteMappedResultsDuration.Stop();
+				using (StopwatchScope.For(deleteMappedResultsDuration))
+				{
+					actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, indexId, deleted);
+				}
 				
 				return doc;
 			})
-				.Where(x => x is FilteredDocument == false)
-				.ToList();
+			.Where(x => x is FilteredDocument == false)
+			.ToList();
+
+			performanceStats.Add(new PerformanceStats
+			{
+				Name = IndexingOperation.MapStorage_DeleteMappedResults,
+				DurationMs = deleteMappedResultsDuration.ElapsedMilliseconds,
+			});
+
 			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 			var allReferenceEtags = new ConcurrentQueue<IDictionary<string, Etag>>();
 			var allState = new ConcurrentQueue<Tuple<HashSet<ReduceKeyAndBucket>, IndexingWorkStats, Dictionary<string, int>>>();
 
-			int loadDocumentCount = 0;
-			long loadDocumentDuration = 0;
-			long linqExecutionDuration = 0;
-			long reduceInMapLinqExecutionDuration = 0;
-			long putMappedResultsDuration = 0;
-			long storageCommitDuration = 0;
-
 			var usedStorageAccessors = new ConcurrentSet<IStorageActionsAccessor>();
+
+			var parallelOperations = new ConcurrentQueue<ParallelBatchStats>();
+
+			var parallelProcessingStart = SystemTime.UtcNow;
 
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, partition =>
 			{
-				token.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
+				var parallelStats = new ParallelBatchStats
+				{
+					StartDelay = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
+				};
 
 				var localStats = new IndexingWorkStats();
 				var localChanges = new HashSet<ReduceKeyAndBucket>();
 				var statsPerKey = new Dictionary<string, int>();
-				var linqExecution = new Stopwatch();
-				var putMappedResultsTiming = new Stopwatch();
-				long reduceDuringMapDurationTicks = 0;
+
+				var linqExecutionDuration = new Stopwatch();
+				var reduceInMapLinqExecutionDuration = new Stopwatch();
+				var putMappedResultsDuration = new Stopwatch();
+				var convertToRavenJObjectDuration = new Stopwatch();
 
 				allState.Enqueue(Tuple.Create(localChanges, localStats, statsPerKey));
 
@@ -143,16 +155,15 @@ namespace Raven.Database.Indexing
 							accessor.AfterStorageCommit += () =>
 							{
 								storageCommitDurationWatch.Stop();
-								performanceStats.MapStoragePerformance.StorageCommitDurationMs = 
-									Interlocked.Add(ref storageCommitDuration, storageCommitDurationWatch.ElapsedMilliseconds);
+
+								parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.MapStorage_Commit, storageCommitDurationWatch.ElapsedMilliseconds));
 							};
 						}
 
-						var mapResults = RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, localStats, out linqExecution);
+						var mapResults = RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, localStats, linqExecutionDuration);
 						var currentDocumentResults = new List<object>();
 						string currentKey = null;
 						bool skipDocument = false;
-						Stopwatch reduceInMapLinqExecution;
 						
 						foreach (var currentDoc in mapResults)
 						{
@@ -161,9 +172,7 @@ namespace Raven.Database.Indexing
 							var documentId = GetDocumentId(currentDoc);
 							if (documentId != currentKey)
 							{
-								count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, out reduceInMapLinqExecution, ref putMappedResultsTiming);
-
-								reduceDuringMapDurationTicks += reduceInMapLinqExecution.Elapsed.Ticks;
+								count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, reduceInMapLinqExecutionDuration, putMappedResultsDuration, convertToRavenJObjectDuration);
 
 								currentDocumentResults.Clear();
 								currentKey = documentId;
@@ -172,7 +181,14 @@ namespace Raven.Database.Indexing
 							{
 								continue;
 							}
-							currentDocumentResults.Add(new DynamicJsonObject(RavenJObject.FromObject(currentDoc, jsonSerializer)));
+
+							RavenJObject currentDocJObject;
+							using (StopwatchScope.For(convertToRavenJObjectDuration))
+							{
+								currentDocJObject = RavenJObject.FromObject(currentDoc, jsonSerializer);
+							}
+
+							currentDocumentResults.Add(new DynamicJsonObject(currentDocJObject));
 
 							if (EnsureValidNumberOfOutputsForDocument(documentId, currentDocumentResults.Count) == false)
 							{
@@ -183,18 +199,28 @@ namespace Raven.Database.Indexing
 
 							Interlocked.Increment(ref localStats.IndexingSuccesses);
 						}
-						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, out reduceInMapLinqExecution, ref putMappedResultsTiming);
-
-						reduceDuringMapDurationTicks += reduceInMapLinqExecution.Elapsed.Ticks;
+						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, reduceInMapLinqExecutionDuration, putMappedResultsDuration, convertToRavenJObjectDuration);
 					});
+
 					allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
 					allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
-					Interlocked.Add(ref loadDocumentCount, CurrentIndexingScope.Current.LoadDocumentCount);
-					Interlocked.Add(ref loadDocumentDuration, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds);
-					Interlocked.Add(ref linqExecutionDuration, linqExecution.ElapsedMilliseconds);
-					Interlocked.Add(ref putMappedResultsDuration, putMappedResultsTiming.ElapsedMilliseconds);
-					Interlocked.Add(ref reduceInMapLinqExecutionDuration, (long) TimeSpan.FromTicks(reduceDuringMapDurationTicks).TotalMilliseconds);
+
+					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.LoadDocument, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds));
+
+					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_MapExecution, linqExecutionDuration.ElapsedMilliseconds));
+					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_ReduceLinqExecution, reduceInMapLinqExecutionDuration.ElapsedMilliseconds));
+					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.MapStorage_PutMappedResult, putMappedResultsDuration.ElapsedMilliseconds));
+					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.MapStorage_ConvertToRavenJObject, convertToRavenJObjectDuration.ElapsedMilliseconds));
+
+					parallelOperations.Enqueue(parallelStats);
 				}
+			});
+
+			performanceStats.Add(new ParallelPefromanceStats
+			{
+				NumberOfThreads = parallelOperations.Count,
+				DurationMs = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds,
+				BatchedOperations = parallelOperations.ToList()
 			});
 
 			UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
@@ -218,52 +244,53 @@ namespace Raven.Database.Indexing
 				}
 			}));
 
+
+			var parallelReductionOperations = new ConcurrentQueue<ParallelBatchStats>();
+			var parallelReductionStart = SystemTime.UtcNow;
+
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, changed, enumerator => context.TransactionalStorage.Batch(accessor =>
 			{
-				while (enumerator.MoveNext())
+				var parallelStats = new ParallelBatchStats
 				{
-					accessor.MapReduce.ScheduleReductions(indexId, 0, enumerator.Current);
+					StartDelay = (long)(SystemTime.UtcNow - parallelReductionStart).TotalMilliseconds
+				};
+
+				var scheduleReductionsDuration = new Stopwatch();
+
+				using (StopwatchScope.For(scheduleReductionsDuration))
+				{
+					while (enumerator.MoveNext())
+					{
+						accessor.MapReduce.ScheduleReductions(indexId, 0, enumerator.Current);
+					}
 				}
+
+				parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.MapStorage_ScheduleReduction, scheduleReductionsDuration.ElapsedMilliseconds));
+				parallelReductionOperations.Enqueue(parallelStats);
 			}));
 
+			performanceStats.Add(new ParallelPefromanceStats
+			{
+				NumberOfThreads = parallelReductionOperations.Count,
+				DurationMs = (long)(SystemTime.UtcNow - parallelReductionStart).TotalMilliseconds,
+				BatchedOperations = parallelReductionOperations.ToList()
+			});
 
 			UpdateIndexingStats(context, stats);
 
-			BatchCompleted("Current Map", "Map", sourceCount, count,
-				new LoadDocumentPerformanceStats
-				{
-					LoadDocumentCount = loadDocumentCount,
-					LoadDocumentDurationMs = loadDocumentDuration
-				},
-				new LinqExecutionPerformanceStats
-				{
-					MapLinqExecutionDurationMs = linqExecutionDuration,
-					ReduceLinqExecutionDurationMs = reduceInMapLinqExecutionDuration
-				},
-				new LucenePerformanceStats
-				{
-					FlushToDiskDurationMs = -1,
-					WriteDocumentsDurationMs = -1
-				}, 
-				new MapStoragePerformanceStats
-				{
-					DeleteMappedResultsDurationMs = deleteMappedResultsDuration.ElapsedMilliseconds,
-					PutMappedResultsDurationMs = putMappedResultsDuration
-				});
+			BatchCompleted("Current Map", "Map", sourceCount, count, performanceStats);
 
 			logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
 
-			return performanceStats;
+			return performance;
 		}
 
 		private int ProcessBatch(AbstractViewGenerator viewGenerator, List<object> currentDocumentResults, string currentKey, HashSet<ReduceKeyAndBucket> changes,
 			IStorageActionsAccessor actions,
-			IDictionary<string, int> statsPerKey, out Stopwatch reduceDuringMapLinqExecution, ref Stopwatch putMappedResultsDuration)
+			IDictionary<string, int> statsPerKey, Stopwatch reduceDuringMapLinqExecution, Stopwatch putMappedResultsDuration, Stopwatch convertToRavenJObjectDuration)
 		{
 			if (currentKey == null || currentDocumentResults.Count == 0)
 			{
-				reduceDuringMapLinqExecution = new Stopwatch();
-				putMappedResultsDuration = new Stopwatch();
 				return 0;
 			}
 
@@ -286,7 +313,7 @@ namespace Raven.Database.Indexing
 
 				int count = 0;
 
-				var results = RobustEnumerationReduceDuringMapPhase(currentDocumentResults.GetEnumerator(), viewGenerator.ReduceDefinition, out reduceDuringMapLinqExecution);
+				var results = RobustEnumerationReduceDuringMapPhase(currentDocumentResults.GetEnumerator(), viewGenerator.ReduceDefinition, reduceDuringMapLinqExecution);
 				foreach (var doc in results)
 				{
 					count++;
@@ -300,13 +327,18 @@ namespace Raven.Database.Indexing
 					}
 					string reduceKey = ReduceKeyToString(reduceValue);
 
-					var data = GetMappedData(doc);
+					RavenJObject data;
+					using (StopwatchScope.For(convertToRavenJObjectDuration))
+					{
+						data = GetMappedData(doc);
+					}
 
 					logIndexing.Debug("Index {0} for document {1} resulted in ({2}): {3}", PublicName, currentKey, reduceKey, data);
 
-					putMappedResultsDuration.Start();
-					actions.MapReduce.PutMappedResult(indexId, currentKey, reduceKey, data);
-					putMappedResultsDuration.Stop();
+					using (StopwatchScope.For(putMappedResultsDuration))
+					{
+						actions.MapReduce.PutMappedResult(indexId, currentKey, reduceKey, data);
+					}
 
 					statsPerKey[reduceKey] = statsPerKey.GetOrDefault(reduceKey) + 1;
 					actions.General.MaybePulseTransaction();
@@ -596,20 +628,24 @@ namespace Raven.Database.Indexing
 			{
 				var count = 0;
 				var sourceCount = 0;
-				var writeDocumentToIndexTotalDutation = new Stopwatch();
-				long linqExecutionDuration = 0;
+				var addDocumentDutation = new Stopwatch();
+				var convertToLuceneDocumentDuration = new Stopwatch();
+				var flushToDiskDuration = new Stopwatch();
+				var linqExecutionDuration = new Stopwatch();
+				var recreateSearcherDuration = new Stopwatch();
+				var deleteExistingDocumentsDuration = new Stopwatch();
 
 				IndexingPerformanceStats performance = null;
 
-				var writeStats = parent.Write((indexWriter, analyzer, stats) =>
+				parent.Write((indexWriter, analyzer, stats) =>
 				{
 					stats.Operation = IndexingWorkStats.Status.Reduce;
 					try
 					{
-						performance = parent.RecordCurrentBatch("Current Reduce #" + Level, MappedResultsByBucket.Sum(x => x.Count()));
+						performance = parent.RecordCurrentBatch("Current Reduce #" + Level, "Reduce Level " + Level, MappedResultsByBucket.Sum(x => x.Count()));
 						if (Level == 2)
 						{
-							RemoveExistingReduceKeysFromIndex(indexWriter);
+							RemoveExistingReduceKeysFromIndex(indexWriter, deleteExistingDocumentsDuration);
 						}
 						foreach (var mappedResults in MappedResultsByBucket)
 						{
@@ -619,10 +655,8 @@ namespace Raven.Database.Indexing
 								return x;
 							});
 
-							Stopwatch linqExecution;
-
 							foreach (var doc in parent.RobustEnumerationReduce(input.GetEnumerator(), ViewGenerator.ReduceDefinition, Actions, stats,
-								out linqExecution))
+								linqExecutionDuration))
 							{
 								count++;
 								string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
@@ -635,17 +669,13 @@ namespace Raven.Database.Indexing
 										Actions.General.MaybePulseTransaction();
 										break;
 									case 2:
-										writeDocumentToIndexTotalDutation.Start();
-										WriteDocumentToIndex(doc, indexWriter, analyzer);
-										writeDocumentToIndexTotalDutation.Stop();
+										WriteDocumentToIndex(doc, indexWriter, analyzer, convertToLuceneDocumentDuration, addDocumentDutation);
 										break;
 									default:
 										throw new InvalidOperationException("Unknown level: " + Level);
 								}
 								stats.ReduceSuccesses++;
 							}
-
-							linqExecutionDuration += linqExecution.ElapsedMilliseconds;
 						}
 					}
 					catch (Exception e)
@@ -680,67 +710,59 @@ namespace Raven.Database.Indexing
 					{
 						ChangedDocs = count + ReduceKeys.Count
 					};
-				});
+				}, flushToDiskDuration, recreateSearcherDuration);
 
-				parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count,
-					new LoadDocumentPerformanceStats()
-					{
-						LoadDocumentCount = -1,
-						LoadDocumentDurationMs = -1
-					}, 
-					new LinqExecutionPerformanceStats
-					{
-						MapLinqExecutionDurationMs = -1,
-						ReduceLinqExecutionDurationMs = linqExecutionDuration
-					},
-					new LucenePerformanceStats
-					{
-						WriteDocumentsDurationMs = writeDocumentToIndexTotalDutation.ElapsedMilliseconds,
-						FlushToDiskDurationMs = writeStats.FlushToDiskDurationMs,
-					},
-					new MapStoragePerformanceStats
-					{
-						DeleteMappedResultsDurationMs = -1,
-						PutMappedResultsDurationMs = -1
-					});
+				var performanceStats = new List<BasePefromanceStats>();
+				
+				performanceStats.Add(PerformanceStats.From(IndexingOperation.Linq_ReduceLinqExecution, linqExecutionDuration.ElapsedMilliseconds));
+				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_DeleteExistingDocument, deleteExistingDocumentsDuration.ElapsedMilliseconds));
+				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_ConvertToLuceneDocument, convertToLuceneDocumentDuration.ElapsedMilliseconds));
+				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_AddDocument, addDocumentDutation.ElapsedMilliseconds));
+				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_FlushToDisk, flushToDiskDuration.ElapsedMilliseconds));
+				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_RecreateSearcher, recreateSearcherDuration.ElapsedMilliseconds));
+
+				parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count, performanceStats);
 
 				logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, indexId, string.Join(", ", ReduceKeys)));
 
 				return performance;
 			}
 
-			private void WriteDocumentToIndex(object doc, RavenIndexWriter indexWriter, Analyzer analyzer)
+			private void WriteDocumentToIndex(object doc, RavenIndexWriter indexWriter, Analyzer analyzer, Stopwatch convertToLuceneDocumentDuration, Stopwatch addDocumentDutation)
 			{
-				float boost;
-				List<AbstractField> fields;
-				try
+				string reduceKeyAsString;
+				using (StopwatchScope.For(convertToLuceneDocumentDuration))
 				{
-					fields = GetFields(doc, out boost).ToList();
-				}
-				catch (Exception e)
-				{
-					Context.AddError(indexId,
-						parent.PublicName,
-						TryGetDocKey(doc),
-						e.Message,
-						"Reduce"
-						);
-					logIndexing.WarnException("Could not get fields to during reduce for " + parent.PublicName, e);
-					return;
-				}
+					float boost;
+					List<AbstractField> fields;
+					try
+					{
+						fields = GetFields(doc, out boost).ToList();
+					}
+					catch (Exception e)
+					{
+						Context.AddError(indexId,
+							parent.PublicName,
+							TryGetDocKey(doc),
+							e.Message,
+							"Reduce"
+							);
+						logIndexing.WarnException("Could not get fields to during reduce for " + parent.PublicName, e);
+						return;
+					}
 
-				string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
-				reduceKeyField.SetValue(reduceKeyAsString);
-				reduceValueField.SetValue(ToJsonDocument(doc).ToString(Formatting.None));
-				luceneDoc.GetFields().Clear();
-				luceneDoc.Boost = boost;
-				luceneDoc.Add(reduceKeyField);
-				luceneDoc.Add(reduceValueField);
-				foreach (var field in fields)
-				{
-					luceneDoc.Add(field);
+					reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
+					reduceKeyField.SetValue(reduceKeyAsString);
+					reduceValueField.SetValue(ToJsonDocument(doc).ToString(Formatting.None));
+					luceneDoc.GetFields().Clear();
+					luceneDoc.Boost = boost;
+					luceneDoc.Add(reduceKeyField);
+					luceneDoc.Add(reduceValueField);
+					foreach (var field in fields)
+					{
+						luceneDoc.Add(field);
+					}
 				}
-
 				batchers.ApplyAndIgnoreAllErrors(
 					exception =>
 					{
@@ -754,16 +776,23 @@ namespace Raven.Database.Indexing
 
 				parent.LogIndexedDocument(reduceKeyAsString, luceneDoc);
 
-				parent.AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+				using (StopwatchScope.For(addDocumentDutation))
+				{
+					parent.AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+				}
 			}
 
-			private void RemoveExistingReduceKeysFromIndex(RavenIndexWriter indexWriter)
+			private void RemoveExistingReduceKeysFromIndex(RavenIndexWriter indexWriter, Stopwatch deleteExistingDocumentsDuration)
 			{
 				foreach (var reduceKey in ReduceKeys)
 				{
 					var entryKey = reduceKey;
 					parent.InvokeOnIndexEntryDeletedOnAllBatchers(batchers, new Term(Constants.ReduceKeyFieldName, entryKey));
-					indexWriter.DeleteDocuments(new Term(Constants.ReduceKeyFieldName, entryKey));
+
+					using (StopwatchScope.For(deleteExistingDocumentsDuration))
+					{
+						indexWriter.DeleteDocuments(new Term(Constants.ReduceKeyFieldName, entryKey));
+					}
 				}
 			}
 		}
