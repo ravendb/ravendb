@@ -42,15 +42,15 @@ namespace Raven.Abstractions.Indexing
 		public int IndexId { get; set; }
 
 		/// <summary>
-		/// This is the means by which the outside world refers to this index defiintion
+		/// This is the means by which the outside world refers to this index definition
 		/// </summary>
 		public string Name { get; set; }
 
 		/// <summary>
 		/// Index lock mode:
-		/// - Unlock - all index definition changes acceptable
-		/// - LockedIgnore - all index definition changes will be ignored, only log entry will be created
-		/// - LockedError - all index definition changes will raise exception
+		/// <para>- Unlock - all index definition changes acceptable</para>
+		/// <para>- LockedIgnore - all index definition changes will be ignored, only log entry will be created</para>
+		/// <para>- LockedError - all index definition changes will raise exception</para>
 		/// </summary>
 		public IndexLockMode LockMode { get; set; }
 
@@ -149,7 +149,7 @@ namespace Raven.Abstractions.Indexing
 		/// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
 		/// the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document 
 		/// will be skipped and the appropriate error message will be added to the indexing errors.
-		/// Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.
+		/// <para>Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.</para>
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }
 
