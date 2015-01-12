@@ -11,6 +11,7 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Trees;
+using Voron.Util;
 
 namespace Voron.Impl
 {
@@ -155,7 +156,7 @@ namespace Voron.Impl
 			var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPagesIncludingOverflow);
 
 			var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
-			StdLib.memcpy(dest, page.Base, numberOfPagesIncludingOverflow * AbstractPager.PageSize);
+            MemoryUtils.Copy(dest, page.Base, numberOfPagesIncludingOverflow * AbstractPager.PageSize);
 
 			_allocatedPagesInTransaction++;
 
@@ -240,7 +241,7 @@ namespace Voron.Impl
 
 			var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
 
-			StdLib.memcpy(newPage.Base, page.Base, AbstractPager.PageSize);
+            MemoryUtils.Copy(newPage.Base, page.Base, AbstractPager.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
 			newPage.LastMatch = page.LastMatch;
 

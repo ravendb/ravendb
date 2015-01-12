@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using Voron.Util;
 
 namespace Voron.Trees
 {
@@ -99,7 +100,7 @@ namespace Voron.Trees
 			using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
 			{
 				var mergedPage = tmp.GetTempPage(left.KeysPrefixed);
-				StdLib.memcpy(mergedPage.Base, left.Base, left.PageSize);
+                MemoryUtils.Copy(mergedPage.Base, left.Base, left.PageSize);
 
 				var previousSearchPosition = right.LastSearchPosition;
 
@@ -120,7 +121,7 @@ namespace Voron.Trees
 					mergedPage.CopyNodeDataToEndOfPage(node, prefixedKey);
 				}
 
-				StdLib.memcpy(left.Base, mergedPage.Base, left.PageSize);
+                MemoryUtils.Copy(left.Base, mergedPage.Base, left.PageSize);
 			}
 
 			parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
@@ -191,7 +192,7 @@ namespace Voron.Trees
 	        }
 			
 			if(dataPos != null && fromDataSize > 0)
-				StdLib.memcpy(dataPos, val, fromDataSize);
+                MemoryUtils.Copy(dataPos, val, fromDataSize);
             
             from.RemoveNode(from.LastSearchPositionOrLastEntry);
 

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using Voron.Impl.Paging;
+using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
@@ -34,7 +35,7 @@ namespace Voron.Impl.Journal
 	        {
 				for (int i = 0; i < CompressedPages.Length; i++)
 	            {
-	                StdLib.memcpy(p + (i*AbstractPager.PageSize), CompressedPages[i], AbstractPager.PageSize);
+                    MemoryUtils.Copy(p + (i * AbstractPager.PageSize), CompressedPages[i], AbstractPager.PageSize);
 	            }
 	        }
 	    }
