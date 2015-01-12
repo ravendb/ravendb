@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using System.Linq.Expressions;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
 {
@@ -192,6 +193,7 @@ namespace Raven.Abstractions.Data
 		public DateTime Completed { get; set; }
 	    public TimeSpan Duration { get; set; }
 	    public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
+		[JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]
 		public List<BasePefromanceStats> Operations { get; set; }
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
 	}
@@ -295,6 +297,7 @@ namespace Raven.Abstractions.Data
 		public DateTime Completed { get; set; }
 		public TimeSpan Duration { get; set; }
 		public double DurationMs{ get { return Math.Round(Duration.TotalMilliseconds, 2); } }
+		[JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]
 		public List<BasePefromanceStats> Operations { get; set; }
 
 		public void Add(IndexingPerformanceStats other)
