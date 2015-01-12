@@ -94,11 +94,11 @@ namespace Voron
 			if (_val == null)
 			{
 				fixed (byte* b = _buffer)
-					StdLib.memcpy(buffer, b + _pos, count);
+                    MemoryUtils.Copy(buffer, b + _pos, count);
 			}
 			else
 			{
-				StdLib.memcpy(buffer, _val + _pos, count);
+                MemoryUtils.Copy(buffer, _val + _pos, count);
 			}
 			_pos += count;
 
@@ -212,20 +212,20 @@ namespace Voron
 					{
 						fixed (byte* b = other._buffer)
 						{
-							return StdLib.memcmp(a, b, len);
+                            return MemoryUtils.Compare(a, b, len);
 						}
 					}
-					return StdLib.memcmp(a, other._val, len);
+                    return MemoryUtils.Compare(a, other._val, len);
 				}
 			}
 			if (other._buffer != null)
 			{
 				fixed (byte* b = other._buffer)
 				{
-					return StdLib.memcmp(_val, b, len);
+                    return MemoryUtils.Compare(_val, b, len);
 				}
 			}
-			return StdLib.memcmp(_val, other._val, len);
+            return MemoryUtils.Compare(_val, other._val, len);
 		}
 
 		public Slice AsSlice()

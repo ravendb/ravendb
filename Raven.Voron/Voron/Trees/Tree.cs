@@ -8,6 +8,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
+using Voron.Util;
 
 namespace Voron.Trees
 {
@@ -119,7 +120,7 @@ namespace Voron.Trees
 
 			fixed (byte* src = value)
 			{
-				StdLib.memcpy(pos, src, value.Length);
+                MemoryUtils.Copy(pos, src, value.Length);
 			}
 		}
 
@@ -145,7 +146,7 @@ namespace Voron.Trees
 					var read = value.Read(tempPageBuffer, 0, AbstractPager.PageSize);
 					if (read == 0)
 						break;
-					StdLib.memcpy(pos, tempPagePointer, read);
+                    MemoryUtils.Copy(pos, tempPagePointer, read);
 					pos += read;
 				}
 			}

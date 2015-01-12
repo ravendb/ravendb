@@ -83,7 +83,7 @@ namespace Voron.Impl.Journal
 			}
 			else
 			{
-				StdLib.memcpy(dataPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
+                MemoryUtils.Copy(dataPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
 			}
 
 			var tempTransactionPageTranslaction = new Dictionary<long, RecoveryPagePosition>();

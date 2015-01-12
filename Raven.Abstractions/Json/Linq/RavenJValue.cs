@@ -264,7 +264,8 @@ namespace Raven.Json.Linq
 
 			if (converters != null)
 			{
-				for (int i = 0; i < converters.Count; i++)
+                int count = converters.Count;
+                for (int i = 0; i < count; i++)
 				{
 					JsonConverter converter = converters[i];
 
@@ -299,6 +300,7 @@ namespace Raven.Json.Linq
 					return;
 			}
 
+            // TODO: Check if we can take this to the bottom. Costly call for the check and a very low probability to hit (less than 1%)
 			JsonConverter matchingConverter;
 			if (_value != null && ((matchingConverter = GetMatchingConverter(converters, _value.GetType())) != null))
 			{
