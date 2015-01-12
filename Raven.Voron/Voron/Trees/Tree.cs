@@ -728,5 +728,11 @@ namespace Voron.Trees
 				return it.CurrentKey.Clone();
 			}
 		}
+
+		public void ClearRecentFoundPages()
+		{
+			if (_recentlyFoundPages != null)
+				_recentlyFoundPages.Clear();
+		}
 	}
 }
