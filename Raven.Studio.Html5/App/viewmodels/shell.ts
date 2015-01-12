@@ -30,6 +30,7 @@ import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler")
 import changesApi = require("common/changesApi");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
+import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
 
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
@@ -52,8 +53,11 @@ import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 class shell extends viewModelBase {
     private router = router;
-    
+
+    renewOAuthTokenTimeoutId: number;
+
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
+    showLogOutButton: KnockoutComputed<boolean>;
 
     static databases = ko.observableArray<database>();
     listedResources: KnockoutComputed<resource[]>;
@@ -120,7 +124,13 @@ class shell extends viewModelBase {
         super();
 
         this.preLoadRecentErrorsView();
-		extensions.install();
+        extensions.install();
+
+        this.showLogOutButton = ko.computed(() => {
+            var lsApiKey = apiKeyLocalStorage.get();
+            var contextApiKey = oauthContext.apiKey();
+            return lsApiKey || contextApiKey;
+        });
         oauthContext.enterApiKeyTask = this.setupApiKey();
         oauthContext.enterApiKeyTask.done(() => this.globalChangesApi = new changesApi(appUrl.getSystemDatabase()));
 
@@ -234,6 +244,8 @@ class shell extends viewModelBase {
                     this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
                     this.notifications = this.createNotifications();
                 }
+            } else if (e.originalEvent.key == apiKeyLocalStorage.localStorageName) {
+                this.onLogOut();
             }
         });
     }
@@ -312,10 +324,32 @@ class shell extends viewModelBase {
             var match = /#api-key=(.*)/.exec(hash);
             if (match && match.length == 2) {
                 oauthContext.apiKey(match[1]);
+                apiKeyLocalStorage.setValue(match[1]);
                 window.location.hash = "#";
             }
+        } else {
+            var apiKeyFromStorage = apiKeyLocalStorage.get();
+            if (apiKeyFromStorage) {
+                oauthContext.apiKey(apiKeyFromStorage);
+            }
         }
+
+        oauthContext.authHeader.subscribe(h => {
+            if (this.renewOAuthTokenTimeoutId) {
+                clearTimeout(this.renewOAuthTokenTimeoutId);
+                this.renewOAuthTokenTimeoutId = null;
+            }
+            if (h) {
+                this.renewOAuthTokenTimeoutId = setTimeout(() => this.renewOAuthToken(), 25 * 60 * 1000);
+            }
+        });
+
         return $.Deferred().resolve();
+    }
+
+    private renewOAuthToken() {
+        oauthContext.authHeader(null);
+        new getDatabaseStatsCommand(this.systemDatabase).execute();
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -896,6 +930,17 @@ class shell extends viewModelBase {
         } else {
             return "fa fa-calculator";
         }
+    }
+
+    logOut() {
+        // this call dispatches storage event to all tabs in browser and calls onLogOut inside each.
+        apiKeyLocalStorage.clean();
+        apiKeyLocalStorage.notifyAboutLogOut();
+    }
+
+    onLogOut() {
+        window.location.hash = this.appUrls.hasApiKey();
+        window.location.reload();
     }
 }
 
