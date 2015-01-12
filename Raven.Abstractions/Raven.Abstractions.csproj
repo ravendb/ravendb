@@ -28,6 +28,7 @@
     <NoWarn>1591</NoWarn>
     <DocumentationFile>bin\Debug\Raven.Abstractions.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>

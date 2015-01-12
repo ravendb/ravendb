@@ -34,17 +34,16 @@ namespace Voron.Impl
 			if (String.IsNullOrEmpty(treeName))
 				throw new InvalidOperationException("Cannot fetch tree with empty name");
 
+			Tree tree = tx.ReadTree(treeName);
+
+			if (tree != null)
+				return tree;
+
 			if (treeName.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase))
 				return Root;
 
 			if (treeName.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
 				return FreeSpaceRoot;
-
-
-			Tree tree = tx.ReadTree(treeName);
-
-			if (tree != null)
-				return tree;
 
 			if (tx.Flags == TransactionFlags.ReadWrite)
 				return tx.Environment.CreateTree(tx, treeName);

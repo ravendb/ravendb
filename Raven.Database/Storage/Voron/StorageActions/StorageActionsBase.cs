@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Runtime.InteropServices;
 using System.Text;
 
 using Raven.Abstractions.Util.Encryptors;
