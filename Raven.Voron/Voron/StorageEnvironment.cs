@@ -559,7 +559,7 @@ namespace Voron
 		        }, TaskCreationOptions.LongRunning);
         }
 
-        public void FlushLogToDataFile(Transaction tx = null, bool allowToFlushOverwrittenPages = false)
+		public void FlushLogToDataFile(Transaction tx = null, bool allowToFlushOverwrittenPages = false)
         {
 	        if (_options.ManualFlushing == false)
 				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
@@ -582,7 +582,7 @@ namespace Voron
 		    }
 	    }
 
-	    public void AssertFlushingNotFailed()
+	    internal void AssertFlushingNotFailed()
         {
 	        var flushingTaskCopy = _flushingTask;
 	        if (flushingTaskCopy == null || flushingTaskCopy.IsFaulted == false)
@@ -591,7 +591,7 @@ namespace Voron
             flushingTaskCopy.Wait();// force re-throw of error
         }
 
-	    public void HandleDataDiskFullException(DiskFullException exception)
+	    internal void HandleDataDiskFullException(DiskFullException exception)
 	    {
 			if(_options.ManualFlushing)
 				return;
@@ -600,7 +600,7 @@ namespace Voron
 			_endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo);
 	    }
 
-	    public IDisposable GetTemporaryPage(Transaction tx, out TemporaryPage tmp)
+	    internal IDisposable GetTemporaryPage(Transaction tx, out TemporaryPage tmp)
 	    {
 		    if (tx.Flags != TransactionFlags.ReadWrite)
 			    throw new ArgumentException("Temporary pages are only available for write transactions");

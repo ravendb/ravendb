@@ -78,7 +78,7 @@ namespace Voron.Tests
 			_options.OwnsPagers = ownsPagers;
 		}
 
-		protected void DeleteDirectory(string dir)
+		public static void DeleteDirectory(string dir)
 		{
 			if (Directory.Exists(dir) == false)
 				return;

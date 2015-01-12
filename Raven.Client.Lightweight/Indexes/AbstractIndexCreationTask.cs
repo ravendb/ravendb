@@ -3,6 +3,15 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
+using Raven.Client.Document;
+using Raven.Json.Linq;
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,15 +19,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
-using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
 {
@@ -37,7 +37,6 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Creates the index definition.
 		/// </summary>
-		/// <returns></returns>
 		public abstract IndexDefinition CreateIndexDefinition();
 
 		protected internal virtual IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
@@ -45,18 +44,24 @@ namespace Raven.Client.Indexes
 			return enumerable.Take(indexQuery.PageSize);
 		}
 
+		/// <summary>
+		/// Gets a value indicating whether this instance is map reduce index definition
+		/// </summary>
+		/// <value>
+		/// 	<c>true</c> if this instance is map reduce; otherwise, <c>false</c>.
+		/// </value>
 		public virtual bool IsMapReduce { get { return false; } }
 
 		/// <summary>
-		/// Gets the name of the index.
+		/// Generates index name from type name replacing all _ with /
+		/// <para>e.g.</para>
+		/// <para>if our type is <code>'Orders_Totals'</code> then index name would be <code>'Orders/Totals'</code></para>
 		/// </summary>
-		/// <value>The name of the index.</value>
 		public virtual string IndexName { get { return GetType().Name.Replace("_", "/"); } }
 
 		/// <summary>
-		/// Gets or sets the document store.
+		/// Gets or sets the conventions that should be used when index definition is created.
 		/// </summary>
-		/// <value>The document store.</value>
 		public DocumentConvention Conventions { get; set; }
 
 		/// <summary>
@@ -98,8 +103,8 @@ namespace Raven.Client.Indexes
 		/// Generate field with values that can be used for spatial clustering on the lat/lng coordinates
 		/// </summary>
 		public object SpatialClustering(string fieldName, double? lat, double? lng,
-		                                                 int minPrecision,
-		                                                 int maxPrecision)
+														 int minPrecision,
+														 int maxPrecision)
 		{
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
@@ -180,10 +185,10 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
-		/// Loads the specifed document during the indexing process
+		/// Loads the specifed attachment content during the indexing process
 		/// </summary>
-        [Obsolete("Use RavenFS instead.")]
-        public object LoadAttachmentForIndexing(string key)
+		[Obsolete("Use RavenFS instead.")]
+		public object LoadAttachmentForIndexing(string key)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
@@ -227,7 +232,7 @@ namespace Raven.Client.Indexes
 				ReplicateIndexesIfNeeded(databaseCommands);
 		}
 
-		internal void ReplicateIndexesIfNeeded(IDatabaseCommands databaseCommands)
+		private void ReplicateIndexesIfNeeded(IDatabaseCommands databaseCommands)
 		{
 			var serverClient = databaseCommands as ServerClient;
 			if (serverClient == null)
@@ -247,7 +252,7 @@ namespace Raven.Client.Indexes
 
 		}
 
-		internal async Task ReplicateIndexesIfNeededAsync(IAsyncDatabaseCommands databaseCommands)
+		private async Task ReplicateIndexesIfNeededAsync(IAsyncDatabaseCommands databaseCommands)
 		{
 			var serverClient = databaseCommands as AsyncServerClient;
 			if (serverClient == null)
@@ -259,7 +264,7 @@ namespace Raven.Client.Indexes
 				{
 					await replicateIndexRequest.ExecuteRawResponseAsync();
 				}
-				catch (Exception )
+				catch (Exception)
 				{
 					// ignore errors
 				}
@@ -282,13 +287,14 @@ namespace Raven.Client.Indexes
 			}
 			return legacyIndexDefinition;
 		}
-        /// <summary>
-        /// Executes the index creation against the specified document store.
-        /// </summary>
-        public Task ExecuteAsync(IDocumentStore store)
-        {
-            return store.ExecuteIndexAsync(this);
-        }
+
+		/// <summary>
+		/// Executes the index creation against the specified document store.
+		/// </summary>
+		public Task ExecuteAsync(IDocumentStore store)
+		{
+			return store.ExecuteIndexAsync(this);
+		}
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.
@@ -311,7 +317,7 @@ namespace Raven.Client.Indexes
 						return; // if it matches the legacy definition, do not change that (to avoid re-indexing)
 				}
 			}
-			
+
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
@@ -327,7 +333,6 @@ namespace Raven.Client.Indexes
 	public class AbstractIndexCreationTask<TDocument> :
 		AbstractIndexCreationTask<TDocument, TDocument>
 	{
-
 	}
 
 	/// <summary>
@@ -361,7 +366,7 @@ namespace Raven.Client.Indexes
 			{
 				Indexes = Indexes,
 				IndexesStrings = IndexesStrings,
-                SortOptionsStrings = IndexSortOptionsStrings,
+				SortOptionsStrings = IndexSortOptionsStrings,
 				SortOptions = IndexSortOptions,
 				Analyzers = Analyzers,
 				AnalyzersStrings = AnalyzersStrings,
@@ -374,16 +379,25 @@ namespace Raven.Client.Indexes
 				TermVectorsStrings = TermVectorsStrings,
 				SpatialIndexes = SpatialIndexes,
 				SpatialIndexesStrings = SpatialIndexesStrings,
-                DisableInMemoryIndexing = DisableInMemoryIndexing,
+				DisableInMemoryIndexing = DisableInMemoryIndexing,
 				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			}.ToIndexDefinition(Conventions);
 		}
 
 		/// <summary>
-		/// Max number of allowed indexing outputs per one source document
+		/// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
+		/// the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document 
+		/// will be skipped and the appropriate error message will be added to the indexing errors.
+		/// <para>Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.</para>
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }
 
+		/// <summary>
+		/// Gets a value indicating whether this instance is map reduce index definition
+		/// </summary>
+		/// <value>
+		/// 	<c>true</c> if this instance is map reduce; otherwise, <c>false</c>.
+		/// </value>
 		public override bool IsMapReduce
 		{
 			get { return Reduce != null; }
@@ -397,8 +411,6 @@ namespace Raven.Client.Indexes
 
 	public abstract class AbstractCommonApiForIndexesAndTransformers
 	{
-		private readonly ILog Logger = LogManager.GetCurrentClassLogger();
-
 		/// <summary>
 		/// Allows to use lambdas recursively
 		/// </summary>
@@ -406,7 +418,6 @@ namespace Raven.Client.Indexes
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
-
 
 		/// <summary>
 		/// Allows to use lambdas recursively
@@ -502,16 +513,6 @@ namespace Raven.Client.Indexes
 		protected RavenJObject AsDocument(object doc)
 		{
 			throw new NotSupportedException("This is here as a marker only");
-		}
-
-	    private OperationMetadata GetReplicationOperation(ReplicationDestination replicationDestination)
-		{
-			var replicationUrl = replicationDestination.ClientVisibleUrl ?? replicationDestination.Url;
-			var url = string.IsNullOrWhiteSpace(replicationDestination.Database)
-				? replicationUrl
-				: replicationUrl + "/databases/" + replicationDestination.Database;
-
-			return new OperationMetadata(url, replicationDestination.Username, replicationDestination.Password, replicationDestination.Domain, replicationDestination.ApiKey);
 		}
 	}
 }
