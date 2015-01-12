@@ -355,6 +355,7 @@ interface indexDefinitionDto {
     Maps: string[];
     Reduce: string;
     IsTestIndex: boolean;
+    IsSideBySideIndex: boolean;
     IsMapReduce: boolean;
     IsCompiled: boolean;
     Stores: any;

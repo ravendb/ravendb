@@ -112,8 +112,10 @@ namespace Voron.Trees
 			if (newRequiredSize <= maxNodeSize)
 			{
 				// we can just expand the current value... no need to create a nested tree yet
-				var actualPageSize = (ushort)Math.Min(Utils.NearestPowerOfTwo(newRequiredSize), maxNodeSize);
-				ExpandMultiTreeNestedPageSize(_tx, key, value, nestedPagePtr, actualPageSize, item->DataSize);
+                var actualPageSize = (ushort) Math.Min(Utils.NearestPowerOfTwo(newRequiredSize), maxNodeSize);
+
+                var currentDataSize = NodeHeader.GetDataSize(_tx, item);
+                ExpandMultiTreeNestedPageSize(_tx, key, value, nestedPagePtr, actualPageSize, currentDataSize);
 
 				return;
 			}

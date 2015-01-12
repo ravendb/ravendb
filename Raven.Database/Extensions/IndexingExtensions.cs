@@ -14,9 +14,12 @@ using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Database.Indexing;
 using Raven.Database.Indexing.Sorting;
 using Raven.Database.Indexing.Sorting.Custom;
 using Raven.Database.Linq;
+using Spatial4n.Core.Shapes;
+using Spatial4n.Core.Shapes.Impl;
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Extensions
@@ -184,12 +187,53 @@ namespace Raven.Database.Extensions
 										throw new InvalidOperationException("Cannot figure out type for custom sort");
 									return new CustomSortField(parts[1], self, parts[0][parts[0].Length-1] == '-');
 								}
-								if (spatialQuery != null && sortedField.Field == Constants.DistanceFieldName)
+								if (sortedField.Field.StartsWith(Constants.DistanceFieldName))
 								{
-									var spatialField = viewGenerator.GetSpatialField(spatialQuery.SpatialFieldName);
-									var shape = spatialField.ReadShape(spatialQuery.QueryShape);
+								    SpatialField spatialField = null;
+								    Shape shape ;
+
+                                    if (sortedField.Field.Length == Constants.DistanceFieldName.Length) 
+                                    {
+                                        if (spatialQuery == null)
+                                            throw new InvalidOperationException("Illegal Spatial Sort Parameter: Blank Spatial sort cannot be used without a spatial query");
+
+                                        spatialField = viewGenerator.GetSpatialField(spatialQuery.SpatialFieldName);
+
+                                        shape = spatialField.ReadShape(spatialQuery.QueryShape);
+                                    }
+                                    else
+                                    {
+                                        var sortParams = sortedField.Field.Split(';');
+                                        double lat, lng;
+
+                                        if (sortParams.Length <3 || !double.TryParse(sortParams[1], out lat) || !double.TryParse(sortParams[2], out lng))
+                                            throw new InvalidOperationException("Illegal Spatial Sort Parameter");
+
+
+                                        string spatialFieldName;
+
+                                        if (sortParams.Length >= 4)
+                                        {
+                                            spatialFieldName = sortParams[3];
+                                        }
+                                        else
+                                        {
+                                            if (spatialQuery == null)
+                                            {
+                                                spatialFieldName = Constants.DefaultSpatialFieldName;
+                                            }
+                                            else
+                                            {
+                                                spatialFieldName  = spatialQuery.SpatialFieldName;
+                                            }
+                                        }
+
+                                        spatialField = viewGenerator.GetSpatialField(spatialFieldName);
+                                        
+                                        shape = new PointImpl(lat, lng, spatialField.GetContext());    
+                                    }
 									var dsort = new SpatialDistanceFieldComparatorSource(spatialField, shape.GetCenter());
-									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
+                                    return new SortField(sortedField.Field, dsort, sortedField.Descending);
 								}
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field, self);
                                 

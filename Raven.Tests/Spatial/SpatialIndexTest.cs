@@ -4,11 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
+using Raven.Client.Linq;
+using Raven.Client.Spatial;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
 using Raven.Database;
@@ -128,7 +131,6 @@ namespace Raven.Tests.Spatial
 				queryResult = store.DatabaseCommands.Query("eventsByLatLng", new IndexQuery()
 				{
 					Query = "Tag:[[Event]]",
-					SortedFields = new[] { new SortedField("__distance"), }
 				}, null);
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
@@ -261,6 +263,8 @@ namespace Raven.Tests.Spatial
 				Assert.Equal(expectedOrder[i], queryResult.Results[i].Value<RavenJObject>("@metadata").Value<string>("@id"));
 			}
 		}
+
+        
 
 		/// <summary>
 		/// The International Union of Geodesy and Geophysics says the Earth's mean radius in KM is:

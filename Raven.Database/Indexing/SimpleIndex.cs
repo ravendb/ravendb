@@ -41,8 +41,10 @@ namespace Raven.Database.Indexing
 
 		public DateTime LastCommitPointStoreTime { get; private set; }
 
-		public override IndexingPerformanceStats IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp)
+		public override IndexingPerformanceStats IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp, CancellationToken token)
 		{
+			token.ThrowIfCancellationRequested();
+
 			var count = 0;
 			var sourceCount = 0;
 			var flushToDiskDuration = new Stopwatch();
@@ -66,6 +68,8 @@ namespace Raven.Database.Indexing
 					var docIdTerm = new Term(Constants.DocumentIdFieldName);
 					var documentsWrapped = batch.Docs.Select((doc, i) =>
 					{
+						token.ThrowIfCancellationRequested();
+
 						Interlocked.Increment(ref sourceCount);
 						if (doc.__document_id == null)
 							throw new ArgumentException(
@@ -106,6 +110,7 @@ namespace Raven.Database.Indexing
 
 					BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
 					{
+                        token.ThrowIfCancellationRequested();
 						var parallelStats = new ParallelBatchStats
 						{
 							StartDelay = (long) (SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
@@ -129,6 +134,8 @@ namespace Raven.Database.Indexing
 
 							foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats, out onErrorFunc, linqExecutionDuration))
 							{
+								token.ThrowIfCancellationRequested();
+
 								float boost;
 								IndexingResult indexingResult;
 								using (StopwatchScope.For(convertToLuceneDocumentDuration))

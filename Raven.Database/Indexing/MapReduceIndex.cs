@@ -77,12 +77,10 @@ namespace Raven.Database.Indexing
 			get { return true; }
 		}
 
-		public override IndexingPerformanceStats IndexDocuments(
-			AbstractViewGenerator viewGenerator,
-			IndexingBatch batch,
-			IStorageActionsAccessor actions,
-			DateTime minimumTimestamp)
+		public override IndexingPerformanceStats IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp, CancellationToken token)
 		{
+			token.ThrowIfCancellationRequested();
+
 			var count = 0;
 			var sourceCount = 0;
 			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
@@ -92,6 +90,8 @@ namespace Raven.Database.Indexing
 			var deleteMappedResultsDuration = new Stopwatch();
 			var documentsWrapped = batch.Docs.Select(doc =>
 			{
+				token.ThrowIfCancellationRequested();
+
 				sourceCount++;
 				var documentId = doc.__document_id;
 
@@ -123,6 +123,7 @@ namespace Raven.Database.Indexing
 
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, partition =>
 			{
+                token.ThrowIfCancellationRequested();
 				var parallelStats = new ParallelBatchStats
 				{
 					StartDelay = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
@@ -166,6 +167,8 @@ namespace Raven.Database.Indexing
 						
 						foreach (var currentDoc in mapResults)
 						{
+							token.ThrowIfCancellationRequested();
+
 							var documentId = GetDocumentId(currentDoc);
 							if (documentId != currentKey)
 							{

@@ -78,6 +78,10 @@
     <TypeScriptCompile Include="App\commands\formatIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSystemDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\replicateAllIndexesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\replicateAllTransformersCommand.ts" />
+    <TypeScriptCompile Include="App\commands\replicateIndexesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\replicateTransformersCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />

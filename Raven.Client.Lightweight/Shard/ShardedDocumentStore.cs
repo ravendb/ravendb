@@ -393,5 +393,28 @@ namespace Raven.Client.Shard
                 return tcs.Task;
             });
         }
+
+        public override Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask)
+        {
+            var list = ShardStrategy.Shards.Values.Select(x => x.AsyncDatabaseCommands).ToList();
+            return ShardStrategy.ShardAccessStrategy.ApplyAsync(list,
+                                                            new ShardRequestData()
+                                                            , (commands, i) =>
+                                                            {
+                                                                var tcs = new TaskCompletionSource<bool>();
+
+                                                                try
+                                                                {
+                                                                    transformerCreationTask.ExecuteAsync(commands, Conventions)
+                                                                        .ContinueWith(t => tcs.SetResult(true));
+                                                                }
+                                                                catch (Exception e)
+                                                                {
+                                                                    tcs.SetException(e);
+                                                                }
+
+                                                                return tcs.Task;
+                                                            });
+        }
 	}
 }
