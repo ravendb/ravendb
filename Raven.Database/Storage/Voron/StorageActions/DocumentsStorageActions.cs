@@ -230,21 +230,21 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 
 			var lowerKey = CreateKey(key);
-			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value))
-			{
-				logger.Debug("Document with key='{0}' was not found", key);
-				return null;
-			}
-
 			var metadataDocument = ReadDocumentMetadata(key);
 			if (metadataDocument == null)
 			{
-				logger.Warn(string.Format("Metadata of document with key='{0} was not found, but the document itself exists.", key));
-				return null;
+                logger.Debug("Document with key='{0}' was not found", key);
+                return null;
 			}
 
 			int sizeOnDisk;
 			var documentData = ReadDocumentData(key, metadataDocument.Etag, metadataDocument.Metadata,out sizeOnDisk);
+
+		    if (documentData == null)
+		    {
+		        logger.Warn("Could not find data for {0}, but found the metadata", key);
+		        return null;
+		    }
 
 			logger.Debug("DocumentByKey() by key ='{0}'", key);
 

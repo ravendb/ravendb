@@ -85,7 +85,7 @@ namespace Voron.Trees
 
             if (_page.IsLeaf)
             {
-                _tx.ClearRecentFoundPages(_tree);
+                _tree.ClearRecentFoundPages();
             }
 
 	        if (_tree.Name == Constants.FreeSpaceTreeName)

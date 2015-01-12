@@ -22,7 +22,7 @@ namespace Voron.Trees
 
         public Page Execute(Page page)
         {
-            _tx.ClearRecentFoundPages(_tree);
+			_tree.ClearRecentFoundPages();
             if (_cursor.PageCount <= 1) // the root page
             {
                 RebalanceRoot(page);

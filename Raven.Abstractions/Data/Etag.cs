@@ -106,16 +106,36 @@ namespace Raven.Abstractions.Data
 			return ToBytes().ToArray();
 		}
 
-		public override string ToString()
+		public unsafe override string ToString()
 		{
-			var etagBytes = ToBytes().ToList();
-			var sb = etagBytes.Aggregate(new StringBuilder(36),
-				(stringBuilder, b) => stringBuilder.Append(GenericUtil.ByteToHexAsStringLookup[b]));
+		    var sb = new StringBuilder(36);
+		    var buffer = stackalloc byte[8];
 
-			sb.Insert(8, "-")
-					.Insert(13, "-")
-					.Insert(18, "-")
-					.Insert(23, "-");
+		    *((long*) buffer) = restarts;
+
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[7]]);
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[6]]);
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[5]]);
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[4]]);
+		    sb.Append('-');
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[3]]);
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[2]]);
+            sb.Append('-');
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[1]]);
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[0]]);
+            sb.Append('-');
+
+            *((long*)buffer) = changes;
+
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[7]]);
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[6]]);
+            sb.Append('-'); 
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[5]]);
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[4]]);
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[3]]);
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[2]]);
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[1]]);
+            sb.Append(GenericUtil.ByteToHexAsStringLookup[buffer[0]]);
 
 			var etagAsString = sb.ToString();
 			Debug.Assert(etagAsString.Length == 36); //prevent stupid bugs if something is refactored
@@ -123,13 +143,23 @@ namespace Raven.Abstractions.Data
 			return etagAsString;
 		}
 
-		public static Etag Parse(byte[] bytes)
+		public unsafe static Etag Parse(byte[] bytes)
 		{
-			return new Etag
-			{
-				restarts = BitConverter.ToInt64(bytes.Take(8).Reverse().ToArray(), 0),
-				changes = BitConverter.ToInt64(bytes.Skip(8).Take(8).Reverse().ToArray(), 0)
-			};
+		    var etag = new Etag();
+            fixed (byte* restarts = bytes)
+            {
+                int fst = (*restarts << 24) | (*(restarts + 1) << 16) | (*(restarts + 2) << 8) | (*(restarts + 3));
+                int snd = (*(restarts + 4) << 24) | (*(restarts + 5) << 16) | (*(restarts + 6) << 8) | (*(restarts + 7));
+                etag.restarts = (uint)snd | ((long)fst << 32);
+
+                var changes = restarts + 8;
+
+                fst = (*changes << 24) | (*(changes + 1) << 16) | (*(changes + 2) << 8) | (*(changes + 3));
+                snd = (*(changes + 4) << 24) | (*(changes + 5) << 16) | (*(changes + 6) << 8) | (*(changes + 7));
+                etag.changes = (uint)snd | ((long)fst << 32);
+		    }
+
+			return etag;
 		}
 
 		public static bool TryParse(string str, out Etag etag)

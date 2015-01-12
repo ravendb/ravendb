@@ -29,7 +29,6 @@ namespace Voron.Impl
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
 
 		private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>();
-		private readonly IDictionary<Tree, RecentlyFoundPages> _recentlyFoundPages = new Dictionary<Tree, RecentlyFoundPages>();
 
 		internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
@@ -571,29 +570,6 @@ namespace Voron.Impl
 		{
 			return _freedPages;
 		} 
-
-		internal RecentlyFoundPages GetRecentlyFoundPages(Tree tree)
-		{
-			RecentlyFoundPages pages;
-			if (_recentlyFoundPages.TryGetValue(tree, out pages))
-				return pages;
-
-			return null;
-		}
-
-		internal void ClearRecentFoundPages(Tree tree)
-	    {
-	        _recentlyFoundPages.Remove(tree);
-	    }
-
-		internal void AddRecentlyFoundPage(Tree tree, RecentlyFoundPages.FoundPage foundPage)
-		{
-			RecentlyFoundPages pages;
-		    if (_recentlyFoundPages.TryGetValue(tree, out pages) == false)
-		        _recentlyFoundPages[tree] = pages = new RecentlyFoundPages(Flags == TransactionFlags.Read ? 8 : 2);
-
-			pages.Add(foundPage);
-		}
 
 		internal void AddTree(string name, Tree tree)
 	    {
