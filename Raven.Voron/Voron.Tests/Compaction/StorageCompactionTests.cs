@@ -19,7 +19,7 @@ namespace Voron.Tests.Compaction
 
 		public StorageCompactionTests()
 		{
-			ClearDirs();
+			Clean();
 		}
 
 		[Fact]
@@ -185,10 +185,8 @@ namespace Voron.Tests.Compaction
 		}
 
 		[Fact]
-		public void ShouldNotDeleteJournalsIfCompactedStorageSupportsIncrementalBackup()
+		public void CannotCompactStorageIfIncrementalBackupEnabled()
 		{
-			var r = new Random();
-
 			var envOptions = StorageEnvironmentOptions.ForPath(CompactionTestsData);
 			envOptions.IncrementalBackupEnabled = true;
 			using (var env = new StorageEnvironment(envOptions))
@@ -197,31 +195,19 @@ namespace Voron.Tests.Compaction
 				{
 					var tree = env.CreateTree(tx, "records");
 
-					for (int i = 0; i < 100; i++)
-					{
-						var bytes = new byte[r.Next(10, 2 * 1024 * 1024)];
-						r.NextBytes(bytes);
-
-						tree.Add("record/" + i, bytes);
-					}
+					tree.Add("record/1", new byte[9]);
+					tree.Add("record/2", new byte[9]);
 
 					tx.Commit();
 				}
 			}
 
-			var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData);
-			compactOptions.IncrementalBackupEnabled = true;
+			var srcOptions = StorageEnvironmentOptions.ForPath(CompactionTestsData);
+			srcOptions.IncrementalBackupEnabled = true;
 
-			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), compactOptions);
+			var invalidOperationException = Assert.Throws<InvalidOperationException>(() => StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData)));
 
-			var compactedDir = new DirectoryInfo(CompactedData);
-
-			var journalsAfterCompaction = compactedDir.GetFiles("*.journal").Select(x => x.Name).ToList();
-
-			for (int i = 0; i < journalsAfterCompaction.Count; i++)
-			{
-				Assert.Equal(StorageEnvironmentOptions.JournalName(i), journalsAfterCompaction[i]);
-			}
+			Assert.Equal(StorageCompaction.CannotCompactBecauseOfIncrementalBackup, invalidOperationException.Message);
 		}
 
 		[Fact]
@@ -274,10 +260,10 @@ namespace Voron.Tests.Compaction
 
 		public void Dispose()
 		{
-			ClearDirs();
+			Clean();
 		}
 
-		private static void ClearDirs()
+		private static void Clean()
 		{
 			if (Directory.Exists(CompactionTestsData))
 				StorageTest.DeleteDirectory(CompactionTestsData);

@@ -260,9 +260,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 			RecoverFromFailedCompact(sourcePath);
 
 			var sourceOptions = CreateStorageOptionsFromConfiguration(path, settings);
-
 			var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath);
-			compactOptions.IncrementalBackupEnabled = sourceOptions.IncrementalBackupEnabled;
 
 			StorageCompaction.Execute(sourceOptions, compactOptions);
 

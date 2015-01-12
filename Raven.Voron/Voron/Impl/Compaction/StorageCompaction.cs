@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.IO;
 using Voron.Impl.Paging;
 using Voron.Trees;
@@ -11,8 +12,13 @@ namespace Voron.Impl.Compaction
 {
 	public unsafe static class StorageCompaction
 	{
+		public const string CannotCompactBecauseOfIncrementalBackup = "Cannot compact a storage that supports incremental backups. The compact operation changes internal data structures on which the incremental backup relays.";
+
 		public static void Execute(StorageEnvironmentOptions srcOptions, StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions)
 		{
+			if (srcOptions.IncrementalBackupEnabled)
+				throw new InvalidOperationException(CannotCompactBecauseOfIncrementalBackup);
+
 			long minimalCompactedDataFileSize;
 
 			srcOptions.ManualFlushing = true; // prevent from flushing during compaction - we shouldn't touch any source files
@@ -23,7 +29,7 @@ namespace Voron.Impl.Compaction
 			{
 				CopyTrees(existingEnv, compactedEnv);
 
-				compactedEnv.FlushLogToDataFile(allowToFlushOverwrittenPages: true);	
+				compactedEnv.FlushLogToDataFile(allowToFlushOverwrittenPages: true);
 				compactedEnv.Journal.Applicator.SyncDataFile(compactedEnv.OldestTransaction);
 				compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 
