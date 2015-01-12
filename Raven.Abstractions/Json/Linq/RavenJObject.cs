@@ -10,6 +10,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
 using Raven.Abstractions.Data;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Json.Linq
 {
@@ -126,12 +127,15 @@ namespace Raven.Json.Linq
 		/// <value></value>
 		public RavenJToken this[string propertyName]
 		{
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get
 			{
 				RavenJToken ret;
 				Properties.TryGetValue(propertyName, out ret);
 				return ret;
 			}
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			set { Properties[propertyName] = value; }
 		}
 
