@@ -435,6 +435,21 @@ class metrics extends viewModelBase {
             .attr('stroke-linecap', 'square')
             .attr('stroke-linejoin', 'miter');
 
+        defs.append('pattern')
+            .attr('id', 'lines')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', 5)
+            .attr('height', 5)
+            .attr('patternUnits', 'userSpaceOnUse')
+            .append('path')
+            .attr('d', 'M 0 5 L 5 0')
+            .attr('stroke', '#333')
+            .attr('fill', 'transparent')
+            .attr('stroke-width', 0.25)
+            .attr('stroke-linecap', 'square')
+            .attr('stroke-linejoin', 'miter');
+
         var svgEnter = this.svg
             .selectAll(".map_group")
             .data([null]).enter();
@@ -616,7 +631,7 @@ class metrics extends viewModelBase {
         batches.enter()
             .append('g')
                 .attr('class', 'batchRange')
-                .on('click', function (d) { return self.mapBatchInfoClicked(d, this); })
+                .on('click', function (d) { return self.mapBatchInfoClicked(d); })
             .append('rect')
                 .attr('x', (d: indexingBatchInfoDto) => self.xScale(d.StartedAtDate))
                 .attr('y', (d: indexingBatchInfoDto) => d3.min(d.PerfStats, v => self.yMapScale(v.indexName)))
@@ -651,7 +666,7 @@ class metrics extends viewModelBase {
         batches.enter()
             .append('g')
             .attr('class', 'batchRange')
-            .on('click', function (d) { return self.reduceBatchInfoClicked(d, this); })
+            .on('click', function (d) { return self.reduceBatchInfoClicked(d); })
             .append('rect')
             .attr('x', (d: reducingBatchInfoDto) => self.xScale(d.StartedAtDate))
             .attr('y', (d: reducingBatchInfoDto) => d3.min(d.PerfStats, v => self.yReduceScale(v.indexName)))
@@ -710,7 +725,7 @@ class metrics extends viewModelBase {
         var enteringOps = op.enter()
             .append('g')
             .attr('class', 'op')
-            .on('click', function (d) { return self.indexStatClicked(d, this); })
+            .on('click', function (d) { return self.indexStatClicked(d); })
             .attr("transform",
             (d: indexNameAndMapPerformanceStats) =>
                 "translate(" + self.xScale(self.isoFormat.parse(d.stats.Started)) + "," + self.yMapScale(d.indexName) + ")");
@@ -756,7 +771,7 @@ class metrics extends viewModelBase {
             .attr('y', self.yBarMargin)
             .attr('width', 0)
             .attr('height', self.yBarHeight) 
-            .style('fill', 'url(#hash)')
+            .style('fill', 'url(#lines)')
             .transition()
             .attr('width', (d: parallelPefromanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
             
@@ -833,7 +848,7 @@ class metrics extends viewModelBase {
             .enter()
             .append('g')
             .attr('class', 'op')
-            .on('click', function (d) { return self.reduceStatClicked(d, this); })
+            .on('click', function (d) { return self.reduceStatClicked(d); })
             .attr("transform",
             (d: reduceLevelPeformanceStatsDto) =>
                 "translate(" + self.xScale(self.isoFormat.parse(d.Started)) + "," + self.yReduceScale(d.parent.indexName) + ")");
@@ -885,7 +900,7 @@ class metrics extends viewModelBase {
             .attr('y', self.yBarMargin)
             .attr('width', 0)
             .attr('height', self.yBarHeight)
-            .style('fill', 'url(#hash)')
+            .style('fill', 'url(#lines)')
             .transition()
             .attr('width', (d: parallelPefromanceStatsDto) => self.xScaleExtent(d.CacheWidth)); 
 
@@ -979,45 +994,41 @@ class metrics extends viewModelBase {
         return d3.max(parallelOps.map(p => p.NumberOfThreads));
     }
 
-    private indexStatClicked(data: indexNameAndMapPerformanceStats, element: Element) {
+    private indexStatClicked(data: indexNameAndMapPerformanceStats) {
         var self = this;
         nv.tooltip.cleanup();
-        var offset = $(element).offset();
-        var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'index-stat-template\' }"></div>'; 
-        nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
+        var event = d3.event;
+        nv.tooltip.show([event.x, event.y], html, 'n', 0, null, "selectable-tooltip");
         data.CacheThreadCount = self.findMaxThreadCountInMap(data);
         self.fillTooltip(data);
     }
 
-    private reduceStatClicked(data: reduceLevelPeformanceStatsDto, element: Element) {
+    private reduceStatClicked(data: reduceLevelPeformanceStatsDto) {
         var self = this;
         nv.tooltip.cleanup();
-        var offset = $(element).offset();
-        var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'reduce-stat-template\' }"></div>';
-        nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
+        var event = d3.event;
+        nv.tooltip.show([event.x, event.y], html, 'n', 0, null, "selectable-tooltip");
         data.CacheThreadCount = self.findMaxThreadCountInReduce(data);
         self.fillTooltip(data);
     }
 
-    private mapBatchInfoClicked(data: indexingBatchInfoDto, element: Element) {
+    private mapBatchInfoClicked(data: indexingBatchInfoDto) {
         var self = this;
         nv.tooltip.cleanup();
-        var offset = $(element).offset();
-        var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'map-batch-info-template\' }"></div>'; 
-        nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
+        var event = d3.event;
+        nv.tooltip.show([event.x, event.y], html, 'n', 0, null, "selectable-tooltip");
         self.fillTooltip(data);
     }
 
-    private reduceBatchInfoClicked(data: indexingBatchInfoDto, element: Element) {
+    private reduceBatchInfoClicked(data: indexingBatchInfoDto) {
         var self = this;
         nv.tooltip.cleanup();
-        var offset = $(element).offset();
-        var containerOffset = $("#metricsContainer").offset();
         var html = '<div data-bind="template: { name : \'reduce-batch-info-template\' }"></div>';
-        nv.tooltip.show([offset.left + element.getBoundingClientRect().width + 10, offset.top], html, 's', 0, null, "selectable-tooltip");
+        var event = d3.event;
+        nv.tooltip.show([event.x, event.y], html, 'n', 0, null, "selectable-tooltip");
         self.fillTooltip(data);
     }
 

@@ -62,12 +62,16 @@
 	.MapStorage_ScheduleReduction { fill: #ffbb78; background-color: #ffbb78 }
 	.MapStorage_Commit { fill: #ff9896; background-color: #ff9896 }
 
-	.ReduceStorage_GetItemsToReduce { fill: #c5b0d5; background-color: #c5b0d }
+	.ReduceStorage_GetItemsToReduce { fill: #c5b0d5; background-color: #c5b0d5 }
 	.ReduceStorage_DeletePreviouslyScheduledReductions { fill: #c49c94; background-color: #c49c94 }
 	.ReduceStorage_ScheduleReductions { fill: #f7b6d2; background-color: #f7b6d2 }
 	.ReduceStorage_GetMappedResults { fill: #bcbd22; background-color: #bcbd22 }
 	.ReduceStorage_RemoveReduceResults { fill: #dbdb8d; background-color: #dbdb8d }
 	.ReduceStorage_Commit { fill: #9edae5; background-color: #9edae5 }
+
+    .ParallelBlock {
+       background:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAI0lEQVQIW2NkwAT/GdHE/gP5jMiCYAGQIpggXAAmiCIAEgQAAE4FBbECyZcAAAAASUVORK5CYII=') repeat;
+    }
 
 </style>
 
@@ -193,9 +197,15 @@
                 <!-- /ko -->
                 <!-- ko if:!CacheIsSingleThread -->
                 <tr>
-                    <td>Parallel block</td>
+                    <td><span class="rect_legend ParallelBlock"></span> Parallel block</td>
                     <!-- ko foreach: BatchedOperations -->
                     <td data-bind="text: 'Thread #' + ( 1 + $index())"></td>
+                    <!-- /ko -->
+                </tr>
+                <tr class="mto">
+                    <td>Thread start delay [ms]</td>
+                    <!-- ko foreach: BatchedOperations -->
+                    <td data-bind="text: StartDelay"></td>
                     <!-- /ko -->
                 </tr>
                 <!-- ko foreach: BatchedOperations[0].Operations -->
@@ -241,11 +251,11 @@
                 </tr>
                 <tr>
                     <td>Items count</td>
-					<td data-bind="text: ItemsCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
+                    <td data-bind="text: ItemsCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Output count</td>
-					<td data-bind="text: OutputCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
+                    <td data-bind="text: OutputCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Duration</td>
@@ -267,6 +277,12 @@
                     <td>Parallel block</td>
                     <!-- ko foreach: BatchedOperations -->
                     <td data-bind="text: 'Thread #' + (1 + $index())"></td>
+                    <!-- /ko -->
+                </tr>
+                <tr class="mto">
+                    <td>Thread start delay [ms]</td>
+                    <!-- ko foreach: BatchedOperations -->
+                    <td data-bind="text: StartDelay"></td>
                     <!-- /ko -->
                 </tr>
                 <!-- ko foreach: BatchedOperations[0].Operations -->
