@@ -79,11 +79,16 @@ namespace Raven.Bundles.Encryption.Streams
 				// If the stream is used for both reading and writing, make sure we're reading everything that was written
 				WriteAnyUnwrittenData();
 
-				if (Position >= underlyingStream.Header.TotalUnencryptedSize && underlyingStream.Header.MagicNumber == EncryptedFile.WithTotalSizeMagicNumber)
+				if (Position >= underlyingStream.Footer.TotalLength &&
+					underlyingStream.Header.MagicNumber == EncryptedFile.DefaultMagicNumber)
 					return 0;
-				if (Position >= underlyingStream.Footer.TotalLength && underlyingStream.Header.MagicNumber == EncryptedFile.DefaultMagicNumber)
+
+				if (Position >= underlyingStream.Header.TotalUnencryptedSize && 
+					underlyingStream.Header.MagicNumber == EncryptedFile.WithTotalSizeMagicNumber)
 					return 0;
-				if (underlyingStream.Header.MagicNumber != EncryptedFile.WithTotalSizeMagicNumber && underlyingStream.Header.MagicNumber != EncryptedFile.DefaultMagicNumber)
+	
+				if (underlyingStream.Header.MagicNumber != EncryptedFile.WithTotalSizeMagicNumber && 
+					underlyingStream.Header.MagicNumber != EncryptedFile.DefaultMagicNumber)
 					throw new ApplicationException("Invalid magic number in the encrypted file. Cannot proceed with reading.");
 
 				var startingBlock = underlyingStream.Header.GetBlockNumberFromLogicalPosition(Position);
