@@ -214,19 +214,19 @@ namespace Raven.Database.Indexing
 							Interlocked.Increment(ref localStats.IndexingSuccesses);
 						}
 						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, reduceInMapLinqExecutionDuration, putMappedResultsDuration, convertToRavenJObjectDuration);
+
+						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.LoadDocument, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds));
+
+						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_MapExecution, linqExecutionDuration.ElapsedMilliseconds));
+						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_ReduceLinqExecution, reduceInMapLinqExecutionDuration.ElapsedMilliseconds));
+						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_PutMappedResults, putMappedResultsDuration.ElapsedMilliseconds));
+						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_ConvertToRavenJObject, convertToRavenJObjectDuration.ElapsedMilliseconds));
+
+						parallelOperations.Enqueue(parallelStats);
 					});
 
 					allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
 					allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
-
-					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.LoadDocument, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds));
-
-					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_MapExecution, linqExecutionDuration.ElapsedMilliseconds));
-					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_ReduceLinqExecution, reduceInMapLinqExecutionDuration.ElapsedMilliseconds));
-					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_PutMappedResults, putMappedResultsDuration.ElapsedMilliseconds));
-					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_ConvertToRavenJObject, convertToRavenJObjectDuration.ElapsedMilliseconds));
-
-					parallelOperations.Enqueue(parallelStats);
 				}
 			});
 
