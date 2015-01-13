@@ -79,8 +79,12 @@ namespace Raven.Bundles.Encryption.Streams
 				// If the stream is used for both reading and writing, make sure we're reading everything that was written
 				WriteAnyUnwrittenData();
 
-				if (Position >= underlyingStream.Header.TotalUnencryptedSize)
+				if (Position >= underlyingStream.Header.TotalUnencryptedSize && underlyingStream.Header.MagicNumber == EncryptedFile.WithTotalSizeMagicNumber)
 					return 0;
+				if (Position >= underlyingStream.Footer.TotalLength && underlyingStream.Header.MagicNumber == EncryptedFile.DefaultMagicNumber)
+					return 0;
+				if (underlyingStream.Header.MagicNumber != EncryptedFile.WithTotalSizeMagicNumber && underlyingStream.Header.MagicNumber != EncryptedFile.DefaultMagicNumber)
+					throw new ApplicationException("Invalid magic number in the encrypted file. Cannot proceed with reading.");
 
 				var startingBlock = underlyingStream.Header.GetBlockNumberFromLogicalPosition(Position);
 				var blockOffset = underlyingStream.Header.GetBlockOffsetFromLogicalPosition(Position);
@@ -90,7 +94,7 @@ namespace Raven.Bundles.Encryption.Streams
 					currentReadingBlock = underlyingStream.ReadBlock(startingBlock);
 				}
 
-				var blockRead = (int)Math.Min(underlyingStream.Header.TotalUnencryptedSize - Position, currentBlockSize - blockOffset);
+				var blockRead = (int) Math.Min(underlyingStream.Header.TotalUnencryptedSize - Position, currentBlockSize - blockOffset);
 				var actualRead = Math.Min(count, blockRead);
 				Array.Copy(currentReadingBlock.Data, blockOffset, buffer, bufferOffset, actualRead);
 				// We use the fact that a stream doesn't have to read all data in one go to avoid a loop here.
@@ -141,7 +145,7 @@ namespace Raven.Bundles.Encryption.Streams
 							{
 								BlockNumber = startingBlock,
 								Data = new byte[currentBlockSize],
-								TotalStreamLength = underlyingStream.Footer.TotalLength
+								TotalEncryptedStreamLength = underlyingStream.Footer.TotalLength
 							};
 						}
 					}
@@ -192,8 +196,8 @@ namespace Raven.Bundles.Encryption.Streams
 				lock (locker)
 				{
 					currentPosition = value;
-					if (currentWritingBlock != null && currentWritingBlock.TotalStreamLength < Position)
-						currentWritingBlock.TotalStreamLength = Position;
+					if (currentWritingBlock != null && currentWritingBlock.TotalEncryptedStreamLength < Position)
+						currentWritingBlock.TotalEncryptedStreamLength = Position;
 				}
 			}
 		}
@@ -242,7 +246,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 					// Even if we haven't flushed a block to the BlockReaderWriter, we need to count its size as written.
 					if (currentWritingBlock != null)
-						result = Math.Max(result, currentWritingBlock.TotalStreamLength);
+						result = Math.Max(result, currentWritingBlock.TotalEncryptedStreamLength);
 
 					return result;
 				}

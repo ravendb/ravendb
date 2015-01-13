@@ -177,7 +177,7 @@ namespace Raven.Bundles.Encryption.Streams
 					return new EncryptedFile.Block
 					{
 						BlockNumber = blockNumber,
-						TotalStreamLength = footer.TotalLength,
+						TotalEncryptedStreamLength = footer.TotalLength,
 						Data = new byte[header.DecryptedBlockSize],
 					};
 				}
@@ -193,7 +193,7 @@ namespace Raven.Bundles.Encryption.Streams
 				return new EncryptedFile.Block
 				{
 					BlockNumber = blockNumber,
-					TotalStreamLength = footer.TotalLength,
+					TotalEncryptedStreamLength = footer.TotalLength,
 					Data = decrypted,
 				};
 			}
@@ -232,7 +232,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 				if (stream.Length <= stream.Position + EncryptedFile.Footer.FooterSize)
 				{
-					footer.TotalLength = block.TotalStreamLength;
+					footer.TotalLength = block.TotalEncryptedStreamLength;
 					WriteFooterInCurrentPosition(footer);
 				}
 			}
