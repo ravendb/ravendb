@@ -268,11 +268,14 @@ namespace Raven.Database.Prefetching
 				if (futureIndexBatches.TryRemove(nextDocEtag, out nextBatch) == false) // here we need to remove the batch
 					return false;
 
-                using(prefetchingQueue.EnterWriteLock())
-				foreach (var jsonDocument in nextBatch.Task.Result)
-					prefetchingQueue.Add(jsonDocument);
+                List<JsonDocument> jsonDocuments = nextBatch.Task.Result;
+                using (prefetchingQueue.EnterWriteLock())
+                {
+                    foreach (var jsonDocument in jsonDocuments)
+                        prefetchingQueue.Add(jsonDocument);
+                }
 
-				return true;
+			    return true;
 			}
 			catch (Exception e)
 			{
