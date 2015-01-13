@@ -106,6 +106,8 @@ namespace Raven.Database.Config
 			// and we also need to allow sessions for background operations and for multi get requests
 			MaxConcurrentServerRequests = ravenSettings.MaxConcurrentServerRequests.Value;
 
+			MaxConcurrentRequestsForDatabaseDuringLoad = ravenSettings.MaxConcurrentRequestsForDatabaseDuringLoad.Value;
+
 			MaxConcurrentMultiGetRequests = ravenSettings.MaxConcurrentMultiGetRequests.Value;
 			if (ConcurrentMultiGetRequests == null)
 				ConcurrentMultiGetRequests = new SemaphoreSlim(MaxConcurrentMultiGetRequests);
@@ -311,6 +313,8 @@ namespace Raven.Database.Config
 		public TimeSpan TombstoneRetentionTime { get; set; }
 
 		public int MaxConcurrentServerRequests { get; set; }
+
+		public int MaxConcurrentRequestsForDatabaseDuringLoad { get; set; }
 
 		public int MaxConcurrentMultiGetRequests { get; set; }
 

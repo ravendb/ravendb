@@ -99,9 +99,17 @@ namespace Raven.Database.Indexing
 				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext,
 					indexDefinitionStorage.IndexNames, OpenIndexOnStartup);
 			}
-			catch
+			catch(Exception e)
 			{
+				log.WarnException("Could not create index storage", e);
+				try
+				{
 				Dispose();
+				}
+				catch (Exception ex)
+				{
+					log.FatalException("Failed to disposed when already getting an error during ctor", ex);
+				}
 				throw;
 			}
 		}
@@ -200,7 +208,7 @@ namespace Raven.Database.Indexing
 			// 2. If no 'LastEtag' in commitData then we consider it an invalid index
 			// 3. If 'LastEtag' is present (and valid), then resetting to it (if it is lower than lastStoredEtag)
 
-            var commitData = IndexReader.GetCommitUserData(directory);
+			var commitData = IndexReader.GetCommitUserData(directory);
 
 		    if (index.IsMapReduce)
 				CheckMapReduceIndexState(commitData, resetTried);
@@ -990,12 +998,7 @@ namespace Raven.Database.Indexing
 		}
 
 		[CLSCompliant(false)]
-		public IndexingPerformanceStats Index(int index,
-			AbstractViewGenerator viewGenerator,
-			IndexingBatch batch,
-			WorkContext context,
-			IStorageActionsAccessor actions,
-			DateTime minimumTimestamp)
+		public IndexingPerformanceStats Index(int index, AbstractViewGenerator viewGenerator, IndexingBatch batch, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp, CancellationToken token)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -1006,7 +1009,7 @@ namespace Raven.Database.Indexing
 			using (EnsureInvariantCulture())
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
-				var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp);
+				var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp, token);
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = value.PublicName,
@@ -1345,11 +1348,13 @@ namespace Raven.Database.Indexing
 
 		public void FlushMapIndexes()
 		{
-			foreach (var value in indexes.Values.Where(value => value != null && !value.IsMapReduce))
+			if (indexes == null)
+				return;
+			foreach (var value in indexes.Values.Where(value => value != null &&  !value.IsMapReduce))
 			{
 				try
 				{
-                value.Flush(value.GetLastEtagFromStats());
+        			value.Flush(value.GetLastEtagFromStats());
 			}
 				catch (Exception e)
 				{
@@ -1361,11 +1366,13 @@ namespace Raven.Database.Indexing
 
 		public void FlushReduceIndexes()
 		{
+			if (indexes == null)
+				return;
 			foreach (var value in indexes.Values.Where(value => value != null && value.IsMapReduce))
 			{
 				try
 				{
-                value.Flush(value.GetLastEtagFromStats());
+                		value.Flush(value.GetLastEtagFromStats());
 			}
 				catch (Exception e)
 				{
@@ -1465,6 +1472,6 @@ namespace Raven.Database.Indexing
 			documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false);
 
 			return true;
-		}
 	}
+}
 }

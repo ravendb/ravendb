@@ -6,6 +6,7 @@
 using System;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
@@ -18,30 +19,23 @@ namespace Raven.Client.Linq
 	public interface IRavenQueryable<T> : IOrderedQueryable<T>
 	{
 		/// <summary>
-		/// Provide statistics about the query, such as total count of matching records
+		/// Provide statistics about the query, such as duration, total number of results, staleness information, etc.
 		/// </summary>
 		IRavenQueryable<T> Statistics(out RavenQueryStatistics stats);
 
 		/// <summary>
 		/// Customizes the query using the specified action
 		/// </summary>
-		/// <param name="action">The action.</param>
-		/// <returns></returns>
 		IRavenQueryable<T> Customize(Action<IDocumentQueryCustomization> action);
 
         /// <summary>
         /// Specifies a result transformer to use on the results
         /// </summary>
-        /// <typeparam name="TTransformer"></typeparam>
-        /// <typeparam name="TResult"></typeparam>
-        /// <returns></returns>
 	    IRavenQueryable<TResult> TransformWith<TTransformer, TResult>() where TTransformer : AbstractTransformerCreationTask, new();
 
 	    /// <summary>
 	    /// Specifies a result transformer name to use on the results
 	    /// </summary>
-	    /// <typeparam name="TResult"></typeparam>
-	    /// <returns></returns>
 	    IRavenQueryable<TResult> TransformWith<TResult>(string transformerName);
 
 		/// <summary>
@@ -56,5 +50,7 @@ namespace Raven.Client.Linq
 	    IRavenQueryable<T> AddTransformerParameter(string name, RavenJToken value);
 
 		IRavenQueryable<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+	    IRavenQueryable<T> OrderByDistance(SpatialSort sortParamsClause);
 	}
 }

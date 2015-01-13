@@ -126,4 +126,11 @@
         Kilometers,
         Miles
     }
+
+    public class SpatialSort
+    {
+        public string FieldName;
+        public double Longitude;
+        public double Latitude;
+    }
 }

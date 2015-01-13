@@ -770,5 +770,15 @@ If you really want to do in memory filtering on the data returned from the query
 	    /// Order the search results randomly
 	    /// </summary>
         TSelf CustomSortUsing(string typeName, bool descending);
+
+	    /// <summary>
+	    /// Sorts the query results by distance.
+	    /// </summary>
+        TSelf SortByDistance(double lat, double lng);
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf SortByDistance(double lat, double lng, string fieldName);
+
 	}
 }

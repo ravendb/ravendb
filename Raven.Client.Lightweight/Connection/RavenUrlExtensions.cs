@@ -53,9 +53,9 @@ namespace Raven.Client.Connection
 			return url + "/replication/info";
 		}
 
-		public static string LastReplicatedEtagFor(this string destinationUrl, string sourceUrl)
+		public static string LastReplicatedEtagFor(this string destinationUrl, string sourceUrl, string sourceDbId)
 		{
-			return destinationUrl + "/replication/lastEtag?from=" + Uri.EscapeDataString(sourceUrl);
+			return destinationUrl + "/replication/lastEtag?from=" + Uri.EscapeDataString(sourceUrl) + "&dbid=" + sourceDbId;
 		}
 
 		public static string Databases(this string url, int pageSize, int start)

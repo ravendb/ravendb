@@ -252,8 +252,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("debug/reducing-batch-stats")]
-		[Route("databases/{databaseName}/debug/reducing-batch-stats")]
+		[RavenRoute("debug/reducing-batch-stats")]
+		[RavenRoute("databases/{databaseName}/debug/reducing-batch-stats")]
 		public HttpResponseMessage ReducingBatchStats()
 		{
 			var reducingBatches = Database.WorkContext.LastActualReducingBatchInfo.ToArray();
