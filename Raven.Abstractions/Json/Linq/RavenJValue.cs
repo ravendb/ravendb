@@ -316,7 +316,8 @@ namespace Raven.Json.Linq
                     if ( !defaultConvertersCache.TryGetValue(typeToFind, out matchingConverter) )
                     {
                         matchingConverter = GetMatchingConverter(converters, typeToFind);
-                        defaultConvertersCache.AddOrUpdate(typeToFind, matchingConverter, (t,m) => m );
+                        // it is fine if we aren't actually adding, it means we already added this
+                        defaultConvertersCache.TryAdd(typeToFind, matchingConverter);
                     }
                 }
                 else
