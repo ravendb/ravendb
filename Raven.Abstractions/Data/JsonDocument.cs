@@ -6,6 +6,7 @@
 using System;
 using System.Globalization;
 using Raven.Json.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Abstractions.Data
 {
@@ -32,16 +33,20 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public RavenJObject DataAsJson
 		{
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get { return dataAsJson ?? (dataAsJson = new RavenJObject()); }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			set { dataAsJson = value; }
 		}
 
 		/// <summary>
 		/// Metadata for the document
-		/// </summary>
-		public RavenJObject Metadata
+		/// </summary>		
+        public RavenJObject Metadata
 		{
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get { return metadata ?? (metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase)); }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			set { metadata = value; }
 		}
 

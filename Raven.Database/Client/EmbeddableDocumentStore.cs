@@ -131,7 +131,10 @@ namespace Raven.Client.Embedded
             }
 
             _inner.SetListeners(Listeners);
-            _inner.Initialize();
+
+			Configuration.PostInit();
+            _inner.Initialize();	        
+
             return this;
         }
 

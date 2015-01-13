@@ -1,13 +1,13 @@
 ﻿<style>
     .batchRange rect {
-        opacity: 0.3;
+        opacity: 0.4;
     }
     .batchRange rect:hover {
-        opacity: 0.5;
+        opacity: 0.6;
     }
     .rect_legend {
-        width: 10px;
-        height: 10px;
+        width: 15px;
+        height: 15px;
         border: solid 1px black;
     }
     .op {
@@ -44,7 +44,33 @@
         stroke:black;
         stroke-width: 1;
         opacity: 0.5;
+    }
 
+    .LoadDocument { fill: #17becf; background-color: #17becf }
+
+	.Linq_MapExecution { fill: #1f77b4; background-color: #1f77b4 }
+	.Linq_ReduceLinqExecution { fill: #ff7f0e; background-color: #ff7f0e }
+	.Lucene_DeleteExistingDocument { fill: #2ca02c; background-color: #2ca02c }
+	.Lucene_ConvertToLuceneDocument { fill: #d62728; background-color: #d62728 }
+	.Lucene_AddDocument { fill: #9467bd; background-color: #9467bd }
+	.Lucene_FlushToDisk { fill: #8c564b; background-color: #8c564b }
+	.Lucene_RecreateSearcher { fill: #e377c2; background-color: #e377c2 }
+
+	.MapStorage_DeleteMappedResults { fill: #aec7e8; background-color: #aec7e8 }
+	.MapStorage_ConvertToRavenJObject { fill: #e0e5a3; background-color: #e0e5a3 }
+	.MapStorage_PutMappedResult { fill: #98df8a; background-color: #98df8a }
+	.MapStorage_ScheduleReduction { fill: #ffbb78; background-color: #ffbb78 }
+	.MapStorage_Commit { fill: #ff9896; background-color: #ff9896 }
+
+	.ReduceStorage_GetItemsToReduce { fill: #c5b0d5; background-color: #c5b0d5 }
+	.ReduceStorage_DeletePreviouslyScheduledReductions { fill: #c49c94; background-color: #c49c94 }
+	.ReduceStorage_ScheduleReductions { fill: #f7b6d2; background-color: #f7b6d2 }
+	.ReduceStorage_GetMappedResults { fill: #bcbd22; background-color: #bcbd22 }
+	.ReduceStorage_RemoveReduceResults { fill: #dbdb8d; background-color: #dbdb8d }
+	.ReduceStorage_Commit { fill: #9edae5; background-color: #9edae5 }
+
+    .ParallelBlock {
+       background:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAI0lEQVQIW2NkwAT/GdHE/gP5jMiCYAGQIpggXAAmiCIAEgQAAE4FBbECyZcAAAAASUVORK5CYII=') repeat;
     }
 
 </style>
@@ -66,25 +92,25 @@
                     <td>Indexes to work on</td>
                     <td>
                         <ul data-bind="foreach: IndexesToWorkOn">
-                            <li data-bind="text: $data"></l>
+                            <li data-bind="text: $data"></li>
                         </ul>
                     </td>
                 </tr>
                 <tr>
                     <td>Total document count</td>
-                    <td data-bind="text: TotalDocumentCount"></td>
+					<td data-bind="text: TotalDocumentCount.toLocaleString(2)"></td>
                 </tr>
                 <tr>
                     <td>Total document size</td>
-                    <td data-bind="text: TotalDocumentSize"></td>
+					<td data-bind="text: TotalDocumentSize.toLocaleString(2)"></td>
                 </tr>
                 <tr>
                     <td>Started at</td>
                     <td data-bind="text: StartedAt"></td>
                 </tr>
                 <tr>
-                    <td>Total duration</td>
-                    <td data-bind="text: TotalDurationMs"></td>
+                    <td>Total duration [ms]</td>
+					<td data-bind="text: TotalDurationMs.toLocaleString(2)"></td>
                 </tr>
             </tbody>
         </table>
@@ -103,7 +129,7 @@
                     <td>Indexes to work on</td>
                     <td>
                         <ul data-bind="foreach: IndexesToWorkOn">
-                            <li data-bind="text: $data"></l>
+                            <li data-bind="text: $data"></li>
                         </ul>
                     </td>
                 </tr>
@@ -112,12 +138,12 @@
                     <td data-bind="text: StartedAt"></td>
                 </tr>
                 <tr>
-                    <td>Total duration</td>
-                    <td data-bind="text: TotalDurationMs"></td>
+                    <td>Total duration [ms]</td>
+					<td data-bind="text: TotalDurationMs.toLocaleString(2)"></td>
                 </tr>
                 <tr>
-                    <td>Time since first reduce<br />in batch completed ms</td>
-                    <td data-bind="text: TimeSinceFirstReduceInBatchCompletedMs"></td>
+                    <td>Time since first reduce<br />in batch completed [ms]</td>
+					<td data-bind="text: TimeSinceFirstReduceInBatchCompletedMs.toLocaleString(2)"></td>
                 </tr>
             </tbody>
         </table>
@@ -134,70 +160,67 @@
             <thead>
                 <tr>
                     <th>Index stats:</th>
-                    <th data-bind="text: indexName"></th>
+                    <th data-bind="text: indexName, attr: { colspan: $root.data.CacheThreadCount }"></th>
                 </tr>
             </thead>
             <tbody data-bind="with: stats">
                 <tr>
                     <td>Operation</td>
-                    <td data-bind="text: Operation"></td>
+                    <td data-bind="text: Operation, attr: { colspan: $parent.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Input count</td>
-                    <td data-bind="text: InputCount"></td>
+                    <td data-bind="text: InputCount.toLocaleString(2), attr: { colspan: $parent.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Items count</td>
-                    <td data-bind="text: ItemsCount"></td>
+                    <td data-bind="text: ItemsCount.toLocaleString(2), attr: { colspan: $parent.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Output count</td>
-                    <td data-bind="text: OutputCount"></td>
+                    <td data-bind="text: OutputCount.toLocaleString(2), attr: { colspan: $parent.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Duration</td>
-                    <td data-bind="text: Duration"></td>
+                    <td data-bind="text: Duration, attr: { colspan: $parent.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Started</td>
-                    <td data-bind="text: Started"></td>
+                    <td data-bind="text: Started, attr: { colspan: $parent.CacheThreadCount }"></td>
                 </tr>
-
-                <tr data-bind="visible: LoadDocumentPerformance.LoadDocumentDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[0] }" class="rect_legend"></span> LoadDocument duration</td>
-                    <td data-bind="text: LoadDocumentPerformance.LoadDocumentDurationMs"></td>
+                <!-- ko foreach: Operations -->
+                <!-- ko if:CacheIsSingleThread -->
+                <tr class="sto">
+                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="text: Name + ' [ms]'"></span></td>
+                    <td data-bind="text: DurationMs, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
-                <tr data-bind="visible: LinqExecutionPerformance.MapLinqExecutionDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[1] }" class="rect_legend"></span> Linq: map execution duration</td>
-                    <td data-bind="text: LinqExecutionPerformance.MapLinqExecutionDurationMs"></td>
+                <!-- /ko -->
+                <!-- ko if:!CacheIsSingleThread -->
+                <tr>
+                    <td><span class="rect_legend ParallelBlock"></span> Parallel block</td>
+                    <!-- ko foreach: BatchedOperations -->
+                    <td data-bind="text: 'Thread #' + ( 1 + $index())"></td>
+                    <!-- /ko -->
                 </tr>
-                <tr data-bind="visible: LinqExecutionPerformance.ReduceLinqExecutionDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[2] }" class="rect_legend"></span> Linq: reduce execution duration</td>
-                    <td data-bind="text: LinqExecutionPerformance.ReduceLinqExecutionDurationMs"></td>
+                <tr class="mto">
+                    <td>Thread start delay [ms]</td>
+                    <!-- ko foreach: BatchedOperations -->
+                    <td data-bind="text: StartDelay"></td>
+                    <!-- /ko -->
                 </tr>
-                <tr data-bind="visible: LucenePerformance.WriteDocumentsDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[3] }" class="rect_legend"></span> Lucene: write documents duration</td>
-                    <td data-bind="text: LucenePerformance.WriteDocumentsDurationMs"></td>
+                <!-- ko foreach: BatchedOperations[0].Operations -->
+                <tr class="mto">
+                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="text: Name + ' [ms]'"></span></td>
+                    <!-- ko foreach: $parent.BatchedOperations -->
+                    <td data-bind="text: Operations[$parentContext.$index()].DurationMs"></td>
+                    <!-- /ko -->
                 </tr>
-                <tr data-bind="visible: LucenePerformance.FlushToDiskDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[4] }" class="rect_legend"></span> Lucene: flush to disk duration</td>
-                    <td data-bind="text: LucenePerformance.FlushToDiskDurationMs"></td>
-                </tr>
-                <tr data-bind="visible: MapStoragePerformance.DeleteMappedResultsDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[5] }" class="rect_legend"></span> Map storage: delete mapped results duration</td>
-                    <td data-bind="text: MapStoragePerformance.DeleteMappedResultsDurationMs"></td>
-                </tr>
-                <tr data-bind="visible: MapStoragePerformance.PutMappedResultsDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[6] }" class="rect_legend"></span> Map storage: put mapped results duration</td>
-                    <td data-bind="text: MapStoragePerformance.PutMappedResultsDurationMs"></td>
-                </tr>
-                <tr data-bind="visible: MapStoragePerformance.StorageCommitDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[7] }" class="rect_legend"></span> Map storage: commit duration</td>
-                    <td data-bind="text: MapStoragePerformance.StorageCommitDurationMs"></td>
-                </tr>
+                <!-- /ko -->
+                <!-- /ko -->
+                <!-- /ko -->
                 <tr>
                     <td>Waiting time since<br /> last batch completed</td>
-                    <td data-bind="text: WaitingTimeSinceLastBatchCompleted"></td>
+                    <td data-bind="text: WaitingTimeSinceLastBatchCompleted, attr: { colspan: $parent.CacheThreadCount }"></td>
                 </tr>
             </tbody>
         </table>
@@ -214,55 +237,65 @@
             <thead>
                 <tr>
                     <th>Reduce of index stats:</th>
-                    <th data-bind="text: parent.indexName"></th>
+                    <th data-bind="text: parent.indexName, attr: { colspan: $root.data.CacheThreadCount }"></th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td>Reduce type</td>
-                    <td data-bind="text: parent.stats.ReduceType"></td>
+                    <td data-bind="text: parent.stats.ReduceType, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Level</td>
-                    <td data-bind="text: Level"></td>
+                    <td data-bind="text: Level, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Items count</td>
-                    <td data-bind="text: ItemsCount"></td>
+                    <td data-bind="text: ItemsCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Output count</td>
-                    <td data-bind="text: OutputCount"></td>
+                    <td data-bind="text: OutputCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Duration</td>
-                    <td data-bind="text: Duration"></td>
+                    <td data-bind="text: Duration, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
                 <tr>
                     <td>Started</td>
-                    <td data-bind="text: Started"></td>
+                    <td data-bind="text: Started, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
-
-                <tr data-bind="visible: LinqExecutionPerformance.MapLinqExecutionDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[0] }" class="rect_legend"></span> Linq: map execution duration</td>
-                    <td data-bind="text: LinqExecutionPerformance.MapLinqExecutionDurationMs"></td>
+                <!-- ko foreach: Operations -->
+                <!-- ko if:CacheIsSingleThread -->
+                <tr class="sto">
+                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="    text: Name + ' [ms]'"></span></td>
+                    <td data-bind="text: DurationMs, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
-                <tr data-bind="visible: LinqExecutionPerformance.ReduceLinqExecutionDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[1] }" class="rect_legend"></span> Linq: reduce execution duration</td>
-                    <td data-bind="text: LinqExecutionPerformance.ReduceLinqExecutionDurationMs"></td>
+                <!-- /ko -->
+                <!-- ko if:!CacheIsSingleThread -->
+                <tr>
+                    <td>Parallel block</td>
+                    <!-- ko foreach: BatchedOperations -->
+                    <td data-bind="text: 'Thread #' + (1 + $index())"></td>
+                    <!-- /ko -->
                 </tr>
-                <tr data-bind="visible: LucenePerformance.WriteDocumentsDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[2] }" class="rect_legend"></span> Lucene: write documents duration</td>
-                    <td data-bind="text: LucenePerformance.WriteDocumentsDurationMs"></td>
+                <tr class="mto">
+                    <td>Thread start delay [ms]</td>
+                    <!-- ko foreach: BatchedOperations -->
+                    <td data-bind="text: StartDelay"></td>
+                    <!-- /ko -->
                 </tr>
-                <tr data-bind="visible: LucenePerformance.FlushToDiskDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[3] }" class="rect_legend"></span> Lucene: flush to disk duration</td>
-                    <td data-bind="text: LucenePerformance.FlushToDiskDurationMs"></td>
+                <!-- ko foreach: BatchedOperations[0].Operations -->
+                <tr class="mto">
+                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="    text: Name + ' [ms]'"></span></td>
+                    <!-- ko foreach: $parent.BatchedOperations -->
+                    <td data-bind="text: Operations[$parentContext.$index()].DurationMs"></td>
+                    <!-- /ko -->
                 </tr>
-                <tr data-bind="visible: ReduceStoragePerformance.GetItemsToReduceDurationMs >= 0">
-                    <td><span data-bind=" style: { 'backgroundColor': $root.colors[4] }" class="rect_legend"></span> Reduce storage: get items to reduce duration</td>
-                    <td data-bind="text: ReduceStoragePerformance.GetItemsToReduceDurationMs"></td>
-                </tr>
+                <!-- /ko -->
+                <!-- /ko -->
+                <!-- /ko -->
+                
             </tbody>
         </table>
     </div>

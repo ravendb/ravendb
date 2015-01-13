@@ -20,7 +20,7 @@ class getReducingBatchStatsCommand extends commandBase {
         var parser = d3.time.format.iso;
 
         return this.query<reducingBatchInfoDto[]>(url, null, this.db, result => {
-            var mappedResult: reducingBatchInfoDto[] = result.map(item => { return {
+            var mappedResult: any = result.map(item => { return {
                 IndexesToWorkOn: item.IndexesToWorkOn,
                 TotalDurationMs: item.TotalDurationMs,
                 StartedAt: item.StartedAt,
@@ -33,6 +33,14 @@ class getReducingBatchStatsCommand extends commandBase {
             mappedResult.forEach(r => {
                 r.PerfStats.forEach(s => {
                     s.stats.LevelStats.forEach(l => {
+                        l.Operations.filter(x => !("Name" in x)).forEach(o => {
+                            o.BatchedOperations.forEach(b => {
+                                b.Operations.forEach(x => {
+                                    x.ParallelParent = b;
+                                });
+                                b.Parent = o;
+                            });
+                        });
                         l.parent = s;
                     });
                     s.parent = r;

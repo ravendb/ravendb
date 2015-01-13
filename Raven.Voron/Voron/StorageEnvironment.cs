@@ -267,6 +267,12 @@ namespace Voron
             if (tree != null)
                 return tree;
 
+
+	        if (name.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase) ||
+	            name.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
+		        throw new InvalidOperationException("Cannot create a tree with reserved name: " + name);
+
+
             Slice key = name;
 
             // we are in a write transaction, no need to handle locks

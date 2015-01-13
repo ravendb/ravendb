@@ -5,6 +5,7 @@ using Mono.Unix.Native;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Trees;
+using Voron.Util;
 
 namespace Voron.Platform.Posix
 {
@@ -153,7 +154,7 @@ namespace Voron.Platform.Posix
 			ThrowObjectDisposedIfNeeded();
 
 			int toCopy = pagesToWrite * PageSize;
-			StdLib.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
+            MemoryUtils.Copy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
 
 			return toCopy;
 		}

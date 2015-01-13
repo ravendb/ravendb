@@ -185,7 +185,7 @@ namespace Raven.Database.Prefetching
 				if (docsLoaded)
 					etag = result[result.Count - 1].Etag;
 
-				prefetchingQueueSizeInBytes = prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk);
+				prefetchingQueueSizeInBytes = prefetchingQueue.LoadedSize;
 			 } while (result.Count < autoTuner.NumberOfItemsToProcessInSingleBatch && docsLoaded &&
 						prefetchingDurationTimer.ElapsedMilliseconds <= context.Configuration.PrefetchingDurationLimit &&
 						((prefetchingQueueSizeInBytes + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < (context.Configuration.MemoryLimitForProcessingInMb * 1024 * 1024)));
@@ -197,6 +197,7 @@ namespace Raven.Database.Prefetching
 		{
 			var jsonDocs = GetJsonDocsFromDisk(etag, untilEtag);
 			
+            using(prefetchingQueue.EnterWriteLock())
 			foreach (var jsonDocument in jsonDocs)
 				prefetchingQueue.Add(jsonDocument);
 			}
@@ -267,6 +268,7 @@ namespace Raven.Database.Prefetching
 				if (futureIndexBatches.TryRemove(nextDocEtag, out nextBatch) == false) // here we need to remove the batch
 					return false;
 
+                using(prefetchingQueue.EnterWriteLock())
 				foreach (var jsonDocument in nextBatch.Task.Result)
 					prefetchingQueue.Add(jsonDocument);
 
@@ -288,7 +290,7 @@ namespace Raven.Database.Prefetching
 			    //limit how much data we load from disk --> better adhere to memory limits
 			    var totalSizeAllowedToLoadInBytes =
 			        (context.Configuration.MemoryLimitForProcessingInMb*1024*1024) -
-			        (prefetchingQueue.Aggregate(0, (acc, doc) => acc + doc.SerializedSizeOnDisk) + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum());
+			        (prefetchingQueue.LoadedSize + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum());
 
                 // at any rate, we will load a min of 512Kb docs
 			    var maxSize = Math.Max(
@@ -498,23 +500,26 @@ namespace Raven.Database.Prefetching
 
 			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
 				context.Configuration.MaxNumberOfItemsToPreFetch ||
-				prefetchingQueue.Aggregate(0, (x,c) => x + SelectSerializedSizeOnDiskIfNotNull(c)) > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
+                prefetchingQueue.LoadedSize > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
 				return;
 
 			Etag lowestEtag = null;
 
-			foreach (var jsonDocument in docs)
-			{
-                JsonDocument.EnsureIdInMetadata(jsonDocument);
-				prefetchingQueue.Add(jsonDocument);
+		    using (prefetchingQueue.EnterWriteLock())
+		    {
+		        foreach (var jsonDocument in docs)
+		        {
+		            JsonDocument.EnsureIdInMetadata(jsonDocument);
+		            prefetchingQueue.Add(jsonDocument);
 
-				if (ShouldHandleUnusedDocumentsAddedAfterCommit && (lowestEtag == null || jsonDocument.Etag.CompareTo(lowestEtag) < 0))
-				{
-					lowestEtag = jsonDocument.Etag;
-				}
-			}
+		            if (ShouldHandleUnusedDocumentsAddedAfterCommit && (lowestEtag == null || jsonDocument.Etag.CompareTo(lowestEtag) < 0))
+		            {
+		                lowestEtag = jsonDocument.Etag;
+		            }
+		        }
+		    }
 
-			if (ShouldHandleUnusedDocumentsAddedAfterCommit && lowestEtag != null)
+		    if (ShouldHandleUnusedDocumentsAddedAfterCommit && lowestEtag != null)
 			{
 				if (lowestInMemoryDocumentAddedAfterCommit == null || lowestEtag.CompareTo(lowestInMemoryDocumentAddedAfterCommit.Etag) < 0)
 				{
@@ -525,11 +530,6 @@ namespace Raven.Database.Prefetching
 					};
 				}
 			}
-		}
-
-		private int SelectSerializedSizeOnDiskIfNotNull(JsonDocument document)
-		{
-			return (document != null) ? document.SerializedSizeOnDisk : 0;
 		}
 
 		public void CleanupDocuments(Etag lastIndexedEtag)

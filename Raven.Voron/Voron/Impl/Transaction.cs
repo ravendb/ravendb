@@ -11,6 +11,7 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Trees;
+using Voron.Util;
 
 namespace Voron.Impl
 {
@@ -29,7 +30,6 @@ namespace Voron.Impl
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
 
 		private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>();
-		private readonly IDictionary<Tree, RecentlyFoundPages> _recentlyFoundPages = new Dictionary<Tree, RecentlyFoundPages>();
 
 		internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
@@ -156,7 +156,7 @@ namespace Voron.Impl
 			var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPagesIncludingOverflow);
 
 			var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
-			StdLib.memcpy(dest, page.Base, numberOfPagesIncludingOverflow * AbstractPager.PageSize);
+            MemoryUtils.Copy(dest, page.Base, numberOfPagesIncludingOverflow * AbstractPager.PageSize);
 
 			_allocatedPagesInTransaction++;
 
@@ -241,7 +241,7 @@ namespace Voron.Impl
 
 			var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
 
-			StdLib.memcpy(newPage.Base, page.Base, AbstractPager.PageSize);
+            MemoryUtils.Copy(newPage.Base, page.Base, AbstractPager.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
 			newPage.LastMatch = page.LastMatch;
 
@@ -571,29 +571,6 @@ namespace Voron.Impl
 		{
 			return _freedPages;
 		} 
-
-		internal RecentlyFoundPages GetRecentlyFoundPages(Tree tree)
-		{
-			RecentlyFoundPages pages;
-			if (_recentlyFoundPages.TryGetValue(tree, out pages))
-				return pages;
-
-			return null;
-		}
-
-		internal void ClearRecentFoundPages(Tree tree)
-	    {
-	        _recentlyFoundPages.Remove(tree);
-	    }
-
-		internal void AddRecentlyFoundPage(Tree tree, RecentlyFoundPages.FoundPage foundPage)
-		{
-			RecentlyFoundPages pages;
-		    if (_recentlyFoundPages.TryGetValue(tree, out pages) == false)
-		        _recentlyFoundPages[tree] = pages = new RecentlyFoundPages(Flags == TransactionFlags.Read ? 8 : 2);
-
-			pages.Add(foundPage);
-		}
 
 		internal void AddTree(string name, Tree tree)
 	    {
