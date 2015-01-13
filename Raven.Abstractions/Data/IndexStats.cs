@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using System.Linq.Expressions;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
 {
@@ -194,6 +195,8 @@ namespace Raven.Abstractions.Data
 	    public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
 		public List<BasePefromanceStats> Operations { get; set; }
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
+		[JsonIgnore]
+	    public Action OnCompleted = delegate { };
 	}
 
 	public enum IndexingOperation
@@ -210,18 +213,20 @@ namespace Raven.Abstractions.Data
 		Lucene_FlushToDisk,
 		Lucene_RecreateSearcher,
 
-		MapStorage_DeleteMappedResults,
-		MapStorage_ConvertToRavenJObject,
-		MapStorage_PutMappedResult,
-		MapStorage_ScheduleReduction,
-		MapStorage_Commit,
+		Map_DeleteMappedResults,
+		Map_ConvertToRavenJObject,
+		Map_PutMappedResults,
+		Map_ScheduleReductions,
 
-		ReduceStorage_GetItemsToReduce,
-		ReduceStorage_DeletePreviouslyScheduledReductions,
-		ReduceStorage_ScheduleReductions,
-		ReduceStorage_GetMappedResults,
-		ReduceStorage_RemoveReduceResults,
-		ReduceStorage_Commit,
+		Reduce_GetItemsToReduce,
+		Reduce_DeletePreviouslyScheduledReductions,
+		Reduce_ScheduleReductions,
+		Reduce_GetMappedResults,
+		Reduce_RemoveReduceResults,
+
+		UpdateDocumentReferences,
+
+		StorageCommit,
 // ReSharper restore InconsistentNaming
 	}
 

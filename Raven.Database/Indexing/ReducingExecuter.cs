@@ -260,10 +260,10 @@ namespace Raven.Database.Indexing
 				reduceLevelStats.Completed = SystemTime.UtcNow;
 				reduceLevelStats.Duration = reduceLevelStats.Completed - reduceLevelStats.Started;
 
-				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.ReduceStorage_GetItemsToReduce, gettigItemsToReduceDuration.ElapsedMilliseconds));
-				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.ReduceStorage_ScheduleReductions, scheduleReductionsDuration.ElapsedMilliseconds));
-				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.ReduceStorage_RemoveReduceResults, removeReduceResultsDuration.ElapsedMilliseconds));
-				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.ReduceStorage_Commit, storageCommitDuration.ElapsedMilliseconds));
+				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_GetItemsToReduce, gettigItemsToReduceDuration.ElapsedMilliseconds));
+				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_ScheduleReductions, scheduleReductionsDuration.ElapsedMilliseconds));
+				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_RemoveReduceResults, removeReduceResultsDuration.ElapsedMilliseconds));
+				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.StorageCommit, storageCommitDuration.ElapsedMilliseconds));
 
 				reducePerformance.LevelStats.Add(reduceLevelStats);
 			}
@@ -334,7 +334,7 @@ namespace Raven.Database.Indexing
 							scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
 						}
 
-						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.ReduceStorage_GetItemsToReduce, getItemsToReduceDuration.ElapsedMilliseconds));
+						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_GetItemsToReduce, getItemsToReduceDuration.ElapsedMilliseconds));
 
 						autoTuner.CurrentlyUsedBatchSizesInBytes.GetOrAdd(reducingBatchThrottlerId, scheduledItems.Sum(x => x.Size));
 
@@ -362,7 +362,7 @@ namespace Raven.Database.Indexing
 								}
 							}
 
-							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.ReduceStorage_DeletePreviouslyScheduledReductions, deletingScheduledReductionsDuration.ElapsedMilliseconds));
+							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_DeletePreviouslyScheduledReductions, deletingScheduledReductionsDuration.ElapsedMilliseconds));
 						}
 
 						var removeReduceResultsDuration = new Stopwatch();
@@ -396,7 +396,7 @@ namespace Raven.Database.Indexing
 							}
 						}
 
-						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.ReduceStorage_RemoveReduceResults, removeReduceResultsDuration.ElapsedMilliseconds));
+						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_RemoveReduceResults, removeReduceResultsDuration.ElapsedMilliseconds));
 
 						parallelOperations.Enqueue(parallelStats);
 					});
@@ -477,8 +477,8 @@ namespace Raven.Database.Indexing
 
 				reduceLevelStats.Completed = SystemTime.UtcNow;
 				reduceLevelStats.Duration = reduceLevelStats.Completed - reduceLevelStats.Started;
-				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.ReduceStorage_GetMappedResults, getMappedResultsDuration.ElapsedMilliseconds));
-				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.ReduceStorage_Commit, storageCommitDuration.ElapsedMilliseconds));
+				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_GetMappedResults, getMappedResultsDuration.ElapsedMilliseconds));
+				reduceLevelStats.Operations.Add(PerformanceStats.From(IndexingOperation.StorageCommit, storageCommitDuration.ElapsedMilliseconds));
 
 				foreach (var stats in reductionPerformanceStats)
 				{

@@ -53,6 +53,17 @@ namespace Raven.Database.Indexing
 			IndexingPerformanceStats performance = null;
 			var performanceStats = new List<BasePefromanceStats>();
 
+			var storageCommitDuration = new Stopwatch();
+
+			actions.BeforeStorageCommit += storageCommitDuration.Start;
+
+			actions.AfterStorageCommit += () =>
+			{
+				storageCommitDuration.Stop();
+
+				performanceStats.Add(PerformanceStats.From(IndexingOperation.StorageCommit, storageCommitDuration.ElapsedMilliseconds));
+			};
+
 			Write((indexWriter, analyzer, stats) =>
 			{
 				var processedKeys = new HashSet<string>();
@@ -229,7 +240,12 @@ namespace Raven.Database.Indexing
 						BatchedOperations = parallelOperations.ToList()
 					});
 
-					UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
+					var updateDocumentReferencesDuration = new Stopwatch();
+					using (StopwatchScope.For(updateDocumentReferencesDuration))
+					{
+						UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
+					}
+					performanceStats.Add(PerformanceStats.From(IndexingOperation.UpdateDocumentReferences, updateDocumentReferencesDuration.ElapsedMilliseconds));
 				}
 				catch (Exception e)
 				{
@@ -261,7 +277,7 @@ namespace Raven.Database.Indexing
 			performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_FlushToDisk, flushToDiskDuration.ElapsedMilliseconds));
 			performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_RecreateSearcher, recreateSearcherDuration.ElapsedMilliseconds));
 
-			BatchCompleted("Current", "Index", sourceCount, count, performanceStats);
+			performance.OnCompleted = () => BatchCompleted("Current", "Index", sourceCount, count, performanceStats);
 
 			logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
 

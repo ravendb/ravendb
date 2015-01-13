@@ -358,6 +358,8 @@ namespace Raven.Database.Indexing
 				{
 					performanceResult = IndexDocuments(actions, batchForIndex, token);
 				});
+
+				performanceResult.OnCompleted();
 			}
 			catch (Exception e)
 			{

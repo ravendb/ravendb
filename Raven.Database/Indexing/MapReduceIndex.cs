@@ -87,6 +87,22 @@ namespace Raven.Database.Indexing
 			var performance = RecordCurrentBatch("Current Map", "Map", batch.Docs.Count);
 			var performanceStats = new List<BasePefromanceStats>();
 
+			var usedStorageAccessors = new ConcurrentSet<IStorageActionsAccessor>();
+
+			if (usedStorageAccessors.TryAdd(actions))
+			{
+				var storageCommitDuration = new Stopwatch();
+
+				actions.BeforeStorageCommit += storageCommitDuration.Start;
+
+				actions.AfterStorageCommit += () =>
+				{
+					storageCommitDuration.Stop();
+
+					performanceStats.Add(PerformanceStats.From(IndexingOperation.StorageCommit, storageCommitDuration.ElapsedMilliseconds));
+				};
+			}
+
 			var deleteMappedResultsDuration = new Stopwatch();
 			var documentsWrapped = batch.Docs.Select(doc =>
 			{
@@ -107,15 +123,13 @@ namespace Raven.Database.Indexing
 
 			performanceStats.Add(new PerformanceStats
 			{
-				Name = IndexingOperation.MapStorage_DeleteMappedResults,
+				Name = IndexingOperation.Map_DeleteMappedResults,
 				DurationMs = deleteMappedResultsDuration.ElapsedMilliseconds,
 			});
 
 			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 			var allReferenceEtags = new ConcurrentQueue<IDictionary<string, Etag>>();
 			var allState = new ConcurrentQueue<Tuple<HashSet<ReduceKeyAndBucket>, IndexingWorkStats, Dictionary<string, int>>>();
-
-			var usedStorageAccessors = new ConcurrentSet<IStorageActionsAccessor>();
 
 			var parallelOperations = new ConcurrentQueue<ParallelBatchStats>();
 
@@ -148,15 +162,15 @@ namespace Raven.Database.Indexing
 					{
 						if (usedStorageAccessors.TryAdd(accessor))
 						{
-							var storageCommitDurationWatch = new Stopwatch();
+							var storageCommitDuration = new Stopwatch();
 
-							accessor.BeforeStorageCommit += storageCommitDurationWatch.Start;
+							accessor.BeforeStorageCommit += storageCommitDuration.Start;
 
 							accessor.AfterStorageCommit += () =>
 							{
-								storageCommitDurationWatch.Stop();
+								storageCommitDuration.Stop();
 
-								parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.MapStorage_Commit, storageCommitDurationWatch.ElapsedMilliseconds));
+								parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.StorageCommit, storageCommitDuration.ElapsedMilliseconds));
 							};
 						}
 
@@ -209,8 +223,8 @@ namespace Raven.Database.Indexing
 
 					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_MapExecution, linqExecutionDuration.ElapsedMilliseconds));
 					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_ReduceLinqExecution, reduceInMapLinqExecutionDuration.ElapsedMilliseconds));
-					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.MapStorage_PutMappedResult, putMappedResultsDuration.ElapsedMilliseconds));
-					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.MapStorage_ConvertToRavenJObject, convertToRavenJObjectDuration.ElapsedMilliseconds));
+					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_PutMappedResults, putMappedResultsDuration.ElapsedMilliseconds));
+					parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_ConvertToRavenJObject, convertToRavenJObjectDuration.ElapsedMilliseconds));
 
 					parallelOperations.Enqueue(parallelStats);
 				}
@@ -223,7 +237,12 @@ namespace Raven.Database.Indexing
 				BatchedOperations = parallelOperations.ToList()
 			});
 
-			UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
+			var updateDocumentReferencesDuration = new Stopwatch();
+			using (StopwatchScope.For(updateDocumentReferencesDuration))
+			{
+				UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
+			}
+			performanceStats.Add(PerformanceStats.From(IndexingOperation.UpdateDocumentReferences, updateDocumentReferencesDuration.ElapsedMilliseconds));
 
 			var changed = allState.SelectMany(x => x.Item1).Concat(deleted.Keys)
 					.Distinct()
@@ -265,7 +284,7 @@ namespace Raven.Database.Indexing
 					}
 				}
 
-				parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.MapStorage_ScheduleReduction, scheduleReductionsDuration.ElapsedMilliseconds));
+				parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_ScheduleReductions, scheduleReductionsDuration.ElapsedMilliseconds));
 				parallelReductionOperations.Enqueue(parallelStats);
 			}));
 
@@ -278,7 +297,7 @@ namespace Raven.Database.Indexing
 
 			UpdateIndexingStats(context, stats);
 
-			BatchCompleted("Current Map", "Map", sourceCount, count, performanceStats);
+			performance.OnCompleted = () => BatchCompleted("Current Map", "Map", sourceCount, count, performanceStats);
 
 			logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
 
