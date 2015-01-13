@@ -54,9 +54,12 @@
             <label class="btn btn-default" data-bind="click: setFilterTypeCompactFilesystem, visible: compactFilesystemCount() > 0">
                 <input type="radio" name="options" id="option9"> <span data-bind="text: 'Compact filesystem (' + compactFilesystemCount() + ')'"></span>
             </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeIoTest, visible: ioTestCount() > 0">
-                <input type="radio" name="options" id="option10"> <span data-bind="text: 'IO test (' + ioTestCount() + ')'"></span>
-            </label>
+	        <label class="btn btn-default" data-bind="click: setFilterTypeIoTest, visible: ioTestCount() > 0">
+		        <input type="radio" name="options" id="option10"> <span data-bind="text: 'IO test (' + ioTestCount() + ')'"></span>
+	        </label>
+			<label class="btn btn-default" data-bind="click: setFilterTypeNewIndexPrecomputedBatch, visible: newIndexPrecomputedBatchCount() > 0">
+				<input type="radio" name="options" id="option11"> <span data-bind="text: 'New Index (' + newIndexPrecomputedBatchCount() + ')'"></span>
+			</label>
         </div>
         <form class="form-inline" style="display: inline-block; vertical-align: middle;">
             <input type="text" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />

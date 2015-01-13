@@ -25,7 +25,8 @@ using Raven.Json.Linq;
 
 using Voron;
 using Voron.Impl;
-
+using Voron.Impl.Compaction;
+using VoronConstants = Voron.Impl.Constants;
 using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
 
@@ -60,6 +61,9 @@ namespace Raven.Storage.Voron
 			this.configuration = configuration;
 			this.onCommit = onCommit;
 			this.onStorageInaccessible = onStorageInaccessible;
+
+			RecoverFromFailedCompact(configuration.DataDirectory);
+
 			documentCacher = new DocumentCacher(configuration);
 			exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
             bufferPool = new BufferPool(configuration.Storage.Voron.MaxBufferPoolSize * 1024 * 1024 * 1024, int.MaxValue); // 2GB max buffer size (voron limit)
@@ -373,10 +377,97 @@ namespace Raven.Storage.Voron
 		}
         public bool SupportsDtc { get { return false; } }
 
-	    public void Compact(InMemoryRavenConfiguration configuration)
+	    public void Compact(InMemoryRavenConfiguration ravenConfiguration)
 	    {
-            throw new NotSupportedException("Voron storage does not support compaction");
+			if (ravenConfiguration.RunInMemory)
+				throw new InvalidOperationException("Cannot compact in-memory running Voron storage");
+
+			tableStorage.Dispose();
+
+			var sourcePath = ravenConfiguration.DataDirectory;
+			var compactPath = Path.Combine(ravenConfiguration.DataDirectory, "Voron.Compaction");
+
+			if (Directory.Exists(compactPath))
+				Directory.Delete(compactPath, true);
+
+			RecoverFromFailedCompact(sourcePath);
+
+			var sourceOptions = CreateStorageOptionsFromConfiguration(ravenConfiguration);
+		    var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions) StorageEnvironmentOptions.ForPath(compactPath);
+
+			StorageCompaction.Execute(sourceOptions, compactOptions);
+
+		    var sourceDir = new DirectoryInfo(sourcePath);
+		    var sourceFiles = new List<FileInfo>();
+		    
+		    foreach (var pattern in new [] { "*.journal", "headers.one", "headers.two", VoronConstants.DatabaseFilename})
+		    {
+			    sourceFiles.AddRange(sourceDir.GetFiles(pattern));
+		    }
+
+		    var compactionBackup = Path.Combine(sourcePath, "Voron.Compaction.Backup");
+
+		    if (Directory.Exists(compactionBackup))
+			    Directory.Delete(compactionBackup, true);
+
+		    Directory.CreateDirectory(compactionBackup);
+
+		    foreach (var file in sourceFiles)
+		    {
+			    File.Move(file.FullName, Path.Combine(compactionBackup, file.Name));
+		    }
+
+		    var compactedFiles = new DirectoryInfo(compactPath).GetFiles();
+
+			foreach (var file in compactedFiles)
+			{
+				File.Move(file.FullName, Path.Combine(sourcePath, file.Name));
+			}
+			
+			Directory.Delete(compactionBackup, true);
+			Directory.Delete(compactPath, true);
 	    }
+
+		private static void RecoverFromFailedCompact(string sourcePath)
+		{
+			var compactionBackup = Path.Combine(sourcePath, "Voron.Compaction.Backup");
+
+			if (Directory.Exists(compactionBackup) == false) // not in the middle of compact op, we are good
+				return;
+			
+			if (File.Exists(Path.Combine(sourcePath, VoronConstants.DatabaseFilename)) &&
+				File.Exists(Path.Combine(sourcePath, "headers.one")) &&
+				File.Exists(Path.Combine(sourcePath, "headers.two")) &&
+				Directory.EnumerateFiles(sourcePath, "*.journal").Any() == false) // after a successful compaction there is no journal file
+			{
+				// we successfully moved new files and crashed before we could remove the old backup
+				// just complete the op and we are good (committed)
+				Directory.Delete(compactionBackup, true);
+			}
+			else
+			{
+				// just undo the op and we are good (rollback)
+
+				var sourceDir = new DirectoryInfo(sourcePath);
+
+				foreach (var pattern in new[] { "*.journal", "headers.one", "headers.two", VoronConstants.DatabaseFilename })
+				{
+					foreach (var file in sourceDir.GetFiles(pattern))
+					{
+						File.Delete(file.FullName);
+					}
+				}
+
+				var backupFiles = new DirectoryInfo(compactionBackup).GetFiles();
+
+				foreach (var file in backupFiles)
+				{
+					File.Move(file.FullName, Path.Combine(sourcePath, file.Name));
+				}
+
+				Directory.Delete(compactionBackup, true);
+			}
+		}
 
 		public Guid ChangeId()
 		{

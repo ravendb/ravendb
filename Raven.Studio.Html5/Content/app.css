@@ -8342,4 +8342,10 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 #resources-page .resources-container .resource.fs.selected {
   box-shadow: 0 0 20px 0 #7109AA;
 }
-/*# sourceMappingURL=app.css.map */
+
+.form-checkbox-control {
+  width: 35px;
+  height: 35px;
+  text-align: center;
+  display: inline-block;
+}

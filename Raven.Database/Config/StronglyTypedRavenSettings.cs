@@ -45,12 +45,15 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+			IndexAndTransformerReplicationLatencyInSec = new IntegerSetting(settings[Constants.RavenIndexAndTransformerReplicationLatencyInSec], Constants.DefaultRavenIndexAndTransformerReplicationLatencyInSec);
 
 			PrefetchingDurationLimit = new IntegerSetting(settings[Constants.RavenPrefetchingDurationLimit], Constants.DefaultPrefetchingDurationLimit);
 
 			BulkImportBatchTimeout = new TimeSpanSetting(settings[Constants.BulkImportBatchTimeout], TimeSpan.FromMilliseconds(Constants.BulkImportDefaultTimeoutInMs), TimeSpanArgumentType.FromParse);
 
 			MaxConcurrentServerRequests = new IntegerSetting(settings[Constants.MaxConcurrentServerRequests], 512);
+
+			MaxConcurrentRequestsForDatabaseDuringLoad = new IntegerSetting(settings[Constants.MaxConcurrentRequestsForDatabaseDuringLoad], 10);
 
 			MaxConcurrentMultiGetRequests = new IntegerSetting(settings[Constants.MaxConcurrentMultiGetRequests], 192);
 
@@ -110,7 +113,7 @@ namespace Raven.Database.Config
 			NewIndexInMemoryMaxMb =
 				new MultipliedIntegerSetting(new IntegerSettingWithMin(settings["Raven/NewIndexInMemoryMaxMB"], 64, 1), 1024 * 1024);
 			RunInMemory =
-				new BooleanSetting(settings["Raven/RunInMemory"], false);
+                new BooleanSetting(settings[Constants.RunInMemory], false);
 			CreateAutoIndexesForAdHocQueriesIfNeeded =
 				new BooleanSetting(settings["Raven/CreateAutoIndexesForAdHocQueriesIfNeeded"], true);
 			ResetIndexOnUncleanShutdown =
@@ -247,9 +250,13 @@ namespace Raven.Database.Config
 			return val;
 		}
 
+		public IntegerSetting IndexAndTransformerReplicationLatencyInSec { get; private set; }
+
 		public IntegerSetting MemoryLimitForProcessing { get; private set; }
 
 		public IntegerSetting MaxConcurrentServerRequests { get; private set; }
+
+		public IntegerSetting MaxConcurrentRequestsForDatabaseDuringLoad { get; private set; }
 
 		public IntegerSetting MaxConcurrentMultiGetRequests { get; private set; }
 

@@ -473,7 +473,7 @@ namespace Voron.Impl
 
 		internal void FreePage(long pageNumber)
 		{
-			Debug.Assert(pageNumber >= 2);
+			Debug.Assert(pageNumber >= 0);
 			_freeSpaceHandling.FreePage(this, pageNumber);
 
 			_freedPages.Add(pageNumber);

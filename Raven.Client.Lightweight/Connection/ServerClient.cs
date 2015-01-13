@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Connection;
@@ -232,7 +233,7 @@ namespace Raven.Client.Connection
 		public string PutIndex<TDocument, TReduceResult>(string name,
 			IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
 		{
-			return asyncServerClient.PutIndexAsync(name, indexDef).ResultUnwrap();
+			return asyncServerClient.PutIndexAsync(name, indexDef,default(CancellationToken)).ResultUnwrap();
 		}
 
 		public string PutIndex<TDocument, TReduceResult>(string name,

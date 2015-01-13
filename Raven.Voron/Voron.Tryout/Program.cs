@@ -24,9 +24,8 @@ namespace Voron.Tryout
 			var t = Type.GetType ("Mono.Runtime");
 			var m = t.GetMethod ("GetDisplayName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 			Console.WriteLine ( "Mono runtime: " +  m.Invoke(null, null));
-			using (var f = new Full()) {
-				f.CanBackupAndRestore ();
-			}
+			
+            RunAllTests();
 
 		}
 
@@ -35,7 +34,10 @@ namespace Voron.Tryout
 			using (var fileWriter = new StreamWriter ("unit-tests.txt", append: false)) {
 				var testAssembly = typeof(StorageTest).Assembly;
 				var allTestClassTypes = testAssembly.GetTypes ().Where (t => t.IsSubclassOf (typeof(StorageTest))).ToList ();
-				var allTestMethods = allTestClassTypes.SelectMany (t => t.GetMethods ().Where (mt => mt.GetCustomAttributes (true).OfType<FactAttribute> ().Any ())).ToList ();
+				var allTestMethods = allTestClassTypes.SelectMany (t => t.GetMethods ().Where (mt => mt.GetCustomAttributes (true)
+                                                                                               .OfType<FactAttribute> ().Any ()))
+                    .OrderBy(x=>x.DeclaringType.Name + " " + x.Name)
+                    .ToList ();
 				var total = allTestMethods.Count;
 				var failed = 0;
 				Console.Clear ();

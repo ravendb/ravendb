@@ -153,7 +153,7 @@ namespace Voron.Impl.Backup
 			if (Directory.Exists(journalDir) == false)
 				Directory.CreateDirectory(journalDir);
 
-			using (var zip = ZipFile.OpenRead(backupPath))
+			using (var zip = ZipFile.Open(backupPath,ZipArchiveMode.Read, System.Text.Encoding.UTF8))
 			{
 				foreach (var entry in zip.Entries)
 				{

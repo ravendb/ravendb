@@ -765,5 +765,20 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name="longitude">Longitude poiting to a circle center.</param>
 		/// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
 		TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
+
+	    /// <summary>
+	    /// Order the search results randomly
+	    /// </summary>
+        TSelf CustomSortUsing(string typeName, bool descending);
+
+	    /// <summary>
+	    /// Sorts the query results by distance.
+	    /// </summary>
+        TSelf SortByDistance(double lat, double lng);
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf SortByDistance(double lat, double lng, string fieldName);
+
 	}
 }

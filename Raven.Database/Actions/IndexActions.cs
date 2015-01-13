@@ -41,6 +41,11 @@ namespace Raven.Database.Actions
         {
         }
 
+	    internal IndexDefinition[] Definitions
+	    {
+		    get { return Database.IndexDefinitionStorage.IndexDefinitions.Select(inx => inx.Value).ToArray(); }
+	    }
+
         public string[] GetIndexFields(string index)
         {
             var abstractViewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
@@ -355,19 +360,36 @@ namespace Raven.Database.Actions
 
             try
             {
-				Task.Factory.StartNew(() => ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes),
-				TaskCreationOptions.LongRunning)
-				.ContinueWith(t =>
-				{
-					if (t.IsFaulted)
-					{
-						Log.Warn("Could not apply precomputed batch for index " + index, t.Exception);
-					}
-					index.IsMapIndexingInProgress = false;
-					WorkContext.ShouldNotifyAboutWork(() => "Precomputed indexing batch for " + index.PublicName + " is completed");
-					WorkContext.NotifyAboutWork();
+				var cts = new CancellationTokenSource();
 
-				});
+				var task = Task
+					.Factory
+					.StartNew(() => ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes, cts), TaskCreationOptions.LongRunning)
+					.ContinueWith(t =>
+					{
+						if (t.IsFaulted)
+						{
+							Log.Warn("Could not apply precomputed batch for index " + index, t.Exception);
+						}
+						index.IsMapIndexingInProgress = false;
+						WorkContext.ShouldNotifyAboutWork(() => "Precomputed indexing batch for " + index.PublicName + " is completed");
+						WorkContext.NotifyAboutWork();
+					});
+
+	            long id;
+				Database
+					.Tasks
+					.AddTask(
+						task, 
+						new TaskBasedOperationState(task), 
+						new TaskActions.PendingTaskDescription
+				        {
+					        StartTime = DateTime.UtcNow, 
+							Payload = index.PublicName, 
+							TaskType = TaskActions.PendingTaskType.NewIndexPrecomputedBatch
+				        }, 
+						out id,
+						cts);
             }
             catch (Exception)
             {
@@ -376,7 +398,7 @@ namespace Raven.Database.Actions
             }
         }
 
-	    private void ApplyPrecomputedBatchForNewIndex(Index index, AbstractViewGenerator generator, int pageSize)
+	    private void ApplyPrecomputedBatchForNewIndex(Index index, AbstractViewGenerator generator, int pageSize, CancellationTokenSource cts)
         {
             PrecomputedIndexingBatch result = null;
 
@@ -387,8 +409,7 @@ namespace Raven.Database.Actions
 
 	            JsonDocument highestByEtag = null;
 
-                var cts = new CancellationTokenSource();
-                using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
+				using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
 				using (var op = new QueryActions.DatabaseQueryOperation(Database, Constants.DocumentsByEntityNameIndex, new IndexQuery
                 {
                     Query = query,
@@ -457,10 +478,13 @@ namespace Raven.Database.Actions
 
 			if (result != null && result.Documents != null && result.Documents.Count > 0)
 			{
-				Database.IndexingExecuter.IndexPrecomputedBatch(result);
+				using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
+				{
+					Database.IndexingExecuter.IndexPrecomputedBatch(result, linked.Token);
 
-				if (index.IsTestIndex)
-					TransactionalStorage.Batch(accessor => accessor.Indexing.TouchIndexEtag(index.IndexId));
+					if (index.IsTestIndex) 
+						TransactionalStorage.Batch(accessor => accessor.Indexing.TouchIndexEtag(index.IndexId));
+				}
 			}
 
         }

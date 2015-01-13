@@ -10,64 +10,61 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem.ClientApi
 {
     public class FileSessionTests : RavenFilesTestWithLogs
     {
+        [Theory]
+        [PropertyData("Storages")]
 
-        private readonly IFilesStore filesStore;
-
-        public FileSessionTests()
+        public void SessionLifecycle(string storage)
         {
-            filesStore = this.NewStore();
-        }
-
-        [Fact]
-        public void SessionLifecycle()
-        {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
+            using (var store = NewStore(requestedStorage: storage))
             {
-                Assert.NotNull(session.Advanced);
-                Assert.True(session.Advanced.MaxNumberOfRequestsPerSession == 30);
-                Assert.False(string.IsNullOrWhiteSpace(session.Advanced.StoreIdentifier));
-                Assert.Equal(filesStore, session.Advanced.FilesStore);
-                Assert.Equal(filesStore.Identifier, session.Advanced.StoreIdentifier.Split(';')[0]);
-                Assert.Equal(store.DefaultFileSystem, session.Advanced.StoreIdentifier.Split(';')[1]);
-            }
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.NotNull(session.Advanced);
+                    Assert.True(session.Advanced.MaxNumberOfRequestsPerSession == 30);
+                    Assert.False(string.IsNullOrWhiteSpace(session.Advanced.StoreIdentifier));
+                    Assert.Equal(store, session.Advanced.FilesStore);
+                    Assert.Equal(store.Identifier, session.Advanced.StoreIdentifier.Split(';')[0]);
+                    Assert.Equal(store.DefaultFileSystem, session.Advanced.StoreIdentifier.Split(';')[1]);
+                }
 
-            store.Conventions.MaxNumberOfRequestsPerSession = 10;
+                store.Conventions.MaxNumberOfRequestsPerSession = 10;
 
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                Assert.True(session.Advanced.MaxNumberOfRequestsPerSession == 10);
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.True(session.Advanced.MaxNumberOfRequestsPerSession == 10);
+                }
             }
         }
 
         [Fact]
         public async Task EnsureMaxNumberOfRequestsPerSessionIsHonored()
         {
-            var store = (FilesStore)filesStore;
-            store.Conventions.MaxNumberOfRequestsPerSession = 0;
-
-            using (var session = filesStore.OpenAsyncSession())
+            using (var store = NewStore())
             {
-                await AssertAsync.Throws<InvalidOperationException>(() => session.LoadFileAsync("test1.file"));
-                await AssertAsync.Throws<InvalidOperationException>(() => session.DownloadAsync("test1.file"));
-                Assert.Throws<InvalidOperationException>(() => session.RegisterFileDeletion("test1.file"));
-                Assert.Throws<InvalidOperationException>(() => session.RegisterRename("test1.file", "test2.file"));
-                Assert.Throws<InvalidOperationException>(() => session.RegisterUpload("test1.file", CreateUniformFileStream(128)));
+                store.Conventions.MaxNumberOfRequestsPerSession = 0;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await AssertAsync.Throws<InvalidOperationException>(() => session.LoadFileAsync("test1.file"));
+                    await AssertAsync.Throws<InvalidOperationException>(() => session.DownloadAsync("test1.file"));
+                    Assert.Throws<InvalidOperationException>(() => session.RegisterFileDeletion("test1.file"));
+                    Assert.Throws<InvalidOperationException>(() => session.RegisterRename("test1.file", "test2.file"));
+                    Assert.Throws<InvalidOperationException>(() => session.RegisterUpload("test1.file", CreateUniformFileStream(128)));
+                }
             }
         }
 
         [Fact]
 		public async Task UploadWithDeferredAction()
         {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
+            using (var store = NewStore())
+            using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("test1.file", 128, x =>
                 {
@@ -98,9 +95,8 @@ namespace Raven.Tests.FileSystem.ClientApi
         [Fact]
 		public async Task UploadActionWritesIncompleteStream()
         {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
+            using (var store = NewStore())
+            using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("test1.file", 128, x =>
                 {
@@ -115,9 +111,8 @@ namespace Raven.Tests.FileSystem.ClientApi
         [Fact]
 		public async Task UploadActionWritesIncompleteWithErrorStream()
         {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
+            using (var store = NewStore())
+            using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("test1.file", 128, x =>
                 {
@@ -132,78 +127,83 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
-        [Fact]
-		public async Task UploadAndDeleteFileOnDifferentSessions()
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task UploadAndDeleteFileOnDifferentSessions(string storage)
         {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
+            using (var store = NewStore(requestedStorage: storage))
             {
-                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
-                session.RegisterUpload("test2.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-            }
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                    session.RegisterUpload("test2.file", CreateUniformFileStream(128));
+                    await session.SaveChangesAsync();
+                }
 
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                session.RegisterFileDeletion("test1.file");
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.RegisterFileDeletion("test1.file");
 
-                var file = await session.LoadFileAsync("test1.file");
-                Assert.NotNull(file);
+                    var file = await session.LoadFileAsync("test1.file");
+                    Assert.NotNull(file);
 
-                await session.SaveChangesAsync();
+                    await session.SaveChangesAsync();
 
-                file = await session.LoadFileAsync("test1.file");
-                Assert.Null(file);
-            }
-        }
-
-        [Fact]
-        public async Task RenameWithDirectoryChange()
-        {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                session.RegisterUpload("a/test1.file", CreateUniformFileStream(128));
-                session.RegisterRename("a/test1.file", "a/a/test1.file");
-                await session.SaveChangesAsync();
-
-                var deletedFile = await session.LoadFileAsync("/a/test1.file");
-                Assert.Null(deletedFile);
-
-                var availableFile = await session.LoadFileAsync("/a/a/test1.file");
-                Assert.NotNull(availableFile);
+                    file = await session.LoadFileAsync("test1.file");
+                    Assert.Null(file);
+                }
             }
         }
 
-        [Fact]
-        public async Task RenameWithoutDirectoryChange()
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task RenameWithDirectoryChange(string storage)
         {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
+            using (var store = NewStore(requestedStorage: storage))
             {
-                session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.RegisterUpload("a/test1.file", CreateUniformFileStream(128));
+                    session.RegisterRename("a/test1.file", "a/a/test1.file");
+                    await session.SaveChangesAsync();
 
-                session.RegisterRename("/b/test1.file", "/b/test2.file");
-                await session.SaveChangesAsync();
+                    var deletedFile = await session.LoadFileAsync("/a/test1.file");
+                    Assert.Null(deletedFile);
 
-                var deletedFile = await session.LoadFileAsync("b/test1.file");
-                Assert.Null(deletedFile);
+                    var availableFile = await session.LoadFileAsync("/a/a/test1.file");
+                    Assert.NotNull(availableFile);
+                }
+            }
+        }
 
-                var availableFile = await session.LoadFileAsync("b/test2.file");
-                Assert.NotNull(availableFile);
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task RenameWithoutDirectoryChange(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
+                    await session.SaveChangesAsync();
+
+                    session.RegisterRename("/b/test1.file", "/b/test2.file");
+                    await session.SaveChangesAsync();
+
+                    var deletedFile = await session.LoadFileAsync("b/test1.file");
+                    Assert.Null(deletedFile);
+
+                    var availableFile = await session.LoadFileAsync("b/test2.file");
+                    Assert.NotNull(availableFile);
+                }
             }
         }
 
         [Fact]
         public async Task EnsureSlashPrefixWorks()
         {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
+            using (var store = NewStore())
+            using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
                 session.RegisterUpload("test1.file", CreateUniformFileStream(128));
@@ -222,248 +222,266 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
 
-        [Fact]
-        public async Task EnsureTwoLoadsWillReturnSameObject()
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task EnsureTwoLoadsWillReturnSameObject(string storage)
         {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
+            using (var store = NewStore(requestedStorage: storage))
             {
-                session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
-                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-
-               var firstCallFile = await session.LoadFileAsync("test1.file");
-                var secondCallFile = await session.LoadFileAsync("test1.file");
-                Assert.Equal(firstCallFile, secondCallFile);
-
-                firstCallFile = await session.LoadFileAsync("/b/test1.file");
-                secondCallFile = await session.LoadFileAsync("/b/test1.file");
-                Assert.Equal(firstCallFile, secondCallFile);
-            }
-        }
-
-
-        [Fact]
-        public async Task DownloadStream()
-        {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                var fileStream = CreateUniformFileStream(128);
-                session.RegisterUpload("test1.file", fileStream);
-                await session.SaveChangesAsync();
-
-                fileStream.Seek(0, SeekOrigin.Begin);
-
-                var file = await session.LoadFileAsync("test1.file");
-
-                var resultingStream = await session.DownloadAsync(file);
-
-                var originalText = new StreamReader(fileStream).ReadToEnd();
-                var downloadedText = new StreamReader(resultingStream).ReadToEnd();
-                Assert.Equal(originalText, downloadedText);
-
-                //now downloading file with metadata
-
-                Reference<RavenJObject> metadata = new Reference<RavenJObject>();
-                resultingStream = await session.DownloadAsync("test1.file", metadata);
-
-                Assert.NotNull(metadata.Value);
-                Assert.Equal(128, metadata.Value.Value<long>("RavenFS-Size"));
-            }
-        }
-
-        [Fact]
-        public async Task SaveIsIncompleteEnsureAllPendingOperationsAreCancelledStream()
-        {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                var fileStream = CreateUniformFileStream(128);
-                session.RegisterUpload("test2.file", fileStream);
-                session.RegisterUpload("test1.file", 128, x =>
+                using (var session = store.OpenAsyncSession())
                 {
-                    for (byte i = 0; i < 60; i++)
-                        x.WriteByte(i);
-                });
-                session.RegisterRename("test2.file", "test3.file");
+                    session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
+                    session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                    await session.SaveChangesAsync();
 
-                await AssertAsync.Throws<BadRequestException>(() => session.SaveChangesAsync());
+                    var firstCallFile = await session.LoadFileAsync("test1.file");
+                    var secondCallFile = await session.LoadFileAsync("test1.file");
+                    Assert.Equal(firstCallFile, secondCallFile);
 
-                var shouldExist = await session.LoadFileAsync("test2.file");
-                Assert.NotNull(shouldExist);
-                var shouldNotExist = await session.LoadFileAsync("test3.file");
-                Assert.Null(shouldNotExist);
-            }
-        }
-
-        [Fact]
-        public async Task LoadMultipleFileHeaders()
-        {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
-                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-
-                var files = await session.LoadFileAsync(new String[] { "/b/test1.file", "test1.file" });
-
-                Assert.NotNull(files);
-            }
-        }
-
-        [Fact]
-        public async Task MetadataUpdateWithRenames()
-        {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-
-                // Modify metadata and then rename
-                var file = await session.LoadFileAsync("test1.file");
-                file.Metadata["Test"] = new RavenJValue("Value");
-                session.RegisterRename("test1.file", "test2.file");
-
-                await session.SaveChangesAsync();
-
-                file = await session.LoadFileAsync("test2.file");
-                
-                Assert.Null(await session.LoadFileAsync("test1.file"));
-                Assert.NotNull(file);
-                Assert.True(file.Metadata.ContainsKey("Test"));
-
-                // Rename and then modify metadata
-                session.RegisterRename("test2.file", "test3.file");
-                file.Metadata["Test2"] = new RavenJValue("Value");
-
-                await session.SaveChangesAsync();
-
-                file = await session.LoadFileAsync("test3.file");
-                
-                Assert.Null(await session.LoadFileAsync("test2.file"));
-                Assert.NotNull(file);
-                Assert.True(file.Metadata.ContainsKey("Test"));
-                Assert.True(file.Metadata.ContainsKey("Test2"));
-            }
-        }
-
-        [Fact]
-        public async Task MetadataUpdateWithContentUpdate()
-        {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-
-                // content update after a metadata change
-                var file = await session.LoadFileAsync("test1.file");
-                file.Metadata["Test"] = new RavenJValue("Value");
-                session.RegisterUpload("test1.file", CreateUniformFileStream(180));
-
-                await session.SaveChangesAsync();
-
-                Assert.True(file.Metadata.ContainsKey("Test"));
-                Assert.Equal(180, file.TotalSize);
-
-                // content update using file header
-                file.Metadata["Test2"] = new RavenJValue("Value");
-                session.RegisterUpload(file, CreateUniformFileStream(120));
-
-                await session.SaveChangesAsync();
-
-                Assert.True(file.Metadata.ContainsKey("Test"));
-                Assert.True(file.Metadata.ContainsKey("Test2"));
-                Assert.Equal(120, file.TotalSize);
-            }
-        }
-
-        [Fact]
-        public async Task MetadataUpdateWithDeletes()
-        {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-
-                // deleting file after a metadata change
-                var file = await session.LoadFileAsync("test1.file");
-                file.Metadata["Test"] = new RavenJValue("Value");
-                session.RegisterFileDeletion("test1.file");
-
-                await session.SaveChangesAsync();
-                
-                Assert.Null(await session.LoadFileAsync("test1.file"));
-
-                // deleting file after a metadata change
-                session.RegisterUpload("test1.file", CreateUniformFileStream(128));
-                await session.SaveChangesAsync();
-
-                file = await session.LoadFileAsync("test1.file");
-                session.RegisterFileDeletion("test1.file");
-                await session.SaveChangesAsync();
-
-                file.Metadata["Test"] = new RavenJValue("Value");
-                await session.SaveChangesAsync();
-
-                file = await session.LoadFileAsync("test1.file");
-                Assert.Null(file);
-            }
-        }
-
-        [Fact]
-        public async Task WorkingWithMultipleFiles()
-        {
-            var store = (FilesStore)filesStore;
-
-            using (var session = filesStore.OpenAsyncSession())
-            {
-                // Uploading 10 files
-                for ( int i = 0; i < 10; i++ )
-                {
-                    session.RegisterUpload(string.Format("test{0}.file", i), CreateUniformFileStream(128));
+                    firstCallFile = await session.LoadFileAsync("/b/test1.file");
+                    secondCallFile = await session.LoadFileAsync("/b/test1.file");
+                    Assert.Equal(firstCallFile, secondCallFile);
                 }
+            }
+        }
 
-                await session.SaveChangesAsync();
 
-                // Some files are then deleted and some are updated
-                for (int i = 0; i < 10; i++)
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task DownloadStream(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
                 {
-                    if (i % 2 == 0)
-                    {
-                        var file = await session.LoadFileAsync(string.Format("test{0}.file", i));
-                        file.Metadata["Test"] = new RavenJValue("Value");
-                    }
-                    else
-                    {
-                        session.RegisterFileDeletion(string.Format("test{0}.file", i));
-                    }
+                    var fileStream = CreateUniformFileStream(128);
+                    session.RegisterUpload("test1.file", fileStream);
+                    await session.SaveChangesAsync();
+
+                    fileStream.Seek(0, SeekOrigin.Begin);
+
+                    var file = await session.LoadFileAsync("test1.file");
+
+                    var resultingStream = await session.DownloadAsync(file);
+
+                    var originalText = new StreamReader(fileStream).ReadToEnd();
+                    var downloadedText = new StreamReader(resultingStream).ReadToEnd();
+                    Assert.Equal(originalText, downloadedText);
+
+                    //now downloading file with metadata
+
+                    Reference<RavenJObject> metadata = new Reference<RavenJObject>();
+                    resultingStream = await session.DownloadAsync("test1.file", metadata);
+
+                    Assert.NotNull(metadata.Value);
+                    Assert.Equal(128, metadata.Value.Value<long>("RavenFS-Size"));
                 }
+            }
+        }
 
-                await session.SaveChangesAsync();
-
-                // Finally we assert over all the files to see if they were treated as expected
-                for (int i = 0; i < 10; i++)
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task SaveIsIncompleteEnsureAllPendingOperationsAreCancelledStream(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
                 {
-                    if (i % 2 == 0)
+                    var fileStream = CreateUniformFileStream(128);
+                    session.RegisterUpload("test2.file", fileStream);
+                    session.RegisterUpload("test1.file", 128, x =>
                     {
-                        var file = await session.LoadFileAsync(string.Format("test{0}.file", i));
-                        Assert.True(file.Metadata.ContainsKey("Test"));
+                        for (byte i = 0; i < 60; i++)
+                            x.WriteByte(i);
+                    });
+                    session.RegisterRename("test2.file", "test3.file");
+
+                    await AssertAsync.Throws<BadRequestException>(() => session.SaveChangesAsync());
+
+                    var shouldExist = await session.LoadFileAsync("test2.file");
+                    Assert.NotNull(shouldExist);
+                    var shouldNotExist = await session.LoadFileAsync("test3.file");
+                    Assert.Null(shouldNotExist);
+                }
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task LoadMultipleFileHeaders(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
+                    session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                    await session.SaveChangesAsync();
+
+                    var files = await session.LoadFileAsync(new String[] { "/b/test1.file", "test1.file" });
+
+                    Assert.NotNull(files);
+                }
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task MetadataUpdateWithRenames(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                    await session.SaveChangesAsync();
+
+                    // Modify metadata and then rename
+                    var file = await session.LoadFileAsync("test1.file");
+                    file.Metadata["Test"] = new RavenJValue("Value");
+                    session.RegisterRename("test1.file", "test2.file");
+
+                    await session.SaveChangesAsync();
+
+                    file = await session.LoadFileAsync("test2.file");
+
+                    Assert.Null(await session.LoadFileAsync("test1.file"));
+                    Assert.NotNull(file);
+                    Assert.True(file.Metadata.ContainsKey("Test"));
+
+                    // Rename and then modify metadata
+                    session.RegisterRename("test2.file", "test3.file");
+                    file.Metadata["Test2"] = new RavenJValue("Value");
+
+                    await session.SaveChangesAsync();
+
+                    file = await session.LoadFileAsync("test3.file");
+
+                    Assert.Null(await session.LoadFileAsync("test2.file"));
+                    Assert.NotNull(file);
+                    Assert.True(file.Metadata.ContainsKey("Test"));
+                    Assert.True(file.Metadata.ContainsKey("Test2"));
+                }
+            }
+
+            
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task MetadataUpdateWithContentUpdate(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                    await session.SaveChangesAsync();
+
+                    // content update after a metadata change
+                    var file = await session.LoadFileAsync("test1.file");
+                    file.Metadata["Test"] = new RavenJValue("Value");
+                    session.RegisterUpload("test1.file", CreateUniformFileStream(180));
+
+                    await session.SaveChangesAsync();
+
+                    Assert.True(file.Metadata.ContainsKey("Test"));
+                    Assert.Equal(180, file.TotalSize);
+
+                    // content update using file header
+                    file.Metadata["Test2"] = new RavenJValue("Value");
+                    session.RegisterUpload(file, CreateUniformFileStream(120));
+
+                    await session.SaveChangesAsync();
+
+                    Assert.True(file.Metadata.ContainsKey("Test"));
+                    Assert.True(file.Metadata.ContainsKey("Test2"));
+                    Assert.Equal(120, file.TotalSize);
+                }
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task MetadataUpdateWithDeletes(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                    await session.SaveChangesAsync();
+
+                    // deleting file after a metadata change
+                    var file = await session.LoadFileAsync("test1.file");
+                    file.Metadata["Test"] = new RavenJValue("Value");
+                    session.RegisterFileDeletion("test1.file");
+
+                    await session.SaveChangesAsync();
+
+                    Assert.Null(await session.LoadFileAsync("test1.file"));
+
+                    // deleting file after a metadata change
+                    session.RegisterUpload("test1.file", CreateUniformFileStream(128));
+                    await session.SaveChangesAsync();
+
+                    file = await session.LoadFileAsync("test1.file");
+                    session.RegisterFileDeletion("test1.file");
+                    await session.SaveChangesAsync();
+
+                    file.Metadata["Test"] = new RavenJValue("Value");
+                    await session.SaveChangesAsync();
+
+                    file = await session.LoadFileAsync("test1.file");
+                    Assert.Null(file);
+                }
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task WorkingWithMultipleFiles(string storage)
+        {
+            using (var store = NewStore(requestedStorage: storage))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    // Uploading 10 files
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.RegisterUpload(string.Format("test{0}.file", i), CreateUniformFileStream(128));
                     }
-                    else
+
+                    await session.SaveChangesAsync();
+
+                    // Some files are then deleted and some are updated
+                    for (int i = 0; i < 10; i++)
                     {
-                        Assert.Null(await session.LoadFileAsync(string.Format("test{0}.file", i)));
+                        if (i % 2 == 0)
+                        {
+                            var file = await session.LoadFileAsync(string.Format("test{0}.file", i));
+                            file.Metadata["Test"] = new RavenJValue("Value");
+                        }
+                        else
+                        {
+                            session.RegisterFileDeletion(string.Format("test{0}.file", i));
+                        }
+                    }
+
+                    await session.SaveChangesAsync();
+
+                    // Finally we assert over all the files to see if they were treated as expected
+                    for (int i = 0; i < 10; i++)
+                    {
+                        if (i % 2 == 0)
+                        {
+                            var file = await session.LoadFileAsync(string.Format("test{0}.file", i));
+                            Assert.True(file.Metadata.ContainsKey("Test"));
+                        }
+                        else
+                        {
+                            Assert.Null(await session.LoadFileAsync(string.Format("test{0}.file", i)));
+                        }
                     }
                 }
             }
@@ -472,7 +490,8 @@ namespace Raven.Tests.FileSystem.ClientApi
         [Fact]
         public async Task CombinationOfDeletesAndUpdatesNotPermitted()
         {
-            using (var session = filesStore.OpenAsyncSession())
+            using (var store = NewStore())
+            using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await session.SaveChangesAsync();
@@ -486,7 +505,8 @@ namespace Raven.Tests.FileSystem.ClientApi
         [Fact]
         public async Task MultipleLoadsInTheSameCall()
         {
-            using (var session = filesStore.OpenAsyncSession())
+            using (var store = NewStore())
+            using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("test.file", CreateUniformFileStream(10));
                 session.RegisterUpload("test.fil", CreateUniformFileStream(10));
@@ -505,7 +525,8 @@ namespace Raven.Tests.FileSystem.ClientApi
         public async Task MetadataDatesArePreserved()
         {
             FileHeader originalFile;
-            using (var session = filesStore.OpenAsyncSession())
+            using (var store = NewStore())
+            using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("test1.file", CreateUniformFileStream(128));
                 await session.SaveChangesAsync();

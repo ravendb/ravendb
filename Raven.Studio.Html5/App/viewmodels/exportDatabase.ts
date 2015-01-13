@@ -4,6 +4,8 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
 import collection = require("models/collection");
 import appUrl = require("common/appUrl");
+import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
+import messagePublisher = require('common/messagePublisher'); 
 
 class exportDatabase extends viewModelBase {
     includeDocuments = ko.observable(true);
@@ -21,6 +23,7 @@ class exportDatabase extends viewModelBase {
     exportActionUrl:KnockoutComputed<string>;
     noneDefualtFileName = ko.observable<string>("");
     chooseDifferntFileName = ko.observable<boolean>(false);
+    authToken = ko.observable<string>();
 
     constructor() {
         super();
@@ -42,7 +45,8 @@ class exportDatabase extends viewModelBase {
             });
 
         this.exportActionUrl = ko.computed(() => {
-            return appUrl.forResourceQuery(this.activeDatabase()) + "/studio-tasks/exportDatabase";
+            var token = this.authToken();
+            return appUrl.forResourceQuery(this.activeDatabase()) + "/studio-tasks/exportDatabase" + (token ? '?singleUseAuthToken=' + token : '');
         });
     }
 
@@ -94,7 +98,11 @@ class exportDatabase extends viewModelBase {
         };
         
         $("#SmugglerOptions").val(JSON.stringify(smugglerOptions));
-        $("#dbExportDownloadForm").submit();
+
+        new getSingleAuthTokenCommand(this.activeDatabase()).execute().done((token: singleAuthToken) => {
+            this.authToken(token.Token);
+            $("#dbExportDownloadForm").submit();
+        }).fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not get Single Auth Token for export.", errorThrown));
     }
 
     selectOptions(){

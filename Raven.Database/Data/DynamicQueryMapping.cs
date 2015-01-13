@@ -170,6 +170,8 @@ namespace Raven.Database.Data
 					var field = sortedField.Field;
 					if (field.StartsWith(Constants.RandomFieldName))
 						continue;
+					if (field.StartsWith(Constants.CustomSortFieldName))
+						continue;
 					if (field == Constants.TemporaryScoreValue)
 						continue;
 

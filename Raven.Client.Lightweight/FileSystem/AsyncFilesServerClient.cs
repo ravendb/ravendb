@@ -571,7 +571,7 @@ namespace Raven.Client.FileSystem
 
                     await TryReadNextPageStart().ConfigureAwait(false);
 
-                    await EnsureValidEndOfResponse();
+					await EnsureValidEndOfResponse().ConfigureAwait(false);
 
                     return false;
                 }

@@ -64,7 +64,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 				Id = "repl",
 				Settings =
 				{
-					{"Raven/RunInMemory", "true"},
+					{Constants.RunInMemory, "true"},
 					{"Raven/DataDir", "~/db1"},
 					{"Raven/ActiveBundles", "Replication"}
 				}
@@ -74,7 +74,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 				Id = "repl",
 				Settings =
 				{
-					{"Raven/RunInMemory", "true"},
+					{Constants.RunInMemory, "true"},
 					{"Raven/DataDir", "~/db2"},
 					{"Raven/ActiveBundles", "Replication"}
 				}

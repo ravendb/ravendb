@@ -64,7 +64,6 @@ namespace Raven.Database.Indexing
 		private long writeErrors;
 
 		public IndexingPriority Priority { get; set; }
-
 		/// <summary>
 		/// Note, this might be written to be multiple threads at the same time
 		/// We don't actually care for exact timing, it is more about general feeling
@@ -345,9 +344,9 @@ namespace Raven.Database.Indexing
 
 					ResetWriteErrors();
 				}
-				catch (Exception)
+				catch (Exception e)
 				{
-					IncrementWriteErrors();
+					IncrementWriteErrors(e);
 					throw;
 				}
 				finally
@@ -357,7 +356,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public abstract IndexingPerformanceStats IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp);
+		public abstract IndexingPerformanceStats IndexDocuments(AbstractViewGenerator viewGenerator, IndexingBatch batch, IStorageActionsAccessor actions, DateTime minimumTimestamp, CancellationToken token);
 
 		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, ScoreDoc score)
 		{
@@ -540,7 +539,7 @@ namespace Raven.Database.Indexing
 				}
 				catch (Exception e)
 				{
-					IncrementWriteErrors();
+					IncrementWriteErrors(e);
 
 					throw new InvalidOperationException("Could not properly write to index " + PublicName, e);
 				}
@@ -924,6 +923,10 @@ namespace Raven.Database.Indexing
 
 		public void MarkQueried(DateTime time)
 		{
+			if (lastQueryTime != null && 
+				lastQueryTime.Value >= time) 
+				return;
+
 			lastQueryTime = time;
 		}
 
@@ -1057,9 +1060,9 @@ namespace Raven.Database.Indexing
 					{
 						f = f.Substring(0, f.Length - "_Range".Length);
 					}
-					if (f.StartsWith(Constants.RandomFieldName))
+					if (f.StartsWith(Constants.RandomFieldName) || f.StartsWith(Constants.CustomSortFieldName))
 						continue;
-					if (viewGenerator.ContainsField(f) == false && f != Constants.DistanceFieldName
+					if (viewGenerator.ContainsField(f) == false && ! f.StartsWith(Constants.DistanceFieldName)
 							&& viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
 						throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
 				}
@@ -1582,7 +1585,7 @@ namespace Raven.Database.Indexing
 			return currentlyIndexing.Values.ToArray();
 		}
 
-		public void Backup(string backupDirectory, string path, string incrementalTag)
+        public void Backup(string backupDirectory, string path, string incrementalTag, Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback)
 		{
 			if (directory is RAMDirectory)
 			{
@@ -1595,9 +1598,9 @@ namespace Raven.Database.Indexing
 			}
 
 			bool hasSnapshot = false;
-			bool throwOnFinallyException = true;
+            bool throwOnFinallyException = true;
 			try
-			{
+			{   
 				var existingFiles = new HashSet<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
@@ -1637,14 +1640,12 @@ namespace Raven.Database.Indexing
 					}
 					catch (CorruptIndexException e)
 					{
-						logIndexing.WarnException(
-							"Could not backup index " + indexId +
-							" because it is corrupted. Skipping the index, will force index reset on restore", e);
-						neededFilesWriter.Dispose();
+					    var failureMessage = "Could not backup index " + PublicName + " because it is corrupted. Skipping the index, will force index reset on restore";
+                        LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
+					    neededFilesWriter.Dispose();
 						TryDelete(neededFilePath);
 						return;
 					}
-
 					var commit = snapshotter.Snapshot();
 					hasSnapshot = true;
 					foreach (var fileName in commit.FileNames)
@@ -1665,10 +1666,10 @@ namespace Raven.Database.Indexing
 								File.Copy(fullPath, destFileName);
 							}
 							catch (Exception e)
-							{
-								logIndexing.WarnException(
-									"Could not backup index " + indexId +
-									" because failed to copy file : " + fullPath + ". Skipping the index, will force index reset on restore", e);
+							{								
+                                var failureMessage = "Could not backup index " + PublicName + " because failed to copy file : " + fullPath +
+                                    ". Skipping the index, will force index reset on restore";
+                                LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
 								neededFilesWriter.Dispose();
 								TryDelete(neededFilePath);
 								return;
@@ -1682,10 +1683,23 @@ namespace Raven.Database.Indexing
 					neededFilesWriter.Flush();
 				}
 			}
-			catch
+			catch (Exception e)
 			{
-				throwOnFinallyException = false;
-				throw;
+			    var failureMessage = "Could not backup index " + PublicName +
+			                         " because an unexpected exception was thrown. Skipping the index, will force index reset on restore";
+                LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
+			    try
+			    {
+			        File.WriteAllText(Path.Combine(backupDirectory, String.Format("{0}.backup_failed", indexId)), e.ToString());
+			    }
+			    catch (Exception fe)
+			    {
+			        failureMessage = "failed to create fail index file for index " + PublicName +
+			                             " because an unexpected exception was thrown. This error may prevent auto reseting of the index on restore.";
+                    LogErrorAndNotifyStudio(notifyCallback, failureMessage, fe);
+			        throwOnFinallyException = false;
+			        throw;
+			    }
 			}
 			finally
 			{
@@ -1695,16 +1709,24 @@ namespace Raven.Database.Indexing
 					{
 						snapshotter.Release();
 					}
-					catch
+					catch (Exception e)
 					{
-						if (throwOnFinallyException)
-							throw;
+                        var failureMessage = "Failed to release snapshotter while backing-up index " + indexId;
+                        LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
+                        if (throwOnFinallyException)  throw;
 					}
 				}
 			}
 		}
 
-		public Etag GetLastEtagFromStats()
+	    private static void LogErrorAndNotifyStudio(Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback, string failureMessage, Exception e)
+	    {
+	        logIndexing.WarnException(failureMessage, e);
+            if (notifyCallback != null) 
+                notifyCallback(failureMessage, null, BackupStatus.BackupMessageSeverity.Error);
+	    }
+
+	    public Etag GetLastEtagFromStats()
 		{
 			return context.IndexStorage.GetLastEtagForIndex(this);
 		}
@@ -1803,8 +1825,11 @@ namespace Raven.Database.Indexing
 			return false;
 		}
 
-		public void IncrementWriteErrors()
+		public void IncrementWriteErrors(Exception e)
 		{
+			if(e is SystemException) // Don't count transient errors
+				return;
+
 			writeErrors = Interlocked.Increment(ref writeErrors);
 
 			if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error) 

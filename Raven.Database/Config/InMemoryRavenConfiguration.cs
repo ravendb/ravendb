@@ -17,6 +17,7 @@ using System.Web;
 using Mono.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
+using Raven.Database.Config.Settings;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins.Catalogs;
@@ -97,12 +98,15 @@ namespace Raven.Database.Config
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
 
+			IndexAndTransformerReplicationLatencyInSec = ravenSettings.IndexAndTransformerReplicationLatencyInSec.Value;
 			BulkImportBatchTimeout = ravenSettings.BulkImportBatchTimeout.Value;
 
 			// Important! this value is synchronized with the max sessions number in esent
 			// since we cannot have more requests in the system than we have sessions for them
 			// and we also need to allow sessions for background operations and for multi get requests
 			MaxConcurrentServerRequests = ravenSettings.MaxConcurrentServerRequests.Value;
+
+			MaxConcurrentRequestsForDatabaseDuringLoad = ravenSettings.MaxConcurrentRequestsForDatabaseDuringLoad.Value;
 
 			MaxConcurrentMultiGetRequests = ravenSettings.MaxConcurrentMultiGetRequests.Value;
 			if (ConcurrentMultiGetRequests == null)
@@ -300,6 +304,8 @@ namespace Raven.Database.Config
 			return this;
 		}
 
+		public int IndexAndTransformerReplicationLatencyInSec { get; internal set; }
+
 		/// <summary>
 		/// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
 		/// purged on next database startup. Default: 14 days.
@@ -307,6 +313,8 @@ namespace Raven.Database.Config
 		public TimeSpan TombstoneRetentionTime { get; set; }
 
 		public int MaxConcurrentServerRequests { get; set; }
+
+		public int MaxConcurrentRequestsForDatabaseDuringLoad { get; set; }
 
 		public int MaxConcurrentMultiGetRequests { get; set; }
 
@@ -327,7 +335,7 @@ namespace Raven.Database.Config
 		/// </summary>
 		public TimeSpan DatabaseOperationTimeout { get; private set; }
 
-		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
+		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; internal set; }
 
 		public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
 
@@ -735,7 +743,7 @@ namespace Raven.Database.Config
 			set
 			{
 				runInMemory = value;
-				Settings["Raven/RunInMemory"] = value.ToString();
+                Settings[Constants.RunInMemory] = value.ToString();
 			}
 		}
 

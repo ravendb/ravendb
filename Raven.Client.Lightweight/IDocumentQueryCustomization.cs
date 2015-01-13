@@ -169,6 +169,16 @@ namespace Raven.Client
 		/// </summary>
 		IDocumentQueryCustomization WaitForNonStaleResults();
 
+        /// <summary>
+        /// Sort using custom sorter on the server
+        /// </summary>
+        IDocumentQueryCustomization CustomSortUsing(string typeName);
+
+		/// <summary>
+		/// Sort using custom sorter on the server
+		/// </summary>
+        IDocumentQueryCustomization CustomSortUsing(string typeName, bool descending);
+
 		/// <summary>
 		///     EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
 		///     This shouldn't be used outside of unit tests unless you are well aware of the implications
@@ -300,5 +310,15 @@ namespace Raven.Client
 		/// <param name="longitude">Longitude poiting to a circle center.</param>
 		/// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
 		IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits);
+
+	    /// <summary>
+	    /// When using spatial queries, instruct the query to sort by the distance from the origin point
+	    /// </summary>
+        IDocumentQueryCustomization SortByDistance(double lat, double lng);
+
+        /// <summary>
+        /// When using spatial queries, instruct the query to sort by the distance from the origin point
+        /// </summary>
+        IDocumentQueryCustomization SortByDistance(double lat, double lng, string fieldName);
 	}
 }

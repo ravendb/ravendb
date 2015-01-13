@@ -1,14 +1,16 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
-using Mono.CSharp;
+
+using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -17,12 +19,12 @@ using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Bundles.Replication.Responders;
 using Raven.Bundles.Replication.Tasks;
+using Raven.Client.Connection;
 using Raven.Database.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Controllers
@@ -179,18 +181,14 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 		private void SaveReplicationSource(string src, string lastEtag)
 		{
-			var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
+			Guid remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
+
+			var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + remoteServerInstanceId;
 			var replicationDocument = Database.Documents.Get(replicationDocKey, null);
 			var lastAttachmentId = Etag.Empty;
 			if (replicationDocument != null)
 			{
 				lastAttachmentId = replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().LastAttachmentEtag;
-			}
-
-			Guid serverInstanceId;
-			if (Guid.TryParse(GetQueryStringValue("dbid"), out serverInstanceId) == false)
-			{
-				serverInstanceId = Database.TransactionalStorage.Id;
 			}
 
 			Database
@@ -204,7 +202,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 							Source = src,
 							LastDocumentEtag = Etag.Parse(lastEtag),
 							LastAttachmentEtag = lastAttachmentId,
-							ServerInstanceId = serverInstanceId
+							ServerInstanceId = remoteServerInstanceId,
+							LastModified = SystemTime.UtcNow
 						}),
 					new RavenJObject(),
 					null);
@@ -247,7 +246,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), src);
 					}
 
-					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
+					Guid remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
+
+					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + remoteServerInstanceId;
 					var replicationDocument = Database.Documents.Get(replicationDocKey, null);
 					Etag lastDocId = null;
 					if (replicationDocument != null)
@@ -257,16 +258,14 @@ namespace Raven.Database.Bundles.Replication.Controllers
 								LastDocumentEtag;
 					}
 
-					Guid serverInstanceId;
-					if (Guid.TryParse(GetQueryStringValue("dbid"), out serverInstanceId) == false)
-						serverInstanceId = Database.TransactionalStorage.Id;
 					Database.Documents.Put(replicationDocKey, null,
 								 RavenJObject.FromObject(new SourceReplicationInformation
 								 {
 									 Source = src,
 									 LastDocumentEtag = lastDocId,
 									 LastAttachmentEtag = lastEtag,
-									 ServerInstanceId = serverInstanceId
+									 ServerInstanceId = remoteServerInstanceId,
+									 LastModified = SystemTime.UtcNow
 								 }),
 								 new RavenJObject(), null);
 				});
@@ -298,24 +297,72 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
+				JsonDocument document = null;
+				SourceReplicationInformation sourceReplicationInformation = null;
 
-				SourceReplicationInformation sourceReplicationInformation;
+				var localServerInstanceId = Database.TransactionalStorage.Id; // this is my id, sent to the remote server
 
-				var serverInstanceId = Database.TransactionalStorage.Id; // this is my id, sent to the remote serve
+				if (string.IsNullOrEmpty(dbid))
+				{
+					// backward compatibility for replication behavior
+					int nextStart = 0;
+					var replicationSources = Database.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
+					foreach (RavenJObject replicationSource in replicationSources)
+					{
+						sourceReplicationInformation = replicationSource.JsonDeserialization<SourceReplicationInformation>();
+						if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false)
+							continue;
+
+						document = replicationSource.ToJsonDocument();
+						break;
+					}
+				}
+				else
+				{
+					var remoteServerInstanceId = Guid.Parse(dbid);
+
+					document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + remoteServerInstanceId, null);
+					if (document == null)
+					{
+						// migrate
+						document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
+						if (document != null)
+						{
+							sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+							Database.Documents.Put(Constants.RavenReplicationSourcesBasePath + "/" + sourceReplicationInformation.ServerInstanceId, Etag.Empty, document.DataAsJson, document.Metadata, null);
+							Database.Documents.Delete(Constants.RavenReplicationSourcesBasePath + "/" + src, document.Etag, null);
+
+							if (remoteServerInstanceId != sourceReplicationInformation.ServerInstanceId) 
+								document = null;
+						}
+					}
+				}
 
 				if (document == null)
 				{
-					sourceReplicationInformation = new SourceReplicationInformation()
+					sourceReplicationInformation = new SourceReplicationInformation
 					{
 						Source = src,
-						ServerInstanceId = serverInstanceId
+						ServerInstanceId = localServerInstanceId,
+						LastModified = SystemTime.UtcNow
 					};
 				}
 				else
 				{
-					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
+					if (sourceReplicationInformation == null)
+						sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+
+					if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false 
+						&& sourceReplicationInformation.LastModified.HasValue 
+						&& (SystemTime.UtcNow - sourceReplicationInformation.LastModified.Value).TotalMinutes < 10)
+					{
+						log.Info(string.Format("Replication source mismatch. Stored: {0}. Remote: {1}.", sourceReplicationInformation.Source, src));
+
+						sourceReplicationInformation.LastAttachmentEtag = Etag.InvalidEtag;
+						sourceReplicationInformation.LastDocumentEtag = Etag.InvalidEtag;
+					}
+
+					sourceReplicationInformation.ServerInstanceId = localServerInstanceId;
 				}
 
 				var currentEtag = GetQueryStringValue("currentEtag");
@@ -337,7 +384,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
+				var document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + dbid, null);
 
 				SourceReplicationInformation sourceReplicationInformation;
 
@@ -348,19 +395,17 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				}
 				catch
 				{
-
 				}
+
 				try
 				{
 					attachmentEtag = Etag.Parse(GetQueryStringValue("attachmentEtag"));
 				}
 				catch
 				{
-
 				}
-				Guid serverInstanceId;
-				if (Guid.TryParse(dbid, out serverInstanceId) == false)
-					serverInstanceId = Database.TransactionalStorage.Id;
+
+				Guid serverInstanceId = Guid.Parse(dbid);
 
 				if (document == null)
 				{
@@ -369,7 +414,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						ServerInstanceId = serverInstanceId,
 						LastAttachmentEtag = attachmentEtag ?? Etag.Empty,
 						LastDocumentEtag = docEtag ?? Etag.Empty,
-						Source = src
+						Source = src,
+						LastModified = SystemTime.UtcNow
 					};
 				}
 				else
@@ -378,6 +424,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
 					sourceReplicationInformation.LastDocumentEtag = docEtag ?? sourceReplicationInformation.LastDocumentEtag;
 					sourceReplicationInformation.LastAttachmentEtag = attachmentEtag ?? sourceReplicationInformation.LastAttachmentEtag;
+					sourceReplicationInformation.LastModified = SystemTime.UtcNow;
 				}
 
 				var etag = document == null ? Etag.Empty : document.Etag;
@@ -388,7 +435,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 								  sourceReplicationInformation.LastDocumentEtag,
 								  sourceReplicationInformation.LastAttachmentEtag);
 
-				Database.Documents.Put(Constants.RavenReplicationSourcesBasePath + "/" + src, etag, newDoc, metadata, null);
+				Database.Documents.Put(Constants.RavenReplicationSourcesBasePath + "/" + dbid, etag, newDoc, metadata, null);
 			}
 
 			return GetEmptyMessage();
@@ -415,6 +462,292 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			return GetEmptyMessage();
 		}
+
+		
+		[HttpPost]
+		[RavenRoute("replication/replicate-indexes")]
+		[RavenRoute("databases/{databaseName}/replication/replicate-indexes")]
+		public HttpResponseMessage IndexReplicate([FromBody] ReplicationDestination replicationDestination)
+		{
+			var op = GetQueryStringValue("op");
+
+			if (string.Equals(op, "replicate-all", StringComparison.InvariantCultureIgnoreCase))
+				return ReplicateAllIndexes();
+
+			if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
+				return ReplicateAllIndexes(dest => dest.IsEqualTo(replicationDestination));
+
+			var indexName = GetQueryStringValue("indexName");
+			if(indexName == null)
+				throw new InvalidOperationException("indexName query string must be specified if op=replicate-all or op=replicate-all-to-destination isn't specified");
+
+			//check for replication document before doing work on getting index definitions.
+			//if there is no replication set up --> no point in doing any other work
+			HttpResponseMessage erroResponseMessage;
+			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
+			if (replicationDocument == null)
+				return erroResponseMessage;
+
+			if (indexName.EndsWith("/")) //since id is part of the url, perhaps a trailing forward slash appears there
+				indexName = indexName.Substring(0, indexName.Length - 1);
+			indexName = HttpUtility.UrlDecode(indexName);
+
+			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
+			if (indexDefinition == null)
+			{
+				return GetMessageWithObject(new
+				{
+					Message = string.Format("Index with name: {0} not found. Cannot proceed with replication...", indexName)
+				}, HttpStatusCode.NotFound);
+			}
+
+			var serializedIndexDefinition = RavenJObject.FromObject(indexDefinition);
+
+			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
+
+			var failedDestinations = new ConcurrentDictionary<string, Exception>();
+			Parallel.ForEach(replicationDocument.Destinations.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false),
+				destination =>
+				{
+					try
+					{
+						ReplicateIndex(indexName, destination, serializedIndexDefinition, httpRavenRequestFactory);
+					}
+					catch (Exception e)
+					{
+						failedDestinations.TryAdd(destination.Humane ?? "<null?>", e);
+						log.WarnException("Could not replicate index " + indexName + " to " + destination.Humane, e);
+					}
+				});
+
+			return GetMessageWithObject(new
+			{
+				SuccessfulReplicationCount = (replicationDocument.Destinations.Count - failedDestinations.Count),
+				FailedDestinationUrls = failedDestinations.Select(x => new { Server = x.Key, Error = x.Value.ToString() }).ToArray()
+			});
+		}
+
+		[HttpPost]
+		[RavenRoute("replication/replicate-transformers")]
+		[RavenRoute("databases/{databaseName}/replication/replicate-transformers")]
+		public HttpResponseMessage TransformersReplicate([FromBody] ReplicationDestination replicationDestination)
+		{
+			var op = GetQueryStringValue("op");
+
+			if (string.Equals(op, "replicate-all", StringComparison.InvariantCultureIgnoreCase))
+				return ReplicateAllTransformers();
+
+			if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
+				return ReplicateAllTransformers(dest => dest.IsEqualTo(replicationDestination));
+
+			var transformerName = GetQueryStringValue("transformerName");
+			if (transformerName == null)
+				throw new InvalidOperationException("transformerName query string must be specified if op=replicate-all or op=replicate-all-to-destination isn't specified");
+
+			HttpResponseMessage erroResponseMessage;
+			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
+			if (replicationDocument == null)
+				return erroResponseMessage;
+
+			if (string.IsNullOrWhiteSpace(transformerName) || transformerName.StartsWith("/"))
+				return GetMessageWithString(String.Format("Invalid transformer name! Received : '{0}'", transformerName), HttpStatusCode.NotFound);
+
+			var transformerDefinition = Database.Transformers.GetTransformerDefinition(transformerName);
+			if (transformerDefinition == null)
+				return GetEmptyMessage(HttpStatusCode.NotFound);
+
+			var clonedTransformerDefinition = transformerDefinition.Clone();
+			clonedTransformerDefinition.TransfomerId = 0;
+
+			var serializedTransformerDefinition = RavenJObject.FromObject(clonedTransformerDefinition);
+			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
+
+			var failedDestinations = new ConcurrentBag<string>();
+			Parallel.ForEach(replicationDocument.Destinations.Where(x => x.Disabled == false && x.SkipIndexReplication == false),
+				destination => ReplicateTransformer(transformerName, destination, serializedTransformerDefinition, failedDestinations, httpRavenRequestFactory));
+
+			return GetMessageWithObject(new
+			{
+				SuccessfulReplicationCount = (replicationDocument.Destinations.Count - failedDestinations.Count),
+				FailedDestinationUrls = failedDestinations
+			});
+		}
+
+		private HttpResponseMessage ReplicateAllTransformers(Func<ReplicationDestination, bool> destinationPredicate = null)
+		{
+			HttpResponseMessage erroResponseMessage;
+			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
+			if (replicationDocument == null)
+				return erroResponseMessage;
+
+			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
+
+			var enabledReplicationDestinations = replicationDocument.Destinations
+				.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false)
+				.ToList();
+
+			if (destinationPredicate != null)
+				enabledReplicationDestinations = enabledReplicationDestinations.Where(destinationPredicate).ToList();
+
+			if (enabledReplicationDestinations.Count == 0)
+				return GetMessageWithObject(new { Message = "Replication is configured, but no enabled destinations found." }, HttpStatusCode.NotFound);
+
+			var allTransformerDefinitions = Database.Transformers.Definitions;
+			if (allTransformerDefinitions.Length == 0)
+				return GetMessageWithObject(new { Message = "No transformers to replicate. Nothing to do.. " });
+
+			var replicationRequestTasks = new List<Task>(enabledReplicationDestinations.Count * allTransformerDefinitions.Length);
+
+			var failedDestinations = new ConcurrentBag<string>();
+			foreach (var definition in allTransformerDefinitions)
+			{
+				var clonedDefinition = definition.Clone();
+				clonedDefinition.TransfomerId = 0;
+				replicationRequestTasks.AddRange(
+					enabledReplicationDestinations
+						.Select(destination =>
+							Task.Run(() =>
+								ReplicateTransformer(definition.Name, destination,
+									RavenJObject.FromObject(clonedDefinition),
+									failedDestinations,
+									httpRavenRequestFactory))).ToList());
+			}
+
+			Task.WaitAll(replicationRequestTasks.ToArray());
+
+			return GetMessageWithObject(new
+			{
+				TransformerCount = allTransformerDefinitions.Length,
+				EnabledDestinationsCount = enabledReplicationDestinations.Count,
+				SuccessfulReplicationCount = ((enabledReplicationDestinations.Count * allTransformerDefinitions.Length) - failedDestinations.Count),
+				FailedDestinationUrls = failedDestinations
+			});
+		}
+
+		private HttpResponseMessage ReplicateAllIndexes(Func<ReplicationDestination, bool> additionalDestinationPredicate = null)
+		{
+			//check for replication document before doing work on getting index definitions.
+			//if there is no replication set up --> no point in doing any other work
+			HttpResponseMessage erroResponseMessage;
+			var replicationDocument = GetReplicationDocument(out erroResponseMessage);
+			if (replicationDocument == null)
+				return erroResponseMessage;
+
+			var indexDefinitions = Database.IndexDefinitionStorage
+				.IndexDefinitions
+				.Select(x => x.Value)
+				.ToList();
+
+			var httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = Database.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds };
+			var enabledReplicationDestinations = replicationDocument.Destinations
+				.Where(dest => dest.Disabled == false && dest.SkipIndexReplication == false)
+				.ToList();
+
+			if (additionalDestinationPredicate != null)
+				enabledReplicationDestinations = enabledReplicationDestinations.Where(additionalDestinationPredicate).ToList();
+
+			if (enabledReplicationDestinations.Count == 0)
+				return GetMessageWithObject(new { Message = "Replication is configured, but no enabled destinations found." }, HttpStatusCode.NotFound);
+
+			var replicationRequestTasks = new List<Task>(enabledReplicationDestinations.Count * indexDefinitions.Count);
+
+			var failedDestinations = new ConcurrentDictionary<string, Exception>();
+			foreach (var definition in indexDefinitions)
+			{
+				replicationRequestTasks.AddRange(
+					enabledReplicationDestinations
+						.Select(destination =>
+							Task.Run(() =>
+							{
+								try
+								{
+									ReplicateIndex(definition.Name, destination,
+										RavenJObject.FromObject(definition),
+										httpRavenRequestFactory);
+								}
+								catch (Exception e)
+								{
+									failedDestinations.TryAdd(destination.Humane ?? "<null?>", e);
+									log.WarnException("Could not replicate " + definition.Name + " to " + destination.Humane, e);
+								}
+							})));
+			}
+
+			Task.WaitAll(replicationRequestTasks.ToArray());
+
+			return GetMessageWithObject(new
+			{
+				IndexesCount = indexDefinitions.Count,
+				EnabledDestinationsCount = enabledReplicationDestinations.Count,
+				SuccessfulReplicationCount = ((enabledReplicationDestinations.Count * indexDefinitions.Count) - failedDestinations.Count),
+				FailedDestinationUrls = failedDestinations.Select(x=>new{ Server = x.Key, Error = x.Value.ToString()}).ToArray()
+			});
+		}
+
+		private void ReplicateTransformer(string transformerName, ReplicationDestination destination, RavenJObject transformerDefinition, ConcurrentBag<string> failedDestinations, HttpRavenRequestFactory httpRavenRequestFactory)
+		{
+			var connectionOptions = new RavenConnectionStringOptions
+			{
+				ApiKey = destination.ApiKey,
+				Url = destination.Url,
+				DefaultDatabase = destination.Database
+			};
+
+			if (!String.IsNullOrWhiteSpace(destination.Username) &&
+				!String.IsNullOrWhiteSpace(destination.Password))
+			{
+				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain ?? string.Empty);
+			}
+
+			//databases/{databaseName}/transformers/{*id}
+			const string urlTemplate = "{0}/databases/{1}/transformers/{2}";
+			if (Uri.IsWellFormedUriString(destination.Url, UriKind.RelativeOrAbsolute) == false)
+			{
+				const string error = "Invalid destination URL";
+				failedDestinations.Add(destination.Url);
+				Log.Error(error);
+				return;
+			}
+
+			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(transformerName));
+			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
+			replicationRequest.Write(transformerDefinition);
+
+			try
+			{
+				replicationRequest.ExecuteRequest();
+			}
+			catch (Exception e)
+			{
+				Log.ErrorException("failed to replicate index to: " + destination.Url, e);
+				failedDestinations.Add(destination.Url);
+			}
+		}
+
+		private void ReplicateIndex(string indexName, ReplicationDestination destination, RavenJObject indexDefinition, HttpRavenRequestFactory httpRavenRequestFactory)
+		{
+			var connectionOptions = new RavenConnectionStringOptions
+			{
+				ApiKey = destination.ApiKey,
+				Url = destination.Url,
+				DefaultDatabase = destination.Database
+			};
+
+			if (!String.IsNullOrWhiteSpace(destination.Username) &&
+				!String.IsNullOrWhiteSpace(destination.Password))
+			{
+				connectionOptions.Credentials = new NetworkCredential(destination.Username, destination.Password, destination.Domain ?? string.Empty);
+			}
+
+			const string urlTemplate = "{0}/databases/{1}/indexes/{2}";
+
+			var operationUrl = string.Format(urlTemplate, destination.Url, destination.Database, Uri.EscapeUriString(indexName));
+			var replicationRequest = httpRavenRequestFactory.Create(operationUrl, "PUT", connectionOptions);
+			replicationRequest.Write(indexDefinition);
+
+			replicationRequest.ExecuteRequest();
+		}
+
 
 		private HttpResponseMessage GetValuesForLastEtag(out string src, out string dbid)
 		{

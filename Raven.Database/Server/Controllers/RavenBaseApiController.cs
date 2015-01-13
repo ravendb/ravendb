@@ -95,13 +95,14 @@ namespace Raven.Database.Server.Controllers
 
 		protected virtual void InnerInitialization(HttpControllerContext controllerContext)
 		{
-			this.request = controllerContext.Request;
-			this.User = controllerContext.RequestContext.Principal;
+			request = controllerContext.Request;
+			User = controllerContext.RequestContext.Principal;
 
-            this.landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
-            this.fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
-            this.countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
-            this.requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
+            landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
+            fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
+            countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
+            requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
+			maxNumberOfThreadsForDatabaseToLoad = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
 		}
 
 		public async Task<T> ReadJsonObjectAsync<T>()
@@ -750,6 +751,16 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
+		private SemaphoreSlim maxNumberOfThreadsForDatabaseToLoad;
+		public SemaphoreSlim MaxNumberOfThreadsForDatabaseToLoad
+		{
+			get
+			{
+				if (Configuration == null)
+					return maxNumberOfThreadsForDatabaseToLoad;
+				return (SemaphoreSlim)Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
+			}
+		}
         #endregion
     }
 }

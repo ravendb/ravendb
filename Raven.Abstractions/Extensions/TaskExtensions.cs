@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Security;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Exceptions;
 
@@ -43,6 +45,29 @@ namespace Raven.Abstractions.Extensions
 	                return task;
 	            }).Unwrap();
 	    }
+
+		public static Task WithCancellation(this Task task,
+			CancellationToken token)
+		{
+			if (token == default(CancellationToken))
+				return task;
+
+			return task.ContinueWith(t => t.GetAwaiter().GetResult(), token);
+		}
+		public static Task<T> WithCancellation<T>(this Task<T> task,
+			CancellationToken token)
+		{
+			if (token == default (CancellationToken))
+				return task;
+
+			return task.ContinueWith(t => t.GetAwaiter().GetResult(), token);
+		}
+
+		public static void ThrowCancellationIfNotDefault(this CancellationToken token)
+		{
+			if(token != default (CancellationToken))
+				token.ThrowIfCancellationRequested();
+		}
 
 	    public static async Task<bool> WaitWithTimeout(this Task task, TimeSpan? timeout)
 		{

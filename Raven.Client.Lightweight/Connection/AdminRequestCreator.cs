@@ -6,8 +6,10 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -105,11 +107,11 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Gets the list of databases from the server asynchronously
         /// </summary>
-        public async Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0)
+		public async Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0, CancellationToken token = default (CancellationToken))
         {
 	        using (var requestForSystemDatabase = createRequestForSystemDatabase(string.Format(CultureInfo.InvariantCulture, "/databases?pageSize={0}&start={1}", pageSize, start), "GET"))
 	        {
-				var result = await requestForSystemDatabase.ReadResponseJsonAsync().ConfigureAwait(false);
+				var result = await requestForSystemDatabase.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				var json = (RavenJArray)result;
 				return json.Select(x => x.ToString())
 					.ToArray();

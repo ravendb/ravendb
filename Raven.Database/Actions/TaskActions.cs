@@ -183,9 +183,9 @@ namespace Raven.Database.Actions
 
             CompactFilesystem,
 
-            IoTest
-        }
+            IoTest,
 
-      
+	        NewIndexPrecomputedBatch
+        }
     }
 }

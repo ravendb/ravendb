@@ -78,6 +78,10 @@
     <TypeScriptCompile Include="App\commands\formatIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSystemDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\replicateAllIndexesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\replicateAllTransformersCommand.ts" />
+    <TypeScriptCompile Include="App\commands\replicateIndexesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\replicateTransformersCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
@@ -1022,7 +1026,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>49940</DevelopmentServerPort>
+          <DevelopmentServerPort>31052</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>

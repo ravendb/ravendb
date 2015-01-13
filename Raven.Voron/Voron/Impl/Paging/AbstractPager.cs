@@ -35,8 +35,13 @@ namespace Voron.Impl.Paging
         protected AbstractPager()
         {
             _increaseSize = MinIncreaseSize;
-	        MaxNodeSize = PageMaxSpace/2 - 1;
+
+            MaxNodeSize = PageMaxSpace/2 - 1;
+
+            // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
+            Debug.Assert(MaxNodeSize < ushort.MaxValue);
             Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
+            
             PageMinSpace = (int)(PageMaxSpace * 0.33);
             PagerState = new PagerState(this);
           

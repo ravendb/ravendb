@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -99,7 +100,7 @@ namespace Raven.Client
 		///     skip document fetching until given key is found and return documents after that key (default:
 		///     null)
 		/// </param>
-		Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+		Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Loads multiple entities that contain common prefix and applies specified transformer.
@@ -121,13 +122,13 @@ namespace Raven.Client
 		///     skip document fetching until given key is found and return documents after that key (default:
 		///     null)
 		/// </param>
-		Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null, string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new();
+		Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null, string skipAfter = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		///     Updates entity with latest changes from server
 		/// </summary>
 		/// <param name="entity">Instance of an entity that will be refreshed</param>
-		Task RefreshAsync<T>(T entity);
+		Task RefreshAsync<T>(T entity, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available and
@@ -160,7 +161,7 @@ namespace Raven.Client
 		///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
 		/// </summary>
 		/// <param name="query">Query to stream results for</param>
-		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query);
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Stream the results on the query to the client, converting them to
@@ -168,16 +169,7 @@ namespace Raven.Client
 		///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
 		/// </summary>
 		/// <param name="query">Query to stream results for</param>
-		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query);
-
-		/// <summary>
-		///     Stream the results on the query to the client, converting them to
-		///     CLR types along the way.
-		///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-		/// </summary>
-		/// <param name="query">Query to stream results for</param>
-		/// <param name="queryHeaderInformation">Information about performed query</param>
-		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Stream the results on the query to the client, converting them to
@@ -186,7 +178,16 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="query">Query to stream results for</param>
 		/// <param name="queryHeaderInformation">Information about performed query</param>
-		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation, CancellationToken token = default (CancellationToken));
+
+		/// <summary>
+		///     Stream the results on the query to the client, converting them to
+		///     CLR types along the way.
+		///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
+		/// </summary>
+		/// <param name="query">Query to stream results for</param>
+		/// <param name="queryHeaderInformation">Information about performed query</param>
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Stream the results of documents search to the client, converting them to CLR types along the way.
@@ -196,7 +197,7 @@ namespace Raven.Client
 		/// <param name="start">number of documents that should be skipped</param>
 		/// <param name="pageSize">maximum number of documents that will be retrieved</param>
 		/// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
-		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null);
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		///     Stream the results of documents search to the client, converting them to CLR types along the way.
@@ -214,6 +215,6 @@ namespace Raven.Client
 		///     skip document fetching until given key is found and return documents after that key (default:
 		///     null)
 		/// </param>
-		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken));
 	}
 }
