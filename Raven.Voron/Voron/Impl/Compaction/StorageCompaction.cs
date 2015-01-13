@@ -10,11 +10,22 @@ using Voron.Trees;
 
 namespace Voron.Impl.Compaction
 {
+	public class CompactionProgress
+	{
+		public string TreeName;
+
+		public long CopiedTrees;
+		public long TotalTreeCount;
+
+		public long CopiedTreeRecords;
+		public long TotalTreeRecordsCount;
+	}
+
 	public unsafe static class StorageCompaction
 	{
 		public const string CannotCompactBecauseOfIncrementalBackup = "Cannot compact a storage that supports incremental backups. The compact operation changes internal data structures on which the incremental backup relays.";
 
-		public static void Execute(StorageEnvironmentOptions srcOptions, StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions)
+		public static void Execute(StorageEnvironmentOptions srcOptions, StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions, Action<CompactionProgress> progressReport = null)
 		{
 			if (srcOptions.IncrementalBackupEnabled)
 				throw new InvalidOperationException(CannotCompactBecauseOfIncrementalBackup);
@@ -27,9 +38,10 @@ namespace Voron.Impl.Compaction
 			using(var existingEnv = new StorageEnvironment(srcOptions))
 			using (var compactedEnv = new StorageEnvironment(compactOptions))
 			{
-				CopyTrees(existingEnv, compactedEnv);
+				CopyTrees(existingEnv, compactedEnv, progressReport);
 
 				compactedEnv.FlushLogToDataFile(allowToFlushOverwrittenPages: true);
+
 				compactedEnv.Journal.Applicator.SyncDataFile(compactedEnv.OldestTransaction);
 				compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 
@@ -42,12 +54,15 @@ namespace Voron.Impl.Compaction
 			}
 		}
 
-		private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv)
+		private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport = null)
 		{
 			using (var rootIterator = existingEnv.State.Root.Iterate())
 			{
 				if (rootIterator.Seek(Slice.BeforeAllKeys) == false)
 					return;
+
+				var totalTreesCount = existingEnv.State.Root.State.EntriesCount;
+				var copiedTrees = 0L;
 
 				do
 				{
@@ -56,6 +71,8 @@ namespace Voron.Impl.Compaction
 					using (var txr = existingEnv.NewTransaction(TransactionFlags.Read))
 					{
 						var existingTree = existingEnv.State.GetTree(txr, treeName);
+
+						Report(treeName, copiedTrees, totalTreesCount, 0, existingTree.State.EntriesCount, progressReport);
 
 						using (var existingTreeIterator = existingTree.Iterate())
 						{
@@ -67,6 +84,8 @@ namespace Voron.Impl.Compaction
 								compactedEnv.CreateTree(txw, treeName);
 								txw.Commit();
 							}
+
+							var copiedEntries = 0L;
 
 							do
 							{
@@ -103,10 +122,18 @@ namespace Voron.Impl.Compaction
 												transactionSize += value.Length;
 											}
 										}
+
+										copiedEntries++;
+
 									} while (transactionSize < compactedEnv.Options.MaxLogFileSize/2 && existingTreeIterator.MoveNext());
 
 									txw.Commit();
 								}
+
+								if (copiedEntries == existingTree.State.EntriesCount)
+									copiedTrees++;
+
+								Report(treeName, copiedTrees, totalTreesCount, copiedEntries, existingTree.State.EntriesCount, progressReport);
 
 								compactedEnv.FlushLogToDataFile();
 
@@ -115,6 +142,21 @@ namespace Voron.Impl.Compaction
 					}
 				} while (rootIterator.MoveNext());
 			}
+		}
+
+		private static void Report(string treeName, long copiedTrees, long totalTreeCount, long copiedRecords, long totalTreeRecordsCount, Action<CompactionProgress> progressReport)
+		{
+			if(progressReport == null)
+				return;
+
+			progressReport(new CompactionProgress
+			{
+				TreeName = treeName,
+				CopiedTrees = copiedTrees,
+				TotalTreeCount = totalTreeCount,
+				CopiedTreeRecords = copiedRecords,
+				TotalTreeRecordsCount = totalTreeRecordsCount
+			});
 		}
 	}
 }
