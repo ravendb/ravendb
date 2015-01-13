@@ -345,6 +345,7 @@
     <TypeScriptCompile Include="App\commands\getReducingBatchStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\persistIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\explainReplicationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
     <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />
@@ -432,6 +433,7 @@
     <TypeScriptCompile Include="App\viewmodels\statusDebugExplainReplication.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\resetIndexConfirm.ts" />
     <Content Include="App\views\adminSettings.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
@@ -439,6 +441,7 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
+    <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\statusDebugPersistAutoIndex.html" />
     <Content Include="App\views\indexing.html" />
     <Content Include="App\views\replaceIndexDialog.html" />

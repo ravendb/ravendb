@@ -262,6 +262,14 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
         [HttpPost]
+        [RavenRoute("fs/{fileSystemName}/admin/reset-index")]
+        public HttpResponseMessage ResetIndex ()
+        {
+            this.FileSystem.Search.ForceIndexReset();
+            return GetEmptyMessage(HttpStatusCode.OK);
+        }
+
+        [HttpPost]
         [RavenRoute("admin/fs/backup")]
         [RavenRoute("fs/{fileSystemName}/admin/fs/backup")]
         public async Task<HttpResponseMessage> Backup()
