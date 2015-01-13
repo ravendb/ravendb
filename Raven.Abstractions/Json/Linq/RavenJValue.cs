@@ -9,6 +9,8 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using MiscellaneousUtils = Raven.Json.Utilities.MiscellaneousUtils;
 using StringUtils = Raven.Json.Utilities.StringUtils;
+using System.Collections.Concurrent;
+using Raven.Abstractions;
 
 namespace Raven.Json.Linq
 {
@@ -277,6 +279,8 @@ namespace Raven.Json.Linq
 			return null;
 		}
 
+        private static ConcurrentDictionary<Type, JsonConverter> defaultConvertersCache = new ConcurrentDictionary<Type, JsonConverter>();
+
 		/// <summary>
 		/// Writes this token to a <see cref="JsonWriter"/>.
 		/// </summary>
@@ -299,14 +303,33 @@ namespace Raven.Json.Linq
 					writer.WriteUndefined();
 					return;
 			}
+            
+            if ( converters != null && converters.Length != 0 && _value != null )
+            {
+                Type typeToFind = _value.GetType();
 
-            // TODO: Check if we can take this to the bottom. Costly call for the check and a very low probability to hit (less than 1%)
-			JsonConverter matchingConverter;
-			if (_value != null && ((matchingConverter = GetMatchingConverter(converters, _value.GetType())) != null))
-			{
-				matchingConverter.WriteJson(writer, _value, JsonExtensions.CreateDefaultJsonSerializer());
-				return;
-			}
+                // If we are using the default converters we will try to avoid repeatedly check the same types as 
+                // GetMatchingConverter is a costly call with a very low probability to hit (less than 1% in real scenarios).
+                JsonConverter matchingConverter;
+                if ( converters == Default.Converters )
+                {
+                    if ( !defaultConvertersCache.TryGetValue(typeToFind, out matchingConverter) )
+                    {
+                        matchingConverter = GetMatchingConverter(converters, typeToFind);
+                        defaultConvertersCache.AddOrUpdate(typeToFind, matchingConverter, (t,m) => m );
+                    }
+                }
+                else
+                {
+                    matchingConverter = GetMatchingConverter(converters, typeToFind);
+                }
+                
+                if (matchingConverter != null)
+                {
+                    matchingConverter.WriteJson(writer, _value, JsonExtensions.CreateDefaultJsonSerializer());
+                    return;
+                }
+            }            
 
 			switch (_valueType)
 			{
