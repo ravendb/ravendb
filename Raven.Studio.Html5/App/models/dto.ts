@@ -1173,3 +1173,17 @@ interface indexReplaceDocumentDto extends documentDto {
     MinimumEtagBeforeReplace?: string;
     ReplaceTimeUtc?: string;
 }
+
+interface replicationExplanationForDocumentDto {
+    Key: string;
+    Etag: string;
+    Destination: destinationInformationDto;
+    Message: string;
+}
+
+interface destinationInformationDto {
+    Url: string;
+    DatabaseName: string;
+    ServerInstanceId: string;
+    LastDocumentEtag: string;
+}

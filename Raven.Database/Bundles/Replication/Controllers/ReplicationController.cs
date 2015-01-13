@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Bundles.Replication.Responders;
@@ -74,6 +75,80 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 				return withConfiguredResolvers;
 			}
+		}
+
+		[HttpGet]
+		[RavenRoute("replication/explain/{*docId}")]
+		[RavenRoute("databases/{databaseName}/replication/explain/{*docId}")]
+		public HttpResponseMessage ExplainGet(string docId)
+		{
+			if (string.IsNullOrEmpty(docId)) 
+				return GetMessageWithString("Document key is required.", HttpStatusCode.BadRequest);
+
+			var destinationUrl = GetQueryStringValue("destinationUrl");
+			if (string.IsNullOrEmpty(destinationUrl))
+				return GetMessageWithString("Destination url is required.", HttpStatusCode.BadRequest);
+
+			var databaseName = GetQueryStringValue("databaseName");
+			if (string.IsNullOrEmpty(databaseName))
+				return GetMessageWithString("Destination database name is required.", HttpStatusCode.BadRequest);
+
+			var result = new ReplicationExplanationForDocument
+			{
+				Key = docId,
+				Destination = new ReplicationExplanationForDocument.DestinationInformation
+				{
+					Url = destinationUrl,
+					DatabaseName = databaseName
+				}
+			};
+
+			var destinations = ReplicationTask.GetReplicationDestinations(x => string.Equals(x.Url, destinationUrl, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Database, databaseName, StringComparison.OrdinalIgnoreCase));
+			if (destinations == null || destinations.Length == 0)
+			{
+				result.Message = string.Format("Could not find replication destination for a given url ('{0}') and database ('{1}').", destinationUrl, databaseName);
+				return GetMessageWithObject(result);
+			}
+
+			if (destinations.Length > 1)
+			{
+				result.Message = string.Format("There is more than one replication destination for a given url ('{0}') and database ('{1}').", destinationUrl, databaseName);
+				return GetMessageWithObject(result);
+			}
+
+			var destination = destinations[0];
+			var destinationsReplicationInformationForSource = ReplicationTask.GetLastReplicatedEtagFrom(destination);
+			if (destinationsReplicationInformationForSource == null)
+			{
+				result.Message = "Could not connect to destination server.";
+				return GetMessageWithObject(result);
+			}
+
+			var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
+			result.Destination.ServerInstanceId = destinationId;
+			result.Destination.LastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
+
+			var document = Database.Documents.Get(docId, null);
+			if (document == null)
+			{
+				result.Message = string.Format("Document with given key ('{0}') does not exist.", docId);
+				return GetMessageWithObject(result);
+			}
+
+			result.Key = document.Key;
+			result.Etag = document.Etag;
+
+			string reason;
+			if (destination.FilterDocuments(destinationId, document.Key, document.Metadata, out reason) == false)
+			{
+				result.Message = reason;
+				return GetMessageWithObject(result);
+			}
+
+			reason = EtagUtil.IsGreaterThan(document.Etag, destinationsReplicationInformationForSource.LastDocumentEtag) ? "Document will be replicated." : "Document should have been replicated.";
+			result.Message = reason;
+
+			return GetMessageWithObject(result);
 		}
 
 		[HttpGet]
@@ -807,6 +882,28 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			{
 				Log.Warn("Could not deserialize a replication config", e);
 				return null;
+			}
+		}
+
+		private class ReplicationExplanationForDocument
+		{
+			public string Key { get; set; }
+
+			public Etag Etag { get; set; }
+
+			public DestinationInformation Destination { get; set; }
+
+			public string Message { get; set; }
+
+			public class DestinationInformation
+			{
+				public string Url { get; set; }
+
+				public string DatabaseName { get; set; }
+
+				public string ServerInstanceId { get; set; }
+
+				public Etag LastDocumentEtag { get; set; }
 			}
 		}
 	}

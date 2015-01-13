@@ -87,6 +87,7 @@ class appUrl {
         statusDebugIdentities: ko.computed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
         statusDebugWebSocket: ko.computed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
         statusDebugPersistAutoIndex: ko.computed(() => appUrl.forStatusDebugPersistAutoIndex(appUrl.currentDatabase())),
+        statusDebugExplainReplication: ko.computed(() => appUrl.forStatusDebugExplainReplication(appUrl.currentDatabase())),
         infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
 
         statusStorageOnDisk: ko.computed(() => appUrl.forStatusStorageOnDisk(appUrl.currentDatabase())),
@@ -333,6 +334,10 @@ class appUrl {
 
     static forStatusDebugPersistAutoIndex(db: database): string {
         return "#databases/status/debug/persist?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugExplainReplication(db: database): string {
+        return "#databases/status/debug/explainReplication?" + appUrl.getEncodedDbPart(db);
     }
 
     static forInfoPackage(db: database): string {
