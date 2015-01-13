@@ -75,6 +75,10 @@
        background:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAI0lEQVQIW2NkwAT/GdHE/gP5jMiCYAGQIpggXAAmiCIAEgQAAE4FBbECyZcAAAAASUVORK5CYII=') repeat;
     }
 
+    .nvtooltip .mto_indent {
+        padding-left: 25px;
+    }
+
 </style>
 
 <script type="text/html" id="map-batch-info-template">
@@ -205,14 +209,14 @@
                     <!-- /ko -->
                 </tr>
                 <tr class="mto">
-                    <td>Thread start delay [ms]</td>
+                    <td class="mto_indent">Thread start delay [ms]</td>
                     <!-- ko foreach: BatchedOperations -->
                     <td data-bind="text: StartDelay"></td>
                     <!-- /ko -->
                 </tr>
                 <!-- ko foreach: BatchedOperations[0].Operations -->
                 <tr class="mto">
-                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="text: Name + ' [ms]'"></span></td>
+                    <td class="mto_indent"><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="text: Name + ' [ms]'"></span></td>
                     <!-- ko foreach: $parent.BatchedOperations -->
                     <td data-bind="text: Operations[$parentContext.$index()].DurationMs"></td>
                     <!-- /ko -->
@@ -282,14 +286,14 @@
                     <!-- /ko -->
                 </tr>
                 <tr class="mto">
-                    <td>Thread start delay [ms]</td>
+                    <td class="mto_indent">Thread start delay [ms]</td>
                     <!-- ko foreach: BatchedOperations -->
                     <td data-bind="text: StartDelay"></td>
                     <!-- /ko -->
                 </tr>
                 <!-- ko foreach: BatchedOperations[0].Operations -->
                 <tr class="mto">
-                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="    text: Name + ' [ms]'"></span></td>
+                    <td class="mto_indent"><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="    text: Name + ' [ms]'"></span></td>
                     <!-- ko foreach: $parent.BatchedOperations -->
                     <td data-bind="text: Operations[$parentContext.$index()].DurationMs"></td>
                     <!-- /ko -->
@@ -302,19 +306,26 @@
         </table>
     </div>
 </script>
-
-<div>
-    <div class="btn-group">
-        <button class="btn btn-default" data-bind="event: { mousedown: startZoomIn, mouseup: stopZoomIn }" title="Zoom in"><i class="fa fa-search-plus"></i></button>
-        <button class="btn btn-default" data-bind="event: { mousedown: startZoomOut, mouseup: stopZoomOut }" title="Zoom out"><i class="fa fa-search-minus"></i></button>    
-    </div>
-    <div class="btn-group">
-        <select id="visibleIndexesSelector" data-bind="options: allIndexNames, selectedOptions: selectedIndexNames" multiple="multiple"></select>
-    </div>
+<section id="indexingPerformance" style="position: relative">
+    <div>
+        <div class="btn-group">
+            <button class="btn btn-default" data-bind="event: { mousedown: startZoomIn, mouseup: stopZoomIn }" title="Zoom in"><i class="fa fa-search-plus"></i></button>
+            <button class="btn btn-default" data-bind="event: { mousedown: startZoomOut, mouseup: stopZoomOut }" title="Zoom out"><i class="fa fa-search-minus"></i></button>    
+        </div>
+        <div class="btn-group">
+            <select id="visibleIndexesSelector" data-bind="options: allIndexNames, selectedOptions: selectedIndexNames" multiple="multiple"></select>
+        </div>
+        
+        <div class="btn-group">
+            <button id="fullScreenButton" class="btn btn-default" data-bind="click: toggleFullscreen" title="Fullscreen mode">
+                <i class="fa fa-expand"></i>
+            </button>
+        </div>
     
     
-</div>
+    </div>
 
-<section id="metricsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-    <svg id="indexPerformanceGraph" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
+    <section id="metricsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+        <svg id="indexPerformanceGraph" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
+    </section>
 </section>

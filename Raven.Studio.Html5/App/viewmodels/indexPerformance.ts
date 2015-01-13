@@ -163,6 +163,18 @@ class metrics extends viewModelBase {
         return new getReducingBatchStatsCommand(this.activeDatabase()).execute();
     }
 
+    activate(args) {
+        super.activate(args);
+
+        $(document).bind("fullscreenchange", function () {
+            if ($(document).fullScreen()) {
+                $("#fullScreenButton i").removeClass("fa-expand").addClass("fa-compress");
+            } else {
+                $("#fullScreenButton i").removeClass("fa-compress").addClass("fa-expand");
+            }
+        });
+    }
+
     attached() {
         this.createKeyboardShortcut("esc", nv.tooltip.cleanup, "body");
         $("#metricsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
@@ -631,7 +643,7 @@ class metrics extends viewModelBase {
         batches.enter()
             .append('g')
                 .attr('class', 'batchRange')
-                .on('click', function (d) { return self.mapBatchInfoClicked(d); })
+                .on('click', self.mapBatchInfoClicked.bind(self))
             .append('rect')
                 .attr('x', (d: indexingBatchInfoDto) => self.xScale(d.StartedAtDate))
                 .attr('y', (d: indexingBatchInfoDto) => d3.min(d.PerfStats, v => self.yMapScale(v.indexName)))
@@ -666,7 +678,7 @@ class metrics extends viewModelBase {
         batches.enter()
             .append('g')
             .attr('class', 'batchRange')
-            .on('click', function (d) { return self.reduceBatchInfoClicked(d); })
+            .on('click', self.reduceBatchInfoClicked.bind(self))
             .append('rect')
             .attr('x', (d: reducingBatchInfoDto) => self.xScale(d.StartedAtDate))
             .attr('y', (d: reducingBatchInfoDto) => d3.min(d.PerfStats, v => self.yReduceScale(v.indexName)))
@@ -725,7 +737,7 @@ class metrics extends viewModelBase {
         var enteringOps = op.enter()
             .append('g')
             .attr('class', 'op')
-            .on('click', function (d) { return self.indexStatClicked(d); })
+            .on('click',  self.indexStatClicked.bind(self))
             .attr("transform",
             (d: indexNameAndMapPerformanceStats) =>
                 "translate(" + self.xScale(self.isoFormat.parse(d.stats.Started)) + "," + self.yMapScale(d.indexName) + ")");
@@ -848,7 +860,7 @@ class metrics extends viewModelBase {
             .enter()
             .append('g')
             .attr('class', 'op')
-            .on('click', function (d) { return self.reduceStatClicked(d); })
+            .on('click', self.reduceStatClicked.bind(self))
             .attr("transform",
             (d: reduceLevelPeformanceStatsDto) =>
                 "translate(" + self.xScale(self.isoFormat.parse(d.Started)) + "," + self.yReduceScale(d.parent.indexName) + ")");
@@ -994,47 +1006,34 @@ class metrics extends viewModelBase {
         return d3.max(parallelOps.map(p => p.NumberOfThreads));
     }
 
-    private indexStatClicked(data: indexNameAndMapPerformanceStats) {
+    private showTooltip(data: any, templateName: string) {
         var self = this;
+        var container = document.getElementById("indexingPerformance");
         nv.tooltip.cleanup();
-        var html = '<div data-bind="template: { name : \'index-stat-template\' }"></div>'; 
-        var event = d3.event;
-        nv.tooltip.show([event.x, event.y], html, 'n', 0, null, "selectable-tooltip");
-        data.CacheThreadCount = self.findMaxThreadCountInMap(data);
-        self.fillTooltip(data);
+        var html = '<div data-bind="template: { name : \'' + templateName + '\' }"></div>';
+        var clickLocation = d3.mouse(container);
+        console.log(clickLocation);
+        nv.tooltip.show([clickLocation[0], clickLocation[1]], html, 'n', 0, container, "selectable-tooltip");
+        var node = $(".nvtooltip")[0];
+        ko.applyBindings({ data: data, tooltipClose: nv.tooltip.cleanup }, node);
+    }
+
+    private indexStatClicked(data: indexNameAndMapPerformanceStats) {
+        data.CacheThreadCount = this.findMaxThreadCountInMap(data);
+        this.showTooltip(data, 'index-stat-template');
     }
 
     private reduceStatClicked(data: reduceLevelPeformanceStatsDto) {
-        var self = this;
-        nv.tooltip.cleanup();
-        var html = '<div data-bind="template: { name : \'reduce-stat-template\' }"></div>';
-        var event = d3.event;
-        nv.tooltip.show([event.x, event.y], html, 'n', 0, null, "selectable-tooltip");
-        data.CacheThreadCount = self.findMaxThreadCountInReduce(data);
-        self.fillTooltip(data);
+        data.CacheThreadCount = this.findMaxThreadCountInReduce(data);
+        this.showTooltip(data, 'reduce-stat-template');
     }
 
     private mapBatchInfoClicked(data: indexingBatchInfoDto) {
-        var self = this;
-        nv.tooltip.cleanup();
-        var html = '<div data-bind="template: { name : \'map-batch-info-template\' }"></div>'; 
-        var event = d3.event;
-        nv.tooltip.show([event.x, event.y], html, 'n', 0, null, "selectable-tooltip");
-        self.fillTooltip(data);
+        this.showTooltip(data, 'map-batch-info-template');
     }
 
     private reduceBatchInfoClicked(data: indexingBatchInfoDto) {
-        var self = this;
-        nv.tooltip.cleanup();
-        var html = '<div data-bind="template: { name : \'reduce-batch-info-template\' }"></div>';
-        var event = d3.event;
-        nv.tooltip.show([event.x, event.y], html, 'n', 0, null, "selectable-tooltip");
-        self.fillTooltip(data);
-    }
-
-    private fillTooltip(model: any) {
-        var node = $(".nvtooltip")[0];
-        ko.applyBindings({ data: model, tooltipClose:  nv.tooltip.cleanup }, node);
+        this.showTooltip(data, 'reduce-batch-info-template');
     }
 
     onWindowHeightChanged() {
@@ -1100,6 +1099,16 @@ class metrics extends viewModelBase {
             }
             setTimeout(() => this.zoomOut(), 100);
         }
+    }
+
+    toggleFullscreen() {
+        if ($(document).fullScreen()) {
+            $("#indexingPerformance").width('').height('');
+        } else {
+            $("#indexingPerformance").width("100%").height("100%");
+        }
+
+        $("#indexingPerformance").toggleFullScreen();
     }
 }
 
