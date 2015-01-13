@@ -33,6 +33,7 @@ using Raven.Database.Indexing;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
+using Raven.Database.Server;
 using Raven.Database.Storage;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
@@ -312,7 +313,7 @@ namespace Raven.Database.Linq
 					return type;
 			}
 
-			var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath);
+			var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath, configuration);
 
 			// ReSharper disable once RedundantArgumentName
 			AddResultToCache(source, result, shouldUpdateIfExists: shouldCachedIndexBeRecompiled);
@@ -447,10 +448,9 @@ namespace Raven.Database.Linq
 		}
 
 		private static Type DoActualCompilation(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
-												string basePath, string indexFilePath)
+												string basePath, string indexFilePath, InMemoryRavenConfiguration configuration)
 		{
 			var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
-			var currentAssembly = typeof(QueryParsingUtils).Assembly;
 
 			var assemblies = new HashSet<string>
 			{
@@ -459,7 +459,7 @@ namespace Raven.Database.Linq
 				typeof (NameValueCollection).Assembly.Location,
 				typeof (Enumerable).Assembly.Location,
 				typeof (Binder).Assembly.Location,
-				AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(Field), currentAssembly),
+                AssemblyExtractor.GetExtractedAssemblyLocationFor(typeof(Field), configuration),
 			};
 			foreach (var extension in extensions)
 			{

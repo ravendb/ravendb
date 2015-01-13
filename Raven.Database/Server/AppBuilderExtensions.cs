@@ -67,7 +67,7 @@ namespace Owin
 				}
 			}
 
-            AssemblyExtractor.ExtractEmbeddedAssemblies();
+            AssemblyExtractor.ExtractEmbeddedAssemblies(options.SystemDatabase.Configuration);
 
 #if DEBUG
 			app.UseInterceptor();

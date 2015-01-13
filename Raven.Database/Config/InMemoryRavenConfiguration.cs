@@ -244,6 +244,10 @@ namespace Raven.Database.Config
 
 			PluginsDirectory = ravenSettings.PluginsDirectory.Value.ToFullPath();
 
+		    AssembliesDirectory = ravenSettings.AssembliesDirectory.Value.ToFullPath();
+
+		    EmbeddedFilesDirectory = ravenSettings.EmbeddedFilesDirectory.Value.ToFullPath();
+
 			CompiledIndexCacheDirectory = ravenSettings.CompiledIndexCacheDirectory.Value.ToFullPath();
 
 			var taskSchedulerType = ravenSettings.TaskScheduler.Value;
@@ -789,6 +793,18 @@ namespace Raven.Database.Config
 			}
 		}
 
+        /// <summary>
+        /// Where the internal assemblies will be extracted to.
+        /// Default: ~\Assemblies
+        /// </summary>
+        public string AssembliesDirectory { get; set; }
+
+        /// <summary>
+        /// Where we search for embedded files.
+        /// Default: null
+        /// </summary>
+        public string EmbeddedFilesDirectory { get; set; }
+
 		public bool CreatePluginsDirectoryIfNotExisting { get; set; }
 		public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
 
@@ -1137,6 +1153,8 @@ namespace Raven.Database.Config
 
 		    Encryption.UseSsl = defaultConfiguration.Encryption.UseSsl;
 		    Encryption.UseFips = defaultConfiguration.Encryption.UseFips;
+
+		    AssembliesDirectory = defaultConfiguration.AssembliesDirectory;
 		}
 
 		public IEnumerable<string> GetConfigOptionsDocs()
