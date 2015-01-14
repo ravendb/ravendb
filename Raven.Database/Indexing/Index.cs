@@ -416,7 +416,7 @@ namespace Raven.Database.Indexing
 									"Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
 									indexId, key),
 								exception);
-							context.AddError(indexId, key, exception.Message, "OnIndexEntryDeleted Trigger");
+							context.AddError(indexId, PublicName, key, exception, "OnIndexEntryDeleted Trigger");
 						},
 						trigger => trigger.OnIndexEntryDeleted(key, document));
 				}
@@ -465,7 +465,7 @@ namespace Raven.Database.Indexing
 					}
 					catch (Exception e)
 					{
-						context.AddError(indexId, indexDefinition.Name, "Creating Analyzer", e.ToString(), "Analyzer");
+						context.AddError(indexId, indexDefinition.Name, "Creating Analyzer", e, "Analyzer");
 						throw;
 					}
 
@@ -501,7 +501,7 @@ namespace Raven.Database.Indexing
 							var invalidDocId = (invalidSpatialShapeException == null) ?
 														null :
 														invalidSpatialShapeException.InvalidDocumentId;
-							context.AddError(indexId, indexDefinition.Name, invalidDocId, e.ToString(), "Write");
+							context.AddError(indexId, indexDefinition.Name, invalidDocId, e, "Write");
 							throw;
 						}
 
@@ -747,7 +747,7 @@ namespace Raven.Database.Indexing
 					context.AddError(indexId,
 						indexDefinition.Name,
 						docId ?? TryGetDocKey(o),
-										exception.Message,
+										exception,
 										"Map"
 							);
 
@@ -782,7 +782,7 @@ namespace Raven.Database.Indexing
 					context.AddError(indexId,
 						indexDefinition.Name,
 						TryGetDocKey(o),
-						exception.Message,
+						exception,
 						"Reduce"
 						);
 					logIndexing.WarnException(
@@ -810,7 +810,7 @@ namespace Raven.Database.Indexing
 					context.AddError(indexId,
 									 indexDefinition.Name,
 									TryGetDocKey(o),
-									exception.Message,
+									exception,
 									"Reduce"
 						);
 					logIndexing.WarnException(

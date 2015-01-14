@@ -539,8 +539,9 @@ namespace Raven.Database.Indexing
 			{
 				if (actions.IsWriteConflict(e))
 					return null;
+
 				Log.WarnException(string.Format("Failed to index documents for index: {0}", indexingBatchForIndex.Index.PublicName), e);
-				context.AddError(indexingBatchForIndex.IndexId, indexingBatchForIndex.Index.PublicName, null, e.Message);
+				context.AddError(indexingBatchForIndex.IndexId, indexingBatchForIndex.Index.PublicName, null, e);
 			}
 
 			return performanceStats;
