@@ -85,7 +85,7 @@ namespace Raven.Database.Indexing
 			var sourceCount = 0;
 			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
 			var performance = RecordCurrentBatch("Current Map", "Map", batch.Docs.Count);
-			var performanceStats = new List<BasePefromanceStats>();
+			var performanceStats = new List<BasePerformanceStats>();
 
 			var deleteMappedResultsDuration = new Stopwatch();
 			var documentsWrapped = batch.Docs.Select(doc =>
@@ -712,7 +712,7 @@ namespace Raven.Database.Indexing
 					};
 				}, flushToDiskDuration, recreateSearcherDuration);
 
-				var performanceStats = new List<BasePefromanceStats>();
+				var performanceStats = new List<BasePerformanceStats>();
 				
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Linq_ReduceLinqExecution, linqExecutionDuration.ElapsedMilliseconds));
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_DeleteExistingDocument, deleteExistingDocumentsDuration.ElapsedMilliseconds));

@@ -51,7 +51,7 @@ namespace Raven.Database.Indexing
 			var recreateSearcherDuration = new Stopwatch();
 
 			IndexingPerformanceStats performance = null;
-			var performanceStats = new List<BasePefromanceStats>();
+			var performanceStats = new List<BasePerformanceStats>();
 
 			Write((indexWriter, analyzer, stats) =>
 			{
