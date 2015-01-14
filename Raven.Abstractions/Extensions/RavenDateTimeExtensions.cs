@@ -65,22 +65,6 @@ namespace Raven.Abstractions.Extensions
             return c;
         }
 
-        public static char[][] _twoDigits = CreateTwoDigitsCache();
-
-        private static char[][] CreateTwoDigitsCache()
-        {
-            var c = new char[100][];
-            for (int i = 0; i < 100; i++)
-            {
-                c[i] = new[]
-                {
-                    (char) (i/10 + '0'),
-                    (char) (i%10 + '0')
-                };
-            }
-            return c;
-        }
-
         /// <summary>
         /// This function Processes the to string format of the form "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff" for date times in 
         /// invariant culture scenarios. This implementation takes 20% of the time of a regular .ToString(format) call
@@ -141,25 +125,25 @@ namespace Raven.Abstractions.Extensions
                 chars[2] = v[2];
                 chars[3] = v[3];
                 chars[4] = '-';
-                v = _twoDigits[month];
-                chars[5] = v[0];
-                chars[5 + 1] = v[1];
+                v = _fourDigits[month];
+                chars[5] = v[2];
+                chars[5 + 1] = v[3];
                 chars[7] = '-';
-                v = _twoDigits[day];
-                chars[8] = v[0];
-                chars[8 + 1] = v[1];
+                v = _fourDigits[day];
+                chars[8] = v[2];
+                chars[8 + 1] = v[3];
                 chars[10] = 'T';
-                v = _twoDigits[(ticks / TicksPerHour) % 24];
-                chars[11] = v[0];
-                chars[11 + 1] = v[1];
+                v = _fourDigits[(ticks / TicksPerHour) % 24];
+                chars[11] = v[2];
+                chars[11 + 1] = v[3];
                 chars[13] = ':';
-                v = _twoDigits[(ticks / TicksPerMinute) % 60];
-                chars[14] = v[0];
-                chars[14 + 1] = v[1];
+                v = _fourDigits[(ticks / TicksPerMinute) % 60];
+                chars[14] = v[2];
+                chars[14 + 1] = v[3];
                 chars[16] = ':';
-                v = _twoDigits[(ticks / TicksPerSecond) % 60];
-                chars[17] = v[0];
-                chars[17 + 1] = v[1];
+                v = _fourDigits[(ticks / TicksPerSecond) % 60];
+                chars[17] = v[2];
+                chars[17 + 1] = v[3];
                 chars[19] = '.';
 
                 long fraction = (ticks % 10000000);
