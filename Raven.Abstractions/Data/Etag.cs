@@ -232,39 +232,34 @@ namespace Raven.Abstractions.Data
 
         public unsafe static Etag Parse(string str)
         {
-            if (string.IsNullOrEmpty(str))
+            if (str == null || str.Length != 36)
                 throw new ArgumentException("str cannot be empty or null");
-            if (str.Length != 36)
-                throw new ArgumentException(string.Format("str must be 36 characters. Perhaps you are trying to parse non-etag as etag? (string that was passed into Etag::Parse is {0})", str));
-
-
-            var buffer = new byte[16];
 
             fixed (char* input = str)
             {
-                buffer[0] = (byte)(_asciisOfHexToNum[input[16]] * 16 + _asciisOfHexToNum[input[17]]);
-                buffer[1] = (byte)(_asciisOfHexToNum[input[14]] * 16 + _asciisOfHexToNum[input[15]]);
-                buffer[2] = (byte)(_asciisOfHexToNum[input[11]] * 16 + _asciisOfHexToNum[input[12]]);
-                buffer[3] = (byte)(_asciisOfHexToNum[input[9]] * 16 + _asciisOfHexToNum[input[10]]);
-                buffer[4] = (byte)(_asciisOfHexToNum[input[6]] * 16 + _asciisOfHexToNum[input[7]]);
-                buffer[5] = (byte)(_asciisOfHexToNum[input[4]] * 16 + _asciisOfHexToNum[input[5]]);
-                buffer[6] = (byte)(_asciisOfHexToNum[input[2]] * 16 + _asciisOfHexToNum[input[3]]);
-                buffer[7] = (byte)(_asciisOfHexToNum[input[0]] * 16 + _asciisOfHexToNum[input[1]]);
-                buffer[8] = (byte)(_asciisOfHexToNum[input[34]] * 16 + _asciisOfHexToNum[input[35]]);
-                buffer[9] = (byte)(_asciisOfHexToNum[input[32]] * 16 + _asciisOfHexToNum[input[33]]);
-                buffer[10] = (byte)(_asciisOfHexToNum[input[30]] * 16 + _asciisOfHexToNum[input[31]]);
-                buffer[11] = (byte)(_asciisOfHexToNum[input[28]] * 16 + _asciisOfHexToNum[input[29]]);
-                buffer[12] = (byte)(_asciisOfHexToNum[input[26]] * 16 + _asciisOfHexToNum[input[27]]);
-                buffer[13] = (byte)(_asciisOfHexToNum[input[24]] * 16 + _asciisOfHexToNum[input[25]]);
-                buffer[14] = (byte)(_asciisOfHexToNum[input[21]] * 16 + _asciisOfHexToNum[input[22]]);
-                buffer[15] = (byte)(_asciisOfHexToNum[input[19]] * 16 + _asciisOfHexToNum[input[20]]);
-            }
+                var etag = new Etag();
+                int fst = ((byte)(_asciisOfHexToNum[input[0]] * 16 + _asciisOfHexToNum[input[1]])) |
+                    ((byte)(_asciisOfHexToNum[input[2]] * 16 + _asciisOfHexToNum[input[3]]) |
+                    (byte)(_asciisOfHexToNum[input[4]] * 16 + _asciisOfHexToNum[input[5]])) |
+                    (byte)(_asciisOfHexToNum[input[6]] * 16 + _asciisOfHexToNum[input[7]]);
+                int snd = ((byte)(_asciisOfHexToNum[input[9]] * 16 + _asciisOfHexToNum[input[10]])) |
+                    ((byte)(_asciisOfHexToNum[input[11]] * 16 + _asciisOfHexToNum[input[12]])) |
+                    ((byte)(_asciisOfHexToNum[input[14]] * 16 + _asciisOfHexToNum[input[15]])) |
+                    ((byte)(_asciisOfHexToNum[input[16]] * 16 + _asciisOfHexToNum[input[17]]));
+                etag.restarts = (uint)snd | ((long)fst << 32);
 
-            return new Etag
-            {
-                restarts = BitConverter.ToInt64(buffer, 0),
-                changes = BitConverter.ToInt64(buffer, 8)
-            };
+
+                fst = ((byte)(_asciisOfHexToNum[input[19]] * 16 + _asciisOfHexToNum[input[20]])) |
+                    ((byte)(_asciisOfHexToNum[input[21]] * 16 + _asciisOfHexToNum[input[22]])) |
+                    ((byte)(_asciisOfHexToNum[input[24]] * 16 + _asciisOfHexToNum[input[25]])) |
+                    ((byte)(_asciisOfHexToNum[input[26]] * 16 + _asciisOfHexToNum[input[27]]));
+                snd = ((byte)(_asciisOfHexToNum[input[28]] * 16 + _asciisOfHexToNum[input[29]])) |
+                    ((byte)(_asciisOfHexToNum[input[30]] * 16 + _asciisOfHexToNum[input[31]])) |
+                    ((byte)(_asciisOfHexToNum[input[32]] * 16 + _asciisOfHexToNum[input[33]])) |
+                    ((byte)(_asciisOfHexToNum[input[34]] * 16 + _asciisOfHexToNum[input[35]]));
+                etag.changes = (uint)snd | ((long)fst << 32);
+                return etag;
+            }
         }
 
         public static Etag InvalidEtag
