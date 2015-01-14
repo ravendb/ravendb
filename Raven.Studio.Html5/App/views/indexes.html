@@ -160,9 +160,14 @@
                                                         <i class="fa fa-copy fa-fw"></i> Copy index
                                                     </a>
                                                 </li>
-                                                <li role="presentation">
+                                                <li role="presentation" data-bind="visible: !isSideBySideIndex()">
                                                     <a class="btn" title="Delete the index" data-bind="click: $root.deleteIndex.bind($root)">
                                                         <i class="fa fa-trash-o fa-fw text-danger"></i> Delete Index
+                                                    </a>
+                                                </li>
+                                                <li role="presentation" data-bind="visible: isSideBySideIndex()">
+                                                    <a class="btn" title="Delete the index" data-bind="click: $root.cancelIndex.bind($root)">
+                                                        <i class="fa fa-undo fa-fw text-danger"></i> Cancel side-by-side index
                                                     </a>
                                                 </li>
                                                 <li role="presentation">
