@@ -19,29 +19,12 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-            var list = new List<string>();
-            int count = 10 * 1000 * 1000;
-            for (int i = 0; i < 10 * 1000; i++)
-            {
-                list.Add(Guid.NewGuid().ToString());
-            }
+		    var etag = new Etag(UuidType.Documents, 1, 1);
+		    Console.WriteLine(etag);
+		    Console.WriteLine(Etag.Parse(etag.ToString()));
 
-            for (int i = 0; i < 10; i++)
-            {
-                var x = Guid.NewGuid().ToString();
-                Etag.Parse(x);
-            }
-
-
-            var sp = Stopwatch.StartNew();
-            for (int i = 0; i < count; i++)
-            {
-                Etag.Parse(list[i % list.Count]);
-            }
-            Console.WriteLine(sp.ElapsedMilliseconds);
-
-            //var etag = new Etag(UuidType.Documents, 5, 10);
-            //Console.WriteLine(Etag.Parse(etag.ToString()));
+		    //var etag = new Etag(UuidType.Documents, 5, 10);
+		    //Console.WriteLine(Etag.Parse(etag.ToString()));
 		}
 	}
 

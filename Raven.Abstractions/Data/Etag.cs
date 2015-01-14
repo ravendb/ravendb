@@ -238,24 +238,24 @@ namespace Raven.Abstractions.Data
             fixed (char* input = str)
             {
                 var etag = new Etag();
-                int fst = ((byte)(_asciisOfHexToNum[input[0]] * 16 + _asciisOfHexToNum[input[1]])) |
-                    ((byte)(_asciisOfHexToNum[input[2]] * 16 + _asciisOfHexToNum[input[3]]) |
-                    (byte)(_asciisOfHexToNum[input[4]] * 16 + _asciisOfHexToNum[input[5]])) |
+                int fst = ((byte)(_asciisOfHexToNum[input[0]] * 16 + _asciisOfHexToNum[input[1]])) << 24 |
+                    ((byte)(_asciisOfHexToNum[input[2]] * 16 + _asciisOfHexToNum[input[3]]) << 16 |
+                    (byte)(_asciisOfHexToNum[input[4]] * 16 + _asciisOfHexToNum[input[5]])) << 8 |
                     (byte)(_asciisOfHexToNum[input[6]] * 16 + _asciisOfHexToNum[input[7]]);
-                int snd = ((byte)(_asciisOfHexToNum[input[9]] * 16 + _asciisOfHexToNum[input[10]])) |
-                    ((byte)(_asciisOfHexToNum[input[11]] * 16 + _asciisOfHexToNum[input[12]])) |
-                    ((byte)(_asciisOfHexToNum[input[14]] * 16 + _asciisOfHexToNum[input[15]])) |
+                int snd = ((byte)(_asciisOfHexToNum[input[9]] * 16 + _asciisOfHexToNum[input[10]])) << 24 |
+                    ((byte)(_asciisOfHexToNum[input[11]] * 16 + _asciisOfHexToNum[input[12]])) << 16 |
+                    ((byte)(_asciisOfHexToNum[input[14]] * 16 + _asciisOfHexToNum[input[15]])) << 8 |
                     ((byte)(_asciisOfHexToNum[input[16]] * 16 + _asciisOfHexToNum[input[17]]));
                 etag.restarts = (uint)snd | ((long)fst << 32);
 
 
-                fst = ((byte)(_asciisOfHexToNum[input[19]] * 16 + _asciisOfHexToNum[input[20]])) |
-                    ((byte)(_asciisOfHexToNum[input[21]] * 16 + _asciisOfHexToNum[input[22]])) |
-                    ((byte)(_asciisOfHexToNum[input[24]] * 16 + _asciisOfHexToNum[input[25]])) |
+                fst = ((byte)(_asciisOfHexToNum[input[19]] * 16 + _asciisOfHexToNum[input[20]])) << 24 |
+                    ((byte)(_asciisOfHexToNum[input[21]] * 16 + _asciisOfHexToNum[input[22]])) << 16 |
+                    ((byte)(_asciisOfHexToNum[input[24]] * 16 + _asciisOfHexToNum[input[25]])) << 8 |
                     ((byte)(_asciisOfHexToNum[input[26]] * 16 + _asciisOfHexToNum[input[27]]));
-                snd = ((byte)(_asciisOfHexToNum[input[28]] * 16 + _asciisOfHexToNum[input[29]])) |
-                    ((byte)(_asciisOfHexToNum[input[30]] * 16 + _asciisOfHexToNum[input[31]])) |
-                    ((byte)(_asciisOfHexToNum[input[32]] * 16 + _asciisOfHexToNum[input[33]])) |
+                snd = ((byte)(_asciisOfHexToNum[input[28]] * 16 + _asciisOfHexToNum[input[29]])) << 24 |
+                    ((byte)(_asciisOfHexToNum[input[30]] * 16 + _asciisOfHexToNum[input[31]])) << 16 |
+                    ((byte)(_asciisOfHexToNum[input[32]] * 16 + _asciisOfHexToNum[input[33]])) << 8 |
                     ((byte)(_asciisOfHexToNum[input[34]] * 16 + _asciisOfHexToNum[input[35]]));
                 etag.changes = (uint)snd | ((long)fst << 32);
                 return etag;
