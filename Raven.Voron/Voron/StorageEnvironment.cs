@@ -483,6 +483,8 @@ namespace Voron
 
             foreach (var tree in tx.Trees)
             {
+                if (tree == null)
+                    continue;
                 results.Add(tree.Name, tree.AllPages());
             }
 

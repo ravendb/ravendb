@@ -1,6 +1,7 @@
 ﻿namespace Voron.Impl
 {
 	using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
 
 	public class SliceEqualityComparer : IEqualityComparer<Slice>, IComparer<Slice>
 	{
@@ -11,12 +12,14 @@
 			return x.Compare(y) == 0;
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public int GetHashCode(Slice obj)
 		{
 			return obj.GetHashCode();
 		}
 
-		public unsafe int Compare(Slice x, Slice y)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public int Compare(Slice x, Slice y)
 		{
 			return x.Compare(y);
 		}

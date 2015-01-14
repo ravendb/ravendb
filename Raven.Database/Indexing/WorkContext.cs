@@ -230,9 +230,23 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void AddError(int index, string indexName, string key, string error )
+		public void AddError(int index, string indexName, string key, Exception exception)
 		{
-            AddError(index, indexName, key, error, "Unknown");
+			AddError(index, indexName, key, exception, "Unknown");
+		}
+
+		public void AddError(int index, string indexName, string key, Exception exception, string component)
+		{
+			var aggregateException = exception as AggregateException;
+			if (aggregateException != null)
+				exception = aggregateException.ExtractSingleInnerException();
+
+			AddError(index, indexName, key, exception != null ? exception.Message : "Unknown message", component);
+		}
+
+		public void AddError(int index, string indexName, string key, string error)
+		{
+			AddError(index, indexName, key, error, "Unknown");
 		}
 
 		public void AddError(int index, string indexName, string key, string error, string component)
@@ -328,30 +342,38 @@ namespace Raven.Database.Indexing
 		[CLSCompliant(false)]
         public MetricsCountersManager MetricsCounters { get; private set; }
 
-		public void ReportIndexingBatchStarted(int documentsCount, long documentsSize, List<string> indexesToWorkOn, out IndexingBatchInfo indexingBatchInfo)
+		public IndexingBatchInfo ReportIndexingBatchStarted(int documentsCount, long documentsSize, List<string> indexesToWorkOn)
 		{
-			indexingBatchInfo = new IndexingBatchInfo
+			return new IndexingBatchInfo
 			{
 				IndexesToWorkOn = indexesToWorkOn,
 				TotalDocumentCount = documentsCount,
 				TotalDocumentSize = documentsSize,
 				StartedAt = SystemTime.UtcNow,
-				PerformanceStats = new ConcurrentDictionary<string, IndexingPerformanceStats>()
+				PerformanceStats = new ConcurrentDictionary<string, IndexingPerformanceStats>(),
 			};
-
-			lastActualIndexingBatchInfo.Add(indexingBatchInfo);
 		}
 
-		public void ReportReducingBatchStarted(List<string> indexesToWorkOn, out ReducingBatchInfo reducingBatchInfo)
+		public void ReportIndexingBatchCompleted(IndexingBatchInfo batchInfo)
 		{
-			reducingBatchInfo = new ReducingBatchInfo
+			batchInfo.BatchCompleted();
+			lastActualIndexingBatchInfo.Add(batchInfo);
+		}
+
+		public ReducingBatchInfo ReportReducingBatchStarted(List<string> indexesToWorkOn)
+		{
+			return new ReducingBatchInfo
 			{
 				IndexesToWorkOn = indexesToWorkOn,
 				StartedAt = SystemTime.UtcNow,
 				PerformanceStats = new ConcurrentDictionary<string, ReducingPerformanceStats>()
 			};
+		}
 
-			lastActualReducingBatchInfo.Add(reducingBatchInfo);
+		public void ReportReducingBatchCompleted(ReducingBatchInfo batchInfo)
+		{
+			batchInfo.BatchCompleted();
+			lastActualReducingBatchInfo.Add(batchInfo);
 		}
 
 		public ConcurrentSet<FutureBatchStats> FutureBatchStats

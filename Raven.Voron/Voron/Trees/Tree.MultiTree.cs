@@ -139,7 +139,7 @@ namespace Voron.Trees
 			using (tx.Environment.GetTemporaryPage(tx, out tmp))
 			{
 				var tempPagePointer = tmp.TempPagePointer;
-				StdLib.memcpy(tempPagePointer, nestedPagePtr, currentSize);
+                MemoryUtils.Copy(tempPagePointer, nestedPagePtr, currentSize);
 				Delete(key); // release our current page
 				Page nestedPage = new Page(tempPagePointer, "multi tree", (ushort)currentSize);
 

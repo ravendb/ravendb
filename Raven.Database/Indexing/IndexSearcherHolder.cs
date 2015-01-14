@@ -301,6 +301,7 @@ namespace Raven.Database.Indexing
             private readonly int _hashCode;
             private uint _crc;
 #if DEBUG
+// ReSharper disable once NotAccessedField.Local
 	        private List<string> _values;
 #endif
 

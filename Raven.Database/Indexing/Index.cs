@@ -164,16 +164,17 @@ namespace Raven.Database.Indexing
 		public volatile bool IsMapIndexingInProgress;
 		private DateTime _indexCreationTime;
 
-		protected IndexingPerformanceStats RecordCurrentBatch(string indexingStep, int itemsCount)
+		protected IndexingPerformanceStats RecordCurrentBatch(string indexingStep, string operation, int itemsCount)
 		{
 			var performanceStats = new IndexingPerformanceStats
 			{
 				ItemsCount = itemsCount,
 				Operation = indexingStep,
 				Started = SystemTime.UtcNow,
+				Operations = new BasePefromanceStats[0]
 			};
 
-			var lastStats = indexingPerformanceStats.LastOrDefault(x => x.Operation.Equals(indexingStep, StringComparison.OrdinalIgnoreCase));
+			var lastStats = indexingPerformanceStats.LastOrDefault(x => x.Operation.Equals(operation, StringComparison.OrdinalIgnoreCase));
 
 			if (lastStats != null)
 				performanceStats.WaitingTimeSinceLastBatchCompleted = performanceStats.Started - lastStats.Completed;
@@ -183,7 +184,7 @@ namespace Raven.Database.Indexing
 			return performanceStats;
 		}
 
-		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, LoadDocumentPerformanceStats loadDocumentStats, LinqExecutionPerformanceStats linqExecutionStats, LucenePerformanceStats writeToLuceneStats, MapStoragePerformanceStats mapStorageStats)
+		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, List<BasePefromanceStats> operationStats)
 		{
 			IndexingPerformanceStats stats;
 			if (currentlyIndexing.TryRemove(indexingStep, out stats))
@@ -194,19 +195,7 @@ namespace Raven.Database.Indexing
 
 				stats.InputCount = inputCount;
 				stats.OutputCount = outputCount;
-
-				stats.LoadDocumentPerformance.LoadDocumentCount = loadDocumentStats.LoadDocumentCount;
-				stats.LoadDocumentPerformance.LoadDocumentDurationMs = loadDocumentStats.LoadDocumentDurationMs;
-
-				stats.LinqExecutionPerformance.MapLinqExecutionDurationMs = linqExecutionStats.MapLinqExecutionDurationMs;
-				stats.LinqExecutionPerformance.ReduceLinqExecutionDurationMs = linqExecutionStats.ReduceLinqExecutionDurationMs;
-
-				stats.LucenePerformance.WriteDocumentsDurationMs = writeToLuceneStats.WriteDocumentsDurationMs;
-				stats.LucenePerformance.FlushToDiskDurationMs = writeToLuceneStats.FlushToDiskDurationMs;
-
-				stats.MapStoragePerformance.PutMappedResultsDurationMs = mapStorageStats.PutMappedResultsDurationMs;
-				stats.MapStoragePerformance.DeleteMappedResultsDurationMs = mapStorageStats.DeleteMappedResultsDurationMs;
-				// stats.MapStoragePerformance.StorageCommitDurationMs - it's set in MapReduceIndex.IndexDocuments because storage commit can happen after this batch completes
+				stats.Operations = operationStats.ToArray();
 
 				AddIndexingPerformanceStats(stats);
 			}
@@ -427,7 +416,7 @@ namespace Raven.Database.Indexing
 									"Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
 									indexId, key),
 								exception);
-							context.AddError(indexId, key, exception.Message, "OnIndexEntryDeleted Trigger");
+							context.AddError(indexId, PublicName, key, exception, "OnIndexEntryDeleted Trigger");
 						},
 						trigger => trigger.OnIndexEntryDeleted(key, document));
 				}
@@ -451,15 +440,13 @@ namespace Raven.Database.Indexing
 			return new KeyValuePair<string, RavenJToken>(fld.Name, stringValue);
 		}
 
-		protected WriteIndexStats Write(Func<RavenIndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action)
+		protected void Write(Func<RavenIndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action, Stopwatch flushToDiskDuration = null, Stopwatch recreateSearcherDuration = null)
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + PublicName + " has been disposed");
 
 			PreviousIndexTime = LastIndexTime;
 			LastIndexTime = SystemTime.UtcNow;
-
-			var writeIndexStat = new WriteIndexStats();
 
 			lock (writeLock)
 			{
@@ -478,7 +465,7 @@ namespace Raven.Database.Indexing
 					}
 					catch (Exception e)
 					{
-						context.AddError(indexId, indexDefinition.Name, "Creating Analyzer", e.ToString(), "Analyzer");
+						context.AddError(indexId, indexDefinition.Name, "Creating Analyzer", e, "Analyzer");
 						throw;
 					}
 
@@ -514,20 +501,22 @@ namespace Raven.Database.Indexing
 							var invalidDocId = (invalidSpatialShapeException == null) ?
 														null :
 														invalidSpatialShapeException.InvalidDocumentId;
-							context.AddError(indexId, indexDefinition.Name, invalidDocId, e.ToString(), "Write");
+							context.AddError(indexId, indexDefinition.Name, invalidDocId, e, "Write");
 							throw;
 						}
 
 						if (itemsInfo.ChangedDocs > 0)
 						{
-							WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);                            
-							if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
+							using (StopwatchScope.For(flushToDiskDuration))
 							{
-								var sw = Stopwatch.StartNew();
-								Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
-								writeIndexStat.FlushToDiskDurationMs = sw.ElapsedMilliseconds;
-								flushed = true;
-                            }
+								WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
+								
+								if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
+								{
+									Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
+									flushed = true;
+								}
+							}
 
 							UpdateIndexingStats(context, stats);
 						}
@@ -569,10 +558,13 @@ namespace Raven.Database.Indexing
 				}
 
 				if (shouldRecreateSearcher)
-					RecreateSearcher();
+				{
+					using (StopwatchScope.For(recreateSearcherDuration))
+					{
+						RecreateSearcher();
+					}
+				}
 			}
-
-			return writeIndexStat;
 		}
 
 		private IndexSegmentsInfo GetCurrentSegmentsInfo()
@@ -737,13 +729,13 @@ namespace Raven.Database.Indexing
 			return perFieldAnalyzerWrapper;
 		}
 
-		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, List<IndexingFunc> funcs, IndexingWorkStats stats, out Stopwatch linqExecutionDuration)
+		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, List<IndexingFunc> funcs, IndexingWorkStats stats, Stopwatch linqExecutionDuration)
 		{
 			Action<Exception, object> onErrorFunc;
-			return RobustEnumerationIndex(input, funcs, stats, out onErrorFunc, out linqExecutionDuration);
+			return RobustEnumerationIndex(input, funcs, stats, out onErrorFunc, linqExecutionDuration);
 		}
 
-		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, List<IndexingFunc> funcs, IndexingWorkStats stats, out Action<Exception, object> onErrorFunc, out Stopwatch linqExecutionDuration)
+		protected IEnumerable<object> RobustEnumerationIndex(IEnumerator<object> input, List<IndexingFunc> funcs, IndexingWorkStats stats, out Action<Exception, object> onErrorFunc, Stopwatch linqExecutionDuration)
 		{
 			onErrorFunc = (exception, o) =>
 				{
@@ -755,7 +747,7 @@ namespace Raven.Database.Indexing
 					context.AddError(indexId,
 						indexDefinition.Name,
 						docId ?? TryGetDocKey(o),
-										exception.Message,
+										exception,
 										"Map"
 							);
 
@@ -766,24 +758,22 @@ namespace Raven.Database.Indexing
 
 					stats.IndexingErrors++;
 				};
-			var robustEnumerator = new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
+
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
 			{
 				BeforeMoveNext = () => Interlocked.Increment(ref stats.IndexingAttempts),
 				CancelMoveNext = () => Interlocked.Decrement(ref stats.IndexingAttempts),
-				OnError = onErrorFunc
-			};
-
-			linqExecutionDuration = robustEnumerator.MoveNextDuration;
-
-			return robustEnumerator.RobustEnumeration(input, funcs);
+				OnError = onErrorFunc,
+				MoveNextDuration = linqExecutionDuration
+			}.RobustEnumeration(input, funcs);
 		}
 
 		protected IEnumerable<object> RobustEnumerationReduce(IEnumerator<object> input, IndexingFunc func,
 															IStorageActionsAccessor actions,
-			IndexingWorkStats stats, out Stopwatch linqExecutionDuration)
+			IndexingWorkStats stats, Stopwatch linqExecutionDuration)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			var robustEnumerator = new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
 			{
 				BeforeMoveNext = () => Interlocked.Increment(ref stats.ReduceAttempts),
 				CancelMoveNext = () => Interlocked.Decrement(ref stats.ReduceAttempts),
@@ -792,7 +782,7 @@ namespace Raven.Database.Indexing
 					context.AddError(indexId,
 						indexDefinition.Name,
 						TryGetDocKey(o),
-						exception.Message,
+						exception,
 						"Reduce"
 						);
 					logIndexing.WarnException(
@@ -801,20 +791,17 @@ namespace Raven.Database.Indexing
 						exception);
 
 					stats.ReduceErrors++;
-				}
-			};
-
-			linqExecutionDuration = robustEnumerator.MoveNextDuration;
-
-			return robustEnumerator.RobustEnumeration(input, func);
+				},
+				MoveNextDuration = linqExecutionDuration
+			}.RobustEnumeration(input, func);
 		}
 
 		// we don't care about tracking map/reduce stats here, since it is merely
 		// an optimization step
-		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func, out Stopwatch reduceDuringMapLinqExecution)
+		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerator<object> input, IndexingFunc func, Stopwatch reduceDuringMapLinqExecution)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			var robustEnumerator = new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
+			return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
 			{
 				BeforeMoveNext = () => { }, // don't care
 				CancelMoveNext = () => { }, // don't care
@@ -823,19 +810,16 @@ namespace Raven.Database.Indexing
 					context.AddError(indexId,
 									 indexDefinition.Name,
 									TryGetDocKey(o),
-									exception.Message,
+									exception,
 									"Reduce"
 						);
 					logIndexing.WarnException(
 						String.Format("Failed to execute indexing function on {0} on {1}", indexId,
 										TryGetDocKey(o)),
 						exception);
-				}
-			};
-
-			reduceDuringMapLinqExecution = robustEnumerator.MoveNextDuration;
-
-			return robustEnumerator.RobustEnumeration(input, func);
+				},
+				MoveNextDuration = reduceDuringMapLinqExecution
+			}.RobustEnumeration(input, func);
 		}
 
 		public static string TryGetDocKey(object current)

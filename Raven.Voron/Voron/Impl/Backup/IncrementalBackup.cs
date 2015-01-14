@@ -145,11 +145,14 @@ namespace Voron.Impl.Backup
 						}
 						finally
 						{
+							var lastSyncedJournal = env.HeaderAccessor.Get(header => header->Journal).LastSyncedJournal;
+
 							foreach (var jrnl in usedJournals)
 							{
 								if (backupSuccess) // if backup succeeded we can remove journals
 								{
-									if (jrnl.Number < lastWrittenLogFile) // prevent deletion of the current journal and journals with a greater number
+									if (jrnl.Number < lastWrittenLogFile &&  // prevent deletion of the current journal and journals with a greater number
+										jrnl.Number < lastSyncedJournal) // prevent deletion of journals that aren't synced with the data file
 									{
 										jrnl.DeleteOnClose = true;
 									}
