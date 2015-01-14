@@ -55,7 +55,7 @@ namespace Raven.Abstractions.Extensions
             stream.Write(buffer, 0, buffer.Length);
         }
 
-	    private static void SafePartialRead(this Stream stream, byte[] buffer, int size)
+	    private static void PartialRead(this Stream stream, byte[] buffer, int size)
 	    {
 		    var totalRead = 0;
 			while (totalRead < size)
@@ -76,7 +76,7 @@ namespace Raven.Abstractions.Extensions
 
             try
             {
-                stream.SafePartialRead(buffer,sizeof(long));
+                stream.PartialRead(buffer,sizeof(long));
                 return BitConverter.ToInt64(buffer, 0);
             }
             finally
@@ -87,12 +87,11 @@ namespace Raven.Abstractions.Extensions
 
 		public static ulong ReadUInt64(this Stream stream)
 		{
-			var int64Size = Marshal.SizeOf(typeof(ulong));
-			var buffer = BufferPool.TakeBuffer(int64Size);
+			var buffer = BufferPool.TakeBuffer(sizeof(ulong));
 
 			try
 			{
-				stream.Read(buffer, 0, int64Size);
+				stream.PartialRead(buffer,sizeof(ulong));
 				return BitConverter.ToUInt64(buffer, 0);
 			}
 			finally
@@ -108,7 +107,7 @@ namespace Raven.Abstractions.Extensions
 
             try
             {
-                stream.SafePartialRead(buffer,sizeof(int));
+                stream.PartialRead(buffer,sizeof(int));
                 return BitConverter.ToInt32(buffer, 0);
             }
             finally
@@ -129,7 +128,7 @@ namespace Raven.Abstractions.Extensions
 
             try
             {
-	            stream.SafePartialRead(buffer,stringLength);
+	            stream.PartialRead(buffer,stringLength);
 				return encoding.GetString(buffer, 0, stringLength);
             }
             finally
@@ -175,7 +174,7 @@ namespace Raven.Abstractions.Extensions
 
             try
             {
-	            stream.SafePartialRead(buffer,EtagSize);
+	            stream.PartialRead(buffer,EtagSize);
                 return Etag.Parse(buffer);
             }
             finally
