@@ -171,7 +171,7 @@ namespace Raven.Database.Indexing
 				ItemsCount = itemsCount,
 				Operation = indexingStep,
 				Started = SystemTime.UtcNow,
-				Operations = new List<BasePefromanceStats>()
+				Operations = new BasePefromanceStats[0]
 			};
 
 			var lastStats = indexingPerformanceStats.LastOrDefault(x => x.Operation.Equals(operation, StringComparison.OrdinalIgnoreCase));
@@ -195,7 +195,7 @@ namespace Raven.Database.Indexing
 
 				stats.InputCount = inputCount;
 				stats.OutputCount = outputCount;
-				stats.Operations = operationStats;
+				stats.Operations = operationStats.ToArray();
 
 				AddIndexingPerformanceStats(stats);
 			}

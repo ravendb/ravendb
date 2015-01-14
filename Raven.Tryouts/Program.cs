@@ -24,7 +24,7 @@ namespace Raven.Tryouts
 				{
 					new IndexingPerformanceStats
 					{
-						Operations = new List<BasePefromanceStats>
+						Operations = new BasePefromanceStats[]
 						{
 							new ParallelPefromanceStats(),
 							new PerformanceStats()
