@@ -19,33 +19,33 @@ namespace Voron.Impl
 
 		public ReadResult Read(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
-		    Tree tree = null;
+			Tree tree = null;
 
-			if (writeBatch != null)
+			if (writeBatch != null && writeBatch.IsEmpty == false)
 			{
 				WriteBatch.BatchOperationType operationType;
-			    Stream stream;
-			    ushort? version;
-			    if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
-			    {
-			        if (!version.HasValue) 
-                        tree = GetTree(treeName);
+				Stream stream;
+				ushort? version;
+				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
+				{
+					if (!version.HasValue)
+						tree = GetTree(treeName);
 
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
-					    {
-					        var reader = new ValueReader(stream);
-					        return new ReadResult(reader, version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(key));
-					    }
+							{
+								var reader = new ValueReader(stream);
+								return new ReadResult(reader, version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(key));
+							}
 						case WriteBatch.BatchOperationType.Delete:
 							return null;
 					}
 				}
 			}
 
-		    if (tree == null) 
-                tree = GetTree(treeName);
+			if (tree == null)
+				tree = GetTree(treeName);
 
 			return tree.Read(key);
 		}
@@ -58,7 +58,7 @@ namespace Voron.Impl
 
 		public bool Contains(string treeName, Slice key, out ushort? version, WriteBatch writeBatch = null)
 		{
-			if (writeBatch != null)
+			if (writeBatch != null && writeBatch.IsEmpty == false)
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
@@ -91,15 +91,15 @@ namespace Voron.Impl
 			if (writeBatch != null)
 			{
 				WriteBatch.BatchOperationType operationType;
-			    Stream stream;
-			    ushort? version;
-			    if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType) && version.HasValue)
+				Stream stream;
+				ushort? version;
+				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType) && version.HasValue)
 				{
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
 						case WriteBatch.BatchOperationType.Delete:
-					        return (ushort)(version.Value + 1);
+							return (ushort)(version.Value + 1);
 					}
 				}
 			}
@@ -129,6 +129,6 @@ namespace Voron.Impl
 		{
 			var tree = treeName == null ? Transaction.State.Root : Transaction.State.GetTree(Transaction, treeName);
 			return tree;
-		}	
+		}
 	}
 }

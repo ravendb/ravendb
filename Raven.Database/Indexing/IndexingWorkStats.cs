@@ -33,7 +33,7 @@ namespace Raven.Database.Indexing
 			
 		}
 
-		public enum Status
+		public enum Status : byte
 		{
 			Map,
 			Reduce,

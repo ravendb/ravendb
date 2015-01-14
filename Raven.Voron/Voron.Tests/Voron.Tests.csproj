@@ -82,8 +82,10 @@
   <ItemGroup>
     <Compile Include="Backups\Full.cs" />
     <Compile Include="Backups\Incremental.cs" />
+    <Compile Include="Backups\IncrementalBackupTestUtils.cs" />
     <Compile Include="Backups\MinimalIncrementalBackupTests.cs" />
     <Compile Include="Backups\RavenDB_2939.cs" />
+    <Compile Include="Backups\RavenDB_3115.cs" />
     <Compile Include="Bugs\AccessViolationWithIteratorUsage.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\DeleteCurrentAndMoveNextShouldWorkWithKeysWithNulls.cs" />
@@ -113,6 +115,7 @@
     <Compile Include="Bugs\TreeRebalancer.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
+    <Compile Include="Compaction\StorageCompactionTests.cs" />
     <Compile Include="DebugJournalTest.cs" />
     <Compile Include="Journal\BasicActions.cs" />
     <Compile Include="Journal\EdgeCases.cs" />

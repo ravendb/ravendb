@@ -77,6 +77,9 @@ namespace Raven.Tests.Issues
 					})
 					{
 						store.Initialize();
+
+					    store.DatabaseCommands.Get("force/database/load");
+
 						Parallel.For(0, ParallelThreadCount, i =>
 						{
 							// ReSharper disable once AccessToDisposedClosure
@@ -105,6 +108,7 @@ namespace Raven.Tests.Issues
 				})
 				{
 					store.Initialize();
+                    store.DatabaseCommands.Get("force/database/load");
 
 					WaitForIndexing(store);
 

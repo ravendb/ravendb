@@ -86,7 +86,6 @@ interface databaseStatisticsDto {
     Errors: serverErrorDto[];
     InMemoryIndexingQueueSizes: number[];
     Indexes: indexStatisticsDto[];
-    IndexingBatchInfo: indexingBatchInfoDto[];
     LastAttachmentEtag: string;
     LastDocEtag: string;
     Prefetches: any[];
@@ -134,11 +133,7 @@ interface indexingBatchInfoDto {
 interface indexNameAndMapPerformanceStats {
     indexName: string;
     stats: indexPerformanceDto;
-}
-
-interface indexNameAndMapPerformanceStatsWithCache extends indexNameAndMapPerformanceStats {
-    widths: number[];
-    cumulativeSums: number[];
+    CacheThreadCount?: number;
 }
 
 interface indexPerformanceDto {
@@ -150,21 +145,15 @@ interface indexPerformanceDto {
     Completed: string; // Date
     Duration: string;
     DurationMilliseconds: number;
-
-    LoadDocumentPerformance: { LoadDocumentCount: number; LoadDocumentDurationMs: number };
-    LinqExecutionPerformance: { MapLinqExecutionDurationMs: number; ReduceLinqExecutionDurationMs: number };
-    LucenePerformance: { WriteDocumentsDurationMs: number; FlushToDiskDurationMs: number };
-    MapStoragePerformance: { DeleteMappedResultsDurationMs: number; PutMappedResultsDurationMs: number; StorageCommitDurationMs: number };
-
+    Operations: basePerformanceStatsDto[];
     WaitingTimeSinceLastBatchCompleted: string;
 }
 
-
 interface reducingBatchInfoDto {
     IndexesToWorkOn: string[];
-    TotalDurationMs: number;
     StartedAt: string; // ISO date string.
     StartedAtDate?: Date;
+    TotalDurationMs: number;
     TimeSinceFirstReduceInBatchCompletedMs: number;
     PerfStats: indexNameAndReducingPerformanceStats[];
 }
@@ -180,11 +169,6 @@ interface reducePerformanceStatsDto {
     LevelStats: reduceLevelPeformanceStatsDto[];
 }
 
-interface reduceLevelPeformanceStatsDtoWithCache extends reduceLevelPeformanceStatsDto {
-    widths: number[];
-    cumulativeSums: number[];
-}
-
 interface reduceLevelPeformanceStatsDto {
     Level: number;
     ItemsCount: number;
@@ -194,12 +178,33 @@ interface reduceLevelPeformanceStatsDto {
     Completed: string; // Date
     Duration: string;
     DurationMs: number;
-    LinqExecutionPerformance: { MapLinqExecutionDurationMs: number; ReduceLinqExecutionDurationMs: number };
-    LucenePerformance: { WriteDocumentsDurationMs: number; FlushToDiskDurationMs: number };
-    ReduceStoragePerformance: { GetItemsToReduceDurationMs: number };
+    Operations: basePerformanceStatsDto[];
     parent?: indexNameAndReducingPerformanceStats;
+    CacheThreadCount?: number;
 }
 
+interface basePerformanceStatsDto {
+    DurationMs: number;
+    CacheWidth?: number;
+    CacheCumulativeSum?: number;
+    CacheIsSingleThread?: boolean;
+}
+
+interface performanceStatsDto extends basePerformanceStatsDto {
+    Name: string;
+    ParallelParent?: parallelBatchStatsDto;
+}
+
+interface parallelPefromanceStatsDto extends basePerformanceStatsDto {
+    NumberOfThreads: number;
+    BatchedOperations: parallelBatchStatsDto[];
+}
+
+interface parallelBatchStatsDto {
+    StartDelay: number;
+    Operations: performanceStatsDto[];
+    Parent?: parallelPefromanceStatsDto;
+}
 
 interface apiKeyDto extends documentDto {
     Name: string;
@@ -1172,4 +1177,18 @@ interface indexReplaceDocumentDto extends documentDto {
     IndexToReplace: string;
     MinimumEtagBeforeReplace?: string;
     ReplaceTimeUtc?: string;
+}
+
+interface replicationExplanationForDocumentDto {
+    Key: string;
+    Etag: string;
+    Destination: destinationInformationDto;
+    Message: string;
+}
+
+interface destinationInformationDto {
+    Url: string;
+    DatabaseName: string;
+    ServerInstanceId: string;
+    LastDocumentEtag: string;
 }

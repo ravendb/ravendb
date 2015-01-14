@@ -44,10 +44,13 @@ namespace Raven.Tests.Synchronization
 				Etag = etag4
 			};
 
-			list.Add(doc4);
-			list.Add(doc2);
-			list.Add(doc1);
-			list.Add(doc3);
+		    using (list.EnterWriteLock())
+		    {
+                list.Add(doc4);
+                list.Add(doc2);
+                list.Add(doc1);
+                list.Add(doc3);
+		    }
 
 			JsonDocument result;
 

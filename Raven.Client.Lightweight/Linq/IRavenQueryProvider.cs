@@ -9,7 +9,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.Document;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Linq

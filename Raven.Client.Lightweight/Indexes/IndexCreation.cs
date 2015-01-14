@@ -12,9 +12,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Client.Document;
-using Raven.Client.Shard;
 
 namespace Raven.Client.Indexes
 {
@@ -92,24 +90,24 @@ namespace Raven.Client.Indexes
 				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
 		}
 
-        /// <summary>
-        /// Creates the indexes found in the specified assembly.
-        /// </summary>
-        /// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
-        /// <param name="documentStore">The document store.</param>
-        public static Task CreateIndexesAsync(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore)
-        {
-            var catalog = new CompositionContainer(new AssemblyCatalog(assemblyToScanForIndexingTasks));
-            return CreateIndexesAsync(catalog, documentStore);
-        }        
+		/// <summary>
+		/// Creates the indexes found in the specified assembly.
+		/// </summary>
+		/// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
+		/// <param name="documentStore">The document store.</param>
+		public static Task CreateIndexesAsync(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore)
+		{
+			var catalog = new CompositionContainer(new AssemblyCatalog(assemblyToScanForIndexingTasks));
+			return CreateIndexesAsync(catalog, documentStore);
+		}
 
-        /// <summary>
-        /// Creates the indexes found in the specified catalog
-        /// </summary>
-        /// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
-        /// <param name="documentStore">The document store.</param>
-        public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
-        {
+		/// <summary>
+		/// Creates the indexes found in the specified catalog
+		/// </summary>
+		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
+		/// <param name="documentStore">The document store.</param>
+		public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
+		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 			{
@@ -124,7 +122,7 @@ namespace Raven.Client.Indexes
 			}
 			foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
 			{
-                await task.ExecuteAsync(documentStore);
+				await task.ExecuteAsync(documentStore);
 			}
 
 			if (indexCompilationExceptions.Any())

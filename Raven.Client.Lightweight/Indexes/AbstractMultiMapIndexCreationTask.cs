@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Reflection;
-using Raven.Abstractions.Indexing;
-using System.Linq;
+﻿using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Client.Linq;
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Raven.Client.Indexes
 {
@@ -65,7 +66,7 @@ namespace Raven.Client.Indexes
 			{
 				Indexes = Indexes,
 				SortOptions = IndexSortOptions,
-                SortOptionsStrings = IndexSortOptionsStrings,
+				SortOptionsStrings = IndexSortOptionsStrings,
 				Analyzers = Analyzers,
 				Reduce = Reduce,
 				Stores = Stores,
@@ -91,7 +92,10 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
-		/// Max number of allowed indexing outputs per one source document
+		/// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
+		/// the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document 
+		/// will be skipped and the appropriate error message will be added to the indexing errors.
+		/// <para>Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.</para>
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }
 	}

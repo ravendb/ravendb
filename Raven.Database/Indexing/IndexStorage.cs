@@ -998,12 +998,7 @@ namespace Raven.Database.Indexing
 		}
 
 		[CLSCompliant(false)]
-		public IndexingPerformanceStats Index(int index,
-			AbstractViewGenerator viewGenerator,
-			IndexingBatch batch,
-			WorkContext context,
-			IStorageActionsAccessor actions,
-			DateTime minimumTimestamp)
+		public IndexingPerformanceStats Index(int index, AbstractViewGenerator viewGenerator, IndexingBatch batch, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp, CancellationToken token)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -1014,7 +1009,7 @@ namespace Raven.Database.Indexing
 			using (EnsureInvariantCulture())
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
-				var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp);
+				var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp, token);
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = value.PublicName,
