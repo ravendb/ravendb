@@ -245,23 +245,13 @@ namespace Raven.Bundles.Encryption.Streams
 		{
 			get
 			{
-				if (underlyingStream.Header.MagicNumber == EncryptedFile.DefaultMagicNumber) //old version of encryption -> use old calculation
-				{
-					var result = underlyingStream.Footer.TotalLength;
+				var result = underlyingStream.Footer.TotalLength;
 
-					// Even if we haven't flushed a block to the BlockReaderWriter, we need to count its size as written.
-					if (currentWritingBlock != null)
-						result = Math.Max(result, currentWritingBlock.TotalEncryptedStreamLength);
+				// Even if we haven't flushed a block to the BlockReaderWriter, we need to count its size as written.
+				if (currentWritingBlock != null)
+					result = Math.Max(result, currentWritingBlock.TotalEncryptedStreamLength);
 
-					return result;
-				}
-				
-				if (underlyingStream.Header.MagicNumber == EncryptedFile.WithTotalSizeMagicNumber)
-				{
-					return underlyingStream.Header.TotalUnencryptedSize;
-				}
-				
-				throw new ApplicationException("Invalid magic number in encrypted file, cannot calculate the length of unencrypted data.");
+				return result;
 			}
 		}
 
