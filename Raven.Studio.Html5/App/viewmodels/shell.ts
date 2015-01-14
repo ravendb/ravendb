@@ -27,6 +27,7 @@ import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
+import helpBindingHandler = require("common/helpBindingHandler");
 import changesApi = require("common/changesApi");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
@@ -151,6 +152,7 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
+        helpBindingHandler.install();
 
         this.isSystemConnected = ko.computed(() => {
             var activeDb = this.activeDatabase();
@@ -185,6 +187,8 @@ class shell extends viewModelBase {
             }
             return shell.resources();
         });
+
+        this.clientBuildVersion.subscribe(v => viewModelBase.clientVersion("3.0." + v.BuildVersion));
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.

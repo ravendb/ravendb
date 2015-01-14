@@ -36,6 +36,8 @@ class viewModelBase {
     public static isConfirmedUsingSystemDatabase: boolean = false;
     dirtyFlag = new ko.DirtyFlag([]);
 
+    //holds full studio version eg. 3.0.3528
+    static clientVersion = ko.observable<string>();
 
     static hasContinueTestOption = ko.observable<boolean>(false);
     /*

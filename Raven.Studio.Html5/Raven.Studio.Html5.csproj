@@ -402,6 +402,8 @@
     <TypeScriptCompile Include="App\common\changesApiWarnStorage.ts" />
     <TypeScriptCompile Include="App\common\apiKeyLocalStorage.ts" />
     <TypeScriptCompile Include="App\models\adminLogsConfigEntry.ts" />
+    <TypeScriptCompile Include="App\common\helpBindingHandler.ts" />
+    <Content Include="App\models\adminLogsConfigEntry.ts" />
     <TypeScriptCompile Include="App\models\performanceTestRequest.ts" />
     <TypeScriptCompile Include="App\models\performanceTestResultWrapped.ts" />
     <TypeScriptCompile Include="App\models\indexMergeSuggestion.ts" />
