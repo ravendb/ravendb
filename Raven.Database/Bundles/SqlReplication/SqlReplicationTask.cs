@@ -604,6 +604,7 @@ namespace Raven.Database.Bundles.SqlReplication
 								document.Key);
 							continue;
 						}
+						cfg.ConnectionString = setting;
 					}
 					sqlReplicationConfigs.Add(cfg);
 				}
