@@ -385,7 +385,7 @@ namespace Raven.Database.FileSystem.Controllers
             if (EnsureSystemDatabase() == false)
                 return GetMessageWithString("Restore is only possible from the system database", HttpStatusCode.BadRequest);
 
-            var restoreStatus = new RestoreStatus { Messages = new List<string>() };
+            var restoreStatus = new RestoreStatus { State = RestoreStatusState.Running, Messages = new List<string>() };
 
             var restoreRequest = await ReadJsonObjectAsync<FilesystemRestoreRequest>();
        
@@ -397,7 +397,7 @@ namespace Raven.Database.FileSystem.Controllers
             }
 
             var filesystemDocumentText = File.ReadAllText(fileSystemDocumentPath);
-            FileSystemDocument filesystemDocument = RavenJObject.Parse(filesystemDocumentText).JsonDeserialization<FileSystemDocument>();
+            var filesystemDocument = RavenJObject.Parse(filesystemDocumentText).JsonDeserialization<FileSystemDocument>();
 
             var filesystemName = !string.IsNullOrWhiteSpace(restoreRequest.FilesystemName) ? restoreRequest.FilesystemName
                                    : filesystemDocument == null ? null : filesystemDocument.Id;
@@ -481,38 +481,51 @@ namespace Raven.Database.FileSystem.Controllers
 
             var task = Task.Factory.StartNew(() =>
             {
-                if (!string.IsNullOrWhiteSpace(restoreRequest.FilesystemLocation))
-                    ravenConfiguration.FileSystem.DataDirectory = restoreRequest.FilesystemLocation;
-
-                using (var transactionalStorage = RavenFileSystem.CreateTransactionalStorage(ravenConfiguration))
+                try
                 {
-                    transactionalStorage.Restore(restoreRequest, msg =>
+                    if (!string.IsNullOrWhiteSpace(restoreRequest.FilesystemLocation))
+                        ravenConfiguration.FileSystem.DataDirectory = restoreRequest.FilesystemLocation;
+
+                    using (var transactionalStorage = RavenFileSystem.CreateTransactionalStorage(ravenConfiguration))
                     {
-                        restoreStatus.Messages.Add(msg);
-                        DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null,
-                            RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
-                    });
+                        transactionalStorage.Restore(restoreRequest, msg =>
+                        {
+                            restoreStatus.Messages.Add(msg);
+                            DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null,
+                                                                           RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+                        });
+                    }
+
+                    if (filesystemDocument == null)
+                        return;
+
+                    filesystemDocument.Settings[Constants.FileSystem.DataDirectory] = documentDataDir;
+
+                    if (restoreRequest.IndexesLocation != null)
+                        filesystemDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
+                    if (restoreRequest.JournalsLocation != null)
+                        filesystemDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+                    filesystemDocument.Id = filesystemName;
+
+                    FileSystemsLandlord.Protect(filesystemDocument);
+
+                    DatabasesLandlord.SystemDatabase.Documents.Put(Constants.FileSystem.Prefix + filesystemName, null, RavenJObject.FromObject(filesystemDocument), new RavenJObject(), null);
+
+                    restoreStatus.State = RestoreStatusState.Completed;
+                    restoreStatus.Messages.Add("The new filesystem was created");
+                    DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
                 }
-
-                if (filesystemDocument == null)
-                    return;
-
-                filesystemDocument.Settings[Constants.FileSystem.DataDirectory] = documentDataDir;
-
-                if (restoreRequest.IndexesLocation != null)
-                    filesystemDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
-                if (restoreRequest.JournalsLocation != null)
-                    filesystemDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
-                filesystemDocument.Id = filesystemName;
-
-				FileSystemsLandlord.Protect(filesystemDocument);
-
-                DatabasesLandlord.SystemDatabase.Documents.Put(Constants.FileSystem.Prefix + filesystemName, null, RavenJObject.FromObject(filesystemDocument), new RavenJObject(), null);
-
-                restoreStatus.Messages.Add("The new filesystem was created");
-                DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
-
-                Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
+                catch (Exception e)
+                {
+                    restoreStatus.State = RestoreStatusState.Faulted;
+                    restoreStatus.Messages.Add("Unable to restore filesystem " + e.Message);
+                    DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+                    throw;
+                }
+                finally
+                {
+                    Database.Documents.Delete(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, null);
+                }
             }, TaskCreationOptions.LongRunning);
 
             long id;
