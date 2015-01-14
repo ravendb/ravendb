@@ -242,12 +242,14 @@ namespace Raven.Bundles.Encryption.Streams
 		{
 			lock (locker)
 			{
+				var position = stream.Position;
 				stream.Position = 0;
 				var headerWithUpdatedUnencryptedLenght = header;
 				headerWithUpdatedUnencryptedLenght.TotalUnencryptedSize = totalUnencryptedSize;
 				WriteHeaderInCurrentPositionIfNotReadonly(headerWithUpdatedUnencryptedLenght);
 
 				stream.Flush();
+				stream.Position = position;
 			}
 		}
 

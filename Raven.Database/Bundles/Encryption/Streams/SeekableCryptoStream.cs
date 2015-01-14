@@ -64,6 +64,11 @@ namespace Raven.Bundles.Encryption.Streams
 
 		public override int Read(byte[] buffer, int bufferOffset, int count)
 		{
+			//precaution, should never be true
+			if (underlyingStream.Header.MagicNumber != EncryptedFile.WithTotalSizeMagicNumber &&
+				underlyingStream.Header.MagicNumber != EncryptedFile.DefaultMagicNumber)
+				throw new ApplicationException("Invalid magic number in the encrypted file. Cannot proceed with reading.");
+
 			if (buffer == null)
 				throw new ArgumentNullException("buffer");
 			if (count < 0)
