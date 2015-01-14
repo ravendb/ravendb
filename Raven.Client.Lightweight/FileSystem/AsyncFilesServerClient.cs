@@ -1863,11 +1863,30 @@ namespace Raven.Client.FileSystem
 	            }
             }
 
+            public async Task ResetIndexes(string filesystemName)
+            {
+                var requestUrlString = string.Format("{0}/fs/{1}/admin/reset-index", client.ServerUrl, Uri.EscapeDataString(filesystemName));
+
+                using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, "POST", client.PrimaryCredentials, convention)))
+                {
+                    try
+                    {
+                        await request.ExecuteRequestAsync().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        throw e.SimplifyException();
+                    }
+                }
+            }
+
             public ProfilingInformation ProfilingInformation { get; private set; }
 
             public void Dispose()
             {
             }
+
+
         }
 
         public override void Dispose()

@@ -9,9 +9,15 @@
         <p>Please enter OAuth API Key that will be used to authenticate with the server.</p>
         <form class="form-horizontal" role="form">
             <div class="form-group">
-                <label class="col-sm-3 control-label">Key: </label>
+                <label class="col-sm-5 control-label">Key: </label>
                 <div class="col-sm-7">
                     <input type="text" class="form-control " placeholder="api key" data-bind="value: apiKey" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-5 control-label">Remember me<br />for this session: </label>
+                <div class="col-sm-7">
+                    <input type="checkbox" data-bind="checked: saveInLocalStorage" />
                 </div>
             </div>
         </form>

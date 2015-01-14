@@ -10,6 +10,7 @@ using Voron.Impl.Paging;
 namespace Voron.Trees
 {
 	using System.Runtime.CompilerServices;
+    using Voron.Util;
 
 	public unsafe class Page
     {
@@ -35,7 +36,14 @@ namespace Voron.Trees
 		    _prefixSection = (PrefixInfoSection*) (_base + _pageSize - Constants.PrefixInfoSectionSize);
         }
 
-        public long PageNumber { get { return _header->PageNumber; } set { _header->PageNumber = value; } }
+        
+        public long PageNumber 
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _header->PageNumber; }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set { _header->PageNumber = value; } 
+        }
 
 	    public PageFlags Flags { get { return _header->Flags; } set {_header->Flags = value; } }
 
@@ -49,6 +57,7 @@ namespace Voron.Trees
 
         public ushort* KeysOffsets
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return (ushort*)(_base + Constants.PageHeaderSize); }
         }
 
@@ -63,64 +72,70 @@ namespace Voron.Trees
 				LastMatch = 1;
 				return null;
 			}
+           
+            switch( key.Options )
+            {
+                case SliceOptions.Key:
+                    {
+                        var pageKey = CreateNewEmptyKey();
 
-			if (key.Options == SliceOptions.BeforeAllKeys)
-			{
-				LastSearchPosition = 0;
-				LastMatch = 1;
-				return GetNode(0);
-			}
+                        if (NumberOfEntries == 1)
+                        {
+                            SetNodeKey(GetNode(0), ref pageKey);
+                            LastMatch = key.Compare(pageKey);
+                            LastSearchPosition = LastMatch > 0 ? 1 : 0;
+                            return LastSearchPosition == 0 ? GetNode(0) : null;
+                        }
 
-			if (key.Options == SliceOptions.AfterAllKeys)
-			{
-				LastMatch = -1;
-				LastSearchPosition = NumberOfEntries - 1;
-				return GetNode(LastSearchPosition);
-			}
+                        int low = IsLeaf ? 0 : 1;
+                        int high = NumberOfEntries - 1;
+                        int position = 0;
 
-			var pageKey = CreateNewEmptyKey();
+                        while (low <= high)
+                        {
+                            position = (low + high) >> 1;
 
-			if (NumberOfEntries == 1)
-			{
-				SetNodeKey(GetNode(0), ref pageKey);
-				LastMatch = key.Compare(pageKey);
-				LastSearchPosition = LastMatch > 0 ? 1 : 0;
-				return LastSearchPosition == 0 ? GetNode(0) : null;
-			}
+                            var node = (NodeHeader*)(_base + KeysOffsets[position]);
 
-			int low = IsLeaf ? 0 : 1;
-			int high = NumberOfEntries - 1;
-			int position = 0;
+                            SetNodeKey(node, ref pageKey);
 
-			while (low <= high)
-			{
-				position = (low + high) >> 1;
+                            LastMatch = key.Compare(pageKey);
+                            if (LastMatch == 0)
+                                break;
 
-				var node = (NodeHeader*)(_base + KeysOffsets[position]);
+                            if (LastMatch > 0)
+                                low = position + 1;
+                            else
+                                high = position - 1;
+                        }
 
-				SetNodeKey(node, ref pageKey);
+                        if (LastMatch > 0) // found entry less than key
+                        {
+                            position++; // move to the smallest entry larger than the key
+                        }
 
-				LastMatch = key.Compare(pageKey);
-				if (LastMatch == 0)
-					break;
+                        Debug.Assert(position < ushort.MaxValue);
+                        LastSearchPosition = position;
 
-				if (LastMatch > 0)
-					low = position + 1;
-				else
-					high = position - 1;
-			}
-
-			if (LastMatch > 0) // found entry less than key
-			{
-				position++; // move to the smallest entry larger than the key
-			}
-
-			Debug.Assert(position < ushort.MaxValue);
-			LastSearchPosition = position;
-
-			if (position >= NumberOfEntries)
-				return null;
-			return GetNode(position);
+                        if (position >= NumberOfEntries)
+                            return null;
+                        return GetNode(position);
+                    }
+                case SliceOptions.BeforeAllKeys:
+                    {
+                        LastSearchPosition = 0;
+                        LastMatch = 1;
+                        return GetNode(0);
+                    }
+                case SliceOptions.AfterAllKeys:
+                    {
+                        LastMatch = -1;
+                        LastSearchPosition = NumberOfEntries - 1;
+                        return GetNode(LastSearchPosition);
+                    }
+                default:
+                    throw new NotSupportedException("This SliceOptions is not supported. Make sure you have updated this code when adding a new one.");
+            }
 		}
 
         public NodeHeader* GetNode(int n)
@@ -142,26 +157,31 @@ namespace Voron.Trees
 
 	    public bool IsLeaf
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get { return (_header->Flags & PageFlags.Leaf) == PageFlags.Leaf; }
         }
 
         public bool IsBranch
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return (_header->Flags &  PageFlags.Branch) == PageFlags.Branch; }
         }
 
 		public bool IsOverflow
 		{
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get { return (_header->Flags & PageFlags.Overflow) == PageFlags.Overflow; }
 		}
 
 		public bool KeysPrefixed
 		{
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get { return (_header->Flags & PageFlags.KeysPrefixed) == PageFlags.KeysPrefixed; }
 		}
 
         public ushort NumberOfEntries
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
                 // Because we store the keys offset from the end of the head to lower
@@ -293,7 +313,7 @@ namespace Voron.Trees
 		        return;
 	        }
 	        newNode->DataSize = other->DataSize;
-			StdLib.memcpy((byte*)newNode + Constants.NodeHeaderSize + key.Size,
+            MemoryUtils.Copy((byte*)newNode + Constants.NodeHeaderSize + key.Size,
                                  (byte*)other + Constants.NodeHeaderSize + other->KeySize,
                                  other->DataSize);
         }
@@ -535,7 +555,7 @@ namespace Voron.Trees
 					copy.CopyNodeDataToEndOfPage(node, copy.PrepareKeyToInsert(slice, copy.NumberOfEntries));
 				}
 
-				StdLib.memcpy(_base + Constants.PageHeaderSize,
+                MemoryUtils.Copy(_base + Constants.PageHeaderSize,
 									 copy._base + Constants.PageHeaderSize,
 									 _pageSize - Constants.PageHeaderSize);
 
@@ -609,7 +629,7 @@ namespace Voron.Trees
 		    using (tx.Environment.GetTemporaryPage(tx, out tmp))
 		    {
 			    var tempPage = tmp.GetTempPage(KeysPrefixed);
-				StdLib.memcpy(tempPage.Base, Base, _pageSize);
+                MemoryUtils.Copy(tempPage.Base, Base, _pageSize);
 
 			    var numberOfEntries = NumberOfEntries;
 
@@ -620,7 +640,7 @@ namespace Voron.Trees
 					var node = tempPage.GetNode(i);
 				    var size = node->GetNodeSize() - Constants.NodeOffsetSize;
 				    size += size & 1;
-					StdLib.memcpy(Base + Upper - size, (byte*) node, size);
+                    MemoryUtils.Copy(Base + Upper - size, (byte*)node, size);
 				    Upper -= (ushort) size;
 				    KeysOffsets[i] = Upper;
 			    }
@@ -639,7 +659,7 @@ namespace Voron.Trees
 				    var prefixNodeSize = Constants.PrefixNodeHeaderSize + prefixNode.PrefixLength;
 				    prefixNodeSize += prefixNodeSize & 1;
 
-					StdLib.memcpy(Base + Upper - prefixNodeSize, prefixNode.Base, prefixNodeSize);
+                    MemoryUtils.Copy(Base + Upper - prefixNodeSize, prefixNode.Base, prefixNodeSize);
 				    Upper -= (ushort) prefixNodeSize;
 					_prefixSection->PrefixOffsets[i] = Upper;
 			    }
@@ -737,7 +757,7 @@ namespace Voron.Trees
 				var key = new byte[keySize];
 
 				fixed (byte* ptr = key)
-					StdLib.memcpy(ptr, (byte*)node + Constants.NodeHeaderSize, keySize);
+                    MemoryUtils.Copy(ptr, (byte*)node + Constants.NodeHeaderSize, keySize);
 
 				return new Slice(key);
 			}
@@ -751,7 +771,7 @@ namespace Voron.Trees
 			var nonPrefixedData = new byte[nonPrefixedSize];
 
 			fixed (byte* ptr = nonPrefixedData)
-				StdLib.memcpy(ptr, (byte*)prefixHeader + Constants.PrefixedSliceHeaderSize, nonPrefixedSize);
+                MemoryUtils.Copy(ptr, (byte*)prefixHeader + Constants.PrefixedSliceHeaderSize, nonPrefixedSize);
 
 			var prefixedSlice = new PrefixedSlice(prefixHeader->PrefixId, prefixHeader->PrefixUsage, new Slice(nonPrefixedData));
 
@@ -766,7 +786,7 @@ namespace Voron.Trees
 			var prefixData = new byte[prefixLength];
 
 			fixed (byte* ptr = prefixData)
-				StdLib.memcpy(ptr, (byte*) prefixNodePtr + Constants.PrefixNodeHeaderSize, prefixLength);
+                MemoryUtils.Copy(ptr, (byte*)prefixNodePtr + Constants.PrefixNodeHeaderSize, prefixLength);
 
 			prefixedSlice.Prefix = new PrefixNode(new PrefixNodeHeader{ PrefixLength =  prefixLength }, prefixData, PageNumber);
 

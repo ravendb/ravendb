@@ -88,11 +88,6 @@ namespace Raven.Abstractions.Data
 		public IndexingError[] Errors { get; set; }
 
 		/// <summary>
-		/// Information about recent indexing batches.
-		/// </summary>
-		public IndexingBatchInfo[] IndexingBatchInfo { get; set; }
-
-		/// <summary>
 		/// Information about future indexing batches.
 		/// </summary>
 		public FutureBatchStats[] Prefetches { get; set; }

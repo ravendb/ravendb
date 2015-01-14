@@ -2,6 +2,8 @@
 interface computedAppUrls {
     adminSettings: KnockoutComputed<string>;
 
+    hasApiKey: KnockoutComputed<string>;
+
     resources: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
@@ -58,6 +60,7 @@ interface computedAppUrls {
     statusDebugIdentities: KnockoutComputed<string>;
     statusDebugWebSocket: KnockoutComputed<string>;
     statusDebugPersistAutoIndex: KnockoutComputed<string>;
+    statusDebugExplainReplication: KnockoutComputed<string>;
     infoPackage: KnockoutComputed<string>;
 
     statusStorageOnDisk: KnockoutComputed<string>;

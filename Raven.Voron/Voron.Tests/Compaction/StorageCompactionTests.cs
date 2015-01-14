@@ -247,6 +247,49 @@ namespace Voron.Tests.Compaction
 			}
 		}
 
+		[Fact]
+		public void ShouldReportProgress()
+		{
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactionTestsData)))
+			{
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = env.CreateTree(tx, "fruits");
+
+					tree.Add("apple", new byte[123]);
+					tree.Add("orange", new byte[99]);
+
+					var tree2 = env.CreateTree(tx, "vegetables");
+
+					tree2.Add("carrot", new byte[123]);
+					tree2.Add("potato", new byte[99]);
+
+					var tree3 = env.CreateTree(tx, "multi");
+
+					tree3.MultiAdd("fruits", "apple");
+					tree3.MultiAdd("fruits", "orange");
+
+
+					tree3.MultiAdd("vegetables", "carrot");
+					tree3.MultiAdd("vegetables", "carrot");
+
+					tx.Commit();
+				}
+			}
+
+			var progressReport = new List<string>();
+
+			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData), x => progressReport.Add(string.Format("Copied {0} of {1} records in '{2}' tree. Copied {3} of {4} trees.", x.CopiedTreeRecords, x.TotalTreeRecordsCount, x.TreeName, x.CopiedTrees, x.TotalTreeCount)));
+
+			Assert.NotEmpty(progressReport);
+			Assert.Contains("Copied 0 of 2 records in 'fruits' tree. Copied 0 of 3 trees.", progressReport);
+			Assert.Contains("Copied 2 of 2 records in 'fruits' tree. Copied 1 of 3 trees.", progressReport);
+			Assert.Contains("Copied 0 of 2 records in 'multi' tree. Copied 1 of 3 trees.", progressReport);
+			Assert.Contains("Copied 2 of 2 records in 'multi' tree. Copied 2 of 3 trees.", progressReport);
+			Assert.Contains("Copied 0 of 2 records in 'vegetables' tree. Copied 2 of 3 trees.", progressReport);
+			Assert.Contains("Copied 2 of 2 records in 'vegetables' tree. Copied 3 of 3 trees.", progressReport);
+		}
+
 		public static long GetDirSize(DirectoryInfo d)
 		{
 			var files = d.GetFiles();

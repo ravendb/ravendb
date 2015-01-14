@@ -113,23 +113,23 @@ namespace Raven.Json.Linq
 
 		internal void AddValue(RavenJValue value, JsonToken token)
 		{
-			if (_tokenStack.Count == 0)
-				_value = value;
-			else
-			{
-				switch (CurrentToken.Type)
-				{
-					case JTokenType.Object:
-						((RavenJObject)CurrentToken)[_tempPropName] = value;
-						_tempPropName = null;
-						break;
-					case JTokenType.Array:
-						((RavenJArray)CurrentToken).Add(value);
-						break;
-					default:
-						throw new JsonWriterException("Unexpected token: " + token);
-				}
-			}
+            if (_tokenStack.Count != 0)
+            {
+                var currentToken = this.CurrentToken;
+                switch (currentToken.Type)
+                {
+                    case JTokenType.Object:
+                        ((RavenJObject)currentToken)[_tempPropName] = value;
+                        _tempPropName = null;
+                        break;
+                    case JTokenType.Array:
+                        ((RavenJArray)currentToken).Add(value);
+                        break;
+                    default:
+                        throw new JsonWriterException("Unexpected token: " + token);
+                }
+            }
+            else _value = value;
 		}
 
 		public override void WriteRaw(string json)

@@ -18,49 +18,23 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			List<Facet> fcets = new List<Facet>(){  
-						new Facet
-                      {
-                          Name ="TotalCount"
-                      },
-					  new Facet
-					  {
-					  	Name ="Tag_40062491"
-					  },
-					  new Facet
-					  {
-					  	Name ="Tag_40062492"
-					  },
-					  new Facet
-					  {
-					  	Name ="Tag_40062493"
-					  },
-					  new Facet
-					  {
-					  	Name ="Tag_40062494"
-					  }
-					  ,new Facet
-					  {
-					  	Name ="Tag_40062495"
-					  },
-					  new Facet
-					  {
-					  	Name ="Tag_40062496"
-					  }
-               };
-
-			using (var store = new DocumentStore
+			var idxs = new IndexStats
 			{
-				Url = "http://localhost:8080",
-				DefaultDatabase = "zap"
-			}.Initialize())
-			using (var session = store.OpenSession())
-			{
-				var f = session.Advanced.DocumentQuery<Object>("idxD").Where("IsPayingCustomer:true").SelectFields<Object>("CustomerId").Distinct().ToFacets(fcets);
+				Performance = new[]
+				{
+					new IndexingPerformanceStats
+					{
+						Operations = new List<BasePefromanceStats>
+						{
+							new ParallelPefromanceStats(),
+							new PerformanceStats()
+						}
+					},
+				}
+			};
 
-				Console.WriteLine(JsonConvert.SerializeObject(f,Formatting.Indented));
-			}
- 
+			Console.WriteLine(JsonConvert.SerializeObject(idxs,Formatting.Indented));
+
 
 		}
 	}

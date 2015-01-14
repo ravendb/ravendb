@@ -868,7 +868,7 @@ namespace Voron.Impl.Journal
 				var txPage = txPages[index];
 				var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
 				var count = txPage.NumberOfPages * AbstractPager.PageSize;
-				StdLib.memcpy(write, scratchPage, count);
+                MemoryUtils.Copy(write, scratchPage, count);
 				write += count;
 			}
 
