@@ -600,7 +600,7 @@ interface filesystemRestoreRequestDto extends restoreRequestDto {
 
 interface restoreStatusDto {
     Messages: string[];
-    IsRunning: boolean;
+    State: string;
 }
 
 interface sqlReplicationTableDto {
