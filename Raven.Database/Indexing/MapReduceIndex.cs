@@ -686,7 +686,7 @@ namespace Raven.Database.Indexing
 								ex =>
 								{
 									logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
-									Context.AddError(indexId, parent.indexDefinition.Name, null, ex.Message, "AnErrorOccured Trigger");
+									Context.AddError(indexId, parent.indexDefinition.Name, null, ex, "AnErrorOccured Trigger");
 								},
 								x => x.AnErrorOccured(e));
 						}
@@ -700,7 +700,7 @@ namespace Raven.Database.Indexing
 								e =>
 								{
 									logIndexing.WarnException("Failed to dispose on index update trigger", e);
-									Context.AddError(indexId, parent.indexDefinition.Name, null, e.Message, "Dispose Trigger");
+									Context.AddError(indexId, parent.indexDefinition.Name, null, e, "Dispose Trigger");
 								},
 								x => x.Dispose());
 						}
@@ -744,7 +744,7 @@ namespace Raven.Database.Indexing
 						Context.AddError(indexId,
 							parent.PublicName,
 							TryGetDocKey(doc),
-							e.Message,
+							e,
 							"Reduce"
 							);
 						logIndexing.WarnException("Could not get fields to during reduce for " + parent.PublicName, e);
@@ -770,7 +770,7 @@ namespace Raven.Database.Indexing
 							string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
 										  indexId, reduceKeyAsString),
 							exception);
-						Context.AddError(indexId, parent.PublicName, reduceKeyAsString, exception.Message, "OnIndexEntryCreated Trigger");
+						Context.AddError(indexId, parent.PublicName, reduceKeyAsString, exception, "OnIndexEntryCreated Trigger");
 					},
 					trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
 
