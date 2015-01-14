@@ -1,4 +1,4 @@
-﻿@font-face {
+@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -8342,10 +8342,18 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 #resources-page .resources-container .resource.fs.selected {
   box-shadow: 0 0 20px 0 #7109AA;
 }
-
 .form-checkbox-control {
   width: 35px;
   height: 35px;
-  text-align: center;
-  display: inline-block;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+.help_link {
+  color: #152894;
+}
+.help_link:hover {
+  color: #152894;
+}
+.negative-margin {
+  margin-top: -10px;
 }
