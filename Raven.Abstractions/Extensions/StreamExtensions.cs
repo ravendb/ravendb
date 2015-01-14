@@ -85,6 +85,23 @@ namespace Raven.Abstractions.Extensions
             }
         }
 
+		public static ulong ReadUInt64(this Stream stream)
+		{
+			var int64Size = Marshal.SizeOf(typeof(ulong));
+			var buffer = BufferPool.TakeBuffer(int64Size);
+
+			try
+			{
+				stream.Read(buffer, 0, int64Size);
+				return BitConverter.ToUInt64(buffer, 0);
+			}
+			finally
+			{
+				BufferPool.ReturnBuffer(buffer);
+			}
+		}
+
+
         public static int ReadInt32(this Stream stream)
         {
 	        var buffer = BufferPool.TakeBuffer(sizeof(int));

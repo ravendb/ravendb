@@ -101,7 +101,6 @@ namespace Raven.Tests.Issues
 			using (var store = NewDocumentStore(runInMemory: false))
 			{
 				new OldIndex().Execute(store);
-				new NewIndex().Execute(store);
 
 				using (var session = store.OpenSession())
 				{
@@ -109,9 +108,16 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
+				WaitForIndexing(store);
+				store.DocumentDatabase.StopBackgroundWorkers();
+
+				new NewIndex().Execute(store);
+
+
 				store
 					.DatabaseCommands
-					.Put(Prefix + new NewIndex().IndexName, null, RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = new OldIndex().IndexName, MinimumEtagBeforeReplace = null }), new RavenJObject());
+					.Put(Prefix + new NewIndex().IndexName, null, 
+					RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = new OldIndex().IndexName, MinimumEtagBeforeReplace = null }), new RavenJObject());
 
 				var e = Assert.Throws<InvalidOperationException>(() =>
 				{
@@ -123,6 +129,8 @@ namespace Raven.Tests.Issues
 				});
 
 				Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
+
+				store.DocumentDatabase.SpinBackgroundWorkers();
 
 				WaitForIndexing(store);
 
