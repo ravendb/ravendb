@@ -361,7 +361,7 @@ namespace Raven.Database.Indexing
 				return reduceValue.ToString();
 			}
 			if (reduceValue is DateTime)
-				return ((DateTime)reduceValue).ToString(Default.DateTimeFormatsToWrite);
+				return ((DateTime)reduceValue).GetDefaultRavenFormat();
 			if (reduceValue is DateTimeOffset)
 				return ((DateTimeOffset)reduceValue).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
 			if (reduceValue is ValueType)

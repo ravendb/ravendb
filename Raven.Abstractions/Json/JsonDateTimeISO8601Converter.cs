@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Json
@@ -14,7 +15,7 @@ namespace Raven.Abstractions.Json
 				if (dateTime.Kind == DateTimeKind.Unspecified)
 					dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
 				var postFix = dateTime.Kind == DateTimeKind.Utc ? "Z" : "";
-				writer.WriteValue(dateTime.ToString(Default.DateTimeFormatsToWrite + postFix, CultureInfo.InvariantCulture));
+				writer.WriteValue(dateTime.GetDefaultRavenFormat(true));
 			}
 			else if (value is DateTimeOffset)
 			{

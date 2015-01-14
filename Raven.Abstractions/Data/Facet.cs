@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Linq;
 using System;
 using System.Reflection;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 
@@ -283,7 +284,7 @@ namespace Raven.Abstractions.Data
 			{
 				//The nullable stuff here it a bit weird, but it helps with trying to cast Value types
 				case "System.DateTime":
-                    return RavenQuery.Escape(((DateTime)value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+                    return RavenQuery.Escape(((DateTime)value).GetDefaultRavenFormat());
                 case "System.Int32":
 					return NumberUtil.NumberToString(((int)value));
 				case "System.Int64":

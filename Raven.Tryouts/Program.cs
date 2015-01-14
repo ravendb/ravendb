@@ -18,50 +18,7 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			List<Facet> fcets = new List<Facet>(){  
-						new Facet
-                      {
-                          Name ="TotalCount"
-                      },
-					  new Facet
-					  {
-					  	Name ="Tag_40062491"
-					  },
-					  new Facet
-					  {
-					  	Name ="Tag_40062492"
-					  },
-					  new Facet
-					  {
-					  	Name ="Tag_40062493"
-					  },
-					  new Facet
-					  {
-					  	Name ="Tag_40062494"
-					  }
-					  ,new Facet
-					  {
-					  	Name ="Tag_40062495"
-					  },
-					  new Facet
-					  {
-					  	Name ="Tag_40062496"
-					  }
-               };
-
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8080",
-				DefaultDatabase = "zap"
-			}.Initialize())
-			using (var session = store.OpenSession())
-			{
-				var f = session.Advanced.DocumentQuery<Object>("idxD").Where("IsPayingCustomer:true").SelectFields<Object>("CustomerId").Distinct().ToFacets(fcets);
-
-				Console.WriteLine(JsonConvert.SerializeObject(f,Formatting.Indented));
-			}
- 
-
+		    var etag = Etag.Parse("9A4CEAA9-E4F7-4E6F-86A2-FF09A6369E46");
 		}
 	}
 

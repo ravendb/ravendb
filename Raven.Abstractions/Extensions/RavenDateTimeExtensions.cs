@@ -65,7 +65,7 @@ namespace Raven.Abstractions.Extensions
             return c;
         }
 
-        private static char[][] _twoDigits = CreateTwoDigitsCache();
+        public static char[][] _twoDigits = CreateTwoDigitsCache();
 
         private static char[][] CreateTwoDigitsCache()
         {
@@ -81,15 +81,16 @@ namespace Raven.Abstractions.Extensions
             return c;
         }
 
-        public unsafe static string GetDefaultRavenFormat(this DateTime dt, bool isZooloo = false)
+        /// <summary>
+        /// This function Processes the to string format of the form "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff" for date times in 
+        /// invariant culture scenarios. This implementation takes 20% of the time of a regular .ToString(format) call
+        /// </summary>
+        /// <param name="dt"></param>
+        /// <param name="isUtc"></param>
+        /// <returns></returns>
+        public unsafe static string GetDefaultRavenFormat(this DateTime dt, bool isUtc = false)
         {
-            string result;
-            if (isZooloo)
-            {
-                result = new string('Z', 28);
-            }
-            else
-                result = new string('Z', 27);
+            string result = new string('Z', 27 + (isUtc ? 1 : 0));
 
             var ticks = dt.Ticks;
 
