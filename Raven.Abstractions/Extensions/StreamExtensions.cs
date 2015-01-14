@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using System.Runtime.InteropServices;
@@ -55,17 +56,15 @@ namespace Raven.Abstractions.Extensions
             stream.Write(buffer, 0, buffer.Length);
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	    private static void PartialRead(this Stream stream, byte[] buffer, int size)
 	    {
 		    var totalRead = 0;
 			while (totalRead < size)
 		    {
 				var bytesRead = stream.Read(buffer, totalRead, size - totalRead);
-				if(bytesRead == 0 && size > totalRead)
+				if(bytesRead == 0 )
 					throw new EndOfStreamException();
-				if(bytesRead == 0 && size == totalRead)
-				    break;
-
 			    totalRead += bytesRead;
 		    }
 	    }
