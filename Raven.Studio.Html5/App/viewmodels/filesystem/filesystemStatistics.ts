@@ -19,7 +19,7 @@ class filesystemStatistics extends viewModelBase {
     }
 
     modelPolling() {
-        this.fetchStats();
+        return this.fetchStats();
     }
 
     processStatsResults(results: filesystemStatisticsDto) {

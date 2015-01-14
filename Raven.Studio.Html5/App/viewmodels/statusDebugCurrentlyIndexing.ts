@@ -19,8 +19,9 @@ class statusDebugCurrentlyIndexing extends viewModelBase {
 
     modelPolling() {
         if (this.autoRefresh()) {
-            this.fetchCurrentlyIndexing();
+            return this.fetchCurrentlyIndexing();
         }
+        return $.Deferred().resolve();
     }
 
     toggleAutoRefresh() {
