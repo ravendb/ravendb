@@ -55,14 +55,28 @@ namespace Raven.Abstractions.Extensions
             stream.Write(buffer, 0, buffer.Length);
         }
 
+	    private static void SafePartialRead(this Stream stream, byte[] buffer, int size)
+	    {
+		    var totalRead = 0;
+			while (totalRead < size)
+		    {
+				var bytesRead = stream.Read(buffer, totalRead, size - totalRead);
+				if(bytesRead == 0 && size > totalRead)
+					throw new EndOfStreamException();
+				if(bytesRead == 0 && size == totalRead)
+				    break;
+
+			    totalRead += bytesRead;
+		    }
+	    }
+
         public static long ReadInt64(this Stream stream)
         {
-            var int64Size = Marshal.SizeOf(typeof(long));
-            var buffer = BufferPool.TakeBuffer(int64Size);
+	        var buffer = BufferPool.TakeBuffer(sizeof(long));
 
             try
             {
-                stream.Read(buffer, 0, int64Size);
+                stream.SafePartialRead(buffer,sizeof(long));
                 return BitConverter.ToInt64(buffer, 0);
             }
             finally
@@ -71,15 +85,13 @@ namespace Raven.Abstractions.Extensions
             }
         }
 
-
         public static int ReadInt32(this Stream stream)
         {
-            var int32Size = Marshal.SizeOf(typeof(int));
-            var buffer = BufferPool.TakeBuffer(int32Size);
+	        var buffer = BufferPool.TakeBuffer(sizeof(int));
 
             try
             {
-                stream.Read(buffer, 0, int32Size);
+                stream.SafePartialRead(buffer,sizeof(int));
                 return BitConverter.ToInt32(buffer, 0);
             }
             finally
@@ -100,8 +112,8 @@ namespace Raven.Abstractions.Extensions
 
             try
             {
-                var read = stream.Read(buffer, 0, stringLength);
-                return encoding.GetString(buffer, 0, read);
+	            stream.SafePartialRead(buffer,stringLength);
+				return encoding.GetString(buffer, 0, stringLength);
             }
             finally
             {
@@ -141,13 +153,13 @@ namespace Raven.Abstractions.Extensions
 
         public static Etag ReadEtag(this Stream stream)
         {
-            var buffer = BufferPool.TakeBuffer(16); //etag size is 16 bytes
+	        const int EtagSize = 16;
+            var buffer = BufferPool.TakeBuffer(EtagSize); //etag size is 16 bytes
 
             try
             {
-                stream.Read(buffer, 0, 16);
+	            stream.SafePartialRead(buffer,EtagSize);
                 return Etag.Parse(buffer);
-
             }
             finally
             {
