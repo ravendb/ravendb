@@ -42,7 +42,7 @@ namespace Raven.Bundles.Replication.Tasks
 	{
 		public bool IsRunning { get; private set; }
 
-		private bool shouldPause;
+		private volatile bool shouldPause;
 
 		public const int SystemDocsLimitForRemoteEtagUpdate = 15;
 		public const int DestinationDocsLimitForRemoteEtagUpdate = 15;
