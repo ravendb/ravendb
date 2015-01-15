@@ -346,6 +346,7 @@
     <TypeScriptCompile Include="App\commands\persistIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\explainReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getCachedCollectionsCount.ts" />
     <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
     <Content Include="App\commands\createDefaultSettingsCommand.ts" />

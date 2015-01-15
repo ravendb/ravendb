@@ -572,7 +572,7 @@ for(var customFunction in customFunctions) {{
 
 			var collections = Database
 				.LastCollectionEtags
-				.GetLastChangedCollections(date);
+				.GetLastChangedCollections(date.ToUniversalTime());
 
 			var results = new ConcurrentBag<CollectionNameAndCount>();
 
