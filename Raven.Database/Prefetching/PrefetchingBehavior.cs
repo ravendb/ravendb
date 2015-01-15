@@ -703,7 +703,12 @@ namespace Raven.Database.Prefetching
 
 		public void HandleLowMemory()
 		{
-			futureIndexBatches.Clear();	
+			ClearQueueAndFutureBatches();
+		}
+
+		public void ClearQueueAndFutureBatches()
+		{
+			futureIndexBatches.Clear();
 			prefetchingQueue.Clear();
 		}
 	}

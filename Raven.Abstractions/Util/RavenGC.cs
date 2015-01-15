@@ -11,8 +11,13 @@ namespace Raven.Abstractions.Util
 
 	public static class RavenGC
 	{
+		public static event Action ReleaseMemoryBeforeGC;
+
 		public static void CollectGarbage(bool waitForPendingFinalizers = false)
 		{
+			if (ReleaseMemoryBeforeGC != null)
+				ReleaseMemoryBeforeGC();
+
 			GC.Collect();
 
 			if (waitForPendingFinalizers)
@@ -21,11 +26,17 @@ namespace Raven.Abstractions.Util
 
 		public static void CollectGarbage(int generation, GCCollectionMode collectionMode = GCCollectionMode.Default)
 		{
+			if (ReleaseMemoryBeforeGC != null)
+				ReleaseMemoryBeforeGC();
+
 			GC.Collect(generation, collectionMode);
 		}
 
 		public static void CollectGarbage(bool compactLoh, Action afterCollect)
 		{
+			if (ReleaseMemoryBeforeGC != null)
+				ReleaseMemoryBeforeGC();
+
 			if (compactLoh)
 				SetCompactLog.Value();
 
