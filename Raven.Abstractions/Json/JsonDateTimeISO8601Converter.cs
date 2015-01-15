@@ -14,8 +14,7 @@ namespace Raven.Abstractions.Json
 				var dateTime = ((DateTime)value);
 				if (dateTime.Kind == DateTimeKind.Unspecified)
 					dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
-				var postFix = dateTime.Kind == DateTimeKind.Utc ? "Z" : "";
-				writer.WriteValue(dateTime.GetDefaultRavenFormat(true));
+                writer.WriteValue(dateTime.GetDefaultRavenFormat(dateTime.Kind == DateTimeKind.Utc));
 			}
 			else if (value is DateTimeOffset)
 			{
