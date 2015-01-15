@@ -140,7 +140,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   The types to sort the fields by (NULL if not specified)
 		/// </summary>
-		protected HashSet<KeyValuePair<string, Type>> sortByHints = new HashSet<KeyValuePair<string, Type>>();
+		protected HashSet<KeyValuePair<string, SortOptions?>> sortByHints = new HashSet<KeyValuePair<string, SortOptions?>>();
 
 		/// <summary>
 		///   The page size to use when querying the index
@@ -593,7 +593,7 @@ namespace Raven.Client.Document
 			timeout = waitTimeout;
 		}
 
-		protected internal QueryOperation InitializeQueryOperation(Action<string, string> setOperationHeaders)
+		protected internal QueryOperation InitializeQueryOperation()
 		{
 			var indexQuery = GetIndexQuery(isAsync: false);
 
@@ -604,9 +604,7 @@ namespace Raven.Client.Document
 									  indexName,
 									  indexQuery,
 									  projectionFields,
-									  sortByHints,
 									  theWaitForNonStaleResults,
-									  setOperationHeaders,
 									  timeout,
 									  transformResultsFunc,
 									  includes,
@@ -664,7 +662,7 @@ namespace Raven.Client.Document
 				return;
 			ClearSortHints(DatabaseCommands);
 			ExecuteBeforeQueryListeners();
-			queryOperation = InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
+			queryOperation = InitializeQueryOperation();
 			ExecuteActualQuery();
 		}
 
@@ -719,15 +717,13 @@ namespace Raven.Client.Document
 		/// </summary>
 		public virtual Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
 		{
-			var headers = new Dictionary<string,string>();
 			if (queryOperation == null)
 			{
 				ExecuteBeforeQueryListeners();
-				queryOperation = InitializeQueryOperation((key, val) => headers[key] =val);
+				queryOperation = InitializeQueryOperation();
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
-			lazyQueryOperation.SetHeaders(headers);
 
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
@@ -738,15 +734,13 @@ namespace Raven.Client.Document
         /// </summary>
         public virtual Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval)
         {
-            var headers = new Dictionary<string, string>();
             if (queryOperation == null)
             {
                 ExecuteBeforeQueryListeners();
-                queryOperation = InitializeQueryOperation((key, val) => headers[key] = val);
+                queryOperation = InitializeQueryOperation();
             }
 
             var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
-            lazyQueryOperation.SetHeaders(headers);
 
             return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
         }
@@ -758,16 +752,14 @@ namespace Raven.Client.Document
 		/// </summary>
 		public virtual Lazy<int> CountLazily()
 		{
-			var headers = new Dictionary<string, string>();
 			if (queryOperation == null)
 			{
 				ExecuteBeforeQueryListeners();
 				Take(0);
-				queryOperation = InitializeQueryOperation((key, val) => headers[key] = val);
+				queryOperation = InitializeQueryOperation();
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
-			lazyQueryOperation.SetHeaders(headers);
 
 			return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
 		}
@@ -790,7 +782,7 @@ namespace Raven.Client.Document
 			ClearSortHints(AsyncDatabaseCommands);
 			ExecuteBeforeQueryListeners();
 
-			queryOperation = InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
+			queryOperation = InitializeQueryOperation();
 			return await ExecuteActualQueryAsync();
 		}
 
@@ -936,7 +928,7 @@ namespace Raven.Client.Document
 			});
 			fieldName = descending ? "-" + fieldName : fieldName;
 			orderByFields = orderByFields.Concat(new[] { fieldName }).ToArray();
-			sortByHints.Add(new KeyValuePair<string, Type>(fieldName, fieldType));
+			sortByHints.Add(new KeyValuePair<string, SortOptions?>(fieldName, theSession.Conventions.GetDefaultSortOption(fieldType)));
 		}
 
 		public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
@@ -1375,7 +1367,7 @@ If you really want to do in memory filtering on the data returned from the query
 			AppendSpaceIfNeeded(queryText.Length > 0);
 
 			if ((start ?? end) != null)
-				sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
+				sortByHints.Add(new KeyValuePair<string, SortOptions?>(fieldName, theSession.Conventions.GetDefaultSortOption((start ?? end).GetType())));
 
 			NegateIfNeeded();
 
@@ -1399,7 +1391,7 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			AppendSpaceIfNeeded(queryText.Length > 0);
 			if ((start ?? end) != null)
-				sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
+				sortByHints.Add(new KeyValuePair<string, SortOptions?>(fieldName, theSession.Conventions.GetDefaultSortOption((start ?? end).GetType())));
 
 			NegateIfNeeded();
 
@@ -1875,6 +1867,7 @@ If you really want to do in memory filtering on the data returned from the query
 					WaitForNonStaleResults = theWaitForNonStaleResults,
 					CutoffEtag = cutoffEtag,
 					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+					SortHints = sortByHints.Where(x => x.Value != null).ToDictionary(x => x.Key, x => x.Value.Value),
 					FieldsToFetch = fieldsToFetch,
 					SpatialFieldName = spatialFieldName,
 					QueryShape = queryShape,
@@ -1906,6 +1899,7 @@ If you really want to do in memory filtering on the data returned from the query
                 WaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
 				WaitForNonStaleResults = theWaitForNonStaleResults,
 				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+				SortHints = sortByHints.Where(x => x.Value != null).ToDictionary(x => x.Key, x => x.Value.Value),
 				FieldsToFetch = fieldsToFetch,
 				DefaultField = defaultField,
 				DefaultOperator = defaultOperator,
@@ -1913,7 +1907,7 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlighterPreTags = highlighterPreTags.ToArray(),
 				HighlighterPostTags = highlighterPostTags.ToArray(),
 				HighlighterKeyName = highlighterKeyName,
-                ResultsTransformer = this.resultsTransformer,
+                ResultsTransformer = resultsTransformer,
                 TransformerParameters = transformerParameters,
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
 				DisableCaching = disableCaching,

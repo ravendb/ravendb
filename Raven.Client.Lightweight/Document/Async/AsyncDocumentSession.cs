@@ -403,7 +403,7 @@ namespace Raven.Client.Document.Async
 
 
             var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation, token).ConfigureAwait(false);
-			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation(null);
+			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
 			queryOperation.DisableEntitiesTracking = true;
 
 			return new QueryYieldStream<T>(this, enumerator, queryOperation, token);

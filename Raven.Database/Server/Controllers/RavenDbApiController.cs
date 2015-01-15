@@ -345,6 +345,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var result = new Dictionary<string, SortOptions>();
 
+			// backward compatibility
 			foreach (var header in InnerRequest.Headers.Where(pair => pair.Key.StartsWith("SortHint-")))
 			{
 				SortOptions sort;

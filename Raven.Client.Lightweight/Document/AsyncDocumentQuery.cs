@@ -801,16 +801,14 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default (CancellationToken))
 		{
-			var headers = new Dictionary<string, string>();
 			if (queryOperation == null)
 			{
 				ExecuteBeforeQueryListeners();
 				Take(0);
-				queryOperation = InitializeQueryOperation((key, val) => headers[key] = val);
+				queryOperation = InitializeQueryOperation();
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
-			lazyQueryOperation.SetHeaders(headers);
 
 			return ((AsyncDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation,token);
 		}

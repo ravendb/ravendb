@@ -80,7 +80,7 @@ namespace Raven.Client.Document
 			foreach (var dbCmd in ShardDatabaseCommands)
 			{
 				ClearSortHints(dbCmd);
-				shardQueryOperations.Add(InitializeQueryOperation(dbCmd.OperationsHeaders.Add));
+				shardQueryOperations.Add(InitializeQueryOperation());
 			}
 
 			ExecuteActualQuery();
@@ -256,7 +256,7 @@ namespace Raven.Client.Document
 				}
 
 				ExecuteBeforeQueryListeners();
-				queryOperation = InitializeQueryOperation((s, s1) => ShardDatabaseCommands.ForEach(cmd => cmd.OperationsHeaders.Set(s, s1)));
+				queryOperation = InitializeQueryOperation();
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
