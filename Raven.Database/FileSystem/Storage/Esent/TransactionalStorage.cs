@@ -14,7 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Isam.Esent.Interop;
-
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
@@ -478,9 +478,23 @@ namespace Raven.Database.FileSystem.Storage.Esent
             new RestoreOperation(restoreRequest, configuration, output).Execute();
         }
 
-        void ITransactionalStorage.Compact(InMemoryRavenConfiguration cfg)
+        void ITransactionalStorage.Compact(InMemoryRavenConfiguration cfg, Action<string> output)
         {
-            Compact(cfg, (sesid, snp, snt, data) => JET_err.Success);
+            DateTime lastCompactionProgressStatusUpdate = DateTime.MinValue;
+
+            Compact(cfg, (sesid, snp, snt, data) => {
+
+                if (snt == JET_SNT.Progress)
+                {
+                    if (SystemTime.UtcNow - lastCompactionProgressStatusUpdate < TimeSpan.FromMilliseconds(100))
+                        return JET_err.Success;
+
+                    lastCompactionProgressStatusUpdate = SystemTime.UtcNow;
+                }
+
+                output(string.Format("Esent Compact: {0} {1} {2}", snp, snt, data));
+                return JET_err.Success;
+            });
         }
 
 	    private void Output(string message)

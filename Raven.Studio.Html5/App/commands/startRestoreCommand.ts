@@ -26,6 +26,7 @@ class startRestoreCommand extends commandBase {
                     .fail((response: JQueryXHR) => {
                         this.reportError("Failed to restore backup!", response.responseText, response.statusText);
                         this.logError(response, result);
+                        result.reject();
                     })
                     .done(() => new monitorRestoreCommand(result, this.updateRestoreStatus).execute());
             });
