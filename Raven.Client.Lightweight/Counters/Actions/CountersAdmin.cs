@@ -6,9 +6,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Connection;
-using Raven.Client.Connection.Profiling;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Counters.Actions
@@ -27,7 +24,7 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/counterStorage/conterStorages", serverUrl);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, "GET"))
+			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Get))
 			{
 				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				return response.ToObject<string[]>(jsonSerializer);
@@ -38,7 +35,7 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/counterStorage/stats", serverUrl);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, "GET"))
+			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Get))
 			{
 				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				return response.ToObject<List<CounterStorageStats>>(jsonSerializer);
@@ -58,7 +55,7 @@ namespace Raven.Client.Counters.Actions
 			counterName = counterName ?? defaultStorageName;
 			var requestUriString = String.Format("{0}/counterstorage/admin/{1}", serverUrl, counterName);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, "PUT"))
+			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Put))
 			{
 				try
 				{
@@ -85,7 +82,7 @@ namespace Raven.Client.Counters.Actions
 			counterName = counterName ?? defaultStorageName;
 			var requestUriString = String.Format("{0}/counterstorage/admin/{1}?update=true", serverUrl, counterName);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, "PUT"))
+			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Put))
 				await request.WriteAsync(RavenJObject.FromObject(countersDocument)).WithCancellation(token).ConfigureAwait(false);
 		}
 
@@ -94,7 +91,7 @@ namespace Raven.Client.Counters.Actions
 			counterName = counterName ?? defaultStorageName;
 			var requestUriString = String.Format("{0}/counterstorage/admin/{1}?hard-delete={2}", serverUrl, counterName, hardDelete);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, "DELETE"))
+			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Delete))
 			{
 				try
 				{

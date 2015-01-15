@@ -1,3 +1,4 @@
+using System;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
@@ -10,6 +11,15 @@ namespace Raven.Client.Counters.Actions
 	/// </summary>
 	public abstract class CountersActionsBase
 	{
+		internal class Verbs
+		{
+			internal const string Put = "PUT";
+			internal const string Post = "POST";
+			internal const string Get = "GET";
+			internal const string Delete = "DELETE";
+			internal const string Head = "HEAD";
+		}
+
 		protected readonly OperationCredentials credentials;
 		protected readonly HttpJsonRequestFactory jsonRequestFactory;
 		protected readonly string serverUrl;
@@ -32,6 +42,11 @@ namespace Raven.Client.Counters.Actions
 			
 			this.convention = convention;
 			this.parent = parent;
+		}
+
+		protected HttpJsonRequest CreateHttpJsonRequest(string requestUriString, string HttpVerb)
+		{
+			return jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, HttpVerb, credentials, convention));
 		}
 	}
 }
