@@ -1,6 +1,8 @@
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Database.Server;
@@ -115,5 +117,29 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
+		[Fact]
+		public void ShouldSelectIndexWhenStringSortingSpecifiedByUsingQueryString()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				RavenQueryStatistics stats;
+				using (var session = store.OpenSession())
+				{
+					session.Query<GameServer>()
+						.Statistics(out stats)
+						.OrderBy(x => x.Name)
+						.ToList();
+				}
+
+				CurrentOperationContext.Headers.Value.Clear();
+
+				var indexQuery = new IndexQuery { SortedFields = new[] { new SortedField("Name") } };
+				var url = store.Url.ForDatabase(store.DefaultDatabase).Indexes("dynamic/GameServers") + indexQuery.GetQueryString() + "&SortHint-Name=String";
+				var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+				var result = request.ReadResponseJson().JsonDeserialization<QueryResult>();
+
+				Assert.Equal(stats.IndexName, result.IndexName);
+			}
+		}
 	}
 }

@@ -352,6 +352,16 @@ namespace Raven.Database.Server.Controllers
 				result.Add(Uri.UnescapeDataString(header.Key), sort);
 			}
 
+			foreach (var pair in InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key.StartsWith("SortHint-", StringComparison.OrdinalIgnoreCase)))
+			{
+				var key = pair.Key;
+				var value = pair.Value != null ? Uri.UnescapeDataString(pair.Value) : null;
+
+				SortOptions sort;
+				Enum.TryParse(value, true, out sort);
+				result.Add(Uri.UnescapeDataString(key), sort);
+			}
+
 			return result;
 		}
 
