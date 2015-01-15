@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
@@ -132,7 +133,7 @@ namespace Raven.Database.Server.Controllers
 				msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
 				msg.Headers.Add("Raven-Index", queryOp.Header.Index);
 				msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
-				msg.Headers.Add("Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+				msg.Headers.Add("Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.GetDefaultRavenFormat());
 
                 if ( IsCsvDownloadRequest(InnerRequest))
 				{

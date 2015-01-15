@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
+using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
@@ -32,14 +33,14 @@ namespace Raven.Abstractions.Json
 					if (dateTime.Kind == DateTimeKind.Unspecified)
 						dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
 					var postFix = dateTime.Kind == DateTimeKind.Utc ? "Z" : "";
-					writer.WritePropertyName(dateTime.ToString(Default.DateTimeFormatsToWrite + postFix, CultureInfo.InvariantCulture));
+					writer.WritePropertyName(dateTime.GetDefaultRavenFormat());
 				}
 				else if (key is DateTimeOffset)
 				{
 					var dateTimeOffset = ((DateTimeOffset)key);
 					if (dateTimeOffset.Offset == TimeSpan.Zero)
 					{
-						writer.WriteValue(dateTimeOffset.UtcDateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z");
+						writer.WriteValue(dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true));
 					}
 					else
 					{

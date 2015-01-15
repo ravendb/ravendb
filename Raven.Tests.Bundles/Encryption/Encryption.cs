@@ -14,10 +14,10 @@ namespace Raven.Tests.Bundles.Encryption
 	{
 		private readonly string path;
 		protected readonly DocumentStore documentStore;
-		private RavenDbServer ravenDbServer;
+		protected RavenDbServer ravenDbServer;
 		private bool closed = false;
 
-		public Encryption()
+		protected Encryption()
 		{
 			path = NewDataPath();
 			CreateServer();

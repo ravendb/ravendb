@@ -335,7 +335,7 @@ namespace Rhino.Licensing
 			}
 			catch (Exception e)
 			{
-				Logger.ErrorException("Could not re-lease subscription license", e);
+				Logger.Log(IsOemLicense() ? LogLevel.Info : LogLevel.Error, () => "Could not re-lease subscription license", e);
 			}
 
 			return ValidateWithoutUsingSubscriptionLeasing();

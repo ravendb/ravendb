@@ -271,6 +271,7 @@
     <Compile Include="Default.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\MemberInfoExtensions.cs" />
+    <Compile Include="Extensions\RavenDateTimeExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="FileSystem\ConfigurationSearchResults.cs" />
     <Compile Include="FileSystem\FileHeader.cs" />

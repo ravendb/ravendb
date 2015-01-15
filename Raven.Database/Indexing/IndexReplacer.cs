@@ -29,7 +29,7 @@ namespace Raven.Database.Indexing
 
 		private readonly ConcurrentDictionary<int, IndexReplaceInformation> indexesToReplace = new ConcurrentDictionary<int, IndexReplaceInformation>();
 
-		private const string IndexReplacePrefix = "Raven/Indexes/Replace/";
+		public const string IndexReplacePrefix = "Raven/Indexes/Replace/";
 
 		public IndexReplacer(DocumentDatabase database)
 		{
@@ -86,6 +86,13 @@ namespace Raven.Database.Indexing
 
 			var replaceIndexId = replaceIndex.IndexId;
 
+		    var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(replaceIndexId);
+            if (!indexDefinition.IsSideBySideIndex)
+            {
+                indexDefinition.IsSideBySideIndex = true;
+                Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
+            }
+
 			var indexReplaceInformation = document.DataAsJson.JsonDeserialization<IndexReplaceInformation>();
 			indexReplaceInformation.ReplaceIndex = replaceIndexName;
 
@@ -124,6 +131,8 @@ namespace Raven.Database.Indexing
 			IndexReplaceInformation indexReplaceInformation;
 			if (indexesToReplace.TryRemove(pair.Key, out indexReplaceInformation) && indexReplaceInformation.ReplaceTimer != null)
 				Database.TimerManager.ReleaseTimer(indexReplaceInformation.ReplaceTimer);
+
+            Database.Indexes.DeleteIndex(replaceIndexName);
 		}
 
 		public void ReplaceIndexes(ICollection<int> indexIds)

@@ -113,7 +113,7 @@
             </span>
             <div style="white-space: nowrap" data-bind="foreach: filteredAndSortedTasks, delegatedHandler: 'click'">
                 <div style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectTask" data-bind="visible: IsVisible, css: { warning: TaskStatus === 'Canceled', danger: TaskStatus === 'Faulted', 'selected': $data === $parent.selectedTask() }">
-                    <div class="column" style="width: 40px"><button  data-bind="visible: Killable, click: $root.taskKill.bind($root, $data)" class="btn btn-default"><i class="fa fa-bolt"></i></button></div>
+                    <div class="column" style="width: 40px"><button  data-bind="visible: Killable, click: $root.taskKill.bind($root, $data)" class="btn btn-link negative-margin"><i class="fa fa-bolt"></i></button></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'px' }, text: TaskType"></div> 
                     <div class="column" data-bind="style: { width: $root.columnWidths[1]() + 'px' }, text: TimeStampText, attr: { title: TimeStampText }"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[2]() + 'px' }, text: TaskStatus"></div>

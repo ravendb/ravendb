@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
@@ -18,24 +19,12 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			var idxs = new IndexStats
-			{
-				Performance = new[]
-				{
-					new IndexingPerformanceStats
-					{
-						Operations = new List<BasePefromanceStats>
-						{
-							new ParallelPefromanceStats(),
-							new PerformanceStats()
-						}
-					},
-				}
-			};
+		    var etag = new Etag(UuidType.Documents, 1, 1);
+		    Console.WriteLine(etag);
+		    Console.WriteLine(Etag.Parse(etag.ToString()));
 
-			Console.WriteLine(JsonConvert.SerializeObject(idxs,Formatting.Indented));
-
-
+		    //var etag = new Etag(UuidType.Documents, 5, 10);
+		    //Console.WriteLine(Etag.Parse(etag.ToString()));
 		}
 	}
 

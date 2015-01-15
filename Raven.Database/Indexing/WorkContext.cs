@@ -230,9 +230,23 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void AddError(int index, string indexName, string key, string error )
+		public void AddError(int index, string indexName, string key, Exception exception)
 		{
-            AddError(index, indexName, key, error, "Unknown");
+			AddError(index, indexName, key, exception, "Unknown");
+		}
+
+		public void AddError(int index, string indexName, string key, Exception exception, string component)
+		{
+			var aggregateException = exception as AggregateException;
+			if (aggregateException != null)
+				exception = aggregateException.ExtractSingleInnerException();
+
+			AddError(index, indexName, key, exception != null ? exception.Message : "Unknown message", component);
+		}
+
+		public void AddError(int index, string indexName, string key, string error)
+		{
+			AddError(index, indexName, key, error, "Unknown");
 		}
 
 		public void AddError(int index, string indexName, string key, string error, string component)
