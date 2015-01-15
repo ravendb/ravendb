@@ -262,9 +262,9 @@
             <ul class="nav navbar-nav" data-bind="with: activeFilesystem, visible: appUrls.isAreaActive('filesystems')() && !isActiveFileSystemDisabled()">
                 <li><a data-bind="text:'Status'" class="navbar-link" href="#/filesystems/status"></a></li>
                 <!-- ko with: statistics -->
-                <li><a href="#filesystems" data-bind="text: FileCount + ' files'"></a></li>
-                <li><a href="#filesystems" data-bind="text: Metrics.RequestsPerSecond + ' requests per second'"></a></li>
-                <li><a href="#filesystems" data-bind="text: Metrics.RequestsDuration.Mean.toFixed(1) + 'ms mean duration'"></a></li>
+                <li><a data-bind="text: FileCount + ' files', attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: Metrics.RequestsPerSecond + ' requests per second', attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: Metrics.RequestsDuration.Mean.toFixed(1) + 'ms mean duration', attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
                 <!-- /ko -->
             </ul>
 
