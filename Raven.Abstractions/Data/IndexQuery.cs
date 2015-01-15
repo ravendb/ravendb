@@ -258,7 +258,7 @@ namespace Raven.Abstractions.Data
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
 				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
-			SortHints.ApplyIfNotNull(hint => path.AppendFormat("&SortHint-{0}={1}", Uri.EscapeDataString(hint.Key), hint.Value));
+			SortHints.ApplyIfNotNull(hint => path.AppendFormat("&SortHint{2}{0}={1}", Uri.EscapeDataString(hint.Key), hint.Value, hint.Key.StartsWith("-") ? string.Empty : "-"));
 
             if (string.IsNullOrEmpty(ResultsTransformer) == false)
             {
