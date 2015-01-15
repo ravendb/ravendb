@@ -364,11 +364,11 @@ namespace Raven.Database.Indexing
 			if (fieldsToFetch.FetchAllStoredFields)
 				fields = fields.Concat(document.GetFields().Select(x => x.Name));
 
-			AddFieldsToDocument(document, fields, documentFromFields);
+			AddFieldsToDocument(document, new HashSet<string>(fields), documentFromFields);
 			return documentFromFields;
 		}
 
-		protected static void AddFieldsToDocument(Document document, IEnumerable<string> fieldNames, RavenJObject documentFromFields)
+		protected static void AddFieldsToDocument(Document document, HashSet<string> fieldNames, RavenJObject documentFromFields)
 		{
 			foreach (var fldName in fieldNames)
 			{
