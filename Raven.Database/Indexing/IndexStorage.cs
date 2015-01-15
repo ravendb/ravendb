@@ -1308,7 +1308,7 @@ namespace Raven.Database.Indexing
 			documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification()
 			{
 				Name = thisItem.Name,
-				Type = IndexChangeTypes.IndexDemotedToIdle
+				Type = IndexChangeTypes.IndexDemotedToAbandoned
 			});
 		}
 
