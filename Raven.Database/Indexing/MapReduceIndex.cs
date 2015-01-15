@@ -99,7 +99,7 @@ namespace Raven.Database.Indexing
 				{
 					actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, indexId, deleted);
 				}
-				
+
 				return doc;
 			})
 			.Where(x => x is FilteredDocument == false)
@@ -123,7 +123,7 @@ namespace Raven.Database.Indexing
 
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, partition =>
 			{
-                token.ThrowIfCancellationRequested();
+				token.ThrowIfCancellationRequested();
 				var parallelStats = new ParallelBatchStats
 				{
 					StartDelay = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
@@ -167,7 +167,7 @@ namespace Raven.Database.Indexing
 						var currentDocumentResults = new List<object>();
 						string currentKey = null;
 						bool skipDocument = false;
-						
+
 						foreach (var currentDoc in mapResults)
 						{
 							token.ThrowIfCancellationRequested();
@@ -216,7 +216,7 @@ namespace Raven.Database.Indexing
 						PerformanceStats.From(IndexingOperation.MapStorage_PutMappedResult, putMappedResultsDuration.ElapsedMilliseconds),
 						PerformanceStats.From(IndexingOperation.MapStorage_ConvertToRavenJObject, convertToRavenJObjectDuration.ElapsedMilliseconds)
 					}).ToArray();
-					
+
 
 					parallelOperations.Enqueue(parallelStats);
 				}
@@ -427,9 +427,22 @@ namespace Raven.Database.Indexing
 				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().Select(x => x.Name).ToArray());
 				return base.RetrieveDocument(document, fieldsToFetch, score);
 			}
+			var projection = RavenJObject.Parse(field.StringValue);
+			if (fieldsToFetch.FetchAllStoredFields)
+			{
+				var fields = new HashSet<string>(document.GetFields().Select(x => x.Name));
+				fields.Remove(Constants.ReduceKeyFieldName);
+				var documentFromFields = new RavenJObject();
+				AddFieldsToDocument(document, fields, documentFromFields);
+				foreach (var kvp in projection)
+				{
+					documentFromFields[kvp.Key] = kvp.Value;
+				}
+				projection = documentFromFields;
+			}
 			return new IndexQueryResult
 			{
-				Projection = RavenJObject.Parse(field.StringValue),
+				Projection = projection,
 				Score = score.Score,
 				ReduceVal = field.StringValue
 			};
@@ -722,7 +735,7 @@ namespace Raven.Database.Indexing
 				}, flushToDiskDuration, recreateSearcherDuration);
 
 				var performanceStats = new List<BasePefromanceStats>();
-				
+
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Linq_ReduceLinqExecution, linqExecutionDuration.ElapsedMilliseconds));
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_DeleteExistingDocument, deleteExistingDocumentsDuration.ElapsedMilliseconds));
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_ConvertToLuceneDocument, convertToLuceneDocumentDuration.ElapsedMilliseconds));
