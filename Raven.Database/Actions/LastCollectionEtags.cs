@@ -7,6 +7,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Indexing;
 
@@ -15,7 +17,7 @@ namespace Raven.Database.Actions
 	public class LastCollectionEtags
 	{
 		private readonly WorkContext context;
-		private ConcurrentDictionary<string, Etag> lastCollectionEtags;
+		private ConcurrentDictionary<string, Entry> lastCollectionEtags;
 
 		public LastCollectionEtags(WorkContext context)
 		{
@@ -28,7 +30,7 @@ namespace Raven.Database.Actions
 
 			if (indexDefinitions.Count == 0)
 			{
-				lastCollectionEtags = new ConcurrentDictionary<string, Etag>(StringComparer.InvariantCultureIgnoreCase);
+				lastCollectionEtags = new ConcurrentDictionary<string, Entry>(StringComparer.InvariantCultureIgnoreCase);
 				return;
 			}
 
@@ -61,11 +63,12 @@ namespace Raven.Database.Actions
 										.GroupBy(x => x.Item1, StringComparer.OrdinalIgnoreCase)
 										.Select(x => new
 										{
-											CollectionName = x.Key, MaxEtag = x.Min(y => y.Item2)
+											CollectionName = x.Key,
+											MaxEtag = x.Min(y => y.Item2)
 										})
-										.ToDictionary(x => x.CollectionName, y => y.MaxEtag);
+										.ToDictionary(x => x.CollectionName, y => new Entry { Etag = y.MaxEtag, Updated = SystemTime.UtcNow });
 
-			lastCollectionEtags = new ConcurrentDictionary<string, Etag>(collectionEtags, StringComparer.OrdinalIgnoreCase);
+			lastCollectionEtags = new ConcurrentDictionary<string, Entry>(collectionEtags, StringComparer.OrdinalIgnoreCase);
 		}
 
 		public bool HasEtagGreaterThan(List<string> collectionsToCheck, Etag etagToCheck)
@@ -74,10 +77,10 @@ namespace Raven.Database.Actions
 
 			foreach (var collectionName in collectionsToCheck)
 			{
-				Etag highestEtagForCollection;
-				if (lastCollectionEtags.TryGetValue(collectionName, out highestEtagForCollection))
+				Entry highestEtagForCollectionEntry;
+				if (lastCollectionEtags.TryGetValue(collectionName, out highestEtagForCollectionEntry))
 				{
-					if (highestEtagForCollection.CompareTo(etagToCheck) > 0)
+					if (highestEtagForCollectionEntry.Etag.CompareTo(etagToCheck) > 0)
 						return true;
 
 					higherEtagExists = false;
@@ -93,16 +96,40 @@ namespace Raven.Database.Actions
 
 		public void Update(string collectionName, Etag etag)
 		{
-			lastCollectionEtags.AddOrUpdate(collectionName, etag, (existingEntity, existingEtag) => etag.CompareTo(existingEtag) > 0 ? etag : existingEtag);
+			lastCollectionEtags.AddOrUpdate(collectionName, new Entry { Etag = etag, Updated = SystemTime.UtcNow }, (existingEntity, existingEtagEntry) =>
+			{
+				if (etag.CompareTo(existingEtagEntry.Etag) > 0)
+				{
+					existingEtagEntry.Etag = etag;
+					existingEtagEntry.Updated = SystemTime.UtcNow;
+				}
+
+				return existingEtagEntry;
+			});
 		}
 
 		public Etag GetLastEtagForCollection(string collectionName)
 		{
-			Etag result;
-			if (lastCollectionEtags.TryGetValue(collectionName, out result))
-				return result;
+			Entry entry;
+			if (lastCollectionEtags.TryGetValue(collectionName, out entry))
+				return entry.Etag;
 
 			return null;
+		}
+
+		public List<string> GetLastChangedCollections(DateTime date)
+		{
+			return lastCollectionEtags
+				.Where(x => x.Value.Updated > date)
+				.Select(x => x.Key)
+				.ToList();
+		}
+
+		private class Entry
+		{
+			public Etag Etag { get; set; }
+
+			public DateTime Updated { get; set; }
 		}
 	}
 }
