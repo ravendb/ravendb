@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Prefetching
@@ -19,6 +20,7 @@ namespace Raven.Database.Prefetching
 		public Prefetcher(WorkContext workContext)
 		{
 			this.workContext = workContext;
+			RavenGC.ReleaseMemoryBeforeGC += ClearPrefetchingBehaviors;
 		}
 
 		public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner)
@@ -80,9 +82,19 @@ namespace Raven.Database.Prefetching
 
 		public void Dispose()
 		{
+			RavenGC.ReleaseMemoryBeforeGC -= ClearPrefetchingBehaviors;
+
 			foreach (var prefetchingBehavior in prefetchingBehaviors)
 			{
 				prefetchingBehavior.Dispose();
+			}
+		}
+
+		public void ClearPrefetchingBehaviors()
+		{
+			foreach (var prefetchingBehavior in prefetchingBehaviors)
+			{
+				prefetchingBehavior.ClearQueueAndFutureBatches();
 			}
 		}
 	}
