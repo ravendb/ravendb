@@ -53,12 +53,12 @@ namespace Raven.Database.Actions
 				if (abstractViewGenerator == null)
 					continue;
 
-				stats.ForEntityName = abstractViewGenerator.ForEntityNames.ToList();
+				stats.ForEntityName = abstractViewGenerator.ForEntityNames.ToArray();
 
 				indexesStats.Add(stats);
 			}
 
-			var collectionEtags = indexesStats.Where(x => x.ForEntityName.Count > 0)
+			var collectionEtags = indexesStats.Where(x => x.ForEntityName.Length > 0)
 										.SelectMany(x => x.ForEntityName, (stats, collectionName) => new Tuple<string, Etag>(collectionName, stats.LastIndexedEtag))
 										.GroupBy(x => x.Item1, StringComparer.OrdinalIgnoreCase)
 										.Select(x => new

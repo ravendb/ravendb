@@ -212,12 +212,14 @@ namespace Raven.Database.Indexing
 							}
 							allReferenceEtags.Enqueue(CurrentIndexingScope.Current.ReferencesEtags);
 							allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
+							parallelStats.Operations = parallelStats.Operations.Concat(new[]
+							{
+								PerformanceStats.From(IndexingOperation.LoadDocument, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds),
+								PerformanceStats.From(IndexingOperation.Linq_MapExecution, linqExecutionDuration.ElapsedMilliseconds),
+								PerformanceStats.From(IndexingOperation.Lucene_ConvertToLuceneDocument, convertToLuceneDocumentDuration.ElapsedMilliseconds),
+								PerformanceStats.From(IndexingOperation.Lucene_AddDocument, addDocumentDutation.ElapsedMilliseconds)
+							}).ToArray();
 
-							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.LoadDocument, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds));
-
-							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_MapExecution, linqExecutionDuration.ElapsedMilliseconds));
-							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Lucene_ConvertToLuceneDocument, convertToLuceneDocumentDuration.ElapsedMilliseconds));
-							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Lucene_AddDocument, addDocumentDutation.ElapsedMilliseconds));
 
 							parallelOperations.Enqueue(parallelStats);
 						}
@@ -227,7 +229,7 @@ namespace Raven.Database.Indexing
 					{
 						NumberOfThreads = parallelOperations.Count,
 						DurationMs = (long) (SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds,
-						BatchedOperations = parallelOperations.ToList()
+						BatchedOperations = parallelOperations.ToArray()
 					});
 
 					UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
