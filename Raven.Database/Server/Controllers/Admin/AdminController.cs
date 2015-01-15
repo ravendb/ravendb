@@ -952,5 +952,17 @@ namespace Raven.Database.Server.Controllers.Admin
 				OperationId = id
 			});
 		}
+
+		[HttpPost]
+		[RavenRoute("admin/low-memory-notification")]
+		public HttpResponseMessage LowMemoryNotification()
+		{
+			if (EnsureSystemDatabase() == false)
+				return GetMessageWithString("Low memory simulation is only possible from the system database", HttpStatusCode.BadRequest);
+
+			MemoryStatistics.SimulateLowMemoryNotification();
+
+			return GetEmptyMessage();
+		}
 	}
 }
