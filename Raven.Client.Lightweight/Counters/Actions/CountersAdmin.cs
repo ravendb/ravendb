@@ -14,37 +14,21 @@ namespace Raven.Client.Counters.Actions
 	/// <summary>
 	/// implements administration level counters functionality
 	/// </summary>
-	public class CountersAdmin
+	public class CountersAdmin : CountersActionsBase
 	{
-		private readonly OperationCredentials credentials;
-		private readonly HttpJsonRequestFactory jsonRequestFactory;
-		private readonly string serverUrl;
-		private readonly string counterStorageName;
-		private readonly CountersClient _parent;
-		private readonly Convention convention;
-		private readonly JsonSerializer _jsonSerializer;
-
-		internal CountersAdmin(CountersClient parent, Convention convention)
+		internal CountersAdmin(CountersClient parent, Convention convention) : base(parent, convention)
 		{
-			credentials = parent.PrimaryCredentials;
-			jsonRequestFactory = parent.JsonRequestFactory;
-			serverUrl = parent.ServerUrl;
-			counterStorageName = parent.CounterStorageName;
-			_parent = parent;
-			this.convention = convention;
-			_jsonSerializer = parent.JsonSerializer;
-		}
 
-		public ProfilingInformation ProfilingInformation { get; private set; }
+		}
 
 		public async Task<string[]> GetCounterStoragesNames()
 		{
 			var requestUriString = String.Format("{0}/counterStorage/conterStorages", serverUrl);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(_parent, requestUriString, "GET", credentials, convention)))
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "GET", credentials, convention)))
 			{
 				var response = await request.ReadResponseJsonAsync();
-				return response.ToObject<string[]>(_jsonSerializer);
+				return response.ToObject<string[]>(jsonSerializer);
 			}
 		}
 
@@ -52,10 +36,10 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/counterStorage/stats", serverUrl);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(_parent, requestUriString, "GET", credentials, convention)))
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "GET", credentials, convention)))
 			{
 				var response = await request.ReadResponseJsonAsync();
-				return response.ToObject<List<CounterStorageStats>>(_jsonSerializer);
+				return response.ToObject<List<CounterStorageStats>>(jsonSerializer);
 			}
 		}
 
@@ -69,11 +53,11 @@ namespace Raven.Client.Counters.Actions
 			storageName = storageName ?? counterStorageName;
 			var requestUriString = String.Format("{0}/counterstorage/admin/{1}", serverUrl, storageName);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(_parent, requestUriString, "PUT", credentials, convention)))
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "PUT", credentials, convention)))
 			{
 				try
 				{
-					await request.WriteAsync(RavenJObject.FromObject(countersDocument ?? new CountersDocument()));
+					await request.WriteAsync(RavenJObject.FromObject(countersDocument ?? new CountersDocument())).ConfigureAwait(false);
 				}
 				catch (ErrorResponseException e)
 				{
@@ -93,17 +77,16 @@ namespace Raven.Client.Counters.Actions
 			storageName = storageName ?? counterStorageName;
 			var requestUriString = String.Format("{0}/counterstorage/admin/{1}?update=true", serverUrl, storageName);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(_parent, requestUriString, "PUT", credentials, convention)))
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "PUT", credentials, convention)))
 				await request.WriteAsync(RavenJObject.FromObject(countersDocument));
 		}
 
 		public async Task DeleteCounterStorageAsync(string storageName = null, bool hardDelete = false)
 		{
 			storageName = storageName ?? counterStorageName;
-			var requestUriString = String.Format("{0}/counterstorage/admin/{1}?hard-delete={2}", serverUrl,
-				storageName, hardDelete);
+			var requestUriString = String.Format("{0}/counterstorage/admin/{1}?hard-delete={2}", serverUrl, storageName, hardDelete);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(_parent, requestUriString, "DELETE", credentials, convention)))
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "DELETE", credentials, convention)))
 			{
 				try
 				{

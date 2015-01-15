@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
@@ -8,35 +9,24 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Counters.Actions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Counters
 {
-	public class CountersCommands
+	public class CountersCommands : CountersActionsBase
 	{
-		private readonly OperationCredentials credentials;
-		private readonly HttpJsonRequestFactory jsonRequestFactory;
-		private readonly string counterStorageUrl;
-		private readonly CountersClient _parent;
-		private readonly Convention convention;
-
-		public CountersCommands(CountersClient parent, Convention convention)
+		internal CountersCommands(CountersClient parent, Convention convention)
+			: base(parent, convention)
 		{
-			credentials = parent.PrimaryCredentials;
-			jsonRequestFactory = parent.JsonRequestFactory;
-			counterStorageUrl = parent.CounterStorageUrl;
-			this._parent = parent;
-			this.convention = convention;
 		}
-
-		public ProfilingInformation ProfilingInformation { get; private set; }
 
 		public async Task Change(string group, string counterName, long delta)
 		{
-			var requestUriString = String.Format("{0}/change?group={1}&counterName={2}&delta={3}",
+			var requestUriString = String.Format(CultureInfo.InvariantCulture,"{0}/change?group={1}&counterName={2}&delta={3}",
 				counterStorageUrl, @group, counterName, delta);
 
-			using (var request = _parent.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(_parent, requestUriString, "POST", credentials, convention)))
+			using (var request = parent.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "POST", credentials, convention)))
 			{
 				try
 				{
@@ -55,7 +45,7 @@ namespace Raven.Client.Counters
 			var requestUriString = String.Format("{0}/change?group={1}&counterName={2}",
 				counterStorageUrl, @group, counterName);
 
-			using (var request = _parent.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(_parent, requestUriString, "POST", credentials, convention)))
+			using (var request = parent.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "POST", credentials, convention)))
 			{
 				try
 				{
@@ -69,9 +59,9 @@ namespace Raven.Client.Counters
 			}
 		}
 
-		public void Increment(string group, string counterName)
+		public async Task Increment(string group, string counterName)
 		{
-			Change(@group, counterName, 1).Wait();
+			await Change(@group, counterName, 1);
 		}
 
 		public void Decrement(string group, string counterName)
@@ -84,7 +74,7 @@ namespace Raven.Client.Counters
 			var requestUriString = String.Format("{0}/getCounterOverallTotal?group={1}&counterName={2}",
 				counterStorageUrl, @group, counterName);
 
-			using (var request = _parent.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(_parent, requestUriString, "GET", credentials, convention)))
+			using (var request = parent.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "GET", credentials, convention)))
 			{
 				try
 				{
@@ -104,7 +94,7 @@ namespace Raven.Client.Counters
 			var requestUriString = String.Format("{0}/getCounterServersValues?group={1}&counterName={2}",
 				counterStorageUrl, @group, counterName);
 
-			using (var request = _parent.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(_parent, requestUriString, "GET", credentials, convention)))
+			using (var request = parent.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "GET", credentials, convention)))
 			{
 				try
 				{
@@ -121,7 +111,7 @@ namespace Raven.Client.Counters
 
 		public CounterBatch CreateBatch()
 		{
-			return new CounterBatch(_parent, convention);
+			return new CounterBatch(parent, convention);
 		}
 
 		public class CounterBatch : IHoldProfilingInformation

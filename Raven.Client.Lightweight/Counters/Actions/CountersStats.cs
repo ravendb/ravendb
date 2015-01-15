@@ -10,30 +10,18 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Counters.Actions
 {
-	public class CountersStats
+	public class CountersStats : CountersActionsBase
 	{
-		private readonly OperationCredentials credentials;
-		private readonly HttpJsonRequestFactory jsonRequestFactory;
-		private readonly string counterStorageUrl;
-		private readonly CountersClient _parent;
-		private readonly Convention convention;
-
-		public CountersStats(CountersClient parent, Convention convention)
+		internal CountersStats(CountersClient parent, Convention convention)
+			: base(parent, convention)
 		{
-			credentials = parent.PrimaryCredentials;
-			jsonRequestFactory = parent.JsonRequestFactory;
-			counterStorageUrl = parent.CounterStorageUrl;
-			_parent = parent;
-			this.convention = convention;
 		}
-
-		public ProfilingInformation ProfilingInformation { get; private set; }
 
 		public async Task<List<CounterStorageStats>> GetCounterStorageStats()
 		{
 			var requestUriString = String.Format("{0}/stats", counterStorageUrl);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(_parent, requestUriString, "GET", credentials, convention)))
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "GET", credentials, convention)))
 			{
 				try
 				{
@@ -52,7 +40,7 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/metrics", counterStorageUrl);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(_parent, requestUriString, "GET", credentials, convention)))
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "GET", credentials, convention)))
 			{
 				try
 				{
@@ -71,7 +59,7 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/replications/stats", counterStorageUrl);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(_parent, requestUriString, "GET", credentials, convention)))
+			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "GET", credentials, convention)))
 			{
 				try
 				{

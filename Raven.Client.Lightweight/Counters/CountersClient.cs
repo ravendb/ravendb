@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -31,10 +32,7 @@ namespace Raven.Client.Counters
 
 		public string CounterStorageName { get; private set; }
 
-		public string CounterStorageUrl
-		{
-			get { return string.Format("{0}/counters/{1}", ServerUrl, CounterStorageName); }
-		}
+		public string CounterStorageUrl { get; private set; }
 
 		public ICredentials Credentials { get; private set; }
 
@@ -84,6 +82,7 @@ namespace Raven.Client.Counters
                 if (ServerUrl.EndsWith("/"))
                     ServerUrl = ServerUrl.Substring(0, ServerUrl.Length - 1);
 
+				CounterStorageUrl = string.Format(CultureInfo.InvariantCulture, "{0}/counters/{1}", ServerUrl, CounterStorageName);
 				CounterStorageName = counterStorageName;
                 Credentials = credentials ?? CredentialCache.DefaultNetworkCredentials;
                 ApiKey = apiKey;

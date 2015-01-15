@@ -99,17 +99,18 @@
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Connection\OperationMetadata.cs" />
     <Compile Include="Connection\ReplicationInformer.cs" />
-    <Compile Include="Counters\CountersAdminClient.cs" />
+    <Compile Include="Counters\Actions\CountersActionsBase.cs" />
+    <Compile Include="Counters\Actions\CountersAdmin.cs" />
     <Compile Include="Counters\Convention.cs" />
     <Compile Include="Counters\CountersClient.cs" />
-    <Compile Include="Counters\CountersCommands.cs" />
+    <Compile Include="Counters\Actions\CountersCommands.cs" />
     <Compile Include="Counters\CountersExtensions.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Counters\CountersStatsClient.cs">
+    <Compile Include="Counters\Actions\CountersStats.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Counters\ReplicationClient.cs" />
+    <Compile Include="Counters\Actions\CountersReplication.cs" />
     <Compile Include="Document\AsyncDocumentSubscriptions.cs" />
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />
     <Compile Include="Document\Batches\LazyTransformerLoadOperation.cs" />
