@@ -78,7 +78,7 @@ namespace Raven.Database.Config
 							log.Warn("Low memory simulation, will try to reduce memory usage...");
 
 							RunLowMemoryHandlers();
-							continue;
+							break;
 					    case WAIT_FAILED:
 					        log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
 					        break;
