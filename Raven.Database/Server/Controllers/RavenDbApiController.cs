@@ -349,7 +349,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				SortOptions sort;
 				Enum.TryParse(GetHeader(header.Key), true, out sort);
-				result.Add(Uri.UnescapeDataString(header.Key), sort);
+				result[Uri.UnescapeDataString(header.Key)] = sort;
 			}
 
 			foreach (var pair in InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key.StartsWith("SortHint-", StringComparison.OrdinalIgnoreCase)))
@@ -359,7 +359,7 @@ namespace Raven.Database.Server.Controllers
 
 				SortOptions sort;
 				Enum.TryParse(value, true, out sort);
-				result.Add(Uri.UnescapeDataString(key), sort);
+				result[Uri.UnescapeDataString(key)] = sort;
 			}
 
 			return result;
