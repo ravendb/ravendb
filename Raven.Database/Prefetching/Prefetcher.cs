@@ -20,7 +20,7 @@ namespace Raven.Database.Prefetching
 		public Prefetcher(WorkContext workContext)
 		{
 			this.workContext = workContext;
-			RavenGC.ReleaseMemoryBeforeGC += ClearPrefetchingBehaviors;
+			RavenGC.Register(ClearPrefetchingBehaviors);
 		}
 
 		public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner)
@@ -82,7 +82,7 @@ namespace Raven.Database.Prefetching
 
 		public void Dispose()
 		{
-			RavenGC.ReleaseMemoryBeforeGC -= ClearPrefetchingBehaviors;
+			RavenGC.Unregister(ClearPrefetchingBehaviors);
 
 			foreach (var prefetchingBehavior in prefetchingBehaviors)
 			{
