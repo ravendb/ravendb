@@ -249,7 +249,10 @@ namespace Raven.Abstractions.Data
 
 	public class ParallelPefromanceStats : BasePefromanceStats
 	{
-
+		public ParallelPefromanceStats()
+		{
+			BatchedOperations = new ParallelBatchStats[0];
+		}
 		public long NumberOfThreads { get; set; }
 
 		public ParallelBatchStats[] BatchedOperations { get; set; } 
@@ -257,7 +260,11 @@ namespace Raven.Abstractions.Data
 
 	public class ParallelBatchStats
 	{
-	
+
+		public ParallelBatchStats()
+		{
+			Operations = new PerformanceStats[0];
+		}
 		public long StartDelay { get; set; }
 		public PerformanceStats[] Operations { get; set; } 
 	}
@@ -267,6 +274,7 @@ namespace Raven.Abstractions.Data
 		public ReducingPerformanceStats(ReduceType reduceType)
 		{
 			ReduceType = reduceType;
+			LevelStats = new ReduceLevelPeformanceStats[0];
 		}
 
 		public ReduceType ReduceType { get; private set; }
