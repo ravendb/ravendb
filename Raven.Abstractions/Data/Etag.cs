@@ -234,13 +234,13 @@ namespace Raven.Abstractions.Data
         {
             if (str == null || str.Length != 36)
                 throw new ArgumentException("str cannot be empty or null");
-
+           
             fixed (char* input = str)
             {
                 var etag = new Etag();
                 int fst = ((byte)(_asciisOfHexToNum[input[0]] * 16 + _asciisOfHexToNum[input[1]])) << 24 |
-                    ((byte)(_asciisOfHexToNum[input[2]] * 16 + _asciisOfHexToNum[input[3]]) << 16 |
-                    (byte)(_asciisOfHexToNum[input[4]] * 16 + _asciisOfHexToNum[input[5]])) << 8 |
+                    ((byte)(_asciisOfHexToNum[input[2]] * 16 + _asciisOfHexToNum[input[3]])) << 16 |
+                    ((byte)(_asciisOfHexToNum[input[4]] * 16 + _asciisOfHexToNum[input[5]])) << 8 |
                     (byte)(_asciisOfHexToNum[input[6]] * 16 + _asciisOfHexToNum[input[7]]);
                 int snd = ((byte)(_asciisOfHexToNum[input[9]] * 16 + _asciisOfHexToNum[input[10]])) << 24 |
                     ((byte)(_asciisOfHexToNum[input[11]] * 16 + _asciisOfHexToNum[input[12]])) << 16 |
