@@ -928,7 +928,8 @@ namespace Raven.Client.Document
 			});
 			fieldName = descending ? "-" + fieldName : fieldName;
 			orderByFields = orderByFields.Concat(new[] { fieldName }).ToArray();
-			sortByHints.Add(new KeyValuePair<string, SortOptions?>(fieldName, theSession.Conventions.GetDefaultSortOption(fieldType)));
+			if (theSession != null)
+				sortByHints.Add(new KeyValuePair<string, SortOptions?>(fieldName, theSession.Conventions.GetDefaultSortOption(fieldType)));
 		}
 
 		public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
