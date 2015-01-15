@@ -647,6 +647,11 @@ namespace Raven.Database.Actions
 				if (clearErrors)
 					WorkContext.ClearErrorsFor(instance.Name);
 
+                if (instance.IsSideBySideIndex)
+                {
+                    Database.Documents.Delete(IndexReplacer.IndexReplacePrefix + instance.Name, null, null);
+                }
+
 				// And delete the data in the background
 				StartDeletingIndexDataAsync(instance.IndexId, instance.Name);
 

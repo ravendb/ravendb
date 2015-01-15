@@ -46,7 +46,7 @@ class resourceRestore {
             var logsPre = document.getElementById(this.type + 'RestoreLogPre');
             logsPre.scrollTop = logsPre.scrollHeight;
         }
-        this.parent.isBusy(!!newRestoreStatus.IsRunning);
+        this.parent.isBusy(newRestoreStatus.State == "Running");
     }
 }
 
@@ -107,7 +107,7 @@ class restore extends viewModelBase {
         require(["commands/startRestoreCommand"], startRestoreCommand => {
             new startRestoreCommand(this.dbRestoreOptions.defrag(), restoreDatabaseDto, self.dbRestoreOptions.updateRestoreStatus.bind(self.dbRestoreOptions))
                 .execute()
-                .done(() => shell.reloadDatabases(this.activeDatabase()));
+                .always(() => shell.reloadDatabases(this.activeDatabase()));
         });
     }
 
@@ -124,7 +124,7 @@ class restore extends viewModelBase {
         require(["commands/filesystem/startRestoreCommand"], startRestoreCommand => {
             new startRestoreCommand(this.fsRestoreOptions.defrag(), restoreFilesystemDto, self.fsRestoreOptions.updateRestoreStatus.bind(self.fsRestoreOptions))
                 .execute()
-                .done(() => shell.reloadFilesystems(this.activeFilesystem()));
+                .always(() => shell.reloadFilesystems(this.activeFilesystem()));
         });
     }
 }

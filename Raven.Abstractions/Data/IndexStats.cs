@@ -194,7 +194,7 @@ namespace Raven.Abstractions.Data
 	    public TimeSpan Duration { get; set; }
 	    public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
 		[JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]
-		public List<BasePefromanceStats> Operations { get; set; }
+		public BasePefromanceStats[] Operations { get; set; }
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
 	}
 

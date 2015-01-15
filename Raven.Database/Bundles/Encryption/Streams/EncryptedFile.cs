@@ -16,6 +16,7 @@ namespace Raven.Bundles.Encryption.Streams
 	internal static class EncryptedFile
 	{
 		public const ulong DefaultMagicNumber = 0x2064657470797243; // "Crypted "
+		public const ulong WithTotalSizeMagicNumber = 0x3175768581897343; // "Crypted with additional fields"
 
 		[StructLayout(LayoutKind.Sequential, Pack = 1)]
 		internal struct Header
@@ -24,6 +25,7 @@ namespace Raven.Bundles.Encryption.Streams
 			public int IVSize;
 			public int DecryptedBlockSize;
 			public int EncryptedBlockSize;
+			public long TotalUnencryptedSize;
 
 			public static readonly int HeaderSize = Marshal.SizeOf(typeof(Header));
 
@@ -70,7 +72,7 @@ namespace Raven.Bundles.Encryption.Streams
 		public class Block
 		{
 			public long BlockNumber;
-			public long TotalStreamLength;
+			public long TotalEncryptedStreamLength;
 			public byte[] Data;
 		}
 	}
