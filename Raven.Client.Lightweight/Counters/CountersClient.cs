@@ -30,7 +30,7 @@ namespace Raven.Client.Counters
 	    private const int DefaultNumberOfCachedRequests = 2048;
 		public string ServerUrl { get; private set; }
 
-		public string CounterStorageName { get; private set; }
+		public string DefaultStorageName { get; private set; }
 
 		public string CounterStorageUrl { get; private set; }
 
@@ -82,8 +82,8 @@ namespace Raven.Client.Counters
                 if (ServerUrl.EndsWith("/"))
                     ServerUrl = ServerUrl.Substring(0, ServerUrl.Length - 1);
 
-				CounterStorageUrl = string.Format(CultureInfo.InvariantCulture, "{0}/counters/{1}", ServerUrl, CounterStorageName);
-				CounterStorageName = counterStorageName;
+				CounterStorageUrl = string.Format(CultureInfo.InvariantCulture, "{0}/counters/{1}", ServerUrl, DefaultStorageName);
+				DefaultStorageName = counterStorageName;
                 Credentials = credentials ?? CredentialCache.DefaultNetworkCredentials;
                 ApiKey = apiKey;
 

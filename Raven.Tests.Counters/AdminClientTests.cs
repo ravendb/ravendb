@@ -47,9 +47,9 @@ namespace Raven.Tests.Counters
 			using (var store = NewRemoteDocumentStore())
 			using (var client = store.NewCountersClient(CounterStorageName))
 			{
-				await client.Admin.CreateCounterStorageAsync(storageName: expectedClientNames[0]);
-				await client.Admin.CreateCounterStorageAsync(storageName: expectedClientNames[1]);
-				await client.Admin.CreateCounterStorageAsync(storageName: expectedClientNames[2]);
+				await client.Admin.CreateCounterStorageAsync(counterName: expectedClientNames[0]);
+				await client.Admin.CreateCounterStorageAsync(counterName: expectedClientNames[1]);
+				await client.Admin.CreateCounterStorageAsync(counterName: expectedClientNames[2]);
 				
 				var counterStorageNames = await client.Admin.GetCounterStoragesNames();				
 				counterStorageNames.Should().BeEquivalentTo(expectedClientNames);				

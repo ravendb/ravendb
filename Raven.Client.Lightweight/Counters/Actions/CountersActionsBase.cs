@@ -13,7 +13,7 @@ namespace Raven.Client.Counters.Actions
 		protected readonly OperationCredentials credentials;
 		protected readonly HttpJsonRequestFactory jsonRequestFactory;
 		protected readonly string serverUrl;
-		protected readonly string counterStorageName;
+		protected readonly string defaultStorageName;
 		protected readonly CountersClient parent;
 		protected readonly Convention convention;
 		protected readonly JsonSerializer jsonSerializer;
@@ -26,7 +26,7 @@ namespace Raven.Client.Counters.Actions
 			credentials = parent.PrimaryCredentials;
 			jsonRequestFactory = parent.JsonRequestFactory;
 			serverUrl = parent.ServerUrl;
-			counterStorageName = parent.CounterStorageName;
+			defaultStorageName = parent.DefaultStorageName;
 			counterStorageUrl = parent.CounterStorageUrl;
 			jsonSerializer = parent.JsonSerializer;
 			

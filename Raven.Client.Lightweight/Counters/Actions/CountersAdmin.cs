@@ -47,22 +47,25 @@ namespace Raven.Client.Counters.Actions
 		/// Create new counter storage on the server.
 		/// </summary>
 		/// <param name="countersDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
-		/// <param name="storageName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
-		public async Task CreateCounterStorageAsync(CountersDocument countersDocument = null, string storageName = null)
+		/// <param name="counterName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
+		public async Task CreateCounterStorageAsync(CountersDocument countersDocument, string counterName = null)
 		{
-			storageName = storageName ?? counterStorageName;
-			var requestUriString = String.Format("{0}/counterstorage/admin/{1}", serverUrl, storageName);
+			if (countersDocument == null)
+				throw new ArgumentNullException("countersDocument");
+
+			counterName = counterName ?? defaultStorageName;
+			var requestUriString = String.Format("{0}/counterstorage/admin/{1}", serverUrl, counterName);
 
 			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "PUT", credentials, convention)))
 			{
 				try
 				{
-					await request.WriteAsync(RavenJObject.FromObject(countersDocument ?? new CountersDocument())).ConfigureAwait(false);
+					await request.WriteAsync(RavenJObject.FromObject(countersDocument)).ConfigureAwait(false);
 				}
 				catch (ErrorResponseException e)
 				{
 					if (e.StatusCode == HttpStatusCode.Conflict)
-						throw new InvalidOperationException("Cannot create counter storage with the name '" + storageName + "' because it already exists. Use CreateOrUpdateCounterStorageAsync in case you want to update an existing counter storage", e);
+						throw new InvalidOperationException("Cannot create counter storage with the name '" + counterName + "' because it already exists. Use CreateOrUpdateCounterStorageAsync in case you want to update an existing counter storage", e);
 
 					throw;
 				}					
@@ -72,19 +75,22 @@ namespace Raven.Client.Counters.Actions
 		/// <summary>
 		/// Create new counter storage on the server or update existing one.
 		/// </summary>
-		public async Task CreateOrUpdateCounterStorageAsync(CountersDocument countersDocument, string storageName = null)
+		public async Task CreateOrUpdateCounterStorageAsync(CountersDocument countersDocument, string counterName = null)
 		{
-			storageName = storageName ?? counterStorageName;
-			var requestUriString = String.Format("{0}/counterstorage/admin/{1}?update=true", serverUrl, storageName);
+			if (countersDocument == null)
+				throw new ArgumentNullException("countersDocument");
+
+			counterName = counterName ?? defaultStorageName;
+			var requestUriString = String.Format("{0}/counterstorage/admin/{1}?update=true", serverUrl, counterName);
 
 			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "PUT", credentials, convention)))
 				await request.WriteAsync(RavenJObject.FromObject(countersDocument));
 		}
 
-		public async Task DeleteCounterStorageAsync(string storageName = null, bool hardDelete = false)
+		public async Task DeleteCounterStorageAsync(string counterName = null, bool hardDelete = false)
 		{
-			storageName = storageName ?? counterStorageName;
-			var requestUriString = String.Format("{0}/counterstorage/admin/{1}?hard-delete={2}", serverUrl, storageName, hardDelete);
+			counterName = counterName ?? defaultStorageName;
+			var requestUriString = String.Format("{0}/counterstorage/admin/{1}?hard-delete={2}", serverUrl, counterName, hardDelete);
 
 			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "DELETE", credentials, convention)))
 			{
@@ -95,7 +101,7 @@ namespace Raven.Client.Counters.Actions
 				catch (ErrorResponseException e)
 				{
 					if (e.StatusCode == HttpStatusCode.NotFound)
-						throw new InvalidOperationException(string.Format("Counter storage with specified name ({0}) doesn't exist", storageName));
+						throw new InvalidOperationException(string.Format("Counter storage with specified name ({0}) doesn't exist", counterName));
 					throw;
 					//throw e.TryThrowBetterError();
 				}
