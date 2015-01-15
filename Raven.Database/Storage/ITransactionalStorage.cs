@@ -42,7 +42,7 @@ namespace Raven.Database.Storage
 		bool IsAlreadyInBatch { get; }
         bool SupportsDtc { get; }
 
-		void Compact(InMemoryRavenConfiguration configuration);
+		void Compact(InMemoryRavenConfiguration configuration, Action<string> output);
 		Guid ChangeId();
 		void ClearCaches();
 		void DumpAllStorageTables();
