@@ -217,6 +217,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
+				var conflictResolvers = DocsReplicationConflictResolvers; 
+
 				string lastEtag = Etag.Empty.ToString();
 
 				var docIndex = 0;
@@ -242,7 +244,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 								var id = metadata.Value<string>("@id");
 								document.Remove("@metadata");
 
-								ReplicateDocument(actions, id, metadata, document, src);
+								ReplicateDocument(actions, id, metadata, document, src, conflictResolvers);
 							}
 
 							SaveReplicationSource(src, lastEtag);
@@ -302,6 +304,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			var array = await ReadBsonArrayAsync();
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
+				var conflictResolvers = AttachmentReplicationConflictResolvers; 
+
 				Database.TransactionalStorage.Batch(actions =>
 				{
 					Etag lastEtag = Etag.Empty;
@@ -318,7 +322,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						lastEtag = Etag.Parse(attachment.Value<byte[]>("@etag"));
 						var id = attachment.Value<string>("@id");
 
-						ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), src);
+						ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), src, conflictResolvers);
 					}
 
 					Guid remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
@@ -842,25 +846,25 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return null;
 		}
 
-		private void ReplicateDocument(IStorageActionsAccessor actions, string id, RavenJObject metadata, RavenJObject document, string src)
+		private void ReplicateDocument(IStorageActionsAccessor actions, string id, RavenJObject metadata, RavenJObject document, string src, IEnumerable<AbstractDocumentReplicationConflictResolver> conflictResolvers)
 		{
 			new DocumentReplicationBehavior
 			{
 				Actions = actions,
 				Database = Database,
-				ReplicationConflictResolvers = DocsReplicationConflictResolvers,
+				ReplicationConflictResolvers = conflictResolvers,
 				Src = src
 			}.Replicate(id, metadata, document);
 		}
 
 		[Obsolete("Use RavenFS instead.")]
-		private void ReplicateAttachment(IStorageActionsAccessor actions, string id, RavenJObject metadata, byte[] data, string src)
+		private void ReplicateAttachment(IStorageActionsAccessor actions, string id, RavenJObject metadata, byte[] data, string src, IEnumerable<AbstractAttachmentReplicationConflictResolver> conflictResolvers)
 		{
 			new AttachmentReplicationBehavior
 			{
 				Actions = actions,
 				Database = Database,
-				ReplicationConflictResolvers = AttachmentReplicationConflictResolvers,
+				ReplicationConflictResolvers = conflictResolvers,
 				Src = src
 			}.Replicate(id, metadata, data);
 		}
