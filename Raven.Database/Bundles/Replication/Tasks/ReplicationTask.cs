@@ -574,6 +574,9 @@ namespace Raven.Bundles.Replication.Tasks
 			var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(destination.ConnectionStringOptions.Url,
 				x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, autoTuner));
 
+
+			prefetchingBehavior.AdditionalInfo = string.Format("For destination: {0}. Last replicated etag: {1}", destination.ConnectionStringOptions.Url, destinationsReplicationInformationForSource.LastDocumentEtag);
+
 			try
 			{
 				using (var scope = recorder.StartRecording("Get"))

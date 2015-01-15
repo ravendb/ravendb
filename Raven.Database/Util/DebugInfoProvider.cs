@@ -302,13 +302,11 @@ namespace Raven.Database.Util
 		{
 			var result = new List<object>();
 
-			int group = -1;
-
 			foreach (var prefetchingBehavior in database.IndexingExecuter.PrefetchingBehaviors)
 			{
-				group++;
-
 				var prefetcherDocs = prefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
+				var futureBatches = prefetchingBehavior.DebugGetDocumentsInFutureBatches();
+
 				var compareToCollection = new Dictionary<Etag, int>();
 
 				for (int i = 1; i < prefetcherDocs.Length; i++)
@@ -318,25 +316,27 @@ namespace Raven.Database.Util
 				{
 				    result.Add(new
 				    {
-                        ForIndexingGroup = group,
+						AdditionaInfo = prefetchingBehavior.AdditionalInfo,
                         HasCorrectlyOrderedEtags = false,
                         IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
-                        EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
+                        EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key),
+						FutureBatches = futureBatches
 				    });
 				}
 				else
 				{
-                    var elementsToTake = Math.Min(5, prefetcherDocs.Count());
-                    var etagsWithKeysTail = Enumerable.Range(0, elementsToTake).Select(
-                        i => prefetcherDocs[prefetcherDocs.Count() - elementsToTake + i]).ToDictionary(x => x.Etag, x => x.Key);
+                    var prefetcherDocsToTake = Math.Min(5, prefetcherDocs.Count());
+                    var etagsWithKeysTail = Enumerable.Range(0, prefetcherDocsToTake).Select(
+                        i => prefetcherDocs[prefetcherDocs.Count() - prefetcherDocsToTake + i]).ToDictionary(x => x.Etag, x => x.Key);
 
                     result.Add(new
                     {
-                        ForIndexingGroup = group,
+                        AdditionaInfo = prefetchingBehavior.AdditionalInfo,
                         HasCorrectlyOrderedEtags = true,
                         EtagsWithKeysHead = prefetcherDocs.Take(5).ToDictionary(x => x.Etag, x => x.Key),
                         EtagsWithKeysTail = etagsWithKeysTail,
-                        EtagsWithKeysCount = prefetcherDocs.Count()
+                        EtagsWithKeysCount = prefetcherDocs.Count(),
+						FutureBatches = futureBatches
                     });
 				}
 			}
