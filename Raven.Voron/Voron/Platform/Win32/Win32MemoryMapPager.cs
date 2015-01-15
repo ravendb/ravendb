@@ -277,7 +277,7 @@ namespace Voron.Platform.Win32
 			ThrowObjectDisposedIfNeeded();
 
 			int toCopy = pagesToWrite * PageSize;
-            MemoryUtils.Copy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
+            StdLib.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
 
 			return toCopy;
 		}

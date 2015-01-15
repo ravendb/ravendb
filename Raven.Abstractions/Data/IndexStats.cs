@@ -194,7 +194,9 @@ namespace Raven.Abstractions.Data
 	    public TimeSpan Duration { get; set; }
 	    public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
 		[JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]
-		public BasePefromanceStats[] Operations { get; set; }
+
+		public BasePerformanceStats[] Operations { get; set; }
+
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
 	}
 
@@ -227,12 +229,12 @@ namespace Raven.Abstractions.Data
 // ReSharper restore InconsistentNaming
 	}
 
-	public abstract class BasePefromanceStats
+	public abstract class BasePerformanceStats
 	{
         public long DurationMs { get; set; }
 	}
 
-	public class PerformanceStats : BasePefromanceStats
+	public class PerformanceStats : BasePerformanceStats
 	{
 		public IndexingOperation Name { get; set; }
 		
@@ -247,7 +249,7 @@ namespace Raven.Abstractions.Data
 		}
 	}
 
-	public class ParallelPefromanceStats : BasePefromanceStats
+	public class ParallelPefromanceStats : BasePerformanceStats
 	{
 		public ParallelPefromanceStats()
 		{
@@ -292,11 +294,11 @@ namespace Raven.Abstractions.Data
 		public TimeSpan Duration { get; set; }
 		public double DurationMs{ get { return Math.Round(Duration.TotalMilliseconds, 2); } }
 		[JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]
-		public BasePefromanceStats[] Operations { get; set; }
+		public BasePerformanceStats[] Operations { get; set; }
 
 		public ReduceLevelPeformanceStats()
 		{
-			Operations = new BasePefromanceStats[0];
+            Operations = new BasePerformanceStats[0];
 		}
 
 		public void Add(IndexingPerformanceStats other)
@@ -319,7 +321,7 @@ namespace Raven.Abstractions.Data
 				}
 				else
 				{
-					Operations = Operations.Concat(new BasePefromanceStats[]
+                    Operations = Operations.Concat(new BasePerformanceStats[]
 					{
 						new PerformanceStats
 						{

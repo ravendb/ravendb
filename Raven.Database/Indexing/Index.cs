@@ -171,7 +171,7 @@ namespace Raven.Database.Indexing
 				ItemsCount = itemsCount,
 				Operation = indexingStep,
 				Started = SystemTime.UtcNow,
-				Operations = new BasePefromanceStats[0]
+				Operations = new BasePerformanceStats[0]
 			};
 
 			var lastStats = indexingPerformanceStats.LastOrDefault(x => x.Operation.Equals(operation, StringComparison.OrdinalIgnoreCase));
@@ -184,7 +184,7 @@ namespace Raven.Database.Indexing
 			return performanceStats;
 		}
 
-		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, List<BasePefromanceStats> operationStats)
+		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, List<BasePerformanceStats> operationStats)
 		{
 			IndexingPerformanceStats stats;
 			if (currentlyIndexing.TryRemove(indexingStep, out stats))

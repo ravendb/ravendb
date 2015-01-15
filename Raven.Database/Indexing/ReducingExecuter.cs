@@ -413,7 +413,7 @@ namespace Raven.Database.Indexing
 					});
 				});
 
-				reduceLevelStats.Operations = reduceLevelStats.Operations.Concat(new BasePefromanceStats[]
+				reduceLevelStats.Operations = reduceLevelStats.Operations.Concat(new BasePerformanceStats[]
 				{
 					new ParallelPefromanceStats
 					{
