@@ -78,7 +78,7 @@ namespace Raven.Database.Actions
 			foreach (var collectionName in collectionsToCheck)
 			{
 				Entry highestEtagForCollectionEntry;
-				if (lastCollectionEtags.TryGetValue(collectionName, out highestEtagForCollectionEntry))
+				if (lastCollectionEtags.TryGetValue(collectionName, out highestEtagForCollectionEntry) && highestEtagForCollectionEntry.Etag != null)
 				{
 					if (highestEtagForCollectionEntry.Etag.CompareTo(etagToCheck) > 0)
 						return true;
@@ -108,10 +108,19 @@ namespace Raven.Database.Actions
 			});
 		}
 
+		public void Update(string collectionName)
+		{
+			lastCollectionEtags.AddOrUpdate(collectionName, new Entry { Etag = null, Updated = SystemTime.UtcNow }, (existingEntity, existingEtagEntry) =>
+			{
+				existingEtagEntry.Updated = SystemTime.UtcNow;
+				return existingEtagEntry;
+			});
+		}
+
 		public Etag GetLastEtagForCollection(string collectionName)
 		{
 			Entry entry;
-			if (lastCollectionEtags.TryGetValue(collectionName, out entry))
+			if (lastCollectionEtags.TryGetValue(collectionName, out entry) && entry.Etag != null)
 				return entry.Etag;
 
 			return null;
