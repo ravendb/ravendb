@@ -15,7 +15,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Impl;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Prefetching
@@ -56,6 +55,8 @@ namespace Raven.Database.Prefetching
 		}
 
 		public PrefetchingUser PrefetchingUser { get; private set; }
+
+		public string AdditionalInfo { get; set; }
 
 		public bool DisableCollectingDocumentsAfterCommit { get; set; }
 		public bool ShouldHandleUnusedDocumentsAddedAfterCommit { get; set; }
@@ -240,6 +241,42 @@ namespace Raven.Database.Prefetching
 		public IEnumerable<JsonDocument> DebugGetDocumentsInPrefetchingQueue()
 		{
 			return prefetchingQueue.Clone();
+		}
+
+		public List<object> DebugGetDocumentsInFutureBatches()
+		{
+			var result = new List<object>();
+
+			foreach (var futureBatch in futureIndexBatches)
+			{
+				if (futureBatch.Value.Task.IsCompleted == false)
+				{
+					result.Add(new
+					{
+						FromEtag = futureBatch.Key,
+						Docs = "Loading documents from disk in progress"
+					});
+
+					continue;
+				}
+
+				var docs = futureBatch.Value.Task.Result;
+
+				var take = Math.Min(5, docs.Count);
+
+				var etagsWithKeysTail = Enumerable.Range(0, take).Select(
+					i => docs[docs.Count - take + i]).ToDictionary(x => x.Etag, x => x.Key);
+
+				result.Add(new
+				{
+					FromEtag = futureBatch.Key,
+					EtagsWithKeysHead = docs.Take(5).ToDictionary(x => x.Etag, x => x.Key),
+					EtagsWithKeysTail = etagsWithKeysTail,
+					TotalDocsCount = docs.Count
+				});
+			}
+
+			return result;
 		}
 
 		private bool CanLoadDocumentsFromFutureBatches(Etag nextDocEtag)
