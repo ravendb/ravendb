@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -25,10 +27,10 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void ShouldNotSortStringAsLong()
 		{
-			using(var store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
 				RavenQueryStatistics stats;
-				using(var session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					session.Query<GameServer>()
 						.Statistics(out stats)
@@ -133,8 +135,13 @@ namespace Raven.Tests.Bugs
 
 				CurrentOperationContext.Headers.Value.Clear();
 
-				var indexQuery = new IndexQuery { SortedFields = new[] { new SortedField("Name") } };
-				var url = store.Url.ForDatabase(store.DefaultDatabase).Indexes("dynamic/GameServers") + indexQuery.GetQueryString() + "&SortHint-Name=String";
+				var indexQuery = new IndexQuery
+								 {
+									 SortedFields = new[] { new SortedField("Name") },
+									 SortHints = new Dictionary<string, SortOptions> { { "Name", SortOptions.String } }
+								 };
+
+				var url = store.Url.ForDatabase(store.DefaultDatabase).Indexes("dynamic/GameServers") + indexQuery.GetQueryString();
 				var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
 				var result = request.ReadResponseJson().JsonDeserialization<QueryResult>();
 

@@ -824,7 +824,7 @@ namespace Raven.Client.Document
 			for (int index = 0; index < orderByfields.Length; index++)
 			{
 				var fld = orderByfields[index];
-				sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].ReturnType));
+				sortByHints.Add(new KeyValuePair<string, SortOptions?>(fld, theSession.Conventions.GetDefaultSortOption(propertySelectors[index].ReturnType)));
 			}
 			return this;
 		}
@@ -854,7 +854,7 @@ namespace Raven.Client.Document
             for (int index = 0; index < orderByfields.Length; index++)
             {
                 var fld = orderByfields[index];
-                sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].ReturnType));
+                sortByHints.Add(new KeyValuePair<string, SortOptions?>(fld, theSession.Conventions.GetDefaultSortOption(propertySelectors[index].ReturnType)));
             }
             return this;
 		}

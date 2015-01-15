@@ -629,7 +629,7 @@ namespace Raven.Client.Document
         {
             using (enumerator)
             {
-                var queryOperation = ((DocumentQuery<T>)query).InitializeQueryOperation(null);
+                var queryOperation = ((DocumentQuery<T>)query).InitializeQueryOperation();
                 queryOperation.DisableEntitiesTracking = true;
                 while (enumerator.MoveNext())
                 {
