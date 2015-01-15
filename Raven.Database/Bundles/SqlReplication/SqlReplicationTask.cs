@@ -41,7 +41,7 @@ namespace Raven.Database.Bundles.SqlReplication
 	{
 		private const int MaxNumberOfDeletionsToReplicate = 1024;
 
-		private bool shouldPause;
+		private volatile bool shouldPause;
 
 		public bool IsRunning { get; private set; }
 
