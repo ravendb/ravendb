@@ -131,6 +131,7 @@
     <Compile Include="Storage\Snapshots.cs" />
     <Compile Include="Storage\SplittingVeryBig.cs" />
     <Compile Include="Storage\VeryBig.cs" />
+    <Compile Include="Trees\RavenDB_3114_WorkingWithStructValues.cs" />
     <Compile Include="Trees\Basic.cs" />
     <Compile Include="Trees\CanDefrag.cs" />
     <Compile Include="Trees\CanIterateBackward.cs" />
