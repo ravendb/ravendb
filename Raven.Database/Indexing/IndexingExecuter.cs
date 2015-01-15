@@ -271,6 +271,11 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		protected override void CleanupPrefetchers()
+		{
+			RemoveUnusedPrefetchers(Enumerable.Empty<PrefetchingBehavior>());
+		}
+
 		private static IDisposable MapIndexingInProgress(IList<IndexToWorkOn> indexesToWorkOn)
 		{
 			indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = true);

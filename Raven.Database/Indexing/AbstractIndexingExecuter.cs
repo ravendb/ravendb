@@ -117,6 +117,16 @@ namespace Raven.Database.Indexing
                             {
                                 Log.WarnException("Could not flush indexes properly", e);
                             }
+
+							try
+							{
+								CleanupPrefetchers();
+							}
+                            catch (Exception e)
+                            {
+                                Log.WarnException("Could not cleanup prefetchers properly", e);
+                            }
+							
                         }, name);
                     }
                     else // notify the tasks executer that it has work to do
@@ -129,7 +139,12 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private bool IsEsentOutOfMemory(Exception actual)
+	    protected virtual void CleanupPrefetchers()
+	    {
+		    
+	    }
+
+	    private bool IsEsentOutOfMemory(Exception actual)
         {
             var esentErrorException = actual as EsentErrorException;
             if (esentErrorException == null)
