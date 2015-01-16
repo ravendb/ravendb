@@ -447,16 +447,22 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				}
 
 				var maxNumberOfItemsToReceiveInSingleBatch = Database.Configuration.Replication.MaxNumberOfItemsToReceiveInSingleBatch;
-				var lowMemory = MemoryStatistics.AvailableMemory < Database.Configuration.AvailableMemoryForRaisingBatchSizeLimit / 2;
+				var lowMemory = MemoryStatistics.AvailableMemory < Database.Configuration.AvailableMemoryForRaisingBatchSizeLimit * 2;
 				if (lowMemory)
 				{
+				    int size;
 					var lastBatchSize = sourceReplicationInformation.LastBatchSize;
-					if (lastBatchSize.HasValue && maxNumberOfItemsToReceiveInSingleBatch.HasValue) 
-						sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
-					else if (lastBatchSize.HasValue) 
-						sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch = lastBatchSize.Value;
+					if (lastBatchSize.HasValue && maxNumberOfItemsToReceiveInSingleBatch.HasValue)
+                        size = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
+					else if (lastBatchSize.HasValue)
+                        size = lastBatchSize.Value;
 					else if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
-						sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch = maxNumberOfItemsToReceiveInSingleBatch.Value;
+					    size = maxNumberOfItemsToReceiveInSingleBatch.Value;
+					else
+					    size = 128;
+
+				    sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch =
+                        Math.Max(size / 2, 64);
 				}
 				else
 				{
