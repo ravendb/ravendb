@@ -21,6 +21,8 @@ namespace Raven.Bundles.Replication.Data
 
 		public DateTime? LastModified { get; set; }
 
+		public int? MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
+
 		public override string ToString()
 		{
 			return string.Format("LastDocumentEtag: {0}, LastAttachmentEtag: {1}", LastDocumentEtag, LastAttachmentEtag);

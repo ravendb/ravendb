@@ -81,11 +81,11 @@ namespace Raven.Database.Prefetching
 			return UpdateCurrentlyUsedBatches(documents);
 		}
 
-		public List<JsonDocument> GetDocumentsBatchFrom(Etag etag)
+		public List<JsonDocument> GetDocumentsBatchFrom(Etag etag, int? take = null)
 		{
 			HandleCollectingDocumentsAfterCommit(etag);
 
-			var results = GetDocsFromBatchWithPossibleDuplicates(etag);
+			var results = GetDocsFromBatchWithPossibleDuplicates(etag, take);
 			// a single doc may appear multiple times, if it was updated while we were fetching things, 
 			// so we have several versions of the same doc loaded, this will make sure that we will only  
 			// take one of them.
@@ -161,7 +161,7 @@ namespace Raven.Database.Prefetching
 			return false;
 		}
 
-		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Etag etag)
+		private List<JsonDocument> GetDocsFromBatchWithPossibleDuplicates(Etag etag, int? take)
 		{
 			var result = new List<JsonDocument>();
 			bool docsLoaded;
@@ -180,13 +180,13 @@ namespace Raven.Database.Prefetching
 					}
 				}
 
-				docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, result);
+				docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, result, take);
 
 				if (docsLoaded)
 					etag = result[result.Count - 1].Etag;
 
 				prefetchingQueueSizeInBytes = prefetchingQueue.LoadedSize;
-			 } while (result.Count < autoTuner.NumberOfItemsToProcessInSingleBatch && docsLoaded &&
+			 } while (result.Count < autoTuner.NumberOfItemsToProcessInSingleBatch && (take.HasValue == false || result.Count < take.Value) && docsLoaded &&
 						prefetchingDurationTimer.ElapsedMilliseconds <= context.Configuration.PrefetchingDurationLimit &&
 						((prefetchingQueueSizeInBytes + autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum()) < (context.Configuration.MemoryLimitForProcessingInMb * 1024 * 1024)));
 			
@@ -202,7 +202,7 @@ namespace Raven.Database.Prefetching
 				prefetchingQueue.Add(jsonDocument);
 			}
 
-		private bool TryGetDocumentsFromQueue(Etag nextDocEtag, List<JsonDocument> items)
+		private bool TryGetDocumentsFromQueue(Etag nextDocEtag, List<JsonDocument> items, int? take)
 		{
 			JsonDocument result;
 
@@ -229,6 +229,9 @@ namespace Raven.Database.Prefetching
 
 				items.Add(result);
 				hasDocs = true;
+
+				if (take.HasValue && items.Count >= take.Value)
+					break;
 
 				nextDocEtag = Abstractions.Util.EtagUtil.Increment(nextDocEtag, 1);
 				nextDocEtag = HandleEtagGapsIfNeeded(nextDocEtag);

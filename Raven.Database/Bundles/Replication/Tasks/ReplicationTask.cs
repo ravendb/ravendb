@@ -986,6 +986,7 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
+				var maxNumberOfItemsToReceiveInSingleBatch = destinationsReplicationInformationForSource.MaxNumberOfItemsToReceiveInSingleBatch;
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
@@ -1000,7 +1001,7 @@ namespace Raven.Bundles.Replication.Tasks
 					{
 						docDb.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 
-						docsToReplicate = GetDocsToReplicate(actions, prefetchingBehavior, result);
+						docsToReplicate = GetDocsToReplicate(actions, prefetchingBehavior, result, maxNumberOfItemsToReceiveInSingleBatch);
 
 						filteredDocsToReplicate =
 							docsToReplicate
@@ -1103,9 +1104,9 @@ namespace Raven.Bundles.Replication.Tasks
 			return result;
 		}
 
-		private List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, PrefetchingBehavior prefetchingBehavior, JsonDocumentsToReplicate result)
+		private List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, PrefetchingBehavior prefetchingBehavior, JsonDocumentsToReplicate result, int? maxNumberOfItemsToReceiveInSingleBatch)
 		{
-			var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(result.LastEtag);
+			var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(result.LastEtag, maxNumberOfItemsToReceiveInSingleBatch);
 			Etag lastEtag = null;
 			if (docsToReplicate.Count > 0)
 				lastEtag = docsToReplicate[docsToReplicate.Count - 1].Etag;
@@ -1133,9 +1134,13 @@ namespace Raven.Bundles.Replication.Tasks
 				results = results.Where(x => EtagUtil.IsGreaterThan(x.Etag, lastTombstoneEtag) == false);
 			}
 
-			return results
-				.OrderBy(x => x.Etag)
-				.ToList();
+			results = results.OrderBy(x => x.Etag);
+
+			// can't return earlier, because we need to know if there are tombstones that need to be send
+			if (maxNumberOfItemsToReceiveInSingleBatch.HasValue) 
+				results = results.Take(maxNumberOfItemsToReceiveInSingleBatch.Value);
+
+			return results.ToList();
 		}
 
 		[Obsolete("Use RavenFS instead.")]

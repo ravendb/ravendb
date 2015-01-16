@@ -283,6 +283,7 @@ namespace Raven.Database.Config
 
 			Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
 			Replication.ReplicationRequestTimeoutInMilliseconds = ravenSettings.Replication.ReplicationRequestTimeoutInMilliseconds.Value;
+			Replication.MaxNumberOfItemsToReceiveInSingleBatch = ravenSettings.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value;
 
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
 			FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
@@ -1248,6 +1249,11 @@ namespace Raven.Database.Config
 			/// Number of milliseconds before replication requests will timeout. Default: 60 * 1000.
 			/// </summary>
 			public int ReplicationRequestTimeoutInMilliseconds { get; set; }
+
+			/// <summary>
+			/// Maximum number of items replication will receive in single batch. Min: 512. Default: null (let source server decide).
+			/// </summary>
+			public int? MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
 		}
 
         public class FileSystemConfiguration

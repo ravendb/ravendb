@@ -423,7 +423,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					{
 						Source = src,
 						ServerInstanceId = localServerInstanceId,
-						LastModified = SystemTime.UtcNow
+						LastModified = SystemTime.UtcNow,
+						MaxNumberOfItemsToReceiveInSingleBatch = Database.Configuration.Replication.MaxNumberOfItemsToReceiveInSingleBatch
 					};
 				}
 				else
@@ -441,6 +442,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						sourceReplicationInformation.LastDocumentEtag = Etag.InvalidEtag;
 					}
 
+					sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch = Database.Configuration.Replication.MaxNumberOfItemsToReceiveInSingleBatch;
 					sourceReplicationInformation.ServerInstanceId = localServerInstanceId;
 				}
 
