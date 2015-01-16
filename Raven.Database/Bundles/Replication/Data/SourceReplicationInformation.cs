@@ -21,7 +21,7 @@ namespace Raven.Bundles.Replication.Data
 
 		public DateTime? LastModified { get; set; }
 
-		public int? MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
+		public int? LastBatchSize { get; set; }
 
 		public override string ToString()
 		{
@@ -33,5 +33,10 @@ namespace Raven.Bundles.Replication.Data
 			LastDocumentEtag = Etag.Empty;
 			LastAttachmentEtag = Etag.Empty;
 		}
+	}
+
+	public class SourceReplicationInformationWithBatchInformation : SourceReplicationInformation
+	{
+		public int? MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
 	}
 }

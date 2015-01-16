@@ -23,6 +23,7 @@ using Raven.Bundles.Replication.Tasks;
 using Raven.Client.Connection;
 using Raven.Database.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Utils;
+using Raven.Database.Config;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
@@ -247,7 +248,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 								ReplicateDocument(actions, id, metadata, document, src, conflictResolvers);
 							}
 
-							SaveReplicationSource(src, lastEtag);
+							SaveReplicationSource(src, lastEtag, array.Length);
 						});
 					}
 				}
@@ -256,7 +257,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetEmptyMessage();
 		}
 
-		private void SaveReplicationSource(string src, string lastEtag)
+		private void SaveReplicationSource(string src, string lastEtag, int batchSize)
 		{
 			Guid remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
 
@@ -280,7 +281,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 							LastDocumentEtag = Etag.Parse(lastEtag),
 							LastAttachmentEtag = lastAttachmentId,
 							ServerInstanceId = remoteServerInstanceId,
-							LastModified = SystemTime.UtcNow
+							LastModified = SystemTime.UtcNow,
+							LastBatchSize = batchSize
 						}),
 					new RavenJObject(),
 					null);
@@ -377,7 +379,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
 				JsonDocument document = null;
-				SourceReplicationInformation sourceReplicationInformation = null;
+				SourceReplicationInformationWithBatchInformation sourceReplicationInformation = null;
 
 				var localServerInstanceId = Database.TransactionalStorage.Id; // this is my id, sent to the remote server
 
@@ -388,7 +390,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					var replicationSources = Database.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
 					foreach (RavenJObject replicationSource in replicationSources)
 					{
-						sourceReplicationInformation = replicationSource.JsonDeserialization<SourceReplicationInformation>();
+						sourceReplicationInformation = replicationSource.JsonDeserialization<SourceReplicationInformationWithBatchInformation>();
 						if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false)
 							continue;
 
@@ -407,7 +409,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
 						if (document != null)
 						{
-							sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+							sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformationWithBatchInformation>();
 							Database.Documents.Put(Constants.RavenReplicationSourcesBasePath + "/" + sourceReplicationInformation.ServerInstanceId, Etag.Empty, document.DataAsJson, document.Metadata, null);
 							Database.Documents.Delete(Constants.RavenReplicationSourcesBasePath + "/" + src, document.Etag, null);
 
@@ -419,18 +421,17 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 				if (document == null)
 				{
-					sourceReplicationInformation = new SourceReplicationInformation
+					sourceReplicationInformation = new SourceReplicationInformationWithBatchInformation
 					{
 						Source = src,
 						ServerInstanceId = localServerInstanceId,
-						LastModified = SystemTime.UtcNow,
-						MaxNumberOfItemsToReceiveInSingleBatch = Database.Configuration.Replication.MaxNumberOfItemsToReceiveInSingleBatch
+						LastModified = SystemTime.UtcNow
 					};
 				}
 				else
 				{
 					if (sourceReplicationInformation == null)
-						sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+						sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformationWithBatchInformation>();
 
 					if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false 
 						&& sourceReplicationInformation.LastModified.HasValue 
@@ -442,12 +443,28 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						sourceReplicationInformation.LastDocumentEtag = Etag.InvalidEtag;
 					}
 
-					sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch = Database.Configuration.Replication.MaxNumberOfItemsToReceiveInSingleBatch;
 					sourceReplicationInformation.ServerInstanceId = localServerInstanceId;
 				}
 
+				var maxNumberOfItemsToReceiveInSingleBatch = Database.Configuration.Replication.MaxNumberOfItemsToReceiveInSingleBatch;
+				var lowMemory = MemoryStatistics.AvailableMemory < Database.Configuration.AvailableMemoryForRaisingBatchSizeLimit / 2;
+				if (lowMemory)
+				{
+					var lastBatchSize = sourceReplicationInformation.LastBatchSize;
+					if (lastBatchSize.HasValue && maxNumberOfItemsToReceiveInSingleBatch.HasValue) 
+						sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
+					else if (lastBatchSize.HasValue) 
+						sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch = lastBatchSize.Value;
+					else if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
+						sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch = maxNumberOfItemsToReceiveInSingleBatch.Value;
+				}
+				else
+				{
+					sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch = Database.Configuration.Replication.MaxNumberOfItemsToReceiveInSingleBatch;
+				}
+
 				var currentEtag = GetQueryStringValue("currentEtag");
-				Log.Debug(() => string.Format("Got replication last etag request from {0}: [Local: {1} Remote: {2}]", src, sourceReplicationInformation.LastDocumentEtag, currentEtag));
+				Log.Debug(() => string.Format("Got replication last etag request from {0}: [Local: {1} Remote: {2}]. LowMemory: {3}. MaxNumberOfItemsToReceiveInSingleBatch: {4}.", src, sourceReplicationInformation.LastDocumentEtag, currentEtag, lowMemory, sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch));
 				return GetMessageWithObject(sourceReplicationInformation);
 			}
 		}
