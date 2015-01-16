@@ -1756,16 +1756,9 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 
 					return false;
 				}
-				if (i == 221)
-				{
-					
-				}
-				i++;
 				Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader).ConfigureAwait(false);
 				return true;
 			}
-
-			private int i;
 
 			private async Task TryReadNextPageStart()
 			{
