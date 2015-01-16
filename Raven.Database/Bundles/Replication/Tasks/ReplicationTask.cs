@@ -407,7 +407,7 @@ namespace Raven.Bundles.Replication.Tasks
 				using (docDb.DisableAllTriggersForCurrentThread())
 				using (var stats = new ReplicationStatisticsRecorder(destination, destinationStats))
 				{
-					SourceReplicationInformation destinationsReplicationInformationForSource;
+					SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource;
 					using (var scope = stats.StartRecording("Destination"))
 					{
 						try
@@ -564,7 +564,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return true;
 		}
 
-		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, out int replicatedDocuments)
+		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, out int replicatedDocuments)
 		{
 			replicatedDocuments = 0;
 			JsonDocumentsToReplicate documentsToReplicate = null;
@@ -981,7 +981,7 @@ namespace Raven.Bundles.Replication.Tasks
 			public List<JsonDocument> LoadedDocs { get; set; }
 		}
 
-		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, PrefetchingBehavior prefetchingBehavior, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
+		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, PrefetchingBehavior prefetchingBehavior, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
 		{
 			var timeout = TimeSpan.FromSeconds(docDb.Configuration.Replication.FetchingFromDiskTimeoutInSeconds);
 			var duration = Stopwatch.StartNew();
@@ -1288,7 +1288,7 @@ namespace Raven.Bundles.Replication.Tasks
 				.ToList();
 		}
 
-		internal SourceReplicationInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)
+		internal SourceReplicationInformationWithBatchInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)
 		{
 			try
 			{
@@ -1297,7 +1297,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
 						  "&currentEtag=" + currentEtag + "&dbid=" + docDb.TransactionalStorage.Id;
 				var request = httpRavenRequestFactory.Create(url, "GET", destination.ConnectionStringOptions);
-				var lastReplicatedEtagFrom = request.ExecuteRequest<SourceReplicationInformation>();
+				var lastReplicatedEtagFrom = request.ExecuteRequest<SourceReplicationInformationWithBatchInformation>();
 				return lastReplicatedEtagFrom;
 			}
 			catch (WebException e)
