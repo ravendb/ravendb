@@ -12,9 +12,9 @@
     <TypeScriptToolsVersion>1.0</TypeScriptToolsVersion>
     <UseIISExpress>false</UseIISExpress>
     <IISExpressSSLPort />
-    <IISExpressAnonymousAuthentication />
-    <IISExpressWindowsAuthentication />
-    <IISExpressUseClassicPipelineMode />
+    <IISExpressAnonymousAuthentication>enabled</IISExpressAnonymousAuthentication>
+    <IISExpressWindowsAuthentication>enabled</IISExpressWindowsAuthentication>
+    <IISExpressUseClassicPipelineMode>false</IISExpressUseClassicPipelineMode>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <TargetFrameworkProfile />
@@ -329,7 +329,7 @@
     <TypeScriptCompile Include="App\commands\getServerPrefixForHiLoCommand.ts" />
     <TypeScriptCompile Include="App\commands\getInfoPackage.ts" />
     <TypeScriptCompile Include="App\commands\adminLogsConfigureCommand.ts" />
-    <TypeScriptCompile Include="App\commands\compactDatabaseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\startCompactCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingPerfStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getOperationAlertsCommand.ts" />
     <TypeScriptCompile Include="App\commands\monitorRestoreCommand.ts" />
@@ -344,14 +344,16 @@
     <TypeScriptCompile Include="App\commands\getIndexingBatchStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReducingBatchStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\persistIndexCommand.ts" />
+    <TypeScriptCompile Include="App\commands\explainReplicationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getCachedCollectionsCount.ts" />
     <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
-    <Content Include="App\commands\createDefaultSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\startRestoreCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\compactFilesystemCommand.ts" />
-    <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
     <TypeScriptCompile Include="App\models\conflictsInfo.ts" />
@@ -376,7 +378,7 @@
     <TypeScriptCompile Include="App\viewmodels\databaseSettingsDialog.ts" />
     <TypeScriptCompile Include="App\commands\getIndexSuggestionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getRequestTracingCommand.ts" />
-    <Content Include="App\commands\getVersioningsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getVersioningsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\common\execJs.ts" />
     <TypeScriptCompile Include="App\common\inputCursor.ts" />
@@ -395,12 +397,13 @@
     <TypeScriptCompile Include="App\models\adminLogsConfig.ts" />
     <TypeScriptCompile Include="App\common\eventSourceSettingStorage.ts" />
     <TypeScriptCompile Include="App\common\changesApiWarnStorage.ts" />
-    <Content Include="App\models\adminLogsConfigEntry.ts" />
+    <TypeScriptCompile Include="App\common\apiKeyLocalStorage.ts" />
+    <TypeScriptCompile Include="App\models\adminLogsConfigEntry.ts" />
     <TypeScriptCompile Include="App\models\performanceTestRequest.ts" />
     <TypeScriptCompile Include="App\models\performanceTestResultWrapped.ts" />
     <TypeScriptCompile Include="App\models\indexMergeSuggestion.ts" />
     <TypeScriptCompile Include="App\models\indexReplaceDocument.ts" />
-    <Content Include="App\models\transformerParam.ts" />
+    <TypeScriptCompile Include="App\models\transformerParam.ts" />
     <TypeScriptCompile Include="App\common\oauthContext.ts" />
     <TypeScriptCompile Include="App\viewmodels\enterApiKey.ts" />
     <TypeScriptCompile Include="App\viewmodels\visualizer.ts" />
@@ -428,14 +431,21 @@
     <TypeScriptCompile Include="App\viewmodels\indexing.ts" />
     <TypeScriptCompile Include="App\viewmodels\replaceIndexDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugPersistAutoIndex.ts" />
-    <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugExplainReplication.ts" />
+    <TypeScriptCompile Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\resetIndexConfirm.ts" />
+    <TypeScriptCompile Include="App\commands\monitorCompactCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\monitorCompactCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\startCompactCommand.ts" />
     <Content Include="App\views\adminSettings.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
+    <Content Include="App\views\statusDebugExplainReplication.html" />
+    <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\statusDebugPersistAutoIndex.html" />
     <Content Include="App\views\indexing.html" />
     <Content Include="App\views\replaceIndexDialog.html" />
@@ -888,7 +898,6 @@
     <Content Include="fonts\fontawesome-webfont.ttf" />
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
-    <None Include="Scripts\jquery-2.1.0.intellisense.js" />
     <Content Include="Scripts\forge\forge_custom.min.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
@@ -899,6 +908,7 @@
     <TypeScriptCompile Include="Scripts\typings\ace\aceExt.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap.v3.datetimepicker\bootstrap.v3.datetimepicker.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\d3\dagre.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\es6shim\es6shim.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery.blockUI\jquery.blockUI.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery.dynatree\jquery.dynatree.d.ts" />
@@ -920,14 +930,13 @@
     <Content Include="Scripts\d3\nv.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
-    <Content Include="Scripts\typings\bootstrap.multiselect\bootstrap.multiselect.d.ts" />
-    <Content Include="Scripts\typings\d3\dagreD3.d.ts" />
-    <Content Include="Scripts\typings\d3\d3.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\bootstrap.multiselect\bootstrap.multiselect.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\d3\d3.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelines.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\d3\timelinesChart.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\forge\forge.d.ts" />
-    <Content Include="Scripts\typings\d3\nvd3.d.ts" />
-    <Content Include="Scripts\typings\jquery.fullscreen\jquery.fullscreen.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\d3\nvd3.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\jquery.fullscreen\jquery.fullscreen.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jszip\jszip.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
     <Content Include="web.config">
@@ -937,7 +946,6 @@
     <Content Include="fonts\fontawesome-webfont.ttf" />
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
-    <Content Include="Scripts\jquery-2.1.0.min.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
       <SubType>Designer</SubType>
@@ -1042,6 +1050,12 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <TypeScriptTarget>ES5</TypeScriptTarget>
+    <TypeScriptRemoveComments>true</TypeScriptRemoveComments>
+    <TypeScriptSourceMap>false</TypeScriptSourceMap>
+    <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Profiling'">
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptRemoveComments>true</TypeScriptRemoveComments>
     <TypeScriptSourceMap>false</TypeScriptSourceMap>

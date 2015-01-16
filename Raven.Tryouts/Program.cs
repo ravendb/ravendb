@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
@@ -18,50 +19,12 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			List<Facet> fcets = new List<Facet>(){  
-						new Facet
-                      {
-                          Name ="TotalCount"
-                      },
-					  new Facet
-					  {
-					  	Name ="Tag_40062491"
-					  },
-					  new Facet
-					  {
-					  	Name ="Tag_40062492"
-					  },
-					  new Facet
-					  {
-					  	Name ="Tag_40062493"
-					  },
-					  new Facet
-					  {
-					  	Name ="Tag_40062494"
-					  }
-					  ,new Facet
-					  {
-					  	Name ="Tag_40062495"
-					  },
-					  new Facet
-					  {
-					  	Name ="Tag_40062496"
-					  }
-               };
+		    var etag = new Etag(UuidType.Documents, 1, 1);
+		    Console.WriteLine(etag);
+		    Console.WriteLine(Etag.Parse(etag.ToString()));
 
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8080",
-				DefaultDatabase = "zap"
-			}.Initialize())
-			using (var session = store.OpenSession())
-			{
-				var f = session.Advanced.DocumentQuery<Object>("idxD").Where("IsPayingCustomer:true").SelectFields<Object>("CustomerId").Distinct().ToFacets(fcets);
-
-				Console.WriteLine(JsonConvert.SerializeObject(f,Formatting.Indented));
-			}
- 
-
+		    //var etag = new Etag(UuidType.Documents, 5, 10);
+		    //Console.WriteLine(Etag.Parse(etag.ToString()));
 		}
 	}
 

@@ -345,11 +345,22 @@ namespace Raven.Database.Server.Controllers
 		{
 			var result = new Dictionary<string, SortOptions>();
 
+			// backward compatibility
 			foreach (var header in InnerRequest.Headers.Where(pair => pair.Key.StartsWith("SortHint-")))
 			{
 				SortOptions sort;
 				Enum.TryParse(GetHeader(header.Key), true, out sort);
-				result.Add(Uri.UnescapeDataString(header.Key), sort);
+				result[Uri.UnescapeDataString(header.Key)] = sort;
+			}
+
+			foreach (var pair in InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key.StartsWith("SortHint-", StringComparison.OrdinalIgnoreCase)))
+			{
+				var key = pair.Key;
+				var value = pair.Value != null ? Uri.UnescapeDataString(pair.Value) : null;
+
+				SortOptions sort;
+				Enum.TryParse(value, true, out sort);
+				result[Uri.UnescapeDataString(key)] = sort;
 			}
 
 			return result;

@@ -672,7 +672,7 @@ namespace Voron.Util
 
 		private unsafe static void BlockCopy(byte* src, byte* dest, int len)
 		{
-			StdLib.memcpy(dest, src, len);
+            MemoryUtils.Copy(dest, src, len);
 		}
 
 		#endregion

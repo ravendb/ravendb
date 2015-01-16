@@ -51,6 +51,8 @@ namespace Raven.Tests.Issues
 
 				RemoveReplication(store1.DatabaseCommands);
 
+				WaitForIndexing(store1);
+
 				store1
 					.DatabaseCommands
 					.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Items" })

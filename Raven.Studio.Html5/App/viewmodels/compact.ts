@@ -4,16 +4,18 @@ import database = require("models/database");
 import resource = require("models/resource");
 import filesystem = require("models/filesystem/filesystem");
 
-
-
 class resourceCompact {
     resourceName = ko.observable<string>('');
-    isBusy = ko.observable<boolean>();
+    
     resourcesNames: KnockoutComputed<string[]>;
     searchResults: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
 
-    constructor(private type: string, private resources: KnockoutObservableArray<resource>) {
+    compactStatusMessages = ko.observableArray<string>();
+
+    keepDown = ko.observable<boolean>(false);
+
+    constructor(private parent: compact, private type: string, private resources: KnockoutObservableArray<resource>) {
         this.resourcesNames = ko.computed(() => resources().map((rs: resource) => rs.name));
 
         this.searchResults = ko.computed(() => {
@@ -34,10 +36,29 @@ class resourceCompact {
         });
     }
 
+    toggleKeepDown() {
+        this.keepDown.toggle();
+        if (this.keepDown() == true) {
+            var logsPre = document.getElementById(this.type + 'CompactLogPre');
+            logsPre.scrollTop = logsPre.scrollHeight;
+        }
+    }
+
+    updateCompactStatus(newCompactStatus: compactStatusDto) {
+        this.compactStatusMessages(newCompactStatus.Messages);
+        if (this.keepDown()) {
+            var logsPre = document.getElementById(this.type + 'CompactLogPre');
+            logsPre.scrollTop = logsPre.scrollHeight;
+        }
+        this.parent.isBusy(newCompactStatus.State == "Running");
+    }
+
 }
-class compactDatabase extends viewModelBase {
-    private dbCompactOptions = new resourceCompact(database.type, shell.databases);
-    private fsCompactOptions = new resourceCompact(filesystem.type, shell.fileSystems);
+class compact extends viewModelBase {
+    private dbCompactOptions = new resourceCompact(this, database.type, shell.databases);
+    private fsCompactOptions = new resourceCompact(this, filesystem.type, shell.fileSystems);
+
+    isBusy = ko.observable<boolean>();
 
     canActivate(args): any {
         return true;
@@ -50,26 +71,24 @@ class compactDatabase extends viewModelBase {
     }
 
     startDbCompact() {
-        this.dbCompactOptions.isBusy(true);
+        this.isBusy(true);
+        var self = this;
 
-        require(["commands/compactDatabaseCommand"], compactDatabaseCommand => {
-            var dbToCompact = shell.databases.first((db: database) => db.name == this.dbCompactOptions.resourceName());
-            new compactDatabaseCommand(dbToCompact)
-                .execute()
-                .always(() => this.dbCompactOptions.isBusy(false));
+        require(["commands/startCompactCommand"], startCompactCommand => {
+            new startCompactCommand(this.dbCompactOptions.resourceName(), self.dbCompactOptions.updateCompactStatus.bind(self.dbCompactOptions))
+                .execute();
         });
     }
 
     startFsCompact() {
-        this.fsCompactOptions.isBusy(true);
+        this.isBusy(true);
+        var self = this;
 
-        require(["commands/filesystem/compactFilesystemCommand"], compactFilesystemCommand => {
-            var fsToCompact = shell.fileSystems.first((fs: filesystem) => fs.name == this.fsCompactOptions.resourceName());
-            new compactFilesystemCommand(fsToCompact)
-                .execute()
-                .always(() => this.fsCompactOptions.isBusy(false));
+        require(["commands/filesystem/startCompactCommand"], startCompactCommand => {
+            new startCompactCommand(this.fsCompactOptions.resourceName(), self.fsCompactOptions.updateCompactStatus.bind(self.fsCompactOptions))
+                .execute();
         });
     }
 }
 
-export = compactDatabase;
+export = compact;

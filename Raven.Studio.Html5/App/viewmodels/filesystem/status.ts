@@ -14,6 +14,7 @@ import changeSubscription = require('models/changeSubscription');
 import getSyncOutgoingActivitiesCommand = require("commands/filesystem/getSyncOutgoingActivitiesCommand");
 import getSyncIncomingActivitiesCommand = require("commands/filesystem/getSyncIncomingActivitiesCommand");
 import synchronizeNowCommand = require("commands/filesystem/synchronizeNowCommand");
+import resetIndexConfirm = require("viewmodels/filesystem/resetIndexConfirm");
 
 class status extends viewModelBase {
 
@@ -102,6 +103,11 @@ class status extends viewModelBase {
 
     expandAll() {
         $(".synchronization-group-content").collapse('show');
+    }
+
+    resetIndex() {
+        var resetIndexVm = new resetIndexConfirm(this.activeFilesystem());
+        app.showDialog(resetIndexVm);
     }
 
     private addOrUpdateActivity(e: synchronizationDetail) {

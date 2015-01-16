@@ -266,7 +266,7 @@ namespace Raven.Database.Indexing
 			else if (value is DateTime)
 			{
 				var val = (DateTime)value;
-				var dateAsString = val.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
+				var dateAsString = val.GetDefaultRavenFormat();
 				if (val.Kind == DateTimeKind.Utc)
 					dateAsString += "Z";
 				yield return CreateFieldWithCaching(name, dateAsString, storage,
@@ -283,7 +283,7 @@ namespace Raven.Database.Indexing
 				}
 				else
 				{
-					dtoStr = val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
+					dtoStr = val.UtcDateTime.GetDefaultRavenFormat(true);
 				}
 				yield return CreateFieldWithCaching(name, dtoStr, storage,
 						   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);

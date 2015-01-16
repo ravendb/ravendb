@@ -8,13 +8,13 @@ namespace Raven.Abstractions.Util
 {
 	public static class GenericUtil
 	{
-		public static readonly string[] ByteToHexAsStringLookup;
+		public static readonly char[][] ByteToHexAsStringLookup;
 
 		static GenericUtil()
 		{
-			ByteToHexAsStringLookup = new string[byte.MaxValue + 1];
+			ByteToHexAsStringLookup = new char[byte.MaxValue + 1][];
 			for (int b = Byte.MinValue; b <= Byte.MaxValue; b++)
-				ByteToHexAsStringLookup[b] = b.ToString("X2");
+				ByteToHexAsStringLookup[b] = b.ToString("X2").ToCharArray();
 		}
 	}
 }

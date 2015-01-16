@@ -132,12 +132,20 @@ namespace Raven.Database.Indexing
 
 			var usedPrefetchers = new ConcurrentSet<PrefetchingBehavior>();
 
-			var groupedIndexes = indexingGroups.Select(x => new IndexingGroup
+			var groupedIndexes = indexingGroups.Select(x =>
 			{
-				LastIndexedEtag = x.Key,
-				Indexes = x.Value,
-				LastQueryTime = x.Value.Max(y => y.Index.LastQueryTime),
-				PrefetchingBehavior = GetPrefetcherFor(x.Key, usedPrefetchers)
+				var result = new IndexingGroup
+				{
+					LastIndexedEtag = x.Key,
+					Indexes = x.Value,
+					LastQueryTime = x.Value.Max(y => y.Index.LastQueryTime),
+					PrefetchingBehavior = GetPrefetcherFor(x.Key, usedPrefetchers)
+				};
+
+				result.PrefetchingBehavior.AdditionalInfo = string.Format("Default prefetcher: {0}. For indexing group: [Indexes: {1}, LastIndexedEtag: {2}]",
+					result.PrefetchingBehavior == defaultPrefetchingBehavior, string.Join(", ", result.Indexes.Select(y => y.Index.PublicName)), result.LastIndexedEtag);
+
+				return result;
 			}).OrderByDescending(x => x.LastQueryTime).ToList();
 
 	        var maxIndexOutputsPerDoc = groupedIndexes.Max(x => x.Indexes.Max(y => y.Index.MaxIndexOutputsPerDocument));
@@ -170,7 +178,7 @@ namespace Raven.Database.Indexing
 								jsonDocs.Count, indexingGroup.LastIndexedEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
 						}
 
-						context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexesToWorkOn.Select(x => x.Index.PublicName).ToList(), out batchInfo);
+						batchInfo = context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexesToWorkOn.Select(x => x.Index.PublicName).ToList());
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 
@@ -204,8 +212,8 @@ namespace Raven.Database.Indexing
 						}
 
 						prefetchingBehavior.BatchProcessingComplete();
-						if(batchInfo != null)
-							batchInfo.BatchCompleted();
+						if (batchInfo != null)
+							context.ReportIndexingBatchCompleted(batchInfo);
 					}
 				}
 			});
@@ -236,7 +244,7 @@ namespace Raven.Database.Indexing
 			{
 				// If the distance between etag of a recent document in db and etag to index from is greater than NumberOfItemsToProcessInSingleBatch
 				// then prevent the prefetcher from loading newly added documents. For such prefetcher we will relay only on future batches to prefetch docs to avoid
-				// large memory consumption by in memory prefetching queue that would hold all the new documents, but it would be a long time before we can reach them.
+				// large memory consumption by in-memory prefetching queue that would hold all the new documents, but it would be a long time before we can reach them.
 				newPrefetcher.DisableCollectingDocumentsAfterCommit = true;
 			}
 
@@ -261,6 +269,11 @@ namespace Raven.Database.Indexing
 				prefetchingBehaviors.TryRemove(unusedPrefetcher);
 				prefetcher.RemovePrefetchingBehavior(unusedPrefetcher);
 			}
+		}
+
+		protected override void CleanupPrefetchers()
+		{
+			RemoveUnusedPrefetchers(Enumerable.Empty<PrefetchingBehavior>());
 		}
 
 		private static IDisposable MapIndexingInProgress(IList<IndexToWorkOn> indexesToWorkOn)
@@ -318,10 +331,10 @@ namespace Raven.Database.Indexing
 		        IndexingPerformanceStats performance = null;
 		        try
 		        {
-			        context.ReportIndexingBatchStarted(precomputedBatch.Documents.Count, precomputedBatch.Documents.Sum(x => x.SerializedSizeOnDisk), new List<string>
+					batchInfo = context.ReportIndexingBatchStarted(precomputedBatch.Documents.Count, precomputedBatch.Documents.Sum(x => x.SerializedSizeOnDisk), new List<string>
 			        {
 				        indexToWorkOn.Index.PublicName
-			        }, out batchInfo);
+			        });
 
 			        batchInfo.BatchType = BatchType.Precomputed;
 
@@ -340,7 +353,7 @@ namespace Raven.Database.Indexing
 				        if (performance != null)
 					        batchInfo.PerformanceStats.TryAdd(indexingBatchForIndex.Index.PublicName, performance);
 
-				        batchInfo.BatchCompleted();
+				        context.ReportIndexingBatchCompleted(batchInfo);
 			        }
 		        }
 	        }
@@ -539,8 +552,9 @@ namespace Raven.Database.Indexing
 			{
 				if (actions.IsWriteConflict(e))
 					return null;
+
 				Log.WarnException(string.Format("Failed to index documents for index: {0}", indexingBatchForIndex.Index.PublicName), e);
-				context.AddError(indexingBatchForIndex.IndexId, indexingBatchForIndex.Index.PublicName, null, e.Message);
+				context.AddError(indexingBatchForIndex.IndexId, indexingBatchForIndex.Index.PublicName, null, e);
 			}
 
 			return performanceStats;

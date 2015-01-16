@@ -72,6 +72,16 @@
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
+    <OutputPath>bin\Profiling\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;NET_4_0 NET45</DefineConstants>
+    <Optimize>true</Optimize>
+    <NoWarn>1607, 1591</NoWarn>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Esent.Interop">
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
@@ -239,7 +249,6 @@
     <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From03To04.cs" />
     <Compile Include="Indexing\IndexReplacer.cs" />
     <Compile Include="Impl\Generators\JsonCodeGenerator.cs" />
-    <Compile Include="Indexing\WriteIndexStats.cs" />
     <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
     <Compile Include="Plugins\Builtins\CheckIncrementalBackupStatus.cs" />
     <Compile Include="Plugins\Builtins\PurgeOutdatedTombstones.cs" />
@@ -292,6 +301,7 @@
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
+    <Compile Include="Util\StopwatchScope.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />

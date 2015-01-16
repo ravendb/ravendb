@@ -31,7 +31,7 @@ class indexPrefetches extends viewModelBase {
     }
 
     modelPolling() {
-        this.fetchStats().then(() => {
+        return this.fetchStats().then(() => {
             this.appendData();
             this.updateChart();
         });

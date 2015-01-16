@@ -33,6 +33,7 @@ using System.Text;
 using System.IO;
 using System.Xml;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
@@ -361,10 +362,10 @@ namespace Raven.Imports.Newtonsoft.Json
     {
       InternalWriteValue(JsonToken.String);
 
-      if (value == null)
-        WriteValueInternal(JsonConvert.Null, JsonToken.Null);
+      if (value != null)
+            WriteEscapedString(value);
       else
-        WriteEscapedString(value);
+            WriteValueInternal(JsonConvert.Null, JsonToken.Null);
     }
 
     private void WriteEscapedString(string value)
@@ -680,6 +681,7 @@ namespace Raven.Imports.Newtonsoft.Json
       _writer.Write(ws);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void EnsureWriteBuffer()
     {
       if (_writeBuffer == null)

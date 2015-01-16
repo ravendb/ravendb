@@ -440,7 +440,6 @@ namespace Raven.Database
 					StorageEngine = TransactionalStorage.FriendlyName,
 					CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
 					CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
-					IndexingBatchInfo = workContext.LastActualIndexingBatchInfo.ToArray(),
 					InMemoryIndexingQueueSizes = prefetcher.GetInMemoryIndexingQueueSizes(PrefetchingUser.Indexer),
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
@@ -495,7 +494,7 @@ namespace Raven.Database
 							if (indexDefinition != null)
 								index.LockMode = indexDefinition.LockMode;
 
-							index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToList();
+							index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
 							IndexSearcher searcher;
 							using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
 								index.DocsCount = searcher.IndexReader.NumDocs();

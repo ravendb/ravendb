@@ -315,7 +315,7 @@ class resources extends viewModelBase {
             var createResourceViewModel = new createResource(this.databases, this.fileSystems, license.licenseStatus);
             createResourceViewModel.createDatabasePart
                 .creationTask
-                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, storageEngine: string, incrementalBackup: boolean
+                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, databaseTemp: string, storageEngine: string, incrementalBackup: boolean
                     , alertTimeout: string, alertRecurringTimeout: string) => {
                     var settings = {
                         "Raven/ActiveBundles": bundles.join(";")
@@ -329,6 +329,9 @@ class resources extends viewModelBase {
                         } else {
                             settings["Raven/Voron/AllowIncrementalBackups"] = "true"
                         }
+                    }
+                    if (!this.isEmptyStringOrWhitespace(databaseTemp)) {
+                        settings['Raven/Voron/TempPath'] = databaseTemp;
                     }
                     if (alertTimeout !== "") {
                         settings["Raven/IncrementalBackup/AlertTimeoutHours"] = alertTimeout;

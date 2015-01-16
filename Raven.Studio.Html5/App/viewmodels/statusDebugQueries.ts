@@ -27,8 +27,9 @@ class statusDebugQueries extends viewModelBase {
 
     modelPolling() {
         if (this.autoRefresh()) {
-            this.fetchCurrentQueries();
+            return this.fetchCurrentQueries();
         }
+        return $.Deferred().resolve();
     }
 
     toggleAutoRefresh() {

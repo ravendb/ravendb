@@ -241,7 +241,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             new RestoreOperation(restoreRequest, configuration, output).Execute();
         }
 
-		public void Compact(InMemoryRavenConfiguration ravenConfiguration)
+        public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
 		{
 			bool runInMemory;
 			bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
@@ -262,7 +262,10 @@ namespace Raven.Database.FileSystem.Storage.Voron
 			var sourceOptions = CreateStorageOptionsFromConfiguration(path, settings);
 			var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath);
 
-			StorageCompaction.Execute(sourceOptions, compactOptions);
+            output("Executing storage compaction");
+ 
+	        StorageCompaction.Execute(sourceOptions, compactOptions,
+                             x => output(string.Format("Copied {0} of {1} records in '{2}' tree. Copied {3} of {4} trees.", x.CopiedTreeRecords, x.TotalTreeRecordsCount, x.TreeName, x.CopiedTrees, x.TotalTreeCount)));
 
 			var sourceDir = new DirectoryInfo(sourcePath);
 			var sourceFiles = new List<FileInfo>();
@@ -275,10 +278,14 @@ namespace Raven.Database.FileSystem.Storage.Voron
 			var compactionBackup = Path.Combine(sourcePath, "Voron.Compaction.Backup");
 
 			if (Directory.Exists(compactionBackup))
-				Directory.Delete(compactionBackup, true);
+			{
+                Directory.Delete(compactionBackup, true);
+                output("Removing existing compaction backup directory");
+			}
 
 			Directory.CreateDirectory(compactionBackup);
 
+            output("Backing up original data files");
 			foreach (var file in sourceFiles)
 			{
 				File.Move(file.FullName, Path.Combine(compactionBackup, file.Name));
@@ -286,11 +293,13 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
 			var compactedFiles = new DirectoryInfo(compactPath).GetFiles();
 
+            output("Moving compacted files into target location");
 			foreach (var file in compactedFiles)
 			{
 				File.Move(file.FullName, Path.Combine(sourcePath, file.Name));
 			}
 
+            output("Deleting original data backup");
 			Directory.Delete(compactionBackup, true);
 			Directory.Delete(compactPath, true);
 		}

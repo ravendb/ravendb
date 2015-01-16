@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -65,9 +66,10 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				return GetMessageWithString(error, HttpStatusCode.BadRequest);
 			}
-
 			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
-			if (dbDoc.Settings.ContainsKey(Constants.ActiveBundles) && dbDoc.Settings[Constants.ActiveBundles].Contains("Encryption"))
+			
+			string bundles;			
+			if (dbDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.Contains("Encryption"))
 			{
 				if (dbDoc.SecuredSettings == null || !dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
 				    !dbDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))

@@ -197,14 +197,22 @@ namespace Raven.Database.Server.Controllers
 
 		internal Etag EtagHeaderToEtag()
 		{
-			var responseHeader = GetHeader("If-None-Match");
-			if (string.IsNullOrEmpty(responseHeader))
-				return Etag.InvalidEtag;
+		    try
+		    {
+		        var responseHeader = GetHeader("If-None-Match");
+		        if (string.IsNullOrEmpty(responseHeader))
+		            return Etag.InvalidEtag;
 
-			if (responseHeader[0] == '\"')
-				return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
+		        if (responseHeader[0] == '\"')
+		            return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
 
-			return Etag.Parse(responseHeader);
+		        return Etag.Parse(responseHeader);
+		    }
+		    catch (Exception e)
+		    {
+		        Console.WriteLine(e.Message);
+                return Etag.InvalidEtag;
+		    }
 		}
 
 		public string GetQueryStringValue(string key)
@@ -451,16 +459,20 @@ namespace Raven.Database.Server.Controllers
 
 		public string GetHeader(string key)
 		{
-			if (InnerHeaders.Contains(key) == false)
-				return null;
-			return InnerHeaders.GetValues(key).FirstOrDefault();
+		    IEnumerable<string> values;
+		    if (InnerRequest.Headers.TryGetValues(key, out values) ||
+                (InnerRequest.Content != null && InnerRequest.Content.Headers.TryGetValues(key, out values)))
+		        return values.FirstOrDefault();
+		    return null;
 		}
 
 		public List<string> GetHeaders(string key)
 		{
-			if (InnerHeaders.Contains(key) == false)
-				return null;
-			return InnerHeaders.GetValues(key).ToList();
+            IEnumerable<string> values;
+            if (InnerRequest.Headers.TryGetValues(key, out values) ||
+                InnerRequest.Content.Headers.TryGetValues(key, out values))
+                return values.ToList();
+            return null;
 		}
 
 		public bool HasCookie(string key)

@@ -886,7 +886,8 @@ namespace Raven.Imports.Newtonsoft.Json
 
 			if (converters != null)
 			{
-				for (int i = 0; i < converters.Count; i++)
+                int count = converters.Count;
+                for (int i = 0; i < count; i++)
 				{
 					JsonConverter converter = converters[i];
 

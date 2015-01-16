@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 
 namespace Raven.Client.Indexes
@@ -35,7 +36,6 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Creates the indexes found in the specified catalog
 		/// </summary>
-		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
 		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDatabaseCommands databaseCommands, DocumentConvention conventions)
 		{
 			var indexCompilationExceptions = new List<IndexCompilationException>();
@@ -60,6 +60,34 @@ namespace Raven.Client.Indexes
 			if (indexCompilationExceptions.Any())
 				throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
 		}
+
+        /// <summary>
+        /// Creates the indexes found in the specified catalog
+        /// </summary>
+        public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions)
+        {
+            var indexCompilationExceptions = new List<IndexCompilationException>();
+            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+            {
+                try
+                {
+                    await task.ExecuteAsync(databaseCommands, conventions);
+                }
+                catch (IndexCompilationException e)
+                {
+                    indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
+                }
+
+            }
+
+            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+            {
+                await task.ExecuteAsync(databaseCommands, conventions);
+            }
+
+            if (indexCompilationExceptions.Any())
+                throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+        }
 
 		/// <summary>
 		/// Creates the indexes found in the specified catalog

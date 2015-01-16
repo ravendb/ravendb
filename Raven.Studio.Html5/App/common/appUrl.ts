@@ -28,6 +28,9 @@ class appUrl {
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
         adminSettings: ko.computed(() => appUrl.forAdminSettings()),
+
+        hasApiKey: ko.computed(() => appUrl.forHasApiKey()),
+
         resources: ko.computed(() => appUrl.forResources()),
         documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
@@ -87,6 +90,7 @@ class appUrl {
         statusDebugIdentities: ko.computed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
         statusDebugWebSocket: ko.computed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
         statusDebugPersistAutoIndex: ko.computed(() => appUrl.forStatusDebugPersistAutoIndex(appUrl.currentDatabase())),
+        statusDebugExplainReplication: ko.computed(() => appUrl.forStatusDebugExplainReplication(appUrl.currentDatabase())),
         infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
 
         statusStorageOnDisk: ko.computed(() => appUrl.forStatusStorageOnDisk(appUrl.currentDatabase())),
@@ -190,6 +194,10 @@ class appUrl {
 
     static forResources(): string {
         return "#resources";
+    }
+
+    static forHasApiKey(): string {
+        return "#has-api-key";
     }
 
     static forCounterStorages(): string {
@@ -333,6 +341,10 @@ class appUrl {
 
     static forStatusDebugPersistAutoIndex(db: database): string {
         return "#databases/status/debug/persist?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugExplainReplication(db: database): string {
+        return "#databases/status/debug/explainReplication?" + appUrl.getEncodedDbPart(db);
     }
 
     static forInfoPackage(db: database): string {
@@ -848,17 +860,22 @@ class appUrl {
     public static mapUnknownRoutes(router: DurandalRouter) {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
             var queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
-            messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
-            
-            var fragment = instruction.fragment;
-            var appUrls: computedAppUrls = appUrl.currentDbComputeds;
-            var newLoationHref;
-            if (fragment.indexOf("admin/settings") == 0) { //admin settings section
-                newLoationHref = appUrls.adminSettings();
+
+            if (instruction.fragment == "has-api-key") {
+                location.reload();
             } else {
-                newLoationHref = appUrls.resourcesManagement();
+                messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
+
+                var fragment = instruction.fragment;
+                var appUrls: computedAppUrls = appUrl.currentDbComputeds;
+                var newLoationHref;
+                if (fragment.indexOf("admin/settings") == 0) { //admin settings section
+                    newLoationHref = appUrls.adminSettings();
+                } else {
+                    newLoationHref = appUrls.resourcesManagement();
+                }
+                location.href = newLoationHref;
             }
-            location.href = newLoationHref;
         });
     }
 }

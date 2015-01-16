@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import d3 = require("d3/d3");
+import appUrl = require("common/appUrl");
 
 class getIndexingBatchStatsCommand extends commandBase {
 
@@ -20,7 +21,7 @@ class getIndexingBatchStatsCommand extends commandBase {
         var parser = d3.time.format.iso;
 
         return this.query<indexingBatchInfoDto[]>(url, null, this.db, result => {
-            return result.map(item => { return {
+            var mappedResult = result.map(item => { return {
                 BatchType: item.BatchType,
                 IndexesToWorkOn: item.IndexesToWorkOn,
                 TotalDocumentCount: item.TotalDocumentCount,
@@ -31,7 +32,30 @@ class getIndexingBatchStatsCommand extends commandBase {
                 PerfStats: d3.map(item.PerformanceStats).entries().map(entryMapping)
             }
             });
+
+            mappedResult.forEach(r => {
+                r.PerfStats.forEach(p => {
+                    p.stats.Operations.filter(x => !("Name" in x)).forEach(o => {
+                        o.BatchedOperations.forEach(b => {
+                            b.Operations.forEach(x => { 
+                                x.ParallelParent = b;
+                            });
+                            b.Parent = o;
+                        });
+                    });
+                });
+            });
+
+            return mappedResult;
         });
+    }
+
+    getQueryUrl(): string {
+        return appUrl.forResourceQuery(this.db) + this.getQueryUrlFragment();
+    }
+
+    private getQueryUrlFragment(): string {
+        return "/debug/indexing-perf-stats";
     }
 }
 

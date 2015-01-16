@@ -31,7 +31,7 @@ namespace Raven.Abstractions.Data
 			{
 				if (PerformanceStats.Count > 0)
 				{
-					TimeSinceFirstReduceInBatchCompletedMs = (now - PerformanceStats.Min(x => x.Value.LevelStats.Count > 0 ? x.Value.LevelStats.Last().Completed : DateTime.MaxValue)).TotalMilliseconds;
+					TimeSinceFirstReduceInBatchCompletedMs = (now - PerformanceStats.Min(x => x.Value.LevelStats.Length > 0 ? x.Value.LevelStats.Last().Completed : DateTime.MaxValue)).TotalMilliseconds;
 				}
 			}
 			catch (Exception)

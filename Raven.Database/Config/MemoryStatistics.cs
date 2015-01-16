@@ -42,12 +42,13 @@ namespace Raven.Database.Config
 		private static int memoryLimit;
 		private static readonly IntPtr lowMemoryNotificationHandle;
 		private static readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> LowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
+		private static readonly IntPtr LowMemorySimulationEvent = CreateEvent(IntPtr.Zero, false, false, null);
 
 		static MemoryStatistics()
 		{
 			lowMemoryNotificationHandle = CreateMemoryResourceNotification(LowMemoryResourceNotification); // the handle will be closed by the system if the process terminates
 
-		    var appDomainUnloadEvent = CreateEvent(IntPtr.Zero, true,false, null);
+		    var appDomainUnloadEvent = CreateEvent(IntPtr.Zero, true, false, null);
 
 		    AppDomain.CurrentDomain.DomainUnload += (sender, args) => SetEvent(appDomainUnloadEvent);
 
@@ -61,38 +62,23 @@ namespace Raven.Database.Config
 
 				while (true)
 				{
-                    var waitForResult = WaitForMultipleObjects(2, new[] { lowMemoryNotificationHandle, appDomainUnloadEvent }, false, INFINITE);
+                    var waitForResult = WaitForMultipleObjects(3, new[] { lowMemoryNotificationHandle, appDomainUnloadEvent, LowMemorySimulationEvent }, false, INFINITE);
 
 					switch (waitForResult)
 					{
-					    case 0:
-					        log.Warn("Low memory detected, will try to reduce memory usage...");
+						case 0: // lowMemoryNotificationHandle
+							log.Warn("Low memory detected, will try to reduce memory usage...");
 
-					        var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
-
-					        foreach (var lowMemoryHandler in LowMemoryHandlers)
-					        {
-					            ILowMemoryHandler handler;
-					            if (lowMemoryHandler.TryGetTarget(out handler))
-					            {
-					                try
-					                {
-					                    handler.HandleLowMemory();
-					                }
-					                catch (Exception e)
-					                {
-					                    log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
-					                }
-					            }
-					            else
-					                inactiveHandlers.Add(lowMemoryHandler);
-					        }
-
-					        inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
-					        break;
+					        RunLowMemoryHandlers();
+							break;
                         case 1:
                             // app domain unload
 					        return;
+						case 2: // LowMemorySimulationEvent
+							log.Warn("Low memory simulation, will try to reduce memory usage...");
+
+							RunLowMemoryHandlers();
+							break;
 					    case WAIT_FAILED:
 					        log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
 					        break;
@@ -104,6 +90,36 @@ namespace Raven.Database.Config
                 IsBackground = true,
 				Name = "Low memory notification thread"
 			}.Start();
+		}
+
+		public static void SimulateLowMemoryNotification()
+		{
+			SetEvent(LowMemorySimulationEvent);
+		}
+
+		private static void RunLowMemoryHandlers()
+		{
+			var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
+
+			foreach (var lowMemoryHandler in LowMemoryHandlers)
+			{
+				ILowMemoryHandler handler;
+				if (lowMemoryHandler.TryGetTarget(out handler))
+				{
+					try
+					{
+						handler.HandleLowMemory();
+					}
+					catch (Exception e)
+					{
+						log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+					}
+				}
+				else
+					inactiveHandlers.Add(lowMemoryHandler);
+			}
+
+			inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
 		}
 
 		public static bool IsLowMemory

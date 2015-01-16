@@ -258,6 +258,7 @@ namespace Raven.Abstractions.Data
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
 				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
+			SortHints.ApplyIfNotNull(hint => path.AppendFormat("&SortHint{2}{0}={1}", Uri.EscapeDataString(hint.Key), hint.Value, hint.Key.StartsWith("-") ? string.Empty : "-"));
 
             if (string.IsNullOrEmpty(ResultsTransformer) == false)
             {
@@ -353,7 +354,8 @@ namespace Raven.Abstractions.Data
                    Start == other.Start && 
                    Equals(IsDistinct, other.IsDistinct) && 
                    Equals(FieldsToFetch, other.FieldsToFetch) && 
-                   Equals(SortedFields, other.SortedFields) && 
+                   Equals(SortedFields, other.SortedFields) &&
+				   Equals(SortHints, other.SortHints) && 
                    Cutoff.Equals(other.Cutoff) && 
 				   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
 				   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
@@ -390,6 +392,7 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (SortedFields != null ? SortedFields.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (SortHints != null ? SortHints.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Cutoff.GetHashCode();
                 hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);

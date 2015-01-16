@@ -2,13 +2,13 @@
 /// <reference path="../../Scripts/typings/d3/d3.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import getIndexingBatchStatsCommand = require("commands/getIndexingBatchStatsCommand");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
 
 class metricsIndexBatchSize extends viewModelBase {
 
-    currentStats: KnockoutObservable<databaseStatisticsDto> = ko.observable(null);
+    currentStats: KnockoutObservable<indexingBatchInfoDto[]> = ko.observable(null);
     indexBatchSizeQueryUrl = ko.observable("");
 
     batchSizeChart: any = null;
@@ -24,15 +24,14 @@ class metricsIndexBatchSize extends viewModelBase {
     }
 
     modelPolling() {
-        this.fetchStats().then(() => {
+        return this.fetchStats().then(() => {
             this.appendData();
             this.updateGraph();
         });
     }
 
     appendData() {
-        var stats = this.currentStats();
-        var batchInfos = stats.IndexingBatchInfo;
+        var batchInfos = this.currentStats();
         var values = this.batchSizeChartData[0].values;
 
         for (var i = 0; i < batchInfos.length; i++) {
@@ -84,14 +83,14 @@ class metricsIndexBatchSize extends viewModelBase {
         }
     }
 
-    fetchStats(): JQueryPromise<databaseStatisticsDto> {
+    fetchStats(): JQueryPromise<indexingBatchInfoDto[]> {
         var db = this.activeDatabase();
         if (db) {
-            var command = new getDatabaseStatsCommand(db);
+            var command = new getIndexingBatchStatsCommand(db);
             this.indexBatchSizeQueryUrl(command.getQueryUrl());
             return command
                 .execute()
-                .done((s: databaseStatisticsDto) => this.currentStats(s));
+                .done((s: indexingBatchInfoDto[]) => this.currentStats(s));
         }
         return null;
     }

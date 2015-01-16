@@ -73,7 +73,7 @@ namespace Raven.Client.Document
 			{
 				var dbCommands = commands;
 				ClearSortHints(dbCommands);
-				shardQueryOperations.Add(InitializeQueryOperation((key, val) => dbCommands.OperationsHeaders[key] = val));
+				shardQueryOperations.Add(InitializeQueryOperation());
 			}
 
 			theSession.IncrementRequestCount();
