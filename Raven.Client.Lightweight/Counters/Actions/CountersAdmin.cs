@@ -15,7 +15,7 @@ namespace Raven.Client.Counters.Actions
 	/// </summary>
 	public class CountersAdmin : CountersActionsBase
 	{
-		internal CountersAdmin(CountersClient parent, Convention convention) : base(parent, convention)
+		internal CountersAdmin(CountersClient parent) : base(parent)
 		{
 
 		}

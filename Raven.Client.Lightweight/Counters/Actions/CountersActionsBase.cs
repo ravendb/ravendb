@@ -30,7 +30,7 @@ namespace Raven.Client.Counters.Actions
 
 		public ProfilingInformation ProfilingInformation { get; private set; } //so far it is preparation for air conditioning
 
-		protected CountersActionsBase(CountersClient parent, Convention convention)
+		protected CountersActionsBase(CountersClient parent)
 		{
 			credentials = parent.PrimaryCredentials;
 			jsonRequestFactory = parent.JsonRequestFactory;
@@ -38,8 +38,7 @@ namespace Raven.Client.Counters.Actions
 			defaultStorageName = parent.DefaultStorageName;
 			counterStorageUrl = parent.CounterStorageUrl;
 			jsonSerializer = parent.JsonSerializer;
-			
-			this.convention = convention;
+			convention = parent.Conventions;
 			this.parent = parent;
 		}
 

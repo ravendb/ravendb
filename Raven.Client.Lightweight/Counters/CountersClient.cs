@@ -106,10 +106,10 @@ namespace Raven.Client.Counters
 
 	    private void InitializeActions()
 	    {
-		    Admin = new CountersAdmin(this, Conventions);
-		    Stats = new CountersStats(this, Conventions);
-		    Replication = new ReplicationClient(this, Conventions);
-		    Commands = new CountersCommands(this, Conventions);
+		    Admin = new CountersAdmin(this);
+		    Stats = new CountersStats(this);
+		    Replication = new ReplicationClient(this);
+		    Commands = new CountersCommands(this);
 	    }
 
 	    private void InitializeSecurity()

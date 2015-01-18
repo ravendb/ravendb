@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -16,8 +15,6 @@ using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -25,7 +22,6 @@ using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -49,8 +45,6 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-
-
 	    public CounterStorage CounterStorage
 	    {
 	        get
@@ -64,6 +58,7 @@ namespace Raven.Database.Counters.Controllers
                 return counterStorage.Result;
 	        }
 	    }
+
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			InnerInitialization(controllerContext);
@@ -83,7 +78,6 @@ namespace Raven.Database.Counters.Controllers
 
 			return result;
 		}
-
 
 		private async Task<HttpResponseMessage> ExecuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
 			MixedModeRequestAuthorizer authorizer)
@@ -111,7 +105,6 @@ namespace Raven.Database.Counters.Controllers
 			return result;
 		}
 
-
 		protected override void InnerInitialization(HttpControllerContext controllerContext)
 		{
 			base.InnerInitialization(controllerContext);
@@ -138,24 +131,10 @@ namespace Raven.Database.Counters.Controllers
 
 		public string CountersName { get; private set; }
 
-		public CountersLandlord CountersLandlord
-		{
-			get
-			{
-				if (Configuration == null)
-					return landlord;
-				return (CountersLandlord)Configuration.Properties[typeof(CountersLandlord)];
-			}
-		}
-
-
-	
-
 		private NameValueCollection QueryString
 		{
 			get { return queryString ?? (queryString = HttpUtility.ParseQueryString(Request.RequestUri.Query)); }
 		}
-
 
 		protected PagingInfo Paging
 		{
@@ -270,8 +249,6 @@ namespace Raven.Database.Counters.Controllers
 			get { return CountersLandlord.SystemConfiguration; }
 		}
 
-       
-
 		public CounterStorage Storage
 		{
 			get
@@ -285,7 +262,5 @@ namespace Raven.Database.Counters.Controllers
 				return counter.Result;
 			}
 		}
-
-	
 	}
 }

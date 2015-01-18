@@ -7,8 +7,8 @@ namespace Raven.Client.Counters.Actions
 {
 	public class ReplicationClient : CountersActionsBase
 	{
-		internal ReplicationClient(CountersClient parent, Convention convention)
-			: base(parent, convention)
+		internal ReplicationClient(CountersClient parent)
+			: base(parent)
 		{
 		}
 
@@ -16,7 +16,7 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/replications/get", counterStorageUrl);
 
-			using (var request = CreateHttpJsonRequest(requestUriString,Verbs.Get))
+			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Get))
 			{
 				var response = await request.ReadResponseJsonAsync();
 				return response.ToObject<CounterStorageReplicationDocument>(jsonSerializer);

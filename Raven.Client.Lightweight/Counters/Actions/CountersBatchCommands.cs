@@ -8,9 +8,9 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Counters.Actions
 {
-	public class CountersCommands : CountersActionsBase
+	public class CountersBatchCommands : CountersActionsBase
 	{
-		internal CountersCommands(CountersClient parent)
+		internal CountersBatchCommands(CountersClient parent)
 			: base(parent)
 		{
 		}

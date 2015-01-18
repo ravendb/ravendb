@@ -112,6 +112,7 @@
     <Compile Include="Connection\ReplicationInformer.cs" />
     <Compile Include="Counters\Actions\CountersActionsBase.cs" />
     <Compile Include="Counters\Actions\CountersAdmin.cs" />
+    <Compile Include="Counters\Actions\CountersBatchCommands.cs" />
     <Compile Include="Counters\Convention.cs" />
     <Compile Include="Counters\CountersClient.cs" />
     <Compile Include="Counters\Actions\CountersCommands.cs" />
