@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Counters;
-using Raven.Abstractions.Data;
 using Raven.Client.Counters;
 using Raven.Tests.Helpers;
 using Xunit;
@@ -33,13 +29,13 @@ namespace Raven.Tests.Counters
 				using (var store = NewRemoteDocumentStore())
 				using (var client = store.NewCountersClient(CounterStorageName))
 				{
-					await client.Admin.CreateCounterStorageAsync();
-					var counterStorageNames = await client.Admin.GetCounterStoragesNames();
+					await client.Admin.CreateCounterStorageAsync(new CountersDocument());
+					var counterStorageNames = await client.Admin.GetCounterStoragesNamesAsync();
 					counterStorageNames.Should().HaveCount(1)
 											.And.Contain(CounterStorageName);
 				}			
 		}
-
+		
 		[Fact]
 		public async Task Should_be_able_to_create_multiple_storages()
 		{
@@ -47,11 +43,12 @@ namespace Raven.Tests.Counters
 			using (var store = NewRemoteDocumentStore())
 			using (var client = store.NewCountersClient(CounterStorageName))
 			{
-				await client.Admin.CreateCounterStorageAsync(counterName: expectedClientNames[0]);
-				await client.Admin.CreateCounterStorageAsync(counterName: expectedClientNames[1]);
-				await client.Admin.CreateCounterStorageAsync(counterName: expectedClientNames[2]);
+				var defaultCountersDocument = new CountersDocument();
+				await client.Admin.CreateCounterStorageAsync(defaultCountersDocument , expectedClientNames[0]);
+				await client.Admin.CreateCounterStorageAsync(defaultCountersDocument , expectedClientNames[1]);
+				await client.Admin.CreateCounterStorageAsync(defaultCountersDocument , expectedClientNames[2]);
 				
-				var counterStorageNames = await client.Admin.GetCounterStoragesNames();				
+				var counterStorageNames = await client.Admin.GetCounterStoragesNamesAsync();				
 				counterStorageNames.Should().BeEquivalentTo(expectedClientNames);				
 			}
 		}
@@ -62,8 +59,8 @@ namespace Raven.Tests.Counters
 			using (var store = NewRemoteDocumentStore())
 			using (var client = store.NewCountersClient(CounterStorageName))
 			{
-				await client.Admin.CreateCounterStorageAsync();
-				client.Admin.Invoking(c =>  c.CreateCounterStorageAsync().Wait())
+				await client.Admin.CreateCounterStorageAsync(new CountersDocument());
+				client.Admin.Invoking(c =>  c.CreateCounterStorageAsync(new CountersDocument()).Wait())
 							.ShouldThrow<InvalidOperationException>();
 			}
 		}
