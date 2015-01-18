@@ -1,16 +1,10 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Connection;
-using Raven.Client.Connection.Profiling;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Counters.Actions
 {
@@ -27,17 +21,7 @@ namespace Raven.Client.Counters.Actions
 				counterStorageUrl, @group, counterName, delta);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Post))
-			{
-				try
-				{
-					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false); ;
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
-				}
-			}
+				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 		}
 
 		public async Task IncrementAsync(string group, string counterName, CancellationToken token = default(CancellationToken))

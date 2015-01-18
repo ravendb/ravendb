@@ -102,7 +102,6 @@ namespace Raven.Client.Counters.Actions
 					if (e.StatusCode == HttpStatusCode.NotFound)
 						throw new InvalidOperationException(string.Format("Counter storage with specified name ({0}) doesn't exist", counterName));
 					throw;
-					//throw e.TryThrowBetterError();
 				}
 			}
 		}

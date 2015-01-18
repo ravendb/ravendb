@@ -139,16 +139,7 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public async Task<HttpResponseMessage> ReplicationsSave()
 		{
-			CounterStorageReplicationDocument newReplicationDocument;
-			try
-			{
-				newReplicationDocument = await ReadJsonObjectAsync<CounterStorageReplicationDocument>();
-			}
-			catch (Exception e)
-			{
-				return Request.CreateResponse(HttpStatusCode.BadRequest, e.Message);
-			}
-
+			var newReplicationDocument = await ReadJsonObjectAsync<CounterStorageReplicationDocument>();
 			using (var writer = Storage.CreateWriter())
 			{
 				writer.UpdateReplications(newReplicationDocument);
@@ -158,7 +149,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-        [RavenRoute("counters/{counterName}/replications/stats")]
+	    [RavenRoute("counters/{counterName}/replications/stats")]
         [HttpGet]
         public HttpResponseMessage ReplicationStats()
         {

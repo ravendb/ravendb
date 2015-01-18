@@ -1,9 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
-using Raven.Client.Connection;
-using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Counters.Actions
@@ -19,18 +16,10 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/replications/get", counterStorageUrl);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "GET", credentials, convention)))
+			using (var request = CreateHttpJsonRequest(requestUriString,Verbs.Get))
 			{
-				try
-				{
-					var response = await request.ReadResponseJsonAsync();
-					return response.Value<CounterStorageReplicationDocument>();
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
-				}
+				var response = await request.ReadResponseJsonAsync();
+				return response.ToObject<CounterStorageReplicationDocument>(jsonSerializer);
 			}
 		}
 
@@ -38,18 +27,10 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/replications/save", counterStorageUrl);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "POST", credentials, convention)))
+			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Post))
 			{
-				try
-				{
-					await request.WriteAsync(RavenJObject.FromObject(newReplicationDocument));
-					var response = await request.ReadResponseJsonAsync();
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
-				}
+				await request.WriteAsync(RavenJObject.FromObject(newReplicationDocument));
+				await request.ReadResponseJsonAsync();			
 			}
 		}
 	}

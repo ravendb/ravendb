@@ -1,4 +1,3 @@
-using System;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;

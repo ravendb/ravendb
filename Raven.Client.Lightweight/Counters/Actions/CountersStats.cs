@@ -21,18 +21,10 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/stats", counterStorageUrl);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "GET", credentials, convention)))
+			using (var request = CreateHttpJsonRequest(requestUriString,Verbs.Get))
 			{
-				try
-				{
-					var response = await request.ReadResponseJsonAsync();
-					return new JsonSerializer().Deserialize<List<CounterStorageStats>>(new RavenJTokenReader(response));
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
-				}
+				var response = await request.ReadResponseJsonAsync();
+				return response.ToObject<List<CounterStorageStats>>(jsonSerializer);
 			}
 		}
 
@@ -40,18 +32,10 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/metrics", counterStorageUrl);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "GET", credentials, convention)))
+			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Get))
 			{
-				try
-				{
-					var response = await request.ReadResponseJsonAsync();
-					return new JsonSerializer().Deserialize<List<CountersStorageMetrics>>(new RavenJTokenReader(response));
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
-				}
+				var response = await request.ReadResponseJsonAsync();
+				return response.ToObject<List<CountersStorageMetrics>>(jsonSerializer);
 			}
 		}
 
@@ -59,18 +43,10 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/replications/stats", counterStorageUrl);
 
-			using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, "GET", credentials, convention)))
+			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Get))
 			{
-				try
-				{
-					var response = await request.ReadResponseJsonAsync();
-					return new JsonSerializer().Deserialize<List<CounterStorageReplicationStats>>(new RavenJTokenReader(response));
-				}
-				catch (Exception e)
-				{
-					throw e;
-					//throw e.TryThrowBetterError();
-				}
+				var response = await request.ReadResponseJsonAsync();
+				return response.ToObject<List<CounterStorageReplicationStats>>(jsonSerializer);
 			}
 		}
 	}
