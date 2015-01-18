@@ -1,13 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Controllers;
+using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
+using Raven.Database.Util.Streams;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Bson;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -31,23 +44,137 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public async Task<HttpResponseMessage> CountersBatch()
 		{
-			List<CounterChanges> counterChanges;
-			try
+			/*if (string.IsNullOrEmpty(GetQueryStringValue("no-op")) == false)
 			{
-				counterChanges = await ReadJsonObjectAsync<List<CounterChanges>>();
+				// this is a no-op request which is there just to force the client HTTP layer to handle the authentication
+				// only used for legacy clients
+				return GetEmptyMessage();
 			}
-			catch (Exception e)
+			if ("generate-single-use-auth-token".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
 			{
-				return Request.CreateResponse(HttpStatusCode.BadRequest, e.Message);
-			}
+				// using windows auth with anonymous access = none sometimes generate a 401 even though we made two requests
+				// instead of relying on windows auth, which require request buffering, we generate a one time token and return it.
+				// we KNOW that the user have access to this db for writing, since they got here, so there is no issue in generating 
+				// a single use token for them.
+
+				var authorizer = (MixedModeRequestAuthorizer)Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+
+				var token = authorizer.GenerateSingleUseAuthToken(CountersName, User);
+				return GetMessageWithObject(new
+				{
+					Token = token
+				});
+			}*/
+
+			if (HttpContext.Current != null)
+				HttpContext.Current.Server.ScriptTimeout = 60 * 60 * 6; // six hours should do it, I think.
+
+			//var operationId = ExtractOperationId();
+			var sp = Stopwatch.StartNew();
+
+			var status = new BatchStatus {IsTimedOut = false};
+
+			var timeoutTokenSource = new CancellationTokenSource();
+			var counterChanges = 0;
+			var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
+			var currentCounterStorage = CounterStorage;
+			var timeout = timeoutTokenSource.TimeoutAfter(TimeSpan.FromSeconds(360)); //TODO : make this configurable
+
+			var changeBatches = YieldChangeBatches(inputStream, timeout, countOfChanges => counterChanges += countOfChanges);
 
 			using (var writer = Storage.CreateWriter())
-			{
-				counterChanges.ForEach(counterChange => 
-					writer.Store(Storage.CounterStorageUrl, counterChange.FullCounterName, counterChange.Delta));
+				changeBatches.ForEach(batch =>
+					batch.ForEach(change => StoreChange(change, writer)));
 
-				return new HttpResponseMessage(HttpStatusCode.OK);
-			}	
+			//TODO: do not forget to add task Id
+			AddRequestTraceInfo(log => log.AppendFormat("\tCounters batch operation received {0:#,#;;0} changes in {1}", counterChanges, sp.Elapsed));
+
+			return new HttpResponseMessage();
+		}
+
+		private IEnumerable<IEnumerable<CounterChange>> YieldChangeBatches(Stream requestStream, CancellationTimeout timeout,Action<int> changeCounterFunc)
+		{
+			var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+			try
+			{
+				using (requestStream)
+				{
+					var binaryReader = new BinaryReader(requestStream);
+					while (true)
+					{
+						timeout.ThrowIfCancellationRequested();
+						int batchSize;
+						try
+						{
+							batchSize = binaryReader.ReadInt32();
+						}
+						catch (EndOfStreamException)
+						{
+							break;
+						}
+						using (var stream = new PartialStream(requestStream, batchSize))
+						{
+							yield return YieldBatchItems(stream, serializer, timeout, changeCounterFunc);
+						}
+					}
+				}
+			}
+			finally
+			{
+				requestStream.Close();
+			}
+
+		}
+
+		private IEnumerable<CounterChange> YieldBatchItems(Stream partialStream, JsonSerializer serializer, CancellationTimeout timeout, Action<int> changeCounterFunc)
+		{
+			using (var stream = new GZipStream(partialStream, CompressionMode.Decompress, leaveOpen: true))
+			{
+				var reader = new BinaryReader(stream);
+				var count = reader.ReadInt32();
+
+				for (var i = 0; i < count; i++)
+				{
+					timeout.Delay();
+					var doc = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(reader)
+					{
+						DateTimeKindHandling = DateTimeKind.Unspecified
+					});
+
+					var metadata = doc.Value<RavenJObject>("@metadata");
+
+					if (metadata == null)
+						throw new InvalidOperationException("Could not find metadata for document");
+
+					var id = metadata.Value<string>("@id");
+					if (string.IsNullOrEmpty(id))
+						throw new InvalidOperationException("Could not get id from metadata");
+
+					doc.Remove("@metadata");
+
+					yield return doc.ToObject<CounterChange>(serializer);
+				}
+
+				changeCounterFunc(count);
+			}
+		}
+
+		private void StoreChange(CounterChange counterChange, CounterStorage.Writer writer)
+		{
+			var counterFullName = String.Join(Constants.GroupSeperatorString, new[] {counterChange.Group, counterChange.Name});
+			writer.Store(Storage.CounterStorageUrl, counterFullName, counterChange.Delta);
+		}
+
+		public class BatchStatus : IOperationState
+		{
+			public int Counters { get; set; }
+			public bool Completed { get; set; }
+
+			public bool Faulted { get; set; }
+
+			public RavenJToken State { get; set; }
+
+			public bool IsTimedOut { get; set; }
 		}
 
 		[RavenRoute("counters/{counterName}/reset")]

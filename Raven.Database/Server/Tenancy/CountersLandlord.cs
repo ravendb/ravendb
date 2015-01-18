@@ -147,10 +147,6 @@ namespace Raven.Database.Server.Tenancy
 			if (Locks.Contains(DisposingLock))
 				throw new ObjectDisposedException("CountersLandlord", "Server is shutting down, can't access any counters");
 
-		    if (Enabled == false)
-		    {
-                throw new InvalidOperationException("Counters are an experimental feature that is not enabled");
-		    }
 			if (ResourcesStoresCache.TryGetValue(tenantId, out counter))
 			{
 				if (counter.IsFaulted || counter.IsCanceled)

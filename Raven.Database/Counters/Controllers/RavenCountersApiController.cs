@@ -168,7 +168,7 @@ namespace Raven.Database.Counters.Controllers
 
 	    public override InMemoryRavenConfiguration ResourceConfiguration
 	    {
-	        get { throw new NotImplementedException(); }
+	        get { return CounterStorage.Configuration; }
 	    }
 
 	    public override bool SetupRequestToProperDatabase(RequestManager rm)
@@ -188,7 +188,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 			catch (Exception e)
 			{
-				var msg = "Could open counter named: " + tenantId;
+				var msg = "Could not open counter named: " + tenantId;
 				Logger.WarnException(msg, e);
 				throw new HttpException(503, msg, e);
 			}

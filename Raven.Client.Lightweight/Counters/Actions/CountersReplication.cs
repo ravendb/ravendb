@@ -7,8 +7,7 @@ namespace Raven.Client.Counters.Actions
 {
 	public class ReplicationClient : CountersActionsBase
 	{
-		internal ReplicationClient(CountersClient parent)
-			: base(parent)
+		internal ReplicationClient(CountersClient parent) : base(parent)
 		{
 		}
 

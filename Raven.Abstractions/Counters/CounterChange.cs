@@ -6,9 +6,10 @@
 
 namespace Raven.Abstractions.Counters
 {
-	public class CounterChanges
+	public class CounterChange
 	{
-		public string FullCounterName { get; set; }
+		public string Name { get; set; }
 		public long Delta { get; set; }
+		public string Group { get; set; }
 	}
 }

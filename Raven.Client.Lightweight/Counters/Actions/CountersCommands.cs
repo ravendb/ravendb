@@ -10,8 +10,7 @@ namespace Raven.Client.Counters.Actions
 {
 	public class CountersCommands : CountersActionsBase
 	{
-		internal CountersCommands(CountersClient parent)
-			: base(parent)
+		internal CountersCommands(CountersClient parent) : base(parent)
 		{
 		}
 

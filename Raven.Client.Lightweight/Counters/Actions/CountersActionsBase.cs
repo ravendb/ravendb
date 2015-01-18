@@ -42,9 +42,13 @@ namespace Raven.Client.Counters.Actions
 			this.parent = parent;
 		}
 
-		protected HttpJsonRequest CreateHttpJsonRequest(string requestUriString, string HttpVerb)
+		protected HttpJsonRequest CreateHttpJsonRequest(string requestUriString, string httpVerb, bool disableRequestCompression = false, bool disableAuthentication = false)
 		{
-			return jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, HttpVerb, credentials, convention));
+			return jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(parent, requestUriString, httpVerb, credentials, convention)
+			{
+				DisableRequestCompression = disableRequestCompression,
+				DisableAuthentication = disableAuthentication
+			});
 		}
 	}
 }

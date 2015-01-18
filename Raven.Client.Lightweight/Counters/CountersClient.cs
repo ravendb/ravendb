@@ -82,9 +82,9 @@ namespace Raven.Client.Counters
                 if (ServerUrl.EndsWith("/"))
                     ServerUrl = ServerUrl.Substring(0, ServerUrl.Length - 1);
 
-				CounterStorageUrl = string.Format(CultureInfo.InvariantCulture, "{0}/counters/{1}", ServerUrl, DefaultStorageName);
 				DefaultStorageName = counterStorageName;
-                Credentials = credentials ?? CredentialCache.DefaultNetworkCredentials;
+				CounterStorageUrl = string.Format(CultureInfo.InvariantCulture, "{0}/counters/{1}", ServerUrl, DefaultStorageName);
+				Credentials = credentials ?? CredentialCache.DefaultNetworkCredentials;
                 ApiKey = apiKey;
 
 				Conventions = new Convention();

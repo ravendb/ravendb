@@ -104,7 +104,7 @@ namespace Raven.Database.Server.Controllers
                     status.Completed = true;
                     status.Documents = documents;
                 }
-            });
+            }, tre.Token);
 
             long id;
             Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
