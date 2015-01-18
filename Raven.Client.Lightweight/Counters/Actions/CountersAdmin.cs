@@ -52,7 +52,7 @@ namespace Raven.Client.Counters.Actions
 			if (countersDocument == null)
 				throw new ArgumentNullException("countersDocument");
 
-			counterName = counterName ?? defaultStorageName;
+			counterName = counterName ?? defaultCounterName;
 			var requestUriString = String.Format("{0}/counterstorage/admin/{1}", serverUrl, counterName);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Put))
@@ -79,7 +79,7 @@ namespace Raven.Client.Counters.Actions
 			if (countersDocument == null)
 				throw new ArgumentNullException("countersDocument");
 
-			counterName = counterName ?? defaultStorageName;
+			counterName = counterName ?? defaultCounterName;
 			var requestUriString = String.Format("{0}/counterstorage/admin/{1}?update=true", serverUrl, counterName);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Put))
@@ -88,7 +88,7 @@ namespace Raven.Client.Counters.Actions
 
 		public async Task DeleteCounterStorageAsync(string counterName = null, bool hardDelete = false, CancellationToken token = default(CancellationToken))
 		{
-			counterName = counterName ?? defaultStorageName;
+			counterName = counterName ?? defaultCounterName;
 			var requestUriString = String.Format("{0}/counterstorage/admin/{1}?hard-delete={2}", serverUrl, counterName, hardDelete);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Delete))

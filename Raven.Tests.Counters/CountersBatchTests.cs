@@ -31,14 +31,13 @@ namespace Raven.Tests.Counters
 				},CounterStorageName);
 				using (var counterBatch = countersClient.NewBatch(new CountersBatchOptions{ BatchSizeLimit = 3 }))
 				{
-					counterBatch.Increment("Foo Group", CounterStorageName);
-					counterBatch.Increment("Foo Group", CounterStorageName);
-					counterBatch.Decrement("Foo Group", CounterStorageName);
+					counterBatch.Increment("FooGroup", CounterStorageName);
+					counterBatch.Increment("FooGroup", CounterStorageName);
+					counterBatch.Decrement("FooGroup", CounterStorageName);
 				}
 
-				var values = await countersClient.Commands.GetServersValuesAsync("Foo Group", CounterStorageName);
-
-				values.First().Should().Be(1);
+				var total = await countersClient.Commands.GetOverallTotalAsync("FooGroup", CounterStorageName);
+				total.Should().Be(1);
 			}
 		}
 	}

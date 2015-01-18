@@ -14,8 +14,6 @@ using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
-using Raven.Database.Server.Controllers;
-using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json;
@@ -140,17 +138,6 @@ namespace Raven.Database.Counters.Controllers
 					{
 						DateTimeKindHandling = DateTimeKind.Unspecified
 					});
-
-					var metadata = doc.Value<RavenJObject>("@metadata");
-
-					if (metadata == null)
-						throw new InvalidOperationException("Could not find metadata for document");
-
-					var id = metadata.Value<string>("@id");
-					if (string.IsNullOrEmpty(id))
-						throw new InvalidOperationException("Could not get id from metadata");
-
-					doc.Remove("@metadata");
 
 					yield return doc.ToObject<CounterChange>(serializer);
 				}

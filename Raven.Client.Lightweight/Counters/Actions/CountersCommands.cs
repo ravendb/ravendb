@@ -41,8 +41,9 @@ namespace Raven.Client.Counters.Actions
 				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 		}
 
-		public async Task<long> GetOverallTotalAsync(string group, string counterName, CancellationToken token = default(CancellationToken))
+		public async Task<long> GetOverallTotalAsync(string group, string counterName = null, CancellationToken token = default(CancellationToken))
 		{
+			counterName = counterName ?? defaultCounterName;
 			var requestUriString = String.Format("{0}/getCounterOverallTotal?group={1}&counterName={2}", counterStorageUrl, @group, counterName);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Get))
