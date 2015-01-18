@@ -329,7 +329,7 @@
     <TypeScriptCompile Include="App\commands\getServerPrefixForHiLoCommand.ts" />
     <TypeScriptCompile Include="App\commands\getInfoPackage.ts" />
     <TypeScriptCompile Include="App\commands\adminLogsConfigureCommand.ts" />
-    <TypeScriptCompile Include="App\commands\compactDatabaseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\startCompactCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingPerfStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getOperationAlertsCommand.ts" />
     <TypeScriptCompile Include="App\commands\monitorRestoreCommand.ts" />
@@ -346,13 +346,14 @@
     <TypeScriptCompile Include="App\commands\persistIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\explainReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getCachedCollectionsCount.ts" />
+    <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomFunctionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\startRestoreCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\compactFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
     <TypeScriptCompile Include="App\models\conflictsInfo.ts" />
@@ -434,6 +435,9 @@
     <TypeScriptCompile Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\resetIndexConfirm.ts" />
+    <TypeScriptCompile Include="App\commands\monitorCompactCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\monitorCompactCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\startCompactCommand.ts" />
     <Content Include="App\views\adminSettings.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
@@ -1046,6 +1050,12 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <TypeScriptTarget>ES5</TypeScriptTarget>
+    <TypeScriptRemoveComments>true</TypeScriptRemoveComments>
+    <TypeScriptSourceMap>false</TypeScriptSourceMap>
+    <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Profiling'">
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptRemoveComments>true</TypeScriptRemoveComments>
     <TypeScriptSourceMap>false</TypeScriptSourceMap>

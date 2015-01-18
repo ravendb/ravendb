@@ -8,19 +8,18 @@
         <div role="tabpanel" class="tab-pane active" id="compactDb">
             <form class="form-horizontal" role="form" data-bind="submit: startDbCompact">
                 <div class="panel panel-default" data-bind="with: dbCompactOptions">
-                    <div class="panel-heading">
-                        <div class="btn-group">
-                            <button type="submit" class="btn btn-primary" data-bind="disable: isBusy">
-                                <i class="fa fa-hdd-o"></i>
-                                <span>Start Compaction</span>
-                            </button>
-                        </div>
+                    <div class="panel-heading panel-info">
+                        <button type="submit" class="btn btn-primary" data-bind="disable: $parent.isBusy">
+                            <i class="fa fa-hdd-o"></i>
+                            <span>Start Compaction</span>
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
                     </div>
                     <div class="panel-body">
                         <div class="form-group">
                             <label for="databaseName" class="col-sm-2 control-label">Database to compact</label>
                             <div class="col-sm-3">
-                                <input tabindex="2" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="value: resourceName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Database name to compact">
+                                <input tabindex="2" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="value: resourceName, disable: $parent.isBusy, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Database name to compact">
                                 <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName', foreach: searchResults">
                                     <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
                                         <a role="menuitem" tabindex="-1" href="#">
@@ -30,7 +29,7 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="progress progress-striped active" data-bind="visible: isBusy">
+                        <div class="progress progress-striped active" data-bind="visible: $parent.isBusy">
                             <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
                         </div>
 
@@ -40,24 +39,28 @@
 
                     </div>
                 </div>
+                <div id="databaseCompactLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+                    <pre data-bind="visible: dbCompactOptions.compactStatusMessages().length > 0" id="databaseCompactLogPre" style="word-wrap: normal; overflow: auto; height: 97%">
+<!-- ko foreach: dbCompactOptions.compactStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
+        </pre>
+                </div>
             </form>
         </div>
         <div role="tabpanel" class="tab-pane" id="compactFs">
             <form class="form-horizontal" role="form" data-bind="submit: startFsCompact">
                 <div class="panel panel-default" data-bind="with: fsCompactOptions">
-                    <div class="panel-heading">
-                        <div class="btn-group">
-                            <button type="submit" class="btn btn-primary" data-bind="disable: isBusy">
-                                <i class="fa fa-hdd-o"></i>
-                                <span>Start Compaction</span>
-                            </button>
-                        </div>
+                    <div class="panel-heading panel-info">
+                        <button type="submit" class="btn btn-primary" data-bind="disable: $parent.isBusy">
+                            <i class="fa fa-hdd-o"></i>
+                            <span>Start Compaction</span>
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
                     </div>
                     <div class="panel-body">
                         <div class="form-group">
                             <label for="filesystemName" class="col-sm-2 control-label">Filesystem to compact</label>
                             <div class="col-sm-3">
-                                <input tabindex="2" required type="text" name="filesystemName" class="form-control" id="filesystemName" data-bind="value: resourceName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Filesystem name to compact">
+                                <input tabindex="2" required type="text" name="filesystemName" class="form-control" id="filesystemName" data-bind="value: resourceName, disable: $parent.isBusy, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Filesystem name to compact">
                                 <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#filesystemName', foreach: searchResults">
                                     <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
                                         <a role="menuitem" tabindex="-1" href="#">
@@ -67,7 +70,7 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="progress progress-striped active" data-bind="visible: isBusy">
+                        <div class="progress progress-striped active" data-bind="visible: $parent.isBusy">
                             <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
                         </div>
 
@@ -75,6 +78,11 @@
                             <i class="fa fa-warning text-warning"></i><span class="text-muted">Compaction takes filesystem offline.</span>
                         </p>
                     </div>
+                </div>
+                <div id="filesystemCompactLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+                    <pre data-bind="visible: fsCompactOptions.compactStatusMessages().length > 0" id="filesystemCompactLogPre" style="word-wrap: normal; overflow: auto; height: 97%">
+<!-- ko foreach: fsCompactOptions.compactStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
+        </pre>
                 </div>
             </form>
         </div>

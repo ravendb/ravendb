@@ -26,6 +26,7 @@ namespace Raven.Abstractions.Smuggler
         public SmugglerDatabaseOptions()
 		{
 			Filters = new List<FilterSetting>();
+            ConfigureDefaultFilters();
 		    ChunkSize = int.MaxValue;
             OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
             Timeout = TimeSpan.FromSeconds(30);
@@ -35,6 +36,17 @@ namespace Raven.Abstractions.Smuggler
 	        ExportDeletions = false;
 		    TotalDocumentSizeInChunkLimitInBytes = DefaultDocumentSizeInChunkLimitInBytes;
 		}
+
+        private void ConfigureDefaultFilters()
+        {
+            // filter out encryption verification key document to enable import to encrypted db from encrypted db.
+            Filters.Add(new FilterSetting
+             {
+                 Path = "@metadata.@id",
+                 ShouldMatch = false,
+                 Values = {Constants.InResourceKeyVerificationDocumentName}
+             });
+        }
 
 
         private string continuationFile;

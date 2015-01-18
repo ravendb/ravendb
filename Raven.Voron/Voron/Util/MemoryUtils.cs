@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using Voron.Impl;
 
 namespace Voron.Util
 {
@@ -157,6 +158,25 @@ namespace Voron.Util
             }
         }
 
+        /// <summary>
+        /// Bulk copy is optimized to handle copy operations where n is statistically big. While it will use a faster copy operation for 
+        /// small amounts of memory, when you have smaller than 2048-4096 bytes calls (depending on the target CPU) it will always be
+        /// faster to call .Copy() directly.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe void BulkCopy(byte* dest, byte* src, int n)
+        {
+            if (n >= 2048)
+                StdLib.memcpy(dest, src, n);
+            else
+                Copy(dest, src, n);
+        }
+
+        /// <summary>
+        /// Copy is optimized to handle copy operations where n is statistically small. 
+        /// This method is optimized at the IL level to be extremely efficient for copies smaller than
+        /// 4096 bytes or heterogeneous workloads with occasional big copies.         
+        /// </summary>
         public static unsafe void Copy(byte* dest, byte* src, int n)
         {
             while (true) // Unrolling while with no pointers

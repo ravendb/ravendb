@@ -696,6 +696,16 @@ namespace Raven.Client.Document
 			return false;
 		}
 
+		internal SortOptions? GetDefaultSortOption(Type type)
+		{
+			if (type == null)
+				return null;
+
+			var nonNullableType = (Nullable.GetUnderlyingType(type) ?? type);
+
+			return GetDefaultSortOption(nonNullableType.Name);
+		}
+
 		public SortOptions GetDefaultSortOption(string typeName)
 		{
 			switch (typeName)
@@ -715,10 +725,10 @@ namespace Raven.Client.Document
 				case "String":
 					return SortOptions.String;
 				default:
-			        SortOptions value;
-			        return customDefaultSortOptions.TryGetValue(typeName, out value)
-						       ? value
-						       : SortOptions.String;
+					SortOptions value;
+					return customDefaultSortOptions.TryGetValue(typeName, out value)
+							   ? value
+							   : SortOptions.String;
 			}
 		}
 

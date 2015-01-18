@@ -603,6 +603,11 @@ interface restoreStatusDto {
     State: string;
 }
 
+interface compactStatusDto {
+    Messages: string[];
+    State: string;
+}
+
 interface sqlReplicationTableDto {
     TableName: string;
     DocumentKeyColumn: string;

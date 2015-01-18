@@ -49,6 +49,18 @@
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
+    <OutputPath>bin\Profiling\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
+    <Optimize>true</Optimize>
+    <NoWarn>1591</NoWarn>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="ICSharpCode.NRefactory">
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
@@ -142,6 +154,7 @@
     <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\AbstractRestoreRequest.cs" />
     <Compile Include="Data\BulkOperationOptions.cs" />
+    <Compile Include="Data\CompactStatus.cs" />
     <Compile Include="Data\DatabaseOperationsStatus.cs" />
     <Compile Include="Data\FilesystemRestoreRequest.cs" />
     <Compile Include="Data\FilesystemBackupRequest.cs" />

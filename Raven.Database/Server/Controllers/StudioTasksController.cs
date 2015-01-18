@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -558,6 +559,35 @@ for(var customFunction in customFunctions) {{
             return GetEmptyMessage();
 	    }
 
+		[HttpGet]
+		[RavenRoute("studio-tasks/collection/counts")]
+		[RavenRoute("databases/{databaseName}/studio-tasks/collection/counts")]
+		public Task<HttpResponseMessage> CollectionCount()
+		{
+			var fromDate = GetQueryStringValue("fromDate");
+
+			DateTime date;
+			if (string.IsNullOrEmpty(fromDate) || DateTime.TryParse(fromDate, out date) == false)
+				date = DateTime.MinValue;
+
+			var collections = Database
+				.LastCollectionEtags
+				.GetLastChangedCollections(date.ToUniversalTime());
+
+			var results = new ConcurrentBag<CollectionNameAndCount>();
+
+			Parallel.ForEach(collections, collectionName =>
+			{
+				var result = Database
+					.Queries
+					.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery { Query = "Tag:" + collectionName, PageSize = 0 }, CancellationToken.None);
+
+				results.Add(new CollectionNameAndCount { CollectionName = collectionName, Count = result.TotalResults });
+			});
+
+			return GetMessageWithObjectAsTask(results);
+		}
+
 		private static RavenJToken SetValueInDocument(string value)
 		{
 			if (string.IsNullOrEmpty(value))
@@ -605,6 +635,13 @@ for(var customFunction in customFunctions) {{
 			public string ExceptionDetails { get; set; }
 		    public bool Faulted { get; set; }
 		    public RavenJToken State { get; set; }
+		}
+
+		private class CollectionNameAndCount
+		{
+			public string CollectionName { get; set; }
+
+			public int Count { get; set; }
 		}
 	}
 }

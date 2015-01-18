@@ -358,9 +358,31 @@ namespace Raven.Database.FileSystem.Controllers
 
             var task = Task.Factory.StartNew(() =>
             {
-                // as we perform compact async we don't catch exceptions here - they will be propagated to operation
-                var targetFs = FileSystemsLandlord.GetFileSystemInternal(fs).ResultUnwrap();
-                FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration));
+                var compactStatus = new CompactStatus { State = CompactStatusState.Running, Messages = new List<string>() };
+                DatabasesLandlord.SystemDatabase.Documents.Delete(CompactStatus.RavenFilesystemCompactStatusDocumentKey(fs), null, null);
+                try
+                {
+                    // as we perform compact async we don't catch exceptions here - they will be propagated to operation
+                    var targetFs = FileSystemsLandlord.GetFileSystemInternal(fs).ResultUnwrap();
+                    FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration, msg =>
+			        {
+			            compactStatus.Messages.Add(msg);
+			            DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenFilesystemCompactStatusDocumentKey(fs), null,
+			                                                           RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+			        }));
+                    compactStatus.State = CompactStatusState.Completed;
+                    compactStatus.Messages.Add("File system compaction completed.");
+                    DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenFilesystemCompactStatusDocumentKey(fs), null,
+                        RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+                }
+                catch (Exception e)
+			    {
+                    compactStatus.Messages.Add("Unable to compact file system " + e.Message);
+                    compactStatus.State = CompactStatusState.Faulted;
+                    DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenFilesystemCompactStatusDocumentKey(fs), null,
+                                                                       RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+			        throw;
+			    }
                 return GetEmptyMessage();
             });
             long id;

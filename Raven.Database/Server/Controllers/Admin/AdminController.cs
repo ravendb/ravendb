@@ -407,10 +407,35 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			var task = Task.Factory.StartNew(() =>
 			{
-				// as we perform compact async we don't catch exceptions here - they will be propaged to operation
-				var targetDb = DatabasesLandlord.GetDatabaseInternal(db).ResultUnwrap();
-				DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration));
-				return GetEmptyMessage();
+                var compactStatus = new CompactStatus { State = CompactStatusState.Running, Messages = new List<string>() };
+                DatabasesLandlord.SystemDatabase.Documents.Delete(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null, null);
+
+			    try
+			    {
+
+			        var targetDb = DatabasesLandlord.GetDatabaseInternal(db).ResultUnwrap();
+
+			        DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration, msg =>
+			        {
+			            compactStatus.Messages.Add(msg);
+			            DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
+			                                                           RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+
+			        }));
+                    compactStatus.State = CompactStatusState.Completed;
+                    compactStatus.Messages.Add("Database compaction completed.");
+                    DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
+                                                                       RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+			    }
+			    catch (Exception e)
+			    {
+                    compactStatus.Messages.Add("Unable to compact database " + e.Message);
+                    compactStatus.State = CompactStatusState.Faulted;
+                    DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
+                                                                       RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+			        throw;
+			    }
+			    return GetEmptyMessage();
 			});
 			long id;
 			Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
@@ -951,6 +976,18 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				OperationId = id
 			});
+		}
+
+		[HttpPost]
+		[RavenRoute("admin/low-memory-notification")]
+		public HttpResponseMessage LowMemoryNotification()
+		{
+			if (EnsureSystemDatabase() == false)
+				return GetMessageWithString("Low memory simulation is only possible from the system database", HttpStatusCode.BadRequest);
+
+			MemoryStatistics.SimulateLowMemoryNotification();
+
+			return GetEmptyMessage();
 		}
 	}
 }
