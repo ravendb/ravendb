@@ -223,6 +223,10 @@ namespace Raven.Database.Actions
             {
                 switch (existingIndex.LockMode)
                 {
+                    case IndexLockMode.SideBySide:
+                        Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
+                        throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
+
                     case IndexLockMode.LockedIgnore:
                         Log.Info("Index {0} not saved because it was lock (with ignore)", name);
                         return name;
