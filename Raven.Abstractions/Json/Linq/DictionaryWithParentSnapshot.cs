@@ -37,6 +37,7 @@ namespace Raven.Json.Linq
 			comparer = previous.comparer;
 			if (previous.parentSnapshot != null && previous.count > 0)
 			{
+				localChanges = new Dictionary<string, RavenJToken>(comparer); 
 				foreach (var localChange in previous.localChanges)
 				{
 					localChanges[localChange.Key] = localChange.Value;
