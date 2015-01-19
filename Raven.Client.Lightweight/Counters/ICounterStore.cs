@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -10,7 +11,7 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.Counters
 {
-	public interface ICounterStore : IHoldProfilingInformation
+	public interface ICounterStore : IHoldProfilingInformation, IDisposable
 	{
 		
 		OperationCredentials Credentials { get; set; }
@@ -30,7 +31,7 @@ namespace Raven.Client.Counters
 		/// </summary>
 		/// <param name="countersDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
 		/// <param name="counterName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
-		Task CreateCounterAsync(CountersDocument countersDocument, string counterName, bool shouldUpateIfExists = true, CancellationToken token = default(CancellationToken));
+		Task CreateCounterAsync(CountersDocument countersDocument, string counterName, bool shouldUpateIfExists = false, CancellationToken token = default(CancellationToken));
 
 		Task DeleteCounterStorageAsync(string counterName, bool hardDelete = false, CancellationToken token = default(CancellationToken));
 		

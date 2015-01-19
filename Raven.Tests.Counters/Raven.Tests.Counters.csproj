@@ -65,7 +65,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AdminClientTests.cs" />
-    <Compile Include="BaseCountersTest.cs" />
+    <Compile Include="RavenBaseCountersTest.cs" />
     <Compile Include="CountersChangeTests.cs" />
     <Compile Include="CountersBatchTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

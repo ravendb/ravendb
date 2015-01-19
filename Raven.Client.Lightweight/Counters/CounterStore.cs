@@ -22,13 +22,13 @@ namespace Raven.Client.Counters
 	/// <summary>
 	/// implements administration level counters functionality
 	/// </summary>
-	public class RemoteCounterStore : ICounterStore
+	public class CounterStore : ICounterStore
 	{
-		public RemoteCounterStore()
+		public CounterStore()
 		{
 			JsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
 			JsonRequestFactory = new HttpJsonRequestFactory(Constants.NumberOfCachedRequests);
-
+			Convention = new Convention();
 			Credentials = new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials);
 		}
 
@@ -59,7 +59,7 @@ namespace Raven.Client.Counters
 		/// </summary>
 		/// <param name="countersDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
 		/// <param name="counterName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
-		public async Task CreateCounterAsync(CountersDocument countersDocument, string counterName, bool shouldUpateIfExists = true, CancellationToken token = default(CancellationToken))
+		public async Task CreateCounterAsync(CountersDocument countersDocument, string counterName, bool shouldUpateIfExists = false, CancellationToken token = default(CancellationToken))
 		{
 			if (countersDocument == null)
 				throw new ArgumentNullException("countersDocument");
@@ -240,5 +240,9 @@ namespace Raven.Client.Counters
 			}
 		}
 
+		public virtual void Dispose()
+		{
+			
+		}
 	}
 }

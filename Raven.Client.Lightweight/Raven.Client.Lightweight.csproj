@@ -111,7 +111,7 @@
     <Compile Include="Connection\OperationMetadata.cs" />
     <Compile Include="Connection\ReplicationInformer.cs" />
     <Compile Include="Counters\Actions\CountersActionsBase.cs" />
-    <Compile Include="Counters\RemoteCounterStore.cs" />
+    <Compile Include="Counters\CounterStore.cs" />
     <Compile Include="Counters\Actions\CountersBatchOperation.cs" />
     <Compile Include="Counters\Convention.cs" />
     <Compile Include="Counters\CountersClient.cs" />
