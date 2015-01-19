@@ -162,6 +162,7 @@ namespace Raven.Abstractions.Data
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 		
 		//Counters
+		public const string RavenCounterStoragePathPrefix = "Raven/Counters/";
 		public const byte GroupSeperator = 29;
 		public const char GroupSeperatorChar = (char)GroupSeperator;
 		public const string GroupSeperatorString = "\u001D";
@@ -183,7 +184,7 @@ namespace Raven.Abstractions.Data
 
 		// General
 
-		public const string RavenDatabasesPrefix = "Raven/Databases/";
+		public const string RavenDatabasePathPrefix = "Raven/Databases/";
 
         public static partial class FileSystem
         {

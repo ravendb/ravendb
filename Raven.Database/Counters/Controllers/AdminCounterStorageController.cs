@@ -3,7 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Raven.Abstractions.Counters;
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.WebApi.Attributes;
@@ -18,12 +20,12 @@ namespace Raven.Database.Counters.Controllers
     public class AdminCounterStorageController : BaseAdminController
     {
         [HttpPut]
-        [RavenRoute("counterstorage/admin/{*id}")]
+		[RavenRoute("admin/cs/{*id}")]
         public async Task<HttpResponseMessage> Put(string id)
         {
-            var docKey = "Raven/Counters/" + id;
+            var docKey = Constants.RavenCounterStoragePathPrefix + id;
 
-			bool isCounterStorageUpdate = CheckQueryStringParameterResult("update");
+			var isCounterStorageUpdate = CheckQueryStringParameterResult("update");
 			if (IsCounterStorageNameExists(id) && !isCounterStorageUpdate)
             {
 				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", id), HttpStatusCode.Conflict);
@@ -46,10 +48,10 @@ namespace Raven.Database.Counters.Controllers
 	    }
 
 		[HttpDelete]
-        [RavenRoute("counterstorage/admin/{*id}")]
+        [RavenRoute("admin/cs/{*id}")]
 		public HttpResponseMessage Delete(string id)
 		{
-            var docKey = "Raven/Counters/" + id;
+			var docKey = Constants.RavenCounterStoragePathPrefix + id;
             var configuration = CountersLandlord.CreateTenantConfiguration(id);
 
 			if (configuration == null)
@@ -71,9 +73,30 @@ namespace Raven.Database.Counters.Controllers
 			return GetEmptyMessage();
 		}
 
+		[HttpDelete]
+		[RavenRoute("admin/cs/batch-delete")]
+		public HttpResponseMessage BatchDelete()
+		{
+			throw new NotImplementedException();
+		}
+
+		[HttpPost]
+		[RavenRoute("admin/cs/{*id}")]
+		public HttpResponseMessage Disable(string id, bool isSettingDisabled)
+		{
+			throw new NotImplementedException();
+		}
+
+		[HttpPost]
+		[RavenRoute("admin/cs/batch-toggle-disable")]
+		public HttpResponseMessage ToggleDisable(bool isSettingDisabled)
+		{
+			throw new NotImplementedException();
+		}
+
         private bool IsCounterStorageNameExists(string id)
         {
-            var docKey = "Raven/Counters/" + id;
+			var docKey = Constants.RavenCounterStoragePathPrefix + id;
             var database = Database.Documents.Get(docKey, null);
             return database != null;
         }

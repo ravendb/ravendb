@@ -29,7 +29,7 @@ namespace Raven.Database.Server.Tenancy
 		private readonly DocumentDatabase systemDatabase;
 		private bool initialized;
 
-        private const string COUNTERS_PREFIX = "Raven/Counters/";
+		private const string COUNTERS_PREFIX = Constants.RavenCounterStoragePathPrefix;
         public override string ResourcePrefix { get { return COUNTERS_PREFIX; } }
 
         public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
@@ -54,7 +54,7 @@ namespace Raven.Database.Server.Tenancy
             {
                 if (notification.Id == null)
                     return;
-                const string ravenDbPrefix = "Raven/Counters/";
+				const string ravenDbPrefix = Constants.RavenCounterStoragePathPrefix;
                 if (notification.Id.StartsWith(ravenDbPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
                     return;
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
@@ -123,7 +123,7 @@ namespace Raven.Database.Server.Tenancy
 		{
 			JsonDocument jsonDocument;
 			using (systemDatabase.DisableAllTriggersForCurrentThread())
-				jsonDocument = systemDatabase.Documents.Get("Raven/Counters/" + tenantId, null);
+				jsonDocument = systemDatabase.Documents.Get(Constants.RavenCounterStoragePathPrefix + tenantId, null);
 			if (jsonDocument == null ||
 				jsonDocument.Metadata == null ||
 				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) ||
@@ -246,7 +246,7 @@ namespace Raven.Database.Server.Tenancy
 
 					int nextPageStart = 0;
 					var databases =
-						systemDatabase.Documents.GetDocumentsWithIdStartingWith("Raven/Counters/", null, null, 0,
+						systemDatabase.Documents.GetDocumentsWithIdStartingWith(Constants.RavenCounterStoragePathPrefix, null, null, 0,
 							numberOfAllowedFileSystems, CancellationToken.None, ref nextPageStart).ToList();
 					if (databases.Count >= numberOfAllowedFileSystems)
 						throw new InvalidOperationException(
