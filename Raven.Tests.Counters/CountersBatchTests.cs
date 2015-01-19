@@ -40,8 +40,8 @@ namespace Raven.Tests.Counters
 		}
 
 		[Theory]
-		[InlineData(10)]
-		[InlineData(50)]
+		//[InlineData(10)]
+		[InlineData(100000)]
 		public async Task CountersBatch_with_multiple_batches_should_work(int countOfOperationsInBatch)
 		{
 			using (var store = NewRemoteCountersStore())
@@ -53,7 +53,7 @@ namespace Raven.Tests.Counters
 						{"Raven/Counters/DataDir", @"~\Counters\Cs1"}
 					},
 				}, CounterName);
-				using (var counterBatch = store.BatchOperation(CounterName, new CountersBatchOptions { BatchSizeLimit = countOfOperationsInBatch / 2 }))
+				using (var counterBatch = store.BatchOperation(CounterName, new CountersBatchOptions { BatchSizeLimit = countOfOperationsInBatch }))
 				{
 					int x = 0;
 					for (int i = 0; i < countOfOperationsInBatch; i++)

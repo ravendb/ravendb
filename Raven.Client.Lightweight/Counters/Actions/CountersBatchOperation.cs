@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -10,9 +11,9 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
@@ -168,13 +169,28 @@ namespace Raven.Client.Counters.Actions
 
 			_tempStream.SetLength(0);
 			long bytesWritten;
-			WriteCollectionToBuffer(_tempStream, batchItems, out bytesWritten);
+			WriteCollectionToBuffer(_tempStream, AggregateItems(batchItems), out bytesWritten);
 
 			var requestBinaryWriter = new BinaryWriter(requestStream);
 			requestBinaryWriter.Write((int)_tempStream.Position);
 
 			_tempStream.WriteTo(requestStream);
 			requestStream.Flush();
+		}
+
+		private ICollection<CounterChange> AggregateItems(IEnumerable<CounterChange> batchItems)
+		{
+			var aggregationResult = from item in batchItems
+									group item by new { item.Name, item.Group }
+										into g
+										select new CounterChange
+										{
+											Name = g.Key.Name,
+											Group = g.Key.Group,
+											Delta = g.Sum(x => x.Delta)
+										};
+
+			return aggregationResult.ToList();
 		}
 
 		private void WriteCollectionToBuffer(Stream targetStream, ICollection<CounterChange> items, out long bytesWritten)
