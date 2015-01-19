@@ -107,6 +107,8 @@ class metrics extends viewModelBase {
     yBarHeight = 40;
     yBarMargin = 10;
 
+    edgeDate: Date;
+
     reduceGroupOffset = 0;
     
     mapJsonData: indexingBatchInfoDto[] = [];
@@ -226,8 +228,23 @@ class metrics extends viewModelBase {
         var reduceTask = this.fetchReduceJsonData();
 
         $.when(mapTask, reduceTask)
-            .done((mapResult, reduceResult) => {
+            .done((mapResult: any[], reduceResult: any[]) => {
                 var oldAllIndexes = this.allIndexNames();
+
+                if (oldAllIndexes.length == 0) {
+                    if (mapResult.length > 0 && reduceResult.length > 0) {
+                        // we have to trim data to match common start date
+                        var mapMinDate = d3.min(mapResult, r => r.StartedAtDate);
+                        var reduceMinDate = d3.min(reduceResult, r => r.StartedAtDate);
+                        this.edgeDate = d3.max([mapMinDate, reduceMinDate]);
+                    } else if (mapResult.length > 0) {
+                        this.edgeDate = d3.min(mapResult, r => r.StartedAtDate);
+                    } else if (reduceResult.length > 0) {
+                        this.edgeDate = d3.min(reduceResult, r => r.StartedAtDate);
+                    }
+                } 
+                mapResult = mapResult.filter(r => r.StartedAtDate >= this.edgeDate);
+                reduceResult = reduceResult.filter(r => r.StartedAtDate >= this.edgeDate);
 
                 this.rawMapJsonData = this.mergeMapJsonData(this.rawMapJsonData, mapResult);
                 var mapIndexes = this.findIndexNames(this.rawMapJsonData);
