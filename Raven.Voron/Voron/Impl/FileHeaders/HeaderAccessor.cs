@@ -15,7 +15,7 @@ namespace Voron.Impl.FileHeaders
 	public unsafe delegate void ModifyHeaderAction(FileHeader* ptr);
 
 	public unsafe delegate T GetDataFromHeaderAction<T>(FileHeader* ptr);
-	
+
 	public unsafe class HeaderAccessor : IDisposable
 	{
 		private readonly StorageEnvironment _env;
@@ -23,7 +23,7 @@ namespace Voron.Impl.FileHeaders
 		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 		private long _revision;
 
-		private readonly FileHeader* _theHeader;
+		private FileHeader* _theHeader;
 		private IntPtr _headerPtr;
 
 		internal static string[] HeaderFileNames = new[]
@@ -34,62 +34,73 @@ namespace Voron.Impl.FileHeaders
 
 		public HeaderAccessor(StorageEnvironment env)
 		{
-			this._env = env;
-			
+			_env = env;
+
 			_headerPtr = Marshal.AllocHGlobal(sizeof(FileHeader));
 			_theHeader = (FileHeader*)_headerPtr.ToPointer();
 		}
 
 		public bool Initialize()
 		{
-			var headers = stackalloc FileHeader[2];
-			var f1 = &headers[0];
-			var f2 = &headers[1];
-			var hasHeader1 = _env.Options.ReadHeader(HeaderFileNames[0], f1);
-			var hasHeader2 = _env.Options.ReadHeader(HeaderFileNames[1], f2);
-			if (hasHeader1 == false && hasHeader2 == false)
+			_locker.EnterWriteLock();
+			try
 			{
-				// new 
-				FillInEmptyHeader(f1);
-                FillInEmptyHeader(f2);
-				_env.Options.WriteHeader(HeaderFileNames[0], f1);
-				_env.Options.WriteHeader(HeaderFileNames[1], f2);
+				if (_theHeader == null)
+					throw new ObjectDisposedException("Cannot access the header after it was disposed");
+			
+				var headers = stackalloc FileHeader[2];
+				var f1 = &headers[0];
+				var f2 = &headers[1];
+				var hasHeader1 = _env.Options.ReadHeader(HeaderFileNames[0], f1);
+				var hasHeader2 = _env.Options.ReadHeader(HeaderFileNames[1], f2);
+				if (hasHeader1 == false && hasHeader2 == false)
+				{
+					// new 
+					FillInEmptyHeader(f1);
+					FillInEmptyHeader(f2);
+					_env.Options.WriteHeader(HeaderFileNames[0], f1);
+					_env.Options.WriteHeader(HeaderFileNames[1], f2);
 
-                MemoryUtils.Copy((byte*)_theHeader, (byte*)f1, sizeof(FileHeader));
-                return true; // new
+					MemoryUtils.Copy((byte*)_theHeader, (byte*)f1, sizeof(FileHeader));
+					return true; // new
+				}
+
+				if (f1->MagicMarker != Constants.MagicMarker && f2->MagicMarker != Constants.MagicMarker)
+					throw new InvalidDataException("None of the header files start with the magic marker, probably not db files");
+
+				// if one of the files is corrupted, but the other isn't, restore to the valid file
+				if (f1->MagicMarker != Constants.MagicMarker)
+				{
+					*f1 = *f2;
+				}
+				if (f2->MagicMarker != Constants.MagicMarker)
+				{
+					*f2 = *f1;
+				}
+
+				if (f1->Version != Constants.CurrentVersion)
+					throw new InvalidDataException("This is a db file for version " + f1->Version + ", which is not compatible with the current version " + Constants.CurrentVersion + Environment.NewLine +
+						"Error at " + _env.Options.BasePath);
+
+				if (f1->TransactionId < 0)
+					throw new InvalidDataException("The transaction number cannot be negative");
+
+
+				if (f1->HeaderRevision > f2->HeaderRevision)
+				{
+					MemoryUtils.Copy((byte*)_theHeader, (byte*)f1, sizeof(FileHeader));
+				}
+				else
+				{
+					MemoryUtils.Copy((byte*)_theHeader, (byte*)f2, sizeof(FileHeader));
+				}
+				_revision = _theHeader->HeaderRevision;
+				return false;
 			}
-
-			if (f1->MagicMarker != Constants.MagicMarker && f2->MagicMarker != Constants.MagicMarker)
-				throw new InvalidDataException("None of the header files start with the magic marker, probably not db files");
-
-			// if one of the files is corrupted, but the other isn't, restore to the valid file
-			if (f1->MagicMarker != Constants.MagicMarker)
+			finally
 			{
-				*f1 = *f2;
+				_locker.ExitWriteLock();
 			}
-			if (f2->MagicMarker != Constants.MagicMarker)
-			{
-				*f2 = *f1;
-			}
-
-			if (f1->Version != Constants.CurrentVersion)
-				throw new InvalidDataException("This is a db file for version " + f1->Version + ", which is not compatible with the current version " + Constants.CurrentVersion + Environment.NewLine +
-					"Error at " + _env.Options.BasePath);
-
-			if (f1->TransactionId < 0)
-				throw new InvalidDataException("The transaction number cannot be negative");
-
-
-			if (f1->HeaderRevision > f2->HeaderRevision)
-			{
-                MemoryUtils.Copy((byte*)_theHeader, (byte*)f1, sizeof(FileHeader));
-			}
-			else
-			{
-                MemoryUtils.Copy((byte*)_theHeader, (byte*)f2, sizeof(FileHeader));
-			}
-			_revision = _theHeader->HeaderRevision;
-			return false;
 		}
 
 
@@ -98,6 +109,8 @@ namespace Voron.Impl.FileHeaders
 			_locker.EnterReadLock();
 			try
 			{
+				if (_theHeader == null)
+					throw new ObjectDisposedException("Cannot access the header after it was disposed");
 				return *_theHeader;
 			}
 			finally
@@ -112,6 +125,9 @@ namespace Voron.Impl.FileHeaders
 			_locker.EnterReadLock();
 			try
 			{
+				if (_theHeader == null)
+					throw new ObjectDisposedException("Cannot access the header after it was disposed");
+			
 				return action(_theHeader);
 			}
 			finally
@@ -125,6 +141,9 @@ namespace Voron.Impl.FileHeaders
 			_locker.EnterWriteLock();
 			try
 			{
+				if (_theHeader == null)
+					throw new ObjectDisposedException("Cannot access the header after it was disposed");
+			
 
 				modifyAction(_theHeader);
 
@@ -162,10 +181,19 @@ namespace Voron.Impl.FileHeaders
 
 		public void Dispose()
 		{
-			if (_headerPtr != IntPtr.Zero)
+			_locker.EnterWriteLock();
+			try
 			{
-				Marshal.FreeHGlobal(_headerPtr);
-				_headerPtr = IntPtr.Zero;
+				if (_headerPtr != IntPtr.Zero)
+				{
+					Marshal.FreeHGlobal(_headerPtr);
+					_headerPtr = IntPtr.Zero;
+					_theHeader = null;
+				}
+			}
+			finally
+			{
+				_locker.ExitWriteLock();
 			}
 		}
 	}

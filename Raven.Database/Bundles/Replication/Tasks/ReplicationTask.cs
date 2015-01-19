@@ -517,7 +517,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 
 		[Obsolete("Use RavenFS instead.")]
-		private bool? ReplicateAttachments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder)
+		private bool? ReplicateAttachments(ReplicationStrategy destination, SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder)
 		{
 			Tuple<RavenJArray, Etag> tuple;
 			RavenJArray attachments;
@@ -1147,7 +1147,7 @@ namespace Raven.Bundles.Replication.Tasks
 		}
 
 		[Obsolete("Use RavenFS instead.")]
-		private Tuple<RavenJArray, Etag> GetAttachments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
+		private Tuple<RavenJArray, Etag> GetAttachments(SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
 		{
 			var timeout = TimeSpan.FromSeconds(docDb.Configuration.Replication.FetchingFromDiskTimeoutInSeconds);
 			var duration = Stopwatch.StartNew();
@@ -1157,6 +1157,7 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
+				var maxNumberOfItemsToReceiveInSingleBatch = destinationsReplicationInformationForSource.MaxNumberOfItemsToReceiveInSingleBatch;
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
@@ -1167,7 +1168,7 @@ namespace Raven.Bundles.Replication.Tasks
 					lastAttachmentEtag = startEtag;
 					while (true)
 					{
-						attachmentsToReplicate = GetAttachmentsToReplicate(actions, lastAttachmentEtag);
+						attachmentsToReplicate = GetAttachmentsToReplicate(actions, lastAttachmentEtag, maxNumberOfItemsToReceiveInSingleBatch);
 
 						filteredAttachmentsToReplicate = attachmentsToReplicate.Where(attachment => destination.FilterAttachments(attachment, destinationId)).ToList();
 
@@ -1252,15 +1253,19 @@ namespace Raven.Bundles.Replication.Tasks
 		}
 
 		[Obsolete("Use RavenFS instead.")]
-		private static List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Etag lastAttachmentEtag)
+		private static List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Etag lastAttachmentEtag, int? maxNumberOfItemsToReceiveInSingleBatch)
 		{
-			var attachmentInformations = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100, 1024 * 1024 * 10).ToList();
+			var maxNumberOfAttachments = 100;
+			if (maxNumberOfItemsToReceiveInSingleBatch.HasValue) 
+				maxNumberOfAttachments = Math.Min(maxNumberOfAttachments, maxNumberOfItemsToReceiveInSingleBatch.Value);
+
+			var attachmentInformations = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, maxNumberOfAttachments, 1024 * 1024 * 10).ToList();
 
 			Etag lastEtag = null;
 			if (attachmentInformations.Count > 0)
 				lastEtag = attachmentInformations[attachmentInformations.Count - 1].Etag;
 
-			var maxNumberOfTombstones = Math.Max(100, attachmentInformations.Count);
+			var maxNumberOfTombstones = Math.Max(maxNumberOfAttachments, attachmentInformations.Count);
 			var tombstones = actions
 				.Lists
 				.Read(Constants.RavenReplicationAttachmentsTombstones, lastAttachmentEtag, lastEtag, maxNumberOfTombstones + 1)
@@ -1283,9 +1288,13 @@ namespace Raven.Bundles.Replication.Tasks
 				results = results.Where(x => EtagUtil.IsGreaterThan(x.Etag, lastTombstoneEtag) == false);
 			}
 
-			return results
-				.OrderBy(x => x.Etag)
-				.ToList();
+			results = results.OrderBy(x => x.Etag);
+
+			// can't return earlier, because we need to know if there are tombstones that need to be send
+			if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
+				results = results.Take(maxNumberOfItemsToReceiveInSingleBatch.Value);
+
+			return results.ToList();
 		}
 
 		internal SourceReplicationInformationWithBatchInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)

@@ -4,6 +4,7 @@ namespace Raven.Abstractions.Indexing
     {
         Unlock,
         LockedIgnore,
-        LockedError
+        LockedError,
+        SideBySide
     }
 }
