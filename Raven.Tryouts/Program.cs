@@ -19,15 +19,16 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-		    var etag = new Etag(UuidType.Documents, 1, 1);
+/*		    var etag = new Etag(UuidType.Documents, 1, 1);
 		    Console.WriteLine(etag);
-		    Console.WriteLine(Etag.Parse(etag.ToString()));
+		    Console.WriteLine(Etag.Parse(etag.ToString()));*/
 
 		    //var etag = new Etag(UuidType.Documents, 5, 10);
 		    //Console.WriteLine(Etag.Parse(etag.ToString()));
+            new OrdinaryQueryTest2 ().Execute();
 		}
 	}
-
+    
     public class OrdinaryQueryTest2 : RavenTest
     {
         public class Ob
@@ -53,14 +54,16 @@ namespace Raven.Tryouts
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenSession())
                 {
-                    Queryable.Where(session.Query<Ob>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A" && x.Name != "B" && x.Name != "C" && x.Name != "D" && x.Name != "E" && x.Name != "F" && x.Name != "G" && x.Name != "H" && x.Name != "I" && x.Name != "J" && x.Name != "K" && x.Name != "L" && x.Name != "M" && x.Name != "N" ).ToListAsync().GetAwaiter().GetResult();
+                    Console.WriteLine(
+                        session.Query<Ob>().FirstOrDefault());
+                    /*Queryable.Where(session.Query<Ob>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A" && x.Name != "B" && x.Name != "C" && x.Name != "D" && x.Name != "E" && x.Name != "F" && x.Name != "G" && x.Name != "H" && x.Name != "I" && x.Name != "J" && x.Name != "K" && x.Name != "L" && x.Name != "M" && x.Name != "N" ).ToListAsync().GetAwaiter().GetResult();
                     Queryable.Where(session.Query<Ob>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A" && x.Name != "B" && x.Name != "C" && x.Name != "D" && x.Name != "E" && x.Name != "F" && x.Name != "G" && x.Name != "H" && x.Name != "I" && x.Name != "J" && x.Name != "K" && x.Name != "L" && x.Name != "M" && x.Name != "N").ToListAsync().GetAwaiter().GetResult();
-                    /*Queryable.Where(session.Query<Ob>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A").ToListAsync().GetAwaiter().GetResult();*/
+                    /*Queryable.Where(session.Query<Ob>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A").ToListAsync().GetAwaiter().GetResult();#1#
                     Queryable.Where(session.Query<Ob,ObsIndex>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A").ToFacetsAsync(Enumerable.Repeat(1,1).Select(x=> new Facet() { Name = "Age" }).ToArray()).GetAwaiter().GetResult();
                     Queryable.Where(session.Query<Ob, ObsIndex>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A").ToFacetsAsync(Enumerable.Repeat(1, 1).Select(x => new Facet() { Name = "Age" }).ToArray()).GetAwaiter().GetResult();
-                    //Queryable.Where(session.Query<Ob,ObsIndex>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A").ToFacetsAsync(new[] { new Facet() { Name = "Age" } }).GetAwaiter().GetResult();
+                    //Queryable.Where(session.Query<Ob,ObsIndex>().Customize(x => x.WaitForNonStaleResults()), x => x.Name == "A").ToFacetsAsync(new[] { new Facet() { Name = "Age" } }).GetAwaiter().GetResult();*/
                 }
 
             }
