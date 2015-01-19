@@ -345,6 +345,7 @@ namespace Voron
 				{
 					Marshal.FreeHGlobal(headerSpace.Value);
 				}
+				_headers.Clear();
 			}
 
 			public override bool TryDeleteJournal(long number)
@@ -360,6 +361,8 @@ namespace Voron
 
 			public unsafe override bool ReadHeader(string filename, FileHeader* header)
 			{
+				if(Disposed)
+					throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
 				IntPtr ptr;
 				if (_headers.TryGetValue(filename, out ptr) == false)
 				{
@@ -371,6 +374,9 @@ namespace Voron
 
 			public override unsafe void WriteHeader(string filename, FileHeader* header)
 			{
+				if (Disposed)
+					throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
+
 				IntPtr ptr;
 				if (_headers.TryGetValue(filename, out ptr) == false)
 				{
