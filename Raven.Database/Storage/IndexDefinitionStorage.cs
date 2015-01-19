@@ -538,9 +538,6 @@ namespace Raven.Database.Storage
 			if (index == null) 
 				return false;
 
-            if (index.LockMode == IndexLockMode.SideBySide)
-                index.LockMode = IndexLockMode.Unlock;
-
 			int _;
 			indexNameToId.TryRemove(index.Name, out _);
 
