@@ -35,14 +35,24 @@ namespace Raven.Json.Linq
 		private DictionaryWithParentSnapshot(DictionaryWithParentSnapshot previous)
 		{
 			comparer = previous.comparer;
-			parentSnapshot = previous;
+			if (previous.parentSnapshot != null && previous.count > 0)
+			{
+				foreach (var localChange in previous.localChanges)
+				{
+					localChanges[localChange.Key] = localChange.Value;
+				}
+			}
+			else
+			{
+				parentSnapshot = previous;
+			}
 		}
 
 		#region Dictionary<string,TValue> Members
 
 		public void Add(string key, RavenJToken value)
 		{
-			Debug.Assert(!String.IsNullOrWhiteSpace(key),"key must _never_ be null/empty/whitespace");
+			Debug.Assert(!String.IsNullOrWhiteSpace(key), "key must _never_ be null/empty/whitespace");
 
 			if (IsSnapshot)
 				throw new InvalidOperationException(snapshotMsg ?? "Cannot modify a snapshot, this is probably a bug");
@@ -118,7 +128,7 @@ namespace Raven.Json.Linq
 			{
 				if (parentHasIt && parentToken != DeletedMarker)
 				{
-					LocalChanges[key] = DeletedMarker; 
+					LocalChanges[key] = DeletedMarker;
 					count -= 1;
 					return true;
 				}
@@ -132,7 +142,7 @@ namespace Raven.Json.Linq
 		}
 
 		public bool TryGetValue(string key, out RavenJToken value)
-		{			
+		{
 			value = null;
 			RavenJToken unsafeVal;
 			if (localChanges != null && localChanges.TryGetValue(key, out unsafeVal))
@@ -140,7 +150,7 @@ namespace Raven.Json.Linq
 				if (unsafeVal == DeletedMarker)
 					return false;
 
-				value = unsafeVal;				
+				value = unsafeVal;
 				return true;
 			}
 
@@ -152,7 +162,7 @@ namespace Raven.Json.Linq
 			if (IsSnapshot == false && unsafeVal != null)
 			{
 				if (unsafeVal.IsSnapshot == false && unsafeVal.Type != JTokenType.Object)
-                    unsafeVal.EnsureCannotBeChangeAndEnableSnapshotting();
+					unsafeVal.EnsureCannotBeChangeAndEnableSnapshotting();
 			}
 
 			value = unsafeVal;
@@ -175,7 +185,7 @@ namespace Raven.Json.Linq
 		public RavenJToken this[string key]
 		{
 			get
-			{			
+			{
 				RavenJToken token;
 				if (TryGetValue(key, out token))
 					return token;
