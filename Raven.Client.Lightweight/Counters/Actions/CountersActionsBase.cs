@@ -24,7 +24,7 @@ namespace Raven.Client.Counters.Actions
 		protected readonly OperationCredentials credentials;
 		protected readonly HttpJsonRequestFactory jsonRequestFactory;
 		protected readonly string serverUrl;
-		protected readonly string counterStorageName;
+		protected readonly string counterName;
 		protected readonly Convention convention;
 		protected readonly JsonSerializer jsonSerializer;
 		protected readonly string counterStorageUrl;
@@ -36,7 +36,7 @@ namespace Raven.Client.Counters.Actions
 			credentials = parent.Credentials;
 			jsonRequestFactory = parent.JsonRequestFactory;
 			serverUrl = parent.Url;
-			counterStorageName = counterName;
+			this.counterName = counterName;
 			counterStorageUrl = string.Format(CultureInfo.InvariantCulture, "{0}/cs/{1}", serverUrl, counterName);
 			jsonSerializer = parent.JsonSerializer;
 			convention = parent.Convention;

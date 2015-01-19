@@ -17,7 +17,7 @@ namespace Raven.Client.Counters.Actions
 		public async Task ChangeAsync(string group, long delta, CancellationToken token = default(CancellationToken))
 		{
 			var requestUriString = String.Format(CultureInfo.InvariantCulture,"{0}/change?group={1}&counterName={2}&delta={3}",
-				counterStorageUrl, @group, counterStorageName, delta);
+				counterStorageUrl, @group, counterName, delta);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Post))
 				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
@@ -35,15 +35,14 @@ namespace Raven.Client.Counters.Actions
 
 		public async Task ResetAsync(string group, CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/change?group={1}&counterName={2}", counterStorageUrl, @group, counterStorageName);
+			var requestUriString = String.Format("{0}/change?group={1}&counterName={2}", counterStorageUrl, @group, counterName);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Post))
 				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 		}
 
-		public async Task<long> GetOverallTotalAsync(string group, string counterName = null, CancellationToken token = default(CancellationToken))
+		public async Task<long> GetOverallTotalAsync(string group,  CancellationToken token = default(CancellationToken))
 		{
-			counterName = counterName ?? counterStorageName;
 			var requestUriString = String.Format("{0}/getCounterOverallTotal?group={1}&counterName={2}", counterStorageUrl, @group, counterName);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Get))
@@ -55,7 +54,7 @@ namespace Raven.Client.Counters.Actions
 
 		public async Task<List<CounterView.ServerValue>> GetServersValuesAsync(string group, CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/getCounterServersValues?group={1}&counterName={2}", counterStorageUrl, @group, counterStorageName);
+			var requestUriString = String.Format("{0}/getCounterServersValues?group={1}&counterName={2}", counterStorageUrl, @group, counterName);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Get))
 			{

@@ -11,6 +11,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
+using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
@@ -24,7 +25,6 @@ namespace Raven.Client.Counters.Actions
 		private readonly TaskCompletionSource<bool> _batchOperationTcs; 
 		private readonly BlockingCollection<CounterChange> _changesQueue;
 		private readonly CancellationTokenSource _cts;
-		private bool _isOperationRunning;
 		private bool disposed;
 		private readonly CountersBatchOptions _options;
 		private readonly MemoryStream _tempStream;
@@ -32,19 +32,22 @@ namespace Raven.Client.Counters.Actions
 
 		internal CountersBatchOperation(ICounterStore parent,string counterName, CountersBatchOptions options = null) : base(parent, counterName)
 		{
+
+			if(options != null && options.BatchSizeLimit < 1)
+				throw new ArgumentException("options");
+
 			_options = options ?? new CountersBatchOptions(); //defaults do exist
 			_changesQueue = new BlockingCollection<CounterChange>();			
 			_cts = new CancellationTokenSource();
 			_batchOperationTcs = new TaskCompletionSource<bool>();
 			_tempStream = new MemoryStream();
-			_isOperationRunning = true;
 			_batchOperationTask = StartBatchOperation();
 			disposed = false;
 		}
 
 		private async Task StartBatchOperation()
 		{
-			//using (ConnectionOptions.Expect100Continue(parent.ServerUrl))
+			using (ConnectionOptions.Expect100Continue(serverUrl))
 			{
 				var requestUriString = String.Format("{0}/batch", counterStorageUrl);
 				using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Post))
@@ -69,14 +72,17 @@ namespace Raven.Client.Counters.Actions
 					long operationId;
 
 					using (response)
-					using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-					using (var streamReader = new StreamReader(stream))
 					{
-						var result = RavenJObject.Load(new JsonTextReader(streamReader));
-						operationId = result.Value<long>("OperationId");
-					}
+						using (var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
+						{
+							var result = RavenJToken.TryLoad(stream); 
+							if (result == null) //precaution - should prevent NRE in case the crap hits the fan
+								throw new ApplicationException("Invalid response from server...maybe its not json?");
 
-					//TODO: implement changes api and server side operation tracking
+							operationId = result.Value<long>("OperationId");
+						}
+					}
+					
 					if (await IsOperationCompleted(operationId).ConfigureAwait(false))
 						serverOperationId = operationId;
 					_batchOperationTcs.SetResult(true);
@@ -133,7 +139,7 @@ namespace Raven.Client.Counters.Actions
 		{
 			try
 			{
-				while (_isOperationRunning)
+				while (_changesQueue.IsCompleted == false)
 				{
 					token.ThrowIfCancellationRequested();
 
@@ -141,9 +147,9 @@ namespace Raven.Client.Counters.Actions
 					CounterChange counterChange;
 					while (_changesQueue.TryTake(out counterChange, _options.BatchReadTimeoutInMilliseconds))
 					{
-						if (batch.Count >= _options.BatchSizeLimit)
-							break;
 						batch.Add(counterChange);
+						if (batch.Count == _options.BatchSizeLimit)
+							break;
 					}
 
 					FlushToServer(stream, batch);
@@ -193,7 +199,7 @@ namespace Raven.Client.Counters.Actions
 			}
 		}
 
-		public void Change(string group, string counterName, long delta)
+		public void Change(string group, long delta)
 		{
 			_changesQueue.Add(new CounterChange
 			{
@@ -203,14 +209,14 @@ namespace Raven.Client.Counters.Actions
 			});
 		}
 
-		public void Increment(string group, string counterName)
+		public void Increment(string group)
 		{
-			Change(@group, counterName, 1);
+			Change(@group, 1);
 		}
 
-		public void Decrement(string group, string counterName)
+		public void Decrement(string group)
 		{
-			Change(@group, counterName, -1);
+			Change(@group, -1);
 		}
 
 		public void Dispose()
@@ -218,13 +224,26 @@ namespace Raven.Client.Counters.Actions
 			if (!disposed)
 			{
 				_changesQueue.CompleteAdding();
-				_isOperationRunning = false;
 
 				_batchOperationTcs.Task.Wait();
 				if (_batchOperationTask.Status != TaskStatus.RanToCompletion ||
 					_batchOperationTask.Status != TaskStatus.Canceled)
 					_cts.Cancel();
-								
+
+				if (serverOperationId != default(long))
+				{
+					while (true)
+					{
+						var serverSideOperationWaitingTask = IsOperationCompleted(serverOperationId);
+						serverSideOperationWaitingTask.Wait();
+
+						if (serverSideOperationWaitingTask.Result)
+							break;
+
+						Thread.Sleep(100);
+					}
+				}
+
 				_tempStream.Dispose(); //precaution
 				disposed = true;
 			}

@@ -13,7 +13,7 @@ namespace Raven.Tests.Counters
 
 		public RavenBaseCountersTest()
 		{
-			ravenStore = NewRemoteDocumentStore();
+			ravenStore = NewRemoteDocumentStore(fiddler:true);
 		}
 
 		public ICounterStore NewRemoteCountersStore(string counterName = DefaultCounteName,bool createDefaultCounter = false,OperationCredentials credentials = null)

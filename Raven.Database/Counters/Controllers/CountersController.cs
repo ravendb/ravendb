@@ -80,13 +80,13 @@ namespace Raven.Database.Counters.Controllers
 			
 			var operationId = ExtractOperationId();
 			var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
-
+			var mre = new ManualResetEventSlim();
 			var task = Task.Factory.StartNew(() =>
             {
 				
 				var timeout = timeoutTokenSource.TimeoutAfter(TimeSpan.FromSeconds(360)); //TODO : make this configurable
 
-				var changeBatches = YieldChangeBatches(inputStream, timeout, countOfChanges => counterChanges += countOfChanges);
+				var changeBatches = YieldChangeBatches(inputStream, timeout, mre, countOfChanges => counterChanges += countOfChanges);
 	            try
 	            {
 		            using (var writer = Storage.CreateWriter())
@@ -130,13 +130,15 @@ namespace Raven.Database.Counters.Controllers
 				Payload = operationId.ToString()
 			}, out id, timeoutTokenSource);
 
+			task.Wait(timeoutTokenSource.Token);
+
 			return GetMessageWithObject(new
 			{
 				OperationId = id
 			});
 		}
 
-		private IEnumerable<IEnumerable<CounterChange>> YieldChangeBatches(Stream requestStream, CancellationTimeout timeout, Action<int> changeCounterFunc)
+		private IEnumerable<IEnumerable<CounterChange>> YieldChangeBatches(Stream requestStream, CancellationTimeout timeout, ManualResetEventSlim mre, Action<int> changeCounterFunc)
 		{
 			var serializer = JsonExtensions.CreateDefaultJsonSerializer();
 			try
@@ -165,6 +167,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 			finally
 			{
+				mre.Set();
 				requestStream.Close();
 			}
 
