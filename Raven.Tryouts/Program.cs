@@ -12,6 +12,7 @@ using Raven.SlowTests.Issues;
 using Raven.Tests.Common;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Querying;
+using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
 {
@@ -19,12 +20,14 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-		    var etag = new Etag(UuidType.Documents, 1, 1);
-		    Console.WriteLine(etag);
-		    Console.WriteLine(Etag.Parse(etag.ToString()));
-
-		    //var etag = new Etag(UuidType.Documents, 5, 10);
-		    //Console.WriteLine(Etag.Parse(etag.ToString()));
+			for (int i = 0; i < 1000; i++)
+			{
+				Console.WriteLine(i);
+				using (var r = new RavenDB_1041())
+				{
+					r.CanWaitForReplicationOfParticularEtag().Wait();
+				}
+			}
 		}
 	}
 
