@@ -8,6 +8,7 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Client.Document;
 using Raven.Database;
 using Raven.Json.Linq;
 
@@ -88,7 +89,7 @@ namespace Raven.Bundles.Replication.Impl
 			}
 			lastRequestedUtc = SystemTime.UtcNow;
 
-			while (true)
+			for (int i = 0; i < 10000; i++)
 			{
 				try
 				{
@@ -111,6 +112,7 @@ namespace Raven.Bundles.Replication.Impl
 				{
 				}
 			}
+			throw new InvalidOperationException("Unable to generate new hilo key for the replication version");
 		}
 	}
 }
