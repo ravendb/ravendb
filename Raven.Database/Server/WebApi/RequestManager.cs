@@ -242,7 +242,7 @@ namespace Raven.Database.Server.WebApi
 
 
 
-		public void SetThreadLocalState(HttpHeaders innerHeaders, string databaseName)
+        public void SetThreadLocalState(IEnumerable<KeyValuePair<string, IEnumerable<string>>> innerHeaders, string databaseName)
 		{
 			CurrentOperationContext.Headers.Value = new NameValueCollection();
 			foreach (var innerHeader in innerHeaders)
@@ -317,7 +317,7 @@ namespace Raven.Database.Server.WebApi
 
 				logHttpRequestStatsParam = new LogHttpRequestStatsParams(
 					sw,
-					GetHeaders(controller.InnerHeaders),
+					GetHeaders(controller.ReadInnerHeaders),
 					controller.InnerRequest.Method.Method,
 					response != null ? (int)response.StatusCode : 500,
 					controller.InnerRequest.RequestUri.ToString(),
@@ -384,7 +384,7 @@ namespace Raven.Database.Server.WebApi
 			return queue.ToArray().Reverse();
 		}
 
-		private NameValueCollection GetHeaders(HttpHeaders innerHeaders)
+        private NameValueCollection GetHeaders(IEnumerable<KeyValuePair<string, IEnumerable<string>>> innerHeaders)
 		{
 			var result = new NameValueCollection();
 			foreach (var innerHeader in innerHeaders)
@@ -439,13 +439,6 @@ namespace Raven.Database.Server.WebApi
 				return;
 
 			if (controller is StudioController || controller is HardRouteController || controller is SilverlightController)
-				return;
-
-			// we filter out requests for the UI because they fill the log with information
-			// we probably don't care about them anyway. That said, we do output them if they take too
-			// long.
-			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" &&
-				logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25)
 				return;
 
 			var message = string.Format(CultureInfo.InvariantCulture, "Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",

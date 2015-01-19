@@ -57,7 +57,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
 				{
-                    RequestManager.SetThreadLocalState(InnerHeaders, DatabaseName);
+                    RequestManager.SetThreadLocalState(ReadInnerHeaders, DatabaseName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
 				}, httpException =>
 				{

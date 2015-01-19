@@ -73,7 +73,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 result = await RequestManager.HandleActualRequest(this,controllerContext, async () =>
                 {
-                    RequestManager.SetThreadLocalState(InnerHeaders, FileSystemName);
+                    RequestManager.SetThreadLocalState(ReadInnerHeaders, FileSystemName);
                     return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
                 }, httpException => GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable));
             }

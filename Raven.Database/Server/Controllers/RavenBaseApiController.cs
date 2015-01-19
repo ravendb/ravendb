@@ -89,6 +89,24 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+        public IEnumerable<KeyValuePair<string,IEnumerable<string>>> ReadInnerHeaders
+        {
+            get
+            {
+                foreach (var header in InnerRequest.Headers)
+                {
+                    yield return new KeyValuePair<string, IEnumerable<string>>(header.Key, header.Value);
+                }
+
+                if (InnerRequest.Content == null)
+                    yield break;                
+                foreach (var header in InnerRequest.Content.Headers)
+                {
+                    yield return new KeyValuePair<string, IEnumerable<string>>(header.Key, header.Value);
+                }
+            }
+        }
+
 		public new IPrincipal User { get; set; }
 
         public bool WasAlreadyAuthorizedUsingSingleAuthToken { get; set; }
