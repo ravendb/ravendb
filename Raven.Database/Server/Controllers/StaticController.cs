@@ -102,7 +102,7 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/static/{*filename}")]
 		public async Task<HttpResponseMessage> StaticPut(string filename)
 		{
-			var newEtag = Database.Attachments.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), InnerHeaders.FilterHeadersAttachment());
+			var newEtag = Database.Attachments.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), ReadInnerHeaders.FilterHeadersAttachment());
 
 			var msg = GetEmptyMessage(HttpStatusCode.Created);
 			msg.Headers.Location = Database.Configuration.GetFullUrl("static/" + filename);
@@ -117,7 +117,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage StaticPost(string id)
 		{
 			var filename = id;
-			var newEtagPost = Database.Attachments.PutStatic(filename, GetEtag(), null, InnerHeaders.FilterHeadersAttachment());
+			var newEtagPost = Database.Attachments.PutStatic(filename, GetEtag(), null, ReadInnerHeaders.FilterHeadersAttachment());
 
 			var msg = GetMessageWithObject(newEtagPost);
 			WriteETag(newEtagPost, msg);

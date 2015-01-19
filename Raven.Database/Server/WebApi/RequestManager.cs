@@ -314,10 +314,10 @@ namespace Raven.Database.Server.WebApi
 						sb.Length--;
 					}
 				}
-
+			    var innerRequest = controller.InnerRequest;
 				logHttpRequestStatsParam = new LogHttpRequestStatsParams(
 					sw,
-					GetHeaders(controller.ReadInnerHeaders),
+                    new Lazy<HttpHeaders>(() => controller.CloneRequestHttpHeaders(innerRequest)),
 					controller.InnerRequest.Method.Method,
 					response != null ? (int)response.StatusCode : 500,
 					controller.InnerRequest.RequestUri.ToString(),
@@ -384,15 +384,6 @@ namespace Raven.Database.Server.WebApi
 			return queue.ToArray().Reverse();
 		}
 
-        private NameValueCollection GetHeaders(IEnumerable<KeyValuePair<string, IEnumerable<string>>> innerHeaders)
-		{
-			var result = new NameValueCollection();
-			foreach (var innerHeader in innerHeaders)
-			{
-				result.Add(innerHeader.Key, innerHeader.Value.FirstOrDefault());
-			}
-			return result;
-		}
 		private void TraceTraffic(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
 		{
 			if (HasAnyHttpTraceEventTransport() == false)

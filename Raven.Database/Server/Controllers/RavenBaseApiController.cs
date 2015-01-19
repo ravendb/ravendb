@@ -63,31 +63,33 @@ namespace Raven.Database.Server.Controllers
 
 		public HttpHeaders InnerHeaders
 		{
-			get
-			{
-				var headers = new Headers();
-				foreach (var header in InnerRequest.Headers)
-				{
-					if (header.Value.Count() == 1)
-						headers.Add(header.Key, header.Value.First());
-					else
-						headers.Add(header.Key, header.Value.ToList());
-				}
-
-				if (InnerRequest.Content == null)
-					return headers;
-
-				foreach (var header in InnerRequest.Content.Headers)
-				{
-					if (header.Value.Count() == 1)
-						headers.Add(header.Key, header.Value.First());
-					else
-						headers.Add(header.Key, header.Value.ToList());
-				}
-
-				return headers;
-			}
+			get { return CloneRequestHttpHeaders(InnerRequest); }
 		}
+
+        public HttpHeaders CloneRequestHttpHeaders(HttpRequestMessage message)
+        {
+            var headers = new Headers();
+            foreach (var header in message.Headers)
+            {
+                if (header.Value.Count() == 1)
+                    headers.Add(header.Key, header.Value.First());
+                else
+                    headers.Add(header.Key, header.Value.ToList());
+            }
+
+            if (message.Content == null)
+                return headers;
+
+            foreach (var header in message.Content.Headers)
+            {
+                if (header.Value.Count() == 1)
+                    headers.Add(header.Key, header.Value.First());
+                else
+                    headers.Add(header.Key, header.Value.ToList());
+            }
+
+            return headers; 
+        }
 
         public IEnumerable<KeyValuePair<string,IEnumerable<string>>> ReadInnerHeaders
         {
