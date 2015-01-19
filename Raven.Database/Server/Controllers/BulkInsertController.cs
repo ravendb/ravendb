@@ -128,13 +128,6 @@ namespace Raven.Database.Server.Controllers
             });
         }
 
-        private Guid ExtractOperationId()
-        {
-            Guid result;
-            Guid.TryParse(GetQueryStringValue("operationId"), out result);
-            return result;
-        }
-
         private IEnumerable<IEnumerable<JsonDocument>> YieldBatches(CancellationTimeout timeout, Stream inputStream, ManualResetEventSlim mre, Action<int> increaseDocumentsCount)
         {
             try

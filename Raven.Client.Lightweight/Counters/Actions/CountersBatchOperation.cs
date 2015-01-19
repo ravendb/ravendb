@@ -1,16 +1,17 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Connection;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
@@ -27,8 +28,9 @@ namespace Raven.Client.Counters.Actions
 		private bool disposed;
 		private readonly CountersBatchOptions _options;
 		private readonly MemoryStream _tempStream;
+		private long serverOperationId;
 
-		internal CountersBatchOperation(CountersClient parent, CountersBatchOptions options = null) : base(parent)
+		internal CountersBatchOperation(ICounterStore parent,string counterName, CountersBatchOptions options = null) : base(parent, counterName)
 		{
 			_options = options ?? new CountersBatchOptions(); //defaults do exist
 			_changesQueue = new BlockingCollection<CounterChange>();			
@@ -64,7 +66,7 @@ namespace Raven.Client.Counters.Actions
 
 					await response.AssertNotFailingResponse();
 
-					/*long operationId;
+					long operationId;
 
 					using (response)
 					using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
@@ -72,12 +74,57 @@ namespace Raven.Client.Counters.Actions
 					{
 						var result = RavenJObject.Load(new JsonTextReader(streamReader));
 						operationId = result.Value<long>("OperationId");
-					}*/
+					}
 
 					//TODO: implement changes api and server side operation tracking
-					//if (await IsOperationCompleted(operationId).ConfigureAwait(false)) responseOperationId = operationId;
-
+					if (await IsOperationCompleted(operationId).ConfigureAwait(false))
+						serverOperationId = operationId;
 					_batchOperationTcs.SetResult(true);
+				}
+			}
+		}
+
+		private async Task<bool> IsOperationCompleted(long operationId)
+		{
+			ErrorResponseException errorResponse;
+
+			try
+			{
+				var status = await GetOperationStatusAsync(operationId);
+
+				if (status == null) return true;
+
+				if (status.Value<bool>("Completed"))
+					return true;
+
+				return false;
+			}
+			catch (ErrorResponseException e)
+			{
+				if (e.StatusCode != HttpStatusCode.Conflict)
+					throw;
+
+				errorResponse = e;
+			}
+
+			var conflictsDocument = RavenJObject.Load(new RavenJsonTextReader(new StringReader(errorResponse.ResponseString)));
+
+			throw new ConcurrencyException(conflictsDocument.Value<string>("Error"));
+		}
+
+		private async Task<RavenJToken> GetOperationStatusAsync(long id)
+		{
+			var url = serverUrl + "/operation/status?id=" + id;
+			using (var request = CreateHttpJsonRequest(url, Verbs.Get))
+			{
+				try
+				{
+					return await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				}
+				catch (ErrorResponseException e)
+				{
+					if (e.StatusCode == HttpStatusCode.NotFound) return null;
+					throw;
 				}
 			}
 		}
@@ -177,7 +224,7 @@ namespace Raven.Client.Counters.Actions
 				if (_batchOperationTask.Status != TaskStatus.RanToCompletion ||
 					_batchOperationTask.Status != TaskStatus.Canceled)
 					_cts.Cancel();
-
+								
 				_tempStream.Dispose(); //precaution
 				disposed = true;
 			}

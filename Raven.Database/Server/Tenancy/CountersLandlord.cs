@@ -255,6 +255,8 @@ namespace Raven.Database.Server.Tenancy
 							"You can either upgrade your RavenDB license or delete a counter from the server");
 				}
 			}
+
+			//TODO: implement license validation for counters
 		}
 
 

@@ -7,7 +7,8 @@ namespace Raven.Client.Counters.Actions
 {
 	public class CountersStats : CountersActionsBase
 	{
-		internal CountersStats(CountersClient parent) : base(parent)
+		internal CountersStats(ICounterStore parent, string counterName)
+			: base(parent, counterName)
 		{
 		}
 

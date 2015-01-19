@@ -102,7 +102,7 @@ namespace Raven.Abstractions.Data
 
 		public static readonly Type DefaultCryptoServiceProvider = typeof(System.Security.Cryptography.AesCryptoServiceProvider);
 
-		//Quotas
+	    //Quotas
 		public const string DocsHardLimit = "Raven/Quotas/Documents/HardLimit";
 		public const string DocsSoftLimit = "Raven/Quotas/Documents/SoftLimit";
 		public const string SizeHardLimitInKB = "Raven/Quotas/Size/HardLimitInKB";
@@ -172,6 +172,8 @@ namespace Raven.Abstractions.Data
 		public const string TempUploadsDirectoryName = "RavenTempUploads";
 
 		public const string DataCouldNotBeDecrypted = "<data could not be decrypted>";
+
+		public const int NumberOfCachedRequests = 1024;
 
 		// Backup
 
