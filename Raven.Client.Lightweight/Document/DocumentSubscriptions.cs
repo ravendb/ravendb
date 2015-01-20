@@ -34,7 +34,7 @@ namespace Raven.Client.Document
 			return innerAsync.OpenAsync(id, options, database).ResultUnwrap();
 		}
 
-		public Subscription<T> Open<T>(long id, SubscriptionConnectionOptions options, string database = null)
+		public Subscription<T> Open<T>(long id, SubscriptionConnectionOptions options, string database = null) where T : class 
 		{
 			return innerAsync.OpenAsync<T>(id, options, database).ResultUnwrap();
 		}
