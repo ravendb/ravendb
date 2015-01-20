@@ -81,11 +81,15 @@ namespace Raven.Database.Indexing
 				if (operationCanceled == false)
 				{
 					var deletingScheduledReductionsDuration = new Stopwatch();
+					var storageCommitDuration = new Stopwatch();
 
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed mapped results
 					transactionalStorage.Batch(actions =>
 					{
+						actions.BeforeStorageCommit += storageCommitDuration.Start;
+						actions.AfterStorageCommit += storageCommitDuration.Stop;
+
 						ScheduledReductionInfo latest;
 
 						using (StopwatchScope.For(deletingScheduledReductionsDuration))
@@ -99,6 +103,7 @@ namespace Raven.Database.Indexing
 					});
 
 					postReducingOperations.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_DeleteScheduledReductions, deletingScheduledReductionsDuration.ElapsedMilliseconds));
+					postReducingOperations.Operations.Add(PerformanceStats.From(IndexingOperation.StorageCommit, storageCommitDuration.ElapsedMilliseconds));
 				}
 
 				postReducingOperations.Completed = SystemTime.UtcNow;
