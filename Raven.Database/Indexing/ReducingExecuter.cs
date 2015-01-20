@@ -72,19 +72,42 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
+				var postReducingOperations = new ReduceLevelPeformanceStats
+				{
+					Level = -1,
+					Started = SystemTime.UtcNow
+				};
+
 				if (operationCanceled == false)
 				{
+					var deletingScheduledReductionsDuration = new Stopwatch();
+
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed mapped results
 					transactionalStorage.Batch(actions =>
 					{
-						var latest = actions.MapReduce.DeleteScheduledReduction(itemsToDelete);
+						ScheduledReductionInfo latest;
+
+						using (StopwatchScope.For(deletingScheduledReductionsDuration))
+						{
+							latest = actions.MapReduce.DeleteScheduledReduction(itemsToDelete);
+						}
 
 						if (latest == null)
 							return;
 						actions.Indexing.UpdateLastReduced(indexToWorkOn.Index.indexId, latest.Etag, latest.Timestamp);
 					});
+
+					postReducingOperations.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_DeleteScheduledReductions, deletingScheduledReductionsDuration.ElapsedMilliseconds));
 				}
+
+				postReducingOperations.Completed = SystemTime.UtcNow;
+				postReducingOperations.Duration = postReducingOperations.Completed - postReducingOperations.Started;
+
+				performanceStats.Add(new ReducingPerformanceStats(ReduceType.None)
+				{
+					LevelStats = new List<ReduceLevelPeformanceStats>{ postReducingOperations }
+				});
 
 				Index _;
 				currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
@@ -362,7 +385,7 @@ namespace Raven.Database.Indexing
 								}
 							}
 
-							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_DeletePreviouslyScheduledReductions, deletingScheduledReductionsDuration.ElapsedMilliseconds));
+							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Reduce_DeleteScheduledReductions, deletingScheduledReductionsDuration.ElapsedMilliseconds));
 						}
 
 						var removeReduceResultsDuration = new Stopwatch();
@@ -541,10 +564,7 @@ namespace Raven.Database.Indexing
 		        {
 			        var performanceStats = HandleReduceForIndex(index);
 
-					foreach (var stats in performanceStats)
-				    {
-						reducingBatchInfo.PerformanceStats.TryAdd(index.Index.PublicName, stats);
-				    }
+					reducingBatchInfo.PerformanceStats.TryAdd(index.Index.PublicName, performanceStats);
 		        });
 	        }
 	        finally

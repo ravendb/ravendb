@@ -20,7 +20,7 @@ namespace Raven.Abstractions.Data
 
 		public double TimeSinceFirstReduceInBatchCompletedMs { get; set; }
 
-		public ConcurrentDictionary<string, ReducingPerformanceStats> PerformanceStats { get; set; }
+		public ConcurrentDictionary<string, ReducingPerformanceStats[]> PerformanceStats { get; set; }
 
 		public void BatchCompleted()
 		{
@@ -30,7 +30,7 @@ namespace Raven.Abstractions.Data
 			{
 				if (PerformanceStats.Count > 0)
 				{
-					TimeSinceFirstReduceInBatchCompletedMs = (now - PerformanceStats.Min(x => x.Value.LevelStats.Count > 0 ? x.Value.LevelStats.Last().Completed : DateTime.MaxValue)).TotalMilliseconds;
+					TimeSinceFirstReduceInBatchCompletedMs = (now - PerformanceStats.Min(x => x.Value.Min(y => y.LevelStats.Count > 0 ? y.LevelStats.Last().Completed : DateTime.MaxValue))).TotalMilliseconds;
 				}
 			}
 			catch (Exception)

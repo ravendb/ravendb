@@ -222,7 +222,7 @@ namespace Raven.Abstractions.Data
 		Map_ScheduleReductions,
 
 		Reduce_GetItemsToReduce,
-		Reduce_DeletePreviouslyScheduledReductions,
+		Reduce_DeleteScheduledReductions,
 		Reduce_ScheduleReductions,
 		Reduce_GetMappedResults,
 		Reduce_RemoveReduceResults,
@@ -284,7 +284,7 @@ namespace Raven.Abstractions.Data
 		}
 
 		public ReduceType ReduceType { get; private set; }
-		public List<ReduceLevelPeformanceStats> LevelStats { get; set; } 
+		public List<ReduceLevelPeformanceStats> LevelStats { get; set; }
 	}
 
 	public class ReduceLevelPeformanceStats
