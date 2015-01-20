@@ -50,6 +50,36 @@ namespace Voron.Impl
 			return tree.Read(key);
 		}
 
+		public StructReadResult<T> ReadStruct<T>(string treeName, Slice key, WriteBatch writeBatch = null) where T : struct 
+		{
+			Tree tree = null;
+
+			if (writeBatch != null && writeBatch.IsEmpty == false)
+			{
+				WriteBatch.BatchOperationType operationType;
+				ValueType value;
+				ushort? version;
+				if (writeBatch.TryGetStructValue(treeName, key, out value, out version, out operationType))
+				{
+					if (!version.HasValue)
+						tree = GetTree(treeName);
+
+					switch (operationType)
+					{
+						case WriteBatch.BatchOperationType.AddStruct:
+							return new StructReadResult<T>((T) value, version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(key));
+						case WriteBatch.BatchOperationType.Delete:
+							return null;
+					}
+				}
+			}
+
+			if (tree == null)
+				tree = GetTree(treeName);
+
+			return tree.Read<T>(key);
+		}
+
 		public int GetDataSize(string treeName, Slice key)
 		{
 			var tree = GetTree(treeName);

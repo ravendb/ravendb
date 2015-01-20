@@ -98,50 +98,6 @@ namespace Voron.Trees
 		    CopyStreamToPointer(_tx, value, pos);
 		}
 
-		public StructReadResult<TValue> Read<TStruct, TValue>(Slice key, Expression<Func<TStruct, TValue>> valueSelector) 
-			where TStruct : struct
-			where TValue : struct
-		{
-			var structureType = typeof(TStruct);
-
-			AssertStructHasExplicitLayout(structureType);
-
-			var readResult = Read(key);
-
-			if (readResult == null)
-				return null;
-
-			var fieldOffset = RetrieveFieldOffset(structureType, valueSelector.GetPath()); // TODO arek - add cache
-
-			return new StructReadResult<TValue>((TValue)Marshal.PtrToStructure(new IntPtr(readResult.Reader.Base + fieldOffset), typeof(TValue)), readResult.Version);
-		}
-
-		public void Write<TStruct>(Slice key, Expression<Func<TStruct, ValueType>> valueSelector, ValueType value, ushort? version = null) where TStruct : struct
-		{
-			var structureType = typeof(TStruct);
-
-			AssertStructHasExplicitLayout(structureType);
-
-			var fieldOffset = RetrieveFieldOffset(structureType, valueSelector.GetPath()); // TODO arek - add cache
-
-			var valueSize = Marshal.SizeOf(value);
-
-			var ptr = Marshal.AllocHGlobal(valueSize);
-			try
-			{
-				Marshal.StructureToPtr(value, ptr, false);
-
-				State.IsModified = true;
-				var pos = DirectAdd(key, Marshal.SizeOf(structureType), version: version);
-
-				StdLib.memcpy(pos + fieldOffset, (byte*)ptr.ToPointer(), valueSize);
-			}
-			finally
-			{
-				Marshal.FreeHGlobal(ptr);
-			}
-		}
-
 		public StructReadResult<TStruct> Read<TStruct>(Slice key) where TStruct : struct
 		{
 			var structureType = typeof(TStruct);
@@ -156,25 +112,36 @@ namespace Voron.Trees
 			return new StructReadResult<TStruct>((TStruct)Marshal.PtrToStructure(new IntPtr(readResult.Reader.Base), structureType), readResult.Version);
 		}
 
-		public void Write<TStruct>(Slice key, TStruct value, ushort? version = null) where TStruct : struct
+		public void Write(Slice key, ValueType value, ushort? version = null)
 		{
-			AssertStructHasExplicitLayout(typeof(TStruct));
+			AssertStructHasExplicitLayout(value.GetType());
 
 			var size = Marshal.SizeOf(value);
 
-			var ptr = Marshal.AllocHGlobal(size);
-			try
+			State.IsModified = true;
+			var pos = DirectAdd(key, size, version: version);
+
+			if (size < AbstractPager.PageSize)
 			{
-				Marshal.StructureToPtr(value, ptr, false);
-
-				State.IsModified = true;
-				var pos = DirectAdd(key, size, version: version);
-
-				StdLib.memcpy(pos, (byte*) ptr.ToPointer(), size);
+				TemporaryPage tempPage;
+				using (_tx.Environment.GetTemporaryPage(_tx, out tempPage))
+				{
+					Marshal.StructureToPtr(value, new IntPtr(tempPage.TempPagePointer), true);
+					MemoryUtils.Copy(pos, tempPage.TempPagePointer, size);
+				}
 			}
-			finally
+			else
 			{
-				Marshal.FreeHGlobal(ptr);
+				var ptr = Marshal.AllocHGlobal(size);
+				try
+				{
+					Marshal.StructureToPtr(value, ptr, false);
+					StdLib.memcpy(pos, (byte*) ptr.ToPointer(), size);
+				}
+				finally
+				{
+					Marshal.FreeHGlobal(ptr);
+				}
 			}
 		}
 
@@ -183,7 +150,7 @@ namespace Voron.Trees
 		private static void AssertStructHasExplicitLayout(Type structureType)
 		{
 			if (structureType.Attributes.HasFlag(TypeAttributes.ExplicitLayout) == false)
-				throw new InvalidDataException("Specified struct type has to have StructLayout(LayoutKind.Explicit) attribute applied");
+				throw new InvalidDataException("Specified type has to be struct with StructLayout(LayoutKind.Explicit) attribute applied");
 		}
 
 		public int RetrieveFieldOffset(Type type, IEnumerable<string> path)

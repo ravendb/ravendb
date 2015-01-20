@@ -218,6 +218,9 @@ namespace Voron.Impl
 									case WriteBatch.BatchOperationType.Increment:
 										actionType = DebugActionType.Increment;
 										break;
+									case WriteBatch.BatchOperationType.AddStruct:
+										actionType = DebugActionType.AddStruct; // TODO arek - debugjournal should handle structs
+										break;
 									default:
 										throw new ArgumentOutOfRangeException();
 								}
@@ -244,6 +247,9 @@ namespace Voron.Impl
 									break;
 								case WriteBatch.BatchOperationType.Increment:
 									tree.Increment(operation.Key, operation.ValueLong, operation.Version);
+									break;
+								case WriteBatch.BatchOperationType.AddStruct:
+									tree.Write(operation.Key, operation.ValueStruct, operation.Version);
 									break;
 								default:
 									throw new ArgumentOutOfRangeException();
