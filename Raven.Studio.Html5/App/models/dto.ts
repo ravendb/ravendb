@@ -600,7 +600,12 @@ interface filesystemRestoreRequestDto extends restoreRequestDto {
 
 interface restoreStatusDto {
     Messages: string[];
-    IsRunning: boolean;
+    State: string;
+}
+
+interface compactStatusDto {
+    Messages: string[];
+    State: string;
 }
 
 interface sqlReplicationTableDto {
@@ -1177,4 +1182,18 @@ interface indexReplaceDocumentDto extends documentDto {
     IndexToReplace: string;
     MinimumEtagBeforeReplace?: string;
     ReplaceTimeUtc?: string;
+}
+
+interface replicationExplanationForDocumentDto {
+    Key: string;
+    Etag: string;
+    Destination: destinationInformationDto;
+    Message: string;
+}
+
+interface destinationInformationDto {
+    Url: string;
+    DatabaseName: string;
+    ServerInstanceId: string;
+    LastDocumentEtag: string;
 }

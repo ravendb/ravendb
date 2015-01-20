@@ -85,7 +85,7 @@ namespace Raven.Database.Indexing
 			var sourceCount = 0;
 			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
 			var performance = RecordCurrentBatch("Current Map", "Map", batch.Docs.Count);
-			var performanceStats = new List<BasePefromanceStats>();
+			var performanceStats = new List<BasePerformanceStats>();
 
 			var usedStorageAccessors = new ConcurrentSet<IStorageActionsAccessor>();
 
@@ -216,7 +216,6 @@ namespace Raven.Database.Indexing
 						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey, reduceInMapLinqExecutionDuration, putMappedResultsDuration, convertToRavenJObjectDuration);
 
 						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.LoadDocument, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds));
-
 						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_MapExecution, linqExecutionDuration.ElapsedMilliseconds));
 						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_ReduceLinqExecution, reduceInMapLinqExecutionDuration.ElapsedMilliseconds));
 						parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Map_PutMappedResults, putMappedResultsDuration.ElapsedMilliseconds));
@@ -240,7 +239,7 @@ namespace Raven.Database.Indexing
 			var updateDocumentReferencesDuration = new Stopwatch();
 			using (StopwatchScope.For(updateDocumentReferencesDuration))
 			{
-				UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
+			UpdateDocumentReferences(actions, allReferencedDocs, allReferenceEtags);
 			}
 			performanceStats.Add(PerformanceStats.From(IndexingOperation.UpdateDocumentReferences, updateDocumentReferencesDuration.ElapsedMilliseconds));
 
@@ -412,7 +411,7 @@ namespace Raven.Database.Indexing
 				return reduceValue.ToString();
 			}
 			if (reduceValue is DateTime)
-				return ((DateTime)reduceValue).ToString(Default.DateTimeFormatsToWrite);
+				return ((DateTime)reduceValue).GetDefaultRavenFormat();
 			if (reduceValue is DateTimeOffset)
 				return ((DateTimeOffset)reduceValue).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
 			if (reduceValue is ValueType)
@@ -437,9 +436,22 @@ namespace Raven.Database.Indexing
 				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().Select(x => x.Name).ToArray());
 				return base.RetrieveDocument(document, fieldsToFetch, score);
 			}
+			var projection = RavenJObject.Parse(field.StringValue);
+			if (fieldsToFetch.FetchAllStoredFields)
+			{
+				var fields = new HashSet<string>(document.GetFields().Select(x => x.Name));
+				fields.Remove(Constants.ReduceKeyFieldName);
+				var documentFromFields = new RavenJObject();
+				AddFieldsToDocument(document, fields, documentFromFields);
+				foreach (var kvp in projection)
+				{
+					documentFromFields[kvp.Key] = kvp.Value;
+				}
+				projection = documentFromFields;
+			}
 			return new IndexQueryResult
 			{
-				Projection = RavenJObject.Parse(field.StringValue),
+				Projection = projection,
 				Score = score.Score,
 				ReduceVal = field.StringValue
 			};
@@ -705,7 +717,7 @@ namespace Raven.Database.Indexing
 								ex =>
 								{
 									logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
-									Context.AddError(indexId, parent.indexDefinition.Name, null, ex.Message, "AnErrorOccured Trigger");
+									Context.AddError(indexId, parent.indexDefinition.Name, null, ex, "AnErrorOccured Trigger");
 								},
 								x => x.AnErrorOccured(e));
 						}
@@ -719,7 +731,7 @@ namespace Raven.Database.Indexing
 								e =>
 								{
 									logIndexing.WarnException("Failed to dispose on index update trigger", e);
-									Context.AddError(indexId, parent.indexDefinition.Name, null, e.Message, "Dispose Trigger");
+									Context.AddError(indexId, parent.indexDefinition.Name, null, e, "Dispose Trigger");
 								},
 								x => x.Dispose());
 						}
@@ -731,8 +743,8 @@ namespace Raven.Database.Indexing
 					};
 				}, flushToDiskDuration, recreateSearcherDuration);
 
-				var performanceStats = new List<BasePefromanceStats>();
-				
+				var performanceStats = new List<BasePerformanceStats>();
+
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Linq_ReduceLinqExecution, linqExecutionDuration.ElapsedMilliseconds));
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_DeleteExistingDocument, deleteExistingDocumentsDuration.ElapsedMilliseconds));
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_ConvertToLuceneDocument, convertToLuceneDocumentDuration.ElapsedMilliseconds));
@@ -763,7 +775,7 @@ namespace Raven.Database.Indexing
 						Context.AddError(indexId,
 							parent.PublicName,
 							TryGetDocKey(doc),
-							e.Message,
+							e,
 							"Reduce"
 							);
 						logIndexing.WarnException("Could not get fields to during reduce for " + parent.PublicName, e);
@@ -789,7 +801,7 @@ namespace Raven.Database.Indexing
 							string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
 										  indexId, reduceKeyAsString),
 							exception);
-						Context.AddError(indexId, parent.PublicName, reduceKeyAsString, exception.Message, "OnIndexEntryCreated Trigger");
+						Context.AddError(indexId, parent.PublicName, reduceKeyAsString, exception, "OnIndexEntryCreated Trigger");
 					},
 					trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
 

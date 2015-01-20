@@ -97,8 +97,17 @@ namespace Raven.Database.Server
                         throw new InvalidOperationException("Could not extract assembly " + assemblyToExtract.Key + " from resources.");
 
                     var assemblyPath = Path.Combine(location, assemblyToExtract.Value.Name + AssemblySuffix);
-                    if (File.Exists(assemblyPath))
-                        File.Delete(assemblyPath);
+	                if (File.Exists(assemblyPath))
+	                {
+		                try
+		                {
+			                File.Delete(assemblyPath);
+		                }
+		                catch (Exception)
+		                {
+			                continue; // probably busy for some reason, ignoring
+		                }
+	                }
 
                     if (assemblyToExtract.Value.Compressed)
                     {

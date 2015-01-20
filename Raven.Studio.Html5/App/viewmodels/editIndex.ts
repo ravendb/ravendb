@@ -534,7 +534,6 @@ class editIndex extends viewModelBase {
         replaceDialog.replaceSettingsTask.done((replaceDocument) => {
             if (!this.editedIndex().isSideBySideIndex()) {
                 this.editedIndex().name(index.SideBySideIndexPrefix + this.editedIndex().name());
-                this.editedIndex().isSideBySideIndex(true);
             }
 
             var indexDef = this.editedIndex().toDto();

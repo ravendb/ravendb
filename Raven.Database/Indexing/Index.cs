@@ -171,7 +171,7 @@ namespace Raven.Database.Indexing
 				ItemsCount = itemsCount,
 				Operation = indexingStep,
 				Started = SystemTime.UtcNow,
-				Operations = new List<BasePefromanceStats>()
+				Operations = new BasePerformanceStats[0]
 			};
 
 			var lastStats = indexingPerformanceStats.LastOrDefault(x => x.Operation.Equals(operation, StringComparison.OrdinalIgnoreCase));
@@ -184,7 +184,7 @@ namespace Raven.Database.Indexing
 			return performanceStats;
 		}
 
-		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, List<BasePefromanceStats> operationStats)
+		protected void BatchCompleted(string indexingStep, string operation, int inputCount, int outputCount, List<BasePerformanceStats> operationStats)
 		{
 			IndexingPerformanceStats stats;
 			if (currentlyIndexing.TryRemove(indexingStep, out stats))
@@ -195,7 +195,7 @@ namespace Raven.Database.Indexing
 
 				stats.InputCount = inputCount;
 				stats.OutputCount = outputCount;
-				stats.Operations = operationStats;
+				stats.Operations = operationStats.ToArray();
 
 				AddIndexingPerformanceStats(stats);
 			}
@@ -364,32 +364,41 @@ namespace Raven.Database.Indexing
 			if (fieldsToFetch.FetchAllStoredFields)
 				fields = fields.Concat(document.GetFields().Select(x => x.Name));
 
-
-			var q = fields
-				.Distinct()
-				.SelectMany(name => document.GetFields(name) ?? new Field[0])
-				.Where(x => x != null)
-				.Where(
-					x =>
-					x.Name.EndsWith("_IsArray") == false &&
-					x.Name.EndsWith("_Range") == false &&
-					x.Name.EndsWith("_ConvertToJson") == false)
-				.Select(fld => CreateProperty(fld, document))
-				.GroupBy(x => x.Key)
-				.Select(g =>
-				{
-					if (g.Count() == 1 && document.GetField(g.Key + "_IsArray") == null)
-					{
-						return g.First();
-					}
-					var ravenJTokens = g.Select(x => x.Value).ToArray();
-					return new KeyValuePair<string, RavenJToken>(g.Key, new RavenJArray((IEnumerable)ravenJTokens));
-				});
-			foreach (var keyValuePair in q)
-			{
-				documentFromFields.Add(keyValuePair.Key, keyValuePair.Value);
-			}
+			AddFieldsToDocument(document, new HashSet<string>(fields), documentFromFields);
 			return documentFromFields;
+		}
+
+		protected static void AddFieldsToDocument(Document document, HashSet<string> fieldNames, RavenJObject documentFromFields)
+		{
+			foreach (var fldName in fieldNames)
+			{
+				if(fldName.EndsWith("_IsArray") || 
+					fldName.EndsWith("_Range") ||
+					fldName.EndsWith("_ConvertToJson"))
+					continue;
+
+				var isArray = fldName + "_IsArray";
+				foreach (var field in document.GetFields(fldName))
+				{
+					var val = CreateProperty(field, document);
+					RavenJToken arrayToken;
+					var tryGetValue = documentFromFields.TryGetValue(field.Name, out arrayToken);
+					if (tryGetValue || document.GetField(isArray) != null)
+					{
+						var array = arrayToken as RavenJArray;
+						if (array == null)
+						{
+							documentFromFields[field.Name] = array =
+								(tryGetValue ? new RavenJArray {arrayToken} : new RavenJArray());
+						}
+						array.Add(val);
+					}
+					else
+					{
+						documentFromFields[field.Name] = val;
+					}
+				}
+			}
 		}
 
 		protected void InvokeOnIndexEntryDeletedOnAllBatchers(List<AbstractIndexUpdateTriggerBatcher> batchers, Term term)
@@ -416,28 +425,28 @@ namespace Raven.Database.Indexing
 									"Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
 									indexId, key),
 								exception);
-							context.AddError(indexId, key, exception.Message, "OnIndexEntryDeleted Trigger");
+							context.AddError(indexId, PublicName, key, exception, "OnIndexEntryDeleted Trigger");
 						},
 						trigger => trigger.OnIndexEntryDeleted(key, document));
 				}
 			}
 		}
 
-		private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
+		private static RavenJToken CreateProperty(Field fld, Document document)
 		{
 			if (fld.IsBinary)
-				return new KeyValuePair<string, RavenJToken>(fld.Name, fld.GetBinaryValue());
+				return fld.GetBinaryValue();
 			var stringValue = fld.StringValue;
 			if (document.GetField(fld.Name + "_ConvertToJson") != null)
 			{
 				var val = RavenJToken.Parse(fld.StringValue) as RavenJObject;
-				return new KeyValuePair<string, RavenJToken>(fld.Name, val);
+				return val;
 			}
 			if (stringValue == Constants.NullValue)
 				stringValue = null;
 			if (stringValue == Constants.EmptyString)
 				stringValue = string.Empty;
-			return new KeyValuePair<string, RavenJToken>(fld.Name, stringValue);
+			return stringValue;
 		}
 
 		protected void Write(Func<RavenIndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action, Stopwatch flushToDiskDuration = null, Stopwatch recreateSearcherDuration = null)
@@ -465,7 +474,7 @@ namespace Raven.Database.Indexing
 					}
 					catch (Exception e)
 					{
-						context.AddError(indexId, indexDefinition.Name, "Creating Analyzer", e.ToString(), "Analyzer");
+						context.AddError(indexId, indexDefinition.Name, "Creating Analyzer", e, "Analyzer");
 						throw;
 					}
 
@@ -501,7 +510,7 @@ namespace Raven.Database.Indexing
 							var invalidDocId = (invalidSpatialShapeException == null) ?
 														null :
 														invalidSpatialShapeException.InvalidDocumentId;
-							context.AddError(indexId, indexDefinition.Name, invalidDocId, e.ToString(), "Write");
+							context.AddError(indexId, indexDefinition.Name, invalidDocId, e, "Write");
 							throw;
 						}
 
@@ -510,7 +519,7 @@ namespace Raven.Database.Indexing
 							using (StopwatchScope.For(flushToDiskDuration))
 							{
 								WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
-								
+
 								if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
 								{
 									Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
@@ -628,7 +637,7 @@ namespace Raven.Database.Indexing
 					default:
 						throw new ArgumentOutOfRangeException();
 				}
-				if(run)
+				if (run)
 					Thread.Sleep(11);
 			}
 		}
@@ -747,7 +756,7 @@ namespace Raven.Database.Indexing
 					context.AddError(indexId,
 						indexDefinition.Name,
 						docId ?? TryGetDocKey(o),
-										exception.Message,
+										exception,
 										"Map"
 							);
 
@@ -782,7 +791,7 @@ namespace Raven.Database.Indexing
 					context.AddError(indexId,
 						indexDefinition.Name,
 						TryGetDocKey(o),
-						exception.Message,
+						exception,
 						"Reduce"
 						);
 					logIndexing.WarnException(
@@ -810,7 +819,7 @@ namespace Raven.Database.Indexing
 					context.AddError(indexId,
 									 indexDefinition.Name,
 									TryGetDocKey(o),
-									exception.Message,
+									exception,
 									"Reduce"
 						);
 					logIndexing.WarnException(
@@ -907,8 +916,8 @@ namespace Raven.Database.Indexing
 
 		public void MarkQueried(DateTime time)
 		{
-			if (lastQueryTime != null && 
-				lastQueryTime.Value >= time) 
+			if (lastQueryTime != null &&
+				lastQueryTime.Value >= time)
 				return;
 
 			lastQueryTime = time;
@@ -1046,7 +1055,7 @@ namespace Raven.Database.Indexing
 					}
 					if (f.StartsWith(Constants.RandomFieldName) || f.StartsWith(Constants.CustomSortFieldName))
 						continue;
-					if (viewGenerator.ContainsField(f) == false && ! f.StartsWith(Constants.DistanceFieldName)
+					if (viewGenerator.ContainsField(f) == false && !f.StartsWith(Constants.DistanceFieldName)
 							&& viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
 						throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
 				}
@@ -1092,7 +1101,7 @@ namespace Raven.Database.Indexing
 				HashSet<RavenJToken> reduceValuesJson = null;
 				if (returnFullEntries == false)
 				{
-					reduceValuesJson =new HashSet<RavenJToken>(RavenJTokenEqualityComparer.Default);
+					reduceValuesJson = new HashSet<RavenJToken>(RavenJTokenEqualityComparer.Default);
 					foreach (var reduceKey in reduceKeys)
 					{
 						reduceValuesJson.Add(new RavenJValue(reduceKey));
@@ -1179,12 +1188,12 @@ namespace Raven.Database.Indexing
 							var search = ExecuteQuery(indexSearcher, documentQuery, start, docsToGet, indexQuery);
 
 							indexQuery.TotalSize.Value = search.TotalHits;
-							
+
 							RecordAlreadyPagedItemsInPreviousPage(start, search, indexSearcher);
 
 							SetupHighlighter(documentQuery);
 
-							for (;position < search.ScoreDocs.Length && pageSize > 0; position++)
+							for (; position < search.ScoreDocs.Length && pageSize > 0; position++)
 							{
 								token.ThrowIfCancellationRequested();
 
@@ -1195,7 +1204,7 @@ namespace Raven.Database.Indexing
 								{
 									indexQueryResult.HighlighterKey = document.Get(indexQuery.HighlighterKeyName);
 								}
-								
+
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
 									indexQuery.SkippedResults.Value++;
@@ -1227,13 +1236,13 @@ namespace Raven.Database.Indexing
 
 			private void RecordAlreadyPagedItemsInPreviousPage(int start, TopDocs search, IndexSearcher indexSearcher)
 			{
-				if(alreadyPagedItemsRecorded)
+				if (alreadyPagedItemsRecorded)
 					return;
 
-				if(start == 0)
+				if (start == 0)
 					return;
 
-				if(indexQuery.SkipDuplicateChecking)
+				if (indexQuery.SkipDuplicateChecking)
 					return;
 
 				// we are paging, we need to check that we don't have duplicates in the previous pages
@@ -1296,22 +1305,22 @@ namespace Raven.Database.Indexing
 
 				var highlightings =
 					(from highlightedField in this.indexQuery.HighlightedFields
-						select new
-						{
-							highlightedField.Field,
-							highlightedField.FragmentsField,
-							Fragments = highlighter.GetBestFragments(
-								fieldQuery,
-								indexSearcher.IndexReader,
-								scoreDoc.Doc,
-								highlightedField.Field,
-								highlightedField.FragmentLength,
-								highlightedField.FragmentCount)
-						}
-						into fieldHighlitings
-						where fieldHighlitings.Fragments != null &&
-						      fieldHighlitings.Fragments.Length > 0
-						select fieldHighlitings).ToList();
+					 select new
+					 {
+						 highlightedField.Field,
+						 highlightedField.FragmentsField,
+						 Fragments = highlighter.GetBestFragments(
+							 fieldQuery,
+							 indexSearcher.IndexReader,
+							 scoreDoc.Doc,
+							 highlightedField.Field,
+							 highlightedField.FragmentLength,
+							 highlightedField.FragmentCount)
+					 }
+						 into fieldHighlitings
+						 where fieldHighlitings.Fragments != null &&
+							   fieldHighlitings.Fragments.Length > 0
+						 select fieldHighlitings).ToList();
 
 				if (indexQueryResult.Projection != null)
 				{
@@ -1456,7 +1465,7 @@ namespace Raven.Database.Indexing
 					return false;
 				}
 
-                if (fieldsToFetch.IsDistinctQuery && alreadySeenProjections.Add(indexQueryResult.Projection) == false)
+				if (fieldsToFetch.IsDistinctQuery && alreadySeenProjections.Add(indexQueryResult.Projection) == false)
 					return false;
 
 				return true;
@@ -1569,7 +1578,7 @@ namespace Raven.Database.Indexing
 			return currentlyIndexing.Values.ToArray();
 		}
 
-        public void Backup(string backupDirectory, string path, string incrementalTag, Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback)
+		public void Backup(string backupDirectory, string path, string incrementalTag, Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback)
 		{
 			if (directory is RAMDirectory)
 			{
@@ -1582,9 +1591,9 @@ namespace Raven.Database.Indexing
 			}
 
 			bool hasSnapshot = false;
-            bool throwOnFinallyException = true;
+			bool throwOnFinallyException = true;
 			try
-			{   
+			{
 				var existingFiles = new HashSet<string>();
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
@@ -1624,9 +1633,9 @@ namespace Raven.Database.Indexing
 					}
 					catch (CorruptIndexException e)
 					{
-					    var failureMessage = "Could not backup index " + PublicName + " because it is corrupted. Skipping the index, will force index reset on restore";
-                        LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
-					    neededFilesWriter.Dispose();
+						var failureMessage = "Could not backup index " + PublicName + " because it is corrupted. Skipping the index, will force index reset on restore";
+						LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
+						neededFilesWriter.Dispose();
 						TryDelete(neededFilePath);
 						return;
 					}
@@ -1650,10 +1659,10 @@ namespace Raven.Database.Indexing
 								File.Copy(fullPath, destFileName);
 							}
 							catch (Exception e)
-							{								
-                                var failureMessage = "Could not backup index " + PublicName + " because failed to copy file : " + fullPath +
-                                    ". Skipping the index, will force index reset on restore";
-                                LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
+							{
+								var failureMessage = "Could not backup index " + PublicName + " because failed to copy file : " + fullPath +
+									". Skipping the index, will force index reset on restore";
+								LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
 								neededFilesWriter.Dispose();
 								TryDelete(neededFilePath);
 								return;
@@ -1669,21 +1678,21 @@ namespace Raven.Database.Indexing
 			}
 			catch (Exception e)
 			{
-			    var failureMessage = "Could not backup index " + PublicName +
-			                         " because an unexpected exception was thrown. Skipping the index, will force index reset on restore";
-                LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
-			    try
-			    {
-			        File.WriteAllText(Path.Combine(backupDirectory, String.Format("{0}.backup_failed", indexId)), e.ToString());
-			    }
-			    catch (Exception fe)
-			    {
-			        failureMessage = "failed to create fail index file for index " + PublicName +
-			                             " because an unexpected exception was thrown. This error may prevent auto reseting of the index on restore.";
-                    LogErrorAndNotifyStudio(notifyCallback, failureMessage, fe);
-			        throwOnFinallyException = false;
-			        throw;
-			    }
+				var failureMessage = "Could not backup index " + PublicName +
+									 " because an unexpected exception was thrown. Skipping the index, will force index reset on restore";
+				LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
+				try
+				{
+					File.WriteAllText(Path.Combine(backupDirectory, String.Format("{0}.backup_failed", indexId)), e.ToString());
+				}
+				catch (Exception fe)
+				{
+					failureMessage = "failed to create fail index file for index " + PublicName +
+										 " because an unexpected exception was thrown. This error may prevent auto reseting of the index on restore.";
+					LogErrorAndNotifyStudio(notifyCallback, failureMessage, fe);
+					throwOnFinallyException = false;
+					throw;
+				}
 			}
 			finally
 			{
@@ -1695,22 +1704,22 @@ namespace Raven.Database.Indexing
 					}
 					catch (Exception e)
 					{
-                        var failureMessage = "Failed to release snapshotter while backing-up index " + indexId;
-                        LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
-                        if (throwOnFinallyException)  throw;
+						var failureMessage = "Failed to release snapshotter while backing-up index " + indexId;
+						LogErrorAndNotifyStudio(notifyCallback, failureMessage, e);
+						if (throwOnFinallyException) throw;
 					}
 				}
 			}
 		}
 
-	    private static void LogErrorAndNotifyStudio(Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback, string failureMessage, Exception e)
-	    {
-	        logIndexing.WarnException(failureMessage, e);
-            if (notifyCallback != null) 
-                notifyCallback(failureMessage, null, BackupStatus.BackupMessageSeverity.Error);
-	    }
+		private static void LogErrorAndNotifyStudio(Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback, string failureMessage, Exception e)
+		{
+			logIndexing.WarnException(failureMessage, e);
+			if (notifyCallback != null)
+				notifyCallback(failureMessage, null, BackupStatus.BackupMessageSeverity.Error);
+		}
 
-	    public Etag GetLastEtagFromStats()
+		public Etag GetLastEtagFromStats()
 		{
 			return context.IndexStorage.GetLastEtagForIndex(this);
 		}
@@ -1811,14 +1820,14 @@ namespace Raven.Database.Indexing
 
 		public void IncrementWriteErrors(Exception e)
 		{
-			if(e is SystemException) // Don't count transient errors
+			if (e is SystemException) // Don't count transient errors
 				return;
 
 			writeErrors = Interlocked.Increment(ref writeErrors);
 
-			if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error) 
+			if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error)
 				return;
-			
+
 			context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
 			Priority = IndexingPriority.Error;
 

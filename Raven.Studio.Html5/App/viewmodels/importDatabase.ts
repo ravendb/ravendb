@@ -148,7 +148,7 @@ class importDatabase extends viewModelBase {
             if (!!result.LastProgress) {
                 db.importStatus("Processing uploaded file, " + result.LastProgress.toLocaleLowerCase());
             }
-            setTimeout(() => this.waitForOperationToComplete(db, operationId), 500);
+            setTimeout(() => this.waitForOperationToComplete(db, operationId), 1000);
         }
     }
 }

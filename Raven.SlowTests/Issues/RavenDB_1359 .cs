@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Issues;
@@ -21,10 +22,15 @@ namespace Raven.SlowTests.Issues
 {
 	public class RavenDB_1359 : RavenTest
 	{
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+		{
+			configuration.EnableResponseLoggingForEmbeddedDatabases = true;
+		}
+
 		[Fact]
 		public void IndexThatLoadAttachmentsShouldIndexAllDocuments()
 		{
-			using (var store = NewDocumentStore(requestedStorage: "esent")) // the problem occurred only on Esent
+			using (var store = NewDocumentStore(requestedStorage: "esent", configureStore: s => s.Conventions.AcceptGzipContent = false)) // the problem occurred only on Esent
 			{
 				var indexWithAttachments = new RavenDB1316.Attachment_Indexing();
 				indexWithAttachments.Execute(store);

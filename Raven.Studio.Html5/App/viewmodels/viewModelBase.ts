@@ -204,27 +204,34 @@ class viewModelBase {
         router.navigate(url, options);
     }
 
-    modelPolling() {
+    modelPolling(): JQueryPromise<any> {
+        return null;
     }
 
-    forceModelPolling() {
-        this.modelPolling();
+    pollingWithContinuation() {
+        var poolPromise = this.modelPolling();
+        if (poolPromise) {
+            poolPromise.always(() => {
+                viewModelBase.modelPollingHandle = setTimeout(() => {
+                    viewModelBase.modelPollingHandle = null;
+                    this.pollingWithContinuation();
+                    }, 5000);
+            });
+        }
     }
 
     modelPollingStart() {
-        this.modelPolling();
         // clear previous pooling handle (if any)
         if (viewModelBase.modelPollingHandle) {
             this.modelPollingStop();
-            viewModelBase.modelPollingHandle = null;
         }
-        viewModelBase.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
-        this.activeDatabase.subscribe(() => this.forceModelPolling());
-        this.activeFilesystem.subscribe(() => this.forceModelPolling());
+        this.pollingWithContinuation();
+       
     }
 
     modelPollingStop() {
-        clearInterval(viewModelBase.modelPollingHandle);
+        clearTimeout(viewModelBase.modelPollingHandle);
+        viewModelBase.modelPollingHandle = null;
     }
 
     confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['No', 'Yes'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {

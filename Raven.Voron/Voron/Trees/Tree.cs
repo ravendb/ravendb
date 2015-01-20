@@ -8,12 +8,19 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
+using Voron.Util;
 
 namespace Voron.Trees
 {
 	public unsafe partial class Tree
 	{
 		private readonly TreeMutableState _state = new TreeMutableState();
+
+		private RecentlyFoundPages _recentlyFoundPages;
+		public RecentlyFoundPages RecentlyFoundPages
+		{
+			get { return _recentlyFoundPages ?? (_recentlyFoundPages = new RecentlyFoundPages(_tx.Flags == TransactionFlags.Read ? 8 : 2)); }
+		}
 
 		public string Name { get; set; }
 
@@ -113,7 +120,7 @@ namespace Voron.Trees
 
 			fixed (byte* src = value)
 			{
-				StdLib.memcpy(pos, src, value.Length);
+                MemoryUtils.Copy(pos, src, value.Length);
 			}
 		}
 
@@ -139,7 +146,7 @@ namespace Voron.Trees
 					var read = value.Read(tempPageBuffer, 0, AbstractPager.PageSize);
 					if (read == 0)
 						break;
-					StdLib.memcpy(pos, tempPagePointer, read);
+                    MemoryUtils.Copy(pos, tempPagePointer, read);
 					pos += read;
 				}
 			}
@@ -420,7 +427,7 @@ namespace Voron.Trees
 	            cur = cur.Next;
 	        }
 
-			_tx.AddRecentlyFoundPage(this, foundPage);
+			RecentlyFoundPages.Add(foundPage);
 	    }
 
 	    private bool TryUseRecentTransactionPage(MemorySlice key, out Lazy<Cursor> cursor, out Page page, out NodeHeader* node)
@@ -429,7 +436,7 @@ namespace Voron.Trees
 			page = null;
 			cursor = null;
 
-			var recentPages = _tx.GetRecentlyFoundPages(this);
+			var recentPages = RecentlyFoundPages;
 
 			if (recentPages == null)
 				return false;
@@ -721,6 +728,12 @@ namespace Voron.Trees
 					return null;
 				return it.CurrentKey.Clone();
 			}
+		}
+
+		public void ClearRecentFoundPages()
+		{
+			if (_recentlyFoundPages != null)
+				_recentlyFoundPages.Clear();
 		}
 	}
 }

@@ -33,7 +33,7 @@ class requestsCount extends viewModelBase {
     ];
 
     modelPolling() {
-        this.fetchMetrics().then(() => {
+        return this.fetchMetrics().then(() => {
             this.appendData();
             this.updateGraph();
         });

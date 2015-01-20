@@ -303,8 +303,9 @@ class replicationStats extends viewModelBase {
         // don't pool if unable to locate element
         var container = $("#replicationStatsContainer");
         if (container.length > 0) {
-            this.refresh();
+            return this.refresh();
         }
+        return $.Deferred().resolve();
     }
 
     filterJsonData() {

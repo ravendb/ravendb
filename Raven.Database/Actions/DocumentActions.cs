@@ -680,6 +680,7 @@ namespace Raven.Database.Actions
                     {
                         Database.DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
 
+	                    string collection = null;
                         Etag deletedETag;
                         if (actions.Documents.DeleteDocument(key, etag, out metadataVar, out deletedETag))
                         {
@@ -689,7 +690,7 @@ namespace Raven.Database.Actions
 
                             Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions);
 
-							var collection = metadataVar.Value<string>(Constants.RavenEntityName);
+							collection = metadataVar.Value<string>(Constants.RavenEntityName);
 							
 							DeleteDocumentFromIndexesForCollection(key, collection, actions);
                             if (deletedETag != null)
@@ -701,6 +702,9 @@ namespace Raven.Database.Actions
                             .ExecuteImmediatelyOrRegisterForSynchronization(() =>
                             {
                                 Database.DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
+								if (string.IsNullOrEmpty(collection) == false)
+									Database.LastCollectionEtags.Update(collection);
+
                                 Database.Notifications.RaiseNotifications(new DocumentChangeNotification
                                 {
                                     Id = key,

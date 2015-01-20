@@ -26,7 +26,6 @@ namespace Raven.Abstractions.Data
 		{
 			var now = SystemTime.UtcNow;
 			TotalDurationMs = (now - StartedAt).TotalMilliseconds;
-
 			try
 			{
 				if (PerformanceStats.Count > 0)
@@ -36,7 +35,6 @@ namespace Raven.Abstractions.Data
 			}
 			catch (Exception)
 			{
-
 			}
 		}
 	}

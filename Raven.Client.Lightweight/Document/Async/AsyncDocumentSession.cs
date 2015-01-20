@@ -222,7 +222,7 @@ namespace Raven.Client.Document.Async
         /// </remarks>
 		Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id, CancellationToken token)
         {
-            return Lazily.LoadAsync(id, (Action<T>)null);
+            return Lazily.LoadAsync(id, (Action<T>)null, token);
         }
 
 		internal Lazy<Task<T>> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval, CancellationToken token = default (CancellationToken))
@@ -236,7 +236,7 @@ namespace Raven.Client.Document.Async
                         throw new InvalidOperationException("Could not perform add lazy operation", t.Exception);
 
                     return (T)operation.Result;
-             }));
+             }, token));
 
              if (onEval != null)
                  onEvaluateLazy[operation] = theResult => onEval((T)theResult);
@@ -403,7 +403,7 @@ namespace Raven.Client.Document.Async
 
 
             var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation, token).ConfigureAwait(false);
-			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation(null);
+			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
 			queryOperation.DisableEntitiesTracking = true;
 
 			return new QueryYieldStream<T>(this, enumerator, queryOperation, token);

@@ -51,7 +51,7 @@ namespace Raven.Database.Indexing
 			var recreateSearcherDuration = new Stopwatch();
 
 			IndexingPerformanceStats performance = null;
-			var performanceStats = new List<BasePefromanceStats>();
+			var performanceStats = new List<BasePerformanceStats>();
 
 			var storageCommitDuration = new Stopwatch();
 
@@ -204,11 +204,12 @@ namespace Raven.Database.Indexing
 											"Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
 											indexId, indexingResult.NewDocId),
 											exception);
-										context.AddError(indexId,
-															 indexingResult.NewDocId,
-															 exception.Message,
-															 "OnIndexEntryCreated Trigger"
-												);
+										context.AddError(
+											indexId,
+											PublicName,
+											indexingResult.NewDocId,
+											exception,
+											"OnIndexEntryCreated Trigger");
 									},
 									trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
 								LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
@@ -224,10 +225,10 @@ namespace Raven.Database.Indexing
 							allReferencedDocs.Enqueue(CurrentIndexingScope.Current.ReferencedDocuments);
 
 							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.LoadDocument, CurrentIndexingScope.Current.LoadDocumentDuration.ElapsedMilliseconds));
-
 							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_MapExecution, linqExecutionDuration.ElapsedMilliseconds));
 							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Lucene_ConvertToLuceneDocument, convertToLuceneDocumentDuration.ElapsedMilliseconds));
 							parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Lucene_AddDocument, addDocumentDutation.ElapsedMilliseconds));
+							parallelOperations.Enqueue(parallelStats);
 
 							parallelOperations.Enqueue(parallelStats);
 						}
@@ -253,7 +254,7 @@ namespace Raven.Database.Indexing
 						ex =>
 						{
 							logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
-							context.AddError(indexId, null, ex.Message, "AnErrorOccured Trigger");
+							context.AddError(indexId, PublicName, null, ex, "AnErrorOccured Trigger");
 						},
 						x => x.AnErrorOccured(e));
 					throw;
@@ -264,7 +265,7 @@ namespace Raven.Database.Indexing
 						e =>
 						{
 							logIndexing.WarnException("Failed to dispose on index update trigger", e);
-							context.AddError(indexId, null, e.Message, "Dispose Trigger");
+							context.AddError(indexId, PublicName, null, e, "Dispose Trigger");
 						},
 						x => x.Dispose());
 				}
@@ -440,7 +441,7 @@ namespace Raven.Database.Indexing
 					e =>
 					{
 						logIndexing.WarnException("Failed to dispose on index update trigger", e);
-						context.AddError(indexId, null, e.Message, "Dispose Trigger");
+						context.AddError(indexId, PublicName, null, e, "Dispose Trigger");
 					},
 					batcher => batcher.Dispose());
 

@@ -159,7 +159,7 @@ namespace Voron.Impl.Backup
 								totalNumberOfPages += size;
 								finalPager.EnsureContinuous(null, start, size); //maybe increase size
 
-								StdLib.memcpy(finalPager.AcquirePagePointer(start), p.Base, size * AbstractPager.PageSize);
+                                MemoryUtils.Copy(finalPager.AcquirePagePointer(start), p.Base, size * AbstractPager.PageSize);
 
 								start += size;
 							}

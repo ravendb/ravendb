@@ -56,7 +56,6 @@ class indexStats extends viewModelBase {
         }
     }
 
-
     filterJsonData() {
         this.jsonData = [];
 
@@ -90,7 +89,27 @@ class indexStats extends viewModelBase {
         incomingData.forEach(d => {
             if (dateLookup.has(d.Started)) {
                 var index = dateLookup.get(d.Started);
-                currentData[index] = d;
+                var exitingData = currentData[index];
+                var newData = d;
+
+                // we merge into existing data
+                var indexLookup = d3.map();
+                exitingData.Stats.forEach((d, i) => {
+                    indexLookup.set(d.Index, i);
+                });
+
+                newData.Stats.forEach(s => {
+                    if (indexLookup.has(s.Index)) {
+                        var index = indexLookup.get(s.Index);
+                        var dest = exitingData.Stats[index];
+                        dest.DurationMilliseconds = Math.max(dest.DurationMilliseconds, s.DurationMilliseconds);
+                        dest.InputCount = Math.max(dest.InputCount, s.InputCount);
+                        dest.OutputCount = Math.max(dest.OutputCount, s.OutputCount);
+                        dest.ItemsCount = Math.max(dest.ItemsCount, s.ItemsCount);
+                    } else {
+                        exitingData.Stats.push(s);
+                    }
+                });
             } else {
                 currentData.push(d);
             }

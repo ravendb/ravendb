@@ -3,8 +3,6 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
-using Raven.Database;
 using Raven.Database.Data;
 using Raven.Json.Linq;
 
@@ -12,31 +10,35 @@ namespace Raven.Bundles.Replication.Tasks
 {
 	public class ReplicationStrategy
 	{
-		private static readonly ILog log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-		public bool FilterDocuments(string destinationId, string key, RavenJObject metadata)
+		public bool FilterDocuments(string destinationId, string key, RavenJObject metadata, out string reason)
 		{
 			if (IsSystemDocumentId(key))
 			{
-				log.Debug("Will not replicate document '{0}' to '{1}' because it is a system document", key, destinationId);
+				reason = string.Format("Will not replicate document '{0}' to '{1}' because it is a system document", key, destinationId);
+				Log.Debug(reason);
 				return false;
 			}
 			if (metadata.ContainsKey(Constants.NotForReplication) && metadata.Value<bool>(Constants.NotForReplication))
 				// not explicitly marked to skip
 			{
-				log.Debug("Will not replicate document '{0}' to '{1}' because it was marked as not for replication", key, destinationId); 
+				reason = string.Format("Will not replicate document '{0}' to '{1}' because it was marked as not for replication", key, destinationId);
+				Log.Debug(reason); 
 				return false;
 			}
 			if (metadata[Constants.RavenReplicationConflict] != null)
 				// don't replicate conflicted documents, that just propagate the conflict
 			{
-				log.Debug("Will not replicate document '{0}' to '{1}' because it a conflict document", key, destinationId); 
+				reason = string.Format("Will not replicate document '{0}' to '{1}' because it a conflict document", key, destinationId);
+				Log.Debug(reason); 
 				return false;
 			}
 
 			if (OriginsFromDestination(destinationId, metadata)) // prevent replicating back to source
 			{
-				log.Debug("Will not replicate document '{0}' to '{1}' because the destination server is the same server it originated from", key, destinationId); 
+				reason = string.Format("Will not replicate document '{0}' to '{1}' because the destination server is the same server it originated from", key, destinationId);
+				Log.Debug(reason); 
 				return false;
 			}
 
@@ -45,13 +47,15 @@ namespace Raven.Bundles.Replication.Tasks
 				case TransitiveReplicationOptions.None:
 					var value = metadata.Value<string>(Constants.RavenReplicationSource);
 			        if (value != null &&  (value != CurrentDatabaseId))
-					{
-						log.Debug("Will not replicate document '{0}' to '{1}' because it was not created on the current server, and TransitiveReplicationOptions = none", key, destinationId);
+			        {
+				        reason = string.Format("Will not replicate document '{0}' to '{1}' because it was not created on the current server, and TransitiveReplicationOptions = none", key, destinationId);
+						Log.Debug(reason);
 					    return false;
 					}
 			        break;
 			}
-			log.Debug("Will replicate '{0}' to '{1}'", key, destinationId);
+			reason = string.Format("Will replicate '{0}' to '{1}'", key, destinationId);
+			Log.Debug(reason);
 			return true;
 
 		}

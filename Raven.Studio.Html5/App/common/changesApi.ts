@@ -70,8 +70,10 @@ class changesApi {
         }
     }
 
-    private connect(action: Function, needToReconnect: boolean = false) {
-        this.connectToChangesApiTask = $.Deferred();
+    private connect(action: Function, recoveringFromWebsocketFailure: boolean = false) {
+        if (!recoveringFromWebsocketFailure) {
+            this.connectToChangesApiTask = $.Deferred();
+        }
         var getTokenTask = new getSingleAuthTokenCommand(this.rs).execute();
 
         getTokenTask
@@ -173,7 +175,7 @@ class changesApi {
 
         if ("EventSource" in window) {
             if (eventSourceSettingStorage.useEventSource()) {
-                this.connect(this.connectEventSource);
+                this.connect(this.connectEventSource, true);
                 warningMessage = "Your server doesn't support the WebSocket protocol!";
                 details = "EventSource API is going to be used instead. However, multi tab usage isn't supported.\r\n" +
                 "WebSockets are only supported on servers running on Windows Server 2012 and equivalent. \r\n" +

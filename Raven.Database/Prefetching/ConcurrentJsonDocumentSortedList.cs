@@ -5,9 +5,11 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Prefetching
 {
@@ -53,19 +55,18 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
+	    public IDisposable EnterWriteLock()
+	    {
+	        slim.EnterWriteLock();
+	        return new DisposableAction(slim.ExitWriteLock);
+	    }
+
 		public void Add(JsonDocument value)
 		{
-			try
-			{
-				slim.EnterWriteLock();
-				var index = CalculateEtagIndex(value.Etag);
-				innerList.Insert(index, value);
-			    loadedSize += value.SerializedSizeOnDisk;
-			}
-			finally
-			{
-				slim.ExitWriteLock();
-			}
+            Debug.Assert(slim.IsWriteLockHeld);
+		    var index = CalculateEtagIndex(value.Etag);
+		    innerList.Insert(index, value);
+		    loadedSize += value.SerializedSizeOnDisk;
 		}
 
 		public bool TryPeek(out JsonDocument result)
@@ -135,19 +136,6 @@ namespace Raven.Database.Prefetching
 				{
 					slim.ExitReadLock();
 				}
-			}
-		}
-
-		public T Aggregate<T>(T seed, Func<T, JsonDocument, T> aggregate)
-		{
-			slim.EnterReadLock();
-			try
-			{
-				return innerList.Aggregate(seed, aggregate);
-			}
-			finally
-			{
-				slim.ExitReadLock();
 			}
 		}
 

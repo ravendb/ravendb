@@ -51,6 +51,8 @@ class documents extends viewModelBase {
     isAllDocumentsAutoSelected = ko.observable<boolean>(false);
     canCopyAllSelected: KnockoutComputed<boolean>;
 
+    lastCollectionCountUpdate = ko.observable<string>();
+
     alerts = ko.observable<alert[]>([]);
 
     static gridSelector = "#documentsGrid";
@@ -144,7 +146,7 @@ class documents extends viewModelBase {
     }
 
     private fetchCollections(db: database): JQueryPromise<Array<collection>> {
-        return new getCollectionsCommand(db).execute();
+        return new getCollectionsCommand(db, this.collections(), this.lastCollectionCountUpdate).execute();
     }
 
     createNotifications(): Array<changeSubscription> {

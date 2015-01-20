@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
@@ -21,6 +22,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 		private readonly EncryptedFile.Header header;
 		private EncryptedFile.Footer footer;
+		private long totalUnencryptedSize;
 
 		public BlockReaderWriter(EncryptionSettings encryptionSettings, string key, Stream stream, int defaultBlockSize)
 		{
@@ -44,8 +46,9 @@ namespace Raven.Bundles.Encryption.Streams
 			this.key = key;
 			this.stream = stream;
 
-			this.header = ReadOrWriteHeader(defaultBlockSize);
+			this.header = ReadOrWriteEmptyHeader(defaultBlockSize);
 			this.footer = ReadOrWriteFooter();
+			totalUnencryptedSize = EncryptedFile.Header.HeaderSize + EncryptedFile.Footer.FooterSize; //at least the unencrypted size is the size of the header and footer
 		}
 
 		public EncryptedFile.Header Header
@@ -58,7 +61,7 @@ namespace Raven.Bundles.Encryption.Streams
 			get { return footer; }
 		}
 
-		private EncryptedFile.Header ReadOrWriteHeader(int defaultBlockSize)
+		private EncryptedFile.Header ReadOrWriteEmptyHeader(int defaultBlockSize)
 		{
 			lock (locker)
 			{
@@ -67,36 +70,56 @@ namespace Raven.Bundles.Encryption.Streams
 				if (stream.Length >= EncryptedFile.Header.HeaderSize)
 				{
 					// Read header
+					int headerSize;
+					var magicNumber = stream.ReadUInt64();
+					switch (magicNumber)
+					{
+						case EncryptedFile.DefaultMagicNumber: //old header struct --> without the last field
+							headerSize = EncryptedFile.Header.HeaderSize - Marshal.SizeOf(typeof(long));
+							break;
+						case EncryptedFile.WithTotalSizeMagicNumber:
+							headerSize = EncryptedFile.Header.HeaderSize;
+						break;
+						default:
+							throw new ApplicationException("Invalid magic number");
+					}
+					stream.Position = 0;
 
-					var headerBytes = stream.ReadEntireBlock(EncryptedFile.Header.HeaderSize);
-					var header = StructConverter.ConvertBitsToStruct<EncryptedFile.Header>(headerBytes);
+					var headerBytes = stream.ReadEntireBlock(headerSize);
+					var fileHeader = StructConverter.ConvertBitsToStruct<EncryptedFile.Header>(headerBytes);
 
-					if (header.MagicNumber != EncryptedFile.DefaultMagicNumber)
+					if (fileHeader.MagicNumber != EncryptedFile.DefaultMagicNumber && fileHeader.MagicNumber != EncryptedFile.WithTotalSizeMagicNumber)
 						throw new InvalidDataException("The magic number in the file doesn't match the expected magic number for encrypted files. Perhaps this file isn't encrypted?");
 
-					return header;
+					return fileHeader;
 				}
 				else
 				{
-					// Write header
-
+					// Write empty header
 					var sizeTest = settings.Codec.EncodeBlock("Dummy key", new byte[defaultBlockSize]);
 
-					var header = new EncryptedFile.Header
+					var fileHeader = new EncryptedFile.Header
 					{
-						MagicNumber = EncryptedFile.DefaultMagicNumber,
+						MagicNumber = EncryptedFile.WithTotalSizeMagicNumber,
 						DecryptedBlockSize = defaultBlockSize,
 						IVSize = sizeTest.IV.Length,
-						EncryptedBlockSize = sizeTest.Data.Length
+						EncryptedBlockSize = sizeTest.Data.Length,
+						TotalUnencryptedSize = EncryptedFile.Header.HeaderSize + EncryptedFile.Footer.FooterSize
 					};
-					var headerBytes = StructConverter.ConvertStructToBits(header);
 
-					if (!isReadonly)
-						stream.Write(headerBytes, 0, EncryptedFile.Header.HeaderSize);
+					WriteHeaderInCurrentPositionIfNotReadonly(fileHeader);
 
-					return header;
+					return fileHeader;
 				}
 			}
+		}
+
+		private void WriteHeaderInCurrentPositionIfNotReadonly(EncryptedFile.Header fileHeader)
+		{
+			if (isReadonly) return;
+
+			var headerBytes = StructConverter.ConvertStructToBits(fileHeader);
+			stream.Write(headerBytes, 0, EncryptedFile.Header.HeaderSize);
 		}
 
 		private EncryptedFile.Footer ReadOrWriteFooter()
@@ -154,7 +177,7 @@ namespace Raven.Bundles.Encryption.Streams
 					return new EncryptedFile.Block
 					{
 						BlockNumber = blockNumber,
-						TotalStreamLength = footer.TotalLength,
+						TotalEncryptedStreamLength = footer.TotalLength,
 						Data = new byte[header.DecryptedBlockSize],
 					};
 				}
@@ -170,7 +193,7 @@ namespace Raven.Bundles.Encryption.Streams
 				return new EncryptedFile.Block
 				{
 					BlockNumber = blockNumber,
-					TotalStreamLength = footer.TotalLength,
+					TotalEncryptedStreamLength = footer.TotalLength,
 					Data = decrypted,
 				};
 			}
@@ -196,10 +219,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 				long position = header.GetPhysicalPositionFromBlockNumber(block.BlockNumber);
 				if (stream.Length - EncryptedFile.Footer.FooterSize < position)
-				{
 					throw new InvalidOperationException("Write past end of file.");
-					//WriteEmptyBlocksUpTo(position);
-				}
 
 				stream.Position = position;
 				var encrypted = settings.Codec.EncodeBlock(key, block.Data);
@@ -208,38 +228,28 @@ namespace Raven.Bundles.Encryption.Streams
 
 				stream.Write(encrypted.IV, 0, encrypted.IV.Length);
 				stream.Write(encrypted.Data, 0, encrypted.Data.Length);
+				totalUnencryptedSize += block.Data.Length;
 
 				if (stream.Length <= stream.Position + EncryptedFile.Footer.FooterSize)
 				{
-					footer.TotalLength = block.TotalStreamLength;
+					footer.TotalLength = block.TotalEncryptedStreamLength;
 					WriteFooterInCurrentPosition(footer);
 				}
 			}
 		}
 
-		//private void WriteEmptyBlocksUpTo(long position)
-		//{
-		//	if (isReadonly)
-		//		throw new InvalidOperationException("The current stream is read-only.");
-
-		//	var emptyData = new byte[Header.DecryptedBlockSize];
-
-		//	while (stream.Length < position)
-		//	{
-		//		var nextBlock = Header.GetBlockNumberFromPhysicalPosition(stream.Length);
-		//		WriteBlock(new EncryptedFile.Block
-		//		{
-		//			BlockNumber = nextBlock,
-		//			Data = emptyData
-		//		});
-		//	}
-		//}
-
 		public void Flush()
 		{
 			lock (locker)
 			{
+				var position = stream.Position;
+				stream.Position = 0;
+				var headerWithUpdatedUnencryptedLenght = header;
+				headerWithUpdatedUnencryptedLenght.TotalUnencryptedSize = totalUnencryptedSize;
+				WriteHeaderInCurrentPositionIfNotReadonly(headerWithUpdatedUnencryptedLenght);
+
 				stream.Flush();
+				stream.Position = position;
 			}
 		}
 

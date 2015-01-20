@@ -118,7 +118,7 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// List of all entity names (collections) for which this index is working.
 		/// </summary>
-		public List<string> ForEntityName { get; set; } 
+		public string[] ForEntityName { get; set; } 
 
 		/// <summary>
 		/// Performance statistics for this index.
@@ -193,7 +193,10 @@ namespace Raven.Abstractions.Data
 		public DateTime Completed { get; set; }
 	    public TimeSpan Duration { get; set; }
 	    public double DurationMilliseconds { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
-		public List<BasePefromanceStats> Operations { get; set; }
+		[JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]
+
+		public BasePerformanceStats[] Operations { get; set; }
+
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
 		[JsonIgnore]
 	    public Action OnCompleted = delegate { };
@@ -230,12 +233,12 @@ namespace Raven.Abstractions.Data
 // ReSharper restore InconsistentNaming
 	}
 
-	public abstract class BasePefromanceStats
+	public abstract class BasePerformanceStats
 	{
         public long DurationMs { get; set; }
 	}
 
-	public class PerformanceStats : BasePefromanceStats
+	public class PerformanceStats : BasePerformanceStats
 	{
 		public IndexingOperation Name { get; set; }
 		
@@ -250,13 +253,12 @@ namespace Raven.Abstractions.Data
 		}
 	}
 
-	public class ParallelPefromanceStats : BasePefromanceStats
+	public class ParallelPefromanceStats : BasePerformanceStats
 	{
 		public ParallelPefromanceStats()
 		{
 			BatchedOperations = new List<ParallelBatchStats>();
 		}
-
 		public long NumberOfThreads { get; set; }
 
 		public List<ParallelBatchStats> BatchedOperations { get; set; } 
@@ -264,11 +266,11 @@ namespace Raven.Abstractions.Data
 
 	public class ParallelBatchStats
 	{
+
 		public ParallelBatchStats()
 		{
 			Operations = new List<PerformanceStats>();
 		}
-
 		public long StartDelay { get; set; }
 		public List<PerformanceStats> Operations { get; set; } 
 	}
@@ -287,11 +289,6 @@ namespace Raven.Abstractions.Data
 
 	public class ReduceLevelPeformanceStats
 	{
-		public ReduceLevelPeformanceStats()
-		{
-			Operations = new List<BasePefromanceStats>();
-		}
-
 		public int Level { get; set; }
 		public int ItemsCount { get; set; }
 		public int InputCount { get; set; }
@@ -300,22 +297,25 @@ namespace Raven.Abstractions.Data
 		public DateTime Completed { get; set; }
 		public TimeSpan Duration { get; set; }
 		public double DurationMs{ get { return Math.Round(Duration.TotalMilliseconds, 2); } }
-		public List<BasePefromanceStats> Operations { get; set; }
+		[JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]
+		public List<BasePerformanceStats> Operations { get; set; }
+
+		public ReduceLevelPeformanceStats()
+		{
+            Operations = new List<BasePerformanceStats>();
+		}
 
 		public void Add(IndexingPerformanceStats other)
 		{
 			ItemsCount += other.ItemsCount;
 			InputCount += other.InputCount;
 			OutputCount += other.OutputCount;
-
 			foreach (var stats in other.Operations)
 			{
 				var performanceStats = stats as PerformanceStats;
-
 				if (performanceStats != null)
 				{
 					var existingStat = Operations.OfType<PerformanceStats>().FirstOrDefault(x => x.Name == performanceStats.Name);
-
 					if (existingStat != null)
 					{
 						existingStat.DurationMs += performanceStats.DurationMs;

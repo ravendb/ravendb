@@ -1,5 +1,6 @@
 ﻿using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -611,7 +612,7 @@ namespace Raven.Client.FileSystem
             if (type == typeof(DateTime))
             {
                 var val = (DateTime)whereParams.Value;
-                var s = val.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
+                var s = val.GetDefaultRavenFormat();
                 if (val.Kind == DateTimeKind.Utc)
                     s += "Z";
                 return s;
@@ -620,7 +621,7 @@ namespace Raven.Client.FileSystem
             if (type == typeof(DateTimeOffset))
             {
                 var val = (DateTimeOffset)whereParams.Value;
-                return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
+                return val.UtcDateTime.GetDefaultRavenFormat(true);
             }
 
             if (type == typeof(decimal))
@@ -674,13 +675,11 @@ namespace Raven.Client.FileSystem
             if (whereParams.Value is DateTime)
             {
                 var dateTime = (DateTime)whereParams.Value;
-                var dateStr = dateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
-                if (dateTime.Kind == DateTimeKind.Utc)
-                    dateStr += "Z";
+                var dateStr = dateTime.GetDefaultRavenFormat(dateTime.Kind == DateTimeKind.Utc);
                 return dateStr;
             }
             if (whereParams.Value is DateTimeOffset)
-                return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
+                return ((DateTimeOffset)whereParams.Value).UtcDateTime.GetDefaultRavenFormat(true);
             if (whereParams.Value is TimeSpan)
                 return NumberUtil.NumberToString(((TimeSpan)whereParams.Value).Ticks);
 

@@ -107,6 +107,7 @@ namespace Raven.Client.FileSystem
         Task<long> StartRestore(FilesystemRestoreRequest restoreRequest);
         Task StartBackup(string backupLocation, FileSystemDocument databaseDocument, bool incremental, string filesystemName);
         Task<long> StartCompact(string filesystemName);
+        Task ResetIndexes(string filesystemName);
     }
 
     public interface IAsyncFilesConfigurationCommands : IDisposable, IHoldProfilingInformation

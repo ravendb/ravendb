@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Bundles.Replication.Responders;
@@ -22,6 +23,7 @@ using Raven.Bundles.Replication.Tasks;
 using Raven.Client.Connection;
 using Raven.Database.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Utils;
+using Raven.Database.Config;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
@@ -74,6 +76,80 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 				return withConfiguredResolvers;
 			}
+		}
+
+		[HttpGet]
+		[RavenRoute("replication/explain/{*docId}")]
+		[RavenRoute("databases/{databaseName}/replication/explain/{*docId}")]
+		public HttpResponseMessage ExplainGet(string docId)
+		{
+			if (string.IsNullOrEmpty(docId)) 
+				return GetMessageWithString("Document key is required.", HttpStatusCode.BadRequest);
+
+			var destinationUrl = GetQueryStringValue("destinationUrl");
+			if (string.IsNullOrEmpty(destinationUrl))
+				return GetMessageWithString("Destination url is required.", HttpStatusCode.BadRequest);
+
+			var databaseName = GetQueryStringValue("databaseName");
+			if (string.IsNullOrEmpty(databaseName))
+				return GetMessageWithString("Destination database name is required.", HttpStatusCode.BadRequest);
+
+			var result = new ReplicationExplanationForDocument
+			{
+				Key = docId,
+				Destination = new ReplicationExplanationForDocument.DestinationInformation
+				{
+					Url = destinationUrl,
+					DatabaseName = databaseName
+				}
+			};
+
+			var destinations = ReplicationTask.GetReplicationDestinations(x => string.Equals(x.Url, destinationUrl, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Database, databaseName, StringComparison.OrdinalIgnoreCase));
+			if (destinations == null || destinations.Length == 0)
+			{
+				result.Message = string.Format("Could not find replication destination for a given url ('{0}') and database ('{1}').", destinationUrl, databaseName);
+				return GetMessageWithObject(result);
+			}
+
+			if (destinations.Length > 1)
+			{
+				result.Message = string.Format("There is more than one replication destination for a given url ('{0}') and database ('{1}').", destinationUrl, databaseName);
+				return GetMessageWithObject(result);
+			}
+
+			var destination = destinations[0];
+			var destinationsReplicationInformationForSource = ReplicationTask.GetLastReplicatedEtagFrom(destination);
+			if (destinationsReplicationInformationForSource == null)
+			{
+				result.Message = "Could not connect to destination server.";
+				return GetMessageWithObject(result);
+			}
+
+			var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
+			result.Destination.ServerInstanceId = destinationId;
+			result.Destination.LastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
+
+			var document = Database.Documents.Get(docId, null);
+			if (document == null)
+			{
+				result.Message = string.Format("Document with given key ('{0}') does not exist.", docId);
+				return GetMessageWithObject(result);
+			}
+
+			result.Key = document.Key;
+			result.Etag = document.Etag;
+
+			string reason;
+			if (destination.FilterDocuments(destinationId, document.Key, document.Metadata, out reason) == false)
+			{
+				result.Message = reason;
+				return GetMessageWithObject(result);
+			}
+
+			reason = EtagUtil.IsGreaterThan(document.Etag, destinationsReplicationInformationForSource.LastDocumentEtag) ? "Document will be replicated." : "Document should have been replicated.";
+			result.Message = reason;
+
+			return GetMessageWithObject(result);
 		}
 
 		[HttpGet]
@@ -142,6 +218,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
+				var conflictResolvers = DocsReplicationConflictResolvers; 
+
 				string lastEtag = Etag.Empty.ToString();
 
 				var docIndex = 0;
@@ -167,10 +245,10 @@ namespace Raven.Database.Bundles.Replication.Controllers
 								var id = metadata.Value<string>("@id");
 								document.Remove("@metadata");
 
-								ReplicateDocument(actions, id, metadata, document, src);
+								ReplicateDocument(actions, id, metadata, document, src, conflictResolvers);
 							}
 
-							SaveReplicationSource(src, lastEtag);
+							SaveReplicationSource(src, lastEtag, array.Length);
 						});
 					}
 				}
@@ -179,7 +257,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetEmptyMessage();
 		}
 
-		private void SaveReplicationSource(string src, string lastEtag)
+		private void SaveReplicationSource(string src, string lastEtag, int batchSize)
 		{
 			Guid remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
 
@@ -203,7 +281,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 							LastDocumentEtag = Etag.Parse(lastEtag),
 							LastAttachmentEtag = lastAttachmentId,
 							ServerInstanceId = remoteServerInstanceId,
-							LastModified = SystemTime.UtcNow
+							LastModified = SystemTime.UtcNow,
+							LastBatchSize = batchSize
 						}),
 					new RavenJObject(),
 					null);
@@ -227,6 +306,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			var array = await ReadBsonArrayAsync();
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
+				var conflictResolvers = AttachmentReplicationConflictResolvers; 
+
 				Database.TransactionalStorage.Batch(actions =>
 				{
 					Etag lastEtag = Etag.Empty;
@@ -243,7 +324,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						lastEtag = Etag.Parse(attachment.Value<byte[]>("@etag"));
 						var id = attachment.Value<string>("@id");
 
-						ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), src);
+						ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), src, conflictResolvers);
 					}
 
 					Guid remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
@@ -298,7 +379,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
 				JsonDocument document = null;
-				SourceReplicationInformation sourceReplicationInformation = null;
+				SourceReplicationInformationWithBatchInformation sourceReplicationInformation = null;
 
 				var localServerInstanceId = Database.TransactionalStorage.Id; // this is my id, sent to the remote server
 
@@ -309,7 +390,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					var replicationSources = Database.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
 					foreach (RavenJObject replicationSource in replicationSources)
 					{
-						sourceReplicationInformation = replicationSource.JsonDeserialization<SourceReplicationInformation>();
+						sourceReplicationInformation = replicationSource.JsonDeserialization<SourceReplicationInformationWithBatchInformation>();
 						if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false)
 							continue;
 
@@ -328,7 +409,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
 						if (document != null)
 						{
-							sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+							sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformationWithBatchInformation>();
 							Database.Documents.Put(Constants.RavenReplicationSourcesBasePath + "/" + sourceReplicationInformation.ServerInstanceId, Etag.Empty, document.DataAsJson, document.Metadata, null);
 							Database.Documents.Delete(Constants.RavenReplicationSourcesBasePath + "/" + src, document.Etag, null);
 
@@ -340,7 +421,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 				if (document == null)
 				{
-					sourceReplicationInformation = new SourceReplicationInformation
+					sourceReplicationInformation = new SourceReplicationInformationWithBatchInformation
 					{
 						Source = src,
 						ServerInstanceId = localServerInstanceId,
@@ -350,7 +431,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				else
 				{
 					if (sourceReplicationInformation == null)
-						sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+						sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformationWithBatchInformation>();
 
 					if (string.Equals(sourceReplicationInformation.Source, src, StringComparison.OrdinalIgnoreCase) == false 
 						&& sourceReplicationInformation.LastModified.HasValue 
@@ -365,8 +446,32 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					sourceReplicationInformation.ServerInstanceId = localServerInstanceId;
 				}
 
+				var maxNumberOfItemsToReceiveInSingleBatch = Database.Configuration.Replication.MaxNumberOfItemsToReceiveInSingleBatch;
+				var availableMemory = MemoryStatistics.AvailableMemory;
+				var lowMemory = availableMemory < 0.2 * MemoryStatistics.TotalPhysicalMemory && availableMemory < Database.Configuration.AvailableMemoryForRaisingBatchSizeLimit * 2;
+				if (lowMemory)
+				{
+				    int size;
+					var lastBatchSize = sourceReplicationInformation.LastBatchSize;
+					if (lastBatchSize.HasValue && maxNumberOfItemsToReceiveInSingleBatch.HasValue)
+                        size = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
+					else if (lastBatchSize.HasValue)
+                        size = lastBatchSize.Value;
+					else if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
+					    size = maxNumberOfItemsToReceiveInSingleBatch.Value;
+					else
+					    size = 128;
+
+				    sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch =
+                        Math.Max(size / 2, 64);
+				}
+				else
+				{
+					sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch = Database.Configuration.Replication.MaxNumberOfItemsToReceiveInSingleBatch;
+				}
+
 				var currentEtag = GetQueryStringValue("currentEtag");
-				Log.Debug(() => string.Format("Got replication last etag request from {0}: [Local: {1} Remote: {2}]", src, sourceReplicationInformation.LastDocumentEtag, currentEtag));
+				Log.Debug(() => string.Format("Got replication last etag request from {0}: [Local: {1} Remote: {2}]. LowMemory: {3}. MaxNumberOfItemsToReceiveInSingleBatch: {4}.", src, sourceReplicationInformation.LastDocumentEtag, currentEtag, lowMemory, sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch));
 				return GetMessageWithObject(sourceReplicationInformation);
 			}
 		}
@@ -767,25 +872,25 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return null;
 		}
 
-		private void ReplicateDocument(IStorageActionsAccessor actions, string id, RavenJObject metadata, RavenJObject document, string src)
+		private void ReplicateDocument(IStorageActionsAccessor actions, string id, RavenJObject metadata, RavenJObject document, string src, IEnumerable<AbstractDocumentReplicationConflictResolver> conflictResolvers)
 		{
 			new DocumentReplicationBehavior
 			{
 				Actions = actions,
 				Database = Database,
-				ReplicationConflictResolvers = DocsReplicationConflictResolvers,
+				ReplicationConflictResolvers = conflictResolvers,
 				Src = src
 			}.Replicate(id, metadata, document);
 		}
 
 		[Obsolete("Use RavenFS instead.")]
-		private void ReplicateAttachment(IStorageActionsAccessor actions, string id, RavenJObject metadata, byte[] data, string src)
+		private void ReplicateAttachment(IStorageActionsAccessor actions, string id, RavenJObject metadata, byte[] data, string src, IEnumerable<AbstractAttachmentReplicationConflictResolver> conflictResolvers)
 		{
 			new AttachmentReplicationBehavior
 			{
 				Actions = actions,
 				Database = Database,
-				ReplicationConflictResolvers = AttachmentReplicationConflictResolvers,
+				ReplicationConflictResolvers = conflictResolvers,
 				Src = src
 			}.Replicate(id, metadata, data);
 		}
@@ -807,6 +912,28 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			{
 				Log.Warn("Could not deserialize a replication config", e);
 				return null;
+			}
+		}
+
+		private class ReplicationExplanationForDocument
+		{
+			public string Key { get; set; }
+
+			public Etag Etag { get; set; }
+
+			public DestinationInformation Destination { get; set; }
+
+			public string Message { get; set; }
+
+			public class DestinationInformation
+			{
+				public string Url { get; set; }
+
+				public string DatabaseName { get; set; }
+
+				public string ServerInstanceId { get; set; }
+
+				public Etag LastDocumentEtag { get; set; }
 			}
 		}
 	}

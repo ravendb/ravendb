@@ -24,7 +24,7 @@ class metricsIndexBatchSize extends viewModelBase {
     }
 
     modelPolling() {
-        this.fetchStats().then(() => {
+        return this.fetchStats().then(() => {
             this.appendData();
             this.updateGraph();
         });
