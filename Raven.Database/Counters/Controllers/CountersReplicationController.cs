@@ -51,7 +51,7 @@ namespace Raven.Database.Counters.Controllers
 	            foreach (var counter in replicationMessage.Counters)
 	            {
 		            lastEtag = Math.Max(counter.Etag, lastEtag);
-		            var currentCounter = writer.GetCounter(counter.CounterName);
+		            var currentCounter = writer.GetCountersByPrefix(counter.CounterName);
 		            foreach (var serverValue in counter.ServerValues)
 		            {
                         Counter.PerServerValue currentServerValue;

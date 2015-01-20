@@ -63,11 +63,12 @@ namespace Raven.Tests.Counters
 
 				using (var client = store.NewCounterClient(CounterStorageName))
 				{
-					var total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter");
+					var total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter2");
+					total.Should().Be(-1);
+
+					total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter");
 					total.Should().Be(1);
 
-					total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter2");
-					total.Should().Be(-1);
 				}
 			}
 		}

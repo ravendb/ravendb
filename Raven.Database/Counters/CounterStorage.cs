@@ -330,19 +330,19 @@ namespace Raven.Database.Counters
 						};
 					} while (it.MoveNext());
 				}
-			}
+			}		
 
-            public Counter GetCounter(Slice name)
+            public Counter GetCountersByPrefix(string namePrefix)
 			{
-				Slice slice = name;
-				var etagResult = countersEtags.Read(slice);
+	            var etagResult = countersEtags.Read(namePrefix);
 				if (etagResult == null)
 					return null;
                 var etag = etagResult.Reader.ReadBigEndianInt64();
-				using (var it = counters.Iterate())
+	           
+	            using (var it = counters.Iterate())
 				{
-					it.RequiredPrefix = slice;
-					if (it.Seek(slice) == false)
+					it.RequiredPrefix = namePrefix + Constants.ServerIdSeperatorString;
+					if (it.Seek(namePrefix) == false)
 						return null;
 
 					var result = new Counter
@@ -386,7 +386,7 @@ namespace Raven.Database.Counters
                         it.CreateReaderForCurrent().Read(buffer, 0, currentDataSize);
                         var counterName = Encoding.UTF8.GetString(buffer, 0, currentDataSize);
 
-                        var counter = GetCounter(counterName);
+                        var counter = GetCountersByPrefix(counterName);
                         yield return new ReplicationCounter
                         {
                             CounterName = counterName,
@@ -520,8 +520,8 @@ namespace Raven.Database.Counters
 			private readonly CounterStorage parent;
 			private readonly Transaction transaction;
 			private readonly Tree serverNamesToIds, serverIdsToNames, serversLastEtag, counters, etagsCountersIx, countersEtagIx, countersGroups, metadata;
-            private readonly byte[] storeBuffer;
-			private byte[] buffer = new byte[0];
+            private readonly byte[] tempThrowawayBuffer;
+			private byte[] counterFullNameInBytes = new byte[0];
 			private readonly byte[] etagBuffer = new byte[sizeof(long)];
 		    private readonly Reader reader;
 			private readonly int storeBufferLength;
@@ -540,15 +540,15 @@ namespace Raven.Database.Counters
 				countersEtagIx = transaction.State.GetTree(transaction, "counters->etags");
 				metadata = transaction.State.GetTree(transaction, "$metadata");
 
-				storeBuffer = new byte[sizeof(long) + //positive
+				tempThrowawayBuffer = new byte[sizeof(long) + //positive
 									   sizeof(long)]; // negative
 
-				storeBufferLength = storeBuffer.Length;
+				storeBufferLength = tempThrowawayBuffer.Length;
 			}
 
-            public Counter GetCounter(string name)
+            public Counter GetCountersByPrefix(string name)
             {
-                return reader.GetCounter(name);
+                return reader.GetCountersByPrefix(name);
             }
 
 			public long GetLastEtagFor(string server)
@@ -561,9 +561,9 @@ namespace Raven.Database.Counters
 				return reader.SourceIdFor(serverName);
 			}
 
-		    public void Store(string server, string counter, long delta)
+		    public void Store(string server, string counterFullName, long delta)
 		    {
-		        Store(server, counter, result =>
+		        Store(server, counterFullName, result =>
 		        {
                     
 		            int valPos = 0;
@@ -582,30 +582,30 @@ namespace Raven.Database.Counters
 
 		            if (result == null)
 		            {
-		                EndianBitConverter.Big.CopyBytes(delta, storeBuffer, valPos);
-		                EndianBitConverter.Big.CopyBytes(0L, storeBuffer, valPos == 0 ? 8 : 0);
+		                EndianBitConverter.Big.CopyBytes(delta, tempThrowawayBuffer, valPos);
+		                EndianBitConverter.Big.CopyBytes(0L, tempThrowawayBuffer, valPos == 0 ? 8 : 0);
 		            }
 		            else
 		            {
-						result.Reader.Read(storeBuffer, 0, storeBufferLength);
-		                delta += EndianBitConverter.Big.ToInt64(storeBuffer, valPos);
-		                EndianBitConverter.Big.CopyBytes(delta, storeBuffer, valPos);
+						result.Reader.Read(tempThrowawayBuffer, 0, storeBufferLength);
+		                delta += EndianBitConverter.Big.ToInt64(tempThrowawayBuffer, valPos);
+		                EndianBitConverter.Big.CopyBytes(delta, tempThrowawayBuffer, valPos);
 		            }
 		        });
 		    }
 
-            public void Store(string server, string counter, long positive, long negative)
+            public void Store(string server, string counterFullName, long positive, long negative)
             {
-                Store(server, counter, result =>
+                Store(server, counterFullName, result =>
                 {
-                    EndianBitConverter.Big.CopyBytes(positive, storeBuffer, 0);
-                    EndianBitConverter.Big.CopyBytes(negative, storeBuffer, 8);
+                    EndianBitConverter.Big.CopyBytes(positive, tempThrowawayBuffer, 0);
+                    EndianBitConverter.Big.CopyBytes(negative, tempThrowawayBuffer, 8);
                 });
             }
 
 			public bool Reset(string server, string fullCounterName)
 			{
-				Counter counter = GetCounter(fullCounterName); //TODO: implement get counter without an etag
+				Counter counter = GetCountersByPrefix(fullCounterName); //TODO: implement get counter without an etag
 				if (counter != null)
 				{
 					long overallTotalPositive = counter.ServerValues.Sum(x => x.Positive);
@@ -623,64 +623,65 @@ namespace Raven.Database.Counters
 				return false;
 			}
 
-			private void Store(string server, string counter, Action<ReadResult> setStoreBuffer)
+			private void Store(string server, string counterFullName, Action<ReadResult> setStoreBuffer)
 			{
                 parent.LastEtag++;
 				var serverId = GetOrAddServerId(server);
 
-				var counterNameSize = Encoding.UTF8.GetByteCount(counter);
-				var requiredBufferSize = counterNameSize + sizeof (int);
+				var counterNameSize = Encoding.UTF8.GetByteCount(counterFullName);
+				var requiredBufferSize = counterNameSize + sizeof(int) + 1;
 				EnsureBufferSize(requiredBufferSize);
 
-				var end = Encoding.UTF8.GetBytes(counter, 0, counter.Length, buffer, 0);
-				EndianBitConverter.Big.CopyBytes(serverId, buffer, end);
+				var sliceWriter = new SliceWriter(counterFullNameInBytes);
+				sliceWriter.WriteString(counterFullName);
+				sliceWriter.WriteBigEndian(Constants.ServerIdSeparator);
+				sliceWriter.WriteBigEndian(serverId);
 
-				var endOfGroupPrefix = Array.IndexOf(buffer, Constants.GroupSeperator, 0, counterNameSize);
-				if (endOfGroupPrefix == -1)
+				var endOfGroupNameIndex = Array.IndexOf(counterFullNameInBytes, Constants.GroupSeparator, 0, counterNameSize);
+				if (endOfGroupNameIndex == -1)
 					throw new InvalidOperationException("Could not find group name in counter, no separator");
 
-				var groupKeySlice = new Slice(buffer, (ushort) endOfGroupPrefix);
+				var groupKey = new Slice(counterFullNameInBytes, (ushort) endOfGroupNameIndex);
 
 				Debug.Assert(requiredBufferSize < ushort.MaxValue);
-				var slice = new Slice(buffer, (ushort) requiredBufferSize);
-				var result = counters.Read(slice);
+				var counterKey = sliceWriter.CreateSlice();
 
-				if (result == null && !IsCounterAlreadyExists(counter)) //if it's a new counter
+				var counterReadResult = counters.Read(counterKey);
+
+				if (counterReadResult == null && !IsCounterExists(counterFullName)) //if it's a new counter
 				{
-				    var curGroupReadResult = countersGroups.Read(groupKeySlice);
+				    var curGroupReadResult = countersGroups.Read(groupKey);
                     long currentValue = 0;
 				    if (curGroupReadResult != null)
 				    {
-                        
                         currentValue = curGroupReadResult.Reader.ReadBigEndianInt64();
-                        countersGroups.Add(groupKeySlice, new Slice(EndianBitConverter.Big.GetBytes(currentValue)));
+                        countersGroups.Add(groupKey, new Slice(EndianBitConverter.Big.GetBytes(currentValue)));
 				    }
 				    else
 				    {
-                        countersGroups.Add(groupKeySlice, new Slice(EndianBitConverter.Big.GetBytes(currentValue)));
+                        countersGroups.Add(groupKey, new Slice(EndianBitConverter.Big.GetBytes(currentValue)));
 				    }
-
 					//countersGroups.Increment(groupKeySlice, 1); todo: consider return that after pavel's fix will be added
 				}
 
-				setStoreBuffer(result);
+				setStoreBuffer(counterReadResult);
 
-				counters.Add(slice, storeBuffer);
+				counters.Add(counterKey, tempThrowawayBuffer);
 
-				slice = new Slice(buffer, (ushort) counterNameSize);
-				result = countersEtagIx.Read(slice);
+				counterKey = new Slice(counterFullNameInBytes, (ushort) counterNameSize);
+				counterReadResult = countersEtagIx.Read(counterKey);
 				
-				if (result != null) // remove old etag entry
+				if (counterReadResult != null) // remove old etag entry
 				{
-					result.Reader.Read(etagBuffer, 0, sizeof (long));
+					counterReadResult.Reader.Read(etagBuffer, 0, sizeof (long));
                     var oldEtagSlice = new Slice(etagBuffer);
                     etagsCountersIx.Delete(oldEtagSlice);
 				}
                 
 				EndianBitConverter.Big.CopyBytes(parent.LastEtag, etagBuffer, 0);
                 var newEtagSlice = new Slice(etagBuffer);
-                etagsCountersIx.Add(newEtagSlice, slice);
-                countersEtagIx.Add(slice, newEtagSlice);
+                etagsCountersIx.Add(newEtagSlice, counterKey);
+                countersEtagIx.Add(counterKey, newEtagSlice);
 			}
 
 			public void RecordLastEtagFor(string server, long lastEtag)
@@ -707,8 +708,8 @@ namespace Raven.Database.Counters
 
 			private void EnsureBufferSize(int requiredBufferSize)
 			{
-				if (buffer.Length < requiredBufferSize)
-					buffer = new byte[Utils.NearestPowerOfTwo(requiredBufferSize)];
+				if (counterFullNameInBytes.Length < requiredBufferSize)
+					counterFullNameInBytes = new byte[Utils.NearestPowerOfTwo(requiredBufferSize)];
 			}
 
 			private int GetOrAddServerId(string server)
@@ -732,7 +733,7 @@ namespace Raven.Database.Counters
 				return serverId;
 			}
 
-			private bool IsCounterAlreadyExists(Slice name)
+			private bool IsCounterExists(Slice name)
 			{
 				using (var it = counters.Iterate())
 				{

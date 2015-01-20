@@ -248,11 +248,11 @@ namespace Raven.Database.Counters.Controllers
 				var prefix = (groupName == null) ? string.Empty : (groupName + Constants.GroupSeperatorString);
 				var results = (
 					from counterFullName in reader.GetCounterNames(prefix)
-					let counter = reader.GetCounter(counterFullName)
+					let counter = reader.GetCountersByPrefix(counterFullName)
 					select new CounterView
 					{
-						Name = counterFullName.Split(Constants.GroupSeperatorChar)[1],
-						Group = counterFullName.Split(Constants.GroupSeperatorChar)[0],
+						Name = counterFullName.Split(Constants.GroupSeparatorChar)[1],
+						Group = counterFullName.Split(Constants.GroupSeparatorChar)[0],
 						OverallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative),
 
 						Servers = counter.ServerValues.Select(s => new CounterView.ServerValue
@@ -271,14 +271,14 @@ namespace Raven.Database.Counters.Controllers
 			using (var reader = Storage.CreateReader())
 			{
 				var counterFullName = CounterFullName(groupName, counterName);
-				var counter = reader.GetCounter(counterFullName);
+				var counter = reader.GetCountersByPrefix(counterFullName);
 				
 				if (counter == null)
 				{
 					return Request.CreateResponse(HttpStatusCode.NotFound);
 				}
 
-				long overallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative);
+				long overallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative); 
 				return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
 			}
         }
@@ -290,7 +290,7 @@ namespace Raven.Database.Counters.Controllers
             using (var reader = Storage.CreateReader())
             {
 				var counterFullName = CounterFullName(groupName, counterName);
-                var counter = reader.GetCounter(counterFullName);
+                var counter = reader.GetCountersByPrefix(counterFullName);
 
                 if (counter == null)
                 {
