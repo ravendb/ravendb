@@ -143,7 +143,7 @@
                                         <small class="text-muted" data-bind="visible: isDisabled">Disabled</small>
                                         <small class="text-muted" data-bind="text: ' - ' + docsCount + ' entries' " title=" the number of documents affected by this index"></small>
                                         <label>
-                                            <i class="fa" data-bind="css: { 'fa-unlock': lockMode() === 'Unlock' || lockMode() === 'LockedError', 'text-danger': lockMode() === 'LockedError', 'fa-lock': lockMode() === 'LockedIgnore' }"></i>
+                                            <i class="fa" data-bind="css: { 'fa-unlock': lockMode() === 'Unlock' || lockMode() === 'LockedError', 'text-danger': lockMode() === 'LockedError', 'fa-lock': lockMode() === 'LockedIgnore' || lockMode() === 'SideBySide' }"></i>
                                         </label>
                                     </h4>
                                     <div class="pull-right">
@@ -175,6 +175,12 @@
                                                     <a class="btn" data-bind="click: $root.unlockIndex.bind($root, $data), css: { active: lockMode() === 'Unlock' }" title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
                                                         <i class="fa fa-unlock fa-fw"></i>
                                                         Unlocked
+                                                    </a>
+                                                </li>
+                                                <li role="presentation">
+                                                    <a class="btn" data-bind="click: $root.lockSideBySide.bind($root, $data), css: { active: lockMode() === 'SideBySide' }" title="Side-by-side: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored. Index be can only updated via side-by-side index.">
+                                                        <i class="fa fa-lock fa-fw"></i>
+                                                        Locked (side-by-side)
                                                     </a>
                                                 </li>
                                                 <li role="presentation">

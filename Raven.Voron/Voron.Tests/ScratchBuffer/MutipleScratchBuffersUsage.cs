@@ -15,7 +15,7 @@ namespace Voron.Tests.ScratchBuffer
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
 			options.MaxScratchBufferSize = 1024*1024*8; // 2048 pages
-			options.MaxNumberOfPagesInJournalBeforeFlush = 128; 
+			options.MaxNumberOfPagesInJournalBeforeFlush = 96; 
 		}
 
 		[Fact]
@@ -51,7 +51,7 @@ namespace Voron.Tests.ScratchBuffer
 				}
 
 				Thread.Sleep(10);
-				size += 1024;
+				size += 768;
 			}
 		}
 
