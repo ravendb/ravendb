@@ -883,7 +883,6 @@ class metrics extends viewModelBase {
                 "translate(" + self.xScale(self.isoFormat.parse(d.Started)) + "," + self.yReduceScale(d.parent.indexName) + ")");
 
         enteringOps
-            .filter((d, i) => i > 0)
             .append('line')
             .attr('class', 'reduce_split_line')
             .attr('x1', 0)
@@ -1029,7 +1028,6 @@ class metrics extends viewModelBase {
         nv.tooltip.cleanup();
         var html = '<div data-bind="template: { name : \'' + templateName + '\' }"></div>';
         var clickLocation = d3.mouse(container);
-        console.log(clickLocation);
         nv.tooltip.show([clickLocation[0], clickLocation[1]], html, 'n', 0, container, "selectable-tooltip");
         var node = $(".nvtooltip")[0];
         ko.applyBindings({ data: data, tooltipClose: nv.tooltip.cleanup }, node);
