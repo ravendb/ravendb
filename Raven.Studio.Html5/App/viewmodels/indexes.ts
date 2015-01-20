@@ -324,6 +324,10 @@ class indexes extends viewModelBase {
         this.updateIndexLockMode(i, "LockedError");
     }
 
+    lockSideBySide(i: index) {
+        this.updateIndexLockMode(i, 'SideBySide');
+    }
+
     updateIndexLockMode(i: index, newLockMode: string) {
         // The old Studio would prompt if you were sure.
         // However, changing the lock status is easily reversible, so we're skipping the prompt.

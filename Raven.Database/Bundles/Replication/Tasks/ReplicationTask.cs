@@ -407,7 +407,7 @@ namespace Raven.Bundles.Replication.Tasks
 				using (docDb.DisableAllTriggersForCurrentThread())
 				using (var stats = new ReplicationStatisticsRecorder(destination, destinationStats))
 				{
-					SourceReplicationInformation destinationsReplicationInformationForSource;
+					SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource;
 					using (var scope = stats.StartRecording("Destination"))
 					{
 						try
@@ -517,7 +517,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 
 		[Obsolete("Use RavenFS instead.")]
-		private bool? ReplicateAttachments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder)
+		private bool? ReplicateAttachments(ReplicationStrategy destination, SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder)
 		{
 			Tuple<RavenJArray, Etag> tuple;
 			RavenJArray attachments;
@@ -564,7 +564,7 @@ namespace Raven.Bundles.Replication.Tasks
 			return true;
 		}
 
-		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, out int replicatedDocuments)
+		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, out int replicatedDocuments)
 		{
 			replicatedDocuments = 0;
 			JsonDocumentsToReplicate documentsToReplicate = null;
@@ -981,7 +981,7 @@ namespace Raven.Bundles.Replication.Tasks
 			public List<JsonDocument> LoadedDocs { get; set; }
 		}
 
-		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, PrefetchingBehavior prefetchingBehavior, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
+		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, PrefetchingBehavior prefetchingBehavior, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
 		{
 			var timeout = TimeSpan.FromSeconds(docDb.Configuration.Replication.FetchingFromDiskTimeoutInSeconds);
 			var duration = Stopwatch.StartNew();
@@ -989,6 +989,7 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
+				var maxNumberOfItemsToReceiveInSingleBatch = destinationsReplicationInformationForSource.MaxNumberOfItemsToReceiveInSingleBatch;
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
@@ -1003,7 +1004,7 @@ namespace Raven.Bundles.Replication.Tasks
 					{
 						docDb.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 
-						docsToReplicate = GetDocsToReplicate(actions, prefetchingBehavior, result);
+						docsToReplicate = GetDocsToReplicate(actions, prefetchingBehavior, result, maxNumberOfItemsToReceiveInSingleBatch);
 
 						filteredDocsToReplicate =
 							docsToReplicate
@@ -1106,9 +1107,9 @@ namespace Raven.Bundles.Replication.Tasks
 			return result;
 		}
 
-		private List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, PrefetchingBehavior prefetchingBehavior, JsonDocumentsToReplicate result)
+		private List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, PrefetchingBehavior prefetchingBehavior, JsonDocumentsToReplicate result, int? maxNumberOfItemsToReceiveInSingleBatch)
 		{
-			var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(result.LastEtag);
+			var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(result.LastEtag, maxNumberOfItemsToReceiveInSingleBatch);
 			Etag lastEtag = null;
 			if (docsToReplicate.Count > 0)
 				lastEtag = docsToReplicate[docsToReplicate.Count - 1].Etag;
@@ -1136,13 +1137,17 @@ namespace Raven.Bundles.Replication.Tasks
 				results = results.Where(x => EtagUtil.IsGreaterThan(x.Etag, lastTombstoneEtag) == false);
 			}
 
-			return results
-				.OrderBy(x => x.Etag)
-				.ToList();
+			results = results.OrderBy(x => x.Etag);
+
+			// can't return earlier, because we need to know if there are tombstones that need to be send
+			if (maxNumberOfItemsToReceiveInSingleBatch.HasValue) 
+				results = results.Take(maxNumberOfItemsToReceiveInSingleBatch.Value);
+
+			return results.ToList();
 		}
 
 		[Obsolete("Use RavenFS instead.")]
-		private Tuple<RavenJArray, Etag> GetAttachments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
+		private Tuple<RavenJArray, Etag> GetAttachments(SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
 		{
 			var timeout = TimeSpan.FromSeconds(docDb.Configuration.Replication.FetchingFromDiskTimeoutInSeconds);
 			var duration = Stopwatch.StartNew();
@@ -1152,6 +1157,7 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
+				var maxNumberOfItemsToReceiveInSingleBatch = destinationsReplicationInformationForSource.MaxNumberOfItemsToReceiveInSingleBatch;
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
@@ -1162,7 +1168,7 @@ namespace Raven.Bundles.Replication.Tasks
 					lastAttachmentEtag = startEtag;
 					while (true)
 					{
-						attachmentsToReplicate = GetAttachmentsToReplicate(actions, lastAttachmentEtag);
+						attachmentsToReplicate = GetAttachmentsToReplicate(actions, lastAttachmentEtag, maxNumberOfItemsToReceiveInSingleBatch);
 
 						filteredAttachmentsToReplicate = attachmentsToReplicate.Where(attachment => destination.FilterAttachments(attachment, destinationId)).ToList();
 
@@ -1247,15 +1253,19 @@ namespace Raven.Bundles.Replication.Tasks
 		}
 
 		[Obsolete("Use RavenFS instead.")]
-		private static List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Etag lastAttachmentEtag)
+		private static List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Etag lastAttachmentEtag, int? maxNumberOfItemsToReceiveInSingleBatch)
 		{
-			var attachmentInformations = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100, 1024 * 1024 * 10).ToList();
+			var maxNumberOfAttachments = 100;
+			if (maxNumberOfItemsToReceiveInSingleBatch.HasValue) 
+				maxNumberOfAttachments = Math.Min(maxNumberOfAttachments, maxNumberOfItemsToReceiveInSingleBatch.Value);
+
+			var attachmentInformations = actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, maxNumberOfAttachments, 1024 * 1024 * 10).ToList();
 
 			Etag lastEtag = null;
 			if (attachmentInformations.Count > 0)
 				lastEtag = attachmentInformations[attachmentInformations.Count - 1].Etag;
 
-			var maxNumberOfTombstones = Math.Max(100, attachmentInformations.Count);
+			var maxNumberOfTombstones = Math.Max(maxNumberOfAttachments, attachmentInformations.Count);
 			var tombstones = actions
 				.Lists
 				.Read(Constants.RavenReplicationAttachmentsTombstones, lastAttachmentEtag, lastEtag, maxNumberOfTombstones + 1)
@@ -1278,12 +1288,16 @@ namespace Raven.Bundles.Replication.Tasks
 				results = results.Where(x => EtagUtil.IsGreaterThan(x.Etag, lastTombstoneEtag) == false);
 			}
 
-			return results
-				.OrderBy(x => x.Etag)
-				.ToList();
+			results = results.OrderBy(x => x.Etag);
+
+			// can't return earlier, because we need to know if there are tombstones that need to be send
+			if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
+				results = results.Take(maxNumberOfItemsToReceiveInSingleBatch.Value);
+
+			return results.ToList();
 		}
 
-		internal SourceReplicationInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)
+		internal SourceReplicationInformationWithBatchInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)
 		{
 			try
 			{
@@ -1292,7 +1306,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
 						  "&currentEtag=" + currentEtag + "&dbid=" + docDb.TransactionalStorage.Id;
 				var request = httpRavenRequestFactory.Create(url, "GET", destination.ConnectionStringOptions);
-				var lastReplicatedEtagFrom = request.ExecuteRequest<SourceReplicationInformation>();
+				var lastReplicatedEtagFrom = request.ExecuteRequest<SourceReplicationInformationWithBatchInformation>();
 				return lastReplicatedEtagFrom;
 			}
 			catch (WebException e)
