@@ -1956,7 +1956,10 @@ If you really want to do in memory filtering on the data returned from the query
 				default:
 					throw new ArgumentOutOfRangeException("escapeQueryOptions", "Value: " + escapeQueryOptions);
 			}
-			lastEquality = new KeyValuePair<string, string>(fieldName, "(" + searchTerms + ")");
+		    bool hasWhiteSpace = searchTerms.Any(char.IsWhiteSpace);
+		    lastEquality = new KeyValuePair<string, string>(fieldName,
+                hasWhiteSpace ? "(" + searchTerms + ")" : searchTerms
+                );
 
 			queryText.Append(fieldName).Append(":").Append("(").Append(searchTerms).Append(")");
 		}
