@@ -234,10 +234,12 @@ namespace Raven.Database.Counters.Controllers
 
 		public override string TenantName
 		{
-			get { return CounterName; }
+			get { return TenantNamePrefix + CounterName; }
 		}
 
-        public override void MarkRequestDuration(long duration)
+		private const string TenantNamePrefix = "cs/";
+
+		public override void MarkRequestDuration(long duration)
         {
             if (Storage == null)
                 return;

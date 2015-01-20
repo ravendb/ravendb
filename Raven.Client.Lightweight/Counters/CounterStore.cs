@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
@@ -76,7 +77,7 @@ namespace Raven.Client.Counters
 
 			var requestUriString = String.Format(urlTemplate, Url, counterName);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, CountersActionsBase.Verbs.Put))
+			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Put))
 			{
 				try
 				{
@@ -96,7 +97,7 @@ namespace Raven.Client.Counters
 		{
 			var requestUriString = String.Format("{0}/admin/cs/{1}?hard-delete={2}", Url, counterName, hardDelete);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, CountersActionsBase.Verbs.Delete))
+			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 			{
 				try
 				{
@@ -123,9 +124,9 @@ namespace Raven.Client.Counters
 
 		public async Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/counterStorage/conterStorages", Url);
+			var requestUriString = String.Format("{0}/cs/conterStorages", Url);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, CountersActionsBase.Verbs.Get))
+			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
 				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				return response.ToObject<string[]>(JsonSerializer);
@@ -134,9 +135,9 @@ namespace Raven.Client.Counters
 
 		public async Task<List<CounterStorageStats>> GetCounterStoragesStatsAsync(CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/counterStorage/stats", Url);
+			var requestUriString = String.Format("{0}/cs/stats", Url);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, CountersActionsBase.Verbs.Get))
+			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
 				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				return response.ToObject<List<CounterStorageStats>>(JsonSerializer);

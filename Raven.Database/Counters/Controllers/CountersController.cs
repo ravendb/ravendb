@@ -61,7 +61,7 @@ namespace Raven.Database.Counters.Controllers
 
 				var authorizer = (MixedModeRequestAuthorizer)Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
-				var token = authorizer.GenerateSingleUseAuthToken(CounterName, User);
+				var token = authorizer.GenerateSingleUseAuthToken(TenantName, User);
 				return GetMessageWithObject(new
 				{
 					Token = token

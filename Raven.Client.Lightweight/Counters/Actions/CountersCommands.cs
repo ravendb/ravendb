@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Extensions;
 
@@ -19,7 +20,7 @@ namespace Raven.Client.Counters.Actions
 			var requestUriString = String.Format(CultureInfo.InvariantCulture,"{0}/change?group={1}&counterName={2}&delta={3}",
 				counterStorageUrl, @group, counterName, delta);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Post))
+			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 		}
 
@@ -37,7 +38,7 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/change?group={1}&counterName={2}", counterStorageUrl, @group, counterName);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Post))
+			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 		}
 
@@ -45,7 +46,7 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/getCounterOverallTotal?group={1}&counterName={2}", counterStorageUrl, @group, counterName);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Get))
+			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
 				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false); ;
 				return response.Value<long>();
@@ -56,7 +57,7 @@ namespace Raven.Client.Counters.Actions
 		{
 			var requestUriString = String.Format("{0}/getCounterServersValues?group={1}&counterName={2}", counterStorageUrl, @group, counterName);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Get))
+			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
 				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false); ;
 				return response.ToObject<List<CounterView.ServerValue>>();

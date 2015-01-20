@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Exceptions;
@@ -42,7 +43,6 @@ namespace Raven.Client.Counters.Actions
 			_batchOperationTcs = new TaskCompletionSource<bool>();
 			_tempStream = new MemoryStream();
 			_singleAuthUrl = string.Format("{0}/cs/{1}/singleAuthToken", serverUrl, counterName);
-			//_singleAuthUrl = "/singleAuthToken";
 			_batchOperationTask = StartBatchOperation();
 			disposed = false;
 		}
@@ -62,7 +62,7 @@ namespace Raven.Client.Counters.Actions
 				}
 
 				var requestUriString = String.Format("{0}/batch", counterStorageUrl);
-				using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Post, true, true)
+				using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post, true, true)
 										.AddOperationHeader("Single-Use-Auth-Token", authToken))
 				{
 					var token = _cts.Token;
@@ -89,7 +89,7 @@ namespace Raven.Client.Counters.Actions
 						{
 							var result = RavenJToken.TryLoad(stream); 
 							if (result == null) //precaution - should prevent NRE in case the crap hits the fan
-								throw new ApplicationException("Invalid response from server...maybe its not json?");
+								throw new ApplicationException("Invalid response from server... maybe its not json?");
 
 							operationId = result.Value<long>("OperationId");
 						}
@@ -133,7 +133,7 @@ namespace Raven.Client.Counters.Actions
 		private async Task<RavenJToken> GetOperationStatusAsync(long id)
 		{
 			var url = serverUrl + "/operation/status?id=" + id;
-			using (var request = CreateHttpJsonRequest(url, Verbs.Get))
+			using (var request = CreateHttpJsonRequest(url, HttpMethods.Get))
 			{
 				try
 				{
@@ -286,7 +286,7 @@ namespace Raven.Client.Counters.Actions
 
 		private async Task<RavenJToken> GetAuthToken()
 		{
-			using (var request = CreateHttpJsonRequest(_singleAuthUrl, Verbs.Get, disableRequestCompression: true))
+			using (var request = CreateHttpJsonRequest(_singleAuthUrl, HttpMethods.Get, disableRequestCompression: true))
 			{
 				var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return response;
@@ -295,7 +295,7 @@ namespace Raven.Client.Counters.Actions
 
 		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
 		{
-			using (var request = CreateHttpJsonRequest(_singleAuthUrl, Verbs.Get, disableRequestCompression: true, disableAuthentication: true))
+			using (var request = CreateHttpJsonRequest(_singleAuthUrl, HttpMethods.Get, disableRequestCompression: true, disableAuthentication: true))
 			{
 				request.AddOperationHeader("Single-Use-Auth-Token", token);
 				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);

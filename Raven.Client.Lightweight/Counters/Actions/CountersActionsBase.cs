@@ -12,15 +12,6 @@ namespace Raven.Client.Counters.Actions
 	/// </summary>
 	public abstract class CountersActionsBase : IHoldProfilingInformation
  	{
-		internal class Verbs
-		{
-			internal const string Put = "PUT";
-			internal const string Post = "POST";
-			internal const string Get = "GET";
-			internal const string Delete = "DELETE";
-			internal const string Head = "HEAD";
-		}
-
 		protected readonly OperationCredentials credentials;
 		protected readonly HttpJsonRequestFactory jsonRequestFactory;
 		protected readonly string serverUrl;
@@ -69,4 +60,5 @@ namespace Raven.Client.Counters.Actions
 			return request;
 		}
 	}
+
 }
