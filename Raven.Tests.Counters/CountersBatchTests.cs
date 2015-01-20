@@ -12,7 +12,7 @@ namespace Raven.Tests.Counters
 		private const string CounterName = "FooBarCounter";
 
 		[Fact]
-		public async Task CountersBatch_should_work()
+		public async Task CountersBatch_increment_decrement_should_work()
 		{
 			using (var store = NewRemoteCountersStore())
 			{
@@ -23,11 +23,11 @@ namespace Raven.Tests.Counters
 						{"Raven/Counters/DataDir", @"~\Counters\Cs1"}
 					},
 				}, CounterName);
-				using (var counterBatch = store.BatchOperation(CounterName,new CountersBatchOptions {BatchSizeLimit = 3}))
+				using (var batchOperation = store.BatchOperation(CounterName,new CountersBatchOptions {BatchSizeLimit = 3}))
 				{
-					counterBatch.Increment("FooGroup");
-					counterBatch.Increment("FooGroup");
-					counterBatch.Decrement("FooGroup");
+					batchOperation.Increment("FooGroup");
+					batchOperation.Increment("FooGroup");
+					batchOperation.Decrement("FooGroup");
 				}
 
 				using (var client = store.NewCounterClient(CounterName))
@@ -45,13 +45,14 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore())
 			{
-				await store.CreateCounterAsync(new CountersDocument()
+				await store.CreateCounterAsync(new CountersDocument
 				{
 					Settings = new Dictionary<string, string>
 					{
 						{"Raven/Counters/DataDir", @"~\Counters\Cs1"}
 					},
 				}, CounterName);
+
 				using (var counterBatch = store.BatchOperation(CounterName, new CountersBatchOptions { BatchSizeLimit = countOfOperationsInBatch / 2 }))
 				{
 					int x = 0;

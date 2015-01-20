@@ -38,7 +38,13 @@ namespace Raven.Client.Counters
 
 			if (ensureDefaultCounterExists && !string.IsNullOrWhiteSpace(DefaultCounterName))
 			{
-				CreateCounterAsync(new CountersDocument(), DefaultCounterName).Wait();
+				CreateCounterAsync(new CountersDocument
+				{
+					Settings = new Dictionary<string, string>
+					{
+						{"Raven/Counters/DataDir", @"~\Counters\" + DefaultCounterName}
+					},
+				}, DefaultCounterName).Wait();
 			}
 		}
 
