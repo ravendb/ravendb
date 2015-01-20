@@ -9,34 +9,69 @@ namespace Raven.Tests.Counters
 {
 	public class CountersBatchTests : RavenBaseCountersTest
 	{
-		private const string CounterName = "FooBarCounter";
+		private const string CounterStorageName = "FooBarCounter";
 
 		[Fact]
 		public async Task CountersBatch_increment_decrement_should_work()
 		{
 			using (var store = NewRemoteCountersStore())
 			{
-				await store.CreateCounterAsync(new CountersDocument()
+				await store.CreateCounterStorageAsync(new CounterStorageDocument()
 				{
 					Settings = new Dictionary<string, string>
 					{
 						{"Raven/Counters/DataDir", @"~\Counters\Cs1"}
 					},
-				}, CounterName);
-				using (var batchOperation = store.BatchOperation(CounterName,new CountersBatchOptions {BatchSizeLimit = 3}))
+				}, CounterStorageName);
+				using (var batchOperation = store.BatchOperation(CounterStorageName,new CountersBatchOptions {BatchSizeLimit = 3}))
 				{
-					batchOperation.Increment("FooGroup");
-					batchOperation.Increment("FooGroup");
-					batchOperation.Decrement("FooGroup");
+					batchOperation.Increment("FooGroup","FooCounter");
+					batchOperation.Increment("FooGroup", "FooCounter");
+					batchOperation.Decrement("FooGroup", "FooCounter");
 				}
 
-				using (var client = store.NewCounterClient(CounterName))
+				using (var client = store.NewCounterClient(CounterStorageName))
 				{
-					var total = await client.Commands.GetOverallTotalAsync("FooGroup");
+					var total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter");
 					total.Should().Be(1);
 				}
 			}
 		}
+
+		[Fact]
+		public async Task CountersBatch_increment_decrement_with_different_counters_in_the_batch_should_work()
+		{
+			using (var store = NewRemoteCountersStore())
+			{
+				await store.CreateCounterStorageAsync(new CounterStorageDocument()
+				{
+					Settings = new Dictionary<string, string>
+					{
+						{"Raven/Counters/DataDir", @"~\Counters\Cs1"}
+					},
+				}, CounterStorageName);
+				using (var batchOperation = store.BatchOperation(CounterStorageName, new CountersBatchOptions { BatchSizeLimit = 3 }))
+				{
+					batchOperation.Increment("FooGroup", "FooCounter");
+					batchOperation.Increment("FooGroup", "FooCounter");
+					batchOperation.Decrement("FooGroup", "FooCounter");
+
+					batchOperation.Increment("FooGroup", "FooCounter2");
+					batchOperation.Decrement("FooGroup", "FooCounter2");
+					batchOperation.Decrement("FooGroup", "FooCounter2");
+				}
+
+				using (var client = store.NewCounterClient(CounterStorageName))
+				{
+					var total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter");
+					total.Should().Be(1);
+
+					total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter2");
+					total.Should().Be(-1);
+				}
+			}
+		}
+
 
 		[Theory]
 		[InlineData(33)]
@@ -45,27 +80,27 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore())
 			{
-				await store.CreateCounterAsync(new CountersDocument
+				await store.CreateCounterStorageAsync(new CounterStorageDocument
 				{
 					Settings = new Dictionary<string, string>
 					{
 						{"Raven/Counters/DataDir", @"~\Counters\Cs1"}
 					},
-				}, CounterName);
+				}, CounterStorageName);
 
-				using (var counterBatch = store.BatchOperation(CounterName, new CountersBatchOptions { BatchSizeLimit = countOfOperationsInBatch / 2 }))
+				using (var counterBatch = store.BatchOperation(CounterStorageName, new CountersBatchOptions { BatchSizeLimit = countOfOperationsInBatch / 2 }))
 				{
 					int x = 0;
 					for (int i = 0; i < countOfOperationsInBatch; i++)
 					{
-						counterBatch.Increment("FooGroup");
+						counterBatch.Increment("FooGroup", "FooCounter");
 						x++;
 					}
 				}
 
-				using (var client = store.NewCounterClient(CounterName))
+				using (var client = store.NewCounterClient(CounterStorageName))
 				{
-					var total = await client.Commands.GetOverallTotalAsync("FooGroup");
+					var total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter");
 					total.Should().Be(countOfOperationsInBatch);
 				}
 			}

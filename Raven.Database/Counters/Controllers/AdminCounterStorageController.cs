@@ -20,18 +20,18 @@ namespace Raven.Database.Counters.Controllers
     public class AdminCounterStorageController : BaseAdminController
     {
         [HttpPut]
-		[RavenRoute("admin/cs/{*id}")]
-        public async Task<HttpResponseMessage> Put(string id)
+		[RavenRoute("admin/cs/{*counterStorageName}")]
+        public async Task<HttpResponseMessage> Put(string counterStorageName)
         {
-            var docKey = Constants.RavenCounterStoragePathPrefix + id;
+            var docKey = Constants.RavenCounterStoragePathPrefix + counterStorageName;
 
 			var isCounterStorageUpdate = CheckQueryStringParameterResult("update");
-			if (IsCounterStorageNameExists(id) && !isCounterStorageUpdate)
+			if (IsCounterStorageNameExists(counterStorageName) && !isCounterStorageUpdate)
             {
-				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", id), HttpStatusCode.Conflict);
+				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", counterStorageName), HttpStatusCode.Conflict);
             }
 
-            var dbDoc = await ReadJsonObjectAsync<CountersDocument>();
+            var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>();
             CountersLandlord.Protect(dbDoc);
             var json = RavenJObject.FromObject(dbDoc);
             json.Remove("Id");
@@ -48,18 +48,18 @@ namespace Raven.Database.Counters.Controllers
 	    }
 
 		[HttpDelete]
-        [RavenRoute("admin/cs/{*id}")]
-		public HttpResponseMessage Delete(string id)
+		[RavenRoute("admin/cs/{*counterStorageName}")]
+		public HttpResponseMessage Delete(string counterStorageName)
 		{
-			var docKey = Constants.RavenCounterStoragePathPrefix + id;
-            var configuration = CountersLandlord.CreateTenantConfiguration(id);
+			var docKey = Constants.RavenCounterStoragePathPrefix + counterStorageName;
+            var configuration = CountersLandlord.CreateTenantConfiguration(counterStorageName);
 
 			if (configuration == null)
 				return GetEmptyMessage();
 
-            if (!IsCounterStorageNameExists(id))
+            if (!IsCounterStorageNameExists(counterStorageName))
             {
-                return GetMessageWithString(string.Format("Counter Storage {0} doesn't exist!", id), HttpStatusCode.NotFound);
+                return GetMessageWithString(string.Format("Counter Storage {0} doesn't exist!", counterStorageName), HttpStatusCode.NotFound);
             }
 
 			Database.Documents.Delete(docKey, null, null);
@@ -81,8 +81,8 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 		[HttpPost]
-		[RavenRoute("admin/cs/{*id}")]
-		public HttpResponseMessage Disable(string id, bool isSettingDisabled)
+		[RavenRoute("admin/cs/{*counterStorageName}")]
+		public HttpResponseMessage Disable(string counterStorageName, bool isSettingDisabled)
 		{
 			throw new NotImplementedException();
 		}
@@ -94,9 +94,9 @@ namespace Raven.Database.Counters.Controllers
 			throw new NotImplementedException();
 		}
 
-        private bool IsCounterStorageNameExists(string id)
+        private bool IsCounterStorageNameExists(string counterStorageName)
         {
-			var docKey = Constants.RavenCounterStoragePathPrefix + id;
+			var docKey = Constants.RavenCounterStoragePathPrefix + counterStorageName;
             var database = Database.Documents.Get(docKey, null);
             return database != null;
         }

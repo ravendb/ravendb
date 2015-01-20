@@ -31,7 +31,8 @@ namespace Raven.Client.Counters.Actions
 		private long serverOperationId;
 		private readonly string _singleAuthUrl;
 
-		internal CountersBatchOperation(ICounterStore parent, string counterName, CountersBatchOptions options = null) : base(parent, counterName)
+		internal CountersBatchOperation(ICounterStore parent, string counterStorageName, CountersBatchOptions options = null)
+			: base(parent, counterStorageName)
 		{
 
 			if(options != null && options.BatchSizeLimit < 1)
@@ -42,7 +43,7 @@ namespace Raven.Client.Counters.Actions
 			_cts = new CancellationTokenSource();
 			_batchOperationTcs = new TaskCompletionSource<bool>();
 			_tempStream = new MemoryStream();
-			_singleAuthUrl = string.Format("{0}/cs/{1}/singleAuthToken", serverUrl, counterName);
+			_singleAuthUrl = string.Format("{0}/cs/{1}/singleAuthToken", serverUrl, counterStorageName);
 			_batchOperationTask = StartBatchOperation();
 			disposed = false;
 		}
@@ -201,7 +202,8 @@ namespace Raven.Client.Counters.Actions
 											Delta = g.Sum(x => x.Delta)
 										};
 
-			return aggregationResult.ToList();
+			var aggregateItems = aggregationResult.ToList();
+			return aggregateItems;
 		}
 
 		private void WriteCollectionToBuffer(Stream targetStream, ICollection<CounterChange> items, out long bytesWritten)
@@ -226,24 +228,24 @@ namespace Raven.Client.Counters.Actions
 			}
 		}
 
-		public void Change(string group, long delta)
+		public void Change(string groupName, string counterName, long delta)
 		{
 			_changesQueue.Add(new CounterChange
 			{
 				Delta = delta,
-				Group = group,
+				Group = groupName,
 				Name = counterName
 			});
 		}
 
-		public void Increment(string group)
+		public void Increment(string groupName, string counterName)
 		{
-			Change(@group, 1);
+			Change(groupName, counterName, 1);
 		}
 
-		public void Decrement(string group)
+		public void Decrement(string groupName, string counterName)
 		{
-			Change(@group, -1);
+			Change(groupName, counterName,-1);
 		}
 
 		public void Dispose()

@@ -9,9 +9,9 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Counters.Controllers
 {
-    public class CounterReplicationController : RavenCountersApiController
+    public class CountersReplicationController : RavenCountersApiController
     {
-		[RavenRoute("cs/{counterName}/lastEtag")]
+		[RavenRoute("cs/{counterStorageName}/lastEtag")]
 		[HttpGet]
 		public HttpResponseMessage GetLastEtag(string serverUrl)
 		{
@@ -23,7 +23,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-        [RavenRoute("cs/{counterName}/replication")]
+        [RavenRoute("cs/{counterStorageName}/replication")]
 		[HttpPost]
         public async Task<HttpResponseMessage> Post()
         {
@@ -99,7 +99,7 @@ namespace Raven.Database.Counters.Controllers
             }
         }
 
-        [RavenRoute("cs/{counterName}/replication/heartbeat")]
+        [RavenRoute("cs/{counterStorageName}/replication/heartbeat")]
 		[HttpPost]
         public HttpResponseMessage HeartbeatPost(string sourceServer)
         {
@@ -118,7 +118,7 @@ namespace Raven.Database.Counters.Controllers
             return GetEmptyMessage();
         }
 
-		[RavenRoute("cs/{counterName}/replications/get")]
+		[RavenRoute("cs/{counterStorageName}/replications/get")]
 		[HttpGet]
 		public HttpResponseMessage ReplicationsGet()
 		{
@@ -134,7 +134,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("cs/{counterName}/replications/save")]
+		[RavenRoute("cs/{counterStorageName}/replications/save")]
 		[HttpPost]
 		public async Task<HttpResponseMessage> ReplicationsSave()
 		{
@@ -147,16 +147,5 @@ namespace Raven.Database.Counters.Controllers
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}
-
-	    [RavenRoute("cs/{counterName}/replications/stats")]
-        [HttpGet]
-        public HttpResponseMessage ReplicationStats()
-        {
-            return Request.CreateResponse(HttpStatusCode.OK,
-                new CounterStorageReplicationStats()
-                {
-                    Stats = Storage.ReplicationTask.DestinationStats.Values.ToList()
-                });
-        }
     }
 }

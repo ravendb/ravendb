@@ -77,7 +77,7 @@ namespace Raven.Database.Server.Tenancy
 
         protected InMemoryRavenConfiguration CreateConfiguration(
                         string tenantId,
-                        CountersDocument document,
+                        CounterStorageDocument document,
                         string folderPropName,
                         InMemoryRavenConfiguration parentConfiguration)
         {
@@ -117,9 +117,7 @@ namespace Raven.Database.Server.Tenancy
             return config;
         }
 
-
-
-        private CountersDocument GetTenantDatabaseDocument(string tenantId)
+        private CounterStorageDocument GetTenantDatabaseDocument(string tenantId)
 		{
 			JsonDocument jsonDocument;
 			using (systemDatabase.DisableAllTriggersForCurrentThread())
@@ -130,7 +128,7 @@ namespace Raven.Database.Server.Tenancy
 				jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))
 				return null;
 
-            var document = jsonDocument.DataAsJson.JsonDeserialization<CountersDocument>();
+            var document = jsonDocument.DataAsJson.JsonDeserialization<CounterStorageDocument>();
 			if (document.Settings.Keys.Contains("Raven/Counters/DataDir") == false)
 				throw new InvalidOperationException("Could not find Raven/Counters/DataDir");
 
@@ -189,7 +187,7 @@ namespace Raven.Database.Server.Tenancy
 			return true;
 		}
 
-        public void Unprotect(CountersDocument configDocument)
+        public void Unprotect(CounterStorageDocument configDocument)
         {
             if (configDocument.SecuredSettings == null)
             {
@@ -216,7 +214,7 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public void Protect(CountersDocument configDocument)
+        public void Protect(CounterStorageDocument configDocument)
         {
             if (configDocument.SecuredSettings == null)
             {
@@ -262,16 +260,16 @@ namespace Raven.Database.Server.Tenancy
 
 		public async Task<CounterStorage> GetCounterInternal(string name)
 		{
-			Task<CounterStorage> db;
-			if (TryGetOrCreateResourceStore(name, out db))
-				return await db;
+			Task<CounterStorage> cs;
+			if (TryGetOrCreateResourceStore(name, out cs))
+				return await cs;
 			return null;
 		}
 
 		public void ForAllCounters(Action<CounterStorage> action)
 		{
 			foreach (var value in ResourcesStoresCache
-				.Select(db => db.Value)
+				.Select(cs => cs.Value)
 				.Where(value => value.Status == TaskStatus.RanToCompletion))
 			{
 				action(value.Result);

@@ -20,7 +20,7 @@ namespace Raven.Client.Counters
 
 		string Url { get; set; }
 
-		string DefaultCounterName { get; set; }
+		string DefaultCounterStorageName { get; set; }
 
 		Convention Convention { get; set; }
 
@@ -29,19 +29,17 @@ namespace Raven.Client.Counters
 		/// <summary>
 		/// Create new counter storage on the server.
 		/// </summary>
-		/// <param name="countersDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
-		/// <param name="counterName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
-		Task CreateCounterAsync(CountersDocument countersDocument, string counterName, bool shouldUpateIfExists = false, CancellationToken token = default(CancellationToken));
+		/// <param name="counterStorageDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
+		/// <param name="counterStorageName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
+		Task CreateCounterStorageAsync(CounterStorageDocument counterStorageDocument, string counterStorageName, bool shouldUpateIfExists = false, CancellationToken token = default(CancellationToken));
 
-		Task DeleteCounterStorageAsync(string counterName, bool hardDelete = false, CancellationToken token = default(CancellationToken));
+		Task DeleteCounterStorageAsync(string counterStorageName, bool hardDelete = false, CancellationToken token = default(CancellationToken));
 		
 		Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken));
 
-		Task<List<CounterStorageStats>> GetCounterStoragesStatsAsync(CancellationToken token = default(CancellationToken));
+		CountersBatchOperation BatchOperation(string counterStorageName, CountersBatchOptions options);
 
-		CountersBatchOperation BatchOperation(string counterName, CountersBatchOptions options);
-
-		CountersClient NewCounterClient(string counterName);
+		CountersClient NewCounterClient(string counterStorageName);
 
 		void Initialize(bool ensureDefaultCounterExists = false);
 	}

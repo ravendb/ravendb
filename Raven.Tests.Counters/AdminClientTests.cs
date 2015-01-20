@@ -8,43 +8,31 @@ namespace Raven.Tests.Counters
 {
 	public class AdminClientTests : RavenBaseCountersTest
 	{
-		private const string CounterName = "FooBarCounter";
+		private const string CounterStorageName = "FooBarCounter";
 
 		[Fact]
-		public void Should_be_able_to_initialize()
-		{
-			Assert.DoesNotThrow(() =>
-			{
-				using (var counterStore = NewRemoteCountersStore())
-				using (var client = counterStore.NewCounterClient(CounterName))
-				{
-				}
-			});
-		}
-
-		[Fact]
-		public async Task Should_be_able_to_create_counter()
+		public async Task Should_be_able_to_create_counter_storage()
 		{
 			using (var store = NewRemoteCountersStore())
 			{
-				await store.CreateCounterAsync(new CountersDocument(), CounterName);
+				await store.CreateCounterStorageAsync(new CounterStorageDocument(), CounterStorageName);
 
 				var counterStorageNames = await store.GetCounterStoragesNamesAsync();
 				counterStorageNames.Should().HaveCount(1)
-					.And.Contain(CounterName);
+					.And.Contain(CounterStorageName);
 			}
 		}
 
 		[Fact]
-		public async Task Should_be_able_to_create_multiple_counters()
+		public async Task Should_be_able_to_create_multiple_counter_storages()
 		{
-			var expectedClientNames = new[] { CounterName + "A", CounterName + "B", CounterName + "C" };
+			var expectedClientNames = new[] { CounterStorageName + "A", CounterStorageName + "B", CounterStorageName + "C" };
 			using (var store = NewRemoteCountersStore())
 			{
-				var defaultCountersDocument = new CountersDocument();
-				await store.CreateCounterAsync(defaultCountersDocument, expectedClientNames[0]);
-				await store.CreateCounterAsync(defaultCountersDocument, expectedClientNames[1]);
-				await store.CreateCounterAsync(defaultCountersDocument, expectedClientNames[2]);
+				var defaultCountersDocument = new CounterStorageDocument();
+				await store.CreateCounterStorageAsync(defaultCountersDocument, expectedClientNames[0]);
+				await store.CreateCounterStorageAsync(defaultCountersDocument, expectedClientNames[1]);
+				await store.CreateCounterStorageAsync(defaultCountersDocument, expectedClientNames[2]);
 
 				var counterStorageNames = await store.GetCounterStoragesNamesAsync();
 				counterStorageNames.Should().BeEquivalentTo(expectedClientNames);
@@ -52,15 +40,15 @@ namespace Raven.Tests.Counters
 		}
 
 		[Fact]
-		public async Task Should_be_able_to_create_multiple_counters_in_parallel()
+		public async Task Should_be_able_to_create_multiple_counter_storages_in_parallel()
 		{
-			var expectedClientNames = new[] { CounterName + "A", CounterName + "B", CounterName + "C" };
+			var expectedClientNames = new[] { CounterStorageName + "A", CounterStorageName + "B", CounterStorageName + "C" };
 			using (var store = NewRemoteCountersStore())
 			{
-				var defaultCountersDocument = new CountersDocument();
-				var t1 = store.CreateCounterAsync(defaultCountersDocument, expectedClientNames[0]);
-				var t2 = store.CreateCounterAsync(defaultCountersDocument, expectedClientNames[1]);
-				var t3 = store.CreateCounterAsync(defaultCountersDocument, expectedClientNames[2]);
+				var defaultCountersDocument = new CounterStorageDocument();
+				var t1 = store.CreateCounterStorageAsync(defaultCountersDocument, expectedClientNames[0]);
+				var t2 = store.CreateCounterStorageAsync(defaultCountersDocument, expectedClientNames[1]);
+				var t3 = store.CreateCounterStorageAsync(defaultCountersDocument, expectedClientNames[2]);
 
 				await Task.WhenAll(t1, t2, t3);
 
@@ -75,10 +63,10 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore())
 			{
-				await store.CreateCounterAsync(new CountersDocument(),CounterName);
+				await store.CreateCounterStorageAsync(new CounterStorageDocument(),CounterStorageName);
 
 				//invoking create counter with the same name twice should fail
-				store.Invoking(c => c.CreateCounterAsync(new CountersDocument(),CounterName).Wait())
+				store.Invoking(c => c.CreateCounterStorageAsync(new CounterStorageDocument(),CounterStorageName).Wait())
 					 .ShouldThrow<InvalidOperationException>();
 			}
 		}

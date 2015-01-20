@@ -87,11 +87,11 @@ namespace Raven.Database.Counters
 	        {
 	            var stats = new CounterStorageStats()
 	            {
-	                Name = Name,
+	                CounterStorageName = Name,
                     Url = CounterStorageUrl,
 	                CountersCount = reader.GetCountersCount(),
                     LastCounterEtag = LastEtag,
-                    ApproximateTaskCount = ReplicationTask.GetActiveTasksCount(),
+                    TasksCount = ReplicationTask.GetActiveTasksCount(),
                     CounterStorageSizeOnDiskInMB = ConvertBytesToMBs(GetCounterStorageSizeOnDisk()),
                     GroupsCount =  reader.GetGroupsCount(),
                     ServersCount = reader.GetServersCount()
@@ -113,11 +113,11 @@ namespace Raven.Database.Counters
         /// <remarks>
         ///     This is a potentially a very expensive call, avoid making it if possible.
         /// </remarks>
-        public long GetCounterStorageSizeOnDisk()
+        private long GetCounterStorageSizeOnDisk()
         {
-            if (storageEnvironment.Options is Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+            if (storageEnvironment.Options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
             {
-                var directoryStorageOptions = storageEnvironment.Options as Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions;
+                var directoryStorageOptions = storageEnvironment.Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions;
                 string[] counters = Directory.GetFiles(directoryStorageOptions.BasePath, "*.*", SearchOption.AllDirectories);
                 long totalCountersSize = counters.Sum(file =>
                 {
@@ -151,7 +151,7 @@ namespace Raven.Database.Counters
                 Resets = metrics.Resets.CreateMeterData(),
                 Increments = metrics.Increments.CreateMeterData(),
                 Decrements = metrics.Decrements.CreateMeterData(),
-                ClientRuqeusts = metrics.ClientRequests.CreateMeterData(),
+                ClientRequests = metrics.ClientRequests.CreateMeterData(),
                 IncomingReplications = metrics.IncomingReplications.CreateMeterData(),
                 OutgoingReplications = metrics.OutgoingReplications.CreateMeterData(),
 
@@ -239,13 +239,12 @@ namespace Raven.Database.Counters
 		[CLSCompliant(false)]
 		public Reader CreateReader()
 		{
-			return new Reader(this, storageEnvironment);
+			return new Reader(storageEnvironment);
 		}
 
 		[CLSCompliant(false)]
 		public Writer CreateWriter()
 		{
-			
 			LastWrite = SystemTime.UtcNow;
 			return new Writer(this, storageEnvironment);
 		}
@@ -266,19 +265,17 @@ namespace Raven.Database.Counters
 		[CLSCompliant(false)]
 		public class Reader : IDisposable
 		{
-		    private readonly CounterStorage parent;
-		    private readonly Transaction transaction;
+			private readonly Transaction transaction;
 			private readonly Tree serverNamesToIds, serverIdsToNames, serversLastEtag, counters, countersEtags, countersGroups, etagsCounters, metadata;
 			private readonly byte[] serverIdBytes = new byte[sizeof(int)];
 
-            public Reader(CounterStorage parent, StorageEnvironment storageEnvironment)
-                : this(parent, storageEnvironment.NewTransaction(TransactionFlags.Read)) { }
+            public Reader(StorageEnvironment storageEnvironment)
+                : this(storageEnvironment.NewTransaction(TransactionFlags.Read)) { }
 
 			[CLSCompliant(false)]
-            public Reader(CounterStorage parent, Transaction t)
+            public Reader(Transaction tx)
             {
-                this.parent = parent;
-                transaction = t;
+				transaction = tx;
 				serverNamesToIds = transaction.State.GetTree(transaction, "serverNames->Ids");
 				serverIdsToNames = transaction.State.GetTree(transaction, "Ids->serverNames");
 				serversLastEtag = transaction.State.GetTree(transaction, "servers->lastEtag");
@@ -347,6 +344,7 @@ namespace Raven.Database.Counters
 					it.RequiredPrefix = slice;
 					if (it.Seek(slice) == false)
 						return null;
+
 					var result = new Counter
 					{
 						Etag = etag
@@ -532,7 +530,7 @@ namespace Raven.Database.Counters
 			{
 				this.parent = parent;
                 transaction = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite);
-                reader = new Reader(parent, transaction);
+                reader = new Reader(transaction);
 				serverNamesToIds = transaction.State.GetTree(transaction, "serverNames->Ids");
 				serverIdsToNames = transaction.State.GetTree(transaction, "Ids->serverNames");
 				serversLastEtag = transaction.State.GetTree(transaction, "servers->lastEtag");

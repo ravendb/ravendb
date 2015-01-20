@@ -37,15 +37,15 @@ namespace Raven.Client.Counters
 		{
 			InitializeSecurity();
 
-			if (ensureDefaultCounterExists && !string.IsNullOrWhiteSpace(DefaultCounterName))
+			if (ensureDefaultCounterExists && !string.IsNullOrWhiteSpace(DefaultCounterStorageName))
 			{
-				CreateCounterAsync(new CountersDocument
+				CreateCounterStorageAsync(new CounterStorageDocument
 				{
 					Settings = new Dictionary<string, string>
 					{
-						{"Raven/Counters/DataDir", @"~\Counters\" + DefaultCounterName}
+						{"Raven/Counters/DataDir", @"~\Counters\" + DefaultCounterStorageName}
 					},
-				}, DefaultCounterName).Wait();
+				}, DefaultCounterStorageName).Wait();
 			}
 		}
 
@@ -55,7 +55,7 @@ namespace Raven.Client.Counters
 
 		public string Url { get; set; }
 
-		public string DefaultCounterName { get; set; }
+		public string DefaultCounterStorageName { get; set; }
 
 		public Convention Convention { get; set; }
 
@@ -64,38 +64,38 @@ namespace Raven.Client.Counters
 		/// <summary>
 		/// Create new counter storage on the server.
 		/// </summary>
-		/// <param name="countersDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
-		/// <param name="counterName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
-		public async Task CreateCounterAsync(CountersDocument countersDocument, string counterName, bool shouldUpateIfExists = false, CancellationToken token = default(CancellationToken))
+		/// <param name="counterStorageDocument">Settings for the counter storage. If null, default settings will be used, and the name specified in the client ctor will be used</param>
+		/// <param name="counterStorageName">Override counter storage name specified in client ctor. If null, the name already specified will be used</param>
+		public async Task CreateCounterStorageAsync(CounterStorageDocument counterStorageDocument, string counterStorageName, bool shouldUpateIfExists = false, CancellationToken token = default(CancellationToken))
 		{
-			if (countersDocument == null)
-				throw new ArgumentNullException("countersDocument");
+			if (counterStorageDocument == null)
+				throw new ArgumentNullException("counterStorageDocument");
 
 			var urlTemplate = "{0}/admin/cs/{1}";
 			if (shouldUpateIfExists)
 				urlTemplate += "?update=true";
 
-			var requestUriString = String.Format(urlTemplate, Url, counterName);
+			var requestUriString = String.Format(urlTemplate, Url, counterStorageName);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Put))
 			{
 				try
 				{
-					await request.WriteAsync(RavenJObject.FromObject(countersDocument)).WithCancellation(token).ConfigureAwait(false);
+					await request.WriteAsync(RavenJObject.FromObject(counterStorageDocument)).WithCancellation(token).ConfigureAwait(false);
 				}
 				catch (ErrorResponseException e)
 				{
 					if (e.StatusCode == HttpStatusCode.Conflict)
-						throw new InvalidOperationException("Cannot create counter storage with the name '" + counterName + "' because it already exists. Use CreateOrUpdateCounterStorageAsync in case you want to update an existing counter storage", e);
+						throw new InvalidOperationException("Cannot create counter storage with the name '" + counterStorageName + "' because it already exists. Use CreateOrUpdateCounterStorageAsync in case you want to update an existing counter storage", e);
 
 					throw;
 				}					
 			}
 		}
 
-		public async Task DeleteCounterStorageAsync(string counterName, bool hardDelete = false, CancellationToken token = default(CancellationToken))
+		public async Task DeleteCounterStorageAsync(string counterStorageName, bool hardDelete = false, CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/admin/cs/{1}?hard-delete={2}", Url, counterName, hardDelete);
+			var requestUriString = String.Format("{0}/admin/cs/{1}?hard-delete={2}", Url, counterStorageName, hardDelete);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
 			{
@@ -106,41 +106,30 @@ namespace Raven.Client.Counters
 				catch (ErrorResponseException e)
 				{
 					if (e.StatusCode == HttpStatusCode.NotFound)
-						throw new InvalidOperationException(string.Format("Counter storage with specified name ({0}) doesn't exist", counterName));
+						throw new InvalidOperationException(string.Format("Counter storage with specified name ({0}) doesn't exist", counterStorageName));
 					throw;
 				}
 			}
 		}
 
-		public CountersBatchOperation BatchOperation(string counterName, CountersBatchOptions options = null)
+		public CountersBatchOperation BatchOperation(string counterStorageName, CountersBatchOptions options = null)
 		{
-			 return new CountersBatchOperation(this,counterName,options);
+			 return new CountersBatchOperation(this,counterStorageName,options);
 		}
 
-		public CountersClient NewCounterClient(string counterName)
+		public CountersClient NewCounterClient(string counterStorageName)
 		{
-			return new CountersClient(this,counterName);
+			return new CountersClient(this,counterStorageName);
 		}
 
 		public async Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/cs/conterStorages", Url);
+			var requestUriString = String.Format("{0}/cs/counterStorageNames", Url);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
 				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 				return response.ToObject<string[]>(JsonSerializer);
-			}
-		}
-
-		public async Task<List<CounterStorageStats>> GetCounterStoragesStatsAsync(CancellationToken token = default(CancellationToken))
-		{
-			var requestUriString = String.Format("{0}/cs/stats", Url);
-
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
-			{
-				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.ToObject<List<CounterStorageStats>>(JsonSerializer);
 			}
 		}
 

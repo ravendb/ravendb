@@ -53,7 +53,7 @@ namespace Raven.Tests.Issues
         public void CheckRoutes()
         {
             RegisterNoSysDbForControllersInThisNamespace<FilesController>();
-            RegisterNoSysDbForControllersInThisNamespace<CountersController>();
+            RegisterNoSysDbForControllersInThisNamespace<CounterOperationsController>();
 
 			RegisterRouteForOnlySysDb<StudioTasksController>(a => a.GetLatestServerBuildVersion(false));
             RegisterRouteForOnlySysDb<AdminController>(a => a.Stats());

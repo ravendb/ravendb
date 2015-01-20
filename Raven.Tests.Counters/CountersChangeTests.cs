@@ -8,15 +8,15 @@ namespace Raven.Tests.Counters
 {
 	public class CountersChangeTests : RavenBaseCountersTest
 	{
-		private const string CounterStorageName = "FooBarCounter";
-
+		private const string CounterStorageName = "FooBarCounterStore";
+		private const string CounterName = "FooBarCounter";
 		[Fact]
 		public async Task CountersIncrement_should_work()
 		{
 			using (var store = NewRemoteCountersStore())
 			using (var client = store.NewCounterClient(CounterStorageName))
 			{
-				await store.CreateCounterAsync(new CountersDocument
+				await store.CreateCounterStorageAsync(new CounterStorageDocument
 				{
 					Settings = new Dictionary<string, string>
 					{
@@ -25,14 +25,14 @@ namespace Raven.Tests.Counters
 				}, CounterStorageName);
 
 				const string CounterGroupName = "FooBarGroup";
-				await client.Commands.IncrementAsync(CounterGroupName);
+				await client.Commands.IncrementAsync(CounterGroupName, CounterName);
 
-				var total = await client.Commands.GetOverallTotalAsync(CounterGroupName);
+				var total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
 				total.Should().Be(1);
 
-				await client.Commands.IncrementAsync(CounterGroupName);
+				await client.Commands.IncrementAsync(CounterGroupName, CounterName);
 
-				total = await client.Commands.GetOverallTotalAsync(CounterGroupName);
+				total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
 				total.Should().Be(2);
 			}
 		}
@@ -43,7 +43,7 @@ namespace Raven.Tests.Counters
 			using (var store = NewRemoteCountersStore())
 			using (var client = store.NewCounterClient(CounterStorageName))
 			{
-				await store.CreateCounterAsync(new CountersDocument
+				await store.CreateCounterStorageAsync(new CounterStorageDocument
 				{
 					Settings = new Dictionary<string, string>
 					{
@@ -52,14 +52,14 @@ namespace Raven.Tests.Counters
 				}, CounterStorageName);
 
 				const string CounterGroupName = "FooBarGroup";
-				await client.Commands.ChangeAsync(CounterGroupName,5);
+				await client.Commands.ChangeAsync(CounterGroupName, CounterName, 5);
 
-				var total = await client.Commands.GetOverallTotalAsync(CounterGroupName);
+				var total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
 				total.Should().Be(5);
 
-				await client.Commands.ChangeAsync(CounterGroupName, -30);
+				await client.Commands.ChangeAsync(CounterGroupName,CounterName, -30);
 
-				total = await client.Commands.GetOverallTotalAsync(CounterGroupName);
+				total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
 				total.Should().Be(-25);
 			}
 			

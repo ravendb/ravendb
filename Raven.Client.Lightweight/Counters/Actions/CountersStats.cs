@@ -10,34 +10,34 @@ namespace Raven.Client.Counters.Actions
 {
 	public class CountersStats : CountersActionsBase
 	{
-		internal CountersStats(ICounterStore parent, string counterName)
-			: base(parent, counterName)
+		internal CountersStats(ICounterStore parent,string counterStorageName)
+			: base(parent, counterStorageName)
 		{
 		}
 
-		public async Task<List<CounterStorageStats>> GetCounterStorageStatsAsync(CancellationToken token = default (CancellationToken))
+		public async Task<CounterStorageStats> GetCounterStatsAsync(CancellationToken token = default (CancellationToken))
 		{
 			var requestUriString = String.Format("{0}/stats", counterStorageUrl);
 
 			using (var request = CreateHttpJsonRequest(requestUriString,HttpMethods.Get))
 			{
 				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.ToObject<List<CounterStorageStats>>(jsonSerializer);
+				return response.ToObject<CounterStorageStats>(jsonSerializer);
 			}
 		}
 
-		public async Task<List<CountersStorageMetrics>> GetCounterStorageMetricsAsync(CancellationToken token = default (CancellationToken))
+		public async Task<CountersStorageMetrics> GetCounterMetricsAsync(CancellationToken token = default (CancellationToken))
 		{
 			var requestUriString = String.Format("{0}/metrics", counterStorageUrl);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
 			{
 				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.ToObject<List<CountersStorageMetrics>>(jsonSerializer);
+				return response.ToObject<CountersStorageMetrics>(jsonSerializer);
 			}
 		}
 
-		public async Task<List<CounterStorageReplicationStats>> GetCounterStoragRelicationStatsAsync(CancellationToken token = default (CancellationToken))
+		public async Task<List<CounterStorageReplicationStats>> GetCounterRelicationStatsAsync(CancellationToken token = default (CancellationToken))
 		{
 			var requestUriString = String.Format("{0}/replications/stats", counterStorageUrl);
 

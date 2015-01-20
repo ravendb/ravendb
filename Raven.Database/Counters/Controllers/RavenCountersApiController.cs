@@ -15,6 +15,7 @@ using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -49,10 +50,13 @@ namespace Raven.Database.Counters.Controllers
 	    {
 	        get
 	        {
-                var counterStorage = CountersLandlord.GetCounterInternal(CounterName);
+		        if (string.IsNullOrWhiteSpace(CounterStorageName))
+			        throw new InvalidOperationException("Could not find counter storage name in path.. maybe it is missing or the request URL is malformed?");
+
+		        var counterStorage = CountersLandlord.GetCounterInternal(CounterStorageName);
                 if (counterStorage == null)
                 {
-                    throw new InvalidOperationException("Could not find a counter storage named: " + CounterName);
+                    throw new InvalidOperationException("Could not find a counter storage named: " + CounterStorageName);
                 }
 
                 return counterStorage.Result;
@@ -68,7 +72,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
 				{
-					RequestManager.SetThreadLocalState(InnerHeaders, CounterName);
+					RequestManager.SetThreadLocalState(InnerHeaders, CounterStorageName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
 				}, httpException => GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable));
 			}
@@ -89,10 +93,10 @@ namespace Raven.Database.Counters.Controllers
             if (IsInternalRequest == false)
 				RequestManager.IncrementRequestCount();
 
-			var fileSystemInternal = await CountersLandlord.GetCounterInternal(CounterName);
+			var fileSystemInternal = await CountersLandlord.GetCounterInternal(CounterStorageName);
 			if (fileSystemInternal == null)
 			{
-				var msg = "Could not find a counters named: " + CounterName;
+				var msg = "Could not find a counters named: " + CounterStorageName;
 				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
 			}
 
@@ -115,21 +119,19 @@ namespace Raven.Database.Counters.Controllers
 			if (values.ContainsKey("MS_SubRoutes"))
 			{
 				var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
-				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("counterName"));
+				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("counterStorageName"));
 
 				if (selectedData != null)
-					CounterName = selectedData.Values["counterName"] as string;
+					CounterStorageName = selectedData.Values["counterStorageName"] as string;
 			}
 			else
 			{
 				if (values.ContainsKey("cou"))
-					CounterName = values["counterName"] as string;
+					CounterStorageName = values["counterStorageName"] as string;
 			}
-			if (CounterName == null)
-				throw new InvalidOperationException("Could not find counter name for this request");
 		}
 
-		public string CounterName { get; private set; }
+		public string CounterStorageName { get; private set; }
 
 		private NameValueCollection QueryString
 		{
@@ -173,14 +175,12 @@ namespace Raven.Database.Counters.Controllers
 
 	    public override bool SetupRequestToProperDatabase(RequestManager rm)
 		{
-			var tenantId = CounterName;
+			var tenantId = CounterStorageName;
 
-			if (string.IsNullOrWhiteSpace(tenantId))
-			{
-				throw new HttpException(503, "Could not find a counter with no name");
-			}
+		    if (string.IsNullOrWhiteSpace(tenantId))
+			    return true;
 
-			Task<CounterStorage> resourceStoreTask;
+		    Task<CounterStorage> resourceStoreTask;
 			bool hasDb;
 			try
 			{
@@ -234,7 +234,7 @@ namespace Raven.Database.Counters.Controllers
 
 		public override string TenantName
 		{
-			get { return TenantNamePrefix + CounterName; }
+			get { return TenantNamePrefix + CounterStorageName; }
 		}
 
 		private const string TenantNamePrefix = "cs/";
@@ -255,14 +255,20 @@ namespace Raven.Database.Counters.Controllers
 		{
 			get
 			{
-				var counter = CountersLandlord.GetCounterInternal(CounterName);
+				var counter = CountersLandlord.GetCounterInternal(CounterStorageName);
 				if (counter == null)
 				{
-					throw new InvalidOperationException("Could not find a counter named: " + CounterName);
+					throw new InvalidOperationException("Could not find a counter storage named: " + CounterStorageName);
 				}
 
 				return counter.Result;
 			}
 		}
+
+		protected static string CounterFullName(string groupName, string counterName)
+		{
+			return String.Join(Constants.GroupSeperatorString, new[] { groupName, counterName });
+		}
+
 	}
 }

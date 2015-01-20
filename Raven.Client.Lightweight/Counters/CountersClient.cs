@@ -20,7 +20,7 @@ namespace Raven.Client.Counters
 
 		public string ServerUrl { get; private set; }
 
-		public string CounterName { get; private set; }
+		public string CounterStorageName { get; private set; }
 
 
 		public ICredentials Credentials { get; private set; }
@@ -57,7 +57,7 @@ namespace Raven.Client.Counters
 		 */
 
 
-		public CountersClient(ICounterStore parent, string counterName)
+		public CountersClient(ICounterStore parent, string counterStorageName)
         {
 	        this.parent = parent;
 	        try
@@ -77,7 +77,7 @@ namespace Raven.Client.Counters
 	            //todo: implement remote counter changes
                 //notifications = new RemoteFileSystemChanges(serverUrl, apiKey, credentials, jsonRequestFactory, convention, replicationInformer, () => { });
                                
-				InitializeActions(counterName);
+				InitializeActions(counterStorageName);
             }
             catch (Exception)
             {
@@ -86,11 +86,11 @@ namespace Raven.Client.Counters
             }
         }
 
-		private void InitializeActions(string counterName)
+		private void InitializeActions(string counterStorageName)
 	    {
-		    Stats = new CountersStats(parent, counterName);
-		    Replication = new ReplicationClient(parent, counterName);
-		    Commands = new CountersCommands(parent, counterName);
+		    Stats = new CountersStats(parent, counterStorageName);
+		    Replication = new ReplicationClient(parent, counterStorageName);
+		    Commands = new CountersCommands(parent, counterStorageName);
 	    }
 
 	    public void Dispose()

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Raven.Abstractions.Counters
 {
 
-    public class CountersDocument
+    public class CounterStorageDocument
     {
         /// <summary>
         /// The ID can be either the counters storage name ("CounterName") or the full document name ("Raven/Counters/CounterName").
@@ -14,7 +14,7 @@ namespace Raven.Abstractions.Counters
         public Dictionary<string, string> SecuredSettings { get; set; } //preparation for air conditioner
         public bool Disabled { get; set; }
 
-        public CountersDocument()
+        public CounterStorageDocument()
         {
             Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 			SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
