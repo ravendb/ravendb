@@ -253,9 +253,9 @@ namespace Raven.Abstractions.Data
 		}
 	}
 
-	public class ParallelPefromanceStats : BasePerformanceStats
+	public class ParallelPerformanceStats : BasePerformanceStats
 	{
-		public ParallelPefromanceStats()
+		public ParallelPerformanceStats()
 		{
 			BatchedOperations = new List<ParallelBatchStats>();
 		}

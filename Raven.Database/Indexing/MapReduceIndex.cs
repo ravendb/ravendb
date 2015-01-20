@@ -229,7 +229,7 @@ namespace Raven.Database.Indexing
 				}
 			});
 
-			performanceStats.Add(new ParallelPefromanceStats
+			performanceStats.Add(new ParallelPerformanceStats
 			{
 				NumberOfThreads = parallelOperations.Count,
 				DurationMs = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds,
@@ -287,7 +287,7 @@ namespace Raven.Database.Indexing
 				parallelReductionOperations.Enqueue(parallelStats);
 			}));
 
-			performanceStats.Add(new ParallelPefromanceStats
+			performanceStats.Add(new ParallelPerformanceStats
 			{
 				NumberOfThreads = parallelReductionOperations.Count,
 				DurationMs = (long)(SystemTime.UtcNow - parallelReductionStart).TotalMilliseconds,

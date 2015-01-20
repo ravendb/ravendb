@@ -402,7 +402,7 @@ namespace Raven.Database.Indexing
 					});
 				});
 
-				reduceLevelStats.Operations.Add(new ParallelPefromanceStats
+				reduceLevelStats.Operations.Add(new ParallelPerformanceStats
 				{
 					NumberOfThreads = parallelOperations.Count,
 					DurationMs = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds,
