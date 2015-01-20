@@ -247,22 +247,30 @@
                 </tr>
             </thead>
             <tbody>
+                <!-- ko if: parent.stats.ReduceType == 'None' -->
+                <tr data-bind="if: parent.stats.ReduceType == 'None'">
+                    <td>Operation</td>
+                    <td>Post reduce operation</td>
+                </tr>
+                <!-- /ko -->
+                <!-- ko if: parent.stats.ReduceType != 'None' -->
                 <tr>
                     <td>Reduce type</td>
                     <td data-bind="text: parent.stats.ReduceType, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
-                <tr>
+                <tr data-bind="if: parent.stats.ReduceType != 'None'">
                     <td>Level</td>
                     <td data-bind="text: Level, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
-                <tr>
+                <tr data-bind="if: parent.stats.ReduceType != 'None'">
                     <td>Items count</td>
                     <td data-bind="text: ItemsCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
-                <tr>
+                <tr data-bind="if: parent.stats.ReduceType != 'None'">
                     <td>Output count</td>
                     <td data-bind="text: OutputCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
+                <!-- /ko -->
                 <tr>
                     <td>Duration</td>
                     <td data-bind="text: Duration, attr: { colspan: $root.data.CacheThreadCount }"></td>
