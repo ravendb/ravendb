@@ -4,10 +4,12 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Server.WebApi.Attributes;
@@ -334,8 +336,8 @@ namespace Raven.Database.FileSystem.Controllers
                 long? size = -1;
                 ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor =>
                 {
+					AssertPutOperationNotVetoed(name, headers, accessor);
                     AssertFileIsNotBeingSynced(name, accessor, true);
-                    StorageOperationsTask.IndicateFileToDelete(name);
 
                     var contentLength = Request.Content.Headers.ContentLength;
                     var sizeHeader = GetHeader("RavenFS-size");
@@ -354,7 +356,12 @@ namespace Raven.Database.FileSystem.Controllers
                         size = sizeForParse;
                     }
 
+					FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(name, headers, accessor));
+
+					StorageOperationsTask.IndicateFileToDelete(name);
                     accessor.PutFile(name, size, headers);
+
+					FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, headers, accessor));
 
                     Search.Index(name, headers);                  
                 }));
@@ -362,7 +369,7 @@ namespace Raven.Database.FileSystem.Controllers
                 log.Debug("Inserted a new file '{0}' with ETag {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));
 
                 using (var contentStream = await Request.Content.ReadAsStreamAsync())
-                using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, contentStream, name))
+                using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, FileSystem.PutTriggers, contentStream, name, headers))
                 {
                     await readFileToDatabase.Execute();                
    
@@ -417,7 +424,18 @@ namespace Raven.Database.FileSystem.Controllers
             return GetEmptyMessage(HttpStatusCode.Created);
 		}
 
-		private void StartSynchronizeDestinationsInBackground()
+	    private void AssertPutOperationNotVetoed(string name, RavenJObject headers, IStorageActionsAccessor accessor)
+	    {
+			var vetoResult = FileSystem.PutTriggers
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(name, headers, accessor) })
+				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+		    if (vetoResult != null)
+		    {
+			    throw new OperationVetoedException("PUT vetoed on file " + name + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+		    }
+	    }
+
+	    private void StartSynchronizeDestinationsInBackground()
 		{
 			Task.Factory.StartNew(async () => await SynchronizationTask.SynchronizeDestinationsAsync(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
 		}
@@ -427,18 +445,26 @@ namespace Raven.Database.FileSystem.Controllers
 			private readonly byte[] buffer;
 			private readonly BufferPool bufferPool;
 			private readonly string filename;
+
+			private readonly RavenJObject headers;
+
 			private readonly Stream inputStream;
 			private readonly ITransactionalStorage storage;
+
+			private readonly OrderedPartCollection<AbstractFilePutTrigger> putTriggers;
+
 			private readonly IHashEncryptor md5Hasher;
 			public int TotalSizeRead;
 			private int pos;
 
-			public ReadFileToDatabase(BufferPool bufferPool, ITransactionalStorage storage, Stream inputStream, string filename)
+			public ReadFileToDatabase(BufferPool bufferPool, ITransactionalStorage storage, OrderedPartCollection<AbstractFilePutTrigger> putTriggers, Stream inputStream, string filename, RavenJObject headers)
 			{
 				this.bufferPool = bufferPool;
 				this.inputStream = inputStream;
 				this.storage = storage;
+				this.putTriggers = putTriggers;
 				this.filename = filename;
+				this.headers = headers;
 				buffer = bufferPool.TakeBuffer(StorageConstants.MaxPageSize);
 			    md5Hasher = Encryptor.Current.CreateHash();
 			}
@@ -460,7 +486,11 @@ namespace Raven.Database.FileSystem.Controllers
 
 					if (read == 0) // nothing left to read
 					{
-						storage.Batch(accessor => accessor.CompleteFileUpload(filename));
+						storage.Batch(accessor =>
+						{
+							accessor.CompleteFileUpload(filename);
+							putTriggers.Apply(trigger => trigger.AfterUpload(filename, headers, accessor));
+						});
 					    FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
 						return; // task is done
 					}
@@ -469,6 +499,7 @@ namespace Raven.Database.FileSystem.Controllers
 					{
 						var hashKey = accessor.InsertPage(buffer, read);
 						accessor.AssociatePage(filename, hashKey, pos, read);
+						putTriggers.Apply(trigger => trigger.OnUpload(filename, headers, hashKey, pos, read, accessor));
 					}));
 
 					md5Hasher.TransformBlock(buffer, 0, read);

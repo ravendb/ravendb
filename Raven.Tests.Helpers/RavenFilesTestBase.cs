@@ -134,7 +134,7 @@ namespace Raven.Tests.Helpers
 
         protected virtual FilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
                                                 ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null, 
-                                                bool runInMemory = true, Action<RavenConfiguration> customConfig = null)
+                                                bool runInMemory = true, Action<RavenConfiguration> customConfig = null, string activeBundles = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
@@ -143,7 +143,8 @@ namespace Raven.Tests.Helpers
                 enableAuthentication: enableAuthentication, 
                 customConfig: customConfig,
                 requestedStorage: requestedStorage, 
-                runInMemory:runInMemory);
+                runInMemory:runInMemory,
+				activeBundles:activeBundles);
 
             server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
