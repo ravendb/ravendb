@@ -840,7 +840,7 @@ class metrics extends viewModelBase {
             .attr('class', 'opGroup');
 
         var op = batches.selectAll('.op_g')
-            .data((d: reducingBatchInfoDto) => d.PerfStats, d => d.indexName);
+            .data((d: reducingBatchInfoDto) => d.PerfStats);
 
         op.exit().remove();
 
