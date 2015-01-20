@@ -62,7 +62,7 @@ namespace Raven.SlowTests.Synchronization
 		[Fact]
 		public void IndexerTest()
 		{
-			using (var store = NewDocumentStore(requestedStorage: "esent", configureStore: store => store.Conventions.AcceptGzipContent = false))
+			using (var store = NewDocumentStore(requestedStorage: "esent", configureStore: s => s.Conventions.AcceptGzipContent = false))
 			{
 				var index = new RavenDocumentsByEntityName();
 				index.Execute(store);
