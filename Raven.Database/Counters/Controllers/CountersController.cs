@@ -17,6 +17,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.FileSystem;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
+using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json;
@@ -45,7 +46,7 @@ namespace Raven.Database.Counters.Controllers
 		[HttpPost]
 		public async Task<HttpResponseMessage> CountersBatch()
 		{
-			/*if (string.IsNullOrEmpty(GetQueryStringValue("no-op")) == false)
+			if (string.IsNullOrEmpty(GetQueryStringValue("no-op")) == false)
 			{
 				// this is a no-op request which is there just to force the client HTTP layer to handle the authentication
 				// only used for legacy clients
@@ -60,12 +61,12 @@ namespace Raven.Database.Counters.Controllers
 
 				var authorizer = (MixedModeRequestAuthorizer)Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
-				var token = authorizer.GenerateSingleUseAuthToken(CountersName, User);
+				var token = authorizer.GenerateSingleUseAuthToken(CounterName, User);
 				return GetMessageWithObject(new
 				{
 					Token = token
 				});
-			}*/
+			}
 
 			if (HttpContext.Current != null)
 				HttpContext.Current.Server.ScriptTimeout = 60 * 60 * 6; // six hours should do it, I think.
@@ -80,13 +81,12 @@ namespace Raven.Database.Counters.Controllers
 			
 			var operationId = ExtractOperationId();
 			var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
-			var mre = new ManualResetEventSlim();
 			var task = Task.Factory.StartNew(() =>
             {
 				
 				var timeout = timeoutTokenSource.TimeoutAfter(TimeSpan.FromSeconds(360)); //TODO : make this configurable
 
-				var changeBatches = YieldChangeBatches(inputStream, timeout, mre, countOfChanges => counterChanges += countOfChanges);
+				var changeBatches = YieldChangeBatches(inputStream, timeout, countOfChanges => counterChanges += countOfChanges);
 	            try
 	            {
 		            using (var writer = Storage.CreateWriter())
@@ -138,7 +138,7 @@ namespace Raven.Database.Counters.Controllers
 			});
 		}
 
-		private IEnumerable<IEnumerable<CounterChange>> YieldChangeBatches(Stream requestStream, CancellationTimeout timeout, ManualResetEventSlim mre, Action<int> changeCounterFunc)
+		private IEnumerable<IEnumerable<CounterChange>> YieldChangeBatches(Stream requestStream, CancellationTimeout timeout, Action<int> changeCounterFunc)
 		{
 			var serializer = JsonExtensions.CreateDefaultJsonSerializer();
 			try
@@ -167,7 +167,6 @@ namespace Raven.Database.Counters.Controllers
 			}
 			finally
 			{
-				mre.Set();
 				requestStream.Close();
 			}
 

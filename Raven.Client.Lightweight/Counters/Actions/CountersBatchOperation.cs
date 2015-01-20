@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -11,7 +10,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json.Bson;
@@ -30,8 +28,9 @@ namespace Raven.Client.Counters.Actions
 		private readonly CountersBatchOptions _options;
 		private readonly MemoryStream _tempStream;
 		private long serverOperationId;
+		private readonly string _singleAuthUrl;
 
-		internal CountersBatchOperation(ICounterStore parent,string counterName, CountersBatchOptions options = null) : base(parent, counterName)
+		internal CountersBatchOperation(ICounterStore parent, string counterName, CountersBatchOptions options = null) : base(parent, counterName)
 		{
 
 			if(options != null && options.BatchSizeLimit < 1)
@@ -42,6 +41,8 @@ namespace Raven.Client.Counters.Actions
 			_cts = new CancellationTokenSource();
 			_batchOperationTcs = new TaskCompletionSource<bool>();
 			_tempStream = new MemoryStream();
+			_singleAuthUrl = string.Format("{0}/cs/{1}/singleAuthToken", serverUrl, counterName);
+			//_singleAuthUrl = "/singleAuthToken";
 			_batchOperationTask = StartBatchOperation();
 			disposed = false;
 		}
@@ -50,8 +51,19 @@ namespace Raven.Client.Counters.Actions
 		{
 			using (ConnectionOptions.Expect100Continue(serverUrl))
 			{
+				var authToken = await GetToken().ConfigureAwait(false);
+				try
+				{
+					authToken = await ValidateThatWeCanUseAuthenticateTokens(authToken).ConfigureAwait(false);
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
+				}
+
 				var requestUriString = String.Format("{0}/batch", counterStorageUrl);
-				using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Post))
+				using (var request = CreateHttpJsonRequest(requestUriString, Verbs.Post, true, true)
+										.AddOperationHeader("Single-Use-Auth-Token", authToken))
 				{
 					var token = _cts.Token;
 					var response = await request.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
@@ -71,7 +83,6 @@ namespace Raven.Client.Counters.Actions
 					await response.AssertNotFailingResponse();
 
 					long operationId;
-
 					using (response)
 					{
 						using (var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
@@ -263,7 +274,6 @@ namespace Raven.Client.Counters.Actions
 				_tempStream.Dispose(); //precaution
 				disposed = true;
 			}
-
 		}
 
 		private async Task<string> GetToken()
@@ -276,15 +286,16 @@ namespace Raven.Client.Counters.Actions
 
 		private async Task<RavenJToken> GetAuthToken()
 		{
-			using (var request = CreateHttpJsonRequest("/singleAuthToken", Verbs.Get, disableRequestCompression: true))
+			using (var request = CreateHttpJsonRequest(_singleAuthUrl, Verbs.Get, disableRequestCompression: true))
 			{
-				return await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				return response;
 			}
 		}
 
 		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
 		{
-			using (var request = CreateHttpJsonRequest("/singleAuthToken", Verbs.Get, disableRequestCompression: true, disableAuthentication: true))
+			using (var request = CreateHttpJsonRequest(_singleAuthUrl, Verbs.Get, disableRequestCompression: true, disableAuthentication: true))
 			{
 				request.AddOperationHeader("Single-Use-Auth-Token", token);
 				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);

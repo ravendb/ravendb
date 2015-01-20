@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Counters;
-using Raven.Client.Linq;
 using Xunit;
 using Xunit.Extensions;
 
@@ -40,8 +39,8 @@ namespace Raven.Tests.Counters
 		}
 
 		[Theory]
-		//[InlineData(10)]
-		[InlineData(100000)]
+		[InlineData(33)]
+		[InlineData(100)]
 		public async Task CountersBatch_with_multiple_batches_should_work(int countOfOperationsInBatch)
 		{
 			using (var store = NewRemoteCountersStore())
@@ -53,7 +52,7 @@ namespace Raven.Tests.Counters
 						{"Raven/Counters/DataDir", @"~\Counters\Cs1"}
 					},
 				}, CounterName);
-				using (var counterBatch = store.BatchOperation(CounterName, new CountersBatchOptions { BatchSizeLimit = countOfOperationsInBatch }))
+				using (var counterBatch = store.BatchOperation(CounterName, new CountersBatchOptions { BatchSizeLimit = countOfOperationsInBatch / 2 }))
 				{
 					int x = 0;
 					for (int i = 0; i < countOfOperationsInBatch; i++)

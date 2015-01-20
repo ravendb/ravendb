@@ -43,13 +43,30 @@ namespace Raven.Client.Counters.Actions
 			ProfilingInformation = parent.ProfilingInformation;
 		}
 
-		protected HttpJsonRequest CreateHttpJsonRequest(string requestUriString, string httpVerb, bool disableRequestCompression = false, bool disableAuthentication = false)
+		protected HttpJsonRequest CreateHttpJsonRequest(string requestUriString, string httpVerb, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
 		{
-			return jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, httpVerb, credentials, convention)
+			CreateHttpJsonRequestParams @params;
+			if (timeout.HasValue)
 			{
-				DisableRequestCompression = disableRequestCompression,
-				DisableAuthentication = disableAuthentication
-			});
+				@params = new CreateHttpJsonRequestParams(this, requestUriString, httpVerb, credentials, convention)
+				{
+					DisableRequestCompression = disableRequestCompression,
+					DisableAuthentication = disableAuthentication,
+					Timeout = timeout.Value
+				};
+			}
+			else
+			{
+				@params = new CreateHttpJsonRequestParams(this, requestUriString, httpVerb, credentials, convention)
+				{
+					DisableRequestCompression = disableRequestCompression,
+					DisableAuthentication = disableAuthentication,
+				};				
+			}
+			var request = jsonRequestFactory.CreateHttpJsonRequest(@params);
+		
+
+			return request;
 		}
 	}
 }
