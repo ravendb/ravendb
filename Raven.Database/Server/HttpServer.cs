@@ -126,6 +126,7 @@ namespace Raven.Database.Server
 		public HttpServer(InMemoryRavenConfiguration configuration, DocumentDatabase resourceStore)
 		{
 			_maxNumberOfThreadsForDatabaseToLoad = new SemaphoreSlim(configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
+		    _maxSecondsForTaskToWaitForDatabaseToLoad = configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
 			if (configuration.RunInMemory == false)
@@ -275,8 +276,9 @@ namespace Raven.Database.Server
 			using (var p = Process.GetCurrentProcess())
 				return p.ProcessName;
 		});
+	    private int _maxSecondsForTaskToWaitForDatabaseToLoad;
 
-		public void Dispose()
+	    public void Dispose()
 		{
 			bool hasWriteLock = true;
 			if (disposerLock.TryEnterWriteLock(TimeSpan.FromMinutes(2)) == false)
@@ -956,7 +958,7 @@ namespace Raven.Database.Server
 			{
 				try
 				{
-					const int timeToWaitForDatabaseToLoad = 5;
+                    //currentDatabase
 					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
 					{
 						if (_maxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
@@ -973,7 +975,7 @@ namespace Raven.Database.Server
 						}
 						try
 						{
-							if (resourceStoreTask.Wait(TimeSpan.FromSeconds(timeToWaitForDatabaseToLoad)) == false)
+                            if (resourceStoreTask.Wait(TimeSpan.FromSeconds(_maxSecondsForTaskToWaitForDatabaseToLoad)) == false)
 							{
 								ctx.SetStatusToNotAvailable();
 								ctx.WriteJson(new
@@ -981,7 +983,7 @@ namespace Raven.Database.Server
 									Error =
 										string.Format(
 											"The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.",
-											tenantId, timeToWaitForDatabaseToLoad),
+                                            tenantId, _maxSecondsForTaskToWaitForDatabaseToLoad),
 								});
 								return false;
 							}
