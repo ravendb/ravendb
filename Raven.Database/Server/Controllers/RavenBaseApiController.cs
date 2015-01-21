@@ -63,29 +63,27 @@ namespace Raven.Database.Server.Controllers
 
 		public HttpHeaders InnerHeaders
 		{
-			get { return CloneRequestHttpHeaders(InnerRequest); }
+			get
+			{
+			    HttpRequestMessage message = InnerRequest;
+			    return CloneRequestHttpHeaders(message.Headers, message.Content == null ? null : message.Content.Headers);
+			}
 		}
 
-        public HttpHeaders CloneRequestHttpHeaders(HttpRequestMessage message)
+        public static HttpHeaders CloneRequestHttpHeaders( HttpRequestHeaders httpRequestHeaders, HttpContentHeaders httpContentHeaders)
         {
             var headers = new Headers();
-            foreach (var header in message.Headers)
+            foreach (var header in httpRequestHeaders)
             {
-                if (header.Value.Count() == 1)
-                    headers.Add(header.Key, header.Value.First());
-                else
-                    headers.Add(header.Key, header.Value.ToList());
+                 headers.Add(header.Key, header.Value);
             }
 
-            if (message.Content == null)
+            if (httpContentHeaders == null)
                 return headers;
 
-            foreach (var header in message.Content.Headers)
+            foreach (var header in httpContentHeaders)
             {
-                if (header.Value.Count() == 1)
-                    headers.Add(header.Key, header.Value.First());
-                else
-                    headers.Add(header.Key, header.Value.ToList());
+                headers.Add(header.Key, header.Value);
             }
 
             return headers; 
@@ -744,9 +742,9 @@ namespace Raven.Database.Server.Controllers
         {
             get
             {
-                if (Configuration == null)
+                if (Configuration == null || landlord != null)
                     return landlord;
-                return (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
+                return landlord = (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
             }
         }
 

@@ -197,17 +197,21 @@ namespace Raven.Database.Server.Controllers
             get { return DatabasesLandlord.SystemConfiguration; }
         }
 
+	    private DocumentDatabase _currentDb;
 		public DocumentDatabase Database
 		{
 			get
 			{
+			    if (_currentDb != null)
+			        return _currentDb;
+
 				var database = DatabasesLandlord.GetDatabaseInternal(DatabaseName);
 				if (database == null)
 				{
 					throw new InvalidOperationException("Could not find a database named: " + DatabaseName);
 				}
 
-				return database.Result;
+                return _currentDb = database.Result;
 			}
 		}
 

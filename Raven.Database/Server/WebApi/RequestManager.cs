@@ -244,11 +244,27 @@ namespace Raven.Database.Server.WebApi
 
         public void SetThreadLocalState(IEnumerable<KeyValuePair<string, IEnumerable<string>>> innerHeaders, string databaseName)
 		{
-			CurrentOperationContext.Headers.Value = new NameValueCollection();
-			foreach (var innerHeader in innerHeaders)
-				CurrentOperationContext.Headers.Value[innerHeader.Key] = innerHeader.Value.FirstOrDefault();
+            CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() =>
+            {
+                var nameValueCollection = new NameValueCollection();
+                foreach (var innerHeader in innerHeaders)
+                {
+                    nameValueCollection[innerHeader.Key] = innerHeader.Value.FirstOrDefault();                   
+                }
+                
+                return nameValueCollection;
+            });
+            CurrentOperationContext.RavenAuthenticatedUser.Value = string.Empty;
+            foreach (var innerHeader in innerHeaders)
+            {
+                if (innerHeader.Key.Equals("Raven-Authorization-User"))
+                {
+                    CurrentOperationContext.RavenAuthenticatedUser.Value = innerHeader.Value.FirstOrDefault();
+                }
+            }
+            
+            
 
-			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = string.Empty;
 			CurrentOperationContext.User.Value = null;
 
 			LogContext.DatabaseName.Value = databaseName;
@@ -261,7 +277,7 @@ namespace Raven.Database.Server.WebApi
 		{
 			try
 			{
-				CurrentOperationContext.Headers.Value = new NameValueCollection();
+				CurrentOperationContext.Headers.Value = null;
 				CurrentOperationContext.User.Value = null;
 				LogContext.DatabaseName.Value = null;
 				foreach (var disposable in CurrentOperationContext.RequestDisposables.Value)
@@ -315,9 +331,11 @@ namespace Raven.Database.Server.WebApi
 					}
 				}
 			    var innerRequest = controller.InnerRequest;
+                var httpRequestHeaders = innerRequest.Headers;
+                var httpContentHeaders = innerRequest.Content == null ? null : innerRequest.Content.Headers;
 				logHttpRequestStatsParam = new LogHttpRequestStatsParams(
 					sw,
-                    new Lazy<HttpHeaders>(() => controller.CloneRequestHttpHeaders(innerRequest)),
+                    new Lazy<HttpHeaders>(() => RavenBaseApiController.CloneRequestHttpHeaders(httpRequestHeaders, httpContentHeaders)),
 					controller.InnerRequest.Method.Method,
 					response != null ? (int)response.StatusCode : 500,
 					controller.InnerRequest.RequestUri.ToString(),

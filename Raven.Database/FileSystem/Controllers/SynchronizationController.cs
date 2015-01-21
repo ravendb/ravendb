@@ -976,15 +976,25 @@ namespace Raven.Database.FileSystem.Controllers
 			Log.Debug("Saved last synchronized file ETag {0} from {1} ({2})", lastSourceEtag, sourceServer.FileSystemUrl, sourceServer.Id);
 		}
 
-		protected override RavenJObject GetFilteredMetadataFromHeaders(HttpHeaders headers)
-		{
-			var result = base.GetFilteredMetadataFromHeaders(headers);
 
-			if (headers.Contains(Constants.RavenLastModified))
+	    protected override RavenJObject GetFilteredMetadataFromHeaders(IEnumerable<KeyValuePair<string, IEnumerable<string>>> headers)
+	    {
+	        string lastModifed = null;
+
+			var result = base.GetFilteredMetadataFromHeaders(headers.Select(h =>
+			{
+			    if ( lastModifed == null && h.Key == Constants.RavenLastModified)
+			    {
+			        lastModifed = h.Value.First();
+			    }
+			    return h;
+			}));
+
+            if (lastModifed != null)
 			{
 				// this is required to resolve conflicts based on last modification date
 
-				result.Add(Constants.RavenLastModified, headers.GetValues(Constants.RavenLastModified).First());
+                result.Add(Constants.RavenLastModified, lastModifed);
 			}
 
 			return result;
