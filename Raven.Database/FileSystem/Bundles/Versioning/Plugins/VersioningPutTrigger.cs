@@ -127,7 +127,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 				var latestRevisionsFile = GetLatestRevisionsFile(name, accessor);
 				if (latestRevisionsFile != null)
 				{
-					var id = latestRevisionsFile.Name;
+					var id = latestRevisionsFile.FullPath;
 					if (id.StartsWith(name, StringComparison.CurrentCultureIgnoreCase))
 					{
 						var revisionNum = id.Substring((name + "/revisions/").Length);
@@ -143,8 +143,9 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 
 		private static FileHeader GetLatestRevisionsFile(string name, IStorageActionsAccessor accessor)
 		{
-			return accessor.ReadFiles(0, int.MaxValue) // TODO [ppekrol] fix this
-				.LastOrDefault(x => x.Name.StartsWith(name + "/revisions/", StringComparison.OrdinalIgnoreCase));
+			return accessor
+				.GetFilesStartingWith(name + "/revisions/", 0, int.MaxValue)
+				.LastOrDefault();
 		}
 
 		private void RemoveOldRevisions(string name, long revision, VersioningConfiguration versioningConfiguration)

@@ -3,23 +3,27 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.IO;
 using System.Threading.Tasks;
 
 using Raven.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Bundles.Versioning;
+using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem.Bundles
 {
 	public class VersioningTests : RavenFilesTestWithLogs
 	{
-		[Fact]
-		public async Task BasicTest()
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task Simple(string requestedStorage)
 		{
 			const string FileName = "file1.txt";
 
-			using (var store = NewStore(activeBundles: "Versioning"))
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
 				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 10 });
 
@@ -45,14 +49,15 @@ namespace Raven.Tests.FileSystem.Bundles
 			}
 		}
 
-		[Fact]
-		public async Task MaxRevisions()
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task MaxRevisions(string requestedStorage)
 		{
 			const string FileName = "file1.txt";
 
-			using (var store = NewStore(activeBundles: "Versioning"))
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
 			{
-				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 2 });
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 3 });
 
 				var aContent = "aaa";
 				var bContent = "bbb";
@@ -68,8 +73,7 @@ namespace Raven.Tests.FileSystem.Bundles
 				Assert.NotNull(stream);
 				Assert.Equal(dContent, StreamToString(stream));
 
-				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1");
-				Assert.Null(stream);
+				await AssertAsync.Throws<FileNotFoundException>(async () => await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1"));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/2");
 				Assert.NotNull(stream);

@@ -44,6 +44,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
         private readonly NameValueCollection settings;
 
         private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
+		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
 
         private volatile bool disposed;
 
@@ -142,10 +143,27 @@ namespace Raven.Database.FileSystem.Storage.Voron
 	        Id = tableStorage.Id;
         }
 
+		public IDisposable DisableBatchNesting()
+		{
+			disableBatchNesting.Value = new object();
+			return new DisposableAction(() => disableBatchNesting.Value = null);
+		}
+
         public void Batch(Action<IStorageActionsAccessor> action)
         {
             if (Id == Guid.Empty)
                 throw new InvalidOperationException("Cannot use Storage before Initialize was called");
+
+			if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
+			{
+				if (current.Value != null) // check again, just to be sure
+				{
+					current.Value.IsNested = true;
+					action(current.Value);
+					current.Value.IsNested = false;
+					return;
+				}
+			}
 
             disposerLock.EnterReadLock();
             try
@@ -174,48 +192,36 @@ namespace Raven.Database.FileSystem.Storage.Voron
             finally
             {
                 disposerLock.ExitReadLock();
-                try
-                {
-                    current.Value = null;
-                }
-                catch (ObjectDisposedException)
-                {
-                }
+				if (disposed == false && disableBatchNesting.Value == null)
+					current.Value = null;
             }
         }
 
         private void ExecuteBatch(Action<IStorageActionsAccessor> action)
         {
-            if (current.Value != null)
-            {
-                action(current.Value);
-                return;
-            }
+			var snapshotRef = new Reference<SnapshotReader>();
+			var writeBatchRef = new Reference<WriteBatch>();
 
-            using (var snapshot = tableStorage.CreateSnapshot())
-            {
-                var writeBatchRef = new Reference<WriteBatch>();
-                try
-                {
-                    writeBatchRef.Value = new WriteBatch { DisposeAfterWrite = false };
-                    using (var storageActionsAccessor = new StorageActionsAccessor(tableStorage, writeBatchRef, snapshot, idGenerator, bufferPool, fileCodecs))
-                    {
-                        current.Value = storageActionsAccessor;
+	        try
+	        {
+				snapshotRef.Value = tableStorage.CreateSnapshot();
+                writeBatchRef.Value = new WriteBatch { DisposeAfterWrite = false }; // prevent from disposing after write to allow read from batch OnStorageCommit
+                var storageActionsAccessor = new StorageActionsAccessor(tableStorage, writeBatchRef, snapshotRef, idGenerator, bufferPool, fileCodecs);
+				if (disableBatchNesting.Value == null)
+                    current.Value = storageActionsAccessor;
 
-                        action(storageActionsAccessor);
-                        storageActionsAccessor.Commit();
+                action(storageActionsAccessor);
+                storageActionsAccessor.Commit();
 
-                        tableStorage.Write(writeBatchRef.Value);
-                    }
-                }
-                finally
-                {
-                    if (writeBatchRef.Value != null)
-                    {
-                        writeBatchRef.Value.Dispose();
-                    }
-                }
-            }
+				tableStorage.Write(writeBatchRef.Value);
+	        }
+	        finally
+	        {
+		        if (writeBatchRef.Value != null)
+		        {
+			        writeBatchRef.Value.Dispose();
+		        }
+	        }
         }
 
         public void StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup,
