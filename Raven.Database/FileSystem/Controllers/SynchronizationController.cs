@@ -78,8 +78,8 @@ namespace Raven.Database.FileSystem.Controllers
 
             var tempFileName = RavenFileNameHelper.DownloadingFileName(canonicalFilename);
 
-            var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
+            var sourceServerInfo = ReadInnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+            var sourceFileETag = Guid.Parse(GetHeader(Constants.MetadataEtagField).Trim('\"'));
 
             var report = new SynchronizationReport(canonicalFilename, sourceFileETag, SynchronizationType.ContentUpdate);
 
@@ -103,7 +103,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                 Storage.Batch(accessor => StartupProceed(canonicalFilename, accessor));
 
-                RavenJObject sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
+                RavenJObject sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
                 var localMetadata = GetLocalMetadata(canonicalFilename);
                 if (localMetadata != null)
@@ -308,9 +308,9 @@ namespace Raven.Database.FileSystem.Controllers
 
             var canonicalFilename = FileHeader.Canonize(fileName);
 
-			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+            var sourceServerInfo = ReadInnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
             // REVIEW: (Oren) It works, but it seems to me it is not an scalable solution. 
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
+            var sourceFileETag = Guid.Parse(GetHeader(Constants.MetadataEtagField).Trim('\"'));
 
             Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName,
 					  sourceFileETag, sourceServerInfo);
@@ -332,7 +332,7 @@ namespace Raven.Database.FileSystem.Controllers
                 Storage.Batch(accessor => StartupProceed(canonicalFilename, accessor));
 
                 var localMetadata = GetLocalMetadata(canonicalFilename);
-                var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
+                var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
                 AssertConflictDetection(canonicalFilename, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
 
@@ -390,8 +390,8 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             var canonicalFilename = FileHeader.Canonize(fileName);
 
-			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
+            var sourceServerInfo = ReadInnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+            var sourceFileETag = Guid.Parse(GetHeader(Constants.MetadataEtagField).Trim('\"'));
 
             Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceServerInfo);
 
@@ -483,9 +483,9 @@ namespace Raven.Database.FileSystem.Controllers
             var canonicalFilename = FileHeader.Canonize(fileName);
             var canonicalRename = FileHeader.Canonize(rename);
 
-			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
-            var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
+            var sourceServerInfo = ReadInnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+            var sourceFileETag = Guid.Parse(GetHeader(Constants.MetadataEtagField).Trim('\"'));
+            var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
 			Log.Debug("Starting to rename a file '{0}' to '{1}' with ETag {2} from {3} because of synchronization", fileName,
 					  rename, sourceFileETag, sourceServerInfo);
@@ -740,7 +740,7 @@ namespace Raven.Database.FileSystem.Controllers
             if (localMetadata == null)
 				throw new InvalidOperationException(string.Format("Could not find the medatada of the file: {0}", conflict.FileName));
 
-			var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
+			var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
 			ConflictResolutionStrategy strategy;
 
