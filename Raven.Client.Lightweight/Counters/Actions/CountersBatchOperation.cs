@@ -12,6 +12,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
@@ -19,17 +20,19 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Counters.Actions
 {
-	public class CountersBatchOperation : CountersActionsBase, IDisposable
+	public class CountersBatchOperation : CountersActionsBase, ICountersBatchOperation
 	{
-		private readonly Task _batchOperationTask;
+		private Task _batchOperationTask;
 		private readonly TaskCompletionSource<bool> _batchOperationTcs; 
 		private readonly BlockingCollection<CounterChange> _changesQueue;
 		private readonly CancellationTokenSource _cts;
 		private bool disposed;
 		private readonly CountersBatchOptions _options;
-		private readonly MemoryStream _tempStream;
+		private MemoryStream _tempStream;
 		private long serverOperationId;
 		private readonly string _singleAuthUrl;
+		private readonly AsyncManualResetEvent _streamingStarted;
+		private Timer _closeAndReopenStreamingTimer;
 
 		internal CountersBatchOperation(ICounterStore parent, string counterStorageName, CountersBatchOptions options = null)
 			: base(parent, counterStorageName)
@@ -38,18 +41,41 @@ namespace Raven.Client.Counters.Actions
 			if(options != null && options.BatchSizeLimit < 1)
 				throw new ArgumentException("options");
 
+			_streamingStarted = new AsyncManualResetEvent();
 			_options = options ?? new CountersBatchOptions(); //defaults do exist
 			_changesQueue = new BlockingCollection<CounterChange>();			
 			_cts = new CancellationTokenSource();
 			_batchOperationTcs = new TaskCompletionSource<bool>();
-			_tempStream = new MemoryStream();
 			_singleAuthUrl = string.Format("{0}/cs/{1}/singleAuthToken", serverUrl, counterStorageName);
 			_batchOperationTask = StartBatchOperation();
 			disposed = false;
+
+			_closeAndReopenStreamingTimer = new Timer(CloseAndReopenStreaming, null,
+				TimeSpan.FromMilliseconds(_options.ConnectionReopenTimingInMilliseconds),
+				TimeSpan.FromMilliseconds(-1)); //fire timer only once -> then rescedule - handles ConnectionReopenTimingInMilliseconds changing use-case
+		}
+
+		private void CloseAndReopenStreaming(object state)
+		{
+			_cts.Cancel();
+			if (_batchOperationTask.Status == TaskStatus.Running)
+				_batchOperationTask.Wait();
+			_batchOperationTask = StartBatchOperation();
+
+			_closeAndReopenStreamingTimer.Dispose();
+			_closeAndReopenStreamingTimer = new Timer(CloseAndReopenStreaming, null,
+				TimeSpan.FromMilliseconds(_options.ConnectionReopenTimingInMilliseconds),
+				TimeSpan.FromMilliseconds(-1)); //fire timer only once -> then rescedule - handles ConnectionReopenTimingInMilliseconds changing use-case
+		}
+
+		public CountersBatchOptions Options
+		{
+			get { return _options; }
 		}
 
 		private async Task StartBatchOperation()
 		{
+			_tempStream = new MemoryStream();
 			using (ConnectionOptions.Expect100Continue(serverUrl))
 			{
 				var authToken = await GetToken().ConfigureAwait(false);
@@ -69,6 +95,7 @@ namespace Raven.Client.Counters.Actions
 					var token = _cts.Token;
 					var response = await request.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
 					{
+						_streamingStarted.Set();
 						try
 						{
 							ContinuouslyWriteQueueToServer(stream, token);
@@ -152,26 +179,79 @@ namespace Raven.Client.Counters.Actions
 		{
 			try
 			{
+				var batch = new List<CounterChange>();
 				while (_changesQueue.IsCompleted == false)
 				{
-					token.ThrowIfCancellationRequested();
-
-					var batch = new List<CounterChange>(_options.BatchSizeLimit);
-					CounterChange counterChange;
-					while (_changesQueue.TryTake(out counterChange, _options.BatchReadTimeoutInMilliseconds))
+					batch.Clear();
+					if (token.IsCancellationRequested)
 					{
-						batch.Add(counterChange);
-						if (batch.Count == _options.BatchSizeLimit)
-							break;
+						FetchAllChangeQueue(batch);	
+						if(batch.Count > 0)
+							FlushToServer(stream,batch);
+						break;
 					}
 
-					FlushToServer(stream, batch);
+					TaskCompletionSource<object> tcs = null;
+					try
+					{
+						CounterChange counterChange;
+						while (_changesQueue.TryTake(out counterChange, Options.BatchReadTimeoutInMilliseconds, token))
+						{
+							if (counterChange.Done != null)
+							{
+								tcs = counterChange.Done;
+								break;
+							}
+
+							batch.Add(counterChange);
+							if (batch.Count >= Options.BatchSizeLimit)
+								break;
+						}
+					}
+					catch (OperationCanceledException)
+					{
+						if(_changesQueue.Count > 0)
+							FetchAllChangeQueue(batch);
+					}
+
+					if (batch.Count <= 0) 
+						continue;
+					try
+					{
+						FlushToServer(stream, batch);
+						if (tcs != null)
+							tcs.TrySetResult(null);
+					}
+					catch (Exception e)
+					{
+						if (tcs != null)
+							tcs.TrySetException(e);
+					}
+					
 				}
 			}
 			finally
 			{
 				_tempStream.Dispose();
 			}
+		}
+
+		private void FetchAllChangeQueue(List<CounterChange> batch)
+		{
+			CounterChange counterChange;
+			while (_changesQueue.TryTake(out counterChange))
+				batch.Add(counterChange);
+		}
+
+		public Task FlushAsync()
+		{
+			var taskCompletionSource = new TaskCompletionSource<object>();
+			_changesQueue.Add(new CounterChange
+			{
+				Done = taskCompletionSource
+			});
+
+			return taskCompletionSource.Task.ContinueWith(t => CloseAndReopenStreaming(null));
 		}
 
 		private void FlushToServer(Stream requestStream, ICollection<CounterChange> batchItems)
@@ -228,8 +308,9 @@ namespace Raven.Client.Counters.Actions
 			}
 		}
 
-		public void Change(string groupName, string counterName, long delta)
+		public void ScheduleChange(string groupName, string counterName, long delta)
 		{
+			_streamingStarted.WaitAsync().Wait();
 			_changesQueue.Add(new CounterChange
 			{
 				Delta = delta,
@@ -238,20 +319,21 @@ namespace Raven.Client.Counters.Actions
 			});
 		}
 
-		public void Increment(string groupName, string counterName)
+		public void ScheduleIncrement(string groupName, string counterName)
 		{
-			Change(groupName, counterName, 1);
+			ScheduleChange(groupName, counterName, 1);
 		}
 
-		public void Decrement(string groupName, string counterName)
+		public void ScheduleDecrement(string groupName, string counterName)
 		{
-			Change(groupName, counterName,-1);
+			ScheduleChange(groupName, counterName,-1);
 		}
 
-		public void Dispose()
+		public virtual void Dispose()
 		{
 			if (!disposed)
 			{
+				_closeAndReopenStreamingTimer.Dispose();
 				_changesQueue.CompleteAdding();
 
 				_batchOperationTcs.Task.Wait();

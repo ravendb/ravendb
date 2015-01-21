@@ -26,6 +26,8 @@ namespace Raven.Client.Counters
 
 		JsonSerializer JsonSerializer { get; set; }
 
+		CounterStore.CounterStoreAdvancedOperations Advanced { get; }
+
 		/// <summary>
 		/// Create new counter storage on the server.
 		/// </summary>
@@ -37,9 +39,9 @@ namespace Raven.Client.Counters
 		
 		Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken));
 
-		CountersBatchOperation BatchOperation(string counterStorageName, CountersBatchOptions options);
-
 		CountersClient NewCounterClient(string counterStorageName);
+
+		CounterStore.BatchOperationsStore Batch { get; }
 
 		void Initialize(bool ensureDefaultCounterExists = false);
 	}

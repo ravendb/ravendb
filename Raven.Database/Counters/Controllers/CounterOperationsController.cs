@@ -272,11 +272,9 @@ namespace Raven.Database.Counters.Controllers
 			{
 				var counterFullName = CounterFullName(groupName, counterName);
 				var counter = reader.GetCountersByPrefix(counterFullName);
-				
+
 				if (counter == null)
-				{
-					return Request.CreateResponse(HttpStatusCode.NotFound);
-				}
+					return GetMessageWithObject(new {Message = "Specified counter not found within the specified group"}, HttpStatusCode.NotFound);
 
 				long overallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative); 
 				return Request.CreateResponse(HttpStatusCode.OK, overallTotal);

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -31,6 +32,8 @@ namespace Raven.Client.Counters
 			JsonRequestFactory = new HttpJsonRequestFactory(Constants.NumberOfCachedRequests);
 			Convention = new Convention();
 			Credentials = new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials);
+			Advanced = new CounterStoreAdvancedOperations(this);
+			_batch = new Lazy<BatchOperationsStore>(() => new BatchOperationsStore(this));
 		}
 
 		public void Initialize(bool ensureDefaultCounterExists = false)
@@ -49,6 +52,13 @@ namespace Raven.Client.Counters
 			}
 		}
 
+		private readonly Lazy<BatchOperationsStore> _batch;
+
+		public BatchOperationsStore Batch
+		{
+			get { return _batch.Value; }
+		}
+
 		public OperationCredentials Credentials { get; set; }
 
 		public HttpJsonRequestFactory JsonRequestFactory { get; set; }
@@ -60,6 +70,8 @@ namespace Raven.Client.Counters
 		public Convention Convention { get; set; }
 
 		public JsonSerializer JsonSerializer { get; set; }
+
+		public CounterStoreAdvancedOperations Advanced { get; private set; }
 
 		/// <summary>
 		/// Create new counter storage on the server.
@@ -110,11 +122,6 @@ namespace Raven.Client.Counters
 					throw;
 				}
 			}
-		}
-
-		public CountersBatchOperation BatchOperation(string counterStorageName, CountersBatchOptions options = null)
-		{
-			 return new CountersBatchOperation(this,counterStorageName,options);
 		}
 
 		public CountersClient NewCounterClient(string counterStorageName)
@@ -236,9 +243,103 @@ namespace Raven.Client.Counters
 			}
 		}
 
-		public virtual void Dispose()
+		public void Dispose()
 		{
+			if(_batch.IsValueCreated)
+				_batch.Value.Dispose();
+
 			
+		}
+
+		public class BatchOperationsStore : ICountersBatchOperation
+		{
+			private readonly ICounterStore _parent;
+			private readonly Lazy<CountersBatchOperation> _defaultBatchOperation;
+			private readonly ConcurrentDictionary<string, CountersBatchOperation> _batchOperations;
+
+			public BatchOperationsStore(ICounterStore parent)
+			{				
+				_batchOperations = new ConcurrentDictionary<string, CountersBatchOperation>();
+				_parent = parent;
+				if(String.IsNullOrWhiteSpace(parent.DefaultCounterStorageName) == false)
+					_defaultBatchOperation = new Lazy<CountersBatchOperation>(() => new CountersBatchOperation(parent, parent.DefaultCounterStorageName));
+			}
+
+			public ICountersBatchOperation this[string storageName]
+			{
+				get { return GetOrCreateBatchOperation(storageName); }
+			}
+
+			private ICountersBatchOperation GetOrCreateBatchOperation(string storageName)
+			{
+				return _batchOperations.GetOrAdd(storageName, arg => new CountersBatchOperation(_parent, storageName));
+			}
+
+			public void Dispose()
+			{
+				_batchOperations.Values
+					.ForEach(operation => operation.Dispose());
+				if (_defaultBatchOperation != null && _defaultBatchOperation.IsValueCreated)
+					_defaultBatchOperation.Value.Dispose();
+			}
+
+			public void ScheduleChange(string groupName, string counterName, long delta)
+			{
+				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
+					throw new InvalidOperationException("Default counter storage name cannot be empty!");
+
+				_defaultBatchOperation.Value.ScheduleChange(groupName, counterName, delta);
+			}
+
+			public void ScheduleIncrement(string groupName, string counterName)
+			{
+				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
+					throw new InvalidOperationException("Default counter storage name cannot be empty!");
+
+				_defaultBatchOperation.Value.ScheduleIncrement(groupName, counterName);
+			}
+
+			public void ScheduleDecrement(string groupName, string counterName)
+			{
+				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
+					throw new InvalidOperationException("Default counter storage name cannot be empty!");
+
+				_defaultBatchOperation.Value.ScheduleDecrement(groupName, counterName);
+			}
+
+			public async Task FlushAsync()
+			{
+				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
+					throw new InvalidOperationException("Default counter storage name cannot be empty!");
+
+				await _defaultBatchOperation.Value.FlushAsync();
+			}
+
+
+			public CountersBatchOptions Options
+			{
+				get
+				{
+					if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
+						throw new InvalidOperationException("Default counter storage name cannot be empty!");
+					return _defaultBatchOperation.Value.Options;
+				}
+			}
+		}
+
+		public class CounterStoreAdvancedOperations
+		{
+			private readonly ICounterStore parent;
+
+			internal CounterStoreAdvancedOperations(ICounterStore parent)
+			{
+				this.parent = parent;
+			}
+
+			public ICountersBatchOperation NewBatch(string counterStorageName, CountersBatchOptions options = null)
+			{
+				return new CountersBatchOperation(parent, counterStorageName, options);
+			}
 		}
 	}
 }

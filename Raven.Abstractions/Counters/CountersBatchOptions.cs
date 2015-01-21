@@ -12,6 +12,7 @@ namespace Raven.Abstractions.Counters
 		{
 			BatchSizeLimit = 512;
 			BatchReadTimeoutInMilliseconds = 5000;
+			ConnectionReopenTimingInMilliseconds = 110000; //default for IIS is 2 minutes
 		}
 		/// <summary>
 		/// Number of counter changes to send in each batch.
@@ -28,5 +29,10 @@ namespace Raven.Abstractions.Counters
 		/// </summary>
 		/// <value>5000 milliseconds by default</value>
 		public int BatchReadTimeoutInMilliseconds { get; set; }
+
+		/// <summary>
+		/// in order to bypass IIS limitations on inactive connection timeouts, close and reopen stream after this time
+		/// </summary>
+		public int ConnectionReopenTimingInMilliseconds { get; set; }
 	}
 }
