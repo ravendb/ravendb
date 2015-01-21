@@ -33,6 +33,8 @@ namespace Raven.Tests.Helpers
 {
     public class RavenFilesTestBase : IDisposable
     {
+	    private static int pathCount;
+
         public static IEnumerable<object[]> Storages
         {
             get
@@ -232,7 +234,7 @@ namespace Raven.Tests.Helpers
             // The truncation of the Guid to 8 still provides enough entropy to avoid collisions.
             string suffix = Guid.NewGuid().ToString("N").Substring(0, 8);
 
-            var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "RavenFS_Test", suffix));
+			var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}-{3}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "RavenFS_Test", suffix, Interlocked.Increment(ref pathCount)));
             Directory.CreateDirectory(newDataDir);
 
 			if(deleteOnDispose)

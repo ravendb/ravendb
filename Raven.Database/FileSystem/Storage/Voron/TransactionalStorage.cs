@@ -217,10 +217,11 @@ namespace Raven.Database.FileSystem.Storage.Voron
 	        }
 	        finally
 	        {
-		        if (writeBatchRef.Value != null)
-		        {
-			        writeBatchRef.Value.Dispose();
-		        }
+				if (snapshotRef.Value != null)
+					snapshotRef.Value.Dispose();
+
+				if (writeBatchRef.Value != null)
+					writeBatchRef.Value.Dispose();
 	        }
         }
 

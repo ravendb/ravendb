@@ -354,7 +354,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 					case JET_err.WriteConflict:
 					case JET_err.SessionWriteConflict:
 					case JET_err.WriteConflictPrimaryIndex:
-						throw new ConcurrencyException("Concurrent modification to the same document are not allowed", e);
+						throw new ConcurrencyException("Concurrent modification to the same file are not allowed", e);
 					default:
 						throw;
 				}
