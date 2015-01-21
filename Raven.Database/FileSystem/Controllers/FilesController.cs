@@ -358,7 +358,11 @@ namespace Raven.Database.FileSystem.Controllers
 
 					FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(name, headers, accessor));
 
-					StorageOperationsTask.IndicateFileToDelete(name);
+	                using (FileSystem.DisableAllTriggersForCurrentThread())
+	                {
+						StorageOperationsTask.IndicateFileToDelete(name);
+	                }
+
                     accessor.PutFile(name, size, headers);
 
 					FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, headers, accessor));
@@ -373,9 +377,9 @@ namespace Raven.Database.FileSystem.Controllers
                 {
                     await readFileToDatabase.Execute();                
    
-                    if ( readFileToDatabase.TotalSizeRead != size )
+                    if (readFileToDatabase.TotalSizeRead != size)
                     {
-                        Storage.Batch(accessor => StorageOperationsTask.IndicateFileToDelete(name));
+                        StorageOperationsTask.IndicateFileToDelete(name);
                         throw new HttpResponseException(HttpStatusCode.BadRequest);
                     }                        
 

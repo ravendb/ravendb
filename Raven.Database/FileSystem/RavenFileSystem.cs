@@ -79,7 +79,7 @@ namespace Raven.Database.FileSystem
             search = new IndexStorage(name, systemConfiguration);
 
             conflictArtifactManager = new ConflictArtifactManager(storage, search);
-            storageOperationsTask = new StorageOperationsTask(storage, search, notificationPublisher); 
+            storageOperationsTask = new StorageOperationsTask(storage, DeleteTriggers, search, notificationPublisher); 
 
 			AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
@@ -167,6 +167,8 @@ namespace Raven.Database.FileSystem
 			FileCodecs.OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 
 			PutTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			DeleteTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
 
 		private void SecondStageInitialization()
@@ -176,6 +178,8 @@ namespace Raven.Database.FileSystem
 				.Apply(initialization => initialization.SecondStageInit());
 
 			PutTriggers.Apply(initialization => initialization.SecondStageInit());
+
+			DeleteTriggers.Apply(initialization => initialization.SecondStageInit());
 		}
 
 		/// <summary>
@@ -188,6 +192,9 @@ namespace Raven.Database.FileSystem
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractFilePutTrigger> PutTriggers { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractFileDeleteTrigger> DeleteTriggers { get; set; }
 
 	    public ITransactionalStorage Storage
 		{

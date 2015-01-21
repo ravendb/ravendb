@@ -14,7 +14,7 @@ namespace Raven.Database.FileSystem.Plugins
 	[InheritedExport]
 	public abstract class AbstractFilePutTrigger : IRequiresFileSystemInitialization
 	{
-		public RavenFileSystem FileSystem { get; set; }
+		public RavenFileSystem FileSystem { get; private set; }
 
 		public virtual void Initialize(RavenFileSystem fileSystem)
 		{

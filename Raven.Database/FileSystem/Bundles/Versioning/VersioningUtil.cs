@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Storage;
@@ -19,7 +20,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning
 
 		public static bool ChangesToRevisionsAllowed(this RavenFileSystem fileSystem)
 		{
-			var changesToRevisionsAllowed = fileSystem.Configuration.Settings["Raven/FileSystem/Versioning/ChangesToRevisionsAllowed"];
+			var changesToRevisionsAllowed = fileSystem.Configuration.Settings[Constants.FileSystem.Versioning.ChangesToRevisionsAllowed];
 			if (changesToRevisionsAllowed == null)
 				return false;
 			bool result;

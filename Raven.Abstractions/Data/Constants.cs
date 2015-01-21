@@ -192,6 +192,11 @@ namespace Raven.Abstractions.Data
             public const string IndexStorageDirectory = "Raven/FileSystem/IndexStoragePath";
             public const string MaximumSynchronizationInterval = "Raven/FileSystem/MaximumSynchronizationInterval";
             public const string Storage = "Raven/FileSystem/Storage";
+
+	        public static class Versioning
+	        {
+				public const string ChangesToRevisionsAllowed = "Raven/FileSystem/Versioning/ChangesToRevisionsAllowed";
+	        }
         }
 
 		// Subscriptions

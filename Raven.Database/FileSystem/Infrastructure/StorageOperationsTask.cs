@@ -1,19 +1,19 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
-using Microsoft.Isam.Esent.Interop;
 using NLog;
+
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.MEF;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Notifications;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Search;
 using Raven.Database.FileSystem.Storage;
-using Raven.Database.FileSystem.Storage.Esent;
 using Raven.Database.FileSystem.Storage.Exceptions;
 using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.FileSystem.Util;
@@ -31,14 +31,19 @@ namespace Raven.Database.FileSystem.Infrastructure
 		private readonly FileLockManager fileLockManager = new FileLockManager();
 		private readonly INotificationPublisher notificationPublisher;
 		private readonly ConcurrentDictionary<string, Task> renameFileTasks = new ConcurrentDictionary<string, Task>();
+
 		private readonly IndexStorage search;
 		private readonly ITransactionalStorage storage;
+
+		private readonly OrderedPartCollection<AbstractFileDeleteTrigger> deleteTriggers;
+
 		private readonly IObservable<long> timer = Observable.Interval(TimeSpan.FromMinutes(15));
         private readonly ConcurrentDictionary<string, FileHeader> uploadingFiles = new ConcurrentDictionary<string, FileHeader>();
 
-		public StorageOperationsTask(ITransactionalStorage storage, IndexStorage search, INotificationPublisher notificationPublisher)
+		public StorageOperationsTask(ITransactionalStorage storage, OrderedPartCollection<AbstractFileDeleteTrigger> deleteTriggers, IndexStorage search, INotificationPublisher notificationPublisher)
 		{
 			this.storage = storage;
+			this.deleteTriggers = deleteTriggers;
 			this.search = search;
 			this.notificationPublisher = notificationPublisher;
 
@@ -103,6 +108,8 @@ namespace Raven.Database.FileSystem.Infrastructure
 
 			storage.Batch(accessor =>
 			{
+				AssertDeleteOperationNotVetoed(fileName);
+
 				var existingFileHeader = accessor.ReadFile(fileName);
 
 				if (existingFileHeader == null)
@@ -154,11 +161,13 @@ namespace Raven.Database.FileSystem.Infrastructure
                     accessor.UpdateFileMetadata(deletingFileName, metadata);
                     accessor.DecrementFileCount(deletingFileName);
 
-                    Log.Debug(string.Format("File '{0}' was renamed to '{1}' and marked as deleted", fileName, deletingFileName));
+                    Log.Debug("File '{0}' was renamed to '{1}' and marked as deleted", fileName, deletingFileName);
 
                     var configName = RavenFileNameHelper.DeleteOperationConfigNameForFile(deletingFileName);
                     var operation = new DeleteFileOperation { OriginalFileName = fileName, CurrentFileName = deletingFileName };
                     accessor.SetConfig(configName, JsonExtensions.ToJObject(operation));
+
+					deleteTriggers.Apply(trigger => trigger.AfterDelete(fileName));
 
                     notificationPublisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
                 }
@@ -217,7 +226,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 					}
 					catch (Exception e)
 					{
-						Log.WarnException(string.Format("Could not delete file '{0}' from storage", deletingFileName), e);
+						Log.Warn(string.Format("Could not delete file '{0}' from storage", deletingFileName), e);
 						return;
 					}
 					var configName = RavenFileNameHelper.DeleteOperationConfigNameForFile(deletingFileName);
@@ -277,8 +286,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 					}
 					catch (Exception e)
 					{
-						Log.WarnException(
-							string.Format("Could not rename file '{0}' to '{1}'", renameOperation.Name, renameOperation.Rename), e);
+						Log.Warn(string.Format("Could not rename file '{0}' to '{1}'", renameOperation.Name, renameOperation.Rename), e);
 						throw;
 					}
 				});
@@ -359,6 +367,17 @@ namespace Raven.Database.FileSystem.Infrastructure
 				renameFileTasks.TryRemove(fileName, out existingTask);
 			}
 			return false;
+		}
+
+		private void AssertDeleteOperationNotVetoed(string name)
+		{
+			var vetoResult = deleteTriggers
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(name) })
+				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+			if (vetoResult != null)
+			{
+				throw new OperationVetoedException("DELETE vetoed on file " + name + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+			}
 		}
 	}
 }
