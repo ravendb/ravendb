@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Net.Http.Headers;
 
 namespace Raven.Database.Server
 {
 	public class LogHttpRequestStatsParams
 	{
-		public LogHttpRequestStatsParams(Stopwatch sw, NameValueCollection headers, string httpMethod, int responseStatusCode,
+        public LogHttpRequestStatsParams(Stopwatch sw, Lazy<HttpHeaders> headers, string httpMethod, int responseStatusCode,
 		                                 string requestUri, string customInfo = null, int innerRequestsCount = 0)
 		{
 			Stopwatch = sw;
@@ -20,7 +21,7 @@ namespace Raven.Database.Server
 
 		public Stopwatch Stopwatch { get; private set; }
 
-		public NameValueCollection Headers { get; private set; }
+        public Lazy<HttpHeaders> Headers { get; private set; }
 
 		public string HttpMethod { get; private set; }
 

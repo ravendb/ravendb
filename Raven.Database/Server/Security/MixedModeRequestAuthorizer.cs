@@ -154,7 +154,7 @@ namespace Raven.Database.Server.Security
 
 			if (value.User != null)
 			{
-				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = value.User.Identity.Name;
+				CurrentOperationContext.RavenAuthenticatedUser.Value = value.User.Identity.Name;
 			}
 	        msg = null;
 	        statusCode = HttpStatusCode.OK;
