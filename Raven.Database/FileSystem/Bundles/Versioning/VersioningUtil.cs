@@ -29,6 +29,14 @@ namespace Raven.Database.FileSystem.Bundles.Versioning
 			return result;
 		}
 
+		public static bool IsVersioningActive(this RavenFileSystem fileSystem)
+		{
+			var exists = false;
+			fileSystem.Storage.Batch(accessor => exists = accessor.IsVersioningActive());
+
+			return exists;
+		}
+
 		public static bool IsVersioningActive(this IStorageActionsAccessor accessor)
 		{
 			return accessor.ConfigExists(DefaultConfigurationName);

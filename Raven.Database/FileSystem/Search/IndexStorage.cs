@@ -8,10 +8,10 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
+using Raven.Database.Plugins;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -398,6 +398,9 @@ namespace Raven.Database.FileSystem.Search
 
         private void Index(IndexWriter writer, string key, RavenJObject metadata)
         {
+			if (IsIndexingAllowed(key, metadata) == false)
+				return;
+
             lock (writerLock)
             {
                 var lowerKey = key.ToLowerInvariant();
@@ -435,7 +438,7 @@ namespace Raven.Database.FileSystem.Search
             }
         }
 
-        public virtual void Index(string key, RavenJObject metadata)
+	    public virtual void Index(string key, RavenJObject metadata)
         {
             Index(writer, key, metadata);
         }
@@ -681,5 +684,19 @@ namespace Raven.Database.FileSystem.Search
             }
         }
 
+		private bool IsIndexingAllowed(string key, RavenJObject metadata)
+		{
+			foreach (var indexingTrigger in filesystem.ReadTriggers)
+			{
+				var result = indexingTrigger.Value.AllowRead(key, metadata, ReadOperation.Index);
+				if (result.Veto == ReadVetoResult.ReadAllow.Allow)
+					continue;
+
+				Log.Debug("Trigger {0} asked us to ignore {1}", indexingTrigger.Value, key);
+				return false;
+			}
+
+			return true;
+		}
     }
 }

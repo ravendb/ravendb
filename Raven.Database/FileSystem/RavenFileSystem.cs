@@ -169,6 +169,8 @@ namespace Raven.Database.FileSystem
 			PutTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 
 			DeleteTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			ReadTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
 
 		private void SecondStageInitialization()
@@ -180,6 +182,8 @@ namespace Raven.Database.FileSystem
 			PutTriggers.Apply(initialization => initialization.SecondStageInit());
 
 			DeleteTriggers.Apply(initialization => initialization.SecondStageInit());
+
+			ReadTriggers.Apply(initialization => initialization.SecondStageInit());
 		}
 
 		/// <summary>
@@ -195,6 +199,9 @@ namespace Raven.Database.FileSystem
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractFileDeleteTrigger> DeleteTriggers { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractFileReadTrigger> ReadTriggers { get; set; }
 
 	    public ITransactionalStorage Storage
 		{

@@ -60,14 +60,19 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/config/non-generated")]
         public HttpResponseMessage NonGeneratedConfigNames()
         {
-            IEnumerable<string> configs = null;
-            Storage.Batch(accessor => { configs = accessor.GetConfigNames(Paging.Start, int.MaxValue); });
-            
-            var searchPattern = new Regex("^(sync|deleteOp|raven\\/synchronization\\/sources|conflicted|renameOp)", RegexOptions.IgnoreCase);
-            configs = configs.Where((c) => !searchPattern.IsMatch(c))
-                             .Take(Paging.PageSize);
+			var searchPattern = new Regex("^(sync|deleteOp|raven\\/synchronization\\/sources|conflicted|renameOp)", RegexOptions.IgnoreCase);
 
-            return this.GetMessageWithObject(configs)
+            List<string> configs = null;
+            Storage.Batch(accessor =>
+            {
+	            configs = accessor
+					.GetConfigNames(Paging.Start, int.MaxValue)
+					.Where(config => !searchPattern.IsMatch(config))
+					.Take(Paging.PageSize)
+					.ToList();
+            });
+
+            return GetMessageWithObject(configs)
                        .WithNoCache();
         }
 

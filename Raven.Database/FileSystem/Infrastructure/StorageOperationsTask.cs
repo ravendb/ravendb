@@ -54,6 +54,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 		{
 			timer.Subscribe(tick =>
 			{
+				// TODO [ppekrol] DisableNestedBatching?
 				ResumeFileRenamingAsync();
 				CleanupDeletedFilesAsync();
 			});

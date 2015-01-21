@@ -108,7 +108,14 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 			object value;
 			headers.__ExternalState.TryGetValue("Next-Revision", out value);
 
-			accessor.CompleteFileUpload(name + "/revisions/" + value);
+			var fileName = name + "/revisions/" + value;
+
+			accessor.CompleteFileUpload(fileName);
+
+			var currentMetadata = accessor.ReadFile(fileName).Metadata;
+			currentMetadata["Content-MD5"] = headers["Content-MD5"];
+
+			accessor.UpdateFileMetadata(fileName, currentMetadata);
 		}
 
 		private static long GetNextRevisionNumber(string name, IStorageActionsAccessor accessor)

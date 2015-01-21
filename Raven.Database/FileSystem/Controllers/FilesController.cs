@@ -490,12 +490,13 @@ namespace Raven.Database.FileSystem.Controllers
 
 					if (read == 0) // nothing left to read
 					{
+						FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
+						headers["Content-MD5"] = FileHash;
 						storage.Batch(accessor =>
 						{
 							accessor.CompleteFileUpload(filename);
 							putTriggers.Apply(trigger => trigger.AfterUpload(filename, headers, accessor));
 						});
-					    FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
 						return; // task is done
 					}
 
