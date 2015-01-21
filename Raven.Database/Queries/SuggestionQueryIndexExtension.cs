@@ -135,6 +135,8 @@ namespace Raven.Database.Queries
 			indexingPerformanceStats.OutputCount = enumerableDictionary.NumberOfFields;
 		}
 
+		public string Name { get { return "Suggestions"; } }
+
 		public class EnumerableDictionary : SpellChecker.Net.Search.Spell.IDictionary
 		{
 			private readonly IEnumerable<Document> documents;

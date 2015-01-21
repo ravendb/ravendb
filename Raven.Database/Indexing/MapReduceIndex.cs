@@ -661,10 +661,9 @@ namespace Raven.Database.Indexing
 				var sourceCount = 0;
 				var addDocumentDutation = new Stopwatch();
 				var convertToLuceneDocumentDuration = new Stopwatch();
-				var flushToDiskDuration = new Stopwatch();
 				var linqExecutionDuration = new Stopwatch();
-				var recreateSearcherDuration = new Stopwatch();
 				var deleteExistingDocumentsDuration = new Stopwatch();
+				var writeToIndexStats = new List<PerformanceStats>();
 
 				IndexingPerformanceStats performance = null;
 
@@ -741,7 +740,7 @@ namespace Raven.Database.Indexing
 					{
 						ChangedDocs = count + ReduceKeys.Count
 					};
-				}, flushToDiskDuration, recreateSearcherDuration);
+				}, writeToIndexStats);
 
 				var performanceStats = new List<BasePerformanceStats>();
 
@@ -749,8 +748,7 @@ namespace Raven.Database.Indexing
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_DeleteExistingDocument, deleteExistingDocumentsDuration.ElapsedMilliseconds));
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_ConvertToLuceneDocument, convertToLuceneDocumentDuration.ElapsedMilliseconds));
 				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_AddDocument, addDocumentDutation.ElapsedMilliseconds));
-				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_FlushToDisk, flushToDiskDuration.ElapsedMilliseconds));
-				performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_RecreateSearcher, recreateSearcherDuration.ElapsedMilliseconds));
+				performanceStats.AddRange(writeToIndexStats);
 
 				parent.BatchCompleted("Current Reduce #" + Level, "Reduce Level " + Level, sourceCount, count, performanceStats);
 

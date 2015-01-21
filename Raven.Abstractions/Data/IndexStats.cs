@@ -229,6 +229,8 @@ namespace Raven.Abstractions.Data
 
 		UpdateDocumentReferences,
 
+		Extension_Suggestions,
+
 		StorageCommit,
 // ReSharper restore InconsistentNaming
 	}

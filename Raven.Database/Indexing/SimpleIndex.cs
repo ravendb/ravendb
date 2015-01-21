@@ -47,8 +47,7 @@ namespace Raven.Database.Indexing
 
 			var count = 0;
 			var sourceCount = 0;
-			var flushToDiskDuration = new Stopwatch();
-			var recreateSearcherDuration = new Stopwatch();
+			var writeToIndexStats = new List<PerformanceStats>();
 
 			IndexingPerformanceStats performance = null;
 			var performanceStats = new List<BasePerformanceStats>();
@@ -273,10 +272,9 @@ namespace Raven.Database.Indexing
 				{
 					ChangedDocs = sourceCount
 				};
-			}, flushToDiskDuration, recreateSearcherDuration);
+			}, writeToIndexStats);
 
-			performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_FlushToDisk, flushToDiskDuration.ElapsedMilliseconds));
-			performanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_RecreateSearcher, recreateSearcherDuration.ElapsedMilliseconds));
+			performanceStats.AddRange(writeToIndexStats);
 
 			performance.OnCompleted = () => BatchCompleted("Current", "Index", sourceCount, count, performanceStats);
 
