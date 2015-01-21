@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -17,7 +16,6 @@ using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using ICSharpCode.NRefactory.CSharp;
 
-using Lucene.Net.Messages;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -27,8 +25,6 @@ using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.Connections;
-using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Database.Util;

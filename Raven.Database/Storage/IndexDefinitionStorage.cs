@@ -533,7 +533,7 @@ namespace Raven.Database.Storage
 		internal bool ReplaceIndex(string indexName, string indexToSwapName)
 		{
 			var index = GetIndexDefinition(indexName);
-			var indexToSwap = GetIndexDefinition(indexToSwapName);
+			var indexToReplace = GetIndexDefinition(indexToSwapName);
 
 			if (index == null) 
 				return false;
@@ -542,7 +542,7 @@ namespace Raven.Database.Storage
 			indexNameToId.TryRemove(index.Name, out _);
 
 		    index.IsSideBySideIndex = false;
-			index.Name = indexToSwap != null ? indexToSwap.Name : indexToSwapName;
+			index.Name = indexToReplace != null ? indexToReplace.Name : indexToSwapName;
 			CreateAndPersistIndex(index);
 			AddIndex(index.IndexId, index);
 

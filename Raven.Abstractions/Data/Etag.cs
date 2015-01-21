@@ -1,14 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Linq;
-using System.Security.Cryptography;
-using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
-using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
 {
@@ -109,72 +103,46 @@ namespace Raven.Abstractions.Data
         }
 
         public unsafe override string ToString()
-        {
-            var results = new string('-', 36);
+		{
+			var results = new string('-', 36);
 
-            fixed (char* buf = results)
-            {
-                var buffer = stackalloc byte[8];
-                *((long*)buffer) = restarts;
-                var duget = GenericUtil.ByteToHexAsStringLookup[buffer[7]];
-                buf[0] = duget[0];
-                buf[1] = duget[1];
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[6]];
-                buf[2] = duget[0];
-                buf[3] = duget[1];
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[5]];
-                buf[4] = duget[0];
-                buf[5] = duget[1];
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[4]];
-                buf[6] = duget[0];
-                buf[7] = duget[1];
-                //buf[8] = '-';
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[3]];
-                buf[9] = duget[0];
-                buf[10] = duget[1];
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[2]];
-                buf[11] = duget[0];
-                buf[12] = duget[1];
-                //buf[13] = '-';
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[1]];
-                buf[14] = duget[0];
-                buf[15] = duget[1];
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[0]];
-                buf[16] = duget[0];
-                buf[17] = duget[1];
-                //buf[18] = '-';
+			fixed (char* buf = results)
+			{
+				var buffer = stackalloc byte[8];
+				*((long*)buffer) = restarts;
 
-                *((long*)buffer) = changes;
+				*(int*)(&buf[0]) = ByteToHexStringAsInt32Lookup[buffer[7]];
+				*(int*)(&buf[2]) = ByteToHexStringAsInt32Lookup[buffer[6]];
+				*(int*)(&buf[4]) = ByteToHexStringAsInt32Lookup[buffer[5]];
+				*(int*)(&buf[6]) = ByteToHexStringAsInt32Lookup[buffer[4]];
 
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[7]];
-                buf[19] = duget[0];
-                buf[20] = duget[1];
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[6]];
-                buf[21] = duget[0];
-                buf[22] = duget[1];
-                //buf[23] = '-';
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[5]];
-                buf[24] = duget[0];
-                buf[25] = duget[1];
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[4]];
-                buf[26] = duget[0];
-                buf[27] = duget[1];
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[3]];
-                buf[28] = duget[0];
-                buf[29] = duget[1];
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[2]];
-                buf[30] = duget[0];
-                buf[31] = duget[1];
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[1]];
-                buf[32] = duget[0];
-                buf[33] = duget[1];
-                duget = GenericUtil.ByteToHexAsStringLookup[buffer[0]];
-                buf[34] = duget[0];
-                buf[35] = duget[1];
+				//buf[8] = '-';
+				*(int*)(&buf[9]) = ByteToHexStringAsInt32Lookup[buffer[3]];
+				*(int*)(&buf[11]) = ByteToHexStringAsInt32Lookup[buffer[2]];
 
-                return results;
-            }
-        }
+				//buf[13] = '-';
+				*(int*)(&buf[14]) = ByteToHexStringAsInt32Lookup[buffer[1]];
+				*(int*)(&buf[16]) = ByteToHexStringAsInt32Lookup[buffer[0]];
+
+				//buf[18] = '-';
+
+				*((long*)buffer) = changes;
+
+				*(int*)(&buf[19]) = ByteToHexStringAsInt32Lookup[buffer[7]];
+				*(int*)(&buf[21]) = ByteToHexStringAsInt32Lookup[buffer[6]];
+
+				//buf[23] = '-';
+				*(int*)(&buf[24]) = ByteToHexStringAsInt32Lookup[buffer[5]];
+				*(int*)(&buf[26]) = ByteToHexStringAsInt32Lookup[buffer[4]];
+				*(int*)(&buf[28]) = ByteToHexStringAsInt32Lookup[buffer[3]];
+				*(int*)(&buf[30]) = ByteToHexStringAsInt32Lookup[buffer[2]];
+				*(int*)(&buf[32]) = ByteToHexStringAsInt32Lookup[buffer[1]];
+				*(int*)(&buf[34]) = ByteToHexStringAsInt32Lookup[buffer[0]];
+
+				return results;
+			}
+		}
+
 
         public unsafe static Etag Parse(byte[] bytes)
         {
@@ -383,30 +351,18 @@ namespace Raven.Abstractions.Data
             }
             return Etag.Parse(bytes);
         }
-    }
 
-    public class EtagJsonConverter : JsonConverter
-    {
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-        {
-            var etag = value as Etag;
-            if (etag == null)
-                writer.WriteNull();
-            else
-                writer.WriteValue(etag.ToString());
-        }
+		private static readonly int[] ByteToHexStringAsInt32Lookup;
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-        {
-            var s = reader.Value as string;
-            if (s == null)
-                return null;
-            return Etag.Parse(s);
-        }
-
-        public override bool CanConvert(Type objectType)
-        {
-            return objectType == typeof(Etag);
-        }
+		static Etag()
+		{
+			ByteToHexStringAsInt32Lookup = new int[256];
+			var abcdef = "0123456789ABCDEF";
+			for (var i = 0; i < 256; i++)
+			{
+				var hex = (abcdef[i / 16] | (abcdef[i % 16] << 16));
+				ByteToHexStringAsInt32Lookup[i] = hex;
+			}
+		}
     }
 }

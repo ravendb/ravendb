@@ -1096,6 +1096,15 @@ more responsive application.
 			GetMetadataFor(entity)[Constants.RavenReadOnly] = true;
 		}
 
+		/// <summary>
+		/// Mark the entity as one that should be ignore for change tracking purposes,
+		/// it still takes part in the session, but is ignored for SaveChanges.
+		/// </summary>
+		public void IgnoreChangesFor(object entity)
+		{
+			GetDocumentMetadata(entity).IgnoreChanges = true;
+		}
+
 
 		/// <summary>
 		/// Determines if the entity have changed.
@@ -1108,6 +1117,9 @@ more responsive application.
 		{
 			if (documentMetadata == null)
 				return true;
+
+			if (documentMetadata.IgnoreChanges)
+				return false;
 
 			string id;
 			if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) &&
@@ -1259,6 +1271,12 @@ more responsive application.
 			/// even if UseOptimisticConcurrency is set to false
 			/// </summary>
 			public bool ForceConcurrencyCheck { get; set; }
+
+			/// <summary>
+			/// If set to true, the session will ignore this document
+			/// when SaveChanges() is called, and won't perform and change tracking
+			/// </summary>
+			public bool IgnoreChanges { get; set; }
 		}
 
 		/// <summary>

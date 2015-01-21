@@ -23,7 +23,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
-	public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable
+	public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class 
 	{
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
@@ -106,13 +106,18 @@ namespace Raven.Client.Document
 									cts.Token.ThrowIfCancellationRequested();
 
 									var jsonDoc = streamedDocs.Current;
+
+									T instance = null;
+
 									foreach (var subscriber in subscribers)
 									{
 										try
 										{
 											if (isStronglyTyped)
 											{
-												var instance = jsonDoc.Deserialize<T>(conventions);
+												if (instance == null)
+													instance = jsonDoc.Deserialize<T>(conventions);
+												
 												subscriber.OnNext(instance);
 											}
 											else

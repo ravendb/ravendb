@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
-
+using Raven.Bundles.Replication.Tasks;
+using Raven.Client;
+using Raven.Json.Linq;
 using Xunit;
 
 using Raven.Client.UniqueConstraints;
@@ -8,6 +10,34 @@ namespace Raven.Tests.Bundles.UniqueConstraints
 {
     public class ExtensionLoadTests : UniqueConstraintsTest
 	{
+		[Fact]
+		public void Manipulate_UniqueConstraint_To_Look_LikeTheOldThenRunThis()
+		{
+			using (var session = DocumentStore.OpenSession())
+			{
+				var user = new User { Email = "foo@bar.com", Name = "James" };
+				session.Store(user);
+
+				session.SaveChanges();
+			}
+
+			var jsonDocument = DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue("foo@bar.com"));
+			jsonDocument.DataAsJson = RavenJObject.Parse("{'RelatedId': 'users/1' }");
+			DocumentStore.DatabaseCommands.Put(jsonDocument.Key, null, jsonDocument.DataAsJson, jsonDocument.Metadata);
+
+			using (var session = DocumentStore.OpenSession())
+			{
+				var loadedUser = session.LoadByUniqueConstraint<User>(x => x.Email, "foo@bar.com");
+
+				session.Delete(loadedUser);
+
+				var user = new User { Email = "foo@bar.com", Name = "James" };
+				session.Store(user);
+
+				session.SaveChanges();
+			}
+		}
+
 		[Fact]
 		public void Will_load_existing_doc_by_constraint()
 		{

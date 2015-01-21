@@ -156,6 +156,7 @@
     <Compile Include="Data\BulkOperationOptions.cs" />
     <Compile Include="Data\CompactStatus.cs" />
     <Compile Include="Data\DatabaseOperationsStatus.cs" />
+    <Compile Include="Data\EtagJsonConverter.cs" />
     <Compile Include="Data\FilesystemRestoreRequest.cs" />
     <Compile Include="Data\FilesystemBackupRequest.cs" />
     <Compile Include="Data\EsentStorageStats.cs" />
@@ -420,7 +421,6 @@
     <Compile Include="Util\Encryptors\IEncryptor.cs" />
     <Compile Include="Util\EscapingHelper.cs" />
     <Compile Include="Util\EtagUtil.cs" />
-    <Compile Include="Util\GenericUtil.cs" />
     <Compile Include="Util\IAsyncEnumerator.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\IndexPrettyPrinter.cs" />

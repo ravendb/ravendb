@@ -366,7 +366,7 @@ namespace Raven.Database.Indexing
 			{
 				IndexesToWorkOn = indexesToWorkOn,
 				StartedAt = SystemTime.UtcNow,
-				PerformanceStats = new ConcurrentDictionary<string, ReducingPerformanceStats>()
+				PerformanceStats = new ConcurrentDictionary<string, ReducingPerformanceStats[]>()
 			};
 		}
 

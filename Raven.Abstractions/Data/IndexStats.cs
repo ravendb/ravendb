@@ -198,6 +198,8 @@ namespace Raven.Abstractions.Data
 		public BasePerformanceStats[] Operations { get; set; }
 
 	    public TimeSpan WaitingTimeSinceLastBatchCompleted { get; set; }
+		[JsonIgnore]
+	    public Action OnCompleted = delegate { };
 	}
 
 	public enum IndexingOperation
@@ -214,18 +216,20 @@ namespace Raven.Abstractions.Data
 		Lucene_FlushToDisk,
 		Lucene_RecreateSearcher,
 
-		MapStorage_DeleteMappedResults,
-		MapStorage_ConvertToRavenJObject,
-		MapStorage_PutMappedResult,
-		MapStorage_ScheduleReduction,
-		MapStorage_Commit,
+		Map_DeleteMappedResults,
+		Map_ConvertToRavenJObject,
+		Map_PutMappedResults,
+		Map_ScheduleReductions,
 
-		ReduceStorage_GetItemsToReduce,
-		ReduceStorage_DeletePreviouslyScheduledReductions,
-		ReduceStorage_ScheduleReductions,
-		ReduceStorage_GetMappedResults,
-		ReduceStorage_RemoveReduceResults,
-		ReduceStorage_Commit,
+		Reduce_GetItemsToReduce,
+		Reduce_DeleteScheduledReductions,
+		Reduce_ScheduleReductions,
+		Reduce_GetMappedResults,
+		Reduce_RemoveReduceResults,
+
+		UpdateDocumentReferences,
+
+		StorageCommit,
 // ReSharper restore InconsistentNaming
 	}
 
@@ -249,15 +253,15 @@ namespace Raven.Abstractions.Data
 		}
 	}
 
-	public class ParallelPefromanceStats : BasePerformanceStats
+	public class ParallelPerformanceStats : BasePerformanceStats
 	{
-		public ParallelPefromanceStats()
+		public ParallelPerformanceStats()
 		{
-			BatchedOperations = new ParallelBatchStats[0];
+			BatchedOperations = new List<ParallelBatchStats>();
 		}
 		public long NumberOfThreads { get; set; }
 
-		public ParallelBatchStats[] BatchedOperations { get; set; } 
+		public List<ParallelBatchStats> BatchedOperations { get; set; } 
 	}
 
 	public class ParallelBatchStats
@@ -265,10 +269,10 @@ namespace Raven.Abstractions.Data
 
 		public ParallelBatchStats()
 		{
-			Operations = new PerformanceStats[0];
+			Operations = new List<PerformanceStats>();
 		}
 		public long StartDelay { get; set; }
-		public PerformanceStats[] Operations { get; set; } 
+		public List<PerformanceStats> Operations { get; set; } 
 	}
 
 	public class ReducingPerformanceStats
@@ -276,11 +280,11 @@ namespace Raven.Abstractions.Data
 		public ReducingPerformanceStats(ReduceType reduceType)
 		{
 			ReduceType = reduceType;
-			LevelStats = new ReduceLevelPeformanceStats[0];
+			LevelStats = new List<ReduceLevelPeformanceStats>();
 		}
 
 		public ReduceType ReduceType { get; private set; }
-		public ReduceLevelPeformanceStats[] LevelStats { get; set; } 
+		public List<ReduceLevelPeformanceStats> LevelStats { get; set; }
 	}
 
 	public class ReduceLevelPeformanceStats
@@ -294,11 +298,11 @@ namespace Raven.Abstractions.Data
 		public TimeSpan Duration { get; set; }
 		public double DurationMs{ get { return Math.Round(Duration.TotalMilliseconds, 2); } }
 		[JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]
-		public BasePerformanceStats[] Operations { get; set; }
+		public List<BasePerformanceStats> Operations { get; set; }
 
 		public ReduceLevelPeformanceStats()
 		{
-            Operations = new BasePerformanceStats[0];
+            Operations = new List<BasePerformanceStats>();
 		}
 
 		public void Add(IndexingPerformanceStats other)
@@ -306,29 +310,24 @@ namespace Raven.Abstractions.Data
 			ItemsCount += other.ItemsCount;
 			InputCount += other.InputCount;
 			OutputCount += other.OutputCount;
-
 			foreach (var stats in other.Operations)
 			{
 				var performanceStats = stats as PerformanceStats;
-
-				if (performanceStats == null) 
-					continue;
-				var existingStat = Operations.OfType<PerformanceStats>().FirstOrDefault(x => x.Name == performanceStats.Name);
-
-				if (existingStat != null)
+				if (performanceStats != null)
 				{
-					existingStat.DurationMs += performanceStats.DurationMs;
-				}
-				else
-				{
-                    Operations = Operations.Concat(new BasePerformanceStats[]
+					var existingStat = Operations.OfType<PerformanceStats>().FirstOrDefault(x => x.Name == performanceStats.Name);
+					if (existingStat != null)
 					{
-						new PerformanceStats
+						existingStat.DurationMs += performanceStats.DurationMs;
+					}
+					else
+					{
+						Operations.Add(new PerformanceStats
 						{
 							Name = performanceStats.Name,
 							DurationMs = performanceStats.DurationMs
-						}
-					}).ToArray();
+						});
+					}
 				}
 			}
 		}
