@@ -111,6 +111,8 @@ namespace Raven.Abstractions.Data
 				var buffer = stackalloc byte[8];
 				*((long*)buffer) = restarts;
 
+				// Optimized with the help of Oliver Hallam (oliver.hallam@gmail.com)
+
 				*(int*)(&buf[0]) = ByteToHexStringAsInt32Lookup[buffer[7]];
 				*(int*)(&buf[2]) = ByteToHexStringAsInt32Lookup[buffer[6]];
 				*(int*)(&buf[4]) = ByteToHexStringAsInt32Lookup[buffer[5]];
