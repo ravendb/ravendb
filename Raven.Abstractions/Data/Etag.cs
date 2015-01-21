@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Abstractions.Data
@@ -101,52 +102,72 @@ namespace Raven.Abstractions.Data
         {
             return ToBytes().ToArray();
         }
-
-        public unsafe override string ToString()
+		[StructLayout(LayoutKind.Explicit)]
+		struct LongBytes
 		{
-			var results = new string('-', 36);
+			[FieldOffset(0)]
+			public long Long;
 
-			fixed (char* buf = results)
-			{
-				var buffer = stackalloc byte[8];
-				*((long*)buffer) = restarts;
-
-				// Optimized with the help of Oliver Hallam (oliver.hallam@gmail.com)
-
-				*(int*)(&buf[0]) = ByteToHexStringAsInt32Lookup[buffer[7]];
-				*(int*)(&buf[2]) = ByteToHexStringAsInt32Lookup[buffer[6]];
-				*(int*)(&buf[4]) = ByteToHexStringAsInt32Lookup[buffer[5]];
-				*(int*)(&buf[6]) = ByteToHexStringAsInt32Lookup[buffer[4]];
-
-				//buf[8] = '-';
-				*(int*)(&buf[9]) = ByteToHexStringAsInt32Lookup[buffer[3]];
-				*(int*)(&buf[11]) = ByteToHexStringAsInt32Lookup[buffer[2]];
-
-				//buf[13] = '-';
-				*(int*)(&buf[14]) = ByteToHexStringAsInt32Lookup[buffer[1]];
-				*(int*)(&buf[16]) = ByteToHexStringAsInt32Lookup[buffer[0]];
-
-				//buf[18] = '-';
-
-				*((long*)buffer) = changes;
-
-				*(int*)(&buf[19]) = ByteToHexStringAsInt32Lookup[buffer[7]];
-				*(int*)(&buf[21]) = ByteToHexStringAsInt32Lookup[buffer[6]];
-
-				//buf[23] = '-';
-				*(int*)(&buf[24]) = ByteToHexStringAsInt32Lookup[buffer[5]];
-				*(int*)(&buf[26]) = ByteToHexStringAsInt32Lookup[buffer[4]];
-				*(int*)(&buf[28]) = ByteToHexStringAsInt32Lookup[buffer[3]];
-				*(int*)(&buf[30]) = ByteToHexStringAsInt32Lookup[buffer[2]];
-				*(int*)(&buf[32]) = ByteToHexStringAsInt32Lookup[buffer[1]];
-				*(int*)(&buf[34]) = ByteToHexStringAsInt32Lookup[buffer[0]];
-
-				return results;
-			}
+			[FieldOffset(0)]
+			public Byte Byte0;
+			[FieldOffset(1)]
+			public Byte Byte1;
+			[FieldOffset(2)]
+			public Byte Byte2;
+			[FieldOffset(3)]
+			public Byte Byte3;
+			[FieldOffset(4)]
+			public Byte Byte4;
+			[FieldOffset(5)]
+			public Byte Byte5;
+			[FieldOffset(6)]
+			public Byte Byte6;
+			[FieldOffset(7)]
+			public Byte Byte7;
 		}
 
+	    public override unsafe string ToString()
+	    {
+		    var results = new string('-', 36);
+			// Optimized with the help of Oliver Hallam (oliver.hallam@gmail.com)
+		    fixed (char* buf = results)
+		    {
+			    var bytes = new LongBytes {Long = this.restarts};
 
-        public unsafe static Etag Parse(byte[] bytes)
+			    *(int*) (&buf[0]) = ByteToHexStringAsInt32Lookup[bytes.Byte7];
+			    *(int*) (&buf[2]) = ByteToHexStringAsInt32Lookup[bytes.Byte6];
+			    *(int*) (&buf[4]) = ByteToHexStringAsInt32Lookup[bytes.Byte5];
+			    *(int*) (&buf[6]) = ByteToHexStringAsInt32Lookup[bytes.Byte4];
+
+			    //buf[8] = '-';
+			    *(int*) (&buf[9]) = ByteToHexStringAsInt32Lookup[bytes.Byte3];
+			    *(int*) (&buf[11]) = ByteToHexStringAsInt32Lookup[bytes.Byte2];
+
+			    //buf[13] = '-';
+			    *(int*) (&buf[14]) = ByteToHexStringAsInt32Lookup[bytes.Byte1];
+			    *(int*) (&buf[16]) = ByteToHexStringAsInt32Lookup[bytes.Byte0];
+
+			    //buf[18] = '-';
+
+			    bytes.Long = this.changes;
+
+			    *(int*) (&buf[19]) = ByteToHexStringAsInt32Lookup[bytes.Byte7];
+			    *(int*) (&buf[21]) = ByteToHexStringAsInt32Lookup[bytes.Byte6];
+
+			    //buf[23] = '-';
+			    *(int*) (&buf[24]) = ByteToHexStringAsInt32Lookup[bytes.Byte5];
+			    *(int*) (&buf[26]) = ByteToHexStringAsInt32Lookup[bytes.Byte4];
+			    *(int*) (&buf[28]) = ByteToHexStringAsInt32Lookup[bytes.Byte3];
+			    *(int*) (&buf[30]) = ByteToHexStringAsInt32Lookup[bytes.Byte2];
+			    *(int*) (&buf[32]) = ByteToHexStringAsInt32Lookup[bytes.Byte1];
+			    *(int*) (&buf[34]) = ByteToHexStringAsInt32Lookup[bytes.Byte0];
+
+			    return results;
+		    }
+	    }
+
+
+	    public unsafe static Etag Parse(byte[] bytes)
         {
             var etag = new Etag();
             fixed (byte* restarts = bytes)
