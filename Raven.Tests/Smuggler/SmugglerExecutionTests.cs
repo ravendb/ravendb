@@ -548,8 +548,9 @@ namespace Raven.Tests.Smuggler
                 }
 
                 store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }), new RavenJObject());
+                
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
-
+                
                 servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
                                                                      Assert.Equal(1,
                                                                                   accessor.Lists.Read(

@@ -242,13 +242,29 @@ namespace Raven.Database.Server.WebApi
 
 
 
-		public void SetThreadLocalState(HttpHeaders innerHeaders, string databaseName)
+        public void SetThreadLocalState(IEnumerable<KeyValuePair<string, IEnumerable<string>>> innerHeaders, string databaseName)
 		{
-			CurrentOperationContext.Headers.Value = new NameValueCollection();
-			foreach (var innerHeader in innerHeaders)
-				CurrentOperationContext.Headers.Value[innerHeader.Key] = innerHeader.Value.FirstOrDefault();
+            CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() =>
+            {
+                var nameValueCollection = new NameValueCollection();
+                foreach (var innerHeader in innerHeaders)
+                {
+                    nameValueCollection[innerHeader.Key] = innerHeader.Value.FirstOrDefault();                   
+                }
+                
+                return nameValueCollection;
+            });
+            CurrentOperationContext.RavenAuthenticatedUser.Value = string.Empty;
+            foreach (var innerHeader in innerHeaders)
+            {
+                if (innerHeader.Key.Equals("Raven-Authorization-User"))
+                {
+                    CurrentOperationContext.RavenAuthenticatedUser.Value = innerHeader.Value.FirstOrDefault();
+                }
+            }
+            
+            
 
-			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = string.Empty;
 			CurrentOperationContext.User.Value = null;
 
 			LogContext.DatabaseName.Value = databaseName;
@@ -261,7 +277,7 @@ namespace Raven.Database.Server.WebApi
 		{
 			try
 			{
-				CurrentOperationContext.Headers.Value = new NameValueCollection();
+				CurrentOperationContext.Headers.Value = null;
 				CurrentOperationContext.User.Value = null;
 				LogContext.DatabaseName.Value = null;
 				foreach (var disposable in CurrentOperationContext.RequestDisposables.Value)
@@ -314,10 +330,12 @@ namespace Raven.Database.Server.WebApi
 						sb.Length--;
 					}
 				}
-
+			    var innerRequest = controller.InnerRequest;
+                var httpRequestHeaders = innerRequest.Headers;
+                var httpContentHeaders = innerRequest.Content == null ? null : innerRequest.Content.Headers;
 				logHttpRequestStatsParam = new LogHttpRequestStatsParams(
 					sw,
-					GetHeaders(controller.InnerHeaders),
+                    new Lazy<HttpHeaders>(() => RavenBaseApiController.CloneRequestHttpHeaders(httpRequestHeaders, httpContentHeaders)),
 					controller.InnerRequest.Method.Method,
 					response != null ? (int)response.StatusCode : 500,
 					controller.InnerRequest.RequestUri.ToString(),
@@ -384,15 +402,6 @@ namespace Raven.Database.Server.WebApi
 			return queue.ToArray().Reverse();
 		}
 
-		private NameValueCollection GetHeaders(HttpHeaders innerHeaders)
-		{
-			var result = new NameValueCollection();
-			foreach (var innerHeader in innerHeaders)
-			{
-				result.Add(innerHeader.Key, innerHeader.Value.FirstOrDefault());
-			}
-			return result;
-		}
 		private void TraceTraffic(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
 		{
 			if (HasAnyHttpTraceEventTransport() == false)
@@ -439,13 +448,6 @@ namespace Raven.Database.Server.WebApi
 				return;
 
 			if (controller is StudioController || controller is HardRouteController || controller is SilverlightController)
-				return;
-
-			// we filter out requests for the UI because they fill the log with information
-			// we probably don't care about them anyway. That said, we do output them if they take too
-			// long.
-			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" &&
-				logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25)
 				return;
 
 			var message = string.Format(CultureInfo.InvariantCulture, "Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",

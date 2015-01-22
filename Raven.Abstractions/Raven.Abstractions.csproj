@@ -157,6 +157,7 @@
     <Compile Include="Data\BulkOperationOptions.cs" />
     <Compile Include="Data\CompactStatus.cs" />
     <Compile Include="Data\DatabaseOperationsStatus.cs" />
+    <Compile Include="Data\EtagJsonConverter.cs" />
     <Compile Include="Data\FilesystemRestoreRequest.cs" />
     <Compile Include="Data\FilesystemBackupRequest.cs" />
     <Compile Include="Data\EsentStorageStats.cs" />

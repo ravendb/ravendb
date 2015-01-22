@@ -19,7 +19,8 @@ namespace Raven.Abstractions.Data
 		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
 
 		public const string RavenShardId = "Raven-Shard-Id";
-		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
+        // turned into CurrentOperationContext.RavenAuthenticatedUser.Value
+        //public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
 		public const string LastModified = "Last-Modified";
         public const string CreationDate = "Creation-Date";
         public const string RavenCreationDate = "Raven-Creation-Date";
