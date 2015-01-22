@@ -264,7 +264,7 @@ namespace Raven.Client.Counters
 			
 		}
 
-		public class BatchOperationsStore
+		public class BatchOperationsStore : ICountersBatchOperation
 		{
 			private readonly ICounterStore _parent;
 			private readonly Lazy<CountersBatchOperation> _defaultBatchOperation;
@@ -296,28 +296,28 @@ namespace Raven.Client.Counters
 					_defaultBatchOperation.Value.Dispose();
 			}
 
-			public void ScheduleChange(string groupName, long delta)
+			public void ScheduleChange(string groupName, string counterName, long delta)
 			{
 				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
 					throw new InvalidOperationException("Default counter storage name cannot be empty!");
 
-				_defaultBatchOperation.Value.ScheduleChange(groupName, _parent.DefaultCounterStorageName, delta);
+				_defaultBatchOperation.Value.ScheduleChange(groupName, counterName, delta);
 			}
 
-			public void ScheduleIncrement(string groupName)
+			public void ScheduleIncrement(string groupName, string counterName)
 			{
 				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
 					throw new InvalidOperationException("Default counter storage name cannot be empty!");
 
-				_defaultBatchOperation.Value.ScheduleIncrement(groupName, _parent.DefaultCounterStorageName);
+				_defaultBatchOperation.Value.ScheduleIncrement(groupName, counterName);
 			}
 
-			public void ScheduleDecrement(string groupName)
+			public void ScheduleDecrement(string groupName, string counterName)
 			{
 				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
 					throw new InvalidOperationException("Default counter storage name cannot be empty!");
 
-				_defaultBatchOperation.Value.ScheduleDecrement(groupName, _parent.DefaultCounterStorageName);
+				_defaultBatchOperation.Value.ScheduleDecrement(groupName, counterName);
 			}
 
 			public async Task FlushAsync()

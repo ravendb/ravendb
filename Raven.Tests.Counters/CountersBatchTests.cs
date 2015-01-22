@@ -118,14 +118,94 @@ namespace Raven.Tests.Counters
 		{
 			using (var store = NewRemoteCountersStore(createDefaultCounter:true))
 			{
-				store.Batch.ScheduleIncrement("FooGroup");//schedule increment for default counter
+				store.Batch.ScheduleIncrement("FooGroup", "FooCounter");//schedule increment for default counter storage
 				await store.Batch.FlushAsync();
 
 				//with counter storage name null - client is opened for default counter
 				using (var client = store.NewCounterClient()) 
 				{
-					var total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter");
+					var total = await client.Commands.GetOverallTotalAsync("FooGroup","FooCounter");
 					total.Should().Be(1);
+				}
+			}
+		}
+
+		[Theory]
+		[InlineData(15, 322)]
+		[InlineData(251, 252)]
+		public async Task Using_multiple_different_batches_for_the_same_store_async_should_work(int totalForT1, int totalForT2)
+		{
+			using (var store = NewRemoteCountersStore(createDefaultCounter:true))
+			{
+				var t1 = Task.Run(() =>
+				{
+					using (var batch = store.Advanced.NewBatch(store.DefaultCounterStorageName,new CountersBatchOptions
+					{
+						BatchSizeLimit = totalForT1 / 3
+					}))
+					{
+						for (int i = 0; i < totalForT1; i++)
+							batch.ScheduleIncrement("G", "C");
+					}
+				});
+
+				var t2 = Task.Run(() =>
+				{
+					using (var batch = store.Advanced.NewBatch(store.DefaultCounterStorageName, new CountersBatchOptions
+					{
+						BatchSizeLimit = totalForT2 / 3
+					}))
+					{
+						for (int i = 0; i < totalForT2; i++)
+							batch.ScheduleIncrement("G", "C");
+					}
+				});
+
+				await Task.WhenAll(t1, t2);
+
+				using (var client = store.NewCounterClient())
+				{
+					var total = await client.Commands.GetOverallTotalAsync("G", "C");
+					total.Should().Be(totalForT1 + totalForT2);
+				}
+
+			}
+		}
+
+		[Fact]
+		public async Task Using_multiple_different_batches_for_different_stores_async_should_work()
+		{
+			using (var store = NewRemoteCountersStore())
+			{
+				await store.CreateCounterStorageAsync(CreateCounterStorageDocument(CounterStorageName1), CounterStorageName1);
+				await store.CreateCounterStorageAsync(CreateCounterStorageDocument(CounterStorageName2), CounterStorageName2);
+
+				var t1 = Task.Run(() =>
+				{
+					for (int i = 0; i < 499; i++)
+						store.Batch[CounterStorageName1].ScheduleIncrement("G", "C");
+					store.Batch[CounterStorageName1].FlushAsync().Wait();
+				});
+
+				var t2 = Task.Run(() =>
+				{
+					for (int i = 0; i < 500; i++)
+						store.Batch[CounterStorageName2].ScheduleIncrement("G", "C");
+					store.Batch[CounterStorageName2].FlushAsync().Wait();
+				});
+
+				await Task.WhenAll(t1, t2);
+
+				using (var client = store.NewCounterClient(CounterStorageName1))
+				{
+					var total = await client.Commands.GetOverallTotalAsync("G", "C");
+					total.Should().Be(499);
+				}
+			
+				using (var client = store.NewCounterClient(CounterStorageName2))
+				{
+					var total = await client.Commands.GetOverallTotalAsync("G", "C");
+					total.Should().Be(500);
 				}
 			}
 		}
