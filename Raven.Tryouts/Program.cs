@@ -1,17 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.SlowTests.Issues;
 using Raven.Tests.Common;
-using Raven.Tests.Core;
-using Raven.Tests.Core.Querying;
 using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
@@ -20,15 +12,23 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			var guids = Enumerable.Range(0, 1000).Select(x => Etag.Parse(Guid.NewGuid().ToString())).ToArray();
-
-			var sp = Stopwatch.StartNew();
-			for (int i = 0; i < 10 * 1000 * 1000; i++)
+			for (int i = 0; i < 1000; i++)
 			{
-				guids[i%1000].ToString();
+				Console.WriteLine(i);
+				using (var test = new RavenDB_1041())
+				{
+					test.CanWaitForReplicationOfParticularEtag().Wait();
+				}
 			}
-
-			Console.WriteLine(sp.ElapsedMilliseconds);
+//			var guids = Enumerable.Range(0, 1000).Select(x => Etag.Parse(Guid.NewGuid().ToString())).ToArray();
+//
+//			var sp = Stopwatch.StartNew();
+//			for (int i = 0; i < 10 * 1000 * 1000; i++)
+//			{
+//				guids[i%1000].ToString();
+//			}
+//
+//			Console.WriteLine(sp.ElapsedMilliseconds);
 		}
 	}
 

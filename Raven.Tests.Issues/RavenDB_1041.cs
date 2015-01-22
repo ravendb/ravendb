@@ -5,12 +5,9 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Threading.Tasks;
-using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
-using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -35,9 +32,9 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task CanWaitForReplication()
 		{
-			var store1 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
-            var store2 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
-            var store3 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
+			var store1 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName,useFiddler:true);
+			var store2 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName, useFiddler: true);
+			var store3 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName, useFiddler: true);
 
 			SetupReplication(store1.DatabaseCommands, store2, store3);
 
