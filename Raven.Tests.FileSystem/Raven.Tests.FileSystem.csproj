@@ -110,10 +110,10 @@
     <Compile Include="CommandsUsage.cs" />
     <Compile Include="CompleteUsage.cs" />
     <Compile Include="Config.cs" />
-    <Compile Include="Encryption\Crud.cs" />
-    <Compile Include="Encryption\EncryptedFileSystemBackupRestore.cs" />
-    <Compile Include="Encryption\FileSystemEncryptionTest.cs" />
-    <Compile Include="Encryption\ShouldErrorOnMissingConfiguration.cs" />
+    <Compile Include="Bundles\Encryption\Crud.cs" />
+    <Compile Include="Bundles\Encryption\EncryptedFileSystemBackupRestore.cs" />
+    <Compile Include="Bundles\Encryption\FileSystemEncryptionTest.cs" />
+    <Compile Include="Bundles\Encryption\ShouldErrorOnMissingConfiguration.cs" />
     <Compile Include="FileHandling.cs" />
     <Compile Include="FileNamingTests.cs" />
     <Compile Include="Folders.cs" />
