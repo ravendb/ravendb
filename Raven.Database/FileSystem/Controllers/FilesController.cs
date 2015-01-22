@@ -197,7 +197,7 @@ namespace Raven.Database.FileSystem.Controllers
 		{
             name = FileHeader.Canonize(name);
 
-            var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
+            var headers = this.GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
             Historian.UpdateLastModified(headers);
             Historian.Update(name, headers);
@@ -296,7 +296,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                 name = FileHeader.Canonize(name);
 
-                var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
+                var headers = this.GetFilteredMetadataFromHeaders(ReadInnerHeaders);
                 if (preserveTimestamps)
                 {
                     if (!headers.ContainsKey(Constants.RavenCreationDate))
@@ -307,10 +307,11 @@ namespace Raven.Database.FileSystem.Controllers
                             throw new InvalidOperationException("Preserve Timestamps requires that the client includes the Raven-Creation-Date header.");
                     }
 
-                    if ( InnerHeaders.Contains(Constants.RavenLastModified))
+                    var lastModified = GetHeader(Constants.RavenLastModified);
+                    if ( lastModified != null)
                     {
                         DateTimeOffset when;
-                        if (!DateTimeOffset.TryParse(InnerHeaders.GetValues(Constants.RavenLastModified).First(), out when))
+                        if (!DateTimeOffset.TryParse(lastModified, out when))
                             when = DateTimeOffset.UtcNow;
 
                         Historian.UpdateLastModified(headers, when);

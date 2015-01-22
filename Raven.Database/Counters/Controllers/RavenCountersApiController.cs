@@ -73,7 +73,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
 				{
-					RequestManager.SetThreadLocalState(InnerHeaders, CountersName);
+					RequestManager.SetThreadLocalState(ReadInnerHeaders, CountersName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
 				}, httpException => GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable));
 			}

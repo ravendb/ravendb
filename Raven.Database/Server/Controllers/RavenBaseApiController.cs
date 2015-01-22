@@ -65,29 +65,47 @@ namespace Raven.Database.Server.Controllers
 		{
 			get
 			{
-				var headers = new Headers();
-				foreach (var header in InnerRequest.Headers)
-				{
-					if (header.Value.Count() == 1)
-						headers.Add(header.Key, header.Value.First());
-					else
-						headers.Add(header.Key, header.Value.ToList());
-				}
-
-				if (InnerRequest.Content == null)
-					return headers;
-
-				foreach (var header in InnerRequest.Content.Headers)
-				{
-					if (header.Value.Count() == 1)
-						headers.Add(header.Key, header.Value.First());
-					else
-						headers.Add(header.Key, header.Value.ToList());
-				}
-
-				return headers;
+			    HttpRequestMessage message = InnerRequest;
+			    return CloneRequestHttpHeaders(message.Headers, message.Content == null ? null : message.Content.Headers);
 			}
 		}
+
+        public static HttpHeaders CloneRequestHttpHeaders( HttpRequestHeaders httpRequestHeaders, HttpContentHeaders httpContentHeaders)
+        {
+            var headers = new Headers();
+            foreach (var header in httpRequestHeaders)
+            {
+                 headers.Add(header.Key, header.Value);
+            }
+
+            if (httpContentHeaders == null)
+                return headers;
+
+            foreach (var header in httpContentHeaders)
+            {
+                headers.Add(header.Key, header.Value);
+            }
+
+            return headers; 
+        }
+
+        public IEnumerable<KeyValuePair<string,IEnumerable<string>>> ReadInnerHeaders
+        {
+            get
+            {
+                foreach (var header in InnerRequest.Headers)
+                {
+                    yield return new KeyValuePair<string, IEnumerable<string>>(header.Key, header.Value);
+                }
+
+                if (InnerRequest.Content == null)
+                    yield break;                
+                foreach (var header in InnerRequest.Content.Headers)
+                {
+                    yield return new KeyValuePair<string, IEnumerable<string>>(header.Key, header.Value);
+                }
+            }
+        }
 
 		public new IPrincipal User { get; set; }
 
@@ -724,9 +742,9 @@ namespace Raven.Database.Server.Controllers
         {
             get
             {
-                if (Configuration == null)
+                if (Configuration == null || landlord != null)
                     return landlord;
-                return (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
+                return landlord = (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
             }
         }
 

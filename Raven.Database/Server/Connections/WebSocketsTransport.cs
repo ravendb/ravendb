@@ -53,19 +53,20 @@ namespace Raven.Database.Server.Connections
 
         public static WebSocketsTransport CreateWebSocketTransport(RavenDBOptions options, IOwinContext context)
         {
-            if (context.Request.Uri.LocalPath.EndsWith(ChangesApiWebsocketSuffix))
+            var localPath = context.Request.Path.Value;
+            if (localPath.EndsWith(ChangesApiWebsocketSuffix))
             {
                 return new WebSocketsTransport(options, context);
             }
-            if (context.Request.Uri.LocalPath.EndsWith(WatchTrafficWebsocketSuffix))
+            if (localPath.EndsWith(WatchTrafficWebsocketSuffix))
             {
                 return new WatchTrafficWebsocketTransport(options, context);
             }
-            if (context.Request.Uri.LocalPath.EndsWith(AdminLogsWebsocketSuffix))
+            if (localPath.EndsWith(AdminLogsWebsocketSuffix))
             {
                 return new AdminLogsWebsocketTransport(options, context);
             }
-			if (context.Request.Uri.LocalPath.EndsWith(WebsocketValidateSuffix))
+			if (localPath.EndsWith(WebsocketValidateSuffix))
 			{
 				return new WebSocketsValidateTransport(options, context);
 			}

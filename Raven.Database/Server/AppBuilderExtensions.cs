@@ -166,14 +166,61 @@ namespace Owin
 			{
 				var context = hostContext as IOwinContext;
 
-				if (context != null)
+                if (context != null)
 				{
-					if (context.Request.Uri.LocalPath.EndsWith("bulkInsert", StringComparison.OrdinalIgnoreCase) ||
-						context.Request.Uri.LocalPath.EndsWith("studio-tasks/loadCsvFile", StringComparison.OrdinalIgnoreCase) ||
-						context.Request.Uri.LocalPath.EndsWith("studio-tasks/import", StringComparison.OrdinalIgnoreCase) ||
-						context.Request.Uri.LocalPath.EndsWith("replication/replicateDocs", StringComparison.OrdinalIgnoreCase) ||
-						context.Request.Uri.LocalPath.EndsWith("replication/replicateAttachments", StringComparison.OrdinalIgnoreCase))
-						return false;
+                    var pathString = context.Request.Path;
+				    if (pathString.HasValue)
+				    {
+                        var localPath = pathString.Value;
+				        var length = localPath.Length;
+				        if (length < 10)
+				            return true;
+				        var prev = localPath[length - 2];
+				        switch (localPath[length-1])
+				        {
+				            case 't':
+                            case 'T':
+				                switch (prev)
+				                {
+                                    case 'R':
+                                    case 'r':
+                                        return (
+                                            localPath.EndsWith("bulkInsert", StringComparison.OrdinalIgnoreCase) ||
+                                            localPath.EndsWith("studio-tasks/import", StringComparison.OrdinalIgnoreCase)
+                                            ) == false;
+                                    default:
+				                        return true;
+				                        
+				                }
+                            case 'e':
+                            case 'E':
+				                switch (prev)
+				                {
+                                    case 'l':
+                                    case 'L':
+                                        return localPath.EndsWith("studio-tasks/loadCsvFile", StringComparison.OrdinalIgnoreCase) == false;
+                                    default:
+				                        return true;
+				                }    
+                            case 's':
+                            case 'S':
+				                switch (prev)
+				                {
+                                    case 'T':
+                                    case 't':
+                                        return localPath.EndsWith("replication/replicateAttachments", StringComparison.OrdinalIgnoreCase) == false;
+                                    case 'o':
+                                    case 'O':
+                                        if (localPath[length - 4] == '/')
+				                        return true;
+				                        return localPath.EndsWith("replication/replicateDocs", StringComparison.OrdinalIgnoreCase) == false;
+                                    default:
+				                        return true;
+				                }
+                            default:
+				                return true;
+				        }
+				    }
 				}
 
 				return true;

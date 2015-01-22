@@ -155,6 +155,12 @@ namespace Raven.Client
 		void MarkReadOnly(object entity);
 
 		/// <summary>
+		/// Mark the entity as one that should be ignore for change tracking purposes,
+		/// it still takes part in the session, but is ignored for SaveChanges.
+		/// </summary>
+		void IgnoreChangesFor(object entity);
+
+		/// <summary>
 		/// Returns all changes for each entity stored within session. Including name of the field/property that changed, its old and new value and change type.
 		/// </summary>
 		IDictionary<string, DocumentsChanges[]> WhatChanged();

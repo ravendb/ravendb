@@ -41,7 +41,7 @@ namespace Raven.Client.Document
 		/// There can be only a single client that is connected to a subscription.
 		/// </summary>
 		/// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
-		Task<Subscription<T>> OpenAsync<T>(long id, SubscriptionConnectionOptions options, string database = null);
+		Task<Subscription<T>> OpenAsync<T>(long id, SubscriptionConnectionOptions options, string database = null) where T : class;
 
 		/// <summary>
 		/// It downloads a list of all existing subscriptions in a database.

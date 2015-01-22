@@ -563,9 +563,8 @@ namespace Raven.Database.Server.Controllers
 			if (indexDefinition == null)
 				return GetMessageWithString("Cannot find index : " + index, HttpStatusCode.NotFound);
 			
-			var definition = indexDefinition.Clone();
-			definition.LockMode = indexLockMode;
-			Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
+			indexDefinition.LockMode = indexLockMode;
+			Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
 
 			return GetEmptyMessage();
 		}

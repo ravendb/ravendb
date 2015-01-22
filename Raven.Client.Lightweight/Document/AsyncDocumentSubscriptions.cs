@@ -64,7 +64,7 @@ namespace Raven.Client.Document
 			return OpenAsync<RavenJObject>(id, options, database);
 		}
 
-		public async Task<Subscription<T>> OpenAsync<T>(long id, SubscriptionConnectionOptions options, string database = null)
+		public async Task<Subscription<T>> OpenAsync<T>(long id, SubscriptionConnectionOptions options, string database = null) where T : class
 		{
 			if(options == null)
 				throw new InvalidOperationException("Cannot open a subscription if options are null");

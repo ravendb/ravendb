@@ -23,10 +23,13 @@ namespace Raven.Database.Util
 			sw.Stop();
 		}
 
-		public static StopwatchScope For(Stopwatch sw)
+		public static StopwatchScope For(Stopwatch sw, bool resetBeforeStart = false)
 		{
 			if (sw == null)
 				return null;
+
+			if(resetBeforeStart)
+				sw.Reset();
 
 			return new StopwatchScope(sw);
 		}

@@ -206,11 +206,18 @@ namespace Raven.Abstractions.Extensions
         }
 
         [Obsolete("Use RavenFS instead.")]
-		public static RavenJObject FilterHeadersAttachment(this HttpHeaders self)
+        public static RavenJObject FilterHeadersAttachment(this IEnumerable<KeyValuePair<string, IEnumerable<string>>> self)
 		{
 			var filterHeaders = self.FilterHeadersToObject();
-
-			string contentType = self.GetFirstValue("Content-Type");
+            string contentType = null;
+            foreach (var keyValue in self)
+            {
+                if (keyValue.Key.Equals("Content-Type"))
+                {
+                    contentType = keyValue.Value.FirstOrDefault();
+                    break;
+                }
+            }
 			if (contentType != null)
 				filterHeaders["Content-Type"] = contentType;
 
@@ -224,7 +231,7 @@ namespace Raven.Abstractions.Extensions
         /// <param name="headersToIgnore">Headers to ignore</param>
         /// <param name="prefixesInHeadersToIgnore">Header prefixes to ignore</param>
         /// <returns></returns>
-        public static RavenJObject FilterHeadersToObject(this HttpHeaders self, HashSet<string> headersToIgnore, HashSet<string> prefixesInHeadersToIgnore)
+        public static RavenJObject FilterHeadersToObject(this IEnumerable<KeyValuePair<string, IEnumerable<string>>> self, HashSet<string> headersToIgnore, HashSet<string> prefixesInHeadersToIgnore)
         {
             var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
             foreach (var a in self)
@@ -259,7 +266,7 @@ namespace Raven.Abstractions.Extensions
         /// </summary>
         /// <param name="self">The self.</param>
         /// <returns></returns>
-        public static RavenJObject FilterHeadersToObject(this HttpHeaders self)
+        public static RavenJObject FilterHeadersToObject(this IEnumerable<KeyValuePair<string, IEnumerable<string>>> self)
         {
             return FilterHeadersToObject(self, HeadersToIgnoreClient, PrefixesInHeadersToIgnoreClient);
         }
