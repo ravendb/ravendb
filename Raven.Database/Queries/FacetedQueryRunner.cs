@@ -279,6 +279,10 @@ namespace Raven.Database.Queries
 						foreach (var kvp in termsForField)
 						{
 							var count = GetIntersectCount(kvp.Value, documents);
+
+						    if (count == 0)
+						        continue;
+
 							var facetValue = new FacetValue
 							{
 								Hits = count,
@@ -314,7 +318,11 @@ namespace Raven.Database.Queries
 								if (parsedRange.IsMatch(kvp.Key))
 								{
 									var facetValue = facetResult.Values[i];
-									facetValue.Hits += GetIntersectCount(kvp.Value, documents);
+
+								    var intersectCount = GetIntersectCount(kvp.Value, documents);
+								    if (intersectCount == 0)
+								        continue;
+								    facetValue.Hits += intersectCount;
 									facetValue.Count = facetValue.Hits;
 
 									switch (facet.Aggregation)
