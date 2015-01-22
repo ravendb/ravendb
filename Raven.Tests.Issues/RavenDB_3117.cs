@@ -31,11 +31,11 @@ namespace Raven.Tests.Issues
 
 			var currentTime = SystemTime.UtcNow;
 			var nowAsStr = currentTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
-			ravenDbServer.SystemDatabase.Documents.Put("foo/1", null, 
-				RavenJObject.FromObject(new User {Name = "FooBar"}),
+			ravenDbServer.SystemDatabase.Documents.Put("foo/1", null,
+				RavenJObject.FromObject(new User { Name = "FooBar" }),
 				RavenJObject.Parse("{ \"Raven-Expiration-Date\" : \"" + nowAsStr + "\"}"), null);
 			WaitForIndexing(ravenDbServer.SystemDatabase);
-	
+
 			using (ravenDbServer.SystemDatabase.DisableAllTriggersForCurrentThread())
 			{
 				var query = "Expiry:[* TO " + nowAsStr + "]";

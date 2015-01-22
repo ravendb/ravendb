@@ -107,11 +107,10 @@ namespace Raven.Tests.Issues
 			using (var session = store1.OpenSession())
 			{
 				session.Store(new ReplicatedItem { Id = "Replicated/1" });
-
 				session.SaveChanges();
 			}
-
-			((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(20)).Wait();
+			
+			store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(20)).Wait();
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 		}
 
