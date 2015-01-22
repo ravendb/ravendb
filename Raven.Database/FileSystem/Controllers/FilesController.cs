@@ -35,14 +35,27 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/files")]
         public HttpResponseMessage Get()
 		{
-            int results;
-            var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
+			var list = new List<FileHeader>();
 
-            var list = new List<FileHeader>();
-            Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
+			var startsWith = GetQueryStringValue("startsWith");
+			if (string.IsNullOrEmpty(startsWith) == false)
+			{
+				var endsWithSlash = startsWith.EndsWith("/") || startsWith.EndsWith("\\");
+				startsWith = FileHeader.Canonize(startsWith);
+				if (endsWithSlash) 
+					startsWith += "/";
 
-            return this.GetMessageWithObject(list, HttpStatusCode.OK)
-                       .WithNoCache();
+				Storage.Batch(accessor => list.AddRange(accessor.GetFilesStartingWith(startsWith, Paging.Start, Paging.PageSize)));
+			}
+			else
+			{
+				int results;
+				var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
+				Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
+			}
+
+			return GetMessageWithObject(list)
+				.WithNoCache();
 		}
 
 		[HttpGet]
@@ -336,7 +349,7 @@ namespace Raven.Database.FileSystem.Controllers
                 long? size = -1;
                 ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor =>
                 {
-					AssertPutOperationNotVetoed(name, headers, accessor);
+					AssertPutOperationNotVetoed(name, headers);
                     AssertFileIsNotBeingSynced(name, accessor, true);
 
                     var contentLength = Request.Content.Headers.ContentLength;
@@ -356,7 +369,7 @@ namespace Raven.Database.FileSystem.Controllers
                         size = sizeForParse;
                     }
 
-					FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(name, headers, accessor));
+					FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(name, headers));
 
 	                using (FileSystem.DisableAllTriggersForCurrentThread())
 	                {
@@ -365,7 +378,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                     accessor.PutFile(name, size, headers);
 
-					FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, headers, accessor));
+					FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, headers));
 
                     Search.Index(name, headers);                  
                 }));
@@ -428,10 +441,10 @@ namespace Raven.Database.FileSystem.Controllers
             return GetEmptyMessage(HttpStatusCode.Created);
 		}
 
-	    private void AssertPutOperationNotVetoed(string name, RavenJObject headers, IStorageActionsAccessor accessor)
+	    private void AssertPutOperationNotVetoed(string name, RavenJObject headers)
 	    {
 			var vetoResult = FileSystem.PutTriggers
-				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(name, headers, accessor) })
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(name, headers) })
 				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
 		    if (vetoResult != null)
 		    {
@@ -495,7 +508,7 @@ namespace Raven.Database.FileSystem.Controllers
 						storage.Batch(accessor =>
 						{
 							accessor.CompleteFileUpload(filename);
-							putTriggers.Apply(trigger => trigger.AfterUpload(filename, headers, accessor));
+							putTriggers.Apply(trigger => trigger.AfterUpload(filename, headers));
 						});
 						return; // task is done
 					}
@@ -504,7 +517,7 @@ namespace Raven.Database.FileSystem.Controllers
 					{
 						var hashKey = accessor.InsertPage(buffer, read);
 						accessor.AssociatePage(filename, hashKey, pos, read);
-						putTriggers.Apply(trigger => trigger.OnUpload(filename, headers, hashKey, pos, read, accessor));
+						putTriggers.Apply(trigger => trigger.OnUpload(filename, headers, hashKey, pos, read));
 					}));
 
 					md5Hasher.TransformBlock(buffer, 0, read);

@@ -9,8 +9,11 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.FileSystem;
 using Raven.Bundles.Versioning.Data;
+using Raven.Client.FileSystem.Bundles.Versioning;
 using Raven.Database.FileSystem.Bundles.Versioning;
+using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -229,6 +232,151 @@ namespace Raven.Tests.FileSystem.Bundles
 
 				await store.AsyncFilesCommands.DeleteAsync(FileName + "/revisions/1");
 				await AssertAsync.Throws<FileNotFoundException>(async () => await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1"));
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task GetRevisionsForAsyncShouldWork(string requestedStorage)
+		{
+			const string FileName = "file1.txt";
+
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+
+				var aContent = "aaa";
+				var bContent = "bbb";
+				var cContent = "bbb";
+
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionsForAsync(FileName, 0, 100);
+					Assert.Equal(3, revisions.Length);
+				}
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task GetRevisionNamesForAsyncShouldWork(string requestedStorage)
+		{
+			const string FileName = "file1.txt";
+
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+
+				var aContent = "aaa";
+				var bContent = "bbb";
+				var cContent = "bbb";
+
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync(FileName, 0, 100);
+					Assert.Equal(3, revisions.Length);
+					Assert.Contains(FileHeader.Canonize(FileName) + "/revisions/1", revisions);
+					Assert.Contains(FileHeader.Canonize(FileName) + "/revisions/2", revisions);
+					Assert.Contains(FileHeader.Canonize(FileName) + "/revisions/3", revisions);
+				}
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task Exclude(string requestedStorage)
+		{
+			const string FileName = "file1.txt";
+
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, Exclude = true });
+
+				var aContent = "aaa";
+				var bContent = "bbb";
+				var cContent = "bbb";
+
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync(FileName, 0, 100);
+					Assert.Equal(0, revisions.Length);
+				}
+
+				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
+				Assert.NotNull(stream);
+				Assert.Equal(cContent, StreamToString(stream));
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task ExcludeExplicit1(string requestedStorage)
+		{
+			const string FileName = "file1.txt";
+
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, ExcludeUnlessExplicit = true });
+
+				var aContent = "aaa";
+				var bContent = "bbb";
+				var cContent = "bbb";
+
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent));
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync(FileName, 0, 100);
+					Assert.Equal(0, revisions.Length);
+				}
+
+				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
+				Assert.NotNull(stream);
+				Assert.Equal(cContent, StreamToString(stream));
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task ExcludeExplicit2(string requestedStorage)
+		{
+			const string FileName = "file1.txt";
+
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, ExcludeUnlessExplicit = true });
+
+				var aContent = "aaa";
+				var bContent = "bbb";
+				var cContent = "bbb";
+
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent), new RavenJObject { { Constants.RavenCreateVersion, true } });
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent), new RavenJObject { { Constants.RavenCreateVersion, true } });
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent), new RavenJObject { { Constants.RavenCreateVersion, true } });
+
+				using (var session = store.OpenAsyncSession())
+				{
+					var revisions = await session.GetRevisionNamesForAsync(FileName, 0, 100);
+					Assert.Equal(3, revisions.Length);
+				}
+
+				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
+				Assert.NotNull(stream);
+				Assert.Equal(cContent, StreamToString(stream));
 			}
 		}
 	}

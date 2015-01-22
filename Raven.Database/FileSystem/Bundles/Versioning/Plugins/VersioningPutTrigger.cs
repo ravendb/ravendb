@@ -21,101 +21,116 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 	[ExportMetadata("Bundle", "Versioning")]
 	public class VersioningPutTrigger : AbstractFilePutTrigger
 	{
-		public override VetoResult AllowPut(string name, RavenJObject headers, IStorageActionsAccessor accessor)
+		public override VetoResult AllowPut(string name, RavenJObject headers)
 		{
-			var file = accessor.ReadFile(name);
-			if (file == null)
-				return VetoResult.Allowed;
-
-			if (FileSystem.ChangesToRevisionsAllowed() == false &&
-				file.Metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical" &&
-				accessor.IsVersioningActive())
+			VetoResult veto = VetoResult.Allowed;
+			FileSystem.Storage.Batch(accessor =>
 			{
-				return VetoResult.Deny("Modifying a historical revision is not allowed");
-			}
+				var file = accessor.ReadFile(name);
+				if (file == null)
+					return;
 
-			return VetoResult.Allowed;
+				if (FileSystem.ChangesToRevisionsAllowed() == false &&
+					file.Metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical" &&
+					accessor.IsVersioningActive())
+				{
+					veto = VetoResult.Deny("Modifying a historical revision is not allowed");
+				}
+			});
+
+			return veto;
 		}
 
-		public override void OnPut(string name, RavenJObject headers, IStorageActionsAccessor accessor)
+		public override void OnPut(string name, RavenJObject headers)
 		{
-			VersioningConfiguration versioningConfiguration;
-
 			if (headers.ContainsKey(Constants.RavenCreateVersion))
 			{
 				headers.__ExternalState[Constants.RavenCreateVersion] = headers[Constants.RavenCreateVersion];
 				headers.Remove(Constants.RavenCreateVersion);
 			}
 
-			if (TryGetVersioningConfiguration(name, headers, accessor, out versioningConfiguration) == false)
-				return;
-
-			var revision = GetNextRevisionNumber(name, accessor);
-
-			using (FileSystem.DisableAllTriggersForCurrentThread())
+			FileSystem.Storage.Batch(accessor =>
 			{
-				RemoveOldRevisions(name, revision, versioningConfiguration);
-			}
+				VersioningConfiguration versioningConfiguration;
+				if (TryGetVersioningConfiguration(name, headers, accessor, out versioningConfiguration) == false) 
+					return;
 
-			headers.__ExternalState["Next-Revision"] = revision;
-			headers.__ExternalState["Parent-Revision"] = headers.Value<string>(VersioningUtil.RavenFileRevision);
+				var revision = GetNextRevisionNumber(name, accessor);
 
-			headers[VersioningUtil.RavenFileRevisionStatus] = RavenJToken.FromObject("Current");
-			headers[VersioningUtil.RavenFileRevision] = RavenJToken.FromObject(revision);
+				using (FileSystem.DisableAllTriggersForCurrentThread())
+				{
+					RemoveOldRevisions(name, revision, versioningConfiguration);
+				}
+
+				headers.__ExternalState["Next-Revision"] = revision;
+				headers.__ExternalState["Parent-Revision"] = headers.Value<string>(VersioningUtil.RavenFileRevision);
+
+				headers[VersioningUtil.RavenFileRevisionStatus] = RavenJToken.FromObject("Current");
+				headers[VersioningUtil.RavenFileRevision] = RavenJToken.FromObject(revision);
+			});
 		}
 
-		public override void AfterPut(string name, long? size, RavenJObject headers, IStorageActionsAccessor accessor)
+		public override void AfterPut(string name, long? size, RavenJObject headers)
 		{
-			if (accessor.IsVersioningActive() == false)
-				return;
-
-			using (FileSystem.DisableAllTriggersForCurrentThread())
+			FileSystem.Storage.Batch(accessor =>
 			{
-				var copyHeaders = new RavenJObject(headers);
-				copyHeaders[VersioningUtil.RavenFileRevisionStatus] = RavenJToken.FromObject("Historical");
-				copyHeaders[Constants.RavenReadOnly] = true;
-				copyHeaders.Remove(VersioningUtil.RavenFileRevision);
-				object parentRevision;
-				headers.__ExternalState.TryGetValue("Parent-Revision", out parentRevision);
-				if (parentRevision != null)
+				VersioningConfiguration versioningConfiguration;
+				if (TryGetVersioningConfiguration(name, headers, accessor, out versioningConfiguration) == false) return;
+
+				using (FileSystem.DisableAllTriggersForCurrentThread())
 				{
-					copyHeaders[VersioningUtil.RavenFileParentRevision] = name + "/revisions/" + parentRevision;
+					var copyHeaders = new RavenJObject(headers);
+					copyHeaders[VersioningUtil.RavenFileRevisionStatus] = RavenJToken.FromObject("Historical");
+					copyHeaders[Constants.RavenReadOnly] = true;
+					copyHeaders.Remove(VersioningUtil.RavenFileRevision);
+					object parentRevision;
+					headers.__ExternalState.TryGetValue("Parent-Revision", out parentRevision);
+					if (parentRevision != null)
+					{
+						copyHeaders[VersioningUtil.RavenFileParentRevision] = name + "/revisions/" + parentRevision;
+					}
+
+					object value;
+					headers.__ExternalState.TryGetValue("Next-Revision", out value);
+
+					accessor.PutFile(name + "/revisions/" + value, size, copyHeaders);
 				}
+			});
+		}
+
+		public override void OnUpload(string name, RavenJObject headers, int pageId, int pagePositionInFile, int pageSize)
+		{
+			FileSystem.Storage.Batch(accessor =>
+			{
+				VersioningConfiguration versioningConfiguration;
+				if (TryGetVersioningConfiguration(name, headers, accessor, out versioningConfiguration) == false) return;
 
 				object value;
 				headers.__ExternalState.TryGetValue("Next-Revision", out value);
 
-				accessor.PutFile(name + "/revisions/" + value, size, copyHeaders);
-			}
+				accessor.AssociatePage(name + "/revisions/" + value, pageId, pagePositionInFile, pageSize);
+			});
 		}
 
-		public override void OnUpload(string name, RavenJObject headers, int pageId, int pagePositionInFile, int pageSize, IStorageActionsAccessor accessor)
+		public override void AfterUpload(string name, RavenJObject headers)
 		{
-			if (accessor.IsVersioningActive() == false)
-				return;
+			FileSystem.Storage.Batch(accessor =>
+			{
+				VersioningConfiguration versioningConfiguration;
+				if (TryGetVersioningConfiguration(name, headers, accessor, out versioningConfiguration) == false) return;
 
-			object value;
-			headers.__ExternalState.TryGetValue("Next-Revision", out value);
+				object value;
+				headers.__ExternalState.TryGetValue("Next-Revision", out value);
 
-			accessor.AssociatePage(name + "/revisions/" + value, pageId, pagePositionInFile, pageSize);
-		}
+				var fileName = name + "/revisions/" + value;
 
-		public override void AfterUpload(string name, RavenJObject headers, IStorageActionsAccessor accessor)
-		{
-			if (accessor.IsVersioningActive() == false)
-				return;
+				accessor.CompleteFileUpload(fileName);
 
-			object value;
-			headers.__ExternalState.TryGetValue("Next-Revision", out value);
+				var currentMetadata = accessor.ReadFile(fileName).Metadata;
+				currentMetadata["Content-MD5"] = headers["Content-MD5"];
 
-			var fileName = name + "/revisions/" + value;
-
-			accessor.CompleteFileUpload(fileName);
-
-			var currentMetadata = accessor.ReadFile(fileName).Metadata;
-			currentMetadata["Content-MD5"] = headers["Content-MD5"];
-
-			accessor.UpdateFileMetadata(fileName, currentMetadata);
+				accessor.UpdateFileMetadata(fileName, currentMetadata);
+			});
 		}
 
 		private static long GetNextRevisionNumber(string name, IStorageActionsAccessor accessor)
