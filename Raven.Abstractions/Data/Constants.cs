@@ -49,6 +49,8 @@ namespace Raven.Abstractions.Data
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
 		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
+	    public const string MaxConcurrentRequestsForDatabaseDuringLoad = "Raven/MaxConcurrentRequestsForDatabaseDuringLoad";
+        public const string MaxSecondsForTaskToWaitForDatabaseToLoad = "Raven/MaxSecondsForTaskToWaitForDatabaseToLoad";
 
 		// Indexing
 		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
