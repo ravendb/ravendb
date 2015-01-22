@@ -149,8 +149,8 @@ namespace Voron.Trees
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static void AssertStructHasExplicitLayout(Type structureType)
 		{
-			if (structureType.Attributes.HasFlag(TypeAttributes.ExplicitLayout) == false)
-				throw new InvalidDataException("Specified type has to be struct with StructLayout(LayoutKind.Explicit) attribute applied");
+			if (structureType.StructLayoutAttribute == null || structureType.StructLayoutAttribute.Value != LayoutKind.Explicit || structureType.StructLayoutAttribute.Pack != 1)
+				throw new InvalidDataException("Specified type has to be struct with StructLayout(LayoutKind.Explicit, Pack = 1) attribute applied");
 		}
 
 		public int RetrieveFieldOffset(Type type, IEnumerable<string> path)

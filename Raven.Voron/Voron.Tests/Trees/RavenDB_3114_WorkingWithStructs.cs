@@ -13,7 +13,7 @@ namespace Voron.Tests.Trees
 {
 	public class RavenDB_3114_WorkingWithStructs : StorageTest
 	{
-		[StructLayout(LayoutKind.Explicit)]
+		[StructLayout(LayoutKind.Explicit, Pack = 1)]
 		public struct Stats
 		{
 			[FieldOffset(0)]
@@ -32,7 +32,7 @@ namespace Voron.Tests.Trees
 			public DateTime IndexedAt;
 		}
 
-		[StructLayout(LayoutKind.Explicit)]
+		[StructLayout(LayoutKind.Explicit, Pack = 1)]
 		public struct Operation
 		{
 			[FieldOffset(0)]
@@ -47,6 +47,13 @@ namespace Voron.Tests.Trees
 			public int Field;
 		}
 
+		[StructLayout(LayoutKind.Explicit)]
+		public struct StructWithExplicitLayoutButWithoutPack
+		{
+			[FieldOffset(0)]
+			public int Field;
+		}
+
 		[Fact]
 		public void ShouldThrowIfStructDoesntHaveExplicitLayout()
 		{
@@ -54,6 +61,9 @@ namespace Voron.Tests.Trees
 			{
 				Assert.Throws<InvalidDataException>(() => tx.State.Root.Write("item", new StructWithoutExplicitLayout()));
 				Assert.Throws<InvalidDataException>(() => tx.State.Root.Read<StructWithoutExplicitLayout>("item"));
+
+				Assert.Throws<InvalidDataException>(() => tx.State.Root.Write("item", new StructWithExplicitLayoutButWithoutPack()));
+				Assert.Throws<InvalidDataException>(() => tx.State.Root.Read<StructWithExplicitLayoutButWithoutPack>("item"));
 			}
 		}
 
