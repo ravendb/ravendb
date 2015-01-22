@@ -3,12 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.IO;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.FileSystem.Bundles.Versioning;
@@ -19,10 +19,15 @@ using Raven.Tests.Common;
 using Xunit;
 using Xunit.Extensions;
 
-namespace Raven.Tests.FileSystem.Bundles
+namespace Raven.Tests.FileSystem.Bundles.Versioning
 {
 	public class VersioningTests : RavenFilesTestWithLogs
 	{
+		private const string Content1 = "aaa";
+		private const string Content2 = "bbb";
+		private const string Content3 = "ccc";
+		private const string Content4 = "ddd";
+
 		[Theory]
 		[PropertyData("Storages")]
 		public async Task Simple(string requestedStorage)
@@ -33,25 +38,21 @@ namespace Raven.Tests.FileSystem.Bundles
 			{
 				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 10 });
 
-				var aContent = "aaa";
-				var bContent = "bbb";
-				var cContent = "ccc";
-
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content3));
 
 				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
 				Assert.NotNull(stream);
-				Assert.Equal(cContent, StreamToString(stream));
+				Assert.Equal(Content3, StreamToString(stream));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1");
 				Assert.NotNull(stream);
-				Assert.Equal(aContent, StreamToString(stream));
+				Assert.Equal(Content1, StreamToString(stream));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/2");
 				Assert.NotNull(stream);
-				Assert.Equal(bContent, StreamToString(stream));
+				Assert.Equal(Content2, StreamToString(stream));
 			}
 		}
 
@@ -65,29 +66,24 @@ namespace Raven.Tests.FileSystem.Bundles
 			{
 				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 3 });
 
-				var aContent = "aaa";
-				var bContent = "bbb";
-				var cContent = "ccc";
-				var dContent = "ddd";
-
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(dContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content3));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content4));
 
 				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
 				Assert.NotNull(stream);
-				Assert.Equal(dContent, StreamToString(stream));
+				Assert.Equal(Content4, StreamToString(stream));
 
 				await AssertAsync.Throws<FileNotFoundException>(async () => await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1"));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/2");
 				Assert.NotNull(stream);
-				Assert.Equal(bContent, StreamToString(stream));
+				Assert.Equal(Content2, StreamToString(stream));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/3");
 				Assert.NotNull(stream);
-				Assert.Equal(cContent, StreamToString(stream));
+				Assert.Equal(Content3, StreamToString(stream));
 			}
 		}
 
@@ -101,25 +97,21 @@ namespace Raven.Tests.FileSystem.Bundles
 			{
 				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, PurgeOnDelete = false });
 
-				var aContent = "aaa";
-				var bContent = "bbb";
-				var cContent = "ccc";
-
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content3));
 
 				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
 				Assert.NotNull(stream);
-				Assert.Equal(cContent, StreamToString(stream));
+				Assert.Equal(Content3, StreamToString(stream));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1");
 				Assert.NotNull(stream);
-				Assert.Equal(aContent, StreamToString(stream));
+				Assert.Equal(Content1, StreamToString(stream));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/2");
 				Assert.NotNull(stream);
-				Assert.Equal(bContent, StreamToString(stream));
+				Assert.Equal(Content2, StreamToString(stream));
 
 				await store.AsyncFilesCommands.DeleteAsync(FileName);
 
@@ -127,11 +119,11 @@ namespace Raven.Tests.FileSystem.Bundles
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1");
 				Assert.NotNull(stream);
-				Assert.Equal(aContent, StreamToString(stream));
+				Assert.Equal(Content1, StreamToString(stream));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/2");
 				Assert.NotNull(stream);
-				Assert.Equal(bContent, StreamToString(stream));
+				Assert.Equal(Content2, StreamToString(stream));
 			}
 		}
 
@@ -145,25 +137,21 @@ namespace Raven.Tests.FileSystem.Bundles
 			{
 				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, PurgeOnDelete = true });
 
-				var aContent = "aaa";
-				var bContent = "bbb";
-				var cContent = "ccc";
-
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content3));
 
 				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
 				Assert.NotNull(stream);
-				Assert.Equal(cContent, StreamToString(stream));
+				Assert.Equal(Content3, StreamToString(stream));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1");
 				Assert.NotNull(stream);
-				Assert.Equal(aContent, StreamToString(stream));
+				Assert.Equal(Content1, StreamToString(stream));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/2");
 				Assert.NotNull(stream);
-				Assert.Equal(bContent, StreamToString(stream));
+				Assert.Equal(Content2, StreamToString(stream));
 
 				await store.AsyncFilesCommands.DeleteAsync(FileName);
 
@@ -183,26 +171,23 @@ namespace Raven.Tests.FileSystem.Bundles
 			{
 				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
-				var aContent = "aaa";
-				var bContent = "bbb";
-
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
 
 				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
 				Assert.NotNull(stream);
-				Assert.Equal(bContent, StreamToString(stream));
+				Assert.Equal(Content2, StreamToString(stream));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1");
 				Assert.NotNull(stream);
-				Assert.Equal(aContent, StreamToString(stream));
+				Assert.Equal(Content1, StreamToString(stream));
 
 				var e = await AssertAsync.Throws<InvalidOperationException>(async () => await store.AsyncFilesCommands.DeleteAsync(FileName + "/revisions/1"));
 				Assert.True(e.Message.Contains("Deleting a historical revision is not allowed"));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1");
 				Assert.NotNull(stream);
-				Assert.Equal(aContent, StreamToString(stream));
+				Assert.Equal(Content1, StreamToString(stream));
 			}
 		}
 
@@ -216,19 +201,16 @@ namespace Raven.Tests.FileSystem.Bundles
 			{
 				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
-				var aContent = "aaa";
-				var bContent = "bbb";
-
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
 
 				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
 				Assert.NotNull(stream);
-				Assert.Equal(bContent, StreamToString(stream));
+				Assert.Equal(Content2, StreamToString(stream));
 
 				stream = await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1");
 				Assert.NotNull(stream);
-				Assert.Equal(aContent, StreamToString(stream));
+				Assert.Equal(Content1, StreamToString(stream));
 
 				await store.AsyncFilesCommands.DeleteAsync(FileName + "/revisions/1");
 				await AssertAsync.Throws<FileNotFoundException>(async () => await store.AsyncFilesCommands.DownloadAsync(FileName + "/revisions/1"));
@@ -245,13 +227,9 @@ namespace Raven.Tests.FileSystem.Bundles
 			{
 				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
-				var aContent = "aaa";
-				var bContent = "bbb";
-				var cContent = "bbb";
-
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content3));
 
 				using (var session = store.OpenAsyncSession())
 				{
@@ -271,13 +249,9 @@ namespace Raven.Tests.FileSystem.Bundles
 			{
 				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
-				var aContent = "aaa";
-				var bContent = "bbb";
-				var cContent = "bbb";
-
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content3));
 
 				using (var session = store.OpenAsyncSession())
 				{
@@ -300,13 +274,9 @@ namespace Raven.Tests.FileSystem.Bundles
 			{
 				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, Exclude = true });
 
-				var aContent = "aaa";
-				var bContent = "bbb";
-				var cContent = "bbb";
-
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content3));
 
 				using (var session = store.OpenAsyncSession())
 				{
@@ -316,7 +286,7 @@ namespace Raven.Tests.FileSystem.Bundles
 
 				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
 				Assert.NotNull(stream);
-				Assert.Equal(cContent, StreamToString(stream));
+				Assert.Equal(Content3, StreamToString(stream));
 			}
 		}
 
@@ -330,13 +300,9 @@ namespace Raven.Tests.FileSystem.Bundles
 			{
 				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, ExcludeUnlessExplicit = true });
 
-				var aContent = "aaa";
-				var bContent = "bbb";
-				var cContent = "bbb";
-
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent));
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2));
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content3));
 
 				using (var session = store.OpenAsyncSession())
 				{
@@ -346,7 +312,7 @@ namespace Raven.Tests.FileSystem.Bundles
 
 				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
 				Assert.NotNull(stream);
-				Assert.Equal(cContent, StreamToString(stream));
+				Assert.Equal(Content3, StreamToString(stream));
 			}
 		}
 
@@ -360,13 +326,9 @@ namespace Raven.Tests.FileSystem.Bundles
 			{
 				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, ExcludeUnlessExplicit = true });
 
-				var aContent = "aaa";
-				var bContent = "bbb";
-				var cContent = "bbb";
-
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(aContent), new RavenJObject { { Constants.RavenCreateVersion, true } });
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(bContent), new RavenJObject { { Constants.RavenCreateVersion, true } });
-				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(cContent), new RavenJObject { { Constants.RavenCreateVersion, true } });
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content1), new RavenJObject { { Constants.RavenCreateVersion, true } });
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content2), new RavenJObject { { Constants.RavenCreateVersion, true } });
+				await store.AsyncFilesCommands.UploadAsync(FileName, StringToStream(Content3), new RavenJObject { { Constants.RavenCreateVersion, true } });
 
 				using (var session = store.OpenAsyncSession())
 				{
@@ -376,7 +338,7 @@ namespace Raven.Tests.FileSystem.Bundles
 
 				var stream = await store.AsyncFilesCommands.DownloadAsync(FileName);
 				Assert.NotNull(stream);
-				Assert.Equal(cContent, StreamToString(stream));
+				Assert.Equal(Content3, StreamToString(stream));
 			}
 		}
 	}
