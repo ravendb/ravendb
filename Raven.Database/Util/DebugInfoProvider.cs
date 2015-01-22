@@ -236,7 +236,7 @@ namespace Raven.Database.Util
 				Uri = x.RequestUri,
 				Method = x.HttpMethod,
 				StatusCode = x.ResponseStatusCode,
-				RequestHeaders = x.Headers.AllKeys.Select(k => new { Name = k, Values = x.Headers.GetValues(k) }),
+				RequestHeaders = x.Headers.Value.Select(k => new { Name = k.Key, Values = k.Value }),
 				ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
 				AdditionalInfo = x.CustomInfo ?? string.Empty
 			});

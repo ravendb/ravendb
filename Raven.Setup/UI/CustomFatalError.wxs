@@ -25,11 +25,11 @@
         </Control>
         <Control Type="Text" Id="logFileNotFound" Width="204" Height="20" X="135" Y="105" Transparent="yes">
           <Text>{\Red8}An installation log file was not found. To specify the log file location explicitly, please run:</Text>
-          <Condition Action="hide"><![CDATA[LOG_FILE_PATH OR NOT NETFRAMEWORK40FULL OR NOT (Privileged AND AdminUser)]]></Condition>
+          <Condition Action="hide"><![CDATA[LOG_FILE_PATH OR NOT NETFRAMEWORK45 OR NOT (Privileged AND AdminUser)]]></Condition>
         </Control>
         <Control Type="Text" Id="logFileNotFoundCommand" Width="204" Height="10" X="135" Y="125" Transparent="yes">
           <Text>{\Red8}RavenDB.Setup.exe /log &lt;fileLogPath&gt;</Text>
-          <Condition Action="hide"><![CDATA[LOG_FILE_PATH OR NOT NETFRAMEWORK40FULL OR NOT (Privileged AND AdminUser)]]></Condition>
+          <Condition Action="hide"><![CDATA[LOG_FILE_PATH OR NOT NETFRAMEWORK45 OR NOT (Privileged AND AdminUser)]]></Condition>
         </Control>
       </Dialog>
       <Publish Dialog="CustomFatalError" Control="Finish" Event="DoAction" Value="LaunchApplication">SHOW_LOG_CHECKBOX = "1" AND LOG_FILE_PATH</Publish>

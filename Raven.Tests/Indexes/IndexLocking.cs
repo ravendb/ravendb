@@ -23,9 +23,8 @@ namespace Raven.Tests.Indexes
 
 				var indexDefinition = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("IndexSample");
 
-				var definition = indexDefinition.Clone();
-				definition.LockMode = IndexLockMode.LockedIgnore;
-				store.SystemDatabase.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
+				indexDefinition.LockMode = IndexLockMode.LockedIgnore;
+				store.SystemDatabase.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
 
 				indexDefinition = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition("IndexSample");
 				Assert.Equal(indexDefinition.LockMode, IndexLockMode.LockedIgnore);

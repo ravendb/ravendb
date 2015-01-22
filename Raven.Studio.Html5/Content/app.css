@@ -8357,3 +8357,9 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .negative-margin {
   margin-top: -10px;
 }
+#indexingPerformance {
+  background-color: white;
+}
+#visualizerContainer {
+  background-color: white;
+}

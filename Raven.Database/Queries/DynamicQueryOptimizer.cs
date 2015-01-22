@@ -101,6 +101,12 @@ namespace Raven.Database.Queries
 							return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
 						}
 
+						if (indexDefinitionKvp.Value == null)
+						{
+							explain(indexName, () => "Index id " + indexDefinitionKvp.Key + " is null, probably bad upgrade?");
+							return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
+						}
+
 						if (indexDefinitionKvp.Value.IsTestIndex)
 						{
 							explain(indexName, () => "Cannot select a test index for dynamic query");

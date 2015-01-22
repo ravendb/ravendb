@@ -57,7 +57,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
 				{
-                    RequestManager.SetThreadLocalState(InnerHeaders, DatabaseName);
+                    RequestManager.SetThreadLocalState(ReadInnerHeaders, DatabaseName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
 				}, httpException =>
 				{
@@ -197,17 +197,21 @@ namespace Raven.Database.Server.Controllers
             get { return DatabasesLandlord.SystemConfiguration; }
         }
 
+	    private DocumentDatabase _currentDb;
 		public DocumentDatabase Database
 		{
 			get
 			{
+			    if (_currentDb != null)
+			        return _currentDb;
+
 				var database = DatabasesLandlord.GetDatabaseInternal(DatabaseName);
 				if (database == null)
 				{
 					throw new InvalidOperationException("Could not find a database named: " + DatabaseName);
 				}
 
-				return database.Result;
+                return _currentDb = database.Result;
 			}
 		}
 
@@ -570,7 +574,7 @@ namespace Raven.Database.Server.Controllers
             {
                 try
                 {
-					const int TimeToWaitForDatabaseToLoad = 5;
+					int TimeToWaitForDatabaseToLoad = MaxSecondsForTaskToWaitForDatabaseToLoad;
 					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
 					{
 						if (MaxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)

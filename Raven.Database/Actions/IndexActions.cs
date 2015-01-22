@@ -55,6 +55,7 @@ namespace Raven.Database.Actions
         public Etag GetIndexEtag(string indexName, Etag previousEtag, string resultTransformer = null)
         {
             Etag lastDocEtag = Etag.Empty;
+	        Etag lastIndexedEtag = null;
             Etag lastReducedEtag = null;
             bool isStale = false;
             int touchCount = 0;
@@ -70,6 +71,7 @@ namespace Raven.Database.Actions
                 if (indexStats != null)
                 {
                     lastReducedEtag = indexStats.LastReducedEtag;
+	                lastIndexedEtag = indexStats.LastIndexedEtag;
                 }
                 touchCount = accessor.Staleness.GetIndexTouchCount(indexInstance.indexId);
             });
@@ -96,6 +98,10 @@ namespace Raven.Database.Actions
             {
                 list.AddRange(lastReducedEtag.ToByteArray());
             }
+	        if (lastIndexedEtag != null)
+	        {
+		        list.AddRange(lastIndexedEtag.ToByteArray());
+	        }
 
             var indexEtag = Etag.Parse(Encryptor.Current.Hash.Compute16(list.ToArray()));
 

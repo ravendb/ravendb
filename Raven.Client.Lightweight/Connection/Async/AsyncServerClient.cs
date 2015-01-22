@@ -851,7 +851,7 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("POST", async operationMetadata =>
 			{
-				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/identity/seed?name=" + Uri.EscapeDataString(name) + "&value=" + Uri.EscapeDataString(value.ToString()), "POST", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
+				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/identity/seed?name=" + Uri.EscapeDataString(name) + "&value=" + Uri.EscapeDataString(value.ToString()), "POST", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
 				{
 					var readResponseJson = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 

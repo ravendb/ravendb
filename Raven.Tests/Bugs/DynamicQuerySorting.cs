@@ -1,5 +1,6 @@
+using System;
 using System.Collections.Generic;
-
+using System.Collections.Specialized;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -76,7 +77,7 @@ namespace Raven.Tests.Bugs
 						.ToList();
 				}
 
-				CurrentOperationContext.Headers.Value.Clear();
+                CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() => new NameValueCollection());
 				var documentDatabase = store.SystemDatabase;
 				var findDynamicIndexName = documentDatabase.FindDynamicIndexName("GameServers", new IndexQuery
 				{
@@ -104,8 +105,8 @@ namespace Raven.Tests.Bugs
 						.ToList();
 				}
 
-				CurrentOperationContext.Headers.Value.Clear();
-				CurrentOperationContext.Headers.Value.Set("SortHint-Name", "String");
+                CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() => new NameValueCollection());
+				CurrentOperationContext.Headers.Value.Value.Set("SortHint-Name", "String");
 				var documentDatabase = store.SystemDatabase;
 				var findDynamicIndexName = documentDatabase.FindDynamicIndexName("GameServers", new IndexQuery
 				{
@@ -133,7 +134,7 @@ namespace Raven.Tests.Bugs
 						.ToList();
 				}
 
-				CurrentOperationContext.Headers.Value.Clear();
+                CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() => new NameValueCollection());
 
 				var indexQuery = new IndexQuery
 								 {

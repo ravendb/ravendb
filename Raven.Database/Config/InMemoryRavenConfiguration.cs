@@ -108,6 +108,7 @@ namespace Raven.Database.Config
 
 			MaxConcurrentRequestsForDatabaseDuringLoad = ravenSettings.MaxConcurrentRequestsForDatabaseDuringLoad.Value;
 
+            MaxSecondsForTaskToWaitForDatabaseToLoad = ravenSettings.MaxSecondsForTaskToWaitForDatabaseToLoad.Value;
 			MaxConcurrentMultiGetRequests = ravenSettings.MaxConcurrentMultiGetRequests.Value;
 			if (ConcurrentMultiGetRequests == null)
 				ConcurrentMultiGetRequests = new SemaphoreSlim(MaxConcurrentMultiGetRequests);
@@ -305,7 +306,9 @@ namespace Raven.Database.Config
 			return this;
 		}
 
-		public int IndexAndTransformerReplicationLatencyInSec { get; internal set; }
+	    public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
+
+	    public int IndexAndTransformerReplicationLatencyInSec { get; internal set; }
 
 		/// <summary>
 		/// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically

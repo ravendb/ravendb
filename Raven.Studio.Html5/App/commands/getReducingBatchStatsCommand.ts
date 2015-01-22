@@ -10,12 +10,18 @@ class getReducingBatchStatsCommand extends commandBase {
 
     execute(): JQueryPromise<reducingBatchInfoDto[]> {
         var url = "/debug/reducing-batch-stats";
-        var entryMapping: (any) => indexNameAndReducingPerformanceStats = (entry) => {
-            return {
-                indexName: entry.key,
-                stats: entry.value
-            }
-        };
+        var inlinePerfStats = (entry) => {
+            var result = [];
+            d3.map(entry).entries().forEach(e => {
+                e.value.forEach(s => {
+                    result.push({
+                        indexName: e.key,
+                        stats: s
+                    });
+                });
+            });
+            return result;
+        }
 
         var parser = d3.time.format.iso;
 
@@ -25,7 +31,7 @@ class getReducingBatchStatsCommand extends commandBase {
                 TotalDurationMs: item.TotalDurationMs,
                 StartedAt: item.StartedAt,
                 StartedAtDate: parser.parse(item.StartedAt),
-                PerfStats: d3.map(item.PerformanceStats).entries().map(entryMapping),
+                PerfStats: inlinePerfStats(item.PerformanceStats),
                 TimeSinceFirstReduceInBatchCompletedMs: item.TimeSinceFirstReduceInBatchCompletedMs
             }
             });
