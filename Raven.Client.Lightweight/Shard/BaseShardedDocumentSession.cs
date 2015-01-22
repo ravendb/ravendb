@@ -20,7 +20,7 @@ namespace Raven.Client.Shard
 		protected readonly List<Tuple<ILazyOperation, IList<TDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<TDatabaseCommands>>>();
 		protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 		protected readonly IDictionary<string, List<ICommandData>> deferredCommandsByShard = new Dictionary<string, List<ICommandData>>();
-		protected readonly ShardStrategy shardStrategy;
+		public readonly ShardStrategy shardStrategy;
 		protected readonly IDictionary<string, TDatabaseCommands> shardDbCommands;
 
 
@@ -245,14 +245,12 @@ namespace Raven.Client.Shard
 #else
 			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, isMapReduce);
 #endif
-			return CreateRavenQueryInspector(indexName, isMapReduce, provider, ravenQueryStatistics, highlightings);
+            var ravenQueryInspector = CreateRavenQueryInspector<T>();
+		    ravenQueryInspector.Init(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, null, isMapReduce);
+		    return ravenQueryInspector;
 		}
 
-		protected abstract RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce,
-		                                                                              RavenQueryProvider<T> provider,
-		                                                                              RavenQueryStatistics
-			                                                                              ravenQueryStatistics,
-		                                                                              RavenQueryHighlightings highlightings);
+		public abstract RavenQueryInspector<T> CreateRavenQueryInspector<T>();
 
 		/// <summary>
 		/// Query RavenDB dynamically using LINQ
@@ -309,7 +307,7 @@ namespace Raven.Client.Shard
 			return IDocumentQueryGeneratorAsyncQuery<T>(indexName, isMapReduce);
 		}
 
-		#endregion
+        #endregion
 
 		internal class DbCmdsListComparer : IEqualityComparer<IList<TDatabaseCommands>>
 		{
