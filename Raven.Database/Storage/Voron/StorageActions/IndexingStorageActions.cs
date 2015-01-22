@@ -3,9 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Concurrent;
 
 using Raven.Abstractions.Util.Streams;
+using Raven.Database.Storage.Voron.StorageActions.Structs;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -59,15 +59,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					var key = indexingStatsIterator.CurrentKey.ToString();
-
-					RavenJObject indexStats;
-					using (var stream = indexingStatsIterator.CreateReaderForCurrent().AsStream())
-					{
-						indexStats = stream.ToJObject();
-					}
-
 					ushort version;
-					var reduceStats = Load(tableStorage.ReduceStats, key, out version);
+					var indexStats = LoadStruct<VoronIndexingWorkStats>(tableStorage.IndexingStats, key, out version);
+					// TODO arek
+					//RavenJObject indexStats;
+					//using (var stream = indexingStatsIterator.CreateReaderForCurrent().AsStream())
+					//{
+					//	indexStats = stream.ToJObject();
+					//}
+
+					
+					var reduceStats = LoadStruct<VoronReducingWorkStats>(tableStorage.ReduceStats, key, out version);
 					var lastIndexedEtag = Load(tableStorage.LastIndexedEtags, key, out version);
 					var priority = ReadPriority(key);
 					var touches = ReadTouches(key);
@@ -84,8 +86,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			ushort version;
 
-			var indexStats = Load(tableStorage.IndexingStats, key, out version);
-			var reduceStats = Load(tableStorage.ReduceStats, key, out version);
+			var indexStats = LoadStruct<VoronIndexingWorkStats>(tableStorage.IndexingStats, key, out version);
+			var reduceStats = LoadStruct<VoronReducingWorkStats>(tableStorage.ReduceStats, key, out version);
 			var lastIndexedEtags = Load(tableStorage.LastIndexedEtags, key, out version);
 			var priority = ReadPriority(key);
 			var touches = ReadTouches(key);
@@ -100,32 +102,32 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (tableStorage.IndexingStats.Contains(Snapshot, key, writeBatch.Value))
 				throw new ArgumentException(string.Format("There is already an index with the name: '{0}'", id));
 
-			tableStorage.IndexingStats.Add(
+			tableStorage.IndexingStats.AddStruct(
 				writeBatch.Value,
 				key,
-				new RavenJObject
+				new VoronIndexingWorkStats
 				{
-					{ "index", id },
-					{ "attempts", 0 },
-					{ "successes", 0 },
-					{ "failures", 0 },
-					{ "createdTimestamp", SystemTime.UtcNow },
-					{ "lastIndexingTime", DateTime.MinValue }
+					IndexId = id,
+					IndexingAttempts = 0,
+					IndexingSuccesses = 0,
+					IndexingErrors = 0,
+					CreatedTimestampTicks = SystemTime.UtcNow.Ticks,
+					LastIndexingTimeTicks = DateTime.MinValue.Ticks,
 				}, 0);
 
 			tableStorage.IndexingMetadata.Add(writeBatch.Value, CreateKey(id, "priority"), BitConverter.GetBytes(1), 0);
 			tableStorage.IndexingMetadata.Increment(writeBatch.Value, CreateKey(id, "touches"), 0, 0);
 
-			tableStorage.ReduceStats.Add(
+			tableStorage.ReduceStats.AddStruct(
 				writeBatch.Value,
 				key,
-				new RavenJObject
+				new VoronReducingWorkStats
 				{
-					{ "reduce_attempts", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
-					{ "reduce_successes", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
-					{ "reduce_failures", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
-					{ "lastReducedEtag", createMapReduce ? Etag.Empty.ToByteArray() : (RavenJToken)RavenJValue.Null },
-					{ "lastReducedTimestamp", createMapReduce ? DateTime.MinValue : (RavenJToken)RavenJValue.Null }
+					ReduceAttempts = createMapReduce ? 0 : -1,
+					ReduceSuccesses = createMapReduce ? 0 : -1,
+					ReduceErrors = createMapReduce ? 0 : -1,
+					LastReducedEtag = createMapReduce ? new VoronEtagStruct(Etag.Empty) : new VoronEtagStruct(Etag.InvalidEtag),
+					LastReducedTimestampTicks = createMapReduce ? DateTime.MinValue.Ticks : -1
 				}, 0);
 
 			tableStorage.LastIndexedEtags.Add(
@@ -173,18 +175,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var indexStats = Load(tableStorage.IndexingStats, key, out version);
-			var reduceStats = Load(tableStorage.ReduceStats, key, out version);
+			var indexStats = LoadStruct<VoronIndexingWorkStats>(tableStorage.IndexingStats, key, out version);
+			var reduceStats = LoadStruct<VoronReducingWorkStats>(tableStorage.ReduceStats, key, out version);
 
 			var indexFailureInformation = new IndexFailureInformation
 			{
-				Attempts = indexStats.Value<int>("attempts"),
-				Errors = indexStats.Value<int>("failures"),
-				Successes = indexStats.Value<int>("successes"),
-				ReduceAttempts = reduceStats.Value<int?>("reduce_attempts"),
-				ReduceErrors = reduceStats.Value<int?>("reduce_failures"),
-				ReduceSuccesses = reduceStats.Value<int?>("reduce_successes"),
-				Id = indexStats.Value<int>("index")
+				Attempts = indexStats.IndexingAttempts,
+				Errors = indexStats.IndexingErrors,
+				Successes = indexStats.IndexingSuccesses,
+				ReduceAttempts = reduceStats.ReduceAttempts,
+				ReduceErrors = reduceStats.ReduceErrors,
+				ReduceSuccesses = reduceStats.ReduceSuccesses,
+				Id = indexStats.IndexId
 			};
 
 			return indexFailureInformation;
@@ -208,15 +210,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var reduceStats = Load(tableStorage.ReduceStats, key, out version);
+			var reduceStats = LoadStruct<VoronReducingWorkStats>(tableStorage.ReduceStats, key, out version);
 
-			if (Buffers.Compare(reduceStats.Value<byte[]>("lastReducedEtag"), etag.ToByteArray()) >= 0)
+			if (new Etag(UuidType.Documents, reduceStats.LastReducedEtag.Restarts, reduceStats.LastReducedEtag.Changes).CompareTo(etag) >= 0)
 				return;
 
-			reduceStats["lastReducedEtag"] = etag.ToByteArray();
-			reduceStats["lastReducedTimestamp"] = timestamp;
+			reduceStats.LastReducedEtag = new VoronEtagStruct(etag);
+			reduceStats.LastReducedTimestampTicks = timestamp.Ticks;
 
-			tableStorage.ReduceStats.Add(writeBatch.Value, key, reduceStats, version);
+			tableStorage.ReduceStats.AddStruct(writeBatch.Value, key, reduceStats, version);
 		}
 
 		public void TouchIndexEtag(int id)
@@ -229,14 +231,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var index = Load(tableStorage.IndexingStats, key, out version);
+			var index = LoadStruct<VoronIndexingWorkStats>(tableStorage.IndexingStats, key, out version);
 
-			index["attempts"] = index.Value<int>("attempts") + stats.IndexingAttempts;
-			index["successes"] = index.Value<int>("successes") + stats.IndexingSuccesses;
-			index["failures"] = index.Value<int>("failures") + stats.IndexingErrors;
-			index["lastIndexingTime"] = SystemTime.UtcNow;
+			index.IndexingAttempts += stats.IndexingAttempts;
+			index.IndexingSuccesses += stats.IndexingSuccesses;
+			index.IndexingErrors += stats.IndexingErrors;
+			index.LastIndexingTimeTicks = SystemTime.UtcNow.Ticks;
 
-			tableStorage.IndexingStats.Add(writeBatch.Value, key, index, version);
+			tableStorage.IndexingStats.AddStruct(writeBatch.Value, key, index, version);
 		}
 
 		public void UpdateReduceStats(int id, IndexingWorkStats stats)
@@ -244,13 +246,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var reduceStats = Load(tableStorage.ReduceStats, key, out version);
+			var reduceStats = LoadStruct<VoronReducingWorkStats>(tableStorage.ReduceStats, key, out version);
 
-			reduceStats["reduce_attempts"] = reduceStats.Value<int>("reduce_attempts") + stats.ReduceAttempts;
-			reduceStats["reduce_successes"] = reduceStats.Value<int>("reduce_successes") + stats.ReduceSuccesses;
-			reduceStats["reduce_failures"] = reduceStats.Value<int>("reduce_failures") + stats.ReduceErrors;
+			reduceStats.ReduceAttempts += stats.ReduceAttempts;
+			reduceStats.ReduceSuccesses += stats.ReduceSuccesses;
+			reduceStats.ReduceErrors += stats.ReduceErrors;
 
-			tableStorage.ReduceStats.Add(writeBatch.Value, key, reduceStats, version);
+			tableStorage.ReduceStats.AddStruct(writeBatch.Value, key, reduceStats, version);
 		}
 
 		public void RemoveAllDocumentReferencesFrom(string key)
@@ -415,6 +417,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
+		// TODO arek - remove this method completely
 		private RavenJObject Load(Table table, string name, out ushort version)
 		{
 			var value = LoadJson(table, CreateKey(name), writeBatch.Value, out version);
@@ -424,28 +427,40 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return value;
 		}
 
-		private static IndexStats GetIndexStats(RavenJToken indexingStats, RavenJToken reduceStats, RavenJToken lastIndexedEtags, int priority, int touches)
+		private T LoadStruct<T>(Table table, string name, out ushort version) where T : struct 
 		{
+			T value;
+
+			if(TryLoadStruct(table, CreateKey(name), writeBatch.Value, out value, out version) == false)
+				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", name));
+
+			return value;
+		}
+
+		private static IndexStats GetIndexStats(VoronIndexingWorkStats indexingStats, VoronReducingWorkStats reduceStats, RavenJToken lastIndexedEtags, int priority, int touches)
+		{
+			var lastReducedEtag = new Etag(UuidType.Documents, reduceStats.LastReducedEtag.Restarts, reduceStats.LastReducedEtag.Changes);
+
 			return new IndexStats
 			{
 				TouchCount = touches,
-				IndexingAttempts = indexingStats.Value<int>("attempts"),
-				IndexingErrors = indexingStats.Value<int>("failures"),
-				IndexingSuccesses = indexingStats.Value<int>("successes"),
-				ReduceIndexingAttempts = reduceStats.Value<int?>("reduce_attempts"),
-				ReduceIndexingErrors = reduceStats.Value<int?>("reduce_failures"),
-				ReduceIndexingSuccesses = reduceStats.Value<int?>("reduce_successes"),
-				Id = indexingStats.Value<int>("index"),
+				IndexingAttempts = indexingStats.IndexingAttempts,
+				IndexingErrors = indexingStats.IndexingErrors,
+				IndexingSuccesses = indexingStats.IndexingSuccesses,
+				ReduceIndexingAttempts = reduceStats.ReduceAttempts == -1 ? (int?) null : reduceStats.ReduceAttempts,
+				ReduceIndexingErrors = reduceStats.ReduceErrors == -1 ? (int?) null : reduceStats.ReduceErrors,
+				ReduceIndexingSuccesses = reduceStats.ReduceSuccesses == -1 ? (int?) null : reduceStats.ReduceSuccesses,
+				Id = indexingStats.IndexId,
 				Priority = (IndexingPriority)priority,
 				LastIndexedEtag = Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag")),
 				LastIndexedTimestamp = lastIndexedEtags.Value<DateTime>("lastTimestamp"),
-				CreatedTimestamp = indexingStats.Value<DateTime>("createdTimestamp"),
-				LastIndexingTime = indexingStats.Value<DateTime>("lastIndexingTime"),
+				CreatedTimestamp = new DateTime(indexingStats.CreatedTimestampTicks, DateTimeKind.Utc),
+				LastIndexingTime = new DateTime(indexingStats.LastIndexingTimeTicks, DateTimeKind.Utc),
 				LastReducedEtag =
-					reduceStats.Value<byte[]>("lastReducedEtag") != null
-						? Etag.Parse(reduceStats.Value<byte[]>("lastReducedEtag"))
+					lastReducedEtag.CompareTo(Etag.InvalidEtag) != 0
+						? lastReducedEtag
 						: null,
-				LastReducedTimestamp = reduceStats.Value<DateTime?>("lastReducedTimestamp")
+				LastReducedTimestamp = reduceStats.LastReducedTimestampTicks == -1 ? (DateTime?) null :  new DateTime(reduceStats.LastReducedTimestampTicks, DateTimeKind.Utc)
 			};
 		}
 

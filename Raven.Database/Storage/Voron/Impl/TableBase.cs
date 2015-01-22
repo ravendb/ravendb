@@ -84,9 +84,9 @@ namespace Raven.Database.Storage.Voron.Impl
 			return snapshot.ReadStruct<T>(TableName, key, writeBatch);
 		}
 
-		public virtual void AddStruct<T>(WriteBatch writeBatch, Slice key, T value) where T : struct 
+		public virtual void AddStruct<T>(WriteBatch writeBatch, Slice key, T value, ushort? expectedVersion = null, bool shouldIgnoreConcurrencyExceptions = false) where T : struct 
 		{
-			writeBatch.AddStruct(key, value, TableName);
+			writeBatch.AddStruct(key, value, TableName, expectedVersion, shouldIgnoreConcurrencyExceptions);
 		}
 
 		public virtual IIterator MultiRead(SnapshotReader snapshot, Slice key)

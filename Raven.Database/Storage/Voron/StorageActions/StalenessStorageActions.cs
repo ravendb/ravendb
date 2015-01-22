@@ -1,6 +1,7 @@
 ﻿
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
+using Raven.Database.Storage.Voron.StorageActions.Structs;
 using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
@@ -29,15 +30,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch.Value, out version);
-			if (indexingStats == null)
+			VoronIndexingWorkStats indexingStats;
+			if (TryLoadStruct(tableStorage.IndexingStats, key, writeBatch.Value, out indexingStats, out version) == false)
 				return false; // index does not exists
 
-			var reduceStats = LoadJson(tableStorage.ReduceStats, key, writeBatch.Value, out version);
-			if (reduceStats == null)
+			VoronReducingWorkStats reduceStats;
+			if (TryLoadStruct(tableStorage.ReduceStats, key, writeBatch.Value, out reduceStats, out version) == false)
 				throw new ArgumentException("reduceStats");
 
-			var hasReduce = reduceStats.Value<byte[]>("lastReducedEtag") != null;
+			var hasReduce = reduceStats.LastReducedEtag.Restarts != Etag.InvalidEtag.Restarts && reduceStats.LastReducedEtag.Changes != Etag.InvalidEtag.Changes;
 
 			if (IsMapStale(id) || hasReduce && IsReduceStale(id))
 			{
@@ -127,19 +128,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch.Value, out version);
-			if (indexingStats == null)
+			VoronIndexingWorkStats indexingStats;
+			if (TryLoadStruct(tableStorage.IndexingStats, key, writeBatch.Value, out indexingStats, out version) == false)
 				throw new IndexDoesNotExistsException("Could not find index named: " + id);
 
-			var reduceStats = LoadJson(tableStorage.ReduceStats, key, writeBatch.Value, out version);
-			if (reduceStats == null)
+			VoronReducingWorkStats reduceStats;
+			if (TryLoadStruct(tableStorage.ReduceStats, key, writeBatch.Value, out reduceStats, out version) == false)
 				throw new ArgumentException("reduceStats");
 
-			if (reduceStats.Value<object>("lastReducedTimestamp") != null)
+			if (reduceStats.LastReducedTimestampTicks != -1)
 			{
 				return Tuple.Create(
-					reduceStats.Value<DateTime>("lastReducedTimestamp"),
-					Etag.Parse(reduceStats.Value<byte[]>("lastReducedEtag")));
+					new DateTime(reduceStats.LastReducedTimestampTicks, DateTimeKind.Utc),
+					new Etag(UuidType.Documents, reduceStats.LastReducedEtag.Restarts, reduceStats.LastReducedEtag.Changes));
 			}
 
 			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
