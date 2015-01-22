@@ -229,10 +229,10 @@ namespace Raven.Abstractions.Smuggler
 		public bool FilterIdentity(string indentityName, ItemType operateOnTypes)
 		{
 			if ("Raven/Etag".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
-				return true;
+				return false;
 
 			if ("IndexId".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase) && operateOnTypes.HasFlag(ItemType.Indexes))
-				return true;
+				return false;
 
 			if (operateOnTypes.HasFlag(ItemType.Documents))
 				return true;
