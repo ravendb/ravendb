@@ -958,7 +958,6 @@ namespace Raven.Database.Server
 			{
 				try
 				{
-                    //currentDatabase
 					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
 					{
 						if (_maxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
