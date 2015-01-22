@@ -29,16 +29,15 @@ namespace Raven.Tests.Issues
 						"
 				});
 
-			ravenDbServer.SystemDatabase.Documents.Put("foo/1", null, 
-				RavenJObject.FromObject(new User {Name = "FooBar"}),
-				RavenJObject.Parse("{ \"Raven-Expiration-Date\" : \"" + DateTime.UtcNow.AddMinutes(1) + "\"}"), null);
-
+			var currentTime = SystemTime.UtcNow;
+			var nowAsStr = currentTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
+			ravenDbServer.SystemDatabase.Documents.Put("foo/1", null,
+				RavenJObject.FromObject(new User { Name = "FooBar" }),
+				RavenJObject.Parse("{ \"Raven-Expiration-Date\" : \"" + nowAsStr + "\"}"), null);
 			WaitForIndexing(ravenDbServer.SystemDatabase);
 
 			using (ravenDbServer.SystemDatabase.DisableAllTriggersForCurrentThread())
 			{
-				var currentTime = SystemTime.UtcNow;
-				var nowAsStr = currentTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
 				var query = "Expiry:[* TO " + nowAsStr + "]";
 
 				var queryResult = ravenDbServer.SystemDatabase.Queries.Query(IndexName, new IndexQuery
