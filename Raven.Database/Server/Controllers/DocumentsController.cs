@@ -97,7 +97,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var json = await ReadJsonAsync();
 			var id = Database.Documents.Put(null, Etag.Empty, json,
-								  InnerHeaders.FilterHeadersToObject(),
+								  ReadInnerHeaders.FilterHeadersToObject(),
 								  GetRequestTransaction());
 
 			return GetMessageWithObject(id);
@@ -185,7 +185,7 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> DocPut(string docId)
 		{
 			var json = await ReadJsonAsync();
-			var putResult = Database.Documents.Put(docId, GetEtag(), json, InnerHeaders.FilterHeadersToObject(), GetRequestTransaction());
+			var putResult = Database.Documents.Put(docId, GetEtag(), json, ReadInnerHeaders.FilterHeadersToObject(), GetRequestTransaction());
 			return GetMessageWithObject(putResult, HttpStatusCode.Created);
 		}
 

@@ -74,7 +74,7 @@ namespace Raven.Database.Server.Security.Windows
 			if (userCreated)
 			{
 				user = (PrincipalWithDatabaseAccess)controller.User;
-				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = controller.User.Identity.Name;
+				CurrentOperationContext.RavenAuthenticatedUser.Value = controller.User.Identity.Name;
 				CurrentOperationContext.User.Value = controller.User;
 
 				// admins always go through

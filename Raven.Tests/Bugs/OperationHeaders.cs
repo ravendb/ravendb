@@ -40,7 +40,7 @@ namespace Raven.Tests.Bugs
 
 			public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 			{
-				Hello = CurrentOperationContext.Headers.Value["Hello"];
+                Hello = CurrentOperationContext.Headers.Value.Value["Hello"];
 				base.OnPut(key, document, metadata, transactionInformation);
 			}
 		}

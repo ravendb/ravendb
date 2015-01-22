@@ -22,12 +22,12 @@ namespace Raven.Tests.Triggers.Bugs
 				{
 					if (metadata["CreatedByPersonId"] == null)
 					{
-						metadata["CreatedByPersonId"] = CurrentOperationContext.Headers.Value["CurrentUserPersonId"];
+                        metadata["CreatedByPersonId"] = CurrentOperationContext.Headers.Value.Value["CurrentUserPersonId"];
 						metadata["CreatedDate"] = CreatedAtDateTime;
 					}
 					else
 					{
-						metadata["LastUpdatedPersonId"] = CurrentOperationContext.Headers.Value["CurrentUserPersonId"];
+                        metadata["LastUpdatedPersonId"] = CurrentOperationContext.Headers.Value.Value["CurrentUserPersonId"];
 						metadata["LastUpdatedDate"] = CreatedAtDateTime;
 					}
 				}

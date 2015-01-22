@@ -314,37 +314,5 @@ namespace Raven.Abstractions.Indexing
 		{
 			return Name ?? Map;
 		}
-
-		public IndexDefinition Clone()
-		{
-			var indexDefinition = new IndexDefinition
-			{
-				IndexId = IndexId,
-				Name = Name,
-				Reduce = Reduce,
-				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
-				cachedHashCodeAsBytes = cachedHashCodeAsBytes
-			};
-
-			if (Maps != null)
-				indexDefinition.Maps = new HashSet<string>(Maps);
-			if (Analyzers != null)
-				indexDefinition.Analyzers = new Dictionary<string, string>(Analyzers);
-			if (Fields != null)
-				indexDefinition.Fields = new List<string>(Fields);
-			if (Indexes != null)
-				indexDefinition.Indexes = new Dictionary<string, FieldIndexing>(Indexes);
-			if (SortOptions != null)
-				indexDefinition.SortOptions = new Dictionary<string, SortOptions>(SortOptions);
-			if (Stores != null)
-				indexDefinition.Stores = new Dictionary<string, FieldStorage>(Stores);
-			if (Suggestions != null)
-				indexDefinition.Suggestions = new Dictionary<string, SuggestionOptions>(Suggestions);
-			if (TermVectors != null)
-				indexDefinition.TermVectors = new Dictionary<string, FieldTermVector>(TermVectors);
-			if (SpatialIndexes != null)
-				indexDefinition.SpatialIndexes = new Dictionary<string, SpatialOptions>(SpatialIndexes);
-			return indexDefinition;
-		}
 	}
 }

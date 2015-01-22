@@ -331,7 +331,7 @@ namespace Raven.Database.Indexing
 		        IndexingPerformanceStats performance = null;
 		        try
 		        {
-					batchInfo = context.ReportIndexingBatchStarted(precomputedBatch.Documents.Count, precomputedBatch.Documents.Sum(x => x.SerializedSizeOnDisk), new List<string>
+					batchInfo = context.ReportIndexingBatchStarted(precomputedBatch.Documents.Count, -1, new List<string>
 			        {
 				        indexToWorkOn.Index.PublicName
 			        });
@@ -371,6 +371,8 @@ namespace Raven.Database.Indexing
 				{
 					performanceResult = IndexDocuments(actions, batchForIndex, token);
 				});
+
+				performanceResult.OnCompleted();
 			}
 			catch (Exception e)
 			{

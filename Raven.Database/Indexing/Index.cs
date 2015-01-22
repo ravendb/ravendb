@@ -449,10 +449,21 @@ namespace Raven.Database.Indexing
 			return stringValue;
 		}
 
-		protected void Write(Func<RavenIndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action, Stopwatch flushToDiskDuration = null, Stopwatch recreateSearcherDuration = null)
+		protected void Write(Func<RavenIndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action, List<PerformanceStats> writePerformanceStats = null)
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + PublicName + " has been disposed");
+
+			Stopwatch extensionExecutionDuration = null;
+			Stopwatch flushToDiskDuration = null;
+			Stopwatch recreateSearcherDuration = null;
+
+			if (writePerformanceStats != null)
+			{
+				extensionExecutionDuration = new Stopwatch();
+				flushToDiskDuration = new Stopwatch();
+				recreateSearcherDuration = new Stopwatch();
+			}
 
 			PreviousIndexTime = LastIndexTime;
 			LastIndexTime = SystemTime.UtcNow;
@@ -501,7 +512,16 @@ namespace Raven.Database.Indexing
 							shouldRecreateSearcher = itemsInfo.ChangedDocs > 0;
 							foreach (var indexExtension in indexExtensions.Values)
 							{
-								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);
+								using (StopwatchScope.For(extensionExecutionDuration, resetBeforeStart: true))
+								{
+									indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);
+								}
+
+								IndexingOperation operation;
+								if (writePerformanceStats != null && Enum.TryParse(string.Format("Extension_{0}", indexExtension.Name), out operation))
+								{
+									writePerformanceStats.Add(PerformanceStats.From(operation, extensionExecutionDuration.ElapsedMilliseconds));
+								}
 							}
 						}
 						catch (Exception e)
@@ -573,6 +593,12 @@ namespace Raven.Database.Indexing
 						RecreateSearcher();
 					}
 				}
+			}
+
+			if (writePerformanceStats != null)
+			{
+				writePerformanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_FlushToDisk, flushToDiskDuration.ElapsedMilliseconds));
+				writePerformanceStats.Add(PerformanceStats.From(IndexingOperation.Lucene_RecreateSearcher, recreateSearcherDuration.ElapsedMilliseconds));
 			}
 		}
 

@@ -56,21 +56,29 @@
 	.Lucene_FlushToDisk { fill: #8c564b; background-color: #8c564b }
 	.Lucene_RecreateSearcher { fill: #e377c2; background-color: #e377c2 }
 
-	.MapStorage_DeleteMappedResults { fill: #aec7e8; background-color: #aec7e8 }
-	.MapStorage_ConvertToRavenJObject { fill: #e0e5a3; background-color: #e0e5a3 }
-	.MapStorage_PutMappedResult { fill: #98df8a; background-color: #98df8a }
-	.MapStorage_ScheduleReduction { fill: #ffbb78; background-color: #ffbb78 }
-	.MapStorage_Commit { fill: #ff9896; background-color: #ff9896 }
+	.Map_DeleteMappedResults { fill: #aec7e8; background-color: #aec7e8 }
+	.Map_ConvertToRavenJObject { fill: #e0e5a3; background-color: #e0e5a3 }
+	.Map_PutMappedResults { fill: #98df8a; background-color: #98df8a }
+	.Map_ScheduleReductions { fill: #ffbb78; background-color: #ffbb78 }
+	
+	.Reduce_GetItemsToReduce { fill: #c5b0d5; background-color: #c5b0d5 }
+	.Reduce_DeleteScheduledReductions { fill: #c49c94; background-color: #c49c94 }
+	.Reduce_ScheduleReductions { fill: #f7b6d2; background-color: #f7b6d2 }
+	.Reduce_GetMappedResults { fill: #bcbd22; background-color: #bcbd22 }
+	.Reduce_RemoveReduceResults { fill: #dbdb8d; background-color: #dbdb8d }
 
-	.ReduceStorage_GetItemsToReduce { fill: #c5b0d5; background-color: #c5b0d5 }
-	.ReduceStorage_DeletePreviouslyScheduledReductions { fill: #c49c94; background-color: #c49c94 }
-	.ReduceStorage_ScheduleReductions { fill: #f7b6d2; background-color: #f7b6d2 }
-	.ReduceStorage_GetMappedResults { fill: #bcbd22; background-color: #bcbd22 }
-	.ReduceStorage_RemoveReduceResults { fill: #dbdb8d; background-color: #dbdb8d }
-	.ReduceStorage_Commit { fill: #9edae5; background-color: #9edae5 }
+	.StorageCommit { fill: #9edae5; background-color: #9edae5 }
+
+	.UpdateDocumentReferences { fill: #ff9896; background-color: #ff9896 }
+
+	.Extension_Suggestions { fill: #55fa9a; background-color: #55fa9a; }
 
     .ParallelBlock {
        background:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAI0lEQVQIW2NkwAT/GdHE/gP5jMiCYAGQIpggXAAmiCIAEgQAAE4FBbECyZcAAAAASUVORK5CYII=') repeat;
+    }
+
+    .nvtooltip .mto_indent {
+        padding-left: 25px;
     }
 
 </style>
@@ -203,14 +211,14 @@
                     <!-- /ko -->
                 </tr>
                 <tr class="mto">
-                    <td>Thread start delay [ms]</td>
+                    <td class="mto_indent">Thread start delay [ms]</td>
                     <!-- ko foreach: BatchedOperations -->
                     <td data-bind="text: StartDelay"></td>
                     <!-- /ko -->
                 </tr>
                 <!-- ko foreach: BatchedOperations[0].Operations -->
                 <tr class="mto">
-                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="text: Name + ' [ms]'"></span></td>
+                    <td class="mto_indent"><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="text: Name + ' [ms]'"></span></td>
                     <!-- ko foreach: $parent.BatchedOperations -->
                     <td data-bind="text: Operations[$parentContext.$index()].DurationMs"></td>
                     <!-- /ko -->
@@ -241,22 +249,30 @@
                 </tr>
             </thead>
             <tbody>
+                <!-- ko if: parent.stats.ReduceType == 'None' -->
+                <tr data-bind="if: parent.stats.ReduceType == 'None'">
+                    <td>Operation</td>
+                    <td>Post reduce operation</td>
+                </tr>
+                <!-- /ko -->
+                <!-- ko if: parent.stats.ReduceType != 'None' -->
                 <tr>
                     <td>Reduce type</td>
                     <td data-bind="text: parent.stats.ReduceType, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
-                <tr>
+                <tr data-bind="if: parent.stats.ReduceType != 'None'">
                     <td>Level</td>
                     <td data-bind="text: Level, attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
-                <tr>
+                <tr data-bind="if: parent.stats.ReduceType != 'None'">
                     <td>Items count</td>
                     <td data-bind="text: ItemsCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
-                <tr>
+                <tr data-bind="if: parent.stats.ReduceType != 'None'">
                     <td>Output count</td>
                     <td data-bind="text: OutputCount.toLocaleString(2), attr: { colspan: $root.data.CacheThreadCount }"></td>
                 </tr>
+                <!-- /ko -->
                 <tr>
                     <td>Duration</td>
                     <td data-bind="text: Duration, attr: { colspan: $root.data.CacheThreadCount }"></td>
@@ -280,14 +296,14 @@
                     <!-- /ko -->
                 </tr>
                 <tr class="mto">
-                    <td>Thread start delay [ms]</td>
+                    <td class="mto_indent">Thread start delay [ms]</td>
                     <!-- ko foreach: BatchedOperations -->
                     <td data-bind="text: StartDelay"></td>
                     <!-- /ko -->
                 </tr>
                 <!-- ko foreach: BatchedOperations[0].Operations -->
                 <tr class="mto">
-                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="    text: Name + ' [ms]'"></span></td>
+                    <td class="mto_indent"><span data-bind="attr: { 'class': 'rect_legend ' + Name }" ></span> <span data-bind="    text: Name + ' [ms]'"></span></td>
                     <!-- ko foreach: $parent.BatchedOperations -->
                     <td data-bind="text: Operations[$parentContext.$index()].DurationMs"></td>
                     <!-- /ko -->
@@ -300,19 +316,26 @@
         </table>
     </div>
 </script>
-
-<div>
-    <div class="btn-group">
-        <button class="btn btn-default" data-bind="event: { mousedown: startZoomIn, mouseup: stopZoomIn }" title="Zoom in"><i class="fa fa-search-plus"></i></button>
-        <button class="btn btn-default" data-bind="event: { mousedown: startZoomOut, mouseup: stopZoomOut }" title="Zoom out"><i class="fa fa-search-minus"></i></button>    
-    </div>
-    <div class="btn-group">
-        <select id="visibleIndexesSelector" data-bind="options: allIndexNames, selectedOptions: selectedIndexNames" multiple="multiple"></select>
-    </div>
+<section id="indexingPerformance" style="position: relative">
+    <div>
+        <div class="btn-group">
+            <button class="btn btn-default" data-bind="event: { mousedown: startZoomIn, mouseup: stopZoomIn }" title="Zoom in"><i class="fa fa-search-plus"></i></button>
+            <button class="btn btn-default" data-bind="event: { mousedown: startZoomOut, mouseup: stopZoomOut }" title="Zoom out"><i class="fa fa-search-minus"></i></button>    
+        </div>
+        <div class="btn-group">
+            <select id="visibleIndexesSelector" data-bind="options: allIndexNames, selectedOptions: selectedIndexNames" multiple="multiple"></select>
+        </div>
+        
+        <div class="btn-group">
+            <button id="fullScreenButton" class="btn btn-default" data-bind="click: toggleFullscreen" title="Fullscreen mode">
+                <i class="fa fa-expand"></i>
+            </button>
+        </div>
     
     
-</div>
+    </div>
 
-<section id="metricsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-    <svg id="indexPerformanceGraph" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
+    <section id="metricsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+        <svg id="indexPerformanceGraph" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
+    </section>
 </section>
