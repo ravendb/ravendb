@@ -39,7 +39,7 @@ namespace Raven.Client.Counters
 		
 		Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken));
 
-		CountersClient NewCounterClient(string counterStorageName);
+		CountersClient NewCounterClient(string counterStorageName = null);
 
 		CounterStore.BatchOperationsStore Batch { get; }
 

@@ -113,9 +113,26 @@ namespace Raven.Tests.Counters
 			}
 		}
 
+		[Fact]
+		public async Task CounterBatch_using_batch_store_for_default_store_should_work()
+		{
+			using (var store = NewRemoteCountersStore(createDefaultCounter:true))
+			{
+				store.Batch.ScheduleIncrement("FooGroup");//schedule increment for default counter
+				await store.Batch.FlushAsync();
+
+				//with counter storage name null - client is opened for default counter
+				using (var client = store.NewCounterClient()) 
+				{
+					var total = await client.Commands.GetOverallTotalAsync("FooGroup", "FooCounter");
+					total.Should().Be(1);
+				}
+			}
+		}
+
 		[Theory]
-		//[InlineData(33)]
-		[InlineData(10)]
+		[InlineData(33)]
+		[InlineData(100)]
 		public async Task CountersBatch_using_batch_store_should_work(int countOfOperationsInBatch)
 		{
 			using (var store = NewRemoteCountersStore())

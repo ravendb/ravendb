@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -26,6 +27,7 @@ namespace Raven.Client.Counters
 	/// </summary>
 	public class CounterStore : ICounterStore
 	{
+		private bool _isInitialized;
 		public CounterStore()
 		{
 			JsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
@@ -34,14 +36,21 @@ namespace Raven.Client.Counters
 			Credentials = new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials);
 			Advanced = new CounterStoreAdvancedOperations(this);
 			_batch = new Lazy<BatchOperationsStore>(() => new BatchOperationsStore(this));
+			_isInitialized = false;
 		}
 
 		public void Initialize(bool ensureDefaultCounterExists = false)
 		{
+			if(_isInitialized)
+				throw new InvalidOperationException("CounterStore already initialized.");
+			_isInitialized = true;
 			InitializeSecurity();
 
 			if (ensureDefaultCounterExists && !string.IsNullOrWhiteSpace(DefaultCounterStorageName))
 			{
+				if (String.IsNullOrWhiteSpace(DefaultCounterStorageName))
+					throw new InvalidOperationException("DefaultCounterStorageName is null or empty and ensureDefaultCounterExists = true --> cannot create default counter storage with empty name");
+
 				CreateCounterStorageAsync(new CounterStorageDocument
 				{
 					Settings = new Dictionary<string, string>
@@ -124,9 +133,13 @@ namespace Raven.Client.Counters
 			}
 		}
 
-		public CountersClient NewCounterClient(string counterStorageName)
+		public CountersClient NewCounterClient(string counterStorageName = null)
 		{
-			return new CountersClient(this,counterStorageName);
+			if (counterStorageName == null && String.IsNullOrWhiteSpace(DefaultCounterStorageName))
+				throw new ArgumentNullException("counterStorageName", 
+					@"counterStorageName is null and default counter storage name is empty - 
+						this means no default counter exists.");
+			return new CountersClient(this,counterStorageName ?? DefaultCounterStorageName);
 		}
 
 		public async Task<string[]> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
@@ -251,7 +264,7 @@ namespace Raven.Client.Counters
 			
 		}
 
-		public class BatchOperationsStore : ICountersBatchOperation
+		public class BatchOperationsStore
 		{
 			private readonly ICounterStore _parent;
 			private readonly Lazy<CountersBatchOperation> _defaultBatchOperation;
@@ -283,28 +296,28 @@ namespace Raven.Client.Counters
 					_defaultBatchOperation.Value.Dispose();
 			}
 
-			public void ScheduleChange(string groupName, string counterName, long delta)
+			public void ScheduleChange(string groupName, long delta)
 			{
 				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
 					throw new InvalidOperationException("Default counter storage name cannot be empty!");
 
-				_defaultBatchOperation.Value.ScheduleChange(groupName, counterName, delta);
+				_defaultBatchOperation.Value.ScheduleChange(groupName, _parent.DefaultCounterStorageName, delta);
 			}
 
-			public void ScheduleIncrement(string groupName, string counterName)
+			public void ScheduleIncrement(string groupName)
 			{
 				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
 					throw new InvalidOperationException("Default counter storage name cannot be empty!");
 
-				_defaultBatchOperation.Value.ScheduleIncrement(groupName, counterName);
+				_defaultBatchOperation.Value.ScheduleIncrement(groupName, _parent.DefaultCounterStorageName);
 			}
 
-			public void ScheduleDecrement(string groupName, string counterName)
+			public void ScheduleDecrement(string groupName)
 			{
 				if (string.IsNullOrWhiteSpace(_parent.DefaultCounterStorageName))
 					throw new InvalidOperationException("Default counter storage name cannot be empty!");
 
-				_defaultBatchOperation.Value.ScheduleDecrement(groupName, counterName);
+				_defaultBatchOperation.Value.ScheduleDecrement(groupName, _parent.DefaultCounterStorageName);
 			}
 
 			public async Task FlushAsync()

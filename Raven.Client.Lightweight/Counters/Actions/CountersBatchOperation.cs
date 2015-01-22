@@ -58,8 +58,10 @@ namespace Raven.Client.Counters.Actions
 		private void CloseAndReopenStreaming(object state)
 		{
 			_cts.Cancel();
-			if (_batchOperationTask.Status == TaskStatus.Running)
-				_batchOperationTask.Wait();
+			if(_batchOperationTask.Status != TaskStatus.Faulted &&
+				_batchOperationTask.Status != TaskStatus.Canceled)
+			_batchOperationTask.Wait();
+
 			_batchOperationTask = StartBatchOperation();
 
 			_closeAndReopenStreamingTimer.Dispose();
@@ -186,8 +188,7 @@ namespace Raven.Client.Counters.Actions
 					if (token.IsCancellationRequested)
 					{
 						FetchAllChangeQueue(batch);	
-						if(batch.Count > 0)
-							FlushToServer(stream,batch);
+						FlushToServer(stream,batch);
 						break;
 					}
 
@@ -214,13 +215,16 @@ namespace Raven.Client.Counters.Actions
 							FetchAllChangeQueue(batch);
 					}
 
-					if (batch.Count <= 0) 
-						continue;
 					try
 					{
 						FlushToServer(stream, batch);
 						if (tcs != null)
 							tcs.TrySetResult(null);
+					}
+					catch (OperationCanceledException)
+					{
+						if (tcs != null)
+							tcs.TrySetResult(null);						
 					}
 					catch (Exception e)
 					{

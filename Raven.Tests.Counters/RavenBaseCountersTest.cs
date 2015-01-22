@@ -37,7 +37,7 @@ namespace Raven.Tests.Counters
 			{
 				Settings = new Dictionary<string, string>
 				{
-					{"Raven/Counters/DataDir", @"~\Counters\" + counterName}
+					{ "Raven/Counters/DataDir", @"~\Counters\" + counterName }
 				},
 			};
 		}
