@@ -121,6 +121,8 @@ namespace Raven.Database.Server.Controllers
             countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
             requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
 			maxNumberOfThreadsForDatabaseToLoad = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
+            maxSecondsForTaskToWaitForDatabaseToLoad = (int)controllerContext.Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
+            //MaxSecondsForTaskToWaitForDatabaseToLoad
 		}
 
 		public async Task<T> ReadJsonObjectAsync<T>()
@@ -789,7 +791,8 @@ namespace Raven.Database.Server.Controllers
         }
 
 		private SemaphoreSlim maxNumberOfThreadsForDatabaseToLoad;
-		public SemaphoreSlim MaxNumberOfThreadsForDatabaseToLoad
+        private int maxSecondsForTaskToWaitForDatabaseToLoad;
+        public SemaphoreSlim MaxNumberOfThreadsForDatabaseToLoad
 		{
 			get
 			{
@@ -798,6 +801,17 @@ namespace Raven.Database.Server.Controllers
 				return (SemaphoreSlim)Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
 			}
 		}
+        public int MaxSecondsForTaskToWaitForDatabaseToLoad
+        {
+            get
+            {
+                if (Configuration == null)
+                {
+                    return maxSecondsForTaskToWaitForDatabaseToLoad;
+                }
+                return (int)Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
+            }
+        }
         #endregion
     }
 }

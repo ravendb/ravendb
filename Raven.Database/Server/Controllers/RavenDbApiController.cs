@@ -574,7 +574,7 @@ namespace Raven.Database.Server.Controllers
             {
                 try
                 {
-					const int TimeToWaitForDatabaseToLoad = 5;
+					int TimeToWaitForDatabaseToLoad = MaxSecondsForTaskToWaitForDatabaseToLoad;
 					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
 					{
 						if (MaxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
