@@ -37,7 +37,7 @@ namespace Raven.Client.Counters.Actions
 
 		public async Task ResetAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
 		{
-			var requestUriString = String.Format("{0}/change/{1}/{2}", counterStorageUrl, groupName, counterName);
+			var requestUriString = String.Format("{0}/reset/{1}/{2}", counterStorageUrl, groupName, counterName);
 
 			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
 				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);

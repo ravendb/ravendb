@@ -81,8 +81,8 @@ namespace Raven.Tests.Counters
 
 
 		[Theory]
-		[InlineData(33)]
-		[InlineData(100)]
+		//[InlineData(33)]
+		[InlineData(50)]
 		public async Task CountersBatch_with_multiple_batches_should_work(int countOfOperationsInBatch)
 		{
 			using (var store = NewRemoteCountersStore())
@@ -95,7 +95,8 @@ namespace Raven.Tests.Counters
 					},
 				}, CounterStorageName1);
 
-				using (var counterBatch = store.Advanced.NewBatch(CounterStorageName1, new CountersBatchOptions { BatchSizeLimit = countOfOperationsInBatch / 2 }))
+				using (var counterBatch = store.Advanced.NewBatch(CounterStorageName1,
+					new CountersBatchOptions { BatchSizeLimit = countOfOperationsInBatch / 2 }))
 				{
 					int x = 0;
 					for (int i = 0; i < countOfOperationsInBatch; i++)
@@ -201,11 +202,41 @@ namespace Raven.Tests.Counters
 					var total = await client.Commands.GetOverallTotalAsync("G", "C");
 					total.Should().Be(499);
 				}
-			
+
 				using (var client = store.NewCounterClient(CounterStorageName2))
 				{
 					var total = await client.Commands.GetOverallTotalAsync("G", "C");
 					total.Should().Be(500);
+				}
+			}
+		}
+
+		[Fact]
+		public async Task Using_batch_multithreaded_should_work()
+		{
+			using (var store = NewRemoteCountersStore())
+			{
+				await store.CreateCounterStorageAsync(CreateCounterStorageDocument(CounterStorageName1), CounterStorageName1);
+
+				var t1 = Task.Run(() =>
+				{
+					for (int i = 0; i < 500; i++)
+						store.Batch[CounterStorageName1].ScheduleIncrement("G", "C");
+				});
+
+				var t2 = Task.Run(() =>
+				{
+					for (int i = 0; i < 500; i++)
+						store.Batch[CounterStorageName1].ScheduleIncrement("G", "C");
+				});
+
+				await Task.WhenAll(t1, t2);
+				await store.Batch[CounterStorageName1].FlushAsync();
+
+				using (var client = store.NewCounterClient(CounterStorageName1))
+				{
+					var total = await client.Commands.GetOverallTotalAsync("G", "C");
+					total.Should().Be(1000);
 				}
 			}
 		}

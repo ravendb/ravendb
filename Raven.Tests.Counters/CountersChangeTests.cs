@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Raven.Abstractions.Counters;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Counters
 {
@@ -10,6 +11,36 @@ namespace Raven.Tests.Counters
 	{
 		private const string CounterStorageName = "FooBarCounterStore";
 		private const string CounterName = "FooBarCounter";
+
+		[Theory]
+		[InlineData(2)]
+		[InlineData(-2)]
+		public async Task CountrsReset_should_work(int delta)
+		{
+			using (var store = NewRemoteCountersStore())
+			using (var client = store.NewCounterClient(CounterStorageName))
+			{
+				await store.CreateCounterStorageAsync(new CounterStorageDocument
+				{
+					Settings = new Dictionary<string, string>
+					{
+						{"Raven/Counters/DataDir", @"~\Counters\Cs1"}
+					},
+				}, CounterStorageName);
+
+				const string CounterGroupName = "FooBarGroup";
+				await client.Commands.ChangeAsync(CounterGroupName, CounterName,delta);
+
+				var total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
+				total.Should().Be(delta);
+
+				await client.Commands.ResetAsync(CounterGroupName, CounterName);
+
+				total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);
+				total.Should().Be(0);
+			}			
+		}
+
 		[Fact]
 		public async Task CountersIncrement_should_work()
 		{
