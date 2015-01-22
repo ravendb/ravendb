@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
 {
