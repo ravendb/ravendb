@@ -40,6 +40,23 @@ namespace Raven.Tests.Counters
 		}
 
 		[Fact]
+		public async Task Should_be_able_to_delete_counter_storages()
+		{
+			var expectedClientNames = new[] { CounterStorageName + "A", CounterStorageName + "C" };
+			using (var store = NewRemoteCountersStore())
+			{				
+				await store.CreateCounterStorageAsync(CreateCounterStorageDocument(expectedClientNames[0]), expectedClientNames[0]);
+				await store.CreateCounterStorageAsync(CreateCounterStorageDocument("CounterThatWillBeDeleted"), "CounterThatWillBeDeleted");
+				await store.CreateCounterStorageAsync(CreateCounterStorageDocument(expectedClientNames[1]), expectedClientNames[1]);
+
+				await store.DeleteCounterStorageAsync("CounterThatWillBeDeleted", true);
+
+				var counterStorageNames = await store.GetCounterStoragesNamesAsync();
+				counterStorageNames.Should().BeEquivalentTo(expectedClientNames);
+			}
+		}
+
+		[Fact]
 		public async Task Should_be_able_to_create_multiple_counter_storages_in_parallel()
 		{
 			var expectedClientNames = new[] { CounterStorageName + "A", CounterStorageName + "B", CounterStorageName + "C" };

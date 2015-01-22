@@ -18,9 +18,9 @@ namespace Raven.Client.Counters
 
 		HttpJsonRequestFactory JsonRequestFactory { get; set; }
 
-		string Url { get; set; }
+		string Url { get; }
 
-		string DefaultCounterStorageName { get; set; }
+		string DefaultCounterStorageName { get; }
 
 		Convention Convention { get; set; }
 
