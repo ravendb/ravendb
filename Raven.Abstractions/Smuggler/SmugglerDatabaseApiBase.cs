@@ -231,7 +231,7 @@ namespace Raven.Abstractions.Smuggler
 			if ("Raven/Etag".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
 				return false;
 
-			if ("IndexId".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase) && operateOnTypes.HasFlag(ItemType.Indexes))
+			if ("IndexId".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
 				return false;
 
 			if (operateOnTypes.HasFlag(ItemType.Documents))
