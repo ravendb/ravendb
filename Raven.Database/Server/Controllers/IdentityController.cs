@@ -48,6 +48,14 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
+			if (name.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+			{
+				return GetMessageWithObject(new
+				{
+					Error = "'name' query string parameter cannot be " + name + " because that is a reserved system name"
+				}, HttpStatusCode.BadRequest);
+			}
+
 			if (string.IsNullOrWhiteSpace(valueString))
 			{
 				return GetMessageWithObject(new

@@ -254,7 +254,7 @@ namespace Raven.Tests.Core.Querying
                     var users = session.Query<User, Users_ByName>()
                         .Where(x => x.Name == "Bob" || x.LastName == "Bob")
                         .ToArray();
-
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(2, users.Length);
                     Assert.Equal("Name", users[0].Name);
                     Assert.Equal("Bob", users[1].Name);
