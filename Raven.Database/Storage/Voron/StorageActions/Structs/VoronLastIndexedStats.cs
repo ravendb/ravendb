@@ -1,31 +1,22 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="VoronEtagStruct.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="VoronLastIndexedStats.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Runtime.InteropServices;
-using Raven.Abstractions.Data;
 
 namespace Raven.Database.Storage.Voron.StorageActions.Structs
 {
 	[StructLayout(LayoutKind.Explicit, Pack = 1)]
-	public struct VoronEtagStruct
+	public struct VoronLastIndexedStats
 	{
 		[FieldOffset(0)]
-		public long Restarts;
+		public int IndexId;
 
-		[FieldOffset(8)]
-		public long Changes;
+		[FieldOffset(4)]
+		public VoronEtagStruct LastEtag;
 
-		public VoronEtagStruct(Etag etag)
-		{
-			Restarts = etag.Restarts;
-			Changes = etag.Changes;
-		}
-
-		public Etag ToEtag(UuidType type)
-		{
-			return new Etag(type, Restarts, Changes);
-		}
+		[FieldOffset(20)]
+		public long LastTimestampTicks;
 	}
 }
