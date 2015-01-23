@@ -13,5 +13,6 @@ namespace Voron.Trees
 		bool MovePrev();
 		bool Skip(int count);
 		ValueReader CreateReaderForCurrent();
+		T ReadStructForCurrent<T>() where T : struct;
 	}
 }

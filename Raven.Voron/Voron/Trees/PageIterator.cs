@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Voron.Impl;
 
 namespace Voron.Trees
@@ -101,6 +100,11 @@ namespace Voron.Trees
 		{
 			var node = Current;
 			return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
+		}
+
+		public TStruct ReadStructForCurrent<TStruct>() where TStruct : struct
+		{
+			throw new InvalidOperationException("Multi trees do not support reading/writing structs");
 		}
 	}
 }

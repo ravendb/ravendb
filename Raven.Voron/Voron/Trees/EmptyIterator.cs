@@ -30,6 +30,11 @@ namespace Voron.Trees
 			throw new InvalidOperationException("No current page");
 		}
 
+		public T ReadStructForCurrent<T>() where T : struct
+		{
+			throw new InvalidOperationException("No current page");
+		}
+
 		public IEnumerable<string> DumpValues()
 		{
 			yield break;

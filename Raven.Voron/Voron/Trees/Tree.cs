@@ -102,7 +102,7 @@ namespace Voron.Trees
 		{
 			var structureType = typeof(TStruct);
 
-			AssertStructHasExplicitLayout(structureType);
+			structureType.AssertStructHasExplicitLayout();
 
 			var readResult = Read(key);
 
@@ -114,7 +114,7 @@ namespace Voron.Trees
 
 		public void Write(Slice key, ValueType value, ushort? version = null)
 		{
-			AssertStructHasExplicitLayout(value.GetType());
+			value.GetType().AssertStructHasExplicitLayout();
 
 			var size = Marshal.SizeOf(value);
 
@@ -143,14 +143,6 @@ namespace Voron.Trees
 					Marshal.FreeHGlobal(ptr);
 				}
 			}
-		}
-
-		// ReSharper disable once UnusedParameter.Local
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static void AssertStructHasExplicitLayout(Type structureType)
-		{
-			if (structureType.StructLayoutAttribute == null || structureType.StructLayoutAttribute.Value != LayoutKind.Explicit || structureType.StructLayoutAttribute.Pack != 1)
-				throw new InvalidDataException("Specified type has to be struct with StructLayout(LayoutKind.Explicit, Pack = 1) attribute applied");
 		}
 
 		public int RetrieveFieldOffset(Type type, IEnumerable<string> path)

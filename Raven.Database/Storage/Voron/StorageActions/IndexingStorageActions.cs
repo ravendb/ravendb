@@ -60,14 +60,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					var key = indexingStatsIterator.CurrentKey.ToString();
 					ushort version;
-					var indexStats = LoadStruct<VoronIndexingWorkStats>(tableStorage.IndexingStats, key, out version);
-					// TODO arek
-					//RavenJObject indexStats;
-					//using (var stream = indexingStatsIterator.CreateReaderForCurrent().AsStream())
-					//{
-					//	indexStats = stream.ToJObject();
-					//}
-
+					var indexStats = indexingStatsIterator.ReadStructForCurrent<VoronIndexingWorkStats>();
 					
 					var reduceStats = LoadStruct<VoronReducingWorkStats>(tableStorage.ReduceStats, key, out version);
 					var lastIndexedEtag = Load(tableStorage.LastIndexedEtags, key, out version);

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Voron.Exceptions;
+using Voron.Util;
 
 namespace Voron.Impl
 {
@@ -185,7 +186,7 @@ namespace Voron.Impl
 		{
 			AssertValidTreeName(treeName);
 
-			AssertStructHasExplicitLayout(typeof(T));
+			typeof(T).AssertStructHasExplicitLayout();
 
 			var batchOperation = BatchOperation.Add(key, value, version, treeName);
 			if (shouldIgnoreConcurrencyExceptions)
@@ -281,13 +282,6 @@ namespace Voron.Impl
 				}
 				lastOpsForTree[operation.Key] = operation;
 			}
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static void AssertStructHasExplicitLayout(Type structureType)
-		{
-			if (structureType.Attributes.HasFlag(TypeAttributes.ExplicitLayout) == false)
-				throw new InvalidDataException("Specified type has to be struct with StructLayout(LayoutKind.Explicit) attribute applied");
 		}
 
 		internal class BatchOperation : IComparable<BatchOperation>

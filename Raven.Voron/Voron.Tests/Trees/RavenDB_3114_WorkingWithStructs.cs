@@ -26,10 +26,11 @@ namespace Voron.Tests.Trees
 			public long Erros;
 
 			[FieldOffset(16)]
+			[MarshalAs(UnmanagedType.U1)]
 			public bool IsValid;
 
 			[FieldOffset(17)]
-			public DateTime IndexedAt;
+			public long IndexedAtTicks;
 		}
 
 		[StructLayout(LayoutKind.Explicit, Pack = 1)]
@@ -82,7 +83,7 @@ namespace Voron.Tests.Trees
 					Erros = -1,
 					Successes = 4,
 					IsValid = true,
-					IndexedAt = indexedAt
+					IndexedAtTicks = indexedAt.Ticks
 				});
 
 				tree.Write("operations/1", new Operation()
@@ -93,7 +94,7 @@ namespace Voron.Tests.Trees
 						Attempts = 10,
 						Successes = 10,
 						IsValid = false,
-						IndexedAt = indexedAt
+						IndexedAtTicks = indexedAt.Ticks
 					}
 				});
 
@@ -110,7 +111,7 @@ namespace Voron.Tests.Trees
 				Assert.Equal(-1, stats.Erros);
 				Assert.Equal(4, stats.Successes);
 				Assert.True(stats.IsValid);
-				Assert.Equal(indexedAt, stats.IndexedAt);
+				Assert.Equal(indexedAt, new DateTime(stats.IndexedAtTicks));
 
 				var operation = tree.Read<Operation>("operations/1").Value;
 
@@ -118,7 +119,7 @@ namespace Voron.Tests.Trees
 				Assert.Equal(10, operation.Stats.Successes);
 				Assert.Equal(10, operation.Stats.Attempts);
 				Assert.False(operation.Stats.IsValid);
-				Assert.Equal(indexedAt, operation.Stats.IndexedAt);
+				Assert.Equal(indexedAt, new DateTime(operation.Stats.IndexedAtTicks));
 			}
 		}
 
@@ -207,6 +208,54 @@ namespace Voron.Tests.Trees
 				var stats = snapshot.ReadStruct<Stats>("stats", "stats/1", batch);
 
 				Assert.Null(stats);
+			}
+		}
+
+		[Fact]
+		public void CanReadStructsFromTreeIterator()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "stats");
+
+				tree.Write("items/1", new Stats()
+				{
+					Attempts = 1
+				});
+
+				tree.Write("items/2", new Stats()
+				{
+					Attempts = 2
+				});
+
+
+				tree.Write("items/3", new Stats()
+				{
+					Attempts = 3
+				});
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var iterator = tx.ReadTree("stats").Iterate();
+
+				iterator.Seek(Slice.BeforeAllKeys);
+
+				var count = 0;
+
+				do
+				{
+					var stats = iterator.ReadStructForCurrent<Stats>();
+
+					count++;
+
+					Assert.Equal(count, stats.Attempts);
+
+				} while (iterator.MoveNext());
+
+				Assert.Equal(3, count);
 			}
 		}
 	}
