@@ -55,6 +55,8 @@ namespace Raven.Database.Config
 
 			MaxConcurrentRequestsForDatabaseDuringLoad = new IntegerSetting(settings[Constants.MaxConcurrentRequestsForDatabaseDuringLoad], 10);
 
+            MaxSecondsForTaskToWaitForDatabaseToLoad = new IntegerSetting(settings[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad], 5);
+
 			MaxConcurrentMultiGetRequests = new IntegerSetting(settings[Constants.MaxConcurrentMultiGetRequests], 192);
 
 			MemoryLimitForProcessing = new IntegerSetting(settings[Constants.MemoryLimitForProcessing] ?? settings[Constants.MemoryLimitForProcessing_BackwardCompatibility],
@@ -231,7 +233,7 @@ namespace Raven.Database.Config
 			TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
 		}
 
-		private string GetDefaultWebDir()
+	    private string GetDefaultWebDir()
 		{
 			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Raven/WebUI");
 		}
@@ -258,6 +260,8 @@ namespace Raven.Database.Config
 		public IntegerSetting MaxConcurrentServerRequests { get; private set; }
 
 		public IntegerSetting MaxConcurrentRequestsForDatabaseDuringLoad { get; private set; }
+
+        public IntegerSetting MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
 
 		public IntegerSetting MaxConcurrentMultiGetRequests { get; private set; }
 

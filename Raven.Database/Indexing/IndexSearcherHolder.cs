@@ -5,10 +5,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Windows.Markup;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Raven.Abstractions;
 using Lucene.Net.Search;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Database.Config;
 using Voron.Util;
@@ -145,7 +147,7 @@ namespace Raven.Database.Indexing
             private readonly ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue> docsCache = new ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue>();
 
             private readonly ReaderWriterLockSlim rwls = new ReaderWriterLockSlim();
-            private readonly Dictionary<string, List<CacheVal>[]> cache = new Dictionary<string, List<CacheVal>[]>(1200);
+			private readonly Dictionary<string, Dictionary<string, HashSet<int>>> cache = new Dictionary<string, Dictionary<string, HashSet<int>>>();
 
 	        public ReaderWriterLockSlim Lock
             {
@@ -163,18 +165,11 @@ namespace Raven.Database.Indexing
 	            }
             }
 
-            public IEnumerable<CacheVal> GetFromCache(string field, int doc)
+			public Dictionary<string, HashSet<int>> GetFromCache(string field)
             {
-	            List<CacheVal>[] vals;
-                if (cache.TryGetValue(field, out vals) == false)
-                    yield break;
-	            if (vals[doc] == null)
-                    yield break;
-
-	            foreach (var cacheVal in vals[doc])
-                {
-		            yield return cacheVal;
-                }
+				Dictionary<string, HashSet<int>> vals;
+				cache.TryGetValue(field, out vals);
+				return vals;
             }
             
             public IEnumerable<string> GetUsedFacets(TimeSpan tooOld)
@@ -256,25 +251,11 @@ namespace Raven.Database.Indexing
                 return readEntriesFromIndex;
             }
 
-	        public void SetInCache(string field, List<CacheVal>[] items)
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	        public void SetInCache(string field, Dictionary<string, HashSet<int>> docsPerTerm)
 	        {
-                cache[field] = items;
+				cache[field] = docsPerTerm;
 	        }
-
-            public Tuple<string,List<CacheVal>[]>[]  GetCachedFields(HashSet<string> fieldsToRead)
-            {
-                var results = new Tuple<string, List<CacheVal>[]>[fieldsToRead.Count];
-                var index = 0;
-                foreach (var field in fieldsToRead)
-                {
-                    List<CacheVal>[] vals;
-                    cache.TryGetValue(field, out vals);
-
-                    results[index++] = Tuple.Create(field, vals);
-                }
-                return results;
-
-            }
 
             public StringCollectionValue GetFieldsValues(int docId, uint fieldsCrc, string[] fields)
             {
@@ -341,5 +322,53 @@ namespace Raven.Database.Indexing
                 }
             }
         }
+
+	    internal class GatherAllDiscintCollector : Collector
+		{
+			private readonly IndexQuery _query;
+			private readonly IndexSearcherHoldingState _state;
+			private int _docBase;
+			private readonly HashSet<int> _documents = new HashSet<int>();
+			private readonly HashSet<StringCollectionValue> _alreadySeen = new HashSet<StringCollectionValue>();
+		    private uint _fieldsCrc;
+
+		    public GatherAllDiscintCollector(IndexQuery query, IndexSearcherHoldingState state)
+			{
+				if (query.IsDistinct == false)
+					throw new ArgumentException("Only distinct queries allowed");
+				_query = query;
+				_state = state;
+				_fieldsCrc = query.FieldsToFetch.Aggregate<string, uint>(0, (current, field) => Crc.Value(field, current));
+			}
+
+			public override void SetScorer(Scorer scorer)
+			{
+			}
+
+			public override void Collect(int doc)
+			{
+				var fields = _state.GetFieldsValues(doc, _fieldsCrc, _query.FieldsToFetch);
+
+				if (_alreadySeen.Add(fields) == false)
+					return;
+
+				_documents.Add(doc + _docBase);
+			}
+
+			public override void SetNextReader(IndexReader reader, int docBase)
+			{
+				_docBase = docBase;
+			}
+
+			public override bool AcceptsDocsOutOfOrder
+			{
+				get { return true; }
+			}
+
+			public HashSet<int> Documents
+			{
+				get { return _documents; }
+			}
+		}
     }
 }

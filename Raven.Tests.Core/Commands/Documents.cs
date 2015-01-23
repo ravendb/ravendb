@@ -42,7 +42,7 @@ namespace Raven.Tests.Core.Commands
         [Fact]
         public async Task CanPutGetUpdateAndDeleteDocument()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(databaseName: "CanPutGetUpdateAndDeleteDocument1"))
             {
                 var putResult = await store.AsyncDatabaseCommands.PutAsync(
                     "companies/1",
@@ -67,6 +67,7 @@ namespace Raven.Tests.Core.Commands
                 var documents = await store.AsyncDatabaseCommands.GetDocumentsAsync(0, 25);
                 Assert.Equal(2, documents.Length);
 
+                WaitForUserToContinueTheTest(store);
                 var metadata = await store.AsyncDatabaseCommands.HeadAsync("companies/1");
                 RavenJToken value = null;
                 Assert.NotNull(metadata);

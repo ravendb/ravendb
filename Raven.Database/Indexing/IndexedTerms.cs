@@ -6,8 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
-using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -17,143 +15,6 @@ namespace Raven.Database.Indexing
 {
     internal static class IndexedTerms
     {
-        public static void ReadEntriesForFieldsFromTermVectors(
-            IndexSearcherHolder.IndexSearcherHoldingState state,
-            HashSet<string> fieldsToRead,
-            HashSet<int> docIds,
-            Func<string,string, double> convert,
-            Action<string, string, double, int> onTermFound)
-        {
-            var reader = state.IndexSearcher.IndexReader;
-
-            foreach (var docId in docIds)
-            {
-                foreach (var field in fieldsToRead)
-                {
-                    var termFreqVector = reader.GetTermFreqVector(docId, field);
-                    if (termFreqVector == null)
-                        continue;
-
-                    foreach (var term in termFreqVector.GetTerms())
-                    {
-                        if (LowPrecisionNumber(field, term))
-                            continue;
-                        onTermFound(field, term, convert(field, term), docId);
-                    }
-                }
-            }
-        }
-
-        public static void ReadEntriesForFields(
-                IndexSearcherHolder.IndexSearcherHoldingState state,
-                HashSet<string> fieldsToRead,
-                HashSet<int> docIds,
-                Func<Term, double> convert,
-                Action<Term, double, int> onTermFound)
-        {
-            var reader = state.IndexSearcher.IndexReader;
-
-            var readFromCache = new Dictionary<string, HashSet<int>>();
-
-            state.Lock.EnterReadLock();
-            try
-            {
-                EnsureFieldsAreInCache(state, fieldsToRead, reader);
-
-                foreach (var field in fieldsToRead)
-                {
-                    var read = new HashSet<int>();
-                    readFromCache[field] = read;
-                    foreach (var docId in docIds)
-                    {
-                        foreach (var val in state.GetFromCache(field, docId))
-                        {
-                            read.Add(docId);
-
-                            double converted;
-                            if (val.Val == null)
-                            {
-                                val.Val = converted = convert(val.Term);
-                            }
-                            else
-                            {
-                                converted = val.Val.Value;
-                            }
-                            onTermFound(val.Term, converted, docId);
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                if (state.Lock.IsReadLockHeld)
-                    state.Lock.ExitReadLock();
-            }
-        }
-
-        public static void ReadEntriesForFieldsFromTermVectors(
-            IndexSearcherHolder.IndexSearcherHoldingState state,
-            HashSet<string> fieldsToRead,
-            HashSet<int> docIds,
-            Action<string,string, int> onTermFound)
-        {
-            var reader = state.IndexSearcher.IndexReader;
-
-            foreach (var docId in docIds)
-            {
-                foreach (var field in fieldsToRead)
-                {
-                    var termFreqVector = reader.GetTermFreqVector(docId, field);
-                    if (termFreqVector == null)
-                        continue;
-
-                    foreach (var term in termFreqVector.GetTerms())
-                    {
-                        if(LowPrecisionNumber(field, term))
-                            continue;
-                        onTermFound(field, term, docId);
-                    }
-                }
-            }
-        }
-
-        public static void ReadEntriesForFields(
-              IndexSearcherHolder.IndexSearcherHoldingState state,
-              HashSet<string> fieldsToRead,
-              HashSet<int> docIds,
-              Action<Term, int> onTermFound)
-        {
-            var reader = state.IndexSearcher.IndexReader;
-
-            state.Lock.EnterReadLock();
-            try
-            {
-                EnsureFieldsAreInCache(state, fieldsToRead, reader);
-
-                var cacheEntries = state.GetCachedFields(fieldsToRead);
-
-                foreach (var docId in docIds)
-                {
-                    for (int i = 0; i < cacheEntries.Length; i++)
-                    {
-                        var cacheVals = cacheEntries[i].Item2[docId];
-                        if (cacheVals == null) 
-                            continue;
-
-                        foreach (var t in cacheVals)
-                        {
-                            onTermFound(t.Term, docId);
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                if (state.Lock.IsReadLockHeld)
-                    state.Lock.ExitReadLock();
-            }
-        }
-
         public static void PreFillCache(IndexSearcherHolder.IndexSearcherHoldingState state, string[] fieldsToRead,
             IndexReader reader)
         {
@@ -170,12 +31,14 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private static void EnsureFieldsAreInCache(IndexSearcherHolder.IndexSearcherHoldingState state, HashSet<string> fieldsToRead, IndexReader reader)
+	    public static void EnsureFieldsAreInCache(IndexSearcherHolder.IndexSearcherHoldingState state, HashSet<string> fieldsToRead, IndexReader reader)
         {
             if (fieldsToRead.All(state.IsInCache))
                 return;
 
-            state.Lock.ExitReadLock();
+		    var isReadLockHeld = state.Lock.IsReadLockHeld;
+		    if (isReadLockHeld)
+			    state.Lock.ExitReadLock();
             state.Lock.EnterWriteLock();
             try
             {
@@ -187,7 +50,8 @@ namespace Raven.Database.Indexing
             {
                 state.Lock.ExitWriteLock();
             }
-            state.Lock.EnterReadLock();
+			if (isReadLockHeld)
+				state.Lock.EnterReadLock();
         }
 
         private static void FillCache(IndexSearcherHolder.IndexSearcherHoldingState state, IEnumerable<string> fieldsToRead,IndexReader reader)
@@ -196,7 +60,7 @@ namespace Raven.Database.Indexing
             {
                 foreach (var field in fieldsToRead)
                 {
-                    var items = new List<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>[reader.MaxDoc];
+	                var items = new Dictionary<string, HashSet<int>>();
 
                     using (var termEnum = reader.Terms(new Term(field)))
                     {
@@ -211,21 +75,17 @@ namespace Raven.Database.Indexing
 
                             var totalDocCountIncludedDeletes = termEnum.DocFreq();
                             termDocs.Seek(termEnum.Term);
-
+	                        var docsForTerm = new HashSet<int>();
                             while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
                             {
                                 var curDoc = termDocs.Doc;
                                 totalDocCountIncludedDeletes -= 1;
                                 if (reader.IsDeleted(curDoc))
                                     continue;
-                                if (items[curDoc] == null)
-                                    items[curDoc] = new List<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>();
 
-                                items[curDoc].Add(new IndexSearcherHolder.IndexSearcherHoldingState.CacheVal
-                                {
-                                    Term = termEnum.Term
-                                });
+	                            docsForTerm.Add(curDoc);
                             }
+	                        items[term.Text] = docsForTerm;
                         } while (termEnum.Next());
                     }
 
