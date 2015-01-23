@@ -131,6 +131,8 @@ namespace Raven.Client.Document
 
 											if (options.IgnoreSubscribersErrors == false)
 											{
+												IsErrored = true;
+
 												try
 												{
 													subscriber.OnError(ex);
@@ -139,7 +141,6 @@ namespace Raven.Client.Document
 												{
 													// can happen if a subscriber doesn't have an onError handler - just ignore it
 												}
-												IsErrored = true;
 												break;
 											}
 										}
