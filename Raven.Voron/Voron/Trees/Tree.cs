@@ -530,7 +530,7 @@ namespace Voron.Trees
 			page.DebugValidate(_tx, State.RootPageNumber);
 		}
 
-		public TreeIterator Iterate(WriteBatch writeBatch = null)
+		public TreeIterator Iterate()
 		{
 			return new TreeIterator(this, _tx);
 		}
