@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
 using Raven.Abstractions.Data;
@@ -262,7 +263,8 @@ namespace Raven.Database.Queries
 					var fieldsToRead = new HashSet<string>(Facets.Values.Select(x => x.Name)
 						.Concat(Ranges.Select(x => x.Key)));
 
-					IndexedTerms.EnsureFieldsAreInCache(currentState, fieldsToRead, currentIndexSearcher.IndexReader);
+				    IndexReader indexReader = currentIndexSearcher.IndexReader;
+				    IndexedTerms.EnsureFieldsAreInCache(currentState, fieldsToRead, indexReader);
 
 					foreach (var facet in Facets.Values)
 					{
@@ -296,7 +298,7 @@ namespace Raven.Database.Queries
 								case FacetAggregation.Count:
 									continue;
 								default:
-									ApplyAggregation(facet, facetValue, GetValueFromIndex(facet.Name, kvp.Key));
+                                    ApplyAggregation(facet, facetValue, kvp.Value, indexReader);
 									break;
 							}
 						}
@@ -331,7 +333,7 @@ namespace Raven.Database.Queries
 										case FacetAggregation.Count:
 											continue;
 										default:
-											ApplyAggregation(facet, facetValue, GetValueFromIndex(facet.Name, kvp.Key));
+                                            ApplyAggregation(facet, facetValue, kvp.Value, indexReader);
 											break;
 									}
 								}
@@ -375,7 +377,7 @@ namespace Raven.Database.Queries
 			{
 				foreach (var facet in Facets.Where(facet => IsAggregationNumerical(facet.Value.Aggregation) && IsAggregationTypeNumerical(facet.Value.AggregationType) && GetSortOptionsForFacet(facet.Value.AggregationField) == SortOptions.None))
 				{
-					throw new InvalidOperationException(string.Format("Index '{0}' does not have sorting enabled for a numerical field '{1}'.", this.Index, facet.Value.AggregationField));
+					throw new InvalidOperationException(string.Format("Index '{0}' does not have sorting enabled for a numerical field '{1}'.", Index, facet.Value.AggregationField));
 				}
 			}
 
@@ -474,32 +476,10 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			private void ApplyAggregation(Facet facet, FacetValue value, double currentVal)
+			private void ApplyAggregation(Facet facet, FacetValue value, HashSet<int> docs, IndexReader indexReader)
 			{
-				if (facet.Aggregation.HasFlag(FacetAggregation.Max))
-				{
-					value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
-				}
-
-				if (facet.Aggregation.HasFlag(FacetAggregation.Min))
-				{
-					value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
-				}
-
-				if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
-				{
-					value.Sum = currentVal + (value.Sum ?? 0d);
-				}
-
-				if (facet.Aggregation.HasFlag(FacetAggregation.Average))
-				{
-					value.Average = currentVal + (value.Average ?? 0d);
-				}
-			}
-
-			private double GetValueFromIndex(string fieldName, string text)
-			{
-				switch (GetSortOptionsForFacet(fieldName))
+			    var sortOptionsForFacet = GetSortOptionsForFacet(facet.AggregationField);
+			    switch (sortOptionsForFacet)
 				{
 					case SortOptions.String:
 					case SortOptions.StringVal:
@@ -507,21 +487,116 @@ namespace Raven.Database.Queries
 					case SortOptions.Short:
 					case SortOptions.Custom:
 					case SortOptions.None:
-						throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", TryTrimRangeSuffix(fieldName)));
+						throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", TryTrimRangeSuffix(facet.AggregationField)));
 					case SortOptions.Int:
-						return NumericUtils.PrefixCodedToInt(text);
+                        int[] ints = FieldCache_Fields.DEFAULT.GetInts(indexReader, facet.AggregationField);
+				        foreach (var doc in docs)
+				        {
+				            var currentVal = ints[doc];
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Max))
+                            {
+                                value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
+                            }
+
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Min))
+                            {
+                                value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
+                            }
+
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
+                            {
+                                value.Sum = currentVal + (value.Sum ?? 0d);
+                            }
+
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+                            {
+                                value.Average = currentVal + (value.Average ?? 0d);
+                            }
+				        }
+				        break;
 					case SortOptions.Float:
-						return NumericUtils.PrefixCodedToFloat(text);
+						var floats = FieldCache_Fields.DEFAULT.GetFloats(indexReader, facet.AggregationField);
+				        foreach (var doc in docs)
+				        {
+				            var currentVal = floats[doc];
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Max))
+                            {
+                                value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
+                            }
+
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Min))
+                            {
+                                value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
+                            }
+
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
+                            {
+                                value.Sum = currentVal + (value.Sum ?? 0d);
+                            }
+
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+                            {
+                                value.Average = currentVal + (value.Average ?? 0d);
+                            }
+				        }
+				        break;
 					case SortOptions.Long:
-						return NumericUtils.PrefixCodedToLong(text);
+						var longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, facet.AggregationField);
+				        foreach (var doc in docs)
+				        {
+				            var currentVal = longs[doc];
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Max))
+                            {
+                                value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
+                            }
+
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Min))
+                            {
+                                value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
+                            }
+
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
+                            {
+                                value.Sum = currentVal + (value.Sum ?? 0d);
+                            }
+
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+                            {
+                                value.Average = currentVal + (value.Average ?? 0d);
+                            }
+				        }
+				        break;
 					case SortOptions.Double:
-						return NumericUtils.PrefixCodedToDouble(text);
+						var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, facet.AggregationField);
+				        foreach (var doc in docs)
+				        {
+				            var currentVal = doubles[doc];
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Max))
+                            {
+                                value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
+                            }
+
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Min))
+                            {
+                                value.Min = Math.Min(value.Min ?? Double.MaxValue, currentVal);
+                            }
+
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Sum))
+                            {
+                                value.Sum = currentVal + (value.Sum ?? 0d);
+                            }
+
+                            if (facet.Aggregation.HasFlag(FacetAggregation.Average))
+                            {
+                                value.Average = currentVal + (value.Average ?? 0d);
+                            }
+				        }
+				        break;
 					default:
-						throw new ArgumentOutOfRangeException();
+                        throw new ArgumentOutOfRangeException("Cannot understand " + sortOptionsForFacet);
 				}
 			}
 
-			public readonly Dictionary<string, SortOptions> cache = new Dictionary<string, SortOptions>();
 			private SortOptions GetSortOptionsForFacet(string field)
 			{
 				SortOptions value;
@@ -538,7 +613,6 @@ namespace Raven.Database.Queries
 						value = SortOptions.None;
 					}
 				}
-				cache[field] = value;
 				return value;
 			}
 
