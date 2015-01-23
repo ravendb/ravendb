@@ -15,7 +15,23 @@ namespace Voron.Platform.Posix
 {
 	internal class PosixHelper
 	{
-		public static void ThrowLastError(int lastError)
+	    public static void AllocateFileSpace(int fd, ulong size)
+	    {
+	        int result;
+	        int retries = 1024;
+	        while (true)
+	        {
+	            result = Syscall.posix_fallocate(fd, 0, size);
+	            if (result != (int)Errno.EINTR)
+	                break;
+	            if (retries-- > 0)
+	                throw new IOException("Tried too many times to call posix_fallocate, but always got EINTR, cannot retry again");
+	        }
+	        if (result != 0)
+	            ThrowLastError(result);
+	    }
+
+	    public static void ThrowLastError(int lastError)
 		{
 			if (Enum.IsDefined(typeof(Errno), lastError) == false)
 				throw new InvalidOperationException("Unknown errror " + lastError);
