@@ -25,8 +25,9 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
+				ValueType _;
 				ushort? version;
-				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
+				if (writeBatch.TryGetValue(treeName, key, out stream, out _, out version, out operationType))
 				{
 					if (!version.HasValue)
 						tree = GetTree(treeName);
@@ -58,8 +59,9 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				ValueType value;
+				Stream _;
 				ushort? version;
-				if (writeBatch.TryGetStructValue(treeName, key, out value, out version, out operationType))
+				if (writeBatch.TryGetValue(treeName, key, out _, out value, out version, out operationType))
 				{
 					if (!version.HasValue)
 						tree = GetTree(treeName);
@@ -92,11 +94,14 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
-				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
+				ValueType valueType;
+				if (writeBatch.TryGetValue(treeName, key, out stream, out valueType, out version, out operationType))
 				{
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
+							return true;
+						case WriteBatch.BatchOperationType.AddStruct:
 							return true;
 						case WriteBatch.BatchOperationType.Delete:
 							return false;
@@ -122,12 +127,14 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
+				ValueType valueType;
 				ushort? version;
-				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType) && version.HasValue)
+				if (writeBatch.TryGetValue(treeName, key, out stream, out valueType, out version, out operationType) && version.HasValue)
 				{
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
+						case WriteBatch.BatchOperationType.AddStruct:
 						case WriteBatch.BatchOperationType.Delete:
 							return (ushort)(version.Value + 1);
 					}

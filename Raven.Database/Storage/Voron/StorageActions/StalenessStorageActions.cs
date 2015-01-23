@@ -60,7 +60,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				}
 				else if (cutoffEtag != null)
 				{
-					var lastIndexedEtag = lastIndexedEtags.LastEtag.ToEtag(UuidType.Documents);
+					var lastIndexedEtag = lastIndexedEtags.LastEtag.ToEtag();
 
 					if (lastIndexedEtag.CompareTo(cutoffEtag) < 0)
 						return true;
@@ -121,7 +121,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (TryLoadStruct(tableStorage.LastIndexedEtags, key, writeBatch.Value, out lastIndexed, out version) == false)
 				return false;
 
-			var lastIndexedEtag = lastIndexed.LastEtag.ToEtag(UuidType.Documents);
+			var lastIndexedEtag = lastIndexed.LastEtag.ToEtag();
 			var lastDocumentEtag = GetMostRecentDocumentEtag();
 
 			return lastDocumentEtag.CompareTo(lastIndexedEtag) > 0;
@@ -144,7 +144,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			{
 				return Tuple.Create(
 					new DateTime(reduceStats.LastReducedTimestampTicks, DateTimeKind.Utc),
-					reduceStats.LastReducedEtag.ToEtag(UuidType.ScheduledReductions));
+					reduceStats.LastReducedEtag.ToEtag());
 			}
 
 			VoronLastIndexedStats lastIndexedEtags;
@@ -152,7 +152,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				throw new ArgumentException("lastIndexedEtags");
 
 			return Tuple.Create(new DateTime(lastIndexedEtags.LastTimestampTicks, DateTimeKind.Utc),
-				 lastIndexedEtags.LastEtag.ToEtag(UuidType.Documents));
+				 lastIndexedEtags.LastEtag.ToEtag());
 		}
 
 		public Etag GetMostRecentDocumentEtag()

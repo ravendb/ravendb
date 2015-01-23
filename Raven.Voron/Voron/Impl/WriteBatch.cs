@@ -76,9 +76,10 @@ namespace Voron.Impl
 			set { _disposeAfterWrite = value; }
 		}
 
-		internal bool TryGetValue(string treeName, Slice key, out Stream value, out ushort? version, out BatchOperationType operationType)
+		internal bool TryGetValue(string treeName, Slice key, out Stream streamValue, out ValueType structValue, out ushort? version, out BatchOperationType operationType)
 		{
-			value = null;
+			streamValue = null;
+			structValue = null;
 			version = null;
 			operationType = BatchOperationType.None;
 
@@ -110,41 +111,11 @@ namespace Voron.Impl
 				if (operation.Type == BatchOperationType.Delete)
 					return true;
 
-				value = operation.ValueStream;
+				streamValue = operation.ValueStream;
 				operation.Reset(); // will reset stream position
+				structValue = operation.ValueStruct;
 
-				if (operation.Type == BatchOperationType.Add)
-					return true;
-			}
-
-			return false;
-		}
-
-		internal bool TryGetStructValue(string treeName, Slice key, out ValueType value, out ushort? version, out BatchOperationType operationType)
-		{
-			value = null;
-			version = null;
-			operationType = BatchOperationType.None;
-
-			if (treeName == null)
-				treeName = Constants.RootTreeName;
-
-			Dictionary<Slice, BatchOperation> operations;
-			if (_lastOperations.TryGetValue(treeName, out operations) == false)
-				return false;
-
-			BatchOperation operation;
-			if (operations.TryGetValue(key, out operation))
-			{
-				operationType = operation.Type;
-				version = operation.Version;
-
-				if (operation.Type == BatchOperationType.Delete)
-					return true;
-
-				value = operation.ValueStruct;
-
-				if (operation.Type == BatchOperationType.AddStruct)
+				if (operation.Type == BatchOperationType.Add || operation.Type == BatchOperationType.AddStruct)
 					return true;
 			}
 

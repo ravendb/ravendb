@@ -176,9 +176,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				Attempts = indexStats.IndexingAttempts,
 				Errors = indexStats.IndexingErrors,
 				Successes = indexStats.IndexingSuccesses,
-				ReduceAttempts = reduceStats.ReduceAttempts,
-				ReduceErrors = reduceStats.ReduceErrors,
-				ReduceSuccesses = reduceStats.ReduceSuccesses,
+				ReduceAttempts = reduceStats.ReduceAttempts == -1 ? (int?) null : reduceStats.ReduceAttempts,
+				ReduceErrors = reduceStats.ReduceErrors == -1 ? (int?) null : reduceStats.ReduceErrors,
+				ReduceSuccesses = reduceStats.ReduceSuccesses == -1 ? (int?) null : reduceStats.ReduceSuccesses,
 				Id = indexStats.IndexId
 			};
 
@@ -189,10 +189,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var key = CreateKey(id);
 
-			var readResult = tableStorage.LastIndexedEtags.Read(Snapshot, key, writeBatch.Value);
+			var version = tableStorage.LastIndexedEtags.ReadVersion(Snapshot, key);
 
-			if(readResult == null)
-				throw new IndexDoesNotExistsException(string.Format("There is no index with the id: '{0}'", id));
+			if(version == null)
+				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", id));
 
 			var indexStats = new VoronLastIndexedStats
 			{
@@ -201,7 +201,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				LastTimestampTicks = timestamp.Ticks
 			};
 
-			tableStorage.LastIndexedEtags.AddStruct(writeBatch.Value, key, indexStats, readResult.Version);
+			tableStorage.LastIndexedEtags.AddStruct(writeBatch.Value, key, indexStats, version);
 		}
 
 		public void UpdateLastReduced(int id, Etag etag, DateTime timestamp)
@@ -211,7 +211,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			ushort version;
 			var reduceStats = LoadStruct<VoronReducingWorkStats>(tableStorage.ReduceStats, key, out version);
 
-			if (reduceStats.LastReducedEtag.ToEtag(UuidType.ScheduledReductions).CompareTo(etag) >= 0)
+			if (reduceStats.LastReducedEtag.ToEtag().CompareTo(etag) >= 0)
 				return;
 
 			reduceStats.LastReducedEtag = new VoronEtagStruct(etag);
@@ -428,7 +428,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private static IndexStats GetIndexStats(VoronIndexingWorkStats indexingStats, VoronReducingWorkStats reduceStats, VoronLastIndexedStats lastIndexedEtags, int priority, int touches)
 		{
-			var lastReducedEtag = reduceStats.LastReducedEtag.ToEtag(UuidType.ScheduledReductions);
+			var lastReducedEtag = reduceStats.LastReducedEtag.ToEtag();
 
 			return new IndexStats
 			{
@@ -441,7 +441,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				ReduceIndexingSuccesses = reduceStats.ReduceSuccesses == -1 ? (int?) null : reduceStats.ReduceSuccesses,
 				Id = indexingStats.IndexId,
 				Priority = (IndexingPriority)priority,
-				LastIndexedEtag = lastIndexedEtags.LastEtag.ToEtag(UuidType.Documents),
+				LastIndexedEtag = lastIndexedEtags.LastEtag.ToEtag(),
 				LastIndexedTimestamp = new DateTime(lastIndexedEtags.LastTimestampTicks, DateTimeKind.Utc),
 				CreatedTimestamp = new DateTime(indexingStats.CreatedTimestampTicks, DateTimeKind.Utc),
 				LastIndexingTime = new DateTime(indexingStats.LastIndexingTimeTicks, DateTimeKind.Utc),

@@ -23,9 +23,9 @@ namespace Raven.Database.Storage.Voron.StorageActions.Structs
 			Changes = etag.Changes;
 		}
 
-		public Etag ToEtag(UuidType type)
+		public Etag ToEtag()
 		{
-			return new Etag(type, Restarts, Changes);
+			return new Etag(0, Restarts, Changes); // no need to specify type explicitly
 		}
 	}
 }
