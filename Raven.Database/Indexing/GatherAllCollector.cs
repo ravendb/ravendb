@@ -16,7 +16,7 @@ namespace Raven.Database.Indexing
 	public class GatherAllCollector : Collector
 	{
 		private int _docBase;
-		private readonly HashSet<int> documents = new HashSet<int>();
+        private readonly List<int> documents = new List<int>();
 
 		public override void SetScorer(Scorer scorer)
 		{
@@ -37,7 +37,7 @@ namespace Raven.Database.Indexing
 			get { return true; }
 		}
 
-		public HashSet<int> Documents
+        public List<int> Documents
 		{
 			get { return documents; }
 		}

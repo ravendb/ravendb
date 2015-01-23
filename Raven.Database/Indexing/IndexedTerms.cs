@@ -60,7 +60,7 @@ namespace Raven.Database.Indexing
             {
                 foreach (var field in fieldsToRead)
                 {
-	                var items = new Dictionary<string, HashSet<int>>();
+                    var items = new Dictionary<string, List<int>>();
 
                     using (var termEnum = reader.Terms(new Term(field)))
                     {
@@ -75,7 +75,7 @@ namespace Raven.Database.Indexing
 
                             var totalDocCountIncludedDeletes = termEnum.DocFreq();
                             termDocs.Seek(termEnum.Term);
-	                        var docsForTerm = new HashSet<int>();
+                            var docsForTerm = new List<int>();
                             while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
                             {
                                 var curDoc = termDocs.Doc;
@@ -85,6 +85,7 @@ namespace Raven.Database.Indexing
 
 	                            docsForTerm.Add(curDoc);
                             }
+                            docsForTerm.Sort();
 	                        items[term.Text] = docsForTerm;
                         } while (termEnum.Next());
                     }

@@ -147,7 +147,7 @@ namespace Raven.Database.Indexing
             private readonly ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue> docsCache = new ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue>();
 
             private readonly ReaderWriterLockSlim rwls = new ReaderWriterLockSlim();
-			private readonly Dictionary<string, Dictionary<string, HashSet<int>>> cache = new Dictionary<string, Dictionary<string, HashSet<int>>>();
+            private readonly Dictionary<string, Dictionary<string, List<int>>> cache = new Dictionary<string, Dictionary<string, List<int>>>();
 
 	        public ReaderWriterLockSlim Lock
             {
@@ -165,9 +165,9 @@ namespace Raven.Database.Indexing
 	            }
             }
 
-			public Dictionary<string, HashSet<int>> GetFromCache(string field)
+			public Dictionary<string, List<int>> GetFromCache(string field)
             {
-				Dictionary<string, HashSet<int>> vals;
+                Dictionary<string, List<int>> vals;
 				cache.TryGetValue(field, out vals);
 				return vals;
             }
@@ -252,7 +252,7 @@ namespace Raven.Database.Indexing
             }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	        public void SetInCache(string field, Dictionary<string, HashSet<int>> docsPerTerm)
+            public void SetInCache(string field, Dictionary<string, List<int>> docsPerTerm)
 	        {
 				cache[field] = docsPerTerm;
 	        }
@@ -328,7 +328,7 @@ namespace Raven.Database.Indexing
 			private readonly IndexQuery _query;
 			private readonly IndexSearcherHoldingState _state;
 			private int _docBase;
-			private readonly HashSet<int> _documents = new HashSet<int>();
+            private readonly List<int> _documents = new List<int>();
 			private readonly HashSet<StringCollectionValue> _alreadySeen = new HashSet<StringCollectionValue>();
 		    private uint _fieldsCrc;
 
@@ -365,7 +365,7 @@ namespace Raven.Database.Indexing
 				get { return true; }
 			}
 
-			public HashSet<int> Documents
+            public List<int> Documents
 			{
 				get { return _documents; }
 			}

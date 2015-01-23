@@ -346,10 +346,10 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			private HashSet<int> GetQueryMatchingDocuments(IndexSearcherHolder.IndexSearcherHoldingState currentState, IndexSearcher currentIndexSearcher, Query baseQuery)
+            private List<int> GetQueryMatchingDocuments(IndexSearcherHolder.IndexSearcherHoldingState currentState, IndexSearcher currentIndexSearcher, Query baseQuery)
 			{
 				Collector queryCollector;
-				HashSet<int> documents;
+                List<int> documents;
 				if (IndexQuery.IsDistinct)
 				{
 					var gatherAllDiscintCollector = new IndexSearcherHolder.GatherAllDiscintCollector(IndexQuery, currentState);
@@ -363,15 +363,65 @@ namespace Raven.Database.Queries
 					documents = gatherAllCollector.Documents;
 				}
 				currentIndexSearcher.Search(baseQuery, queryCollector);
+                documents.Sort();
 				return documents;
 			}
 
-			private static int GetIntersectCount(IEnumerable<int> set1, IEnumerable<int> set2)
-			{
-				var clonedDocsHavingTerm = new HashSet<int>(set1);
-				clonedDocsHavingTerm.IntersectWith(set2);
-				return clonedDocsHavingTerm.Count;
-			}
+            /// <summary>
+            /// This method expects both lists to be sorted
+            /// </summary>
+			private static int GetIntersectCount(List<int> a, List<int> b)
+            {
+                List<int> n,m;
+                if (a.Count > b.Count)
+                {
+                    n = a;
+                    m = b;
+                }
+                else
+                {
+                    n = b;
+                    m = a;
+                }
+
+                int nSize = n.Count;
+                int mSize = m.Count;
+
+                double o1 = nSize + mSize;
+                double o2 = nSize * Math.Log(mSize, 2);
+
+                int result = 0;
+                if (o1 < o2)
+                {
+                    int mi = 0, ni = 0;
+                    while (mi < mSize && ni < nSize)
+                    {
+                        if (n[ni] > m[mi])
+                        {
+                            mi++;
+                        }
+                        else if (n[ni] < m[mi])
+                        {
+                            ni++;
+                        }
+                        else
+                        {
+                            ni++;
+                            mi++;
+                            result++;
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < mSize; i++)
+                    {
+                        if (n.BinarySearch(m[i]) >= 0)
+                            result++;
+                    }
+                }
+                return result;
+            }
 
 			private void ValidateFacets()
 			{
@@ -476,7 +526,7 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			private void ApplyAggregation(Facet facet, FacetValue value, HashSet<int> docs, IndexReader indexReader)
+			private void ApplyAggregation(Facet facet, FacetValue value, List<int> docsInQuery, IndexReader indexReader)
 			{
 			    var sortOptionsForFacet = GetSortOptionsForFacet(facet.AggregationField);
 			    switch (sortOptionsForFacet)
@@ -490,7 +540,7 @@ namespace Raven.Database.Queries
 						throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", TryTrimRangeSuffix(facet.AggregationField)));
 					case SortOptions.Int:
                         int[] ints = FieldCache_Fields.DEFAULT.GetInts(indexReader, facet.AggregationField);
-				        foreach (var doc in docs)
+				        foreach (var doc in docsInQuery)
 				        {
 				            var currentVal = ints[doc];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
@@ -516,7 +566,7 @@ namespace Raven.Database.Queries
 				        break;
 					case SortOptions.Float:
 						var floats = FieldCache_Fields.DEFAULT.GetFloats(indexReader, facet.AggregationField);
-				        foreach (var doc in docs)
+				        foreach (var doc in docsInQuery)
 				        {
 				            var currentVal = floats[doc];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
@@ -542,7 +592,7 @@ namespace Raven.Database.Queries
 				        break;
 					case SortOptions.Long:
 						var longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, facet.AggregationField);
-				        foreach (var doc in docs)
+				        foreach (var doc in docsInQuery)
 				        {
 				            var currentVal = longs[doc];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
@@ -568,7 +618,7 @@ namespace Raven.Database.Queries
 				        break;
 					case SortOptions.Double:
 						var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, facet.AggregationField);
-				        foreach (var doc in docs)
+				        foreach (var doc in docsInQuery)
 				        {
 				            var currentVal = doubles[doc];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
