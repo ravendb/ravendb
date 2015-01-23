@@ -45,9 +45,9 @@ namespace Raven.Tests.DistinctFacets
 
 					Assert.Equal(5, result.Results["TotalCount"].Values[0].Hits);
 
-					Assert.Equal(5, result.Results["Tag"].Values.First(x => x.Range == "0").Hits);
-					Assert.Equal(5, result.Results["Tag"].Values.First(x => x.Range == "1").Hits);
-					Assert.Equal(5, result.Results["Tag"].Values.First(x => x.Range == "2").Hits);
+					Assert.Equal(2, result.Results["Tag"].Values.First(x => x.Range == "0").Hits);
+					Assert.Equal(2, result.Results["Tag"].Values.First(x => x.Range == "1").Hits);
+					Assert.Equal(1, result.Results["Tag"].Values.First(x => x.Range == "2").Hits);
 				}
 			}
 		}
