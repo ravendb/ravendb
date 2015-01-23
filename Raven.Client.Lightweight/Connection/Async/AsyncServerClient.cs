@@ -1917,7 +1917,20 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Doc(key), "DELETE", operationMetadata.Credentials, convention).AddOperationHeaders(operationsHeaders)))
 				{
 					request.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-					await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+					if (etag != null)
+						request.AddHeader("If-None-Match", etag);
+
+					try
+					{
+						await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+					}
+					catch (ErrorResponseException e)
+					{
+						if (e.StatusCode != HttpStatusCode.Conflict) 
+							throw;
+
+						throw FetchConcurrencyException(e);
+					}
 				}
 			}, token);
 		}
