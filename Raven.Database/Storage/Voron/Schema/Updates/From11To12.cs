@@ -114,6 +114,37 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 				tx.Commit();
 			}
 
+			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var lastIndexedEtags = tx.ReadTree(Tables.LastIndexedEtags.TableName);
+
+				var iterator = lastIndexedEtags.Iterate();
+
+				if (iterator.Seek(Slice.BeforeAllKeys))
+				{
+					do
+					{
+						var result = lastIndexedEtags.Read(iterator.CurrentKey);
+
+						using (var stream = result.Reader.AsStream())
+						{
+							var stats = stream.ToJObject();
+
+							var voronStats = new VoronLastIndexedStats
+							{
+								IndexId = stats.Value<int>("index"),
+								LastEtag = new VoronEtagStruct(Etag.Parse(stats.Value<byte[]>("lastEtag"))),
+								LastTimestampTicks = stats.Value<DateTime>("lastTimestamp").Ticks
+							};
+
+							lastIndexedEtags.Write(iterator.CurrentKey, voronStats);
+						}
+					} while (iterator.MoveNext());
+				}
+
+				tx.Commit();
+			}
+
 			UpdateSchemaVersion(tableStorage, output);
 		}
 	}
