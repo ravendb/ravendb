@@ -433,6 +433,8 @@
     <TypeScriptCompile Include="App\viewmodels\statusDebugPersistAutoIndex.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugExplainReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryptionConfirmation.ts" />
+    <TypeScriptCompile Include="App\viewmodels\cancelSideBySizeConfirm.ts" />
+    <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\commands\monitorCompactCommand.ts" />
@@ -444,6 +446,7 @@
     <Content Include="App\views\confirmationDialog.html" />
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
+    <Content Include="App\views\cancelSideBySizeConfirm.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
     <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\statusDebugPersistAutoIndex.html" />
