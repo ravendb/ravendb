@@ -42,8 +42,8 @@ namespace Raven.Client.Document
 				return replicas; // if the etag is empty, nothing to do
 
 			var asyncDatabaseCommands = (AsyncServerClient)documentStore.AsyncDatabaseCommands;
-			if (database != null)
-				asyncDatabaseCommands = (AsyncServerClient)asyncDatabaseCommands.ForDatabase(database);
+		    database = database ?? documentStore.DefaultDatabase;
+            asyncDatabaseCommands = (AsyncServerClient)asyncDatabaseCommands.ForDatabase(database);
 
 			asyncDatabaseCommands.ForceReadFromMaster();
 
