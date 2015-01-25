@@ -257,6 +257,7 @@ namespace Raven.Database.Queries
 			public void Execute()
 			{
 				ValidateFacets();
+				
 
 				var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
 
@@ -272,7 +273,8 @@ namespace Raven.Database.Queries
 
 					var baseQuery = Database.IndexStorage.GetDocumentQuery(Index, IndexQuery, Database.IndexQueryTriggers);
 					var returnedReaders = GetQueryMatchingDocuments(currentIndexSearcher, baseQuery);
-					
+
+				
                     foreach (var facet in Facets.Values)
 					{
 						if(facet.Mode != FacetMode.Default)
@@ -306,7 +308,7 @@ namespace Raven.Database.Queries
                                 }
 
                                 var count = GetIntersectCount(kvp.Value, readerFacetInfo.Results, alreadySeen);
-
+						
                                 if (count == 0)
                                     continue;
 
@@ -414,18 +416,6 @@ namespace Raven.Database.Queries
             /// </summary>
 			private int GetIntersectCount(int[] a,  int[] b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
 		    {
-		        var af = File.CreateText("a.txt");
-		        foreach (var i in a)
-		        {
-		            af.WriteLine(i);
-		        }
-                af.Close();
-                var bf = File.CreateText("b.txt");
-                foreach (var i in b)
-                {
-                    bf.WriteLine(i);
-                }
-                bf.Close();
                 int[] n,m;
                 if (a.Length > b.Length)
                 {
