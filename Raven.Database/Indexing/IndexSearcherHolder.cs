@@ -322,53 +322,5 @@ namespace Raven.Database.Indexing
                 }
             }
         }
-
-	    internal class GatherAllDiscintCollector : Collector
-		{
-			private readonly IndexQuery _query;
-			private readonly IndexSearcherHoldingState _state;
-			private int _docBase;
-            private readonly List<int> _documents = new List<int>();
-			private readonly HashSet<StringCollectionValue> _alreadySeen = new HashSet<StringCollectionValue>();
-		    private uint _fieldsCrc;
-
-		    public GatherAllDiscintCollector(IndexQuery query, IndexSearcherHoldingState state)
-			{
-				if (query.IsDistinct == false)
-					throw new ArgumentException("Only distinct queries allowed");
-				_query = query;
-				_state = state;
-				_fieldsCrc = query.FieldsToFetch.Aggregate<string, uint>(0, (current, field) => Crc.Value(field, current));
-			}
-
-			public override void SetScorer(Scorer scorer)
-			{
-			}
-
-			public override void Collect(int doc)
-			{
-				var fields = _state.GetFieldsValues(doc, _fieldsCrc, _query.FieldsToFetch);
-
-				if (_alreadySeen.Add(fields) == false)
-					return;
-
-				_documents.Add(doc + _docBase);
-			}
-
-			public override void SetNextReader(IndexReader reader, int docBase)
-			{
-				_docBase = docBase;
-			}
-
-			public override bool AcceptsDocsOutOfOrder
-			{
-				get { return true; }
-			}
-
-            public List<int> Documents
-			{
-				get { return _documents; }
-			}
-		}
     }
 }
