@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using ICSharpCode.NRefactory.TypeSystem.Implementation;
 using Lucene.Net.Index;
@@ -304,7 +305,7 @@ namespace Raven.Database.Queries
                                     }
                                 }
 
-                                var count = GetIntersectCount(kvp.Value, readerFacetInfo.Matches, alreadySeen);
+                                var count = GetIntersectCount(kvp.Value, readerFacetInfo.Results, alreadySeen);
 
                                 if (count == 0)
                                     continue;
@@ -365,7 +366,7 @@ namespace Raven.Database.Queries
 				                    {
 				                        var facetValue = facetResult.Values[i];
 
-                                        var intersectCount = GetIntersectCount(kvp.Value, readerFacetInfo.Matches, alreadySeen);
+                                        var intersectCount = GetIntersectCount(kvp.Value, readerFacetInfo.Results, alreadySeen);
 				                        if (intersectCount == 0)
 				                            continue;
 				                        facetValue.Hits += intersectCount;
@@ -399,7 +400,10 @@ namespace Raven.Database.Queries
 
 		        foreach (var readerFacetInfo in gatherAllCollector.Results)
 		        {
-		            readerFacetInfo.Matches.Sort();
+		            var matches = readerFacetInfo.Matches;
+		            matches.Sort();
+		            readerFacetInfo.Results = matches.ToArray();
+		            readerFacetInfo.Matches = null;
 		        }
 
                 return gatherAllCollector.Results;
@@ -408,10 +412,22 @@ namespace Raven.Database.Queries
 		    /// <summary>
             /// This method expects both lists to be sorted
             /// </summary>
-			private int GetIntersectCount(List<int> a,  List<int> b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
-            {
-                List<int> n,m;
-                if (a.Count > b.Count)
+			private int GetIntersectCount(int[] a,  int[] b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
+		    {
+		        var af = File.CreateText("a.txt");
+		        foreach (var i in a)
+		        {
+		            af.WriteLine(i);
+		        }
+                af.Close();
+                var bf = File.CreateText("b.txt");
+                foreach (var i in b)
+                {
+                    bf.WriteLine(i);
+                }
+                bf.Close();
+                int[] n,m;
+                if (a.Length > b.Length)
                 {
                     n = a;
                     m = b;
@@ -422,8 +438,8 @@ namespace Raven.Database.Queries
                     m = a;
                 }
 
-                int nSize = n.Count;
-                int mSize = m.Count;
+                int nSize = n.Length;
+                int mSize = m.Length;
 
                 double o1 = nSize + mSize;
                 double o2 = nSize * Math.Log(mSize, 2);
@@ -459,7 +475,7 @@ namespace Raven.Database.Queries
                 {
                     for (int i = 0; i < mSize; i++)
                     {
-                        if (n.BinarySearch(m[i]) >= 0)
+                        if (Array.BinarySearch(n,m[i]) >= 0)
                         {
                             if (isDistinct)
                                 result += GetDistinctCountValue(m[i], alreadySeen);
@@ -581,7 +597,7 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			private void ApplyAggregation(Facet facet, FacetValue value, List<int> docsInQuery, IndexReader indexReader)
+			private void ApplyAggregation(Facet facet, FacetValue value, int[] docsInQuery, IndexReader indexReader)
 			{
 			    var sortOptionsForFacet = GetSortOptionsForFacet(facet.AggregationField);
 			    switch (sortOptionsForFacet)
@@ -801,7 +817,8 @@ namespace Raven.Database.Queries
 	        public int DocBase;
             // Here we store the _global document id_, if you need the 
             // reader document id, you must decrement with the DocBase
-            public List<int> Matches = new List<int>(); 
+            public List<int> Matches = new List<int>();
+	        public int[] Results;
 	    }
 
         public class GatherAllCollectorByReader : Collector

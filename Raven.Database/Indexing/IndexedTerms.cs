@@ -13,6 +13,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
+using Raven.Database.Config;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
@@ -20,24 +21,38 @@ namespace Raven.Database.Indexing
 {
     internal static class IndexedTerms
     {
-        private readonly static ConditionalWeakTable<IndexReader, ConcurrentDictionary<string, FieldCacheInfo>> _termsCachePerReader = 
-            new ConditionalWeakTable<IndexReader, ConcurrentDictionary<string, FieldCacheInfo>>();
+        private readonly static ConditionalWeakTable<IndexReader, CachedIndexedTerms> _termsCachePerReader =
+            new ConditionalWeakTable<IndexReader, CachedIndexedTerms>();
+
+        private class CachedIndexedTerms : ILowMemoryHandler
+        {
+            public ConcurrentDictionary<string, FieldCacheInfo> Results = new ConcurrentDictionary<string, FieldCacheInfo>();
+            public CachedIndexedTerms()
+            {
+                MemoryStatistics.RegisterLowMemoryHandler(this);
+            }
+
+            public void HandleLowMemory()
+            {
+                Results.Clear();
+            }
+        }
 
         private class FieldCacheInfo
         {
-            public Dictionary<string,List<int>> Results;
+            public Dictionary<string,int[]> Results;
             public bool Done;
         }
 
-        public static Dictionary<string, List<int>> GetTermsAndDocumenstFor(IndexReader reader, int docBase, string field)
+        public static Dictionary<string, int[]> GetTermsAndDocumenstFor(IndexReader reader, int docBase, string field)
         {
             var termsCachePerField = _termsCachePerReader.GetOrCreateValue(reader);
             FieldCacheInfo info;
-            if (termsCachePerField.TryGetValue(field, out info) && info.Done)
+            if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)
             {
                 return info.Results;
             }
-            info = termsCachePerField.GetOrAdd(field, new FieldCacheInfo());
+            info = termsCachePerField.Results.GetOrAdd(field, new FieldCacheInfo());
             lock (info)
             {
                 if (info.Done)
@@ -48,11 +63,12 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private static Dictionary<string, List<int>> FillCache(IndexReader reader, int docBase, string field)
+        private static Dictionary<string, int[]> FillCache(IndexReader reader, int docBase, string field)
         {
             using (var termDocs = reader.TermDocs())
             {
-                var items = new Dictionary<string, List<int>>();
+                var items = new Dictionary<string, int[]>();
+                var docsForTerm = new List<int>();
 
                 using (var termEnum = reader.Terms(new Term(field)))
                 {
@@ -67,7 +83,6 @@ namespace Raven.Database.Indexing
 
                         var totalDocCountIncludedDeletes = termEnum.DocFreq();
                         termDocs.Seek(termEnum.Term);
-                        var docsForTerm = new List<int>();
                         while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
                         {
                             var curDoc = termDocs.Doc;
@@ -78,7 +93,8 @@ namespace Raven.Database.Indexing
                             docsForTerm.Add(curDoc + docBase);
                         }
                         docsForTerm.Sort();
-                        items[term.Text] = docsForTerm;
+                        items[term.Text] = docsForTerm.ToArray();
+                        docsForTerm.Clear();
                     } while (termEnum.Next());
                 }
                 return items;
