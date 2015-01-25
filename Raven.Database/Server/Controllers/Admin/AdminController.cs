@@ -324,7 +324,7 @@ namespace Raven.Database.Server.Controllers.Admin
 					.Put(Constants.RavenReplicationDestinations, null, RavenJObject.FromObject(replicationDocument), new RavenJObject(), null);
 			}
 
-			var databaseDocumentAsJson = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.RavenDatabasesPrefix + databaseName, null);
+			var databaseDocumentAsJson = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.RavenDatabasePathPrefix + databaseName, null);
 			var databaseDocument = databaseDocumentAsJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
 			var bundles = databaseDocument.Settings[Constants.ActiveBundles].GetSemicolonSeparatedValues();
@@ -336,7 +336,7 @@ namespace Raven.Database.Server.Controllers.Admin
 					.SystemDatabase
 					.Documents
 					.Put(
-						Constants.RavenDatabasesPrefix + databaseName,
+						Constants.RavenDatabasePathPrefix + databaseName,
 						null,
 						RavenJObject.FromObject(databaseDocument),
 						new RavenJObject

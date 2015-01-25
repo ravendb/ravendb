@@ -5,14 +5,13 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Counters;
-using Raven.Abstractions.Replication;
 using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Counters.Controllers
 {
-    public class CounterReplicationController : RavenCountersApiController
+    public class CountersReplicationController : RavenCountersApiController
     {
-		[RavenRoute("counters/{counterName}/lastEtag")]
+		[RavenRoute("cs/{counterStorageName}/lastEtag")]
 		[HttpGet]
 		public HttpResponseMessage GetLastEtag(string serverUrl)
 		{
@@ -24,7 +23,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-        [RavenRoute("counters/{counterName}/replication")]
+        [RavenRoute("cs/{counterStorageName}/replication")]
 		[HttpPost]
         public async Task<HttpResponseMessage> Post()
         {
@@ -52,7 +51,7 @@ namespace Raven.Database.Counters.Controllers
 	            foreach (var counter in replicationMessage.Counters)
 	            {
 		            lastEtag = Math.Max(counter.Etag, lastEtag);
-		            var currentCounter = writer.GetCounter(counter.CounterName);
+		            var currentCounter = writer.GetCountersByPrefix(counter.CounterName);
 		            foreach (var serverValue in counter.ServerValues)
 		            {
                         Counter.PerServerValue currentServerValue;
@@ -100,7 +99,7 @@ namespace Raven.Database.Counters.Controllers
             }
         }
 
-        [RavenRoute("counters/{counterName}/replication/heartbeat")]
+        [RavenRoute("cs/{counterStorageName}/replication/heartbeat")]
 		[HttpPost]
         public HttpResponseMessage HeartbeatPost(string sourceServer)
         {
@@ -119,7 +118,7 @@ namespace Raven.Database.Counters.Controllers
             return GetEmptyMessage();
         }
 
-		[RavenRoute("counters/{counterName}/replications/get")]
+		[RavenRoute("cs/{counterStorageName}/replications/get")]
 		[HttpGet]
 		public HttpResponseMessage ReplicationsGet()
 		{
@@ -135,20 +134,11 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		[RavenRoute("counters/{counterName}/replications/save")]
+		[RavenRoute("cs/{counterStorageName}/replications/save")]
 		[HttpPost]
 		public async Task<HttpResponseMessage> ReplicationsSave()
 		{
-			CounterStorageReplicationDocument newReplicationDocument;
-			try
-			{
-				newReplicationDocument = await ReadJsonObjectAsync<CounterStorageReplicationDocument>();
-			}
-			catch (Exception e)
-			{
-				return Request.CreateResponse(HttpStatusCode.BadRequest, e.Message);
-			}
-
+			var newReplicationDocument = await ReadJsonObjectAsync<CounterStorageReplicationDocument>();
 			using (var writer = Storage.CreateWriter())
 			{
 				writer.UpdateReplications(newReplicationDocument);
@@ -157,16 +147,5 @@ namespace Raven.Database.Counters.Controllers
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}
-
-        [RavenRoute("counters/{counterName}/replications/stats")]
-        [HttpGet]
-        public HttpResponseMessage ReplicationStats()
-        {
-            return Request.CreateResponse(HttpStatusCode.OK,
-                new CounterStorageReplicationStats()
-                {
-                    Stats = Storage.ReplicationTask.DestinationStats.Values.ToList()
-                });
-        }
     }
 }

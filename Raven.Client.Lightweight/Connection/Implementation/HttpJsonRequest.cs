@@ -188,10 +188,14 @@ namespace Raven.Client.Connection
 				{
 					var requestMessage = getRequestMessage();
 					CopyHeadersToHttpRequestMessage(requestMessage);
-                    Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
+					Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
 					SetResponseHeaders(Response);
-				    AssertServerVersionSupported();
+					AssertServerVersionSupported();
 					ResponseStatusCode = Response.StatusCode;
+				}
+				catch (Exception e)
+				{
+					
 				}
 				finally
 				{

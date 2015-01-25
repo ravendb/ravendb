@@ -54,7 +54,7 @@ namespace Raven.Database.FileSystem.Controllers
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken(FileSystemName, User);
+			var token = authorizer.GenerateSingleUseAuthToken(TenantName, User);
 
             return GetMessageWithObject(new
             {
@@ -69,12 +69,12 @@ namespace Raven.Database.Counters.Controllers
     public class CounterSingleAuthTokenController : RavenCountersApiController
     {
         [HttpGet]
-        [RavenRoute("counters/{counterName}/singleAuthToken")]
+        [RavenRoute("cs/{counterStorageName}/singleAuthToken")]
         public HttpResponseMessage SingleAuthGet()
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken(CountersName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(TenantName, User);
 
             return GetMessageWithObject(new
             {

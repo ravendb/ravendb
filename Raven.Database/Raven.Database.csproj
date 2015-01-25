@@ -236,6 +236,7 @@
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
+    <Compile Include="Counters\Controllers\CountersStatsController.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
@@ -325,8 +326,8 @@
     <Compile Include="Client\Azure\RavenAzureClient.cs" />
     <Compile Include="Client\RavenStorageClient.cs" />
     <Compile Include="Counters\Controllers\AdminCounterStorageController.cs" />
-    <Compile Include="Counters\Controllers\CounterReplicationController.cs" />
-    <Compile Include="Counters\Controllers\CounterStorageController.cs" />
+    <Compile Include="Counters\Controllers\CountersReplicationController.cs" />
+    <Compile Include="Counters\Controllers\CountersController.cs" />
     <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />
     <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
     <Compile Include="Counters\CountersMetricsManager.cs" />
@@ -353,7 +354,7 @@
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
     <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />
-    <Compile Include="Counters\Controllers\CountersController.cs" />
+    <Compile Include="Counters\Controllers\CounterOperationsController.cs" />
     <Compile Include="Server\Connections\WebSocketsTransport.cs" />
     <EmbeddedResource Include="Server\Assets\EmbeddedData\NorthwindHelpData.cs" />
     <Compile Include="Server\RavenDbServer.cs" />

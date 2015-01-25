@@ -104,7 +104,7 @@ namespace Raven.Abstractions.Data
 
 		public static readonly Type DefaultCryptoServiceProvider = typeof(System.Security.Cryptography.AesCryptoServiceProvider);
 
-		//Quotas
+	    //Quotas
 		public const string DocsHardLimit = "Raven/Quotas/Documents/HardLimit";
 		public const string DocsSoftLimit = "Raven/Quotas/Documents/SoftLimit";
 		public const string SizeHardLimitInKB = "Raven/Quotas/Size/HardLimitInKB";
@@ -164,15 +164,20 @@ namespace Raven.Abstractions.Data
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 		
 		//Counters
-		public const byte GroupSeperator = 29;
-		public const char GroupSeperatorChar = (char)GroupSeperator;
+		public const string RavenCounterStoragePathPrefix = "Raven/Counters/";
+		public const byte GroupSeparator = 29;
+	    public const byte ServerIdSeparator = 28;
+		public const char GroupSeparatorChar = (char)GroupSeparator;
 		public const string GroupSeperatorString = "\u001D";
+		public const string ServerIdSeperatorString = "\u001C";
 
         public const string MetadataEtagField = "ETag";
 
 		public const string TempUploadsDirectoryName = "RavenTempUploads";
 
 		public const string DataCouldNotBeDecrypted = "<data could not be decrypted>";
+
+		public const int NumberOfCachedRequests = 1024;
 
 		// Backup
 
@@ -185,7 +190,7 @@ namespace Raven.Abstractions.Data
 
 		// General
 
-		public const string RavenDatabasesPrefix = "Raven/Databases/";
+		public const string RavenDatabasePathPrefix = "Raven/Databases/";
 
         public static partial class FileSystem
         {
