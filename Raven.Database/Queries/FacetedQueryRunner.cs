@@ -2,15 +2,19 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using ICSharpCode.NRefactory.TypeSystem.Implementation;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Raven.Abstractions;
+using Voron.Util;
 
 namespace Raven.Database.Queries
 {
@@ -217,6 +221,16 @@ namespace Raven.Database.Queries
 		public class QueryForFacets
 		{
 			private readonly IndexDefinition indexDefinition;
+            DocumentDatabase Database { get; set; }
+            string Index { get; set; }
+            Dictionary<string, Facet> Facets { get; set; }
+            Dictionary<string, List<ParsedRange>> Ranges { get; set; }
+            IndexQuery IndexQuery { get; set; }
+            FacetResults Results { get; set; }
+            private int Start { get; set; }
+            private int? PageSize { get; set; }
+            private uint _fieldsCrc;
+            private IndexSearcherHolder.IndexSearcherHoldingState _currentState;
 
 			public QueryForFacets(
 				DocumentDatabase database,
@@ -239,141 +253,171 @@ namespace Raven.Database.Queries
 				indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(Index);
 			}
 
-			DocumentDatabase Database { get; set; }
-			string Index { get; set; }
-			Dictionary<string, Facet> Facets { get; set; }
-			Dictionary<string, List<ParsedRange>> Ranges { get; set; }
-			IndexQuery IndexQuery { get; set; }
-			FacetResults Results { get; set; }
-			private int Start { get; set; }
-			private int? PageSize { get; set; }
-
+		
 			public void Execute()
 			{
 				ValidateFacets();
+				
 
 				var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
 
-				using (var currentState = Database.IndexStorage.GetCurrentStateHolder(Index))
+			    if (IndexQuery.IsDistinct)
+			    {
+                    _fieldsCrc = IndexQuery.FieldsToFetch.Aggregate<string, uint>(0, (current, field) => Crc.Value(field, current));
+			    }
+
+			    _currentState = Database.IndexStorage.GetCurrentStateHolder(Index);
+			    using (_currentState)
 				{
-					var currentIndexSearcher = currentState.IndexSearcher;
+					var currentIndexSearcher = _currentState.IndexSearcher;
 
 					var baseQuery = Database.IndexStorage.GetDocumentQuery(Index, IndexQuery, Database.IndexQueryTriggers);
-					var documents = GetQueryMatchingDocuments(currentState, currentIndexSearcher, baseQuery);
-					var fieldsToRead = new HashSet<string>(Facets.Values.Select(x => x.Name)
-						.Concat(Ranges.Select(x => x.Key)));
+					var returnedReaders = GetQueryMatchingDocuments(currentIndexSearcher, baseQuery);
 
-				    IndexReader indexReader = currentIndexSearcher.IndexReader;
-				    IndexedTerms.EnsureFieldsAreInCache(currentState, fieldsToRead, indexReader);
-
-					foreach (var facet in Facets.Values)
+				
+                    foreach (var facet in Facets.Values)
 					{
 						if(facet.Mode != FacetMode.Default)
 							continue;
 
-						var termsForField = currentState.GetFromCache(facet.Name);
-						if (termsForField == null)
-							continue;
+                        Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
+                        HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
+                        if(IndexQuery.IsDistinct)
+                            distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
 
-						var facetValues = new Dictionary<string, FacetValue>();
-						facetsByName[facet.DisplayName] = facetValues;
+					    foreach (var readerFacetInfo in returnedReaders)
+					    {
+                            var termsForField = IndexedTerms.GetTermsAndDocumenstFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name);
 
-						foreach (var kvp in termsForField)
-						{
-							var count = GetIntersectCount(kvp.Value, documents);
+					        Dictionary<string, FacetValue> facetValues;
+                            
+					        if (facetsByName.TryGetValue(facet.DisplayName, out facetValues) == false)
+					        {
+                                facetsByName[facet.DisplayName] = facetValues = new Dictionary<string, FacetValue>();    
+					        }
 
-						    if (count == 0)
-						        continue;
+                            foreach (var kvp in termsForField)
+                            {
+                                if (IndexQuery.IsDistinct)
+                                {
+                                    if (distinctItems.TryGetValue(kvp.Key, out alreadySeen) == false)
+                                    {
+                                        alreadySeen = new HashSet<IndexSearcherHolder.StringCollectionValue>();
+                                        distinctItems[kvp.Key] = alreadySeen;
+                                    }
+                                }
 
-							var facetValue = new FacetValue
-							{
-								Hits = count,
-								Count = count,
-								Range = GetRangeName(facet.Name, kvp.Key)
-							};
-							facetValues[kvp.Key] = facetValue;
-							switch (facet.Aggregation)
-							{
-								case FacetAggregation.None:
-								case FacetAggregation.Count:
-									continue;
-								default:
-                                    ApplyAggregation(facet, facetValue, kvp.Value, indexReader);
-									break;
-							}
-						}
+                                var count = GetIntersectCount(kvp.Value, readerFacetInfo.Results, alreadySeen);
+						
+                                if (count == 0)
+                                    continue;
+
+                                FacetValue value;
+                                if (facetValues.TryGetValue(kvp.Key, out value) == false)
+                                {
+                                    value = new FacetValue
+                                    {
+                                        Range = GetRangeName(facet.Name, kvp.Key)
+                                    };
+                                    facetValues.Add(kvp.Key, value);
+                                }
+                                value.Hits += count;
+                                value.Count = value.Hits;
+
+                                switch (facet.Aggregation)
+                                {
+                                    case FacetAggregation.None:
+                                    case FacetAggregation.Count:
+                                        continue;
+                                    default:
+                                        ApplyAggregation(facet, value, kvp.Value, readerFacetInfo.Reader);
+                                        break;
+                                }
+                            }
+					    }
 					}
 
-					foreach (var range in Ranges)
-					{
-						var facet = Facets[range.Key];
-						var termsForField = currentState.GetFromCache(range.Key);
-						if (termsForField == null)
-							continue;
-						var facetResult = Results.Results[range.Key];
-						var ranges = range.Value;
-						foreach (var kvp in termsForField)
-						{
-							for (int i = 0; i < ranges.Count; i++)
-							{
-								var parsedRange = ranges[i];
-								if (parsedRange.IsMatch(kvp.Key))
-								{
-									var facetValue = facetResult.Values[i];
+				    foreach (var range in Ranges)
+				    {
+				        var facet = Facets[range.Key];
+                        Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
+                        HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
+                        if (IndexQuery.IsDistinct)
+                            distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
 
-								    var intersectCount = GetIntersectCount(kvp.Value, documents);
-								    if (intersectCount == 0)
-								        continue;
-								    facetValue.Hits += intersectCount;
-									facetValue.Count = facetValue.Hits;
+				        foreach (var readerFacetInfo in returnedReaders)
+				        {
+                            var termsForField = IndexedTerms.GetTermsAndDocumenstFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name);
+                            if (IndexQuery.IsDistinct)
+                            {
+                                if (distinctItems.TryGetValue(range.Key, out alreadySeen) == false)
+                                {
+                                    alreadySeen = new HashSet<IndexSearcherHolder.StringCollectionValue>();
+                                    distinctItems[range.Key] = alreadySeen;
+                                }
+                            }
 
-									switch (facet.Aggregation)
-									{
-										case FacetAggregation.None:
-										case FacetAggregation.Count:
-											continue;
-										default:
-                                            ApplyAggregation(facet, facetValue, kvp.Value, indexReader);
-											break;
-									}
-								}
-							}
-						}
-					}
-					UpdateFacetResults(facetsByName);
+				            var facetResult = Results.Results[range.Key];
+				            var ranges = range.Value;
+				            foreach (var kvp in termsForField)
+				            {
+				                for (int i = 0; i < ranges.Count; i++)
+				                {
+				                    var parsedRange = ranges[i];
+				                    if (parsedRange.IsMatch(kvp.Key))
+				                    {
+				                        var facetValue = facetResult.Values[i];
+
+                                        var intersectCount = GetIntersectCount(kvp.Value, readerFacetInfo.Results, alreadySeen);
+				                        if (intersectCount == 0)
+				                            continue;
+				                        facetValue.Hits += intersectCount;
+				                        facetValue.Count = facetValue.Hits;
+
+				                        switch (facet.Aggregation)
+				                        {
+				                            case FacetAggregation.None:
+				                            case FacetAggregation.Count:
+				                                continue;
+				                            default:
+                                                ApplyAggregation(facet, facetValue, kvp.Value, readerFacetInfo.Reader);
+				                                break;
+				                        }
+				                    }
+				                }
+				            }
+				        }
+				    }
+				    UpdateFacetResults(facetsByName);
 
 					CompleteFacetCalculationsStage();
 				}
 			}
 
-            private List<int> GetQueryMatchingDocuments(IndexSearcherHolder.IndexSearcherHoldingState currentState, IndexSearcher currentIndexSearcher, Query baseQuery)
-			{
-				Collector queryCollector;
-                List<int> documents;
-				if (IndexQuery.IsDistinct)
-				{
-					var gatherAllDiscintCollector = new IndexSearcherHolder.GatherAllDiscintCollector(IndexQuery, currentState);
-					queryCollector = gatherAllDiscintCollector;
-					documents = gatherAllDiscintCollector.Documents;
-				}
-				else
-				{
-					var gatherAllCollector = new GatherAllCollector();
-					queryCollector = gatherAllCollector;
-					documents = gatherAllCollector.Documents;
-				}
-				currentIndexSearcher.Search(baseQuery, queryCollector);
-                documents.Sort();
-				return documents;
-			}
 
-            /// <summary>
+		    private List<ReaderFacetInfo> GetQueryMatchingDocuments(IndexSearcher currentIndexSearcher, Query baseQuery)
+            {
+                var gatherAllCollector = new GatherAllCollectorByReader();
+                currentIndexSearcher.Search(baseQuery, gatherAllCollector);
+
+		        foreach (var readerFacetInfo in gatherAllCollector.Results)
+		        {
+		            var matches = readerFacetInfo.Matches;
+		            matches.Sort();
+		            readerFacetInfo.Results = matches.ToArray();
+		            readerFacetInfo.Matches = null;
+		        }
+
+                return gatherAllCollector.Results;
+            }
+
+		    /// <summary>
             /// This method expects both lists to be sorted
             /// </summary>
-			private static int GetIntersectCount(List<int> a, List<int> b)
-            {
-                List<int> n,m;
-                if (a.Count > b.Count)
+			private int GetIntersectCount(int[] a,  int[] b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
+		    {
+                int[] n,m;
+                if (a.Length > b.Length)
                 {
                     n = a;
                     m = b;
@@ -384,12 +428,13 @@ namespace Raven.Database.Queries
                     m = a;
                 }
 
-                int nSize = n.Count;
-                int mSize = m.Count;
+                int nSize = n.Length;
+                int mSize = m.Length;
 
                 double o1 = nSize + mSize;
                 double o2 = nSize * Math.Log(mSize, 2);
 
+                var isDistinct = IndexQuery.IsDistinct;
                 int result = 0;
                 if (o1 < o2)
                 {
@@ -406,9 +451,13 @@ namespace Raven.Database.Queries
                         }
                         else
                         {
+                            if (isDistinct)
+                                result += GetDistinctCountValue(n[ni], alreadySeen);
+                            else
+                                result++; 
+
                             ni++;
                             mi++;
-                            result++;
                         }
                     }
                 }
@@ -416,14 +465,26 @@ namespace Raven.Database.Queries
                 {
                     for (int i = 0; i < mSize; i++)
                     {
-                        if (n.BinarySearch(m[i]) >= 0)
-                            result++;
+                        if (Array.BinarySearch(n,m[i]) >= 0)
+                        {
+                            if (isDistinct)
+                                result += GetDistinctCountValue(m[i], alreadySeen);
+                            else
+                                result++;
+                        }
                     }
                 }
                 return result;
             }
 
-			private void ValidateFacets()
+		   
+		    private int GetDistinctCountValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen)
+		    {
+                var fields = _currentState.GetFieldsValues(docId, _fieldsCrc, IndexQuery.FieldsToFetch);
+		        return alreadySeen.Add(fields) ? 1 : 0;
+		    }
+
+		    private void ValidateFacets()
 			{
 				foreach (var facet in Facets.Where(facet => IsAggregationNumerical(facet.Value.Aggregation) && IsAggregationTypeNumerical(facet.Value.AggregationType) && GetSortOptionsForFacet(facet.Value.AggregationField) == SortOptions.None))
 				{
@@ -526,7 +587,7 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			private void ApplyAggregation(Facet facet, FacetValue value, List<int> docsInQuery, IndexReader indexReader)
+			private void ApplyAggregation(Facet facet, FacetValue value, int[] docsInQuery, IndexReader indexReader)
 			{
 			    var sortOptionsForFacet = GetSortOptionsForFacet(facet.AggregationField);
 			    switch (sortOptionsForFacet)
@@ -739,5 +800,46 @@ namespace Raven.Database.Queries
 				}
 			}
 		}
+
+	    public class ReaderFacetInfo
+	    {
+	        public IndexReader Reader;
+	        public int DocBase;
+            // Here we store the _global document id_, if you need the 
+            // reader document id, you must decrement with the DocBase
+            public List<int> Matches = new List<int>();
+	        public int[] Results;
+	    }
+
+        public class GatherAllCollectorByReader : Collector
+        {
+
+            private ReaderFacetInfo _current;
+            public List<ReaderFacetInfo> Results = new List<ReaderFacetInfo>(); 
+
+            public override void SetScorer(Scorer scorer)
+            {
+            }
+
+            public override void Collect(int doc)
+            {
+                _current.Matches.Add(doc + _current.DocBase);
+            }
+
+            public override void SetNextReader(IndexReader reader, int docBase)
+            {
+                _current = new ReaderFacetInfo
+                {
+                    DocBase = docBase,
+                    Reader = reader
+                };
+                Results.Add(_current);
+            }
+
+            public override bool AcceptsDocsOutOfOrder
+            {
+                get { return true; }
+            }
+        }
 	}
 }

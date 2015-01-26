@@ -74,7 +74,6 @@ namespace Voron.Platform.Posix
 			const int IOV_MAX = 1024;
 			while (start < pages.Length)
 			{
-				start++;
 				var byteLen = 0L;
 				var locs = new List<Iovec>
 				{
@@ -84,6 +83,7 @@ namespace Voron.Platform.Posix
 						iov_len = AbstractPager.PageSize
 					}
 				};
+                start++;
 				byteLen += AbstractPager.PageSize;
 				for (int i = 1; i < pages.Length && locs.Count < IOV_MAX; i++, start++)
 				{
