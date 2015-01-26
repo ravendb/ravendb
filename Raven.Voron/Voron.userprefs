@@ -1,18 +1,39 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Voron/Impl/Backup/FullBackup.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Voron/Platform/Posix/PosixJournalWriter.cs">
     <Files>
-      <File FileName="Voron/Impl/Backup/FullBackup.cs" Line="42" Column="5" />
+      <File FileName="Voron.Tryout/Program.cs" Line="1" Column="1" />
+      <File FileName="Voron.Tests/Backups/Full.cs" Line="5" Column="5" />
+      <File FileName="Voron/StorageEnvironmentOptions.cs" Line="1" Column="1" />
+      <File FileName="Voron/StorageEnvironment.cs" Line="30" Column="30" />
+      <File FileName="Voron/Impl/Backup/FullBackup.cs" Line="1" Column="1" />
+      <File FileName="Voron/Util/ConcurrentSet.cs" Line="1" Column="1" />
+      <File FileName="Voron/Impl/Journal/WriteAheadJournal.cs" Line="1" Column="1" />
+      <File FileName="Voron/Impl/Journal/JournalReader.cs" Line="18" Column="18" />
+      <File FileName="Voron.Tests/StorageTest.cs" Line="17" Column="17" />
+      <File FileName="Voron.Tests/Storage/Restarts.cs" Line="1" Column="1" />
+      <File FileName="Voron/Impl/Transaction.cs" Line="1" Column="1" />
+      <File FileName="Voron/Impl/Journal/JournalFile.cs" Line="5" Column="5" />
+      <File FileName="Voron/Platform/Posix/PosixJournalWriter.cs" Line="30" Column="30" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="Voron" expanded="True">
             <Node name="Impl" expanded="True">
-              <Node name="Backup" expanded="True">
-                <Node name="FullBackup.cs" selected="True" />
+              <Node name="Backup" expanded="True" />
+              <Node name="Journal" expanded="True" />
+            </Node>
+            <Node name="Platform" expanded="True">
+              <Node name="Posix" expanded="True">
+                <Node name="PosixJournalWriter.cs" selected="True" />
               </Node>
             </Node>
+            <Node name="Util" expanded="True" />
+          </Node>
+          <Node name="Voron.Tests" expanded="True">
+            <Node name="Backups" expanded="True" />
+            <Node name="Storage" expanded="True" />
           </Node>
           <Node name="Voron.Tryout" expanded="True" />
         </State>
@@ -21,8 +42,12 @@
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore>
-      <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron/StorageEnvironmentOptions.cs" line="183" column="1" />
       <Breakpoint file="/home/hr/work/ravendb/Raven.Voron/Voron/Platform/Posix/PosixMemoryMapPager.cs" line="93" column="1" />
+      <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron.Tests/Backups/Full.cs" line="73" column="1" />
+      <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron/StorageEnvironment.cs" line="92" column="1" />
+      <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron.Tryout/Program.cs" line="30" column="1" />
+      <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron/Impl/Transaction.cs" line="403" column="1" />
+      <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron/Impl/Journal/WriteAheadJournal.cs" line="887" column="1" />
     </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
