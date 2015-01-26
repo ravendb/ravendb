@@ -168,11 +168,9 @@ namespace Raven.Database.Indexing
 			maxNumberOfParallelProcessingTasksRatio = Math.Min(1, maxNumberOfParallelProcessingTasksRatio * 1.1);
 		}
 
-		private void CalcMaxNumberOfParallelProcessingTasks(WorkContext context)
+		public double MaxNumberOfParallelProcessingTasksRatio
 		{
-			var maxNumberOfParallelProcessingTasks = context.Configuration.MaxNumberOfParallelProcessingTasks;
-			var numberOfParallelProcessingTasks = (int)Math.Max(1, maxNumberOfParallelProcessingTasks * maxNumberOfParallelProcessingTasksRatio);
-			context.CurrentNumberOfParallelTasks= Math.Min(numberOfParallelProcessingTasks, context.Configuration.MaxNumberOfParallelProcessingTasks);
+			get { return maxNumberOfParallelProcessingTasksRatio; }
 		}
 	}
 }

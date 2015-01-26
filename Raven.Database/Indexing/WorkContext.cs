@@ -90,7 +90,15 @@ namespace Raven.Database.Indexing
 			get { return indexingErrors.ToArray(); }
 		}
 
-		public int CurrentNumberOfParallelTasks { get; set; }
+		public int CurrentNumberOfParallelTasks
+		{
+			get
+			{
+				var currentNumberOfParallelTasks = Configuration.MaxNumberOfParallelProcessingTasks*BackgroundTaskExecuter.Instance.MaxNumberOfParallelProcessingTasksRatio;
+				var numberOfParallelTasks = Math.Max((int)currentNumberOfParallelTasks, Configuration.MaxNumberOfParallelProcessingTasks);
+				return Math.Min(numberOfParallelTasks, 1);
+			}
+		}
 
 		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
 
