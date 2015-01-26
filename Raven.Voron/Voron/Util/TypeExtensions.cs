@@ -16,8 +16,9 @@ namespace Voron.Util
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static void AssertStructHasExplicitLayout(this Type structureType)
 		{
-			if (structureType.StructLayoutAttribute == null || structureType.StructLayoutAttribute.Value != LayoutKind.Explicit || structureType.StructLayoutAttribute.Pack != 1)
-				throw new InvalidDataException("Specified type has to be a struct with StructLayout(LayoutKind.Explicit, Pack = 1) attribute applied");
+			if (structureType.StructLayoutAttribute == null || 
+				structureType.StructLayoutAttribute.Value == LayoutKind.Auto || structureType.StructLayoutAttribute.Pack != 1)
+				throw new InvalidDataException("Specified type has to be a struct with StructLayout(LayoutKind.Explicit, Pack = 1) or StructLayout(LayoutKind.Sequential, Pack = 1) attribute applied");
 		} 
 	}
 }

@@ -33,6 +33,18 @@ namespace Voron.Tests.Trees
 			public long IndexedAtTicks;
 		}
 
+		[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Unicode)]
+		public struct MappedResultsStats
+		{
+			public int View;
+			public string ReduceKey;
+			public string DocId;
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+			public byte[] Etag;
+			public int Bucket;
+			public long TimestampTicks;
+		}
+
 		[StructLayout(LayoutKind.Explicit, Pack = 1)]
 		public struct Operation
 		{
@@ -256,6 +268,47 @@ namespace Voron.Tests.Trees
 				} while (iterator.MoveNext());
 
 				Assert.Equal(3, count);
+			}
+		}
+
+		[Fact]
+		public void StructuresCanHaveStrings()
+		{
+			var now = DateTime.Now;
+			var etag = new byte[16]
+			{
+				1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6
+			};
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "stats");
+
+				tree.Write("items/1", new MappedResultsStats
+				{
+					View = 3,
+					ReduceKey = "reduce_key",
+					Bucket = 1024,
+					DocId = "orders/1",
+					Etag = etag,
+					TimestampTicks = now.Ticks
+				});
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var readTree = tx.ReadTree("stats");
+
+				var mappedResults = readTree.Read<MappedResultsStats>("items/1").Value;
+
+				Assert.Equal(3, mappedResults.View);
+				Assert.Equal("reduce_key", mappedResults.ReduceKey);
+				Assert.Equal(1024, mappedResults.Bucket);
+				Assert.Equal("orders/1", mappedResults.DocId);
+				Assert.Equal(etag, mappedResults.Etag);
+				Assert.Equal(now, new DateTime(mappedResults.TimestampTicks));
 			}
 		}
 	}

@@ -13,7 +13,7 @@ namespace Voron
 			Version = version;
 		}
 
-		public TStruct Value { get; private set; }
+		public TStruct Value;
 
 		public ushort Version { get; private set; }
 	}
