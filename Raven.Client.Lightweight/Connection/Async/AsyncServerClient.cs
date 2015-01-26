@@ -942,9 +942,18 @@ namespace Raven.Client.Connection.Async
 		    {
                 var facetResults = new FacetResults[x.Result.Length];
 
-		        for (var facetResultCounter = 0; facetResultCounter < facetResults.Length; facetResultCounter++)
+				var getResponses = x.Result;
+				for (var facetResultCounter = 0; facetResultCounter < facetResults.Length; facetResultCounter++)
 		        {
-                    var curFacetDoc = x.Result[facetResultCounter].Result;
+			        var getResponse = getResponses[facetResultCounter];
+			        if (getResponse.RequestHasErrors())
+			        {
+						throw new InvalidOperationException("Got an error from server, status code: " + getResponse.Status +
+													   Environment.NewLine + getResponse.Result);
+                   
+			        }
+                    var curFacetDoc = getResponse.Result;
+
                     facetResults[facetResultCounter] = curFacetDoc.JsonDeserialization<FacetResults>();
 		        }
 

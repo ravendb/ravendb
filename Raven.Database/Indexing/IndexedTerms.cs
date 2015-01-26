@@ -4,10 +4,16 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.WindowsRuntime;
 using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Lucene.Net.Util;
+using Raven.Database.Config;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
@@ -15,83 +21,83 @@ namespace Raven.Database.Indexing
 {
     internal static class IndexedTerms
     {
-        public static void PreFillCache(IndexSearcherHolder.IndexSearcherHoldingState state, string[] fieldsToRead,
-            IndexReader reader)
+        private readonly static ConditionalWeakTable<IndexReader, CachedIndexedTerms> _termsCachePerReader =
+            new ConditionalWeakTable<IndexReader, CachedIndexedTerms>();
+
+        private class CachedIndexedTerms : ILowMemoryHandler
         {
-            state.Lock.EnterWriteLock();
-            try
+            public ConcurrentDictionary<string, FieldCacheInfo> Results = new ConcurrentDictionary<string, FieldCacheInfo>();
+            public CachedIndexedTerms()
             {
-                if (fieldsToRead.All(state.IsInCache))
-                    return;
-                FillCache(state, fieldsToRead, reader);
+                MemoryStatistics.RegisterLowMemoryHandler(this);
             }
-            finally
+
+            public void HandleLowMemory()
             {
-                state.Lock.ExitWriteLock();
+                Results.Clear();
             }
         }
 
-	    public static void EnsureFieldsAreInCache(IndexSearcherHolder.IndexSearcherHoldingState state, HashSet<string> fieldsToRead, IndexReader reader)
+        private class FieldCacheInfo
         {
-            if (fieldsToRead.All(state.IsInCache))
-                return;
-
-		    var isReadLockHeld = state.Lock.IsReadLockHeld;
-		    if (isReadLockHeld)
-			    state.Lock.ExitReadLock();
-            state.Lock.EnterWriteLock();
-            try
-            {
-                var fieldsNotInCache = fieldsToRead.Where(field => state.IsInCache(field) == false).ToList();
-                if (fieldsToRead.Count > 0)
-                    FillCache(state, fieldsNotInCache, reader);
-            }
-            finally
-            {
-                state.Lock.ExitWriteLock();
-            }
-			if (isReadLockHeld)
-				state.Lock.EnterReadLock();
+            public Dictionary<string,int[]> Results;
+            public bool Done;
         }
 
-        private static void FillCache(IndexSearcherHolder.IndexSearcherHoldingState state, IEnumerable<string> fieldsToRead,IndexReader reader)
+        public static Dictionary<string, int[]> GetTermsAndDocumenstFor(IndexReader reader, int docBase, string field)
+        {
+            var termsCachePerField = _termsCachePerReader.GetOrCreateValue(reader);
+            FieldCacheInfo info;
+            if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)
+            {
+                return info.Results;
+            }
+            info = termsCachePerField.Results.GetOrAdd(field, new FieldCacheInfo());
+            lock (info)
+            {
+                if (info.Done)
+                    return info.Results;
+                info.Results = FillCache(reader, docBase, field);
+                info.Done = true;
+                return info.Results;
+            }
+        }
+
+        private static Dictionary<string, int[]> FillCache(IndexReader reader, int docBase, string field)
         {
             using (var termDocs = reader.TermDocs())
             {
-                foreach (var field in fieldsToRead)
+                var items = new Dictionary<string, int[]>();
+                var docsForTerm = new List<int>();
+
+                using (var termEnum = reader.Terms(new Term(field)))
                 {
-                    var items = new Dictionary<string, List<int>>();
-
-                    using (var termEnum = reader.Terms(new Term(field)))
+                    do
                     {
-                        do
-                        {
-                            if (termEnum.Term == null || field != termEnum.Term.Field)
-                                break;
+                        if (termEnum.Term == null || field != termEnum.Term.Field)
+                            break;
 
-                            Term term = termEnum.Term;
-                            if (LowPrecisionNumber(term.Field, term.Text))
+                        Term term = termEnum.Term;
+                        if (LowPrecisionNumber(term.Field, term.Text))
+                            continue;
+
+                        var totalDocCountIncludedDeletes = termEnum.DocFreq();
+                        termDocs.Seek(termEnum.Term);
+                        while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
+                        {
+                            var curDoc = termDocs.Doc;
+                            totalDocCountIncludedDeletes -= 1;
+                            if (reader.IsDeleted(curDoc))
                                 continue;
 
-                            var totalDocCountIncludedDeletes = termEnum.DocFreq();
-                            termDocs.Seek(termEnum.Term);
-                            var docsForTerm = new List<int>();
-                            while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
-                            {
-                                var curDoc = termDocs.Doc;
-                                totalDocCountIncludedDeletes -= 1;
-                                if (reader.IsDeleted(curDoc))
-                                    continue;
-
-	                            docsForTerm.Add(curDoc);
-                            }
-                            docsForTerm.Sort();
-	                        items[term.Text] = docsForTerm;
-                        } while (termEnum.Next());
-                    }
-
-                    state.SetInCache(field, items);
+                            docsForTerm.Add(curDoc + docBase);
+                        }
+                        docsForTerm.Sort();
+                        items[term.Text] = docsForTerm.ToArray();
+                        docsForTerm.Clear();
+                    } while (termEnum.Next());
                 }
+                return items;
             }
         }
 
