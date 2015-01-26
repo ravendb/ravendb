@@ -168,8 +168,8 @@ namespace Raven.Abstractions.Data
 		public const byte GroupSeparator = 29;
 	    public const byte ServerIdSeparator = 28;
 		public const char GroupSeparatorChar = (char)GroupSeparator;
-		public const string GroupSeperatorString = "\u001D";
-		public const string ServerIdSeperatorString = "\u001C";
+		public const string GroupSeperatorString = "/";
+		public const string ServerIdSeperatorString = GroupSeperatorString;
 
         public const string MetadataEtagField = "ETag";
 

@@ -92,7 +92,7 @@ namespace Raven.Database.Counters.Controllers
 				if (wroteCounter || writer.GetLastEtagFor(sendingServerName) < lastEtag)
                 {
 					writer.RecordLastEtagFor(sendingServerName, lastEtag);
-                    writer.Commit(); 
+                    writer.Commit();
                 }
 
 	            return new HttpResponseMessage(HttpStatusCode.OK);

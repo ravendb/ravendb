@@ -175,11 +175,14 @@ namespace Voron.Impl
 			AddOperation(BatchOperation.MultiDelete(key, value, version, treeName));
 		}
 
-		public void Increment(Slice key, long delta, string treeName, ushort? version = null)
+		public void Increment(Slice key, long delta, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
 		{
 			AssertValidTreeName(treeName);
 
-			AddOperation(BatchOperation.Increment(key, delta, version, treeName));
+			var batchOperation = BatchOperation.Increment(key, delta, version, treeName);
+			if (shouldIgnoreConcurrencyExceptions)
+				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
+			AddOperation(batchOperation);
 		}
 
 		private static void AssertValidTreeName(string treeName)

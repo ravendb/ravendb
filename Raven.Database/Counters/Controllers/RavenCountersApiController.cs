@@ -269,6 +269,5 @@ namespace Raven.Database.Counters.Controllers
 		{
 			return String.Join(Constants.GroupSeperatorString, new[] { groupName, counterName });
 		}
-
 	}
 }

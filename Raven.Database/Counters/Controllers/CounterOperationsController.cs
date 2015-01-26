@@ -37,7 +37,7 @@ namespace Raven.Database.Counters.Controllers
 				string counterFullName = CounterFullName(groupName, counterName);
 				writer.Store(Storage.CounterStorageUrl, counterFullName, delta);
 				writer.Commit(delta != 0);
-				Storage.MetricsCounters.ClientRequests.Mark();
+                Storage.MetricsCounters.ClientRequests.Mark();
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 		}
@@ -99,17 +99,11 @@ namespace Raven.Database.Counters.Controllers
 				var changeBatches = YieldChangeBatches(inputStream, timeout, countOfChanges => counterChanges += countOfChanges);
 	            try
 	            {
-		            foreach (var batch in changeBatches)
+		            using (var writer = Storage.CreateWriter())
 		            {
-			            using (var writer = Storage.CreateWriter())
-			            {
-				            foreach (var counterChange in batch)
-				            {
-					            var counterFullName = CounterFullName(counterChange.Group, counterChange.Name);
-					            writer.Store(Storage.CounterStorageUrl, counterFullName, counterChange.Delta);
-				            }
-				            writer.Commit();
-			            }
+			            changeBatches.ForEach(batch =>
+				            batch.ForEach(change => StoreChange(change, writer)));
+			            writer.Commit();
 		            }
 	            }
 	            catch (OperationCanceledException)
@@ -210,6 +204,12 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
+		private void StoreChange(CounterChange counterChange, CounterStorage.Writer writer)
+		{
+			var fullCounterName = CounterFullName(counterChange.Group, counterChange.Name);
+			writer.Store(Storage.CounterStorageUrl, fullCounterName, counterChange.Delta);
+		}
+
 		public class BatchStatus : IOperationState
 		{
 			public int Counters { get; set; }
@@ -257,9 +257,7 @@ namespace Raven.Database.Counters.Controllers
 
 						Servers = counter.ServerValues.Select(s => new CounterView.ServerValue
 						{
-							Negative = s.Negative,
-							Positive = s.Positive,
-							Name = reader.ServerNameFor(s.SourceId)
+							Negative = s.Negative, Positive = s.Positive, Name = reader.ServerNameFor(s.SourceId)
 						}).ToList()
 					}).ToList();
 				return Request.CreateResponse(HttpStatusCode.OK, results);
@@ -267,45 +265,45 @@ namespace Raven.Database.Counters.Controllers
 		}
 
 		[RavenRoute("cs/{counterStorageName}/getCounterOverallTotal/{groupName}/{counterName}")]
-		[HttpGet]
+        [HttpGet]
 		public HttpResponseMessage GetCounterOverallTotal(string groupName, string counterName)
-		{
+        {
 			using (var reader = Storage.CreateReader())
 			{
 				var counterFullName = CounterFullName(groupName, counterName);
 				var counter = reader.GetCountersByPrefix(counterFullName);
 
 				if (counter == null)
-					return GetMessageWithObject(new { Message = "Specified counter not found within the specified group" }, HttpStatusCode.NotFound);
+					return GetMessageWithObject(new {Message = "Specified counter not found within the specified group"}, HttpStatusCode.NotFound);
 
-				long overallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative);
+				long overallTotal = counter.ServerValues.Sum(x => x.Positive - x.Negative); 
 				return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
 			}
-		}
+        }
 
 		[RavenRoute("cs/{counterStorageName}/getCounterServersValues/{groupName}/{counterName}")]
-		[HttpGet]
-		public HttpResponseMessage GetCounterServersValues(string groupName, string counterName)
-		{
-			using (var reader = Storage.CreateReader())
-			{
+        [HttpGet]
+        public HttpResponseMessage GetCounterServersValues(string groupName, string counterName)
+        {
+            using (var reader = Storage.CreateReader())
+            {
 				var counterFullName = CounterFullName(groupName, counterName);
-				var counter = reader.GetCountersByPrefix(counterFullName);
+                var counter = reader.GetCountersByPrefix(counterFullName);
 
-				if (counter == null)
-				{
-					return Request.CreateResponse(HttpStatusCode.NotFound);
-				}
+                if (counter == null)
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound);
+                }
 
-				List<CounterView.ServerValue> serverValues =
-					counter.ServerValues.Select(s => new CounterView.ServerValue
-					{
-						Negative = s.Negative,
-						Positive = s.Positive,
-						Name = reader.ServerNameFor(s.SourceId)
-					}).ToList();
-				return Request.CreateResponse(HttpStatusCode.OK, serverValues);
-			}
-		}
+                List<CounterView.ServerValue> serverValues =
+                    counter.ServerValues.Select(s => new CounterView.ServerValue
+                    {
+                        Negative = s.Negative,
+                        Positive = s.Positive,
+                        Name = reader.ServerNameFor(s.SourceId)
+                    }).ToList();
+                return Request.CreateResponse(HttpStatusCode.OK, serverValues);
+            }
+        }
 	}
 }
