@@ -90,6 +90,8 @@ namespace Raven.Database.Indexing
 			get { return indexingErrors.ToArray(); }
 		}
 
+		public int CurrentNumberOfParallelTasks { get; set; }
+
 		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
 
 		public int CurrentNumberOfItemsToReduceInSingleBatch { get; set; }

@@ -23,7 +23,7 @@ namespace Raven.Database.Indexing
 		public IList<TResult> Apply<T, TResult>(WorkContext context, IEnumerable<T> source, Func<T, TResult> func)
 			where TResult : class
 		{
-			var maxNumberOfParallelIndexTasks = GetMaxNumberOfParallelProcessingTasks(context);
+			var maxNumberOfParallelIndexTasks = context.CurrentNumberOfParallelTasks;
 			if (maxNumberOfParallelIndexTasks == 1)
 			{
 				return source.Select(func).ToList();
@@ -40,7 +40,7 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public void ExecuteAllBuffered<T>(WorkContext context, IList<T> source, Action<IEnumerator<T>> action)
 		{
-			var maxNumberOfParallelIndexTasks = GetMaxNumberOfParallelProcessingTasks(context);
+			var maxNumberOfParallelIndexTasks = context.CurrentNumberOfParallelTasks;
 			var size = Math.Max(source.Count / maxNumberOfParallelIndexTasks, 1024);
 			if (maxNumberOfParallelIndexTasks == 1 || source.Count <= size)
 			{
@@ -79,7 +79,7 @@ namespace Raven.Database.Indexing
 			WorkContext context,
 			IList<T> source, Action<T, long> action)
 		{
-			var maxNumberOfParallelProcessingTasks = GetMaxNumberOfParallelProcessingTasks(context);
+			var maxNumberOfParallelProcessingTasks = context.CurrentNumberOfParallelTasks;
 			if (maxNumberOfParallelProcessingTasks == 1)
 			{
 				long i = 0;
@@ -134,7 +134,7 @@ namespace Raven.Database.Indexing
 			}
 
 			using (LogContext.WithDatabase(context.DatabaseName))
-			using (var semaphoreSlim = new SemaphoreSlim(GetMaxNumberOfParallelProcessingTasks(context)))
+			using (var semaphoreSlim = new SemaphoreSlim(context.CurrentNumberOfParallelTasks))
 			{
 				var tasks = new Task[result.Count];
 				for (int i = 0; i < result.Count; i++)
@@ -165,13 +165,14 @@ namespace Raven.Database.Indexing
 
 		public void HandleLowCpuUsage()
 		{
-			maxNumberOfParallelProcessingTasksRatio = Math.Min(1, maxNumberOfParallelProcessingTasksRatio * 1.25);
+			maxNumberOfParallelProcessingTasksRatio = Math.Min(1, maxNumberOfParallelProcessingTasksRatio * 1.1);
 		}
 
-		private int GetMaxNumberOfParallelProcessingTasks(WorkContext context)
+		private void CalcMaxNumberOfParallelProcessingTasks(WorkContext context)
 		{
 			var maxNumberOfParallelProcessingTasks = context.Configuration.MaxNumberOfParallelProcessingTasks;
-			return (int)Math.Max(1, maxNumberOfParallelProcessingTasks * maxNumberOfParallelProcessingTasksRatio);
+			var numberOfParallelProcessingTasks = (int)Math.Max(1, maxNumberOfParallelProcessingTasks * maxNumberOfParallelProcessingTasksRatio);
+			context.CurrentNumberOfParallelTasks= Math.Min(numberOfParallelProcessingTasks, context.Configuration.MaxNumberOfParallelProcessingTasks);
 		}
 	}
 }
