@@ -178,6 +178,14 @@ namespace Voron
 				get { return _tempPath; }
 			}
 
+            public override IVirtualPager OpenPager(string filename)
+            {
+                if (RunningOnPosix)
+                    return new PosixMemoryMapPager(filename);
+
+                return new Win32MemoryMapPager(filename);
+            }
+
 			public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
 			{
 				var name = JournalName(journalNumber);
@@ -393,6 +401,13 @@ namespace Voron
 				return new Win32PageFileBackedMemoryMappedPager(name, InitialFileSize);
 			}
 
+            public override IVirtualPager OpenPager(string filename)
+            {
+                if (RunningOnPosix)
+                    return new PosixMemoryMapPager(filename);
+                return new Win32MemoryMapPager(filename);
+            }
+
 			public override IVirtualPager OpenJournalPager(long journalNumber)
 			{
 				var name = JournalName(journalNumber);
@@ -429,6 +444,8 @@ namespace Voron
 		public abstract IVirtualPager CreateScratchPager(string name);
 
 		public abstract IVirtualPager OpenJournalPager(long journalNumber);
+
+        public abstract IVirtualPager OpenPager(string filename);
 
 		public static bool RunningOnPosix
 		{
