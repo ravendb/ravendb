@@ -13,7 +13,11 @@ namespace Raven.Abstractions.Util
 	{
 		public static string Base62Random()
 		{
-			return Base62ToString(new Random().Next());
+			var newGuid = Guid.NewGuid();
+			long l = BitConverter.ToInt64(newGuid.ToByteArray(), 0),
+				b = BitConverter.ToInt64(newGuid.ToByteArray(), 8);
+
+			return Base62ToString(l) + "/" + Base62ToString(b);
 		}
 
 		private static string Base62ToString(long value)
