@@ -399,7 +399,7 @@ task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 
 task UpdateLiveTest {
 	Remove-Item "C:\Sites\RavenDB 3\Web\bin" -Force -Recurse -ErrorAction SilentlyContinue
-	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB 3\Web\bin" -ErrorAction SilentlyContinue
+	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB 3\Web" -Recurse -ErrorAction SilentlyContinue
 }
 
 task Upload {
