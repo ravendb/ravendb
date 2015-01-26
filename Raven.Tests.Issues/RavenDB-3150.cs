@@ -30,7 +30,7 @@ namespace Raven.Tests.Issues
 
             documentStores = new Dictionary<string, IDocumentStore>
 			{
-				{"shard", new DocumentStore{Url = "http://localhost.fiddler:8079"}}
+				{"shard", new DocumentStore{Url = "http://localhost:8079"}}
 			};
 
             foreach (var documentStore in documentStores)
