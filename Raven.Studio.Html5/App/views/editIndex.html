@@ -98,8 +98,11 @@
             <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes" data-bind="click: refreshIndex">
                 <i class="fa fa-refresh"></i>
             </button>
-            <button class="btn btn-danger" title="Delete index" data-bind="click: deleteIndex">
+            <button class="btn btn-danger" title="Delete index" data-bind="visible: !editedIndex().isSideBySideIndex(), click: deleteIndex">
                 <i class="fa fa-trash-o"></i>
+            </button>
+             <button class="btn btn-danger" title="Cancel side-by-side index" data-bind="visible: editedIndex().isSideBySideIndex(), click: cancelSideBySideIndex">
+                <i class="fa fa-undo"></i>
             </button>
             
         </div>

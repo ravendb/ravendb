@@ -36,6 +36,8 @@ class index {
     willReplaceIndex = ko.observable<string>();
     willBeReplacedByIndex = ko.observable<string>();
 
+    isSideBySideIndex = ko.computed(() => this.willReplaceIndex() != null);
+
     static priorityNormal = "Normal";
     static priorityIdle = "Idle";
     static priorityDisabled = "Disabled";

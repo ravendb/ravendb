@@ -298,15 +298,21 @@ namespace Raven.Json.Linq
                         {
                             localCount++;
                         }
-                        else if (parentSnapshot != null && parentSnapshot.ContainsKey(localChange.Key))
-                        {
-                            localCount--;
-                        }
-
                     }
                 }
                 if (parentSnapshot != null)
-                    localCount += parentSnapshot.Count;
+                {
+                    if (localChanges != null)
+                    {
+                        foreach (var kvp in parentSnapshot)
+                        {
+                            if (localChanges.ContainsKey(kvp.Key) == false) 
+                                localCount++;
+                        }
+                    }
+                    else
+                        localCount = parentSnapshot.Count;
+                }
                 return localCount;
             }
         }

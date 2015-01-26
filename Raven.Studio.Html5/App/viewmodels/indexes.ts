@@ -279,6 +279,23 @@ class indexes extends viewModelBase {
         this.promptDeleteIndexes(i.indexes());
     }
 
+    cancelIndex(i: index) {
+        require(["viewmodels/cancelSideBySizeConfirm"], cancelSideBySizeConfirm => {
+            var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
+            app.showDialog(cancelSideBySideIndexViewModel);
+            cancelSideBySideIndexViewModel.cancelTask
+                .done((closedWithoutDeletion: boolean) => {
+                    if (closedWithoutDeletion == false) {
+                        this.removeIndexesFromAllGroups([i]);
+                    }
+                })
+                .fail(() => {
+                    this.removeIndexesFromAllGroups([i]);
+                    this.fetchIndexes();
+                });
+        });
+    }
+
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
             require(["viewmodels/deleteIndexesConfirm"], deleteIndexesConfirm => {

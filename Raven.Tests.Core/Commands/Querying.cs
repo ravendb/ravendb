@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Data;
+﻿using System.Diagnostics;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;

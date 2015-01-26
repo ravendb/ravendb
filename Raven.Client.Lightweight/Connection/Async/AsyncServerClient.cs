@@ -942,9 +942,18 @@ namespace Raven.Client.Connection.Async
 		    {
                 var facetResults = new FacetResults[x.Result.Length];
 
-		        for (var facetResultCounter = 0; facetResultCounter < facetResults.Length; facetResultCounter++)
+				var getResponses = x.Result;
+				for (var facetResultCounter = 0; facetResultCounter < facetResults.Length; facetResultCounter++)
 		        {
-                    var curFacetDoc = x.Result[facetResultCounter].Result;
+			        var getResponse = getResponses[facetResultCounter];
+			        if (getResponse.RequestHasErrors())
+			        {
+						throw new InvalidOperationException("Got an error from server, status code: " + getResponse.Status +
+													   Environment.NewLine + getResponse.Result);
+                   
+			        }
+                    var curFacetDoc = getResponse.Result;
+
                     facetResults[facetResultCounter] = curFacetDoc.JsonDeserialization<FacetResults>();
 		        }
 
@@ -1917,7 +1926,20 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Doc(key), "DELETE", operationMetadata.Credentials, convention).AddOperationHeaders(operationsHeaders)))
 				{
 					request.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-					await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+					if (etag != null)
+						request.AddHeader("If-None-Match", etag);
+
+					try
+					{
+						await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+					}
+					catch (ErrorResponseException e)
+					{
+						if (e.StatusCode != HttpStatusCode.Conflict) 
+							throw;
+
+						throw FetchConcurrencyException(e);
+					}
 				}
 			}, token);
 		}

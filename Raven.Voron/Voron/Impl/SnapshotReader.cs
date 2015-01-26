@@ -145,10 +145,10 @@ namespace Voron.Impl
 			return tree.ReadVersion(key);
 		}
 
-		public IIterator Iterate(string treeName, WriteBatch writeBatch = null)
+		public IIterator Iterate(string treeName)
 		{
 			var tree = GetTree(treeName);
-			return tree.Iterate(writeBatch);
+			return tree.Iterate();
 		}
 
 		public void Dispose()
