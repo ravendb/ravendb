@@ -121,28 +121,7 @@ namespace Voron.Trees
 			State.IsModified = true;
 			var pos = DirectAdd(key, size, version: version);
 
-			if (size < AbstractPager.PageSize)
-			{
-				TemporaryPage tempPage;
-				using (_tx.Environment.GetTemporaryPage(_tx, out tempPage))
-				{
-					Marshal.StructureToPtr(value, new IntPtr(tempPage.TempPagePointer), true);
-					MemoryUtils.Copy(pos, tempPage.TempPagePointer, size);
-				}
-			}
-			else
-			{
-				var ptr = Marshal.AllocHGlobal(size);
-				try
-				{
-					Marshal.StructureToPtr(value, ptr, false);
-					StdLib.memcpy(pos, (byte*) ptr.ToPointer(), size);
-				}
-				finally
-				{
-					Marshal.FreeHGlobal(ptr);
-				}
-			}
+			Marshal.StructureToPtr(value, new IntPtr(pos), true);
 		}
 
 		public int RetrieveFieldOffset(Type type, IEnumerable<string> path)
