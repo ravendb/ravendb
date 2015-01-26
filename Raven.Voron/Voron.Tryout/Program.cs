@@ -3,7 +3,6 @@ using System.Threading;
 using Voron.Tests.Backups;
 using System.IO;
 using Voron.Platform.Posix;
-using Mono.Unix.Native;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Voron.Tests.ScratchBuffer;
@@ -14,22 +13,40 @@ using Voron.Tests;
 using Xunit;
 using System.Threading.Tasks;
 using Voron.Tests.Bugs;
+using Voron.Tests.Storage;
 
 namespace Voron.Tryout
 {
 	public unsafe class Program
 	{
-		public static void Main()
+        public static int Main()
 		{
 			var t = Type.GetType ("Mono.Runtime");
 			var m = t.GetMethod ("GetDisplayName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 			Console.WriteLine ( "Mono runtime: " +  m.Invoke(null, null));
 			
-            RunAllTests();
+            //Console.WriteLine (BitConverter.IsLittleEndian);
+           
+            var testAssembly = TestAssemblyBuilder.Build(new ExecutorWrapper("Voron.Tests.dll", null, false));
 
+            var testMethods = testAssembly.EnumerateTestMethods(x => true).ToList();
+            if (testMethods.Count == 0)
+                return 0;
+
+            var callback = new TestMethodRunnerCallback();
+            testAssembly.Run(testMethods, callback);
+
+            if (callback.FailedCount > 0)
+            {
+                Console.WriteLine("Has failures");
+                return 1;
+            }
+            Console.WriteLine("done");
+            return 0;
 		}
 
-		static void RunAllTests ()
+
+   		static void RunAllTests ()
 		{
 			using (var fileWriter = new StreamWriter ("unit-tests.txt", append: false)) {
 				var testAssembly = typeof(StorageTest).Assembly;
@@ -82,8 +99,8 @@ namespace Voron.Tryout
 				fileWriter.WriteLine ("------------------------------------------------");
 				fileWriter.WriteLine ("Out of total " + total + ", failed: " + failed);
 				fileWriter.Close ();
+                Console.WriteLine ("Out of total " + total + ", failed: " + failed);
 			}
-			Console.WriteLine ("done");
 		}
 
 		static void TestEdgeCases ()
@@ -132,5 +149,45 @@ namespace Voron.Tryout
 			}
 			Console.WriteLine ("don");
 		}
-	}
+
+
+        public class TestMethodRunnerCallback : ITestMethodRunnerCallback
+        {
+            int index;
+            public int FailedCount { get; private set; }
+
+            public void AssemblyFinished(TestAssembly testAssembly, int total, int failed, int skipped, double time)
+            {
+                Console.WriteLine(testAssembly.AssemblyFilename + " Total: " + total + " Failed: " + failed + " Skipped: " + skipped+" in " + time );
+                FailedCount = failed;
+            }
+
+            public void AssemblyStart(TestAssembly testAssembly)
+            {
+                Console.WriteLine("Starting: " + testAssembly);
+            }
+
+            public bool ClassFailed(TestClass testClass, string exceptionType, string message, string stackTrace)
+            {
+                Console.WriteLine("Class failed: " + testClass +" - " + message);
+                return true;
+            }
+
+            public void ExceptionThrown(TestAssembly testAssembly, Exception exception)
+            {
+                Console.WriteLine(exception);
+            }
+
+            public bool TestFinished(TestMethod testMethod)
+            {
+                return true;
+            }
+
+            public bool TestStart(TestMethod testMethod)
+            {
+                Console.WriteLine("{0,4}: {1}", ++index,testMethod.DisplayName);
+                return true;
+            }
+        }
+    }
 }
