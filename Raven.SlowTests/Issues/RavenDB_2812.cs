@@ -41,10 +41,6 @@ namespace Raven.SlowTests.Issues
 					Map = @"docs.Users.SelectMany(user => user.Friends, (user, friend) => new {
 Name = user.Name
 })",
-					Stores = new Dictionary<string, FieldStorage>()
-					{
-						{"Name", FieldStorage.Yes}
-					},
 					MaxIndexOutputsPerDocument = 16384,
 				};
 			}
@@ -74,7 +70,6 @@ Name = user.Name
 						{
 							user.Friends.Add(new User()
 							{
-								Id = "friend/" + i + "/" + j,
 								Name = "friend/" + i + "/" + j
 							});
 						}
@@ -84,27 +79,36 @@ Name = user.Name
 				}
 
 				WaitForIndexing(store);
-				var pagedResults = new List<string>();
-				
+
+				int skippedResults = 0;
+				var pagedResults = new List<User>();
+
+				var page = 0;
 				const int pageSize = 10;
 
 				using (var session = store.OpenSession())
 				{
-					for (int page = 0; page < 5; page++)
+					for (int i = 0; i < 5; i++)
 					{
+						var stats = new RavenQueryStatistics();
+
 						var results = session
 						.Query<User, UsersAndFiendsIndex>()
-						.Select(x=>x.Name)
-						.Skip((page * pageSize))
+						.Statistics(out stats)
+						.Skip((page * pageSize) + skippedResults)
 						.Take(pageSize)
 						.Distinct()
 						.ToList();
+
+						skippedResults += stats.SkippedResults;
+
+						page++;
 
 						pagedResults.AddRange(results);
 					}
 				}
 
-				Assert.Equal(50, pagedResults.Distinct().Count());
+				Assert.Equal(50, pagedResults.Select(x => x.Id).Distinct().Count());
 			}
 		}
 	}
