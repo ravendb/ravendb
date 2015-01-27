@@ -98,43 +98,22 @@ namespace Voron.Trees
 		    CopyStreamToPointer(_tx, value, pos);
 		}
 
-		public StructReadResult<TStruct> Read<TStruct>(Slice key) where TStruct : struct
+		public StructReadResult<T> ReadStruct<T>(Slice key, StructureSchema<T> schema)
 		{
-			var structureType = typeof(TStruct);
-
-			structureType.AssertStructHasExplicitLayout();
-
 			var readResult = Read(key);
 
 			if (readResult == null)
 				return null;
 
-			return new StructReadResult<TStruct>((TStruct)Marshal.PtrToStructure(new IntPtr(readResult.Reader.Base), structureType), readResult.Version);
+			return new StructReadResult<T>(new StructureReader<T>(readResult.Reader.Base, schema), readResult.Version);
 		}
 
-		public void Write(Slice key, ValueType value, ushort? version = null)
+		public void WriteStruct(Slice key, Structure structure, ushort? version = null)
 		{
-			value.GetType().AssertStructHasExplicitLayout();
-
-			var size = Marshal.SizeOf(value);
-
 			State.IsModified = true;
-			var pos = DirectAdd(key, size, version: version);
+			var pos = DirectAdd(key, structure.GetSize(), version: version);
 
-			Marshal.StructureToPtr(value, new IntPtr(pos), true);
-		}
-
-		public int RetrieveFieldOffset(Type type, IEnumerable<string> path)
-		{
-			FieldInfo field = null;
-
-			foreach (var fieldName in path)
-			{
-				field = type.GetField(fieldName);
-				type = field.FieldType;
-			}
-
-			return field.GetCustomAttribute<FieldOffsetAttribute>().Value;
+			structure.Write(pos);
 		}
 
 		public long Increment(Slice key, long delta, ushort? version = null)

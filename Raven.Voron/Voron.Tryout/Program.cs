@@ -11,6 +11,7 @@ using Voron.Impl.Paging;
 using Voron.Tests.Journal;
 using System.Linq;
 using Voron.Tests;
+using Voron.Util;
 using Xunit;
 using System.Threading.Tasks;
 using Voron.Tests.Bugs;
@@ -21,13 +22,64 @@ namespace Voron.Tryout
 	{
 		public static void Main()
 		{
-			var t = Type.GetType ("Mono.Runtime");
-			var m = t.GetMethod ("GetDisplayName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-			Console.WriteLine ( "Mono runtime: " +  m.Invoke(null, null));
+			var binaryNow = DateTime.Now.ToBinary();
+
+			IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(Test)));
+			var pointer = (byte*)ptr.ToPointer();
+
+			var sp = Stopwatch.StartNew();
+
+			GCHandle gcHandle1 = GCHandle.Alloc(false, GCHandleType.Pinned);
+			GCHandle gcHandle2 = GCHandle.Alloc(32, GCHandleType.Pinned);
+			GCHandle gcHandle3 = GCHandle.Alloc(binaryNow, GCHandleType.Pinned);
+
+
+			for (int i = 0; i < 1000*1000; i++)
+			{
+			//	var c = new Test()
+			//	{
+			//		bucket = 4,
+			//		view = 32,
+			//		timestampBinary = binaryNow
+			//	};
+
+				gcHandle1.Target = long.MaxValue;
+				gcHandle2.Target = 32;
+				gcHandle3.Target = binaryNow;
+
+				MemoryUtils.Copy(pointer, (byte*)gcHandle1.AddrOfPinnedObject(), 4);
+				MemoryUtils.Copy(pointer + 4, (byte*)gcHandle2.AddrOfPinnedObject(), 4);
+				MemoryUtils.Copy(pointer + 8, (byte*)gcHandle3.AddrOfPinnedObject(), 8);
+
+
+
+				//var p = ((Test*) pointer);
+				//*p = c;
+				//c = *p;
+			}
+
+			gcHandle1.Free();
+			gcHandle2.Free();
+			gcHandle3.Free();
+
+			Console.WriteLine(sp.ElapsedMilliseconds);
+
+			Marshal.FreeHGlobal(ptr);
 			
-            RunAllTests();
 
 		}
+
+		[StructLayout(LayoutKind.Explicit, Pack = 1)]
+ public struct Test
+ {
+     [FieldOffset(0)]
+     public int view;
+     [FieldOffset(4)]
+     public int bucket;
+     [FieldOffset(8)]
+     public long timestampBinary;
+
+ }
 
 		static void RunAllTests ()
 		{

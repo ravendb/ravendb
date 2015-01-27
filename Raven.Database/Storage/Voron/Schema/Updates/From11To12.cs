@@ -53,7 +53,7 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 								IndexingErrors = indexStats.Value<int>("failures")
 							};
 
-							indexingStats.Write(iterator.CurrentKey, voronStats);
+							//TODO arek indexingStats.Write(iterator.CurrentKey, voronStats);
 						}
 
 					} while (iterator.MoveNext());
@@ -105,7 +105,7 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 								};
 							}
 
-							reducingStats.Write(iterator.CurrentKey, voronStats);
+							// TODO arekreducingStats.Write(iterator.CurrentKey, voronStats);
 						}
 
 					} while (iterator.MoveNext());
@@ -137,7 +137,7 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 								LastTimestampTicks = stats.Value<DateTime>("lastTimestamp").Ticks
 							};
 
-							lastIndexedEtags.Write(iterator.CurrentKey, voronStats);
+							// TODO areklastIndexedEtags.Write(iterator.CurrentKey, voronStats);
 						}
 					} while (iterator.MoveNext());
 				}

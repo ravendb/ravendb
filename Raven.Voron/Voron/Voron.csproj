@@ -98,6 +98,9 @@
     <Compile Include="SliceComparisonMethods.cs" />
     <Compile Include="SliceWriter.cs" />
     <Compile Include="StructReadResult.cs" />
+    <Compile Include="Structure.cs" />
+    <Compile Include="StructureReader.cs" />
+    <Compile Include="StructureSchema.cs" />
     <Compile Include="Trees\PageIterator.cs" />
     <Compile Include="Trees\PrefixInfoSection.cs" />
     <Compile Include="Trees\PrefixNodeHeader.cs" />
@@ -176,7 +179,6 @@
     <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\EndianBitConverter.cs" />
     <Compile Include="Util\SkipList.cs" />
-    <Compile Include="Util\TypeExtensions.cs" />
     <Compile Include="Util\Utils.cs" />
     <Compile Include="Util\PageTable.cs" />
     <Compile Include="ValueReader.cs" />

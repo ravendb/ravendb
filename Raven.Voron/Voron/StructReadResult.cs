@@ -5,15 +5,15 @@
 // -----------------------------------------------------------------------
 namespace Voron
 {
-	public class StructReadResult<TStruct> where TStruct : struct 
+	public class StructReadResult<T>
 	{
-		public StructReadResult(TStruct value, ushort version)
+		public StructReadResult(StructureReader<T> reader, ushort version)
 		{
-			Value = value;
+			Reader = reader;
 			Version = version;
 		}
 
-		public TStruct Value;
+		public StructureReader<T> Reader { get; private set; }
 
 		public ushort Version { get; private set; }
 	}

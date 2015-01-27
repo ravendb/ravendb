@@ -96,7 +96,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 
 			version = read.Version;
-			value = read.Value;
+			//TODO arekvalue = read.Value;
+			throw new NotImplementedException();
 			return true;
 		}
 

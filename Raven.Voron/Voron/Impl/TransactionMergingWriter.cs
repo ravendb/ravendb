@@ -249,7 +249,7 @@ namespace Voron.Impl
 									tree.Increment(operation.Key, operation.ValueLong, operation.Version);
 									break;
 								case WriteBatch.BatchOperationType.AddStruct:
-									tree.Write(operation.Key, operation.ValueStruct, operation.Version);
+									tree.WriteStruct(operation.Key, operation.ValueStruct, operation.Version);
 									break;
 								default:
 									throw new ArgumentOutOfRangeException();

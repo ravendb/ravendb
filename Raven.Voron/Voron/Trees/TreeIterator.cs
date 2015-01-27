@@ -180,13 +180,15 @@ namespace Voron.Trees
 
 		public TStruct ReadStructForCurrent<TStruct>() where TStruct : struct
 		{
-			var structureType = typeof(TStruct);
+			throw new NotImplementedException();
+			// TODO arek
+			//var structureType = typeof(TStruct);
 
-			structureType.AssertStructHasExplicitLayout();
+			//structureType.AssertStructHasExplicitLayout();
 
-			var valueReader = NodeHeader.Reader(_tx, Current);
+			//var valueReader = NodeHeader.Reader(_tx, Current);
 
-			return (TStruct) Marshal.PtrToStructure(new IntPtr(valueReader.Base), structureType);
+			//return (TStruct) Marshal.PtrToStructure(new IntPtr(valueReader.Base), structureType);
 		}
 
 		public void Dispose()

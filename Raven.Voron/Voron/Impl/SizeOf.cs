@@ -1,4 +1,6 @@
-﻿using Voron.Trees;
+﻿using System;
+using System.Collections.Generic;
+using Voron.Trees;
 
 namespace Voron.Impl
 {
@@ -82,6 +84,28 @@ namespace Voron.Impl
 			}
 
 			return 0;
+		}
+
+		private static readonly Dictionary<Type, int> _primitiveSizes = new Dictionary<Type, int>
+		{
+			{typeof (sbyte), sizeof (sbyte)},
+			{typeof (byte), sizeof (byte)},
+			{typeof (short), sizeof (short)},
+			{typeof (ushort), sizeof (ushort)},
+			{typeof (int), sizeof (int)},
+			{typeof (uint), sizeof (uint)},
+			{typeof (long), sizeof (long)},
+			{typeof (ulong), sizeof (ulong)},
+			{typeof (char), sizeof (char)},
+			{typeof (float), sizeof (float)},
+			{typeof (double), sizeof (double)},
+			{typeof (decimal), sizeof (decimal)},
+			{typeof (bool), sizeof (bool)},
+		};
+
+		public static int Primitive(Type type)
+		{
+			return _primitiveSizes[type];
 		}
 	}
 }

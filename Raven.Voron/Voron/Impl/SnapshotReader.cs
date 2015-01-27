@@ -25,7 +25,7 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
-				ValueType _;
+				Structure _;
 				ushort? version;
 				if (writeBatch.TryGetValue(treeName, key, out stream, out _, out version, out operationType))
 				{
@@ -51,14 +51,15 @@ namespace Voron.Impl
 			return tree.Read(key);
 		}
 
-		public StructReadResult<T> ReadStruct<T>(string treeName, Slice key, WriteBatch writeBatch = null) where T : struct 
+		public StructReadResult<T> ReadStruct<T>(string treeName, Slice key, StructureSchema<T> schema, WriteBatch writeBatch = null)
 		{
+
 			Tree tree = null;
 
 			if (writeBatch != null && writeBatch.IsEmpty == false)
 			{
 				WriteBatch.BatchOperationType operationType;
-				ValueType value;
+				Structure value;
 				Stream _;
 				ushort? version;
 				if (writeBatch.TryGetValue(treeName, key, out _, out value, out version, out operationType))
@@ -69,7 +70,7 @@ namespace Voron.Impl
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.AddStruct:
-							return new StructReadResult<T>((T) value, version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(key));
+							return new StructReadResult<T>(new StructureReader<T>((Structure<T>) value, schema),  version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(key));
 						case WriteBatch.BatchOperationType.Delete:
 							return null;
 					}
@@ -79,7 +80,7 @@ namespace Voron.Impl
 			if (tree == null)
 				tree = GetTree(treeName);
 
-			return tree.Read<T>(key);
+			return tree.ReadStruct(key, schema);
 		}
 
 		public int GetDataSize(string treeName, Slice key)
@@ -94,7 +95,7 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
-				ValueType valueType;
+				Structure valueType;
 				if (writeBatch.TryGetValue(treeName, key, out stream, out valueType, out version, out operationType))
 				{
 					switch (operationType)
@@ -127,7 +128,7 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
-				ValueType valueType;
+				Structure valueType;
 				ushort? version;
 				if (writeBatch.TryGetValue(treeName, key, out stream, out valueType, out version, out operationType) && version.HasValue)
 				{

@@ -76,7 +76,7 @@ namespace Voron.Impl
 			set { _disposeAfterWrite = value; }
 		}
 
-		internal bool TryGetValue(string treeName, Slice key, out Stream streamValue, out ValueType structValue, out ushort? version, out BatchOperationType operationType)
+		internal bool TryGetValue(string treeName, Slice key, out Stream streamValue, out Structure structValue, out ushort? version, out BatchOperationType operationType)
 		{
 			streamValue = null;
 			structValue = null;
@@ -153,12 +153,8 @@ namespace Voron.Impl
 			AddOperation(batchOperation);
 		}
 
-		public void AddStruct<T>(Slice key, T value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false) where T : struct
+		public void AddStruct(Slice key, Structure value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
 		{
-			AssertValidTreeName(treeName);
-
-			typeof(T).AssertStructHasExplicitLayout();
-
 			var batchOperation = BatchOperation.Add(key, value, version, treeName);
 			if (shouldIgnoreConcurrencyExceptions)
 				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
@@ -266,7 +262,7 @@ namespace Voron.Impl
 
 			public readonly Slice ValueSlice;
 
-			public readonly ValueType ValueStruct;
+			public readonly Structure ValueStruct;
 
 			public readonly long ValueLong;
 
@@ -280,7 +276,7 @@ namespace Voron.Impl
 				return new BatchOperation(key, stream, version, treeName, BatchOperationType.Add);
 			}
 
-			public static BatchOperation Add<T>(Slice key, T value, ushort? version, string treeName) where T : struct 
+			public static BatchOperation Add(Slice key, Structure value, ushort? version, string treeName)
 			{
 				return new BatchOperation(key, value, version, treeName, BatchOperationType.AddStruct);
 			}
@@ -331,7 +327,7 @@ namespace Voron.Impl
 				ValueSlice = value;
 			}
 
-			private BatchOperation(Slice key, ValueType value, ushort? version, string treeName, BatchOperationType type)
+			private BatchOperation(Slice key, Structure value, ushort? version, string treeName, BatchOperationType type)
 				: this(key, version, treeName, type)
 			{
 				ValueStruct = value;
