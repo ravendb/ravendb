@@ -24,7 +24,7 @@ namespace Voron.Platform.Posix
             //todo, do we need O_SYNC here? 
             //todo, ALLPERMS ? 
             _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_SYNC,
-                               FilePermissions.S_IRUSR | FilePermissions.S_IWUSR);
+                               FilePermissions.ALLPERMS);
             if (_fd == -1)
                 PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
 
@@ -88,35 +88,56 @@ namespace Voron.Platform.Posix
 
             PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize));
 
-			// On Windows, we can try to allocate the rest of the file in the position after
-			// the current location. In Linux, there are guard pages there. We tried using mremap
-			// but the entire thing came crashing down in flame. Since this is primarily a conveinance
-			// feature, we just allocate the whole virtual memory again and not try to be cute about it.
-           
-            PagerState newPagerState = CreatePagerState();
-            if (newPagerState == null)
+            //disabled until http://issues.hibernatingrhinos.com/issue/RavenDB-3012 is fixed
+            //this will prevent usage of mremap - preventing segmentation faults
+            //if (TryAllocateMoreContinuousPages(allocationSize) == false)
             {
-                var errorMessage = string.Format(
-                    "Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
-                    (_totalAllocationSize + allocationSize));
+                PagerState newPagerState = CreatePagerState();
+                if (newPagerState == null)
+                {
+                    var errorMessage = string.Format(
+                        "Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
+                        (_totalAllocationSize + allocationSize));
 
-                throw new OutOfMemoryException(errorMessage);
+                    throw new OutOfMemoryException(errorMessage);
+                }
+
+                newPagerState.DebugVerify(newLengthAfterAdjustment);
+
+                if (tx != null)
+                {
+                    newPagerState.AddRef();
+                    tx.AddPagerState(newPagerState);
+                }
+
+                var tmp = PagerState;
+                PagerState = newPagerState;
+                tmp.Release(); //replacing the pager state --> so one less reference for it
             }
-
-            newPagerState.DebugVerify(newLengthAfterAdjustment);
-
-            if (tx != null)
-            {
-                newPagerState.AddRef();
-                tx.AddPagerState(newPagerState);
-            }
-
-            var tmp = PagerState;
-            PagerState = newPagerState;
-            tmp.Release(); //replacing the pager state --> so one less reference for it
 
             _totalAllocationSize += allocationSize;
             NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+        }
+
+
+        private bool TryAllocateMoreContinuousPages(long allocationSize)
+        {
+            if (PagerState == null || PagerState.AllocationInfos == null ||
+                PagerState.AllocationInfos.Length != 1)
+                throw new InvalidOperationException("Assertion, this shouldn't be happening");
+
+            var result = Syscall.mremap(new IntPtr(PagerState.MapBase),
+                                         (ulong)PagerState.AllocationInfos[0].Size,
+                                         (ulong)allocationSize,
+                                         (MremapFlags)0);
+            if (result.ToInt64() == -1)
+            {
+                if (Marshal.GetLastWin32Error() == (int)Errno.ENOMEM)
+                    return false;
+                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+            }
+
+            return true;
         }
 
         private PagerState CreatePagerState()
