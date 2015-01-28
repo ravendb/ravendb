@@ -29,6 +29,11 @@ namespace Voron
 
 		public StructureSchema()
 		{
+			var fieldType = typeof(TField);
+
+			if(fieldType != typeof(string) && fieldType != typeof(Enum) && fieldType.IsEnum == false && fieldType.IsPrimitive == false)
+				throw new ArgumentException("Structure schema can have fields of the following types: string, enum, primitives.");
+
 			IsFixedSize = true;
 		}
 

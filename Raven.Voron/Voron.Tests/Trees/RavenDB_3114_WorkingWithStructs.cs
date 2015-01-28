@@ -13,6 +13,25 @@ namespace Voron.Tests.Trees
 {
 	public class RavenDB_3114_WorkingWithStructs : StorageTest
 	{
+		class Foo
+		{
+			 
+		}
+
+		[Fact]
+		public void ShouldNotAllowToCreateSchemaWithAnyTypeOfFields()
+		{
+			Assert.DoesNotThrow(() => new StructureSchema<string>());
+			Assert.DoesNotThrow(() => new StructureSchema<MappedResults>());
+			Assert.DoesNotThrow(() => new StructureSchema<int>());
+			Assert.DoesNotThrow(() => new StructureSchema<ushort>());
+			Assert.DoesNotThrow(() => new StructureSchema<byte>());
+
+			var ae = Assert.Throws<ArgumentException>(() => new StructureSchema<Foo>());
+
+			Assert.Equal("Structure schema can have fields of the following types: string, enum, primitives.", ae.Message);
+		}
+
 		[Fact]
 		public void ShouldNotAllowToDefineBoolBecauseItsNonBlittable()
 		{
@@ -363,7 +382,7 @@ namespace Voron.Tests.Trees
 				1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6
 			};
 
-			var schema = new StructureSchema<Enum>()
+			var schema = new StructureSchema<MappedResults>()
 				.Add<int>(MappedResults.View)
 				.Add<long>(MappedResults.Bucket)
 				.Add<long>(MappedResults.TimestampBinary)
@@ -377,7 +396,7 @@ namespace Voron.Tests.Trees
 				var tree = Env.CreateTree(tx, "stats");
 
 				tree.WriteStruct("items/1",
-					new Structure<Enum>(schema)
+					new Structure<MappedResults>(schema)
 						.Set(MappedResults.View, 3)
 						.Set(MappedResults.Bucket, 999L)
 						.Set(MappedResults.TimestampBinary, now.ToBinary())
