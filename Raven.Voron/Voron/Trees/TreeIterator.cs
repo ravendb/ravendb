@@ -178,17 +178,11 @@ namespace Voron.Trees
 			return NodeHeader.Reader(_tx, Current);
 		}
 
-		public TStruct ReadStructForCurrent<TStruct>() where TStruct : struct
+		public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
 		{
-			throw new NotImplementedException();
-			// TODO arek
-			//var structureType = typeof(TStruct);
+			var valueReader = NodeHeader.Reader(_tx, Current);
 
-			//structureType.AssertStructHasExplicitLayout();
-
-			//var valueReader = NodeHeader.Reader(_tx, Current);
-
-			//return (TStruct) Marshal.PtrToStructure(new IntPtr(valueReader.Base), structureType);
+			return new StructureReader<T>(valueReader.Base, schema);
 		}
 
 		public void Dispose()

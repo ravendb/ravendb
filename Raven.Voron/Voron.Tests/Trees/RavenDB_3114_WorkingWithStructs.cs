@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Globalization;
 using System.IO;
 using Voron.Impl;
 using Xunit;
@@ -237,53 +238,55 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-		//[Fact]
-		//public void CanReadStructsFromTreeIterator()
-		//{
-		//	using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-		//	{
-		//		var tree = Env.CreateTree(tx, "stats");
+		[Fact]
+		public void CanReadStructsFromTreeIterator()
+		{
+			var statsSchema = new StructureSchema<string>()
+				.Add<int>("Attempts")
+				.Add<string>("Message");
 
-		//		tree.Write("items/1", new Stats()
-		//		{
-		//			Attempts = 1
-		//		});
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "stats");
 
-		//		tree.Write("items/2", new Stats()
-		//		{
-		//			Attempts = 2
-		//		});
+				tree.WriteStruct("items/1", new Structure<string>(statsSchema)
+					.Set("Attempts", 1)
+					.Set("Message", "1"));
+
+				tree.WriteStruct("items/2", new Structure<string>(statsSchema)
+					.Set("Attempts", 2)
+					.Set("Message", "2"));
 
 
-		//		tree.Write("items/3", new Stats()
-		//		{
-		//			Attempts = 3
-		//		});
+				tree.WriteStruct("items/3", new Structure<string>(statsSchema)
+					.Set("Attempts", 3)
+					.Set("Message", "3"));
 
-		//		tx.Commit();
-		//	}
+				tx.Commit();
+			}
 
-		//	using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-		//	{
-		//		var iterator = tx.ReadTree("stats").Iterate();
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var iterator = tx.ReadTree("stats").Iterate();
 
-		//		iterator.Seek(Slice.BeforeAllKeys);
+				iterator.Seek(Slice.BeforeAllKeys);
 
-		//		var count = 0;
+				var count = 0;
 
-		//		do
-		//		{
-		//			var stats = iterator.ReadStructForCurrent<Stats>();
+				do
+				{
+					var stats = iterator.ReadStructForCurrent(statsSchema);
 
-		//			count++;
+					count++;
 
-		//			Assert.Equal(count, stats.Attempts);
+					Assert.Equal(count, stats.ReadInt("Attempts"));
+					Assert.Equal(count.ToString(CultureInfo.InvariantCulture), stats.ReadString("Message"));
 
-		//		} while (iterator.MoveNext());
+				} while (iterator.MoveNext());
 
-		//		Assert.Equal(3, count);
-		//	}
-		//}
+				Assert.Equal(3, count);
+			}
+		}
 
 		public enum MappedResults
 		{

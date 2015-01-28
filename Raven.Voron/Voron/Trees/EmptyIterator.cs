@@ -30,7 +30,7 @@ namespace Voron.Trees
 			throw new InvalidOperationException("No current page");
 		}
 
-		public T ReadStructForCurrent<T>() where T : struct
+		public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
 		{
 			throw new InvalidOperationException("No current page");
 		}

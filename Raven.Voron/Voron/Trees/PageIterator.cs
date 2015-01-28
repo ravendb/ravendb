@@ -102,9 +102,9 @@ namespace Voron.Trees
 			return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
 		}
 
-		public TStruct ReadStructForCurrent<TStruct>() where TStruct : struct
+		public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
 		{
-			throw new InvalidOperationException("Multi trees do not support reading/writing structs");
+			throw new NotSupportedException("Multi trees do not support reading/writing structures");
 		}
 	}
 }
