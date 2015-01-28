@@ -47,7 +47,7 @@ namespace Raven.Tests.Issues
 					{Constants.Esent.CircularLog, "false"},
 					{Constants.Voron.AllowIncrementalBackups, "true"}
 				}
-			}.Initialize()))
+			}.Initialize(), null))
 			{
 				db.SpinBackgroundWorkers();
 				db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
@@ -90,7 +90,7 @@ namespace Raven.Tests.Issues
 				" Index will be recreated after launching Raven instance",
 				sb.ToString());
 
-			using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}))
+			using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}, null))
 			{				
 				db.SpinBackgroundWorkers();
 				QueryResult queryResult;
@@ -127,7 +127,7 @@ namespace Raven.Tests.Issues
 				DefaultStorageTypeName = storageName,
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-			}))
+			}, null))
 			{
 				db.SpinBackgroundWorkers();
 				db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
@@ -161,7 +161,7 @@ namespace Raven.Tests.Issues
 					sb.ToString());
 			}
 
-			using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}))
+			using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}, null))
 			{
 				db.SpinBackgroundWorkers();
 				QueryResult queryResult;

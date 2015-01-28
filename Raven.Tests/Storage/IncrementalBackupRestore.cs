@@ -40,7 +40,7 @@ namespace Raven.Tests.Storage
 	                {"Raven/Esent/CircularLog", "false"},
 					{"Raven/Voron/AllowIncrementalBackups", "true"}
 	            }
-	        }.Initialize());
+	        }.Initialize(), null);
 	        db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 	    }
 
@@ -88,7 +88,7 @@ namespace Raven.Tests.Storage
                 Defrag = true
 			}, s => { });
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
+			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
 		    var fetchedData = db.Documents.Get("ayende", null);
             Assert.NotNull(fetchedData);
@@ -151,7 +151,7 @@ namespace Raven.Tests.Storage
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
             var fetchedData = db.Documents.Get("ayende", null);
             Assert.NotNull(fetchedData);
@@ -186,7 +186,7 @@ namespace Raven.Tests.Storage
 				DefaultStorageTypeName = storageName,
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-			});
+			}, null);
 
 			db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		

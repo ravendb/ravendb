@@ -157,9 +157,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[RavenRoute("databases/{databaseName}/replication/topology")]
 		public HttpResponseMessage TopologyGet()
 		{
-			var documentsController = new DocumentsController();
+			var documentsController = new ConfigurationController();
 			documentsController.InitializeFrom(this);
-			return documentsController.DocGet(Constants.RavenReplicationDestinations);
+			return documentsController.ReplicationConfigurationGet();
 		}
 
 		[Obsolete("Use RavenFS instead.")]

@@ -8,6 +8,7 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Config;
+using Raven.Database.Config.Retriever;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
@@ -108,11 +109,11 @@ namespace Raven.Database.Server.Controllers
 
 		protected ReplicationDocument GetReplicationDocument(out HttpResponseMessage erroResponseMessage)
 		{
-			JsonDocument replicationDestinationsDocument;
+			ConfigurationDocument<ReplicationDocument> configurationDocument;
 			erroResponseMessage = null;
 			try
 			{
-				replicationDestinationsDocument = Database.Documents.Get(Constants.RavenReplicationDestinations, null);
+				configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
 			}
 			catch (Exception e)
 			{
@@ -122,16 +123,14 @@ namespace Raven.Database.Server.Controllers
 				return null;
 			}
 
-			if (replicationDestinationsDocument == null)
+			if (configurationDocument == null)
 			{
 				erroResponseMessage = GetMessageWithObject(new { Message = "Replication destinations not found. Perhaps no replication is configured? Nothing to do in this case..." }, HttpStatusCode.NotFound);
 				return null;
 			}
 
-			var replicationDocument = replicationDestinationsDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
-
-			if (replicationDocument.Destinations.Count != 0) 
-				return replicationDocument;
+			if (configurationDocument.Document.Destinations.Count != 0) 
+				return configurationDocument.Document;
 
 			erroResponseMessage = GetMessageWithObject(new
 			{
