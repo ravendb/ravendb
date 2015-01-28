@@ -437,6 +437,7 @@ namespace Raven.Database
 			{
 				var result = new DatabaseStatistics
 				{
+					CurrentNumberOfParallelTasks = workContext.CurrentNumberOfParallelTasks,
 					StorageEngine = TransactionalStorage.FriendlyName,
 					CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
 					CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
