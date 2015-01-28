@@ -26,7 +26,7 @@ namespace Voron.Tryout
 			Console.WriteLine ( "Mono runtime: " +  m.Invoke(null, null));
 			
             //Console.WriteLine (BitConverter.IsLittleEndian);
-           
+           /*
             var testAssembly = TestAssemblyBuilder.Build(new ExecutorWrapper("Voron.Tests.dll", null, false));
 
             var testMethods = testAssembly.EnumerateTestMethods(x => true).ToList();
@@ -40,7 +40,9 @@ namespace Voron.Tryout
             {
                 Console.WriteLine("Has failures");
                 return 1;
-            }
+            }*/
+			var x = new InitialSize ();
+			x.WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordinglyAndItWillBeRoundedToTheNearestGranularity  ();
             Console.WriteLine("done");
             return 0;
 		}
