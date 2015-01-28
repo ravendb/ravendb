@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Voron.Util;
 
 namespace Voron
 {
@@ -124,6 +126,25 @@ namespace Voron
 			}
 
 			return Encoding.UTF8.GetString(_value._variableSizeWrites[field].Value);
+		}
+
+		public byte[] ReadBytes(T field)
+		{
+			if (_ptr != null)
+			{
+				var filedInfo = VariableFieldSizeInfo(field);
+
+				var result = new byte[filedInfo.Length];
+
+				fixed (byte* rPtr = result)
+				{
+					MemoryUtils.Copy(rPtr, _ptr + filedInfo.Offset, filedInfo.Length);
+				}
+
+				return result;
+			}
+
+			return _value._variableSizeWrites[field].Value;
 		}
 	}
 }

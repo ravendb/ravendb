@@ -292,7 +292,7 @@ namespace Voron.Tests.Trees
 			Bucket,
 			DocId,
 			Etag,
-			TimestampTicks
+			TimestampBinary
 		}
 
 		[Fact]
@@ -362,7 +362,11 @@ namespace Voron.Tests.Trees
 
 			var schema = new StructureSchema<Enum>()
 				.Add<int>(MappedResults.View)
-				.Add<string>(MappedResults.ReduceKey);
+				.Add<long>(MappedResults.Bucket)
+				.Add<long>(MappedResults.TimestampBinary)
+				.Add<string>(MappedResults.ReduceKey)
+				.Add<string>(MappedResults.DocId)
+				.Add<byte[]>(MappedResults.Etag);
 
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -372,16 +376,11 @@ namespace Voron.Tests.Trees
 				tree.WriteStruct("items/1",
 					new Structure<Enum>(schema)
 						.Set(MappedResults.View, 3)
-						.Set(MappedResults.ReduceKey, "reduce_key"));
-
-				//{
-				//	View = 3,
-				//	ReduceKey = "reduce_key",
-				//	Bucket = 1024,
-				//	DocId = "orders/1",
-				//	Etag = etag,
-				//	TimestampTicks = now.Ticks
-				//}
+						.Set(MappedResults.Bucket, 999L)
+						.Set(MappedResults.TimestampBinary, now.ToBinary())
+						.Set(MappedResults.ReduceKey, "reduce_key")
+						.Set(MappedResults.DocId, "orders/1")
+						.Set(MappedResults.Etag, etag));
 
 				tx.Commit();
 			}
@@ -394,10 +393,10 @@ namespace Voron.Tests.Trees
 
 				Assert.Equal(3, mappedResults.ReadInt(MappedResults.View));
 				Assert.Equal("reduce_key", mappedResults.ReadString(MappedResults.ReduceKey));
-				//Assert.Equal(1024, mappedResults.Bucket);
-				//Assert.Equal("orders/1", mappedResults.DocId);
-				//Assert.Equal(etag, mappedResults.Etag);
-				//Assert.Equal(now, new DateTime(mappedResults.TimestampTicks));
+				Assert.Equal(999, mappedResults.ReadLong(MappedResults.Bucket));
+				Assert.Equal("orders/1", mappedResults.ReadString(MappedResults.DocId));
+				Assert.Equal(etag, mappedResults.ReadBytes(MappedResults.Etag));
+				Assert.Equal(now, DateTime.FromBinary(mappedResults.ReadLong(MappedResults.TimestampBinary)));
 			}
 		}
 	}

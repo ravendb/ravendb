@@ -72,16 +72,24 @@ namespace Voron
 					throw new InvalidDataException(string.Format("Attempt to set a field value which type is different than defined in the structure schema. Expected: {0}, got: {1}", variableSizeField.Type, type));  //TODO arek - add test for that
 
 				var stringValue = value as string;
+				var bytesValue = value as byte[];
 
-				if (stringValue == null)
+				byte[] bytes = null;
+				if (stringValue != null)
+				{
+					bytes = Encoding.UTF8.GetBytes(stringValue);
+				}
+				else if (bytesValue != null)
+				{
+					bytes = bytesValue;
+				}
+				else
 					throw new NotSupportedException("Unexpected variable size value type: " + type);
-
-				var bytesValue = Encoding.UTF8.GetBytes(stringValue);
 
 				_variableSizeWrites.Add(field, new VariableSizeWrite
 				{
-					Value = bytesValue,
-					ValueSizeLength = SizeOf7BitEncodedInt(bytesValue.Length),
+					Value = bytes,
+					ValueSizeLength = SizeOf7BitEncodedInt(bytes.Length),
 					Index = variableSizeField.Index
 				});
 			}

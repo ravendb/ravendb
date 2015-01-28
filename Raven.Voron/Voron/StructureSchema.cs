@@ -43,7 +43,7 @@ namespace Voron
 			if (type == typeof(bool))
 				throw new ArgumentException("bool is the non-blittable type");
 
-			if (type == typeof(string))
+			if (type == typeof(string) || type == typeof(byte[]))
 			{
 				IsFixedSize = false;
 
