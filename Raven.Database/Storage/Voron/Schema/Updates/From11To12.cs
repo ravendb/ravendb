@@ -9,6 +9,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Storage.Voron.Impl;
+using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Voron;
 
 namespace Raven.Database.Storage.Voron.Schema.Updates
@@ -26,124 +27,114 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 
 		public override void Update(TableStorage tableStorage, Action<string> output)
 		{
-			//TODO arek
-			//using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
-			//{
-			//	var indexingStats = tx.ReadTree(Tables.IndexingStats.TableName);
+			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var indexingStats = tx.ReadTree(Tables.IndexingStats.TableName);
 
-			//	var iterator = indexingStats.Iterate();
+				var iterator = indexingStats.Iterate();
 
-			//	if (iterator.Seek(Slice.BeforeAllKeys))
-			//	{
-			//		do
-			//		{
-			//			var result = indexingStats.Read(iterator.CurrentKey);
+				if (iterator.Seek(Slice.BeforeAllKeys))
+				{
+					do
+					{
+						var result = indexingStats.Read(iterator.CurrentKey);
 
-			//			using (var stream = result.Reader.AsStream())
-			//			{
-			//				var indexStats = stream.ToJObject();
+						using (var stream = result.Reader.AsStream())
+						{
+							var indexStats = stream.ToJObject();
 
-			//				var voronStats = new VoronIndexingWorkStats
-			//				{
-			//					IndexId = indexStats.Value<int>("index"),
-			//					CreatedTimestampTicks = indexStats.Value<DateTime>("createdTimestamp").Ticks,
-			//					LastIndexingTimeTicks = indexStats.Value<DateTime>("lastIndexingTime").Ticks,
-			//					IndexingAttempts = indexStats.Value<int>("attempts"),
-			//					IndexingSuccesses = indexStats.Value<int>("successes"),
-			//					IndexingErrors = indexStats.Value<int>("failures")
-			//				};
+							var statsStructure = new Structure<IndexingWorkStatsFields>(tableStorage.IndexingStats.Schema)
+								.Set(IndexingWorkStatsFields.IndexId, indexStats.Value<int>("index"))
+								.Set(IndexingWorkStatsFields.CreatedTimestamp, indexStats.Value<DateTime>("createdTimestamp").ToBinary())
+								.Set(IndexingWorkStatsFields.LastIndexingTime, indexStats.Value<DateTime>("lastIndexingTime").ToBinary())
+								.Set(IndexingWorkStatsFields.IndexingAttempts, indexStats.Value<int>("attempts"))
+								.Set(IndexingWorkStatsFields.IndexingSuccesses, indexStats.Value<int>("successes"))
+								.Set(IndexingWorkStatsFields.IndexingErrors, indexStats.Value<int>("failures"));
 
-			//				//TODO arek indexingStats.Write(iterator.CurrentKey, voronStats);
-			//			}
+							indexingStats.WriteStruct(iterator.CurrentKey, statsStructure);
+						}
 
-			//		} while (iterator.MoveNext());
-			//	}
+					} while (iterator.MoveNext());
+				}
 
-			//	tx.Commit();
-			//}
+				tx.Commit();
+			}
 
-			//using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
-			//{
-			//	var reducingStats = tx.ReadTree(Tables.ReduceStats.TableName);
+			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var reducingStats = tx.ReadTree(Tables.ReduceStats.TableName);
 
-			//	var iterator = reducingStats.Iterate();
+				var iterator = reducingStats.Iterate();
 
-			//	if (iterator.Seek(Slice.BeforeAllKeys))
-			//	{
-			//		do
-			//		{
-			//			var result = reducingStats.Read(iterator.CurrentKey);
+				if (iterator.Seek(Slice.BeforeAllKeys))
+				{
+					do
+					{
+						var result = reducingStats.Read(iterator.CurrentKey);
 
-			//			using (var stream = result.Reader.AsStream())
-			//			{
-			//				var reduceStats = stream.ToJObject();
+						using (var stream = result.Reader.AsStream())
+						{
+							var reduceStats = stream.ToJObject();
 
-			//				var hasReduce = reduceStats.Value<byte[]>("lastReducedEtag") != null;
+							var hasReduce = reduceStats.Value<byte[]>("lastReducedEtag") != null;
 
-			//				VoronReducingWorkStats voronStats;
+							var voronStats = new Structure<ReducingWorkStatsFields>(tableStorage.ReduceStats.Schema);
 
-			//				if (hasReduce)
-			//				{
-			//					voronStats = new VoronReducingWorkStats
-			//					{
-			//						LastReducedEtag = new VoronEtagStruct(Etag.Parse(reduceStats.Value<byte[]>("lastReducedEtag"))),
-			//						LastReducedTimestampTicks = reduceStats.Value<DateTime>("lastReducedTimestamp").Ticks,
-			//						ReduceAttempts = reduceStats.Value<int>("reduce_attempts"),
-			//						ReduceErrors = reduceStats.Value<int>("reduce_failures"),
-			//						ReduceSuccesses = reduceStats.Value<int>("reduce_successes")
-			//					};
-			//				}
-			//				else
-			//				{
-			//					voronStats = new VoronReducingWorkStats
-			//					{
-			//						ReduceAttempts = -1,
-			//						ReduceSuccesses = -1,
-			//						ReduceErrors = -1,
-			//						LastReducedEtag = new VoronEtagStruct(Etag.InvalidEtag),
-			//						LastReducedTimestampTicks = -1
-			//					};
-			//				}
+							if (hasReduce)
+							{
+								voronStats.Set(ReducingWorkStatsFields.LastReducedEtag, reduceStats.Value<byte[]>("lastReducedEtag"))
+									.Set(ReducingWorkStatsFields.LastReducedTimestamp, reduceStats.Value<DateTime>("lastReducedTimestamp").ToBinary())
+									.Set(ReducingWorkStatsFields.ReduceAttempts, reduceStats.Value<int>("reduce_attempts"))
+									.Set(ReducingWorkStatsFields.ReduceErrors, reduceStats.Value<int>("reduce_failures"))
+									.Set(ReducingWorkStatsFields.ReduceSuccesses, reduceStats.Value<int>("reduce_successes"));
+							}
+							else
+							{
+								voronStats.Set(ReducingWorkStatsFields.ReduceAttempts, -1)
+									.Set(ReducingWorkStatsFields.ReduceSuccesses, -1)
+									.Set(ReducingWorkStatsFields.ReduceErrors, -1)
+									.Set(ReducingWorkStatsFields.LastReducedEtag, Etag.InvalidEtag.ToByteArray())
+									.Set(ReducingWorkStatsFields.LastReducedTimestamp, -1L);
+							}
 
-			//				// TODO arekreducingStats.Write(iterator.CurrentKey, voronStats);
-			//			}
+							reducingStats.WriteStruct(iterator.CurrentKey, voronStats);
+						}
 
-			//		} while (iterator.MoveNext());
-			//	}
+					} while (iterator.MoveNext());
+				}
 
-			//	tx.Commit();
-			//}
+				tx.Commit();
+			}
 
-			//using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
-			//{
-			//	var lastIndexedEtags = tx.ReadTree(Tables.LastIndexedEtags.TableName);
+			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var lastIndexedEtags = tx.ReadTree(Tables.LastIndexedEtags.TableName);
 
-			//	var iterator = lastIndexedEtags.Iterate();
+				var iterator = lastIndexedEtags.Iterate();
 
-			//	if (iterator.Seek(Slice.BeforeAllKeys))
-			//	{
-			//		do
-			//		{
-			//			var result = lastIndexedEtags.Read(iterator.CurrentKey);
+				if (iterator.Seek(Slice.BeforeAllKeys))
+				{
+					do
+					{
+						var result = lastIndexedEtags.Read(iterator.CurrentKey);
 
-			//			using (var stream = result.Reader.AsStream())
-			//			{
-			//				var stats = stream.ToJObject();
+						using (var stream = result.Reader.AsStream())
+						{
+							var stats = stream.ToJObject();
 
-			//				var voronStats = new VoronLastIndexedStats
-			//				{
-			//					IndexId = stats.Value<int>("index"),
-			//					LastEtag = new VoronEtagStruct(Etag.Parse(stats.Value<byte[]>("lastEtag"))),
-			//					LastTimestampTicks = stats.Value<DateTime>("lastTimestamp").Ticks
-			//				};
+							var voronStats = new Structure<LastIndexedStatsFields>(tableStorage.LastIndexedEtags.Schema);
 
-			//				// TODO areklastIndexedEtags.Write(iterator.CurrentKey, voronStats);
-			//			}
-			//		} while (iterator.MoveNext());
-			//	}
+							voronStats.Set(LastIndexedStatsFields.IndexId, stats.Value<int>("index"))
+								.Set(LastIndexedStatsFields.LastEtag, stats.Value<byte[]>("lastEtag"))
+								.Set(LastIndexedStatsFields.LastTimestamp, stats.Value<DateTime>("lastTimestamp").ToBinary());
 
-			//	tx.Commit();
-			//}
+							lastIndexedEtags.WriteStruct(iterator.CurrentKey, voronStats);
+						}
+					} while (iterator.MoveNext());
+				}
+
+				tx.Commit();
+			}
 
 			UpdateSchemaVersion(tableStorage, output);
 		}

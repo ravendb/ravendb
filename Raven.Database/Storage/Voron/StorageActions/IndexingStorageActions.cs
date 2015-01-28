@@ -118,7 +118,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					.Set(ReducingWorkStatsFields.ReduceSuccesses, createMapReduce ? 0 : -1)
 					.Set(ReducingWorkStatsFields.ReduceErrors, createMapReduce ? 0 : -1)
 					.Set(ReducingWorkStatsFields.LastReducedEtag, createMapReduce ? Etag.Empty.ToByteArray() : Etag.InvalidEtag.ToByteArray())
-					.Set(ReducingWorkStatsFields.LastReducedTimestamp, createMapReduce ? DateTime.MinValue.ToBinary() : -1),
+					.Set(ReducingWorkStatsFields.LastReducedTimestamp, createMapReduce ? DateTime.MinValue.ToBinary() : -1L),
 				0);
 
 			tableStorage.LastIndexedEtags.AddStruct(
