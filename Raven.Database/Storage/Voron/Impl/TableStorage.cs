@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Threading;
 using System.Web.UI;
+using Mono.CSharp;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Indexing.Collation.Cultures;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
@@ -108,13 +109,13 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table Documents { get; private set; }
 
-		public Table IndexingStats { get; private set; }
+		public TableOfStructures<IndexingWorkStatsFields> IndexingStats { get; private set; }
 
-		public Table ReduceStats { get; private set; }
+		public TableOfStructures<ReducingWorkStatsFields> ReduceStats { get; private set; }
 
 		public Table IndexingMetadata { get; private set; }
 
-		public Table LastIndexedEtags { get; private set; }
+		public TableOfStructures<LastIndexedStatsFields> LastIndexedEtags { get; private set; }
 
 		public Table DocumentReferences { get; private set; }
 
@@ -138,8 +139,6 @@ namespace Raven.Database.Storage.Voron.Impl
 		public Table ReduceKeyTypes { get; private set; }
 
 		public Table General { get; private set; }
-
-		public VoronStructures Structures { get; private set; }
 
 		public StorageEnvironment Environment
 		{
@@ -208,9 +207,24 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			Documents = new Table(Tables.Documents.TableName, bufferPool, Tables.Documents.Indices.KeyByEtag, Tables.Documents.Indices.Metadata);
 			Details = new Table(Tables.Details.TableName, bufferPool);
-			IndexingStats = new Table(Tables.IndexingStats.TableName, bufferPool);
+			IndexingStats = new TableOfStructures<IndexingWorkStatsFields>(Tables.IndexingStats.TableName,
+				new StructureSchema<IndexingWorkStatsFields>()
+					.Add<int>(IndexingWorkStatsFields.IndexId)
+					.Add<int>(IndexingWorkStatsFields.IndexingAttempts)
+					.Add<int>(IndexingWorkStatsFields.IndexingSuccesses)
+					.Add<int>(IndexingWorkStatsFields.IndexingErrors)
+					.Add<long>(IndexingWorkStatsFields.LastIndexingTime)
+					.Add<long>(IndexingWorkStatsFields.CreatedTimestamp),
+				bufferPool);
+
 			IndexingMetadata = new Table(Tables.IndexingMetadata.TableName, bufferPool);
-			LastIndexedEtags = new Table(Tables.LastIndexedEtags.TableName, bufferPool);
+			LastIndexedEtags = new TableOfStructures<LastIndexedStatsFields>(Tables.LastIndexedEtags.TableName,
+				new StructureSchema<LastIndexedStatsFields>()
+					.Add<int>(LastIndexedStatsFields.IndexId)
+					.Add<long>(LastIndexedStatsFields.LastTimestamp)
+					.Add<byte[]>(LastIndexedStatsFields.LastEtag),
+				bufferPool);
+
 			DocumentReferences = new Table(Tables.DocumentReferences.TableName, bufferPool, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
 			Queues = new Table(Tables.Queues.TableName, bufferPool, Tables.Queues.Indices.ByName, Tables.Queues.Indices.Data);
 			Lists = new Table(Tables.Lists.TableName, bufferPool, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
@@ -222,9 +236,14 @@ namespace Raven.Database.Storage.Voron.Impl
 			Attachments = new Table(Tables.Attachments.TableName, bufferPool, Tables.Attachments.Indices.ByEtag, Tables.Attachments.Indices.Metadata);
 			ReduceResults = new Table(Tables.ReduceResults.TableName, bufferPool, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
 			General = new Table(Tables.General.TableName, bufferPool);
-			ReduceStats = new Table(Tables.ReduceStats.TableName, bufferPool);
-
-			Structures = new VoronStructures();
+			ReduceStats = new TableOfStructures<ReducingWorkStatsFields>(Tables.ReduceStats.TableName,
+				new StructureSchema<ReducingWorkStatsFields>()
+					.Add<int>(ReducingWorkStatsFields.ReduceAttempts)
+					.Add<int>(ReducingWorkStatsFields.ReduceSuccesses)
+					.Add<int>(ReducingWorkStatsFields.ReduceErrors)
+					.Add<long>(ReducingWorkStatsFields.LastReducedTimestamp)
+					.Add<byte[]>(ReducingWorkStatsFields.LastReducedEtag),
+				bufferPool);
 		}
 
 		private static string FindGraphviz()

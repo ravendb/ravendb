@@ -30,11 +30,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			ushort version;
 
-			var indexingStatsReader = LoadStruct(tableStorage.IndexingStats, key, tableStorage.Structures.IndexingWorkStatsSchema, writeBatch.Value, out version);
+			var indexingStatsReader = LoadStruct(tableStorage.IndexingStats, key, writeBatch.Value, out version);
 			if (indexingStatsReader == null)
 				return false; // index does not exists
 
-			var reducingStatsReader = LoadStruct(tableStorage.ReduceStats, key, tableStorage.Structures.ReducingWorkStatsSchema, writeBatch.Value, out version);
+			var reducingStatsReader = LoadStruct(tableStorage.ReduceStats, key, writeBatch.Value, out version);
 			if (reducingStatsReader == null)
 				throw new ArgumentException("reduceStats");
 
@@ -42,7 +42,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			if (IsMapStale(id) || hasReduce && IsReduceStale(id))
 			{
-				var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, tableStorage.Structures.LastIndexedStatsSchema, writeBatch.Value, out version);
+				var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
 				if(lastIndexedEtagsReader == null)
 					throw new ArgumentException("lastIndexedEtags");
 
@@ -118,7 +118,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, tableStorage.Structures.LastIndexedStatsSchema, writeBatch.Value, out version);
+			var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
 			if (lastIndexedEtagsReader == null)
 				return false;
 
@@ -133,11 +133,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var indexingStatsReader = LoadStruct(tableStorage.IndexingStats, key, tableStorage.Structures.IndexingWorkStatsSchema, writeBatch.Value, out version);
+			var indexingStatsReader = LoadStruct(tableStorage.IndexingStats, key, writeBatch.Value, out version);
 			if (indexingStatsReader == null)
 				throw new IndexDoesNotExistsException("Could not find index named: " + id);
 
-			var reducingStatsReader = LoadStruct(tableStorage.ReduceStats, key, tableStorage.Structures.ReducingWorkStatsSchema, writeBatch.Value, out version);
+			var reducingStatsReader = LoadStruct(tableStorage.ReduceStats, key, writeBatch.Value, out version);
 			if (reducingStatsReader == null)
 				throw new ArgumentException("reduceStats");
 
@@ -150,7 +150,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					Etag.Parse(reducingStatsReader.ReadBytes(ReducingWorkStatsFields.LastReducedEtag)));
 			}
 
-			var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, tableStorage.Structures.LastIndexedStatsSchema, writeBatch.Value, out version);
+			var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
 			if (lastIndexedEtagsReader == null)
 				throw new ArgumentException("lastIndexedEtags");
 

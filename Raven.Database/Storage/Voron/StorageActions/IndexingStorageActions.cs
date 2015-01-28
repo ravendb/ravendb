@@ -60,10 +60,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					var key = indexingStatsIterator.CurrentKey.ToString();
 					ushort version;
-					var indexStats = indexingStatsIterator.ReadStructForCurrent(tableStorage.Structures.IndexingWorkStatsSchema);
+					var indexStats = indexingStatsIterator.ReadStructForCurrent(tableStorage.IndexingStats.Schema);
 					
-					var reduceStats = LoadStruct(tableStorage.ReduceStats, key, tableStorage.Structures.ReducingWorkStatsSchema, out version);
-					var lastIndexedEtag = LoadStruct(tableStorage.LastIndexedEtags, key, tableStorage.Structures.LastIndexedStatsSchema, out version);
+					var reduceStats = LoadStruct(tableStorage.ReduceStats, key, out version);
+					var lastIndexedEtag = LoadStruct(tableStorage.LastIndexedEtags, key, out version);
 					var priority = ReadPriority(key);
 					var touches = ReadTouches(key);
 
@@ -79,9 +79,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			ushort version;
 
-			var indexStats = LoadStruct(tableStorage.IndexingStats, key, tableStorage.Structures.IndexingWorkStatsSchema, out version);
-			var reduceStats = LoadStruct(tableStorage.ReduceStats, key, tableStorage.Structures.ReducingWorkStatsSchema, out version);
-			var lastIndexedEtags = LoadStruct(tableStorage.LastIndexedEtags, key, tableStorage.Structures.LastIndexedStatsSchema, out version);
+			var indexStats = LoadStruct(tableStorage.IndexingStats, key, out version);
+			var reduceStats = LoadStruct(tableStorage.ReduceStats, key, out version);
+			var lastIndexedEtags = LoadStruct(tableStorage.LastIndexedEtags, key, out version);
 			var priority = ReadPriority(key);
 			var touches = ReadTouches(key);
 
@@ -98,7 +98,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tableStorage.IndexingStats.AddStruct(
 				writeBatch.Value,
 				key,
-				new Structure<IndexingWorkStatsFields>(tableStorage.Structures.IndexingWorkStatsSchema)
+				new Structure<IndexingWorkStatsFields>(tableStorage.IndexingStats.Schema)
 					.Set(IndexingWorkStatsFields.IndexId, id)
 					.Set(IndexingWorkStatsFields.IndexingAttempts, 0)
 					.Set(IndexingWorkStatsFields.IndexingSuccesses, 0)
@@ -113,7 +113,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tableStorage.ReduceStats.AddStruct(
 				writeBatch.Value,
 				key,
-				new Structure<ReducingWorkStatsFields>(tableStorage.Structures.ReducingWorkStatsSchema)
+				new Structure<ReducingWorkStatsFields>(tableStorage.ReduceStats.Schema)
 					.Set(ReducingWorkStatsFields.ReduceAttempts, createMapReduce ? 0 : -1)
 					.Set(ReducingWorkStatsFields.ReduceSuccesses, createMapReduce ? 0 : -1)
 					.Set(ReducingWorkStatsFields.ReduceErrors, createMapReduce ? 0 : -1)
@@ -124,7 +124,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tableStorage.LastIndexedEtags.AddStruct(
 				writeBatch.Value,
 				key,
-				new Structure<LastIndexedStatsFields>(tableStorage.Structures.LastIndexedStatsSchema)
+				new Structure<LastIndexedStatsFields>(tableStorage.LastIndexedEtags.Schema)
 					.Set(LastIndexedStatsFields.IndexId, id)
 					.Set(LastIndexedStatsFields.LastEtag, Etag.Empty.ToByteArray())
 					.Set(LastIndexedStatsFields.LastTimestamp, DateTime.MinValue.ToBinary()),
@@ -165,8 +165,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var indexStats = LoadStruct(tableStorage.IndexingStats, key, tableStorage.Structures.IndexingWorkStatsSchema, out version);
-			var reduceStats = LoadStruct(tableStorage.ReduceStats, key, tableStorage.Structures.ReducingWorkStatsSchema, out version);
+			var indexStats = LoadStruct(tableStorage.IndexingStats, key, out version);
+			var reduceStats = LoadStruct(tableStorage.ReduceStats, key, out version);
 
 			var reduceAttempts = reduceStats.ReadInt(ReducingWorkStatsFields.ReduceAttempts);
 			var reduceErrors = reduceStats.ReadInt(ReducingWorkStatsFields.ReduceErrors);
@@ -195,7 +195,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if(version == null)
 				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", id));
 
-			var indexStats = new Structure<LastIndexedStatsFields>(tableStorage.Structures.LastIndexedStatsSchema)
+			var indexStats = new Structure<LastIndexedStatsFields>(tableStorage.LastIndexedEtags.Schema)
 				.Set(LastIndexedStatsFields.IndexId, id)
 				.Set(LastIndexedStatsFields.LastEtag, etag.ToByteArray())
 				.Set(LastIndexedStatsFields.LastTimestamp, timestamp.ToBinary());
@@ -208,12 +208,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var reduceStats = LoadStruct(tableStorage.ReduceStats, key, tableStorage.Structures.ReducingWorkStatsSchema, out version);
+			var reduceStats = LoadStruct(tableStorage.ReduceStats, key, out version);
 
 			if (Etag.Parse(reduceStats.ReadBytes(ReducingWorkStatsFields.LastReducedEtag)).CompareTo(etag) >= 0)
 				return;
 
-			var updated = new Structure<ReducingWorkStatsFields>(tableStorage.Structures.ReducingWorkStatsSchema)
+			var updated = new Structure<ReducingWorkStatsFields>(tableStorage.ReduceStats.Schema)
 				.Set(ReducingWorkStatsFields.LastReducedEtag, etag.ToByteArray())
 				.Set(ReducingWorkStatsFields.LastReducedTimestamp, timestamp.ToBinary());
 
@@ -230,9 +230,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var index = LoadStruct(tableStorage.IndexingStats, key, tableStorage.Structures.IndexingWorkStatsSchema, out version);
+			var index = LoadStruct(tableStorage.IndexingStats, key, out version);
 
-			var updated = new Structure<IndexingWorkStatsFields>(tableStorage.Structures.IndexingWorkStatsSchema);
+			var updated = new Structure<IndexingWorkStatsFields>(tableStorage.IndexingStats.Schema);
 
 			updated.Set(IndexingWorkStatsFields.IndexingAttempts, index.ReadInt(IndexingWorkStatsFields.IndexingAttempts) + stats.IndexingAttempts)
 				.Set(IndexingWorkStatsFields.IndexingSuccesses, index.ReadInt(IndexingWorkStatsFields.IndexingSuccesses) + stats.IndexingSuccesses)
@@ -247,9 +247,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var reduceStats = LoadStruct(tableStorage.ReduceStats, key, tableStorage.Structures.ReducingWorkStatsSchema, out version);
+			var reduceStats = LoadStruct(tableStorage.ReduceStats, key, out version);
 
-			var updated = new Structure<ReducingWorkStatsFields>(tableStorage.Structures.ReducingWorkStatsSchema);
+			var updated = new Structure<ReducingWorkStatsFields>(tableStorage.ReduceStats.Schema);
 
 			updated.Set(ReducingWorkStatsFields.ReduceAttempts, reduceStats.ReadInt(ReducingWorkStatsFields.ReduceAttempts) + stats.ReduceAttempts)
 				.Set(ReducingWorkStatsFields.ReduceSuccesses, reduceStats.ReadInt(ReducingWorkStatsFields.ReduceSuccesses) + stats.ReduceSuccesses)
@@ -420,9 +420,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		private StructureReader<T> LoadStruct<T>(Table table, string name, StructureSchema<T> schema, out ushort version) where T : struct
+		private StructureReader<T> LoadStruct<T>(TableOfStructures<T> table, string name, out ushort version) where T : struct
 		{
-			var reader = LoadStruct(table, CreateKey(name), schema, writeBatch.Value, out version);
+			var reader = LoadStruct(table, CreateKey(name), writeBatch.Value, out version);
 
 			if(reader == null)
 				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", name));

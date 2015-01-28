@@ -85,9 +85,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		protected StructureReader<T> LoadStruct<T>(Table table, Slice key, StructureSchema<T> schema, WriteBatch writeBatch, out ushort version)
+		protected StructureReader<T> LoadStruct<T>(TableOfStructures<T> table, Slice key, WriteBatch writeBatch, out ushort version)
 		{
-			var read = table.ReadStruct(Snapshot, key, schema, writeBatch);
+			var read = table.ReadStruct(Snapshot, key, writeBatch);
 			if (read == null)
 			{
 				version = 0;
