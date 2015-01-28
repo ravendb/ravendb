@@ -116,7 +116,7 @@ namespace Voron.Tryout
 			if (File.Exists ("test.map"))
 				File.Delete ("test.map");
 			long initial = 4096;
-			using (var pager = new PosixPageFileBackedMemoryMapPager ("test.map", initial)) {
+			using (var pager = new PosixTempMemoryMapPager ("test.map", initial)) {
 				for (long size = initial; size < initial * 10000; size += 4096) {
 					Console.WriteLine (size);
 					pager.AllocateMorePages (null, size);

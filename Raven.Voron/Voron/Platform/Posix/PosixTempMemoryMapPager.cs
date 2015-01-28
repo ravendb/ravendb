@@ -9,7 +9,20 @@ using Voron.Util;
 
 namespace Voron.Platform.Posix
 {
-	public unsafe class PosixPageFileBackedMemoryMapPager : AbstractPager
+	/// <summary>
+	/// In Windows, we use page file based memory mapped file pager.
+	/// In Linux, we cannot use the same approach, because using shm_open (similar to anonymous memory mapped file in Windows)
+	/// will not actually commit the memory reservation, and it is actually possible that we might allocate memory "successfully"
+	/// but only get around to actually using it later. In this case, Linux will realize that it can't meet its promise about using
+	/// this memory, and it will throw its hands up in the air and give up. At this point, the OOM killer will get involved and assasinate
+	/// us in cold blood, all for believing what the OS said. 
+	/// This has to do with overcommit and the process model for Linux requiring duplicate memory at fork().
+	/// 
+	/// In short, it means that to be reliable, we cannot use swap space in Linux for anything that may be large. We have to create temporary
+	/// files for that purpose (so we'll get assured allocation of space on disk, and then be able to mmap them).
+	/// 
+	/// </summary>
+	public unsafe class PosixTempMemoryMapPager : AbstractPager
 	{
 		private readonly string _file;
 		private int _fd;
@@ -17,7 +30,7 @@ namespace Voron.Platform.Posix
 		private long _totalAllocationSize;
 		private static int _counter;
 
-		public PosixPageFileBackedMemoryMapPager(string file, long? initialFileSize = null)
+		public PosixTempMemoryMapPager(string file, long? initialFileSize = null)
 		{
 			var instanceId = Interlocked.Increment(ref _counter);
 			_file = "/var/tmp/ravendb-" + Syscall.getpid() + "-" + instanceId + "-" + file;
@@ -176,9 +189,16 @@ namespace Voron.Platform.Posix
 			base.Dispose ();
 			if (_fd != -1) 
 			{
+				// note that the orders of operations is important here, we first unlink the file
+				// we are supposed to be the only one using it, so Linux would be ready to delete it
+				// and hopefully when we close it, won't waste any time trying to sync the memory state
+				// to disk just to discard it
+				if (DeleteOnClose) {
+					Syscall.unlink (_file);
+					// explicitly ignoring the result here, there isn't
+					// much we can do to recover from being unable to delete it
+				}
 				Syscall.close (_fd);
-                if(DeleteOnClose)
-                    Syscall.unlink
 				_fd = -1;
 			}		
 		}

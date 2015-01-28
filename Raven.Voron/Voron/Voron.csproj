@@ -20,7 +20,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;MONO</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
@@ -178,7 +178,7 @@
     <Compile Include="Platform\Win32\Win32MemoryMapPager.cs" />
     <Compile Include="Platform\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
     <Compile Include="Platform\Win32\Win32NativeFileMethods.cs" />
-    <Compile Include="Platform\Posix\PosixPageFileBackedMemoryMapPager.cs" />
+    <Compile Include="Platform\Posix\PosixTempMemoryMapPager.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Util\Conversion\readme.txt" />

@@ -312,7 +312,7 @@ namespace Voron
 			{
 				_instanceId = Interlocked.Increment(ref _counter);
 				if (RunningOnPosix)
-					_dataPager = new PosixPageFileBackedMemoryMapPager("_data.pager", InitialFileSize);
+					_dataPager = new PosixTempMemoryMapPager("_data.pager", InitialFileSize);
 				else
 					_dataPager = new Win32PageFileBackedMemoryMappedPager("data.pager", InitialFileSize);
 			}
@@ -397,7 +397,7 @@ namespace Voron
 			public override IVirtualPager CreateScratchPager(string name)
 			{
 				if (RunningOnPosix)
-					return new PosixPageFileBackedMemoryMapPager(name, InitialFileSize);
+					return new PosixTempMemoryMapPager(name, InitialFileSize);
 				return new Win32PageFileBackedMemoryMappedPager(name, InitialFileSize);
 			}
 
