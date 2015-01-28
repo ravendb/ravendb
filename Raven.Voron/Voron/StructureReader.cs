@@ -1,66 +1,127 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
 
 namespace Voron
 {
 	public unsafe class StructureReader<T>
 	{
-		private readonly Structure<T> value;
-		private readonly byte* ptr;
-		private readonly StructureSchema<T> schema;
+		class ReadVariableSizeFieldInfo
+		{
+			public int Length;
+			public int Offset;
+		}
+
+		private readonly Structure<T> _value;
+		private readonly byte* _ptr;
+		private readonly StructureSchema<T> _schema;
+		private Dictionary<T, ReadVariableSizeFieldInfo> _variableFieldInfo = null;
 
 		public StructureReader(byte* ptr, StructureSchema<T> schema)
 		{
-			this.ptr = ptr;
-			this.schema = schema;
+			_ptr = ptr;
+			_schema = schema;
 		}
 
 		public StructureReader(Structure<T> value, StructureSchema<T> schema)
 		{
-			this.value = value;
-			this.schema = schema;
+			_value = value;
+			_schema = schema;
 		}
 
 		private int FixedFieldOffset(T field)
 		{
-			return schema._fixedSizeFields[field].Offset;
+			return _schema._fixedSizeFields[field].Offset;
 		}
 
-		private int VariableFieldSize(T field)
+		private ReadVariableSizeFieldInfo VariableFieldSizeInfo(T field)
 		{
-			return *((int*) (ptr + schema.FixedSize + sizeof (int)*schema._variableSizeFields[field].Index));
+			if (_variableFieldInfo != null) 
+				return _variableFieldInfo[field];
+			
+			_variableFieldInfo = new Dictionary<T, ReadVariableSizeFieldInfo>(_schema._variableSizeFields.Count);
+
+			var variableFieldsPtr = _ptr + _schema.FixedSize;
+
+			var offset = _schema.FixedSize;
+
+			foreach (var fieldKey in _schema._variableSizeFields.Keys)
+			{
+				int valueLengthSize;
+				var length = Read7BitEncodedInt(variableFieldsPtr, out valueLengthSize);
+
+				offset += valueLengthSize;
+
+				_variableFieldInfo.Add(fieldKey, new ReadVariableSizeFieldInfo
+				{
+					Length = length,
+					Offset = offset
+				});
+
+				variableFieldsPtr += valueLengthSize + length;
+				offset += length;
+			}
+
+			return _variableFieldInfo[field];
+		}
+
+		private int Read7BitEncodedInt(byte* ptr, out int size)
+		{
+			size = 0;
+			// Read out an Int32 7 bits at a time.  The high bit 
+			// of the byte when on means to continue reading more bytes.
+			int value = 0;
+			int shift = 0;
+			byte b;
+			do
+			{
+				// Check for a corrupted stream.  Read a max of 5 bytes. 
+				if (shift == 5 * 7)  // 5 bytes max per Int32, shift += 7
+					throw new InvalidDataException("Invalid 7bit shifted value, used more than 5 bytes");
+
+				// ReadByte handles end of stream cases for us.
+				b = *ptr;
+				ptr++;
+				size++;
+				value |= (b & 0x7F) << shift;
+				shift += 7;
+			} while ((b & 0x80) != 0);
+
+			return value;
 		}
 
 		public int ReadInt(T field)
 		{
-			if(ptr != null)
-				return *((int*)(ptr + FixedFieldOffset(field)));
+			if(_ptr != null)
+				return *((int*)(_ptr + FixedFieldOffset(field)));
 
-			return (int) value._fixedSizeWrites[field].Value;
+			return (int) _value._fixedSizeWrites[field].Value;
 		}
 
 		public long ReadLong(T field)
 		{
-			if (ptr != null)
-				return *((long*)(ptr + FixedFieldOffset(field)));
+			if (_ptr != null)
+				return *((long*)(_ptr + FixedFieldOffset(field)));
 
-			return (long) value._fixedSizeWrites[field].Value;
+			return (long) _value._fixedSizeWrites[field].Value;
 		}
 
 		public byte ReadByte(T field)
 		{
-			if (ptr != null)
-				return *(ptr + FixedFieldOffset(field));
+			if (_ptr != null)
+				return *(_ptr + FixedFieldOffset(field));
 
-			return (byte) value._fixedSizeWrites[field].Value;
+			return (byte) _value._fixedSizeWrites[field].Value;
 		}
 
 		public string ReadString(T field)
 		{
-			if (ptr != null)
+			if (_ptr != null)
 			{
-				var size = VariableFieldSize(field);
+				var filedInfo = VariableFieldSizeInfo(field);
 
-				//var length
+				return new string((sbyte*)(_ptr + filedInfo.Offset), 0, filedInfo.Length, Encoding.UTF8);
 			}
 
 			throw new NotImplementedException();

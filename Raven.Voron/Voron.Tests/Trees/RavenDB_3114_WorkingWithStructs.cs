@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.IO;
 using Voron.Impl;
 using Xunit;
 
@@ -33,7 +34,7 @@ namespace Voron.Tests.Trees
 				stats.Set("Attempts", 5);
 				stats.Set("Errors", -1);
 				stats.Set("Successes", 4);
-				stats.Set("IsValid", 1);
+				stats.Set("IsValid", (byte) 1);
 				stats.Set("IndexedAt", indexedAt.ToBinary());
 
 				tree.WriteStruct("stats/1", stats);

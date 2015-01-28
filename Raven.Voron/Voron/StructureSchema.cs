@@ -38,12 +38,12 @@ namespace Voron
 
 		public StructureSchema<TField> Add<T>(TField field)
 		{
-			var type = typeof (T);
+			var type = typeof(T);
 
-			if (type == typeof (bool))
+			if (type == typeof(bool))
 				throw new ArgumentException("bool is the non-blittable type");
 
-			if (type == typeof (string))
+			if (type == typeof(string))
 			{
 				IsFixedSize = false;
 
@@ -55,7 +55,7 @@ namespace Voron
 
 				_variableFieldIndex++;
 			}
-			else
+			else if (type.IsPrimitive)
 			{
 				if (IsFixedSize == false)
 					throw new ArgumentException("Cannot define fixed size fields after fields of variable size");
@@ -71,6 +71,8 @@ namespace Voron
 
 				_fixedFieldOffset += size;
 			}
+			else
+				throw new NotSupportedException("Not supported structure field type: " + type);
 
 			return this;
 		}
