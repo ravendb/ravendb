@@ -42,10 +42,8 @@ namespace Voron.Platform.Posix
 
 			SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
-			if (initialFileSize.HasValue)
-			{
-				_totalAllocationSize = NearestSizeToPageSize(initialFileSize.Value);
-			}
+			_totalAllocationSize = initialFileSize ?? 
+				SysPageSize * 16; // should be 64K, equal to the usual amount we use on Windows
 
 			_totalAllocationSize = NearestSizeToPageSize(_totalAllocationSize);
 			PosixHelper.AllocateFileSpace(_fd, (ulong)_totalAllocationSize);
