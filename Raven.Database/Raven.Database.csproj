@@ -301,10 +301,10 @@
     <Compile Include="Storage\IncrementalBackupState.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From11To12.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
-    <Compile Include="Storage\Voron\StorageActions\Structs\VoronEtagStruct.cs" />
-    <Compile Include="Storage\Voron\StorageActions\Structs\VoronIndexingWorkStats.cs" />
-    <Compile Include="Storage\Voron\StorageActions\Structs\VoronLastIndexedStats.cs" />
-    <Compile Include="Storage\Voron\StorageActions\Structs\VoronReducingWorkStats.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\IndexingWorkStatsFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\LastIndexedStatsFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ReducingWorkStatsFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\VoronStructures.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />

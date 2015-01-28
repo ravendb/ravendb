@@ -7,6 +7,7 @@ using System.Threading;
 using System.Web.UI;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Indexing.Collation.Cultures;
+using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Voron.Impl.Paging;
 
 namespace Raven.Database.Storage.Voron.Impl
@@ -138,6 +139,8 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table General { get; private set; }
 
+		public VoronStructures Structures { get; private set; }
+
 		public StorageEnvironment Environment
 		{
 			get
@@ -220,6 +223,8 @@ namespace Raven.Database.Storage.Voron.Impl
 			ReduceResults = new Table(Tables.ReduceResults.TableName, bufferPool, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
 			General = new Table(Tables.General.TableName, bufferPool);
 			ReduceStats = new Table(Tables.ReduceStats.TableName, bufferPool);
+
+			Structures = new VoronStructures();
 		}
 
 		private static string FindGraphviz()

@@ -9,7 +9,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Storage.Voron.Impl;
-using Raven.Database.Storage.Voron.StorageActions.Structs;
 using Voron;
 
 namespace Raven.Database.Storage.Voron.Schema.Updates
@@ -27,123 +26,124 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 
 		public override void Update(TableStorage tableStorage, Action<string> output)
 		{
-			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var indexingStats = tx.ReadTree(Tables.IndexingStats.TableName);
+			//TODO arek
+			//using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+			//{
+			//	var indexingStats = tx.ReadTree(Tables.IndexingStats.TableName);
 
-				var iterator = indexingStats.Iterate();
+			//	var iterator = indexingStats.Iterate();
 
-				if (iterator.Seek(Slice.BeforeAllKeys))
-				{
-					do
-					{
-						var result = indexingStats.Read(iterator.CurrentKey);
+			//	if (iterator.Seek(Slice.BeforeAllKeys))
+			//	{
+			//		do
+			//		{
+			//			var result = indexingStats.Read(iterator.CurrentKey);
 
-						using (var stream = result.Reader.AsStream())
-						{
-							var indexStats = stream.ToJObject();
+			//			using (var stream = result.Reader.AsStream())
+			//			{
+			//				var indexStats = stream.ToJObject();
 
-							var voronStats = new VoronIndexingWorkStats
-							{
-								IndexId = indexStats.Value<int>("index"),
-								CreatedTimestampTicks = indexStats.Value<DateTime>("createdTimestamp").Ticks,
-								LastIndexingTimeTicks = indexStats.Value<DateTime>("lastIndexingTime").Ticks,
-								IndexingAttempts = indexStats.Value<int>("attempts"),
-								IndexingSuccesses = indexStats.Value<int>("successes"),
-								IndexingErrors = indexStats.Value<int>("failures")
-							};
+			//				var voronStats = new VoronIndexingWorkStats
+			//				{
+			//					IndexId = indexStats.Value<int>("index"),
+			//					CreatedTimestampTicks = indexStats.Value<DateTime>("createdTimestamp").Ticks,
+			//					LastIndexingTimeTicks = indexStats.Value<DateTime>("lastIndexingTime").Ticks,
+			//					IndexingAttempts = indexStats.Value<int>("attempts"),
+			//					IndexingSuccesses = indexStats.Value<int>("successes"),
+			//					IndexingErrors = indexStats.Value<int>("failures")
+			//				};
 
-							//TODO arek indexingStats.Write(iterator.CurrentKey, voronStats);
-						}
+			//				//TODO arek indexingStats.Write(iterator.CurrentKey, voronStats);
+			//			}
 
-					} while (iterator.MoveNext());
-				}
+			//		} while (iterator.MoveNext());
+			//	}
 
-				tx.Commit();
-			}
+			//	tx.Commit();
+			//}
 
-			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var reducingStats = tx.ReadTree(Tables.ReduceStats.TableName);
+			//using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+			//{
+			//	var reducingStats = tx.ReadTree(Tables.ReduceStats.TableName);
 
-				var iterator = reducingStats.Iterate();
+			//	var iterator = reducingStats.Iterate();
 
-				if (iterator.Seek(Slice.BeforeAllKeys))
-				{
-					do
-					{
-						var result = reducingStats.Read(iterator.CurrentKey);
+			//	if (iterator.Seek(Slice.BeforeAllKeys))
+			//	{
+			//		do
+			//		{
+			//			var result = reducingStats.Read(iterator.CurrentKey);
 
-						using (var stream = result.Reader.AsStream())
-						{
-							var reduceStats = stream.ToJObject();
+			//			using (var stream = result.Reader.AsStream())
+			//			{
+			//				var reduceStats = stream.ToJObject();
 
-							var hasReduce = reduceStats.Value<byte[]>("lastReducedEtag") != null;
+			//				var hasReduce = reduceStats.Value<byte[]>("lastReducedEtag") != null;
 
-							VoronReducingWorkStats voronStats;
+			//				VoronReducingWorkStats voronStats;
 
-							if (hasReduce)
-							{
-								voronStats = new VoronReducingWorkStats
-								{
-									LastReducedEtag = new VoronEtagStruct(Etag.Parse(reduceStats.Value<byte[]>("lastReducedEtag"))),
-									LastReducedTimestampTicks = reduceStats.Value<DateTime>("lastReducedTimestamp").Ticks,
-									ReduceAttempts = reduceStats.Value<int>("reduce_attempts"),
-									ReduceErrors = reduceStats.Value<int>("reduce_failures"),
-									ReduceSuccesses = reduceStats.Value<int>("reduce_successes")
-								};
-							}
-							else
-							{
-								voronStats = new VoronReducingWorkStats
-								{
-									ReduceAttempts = -1,
-									ReduceSuccesses = -1,
-									ReduceErrors = -1,
-									LastReducedEtag = new VoronEtagStruct(Etag.InvalidEtag),
-									LastReducedTimestampTicks = -1
-								};
-							}
+			//				if (hasReduce)
+			//				{
+			//					voronStats = new VoronReducingWorkStats
+			//					{
+			//						LastReducedEtag = new VoronEtagStruct(Etag.Parse(reduceStats.Value<byte[]>("lastReducedEtag"))),
+			//						LastReducedTimestampTicks = reduceStats.Value<DateTime>("lastReducedTimestamp").Ticks,
+			//						ReduceAttempts = reduceStats.Value<int>("reduce_attempts"),
+			//						ReduceErrors = reduceStats.Value<int>("reduce_failures"),
+			//						ReduceSuccesses = reduceStats.Value<int>("reduce_successes")
+			//					};
+			//				}
+			//				else
+			//				{
+			//					voronStats = new VoronReducingWorkStats
+			//					{
+			//						ReduceAttempts = -1,
+			//						ReduceSuccesses = -1,
+			//						ReduceErrors = -1,
+			//						LastReducedEtag = new VoronEtagStruct(Etag.InvalidEtag),
+			//						LastReducedTimestampTicks = -1
+			//					};
+			//				}
 
-							// TODO arekreducingStats.Write(iterator.CurrentKey, voronStats);
-						}
+			//				// TODO arekreducingStats.Write(iterator.CurrentKey, voronStats);
+			//			}
 
-					} while (iterator.MoveNext());
-				}
+			//		} while (iterator.MoveNext());
+			//	}
 
-				tx.Commit();
-			}
+			//	tx.Commit();
+			//}
 
-			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var lastIndexedEtags = tx.ReadTree(Tables.LastIndexedEtags.TableName);
+			//using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+			//{
+			//	var lastIndexedEtags = tx.ReadTree(Tables.LastIndexedEtags.TableName);
 
-				var iterator = lastIndexedEtags.Iterate();
+			//	var iterator = lastIndexedEtags.Iterate();
 
-				if (iterator.Seek(Slice.BeforeAllKeys))
-				{
-					do
-					{
-						var result = lastIndexedEtags.Read(iterator.CurrentKey);
+			//	if (iterator.Seek(Slice.BeforeAllKeys))
+			//	{
+			//		do
+			//		{
+			//			var result = lastIndexedEtags.Read(iterator.CurrentKey);
 
-						using (var stream = result.Reader.AsStream())
-						{
-							var stats = stream.ToJObject();
+			//			using (var stream = result.Reader.AsStream())
+			//			{
+			//				var stats = stream.ToJObject();
 
-							var voronStats = new VoronLastIndexedStats
-							{
-								IndexId = stats.Value<int>("index"),
-								LastEtag = new VoronEtagStruct(Etag.Parse(stats.Value<byte[]>("lastEtag"))),
-								LastTimestampTicks = stats.Value<DateTime>("lastTimestamp").Ticks
-							};
+			//				var voronStats = new VoronLastIndexedStats
+			//				{
+			//					IndexId = stats.Value<int>("index"),
+			//					LastEtag = new VoronEtagStruct(Etag.Parse(stats.Value<byte[]>("lastEtag"))),
+			//					LastTimestampTicks = stats.Value<DateTime>("lastTimestamp").Ticks
+			//				};
 
-							// TODO areklastIndexedEtags.Write(iterator.CurrentKey, voronStats);
-						}
-					} while (iterator.MoveNext());
-				}
+			//				// TODO areklastIndexedEtags.Write(iterator.CurrentKey, voronStats);
+			//			}
+			//		} while (iterator.MoveNext());
+			//	}
 
-				tx.Commit();
-			}
+			//	tx.Commit();
+			//}
 
 			UpdateSchemaVersion(tableStorage, output);
 		}

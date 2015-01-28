@@ -1,8 +1,7 @@
 ﻿
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
-using Raven.Database.Storage.Voron.StorageActions.Structs;
-using Raven.Database.Util.Streams;
+using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -30,37 +29,39 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			VoronIndexingWorkStats indexingStats;
-			if (TryLoadStruct(tableStorage.IndexingStats, key, writeBatch.Value, out indexingStats, out version) == false)
+
+			var indexingStatsReader = LoadStruct(tableStorage.IndexingStats, key, tableStorage.Structures.IndexingWorkStatsSchema, writeBatch.Value, out version);
+			if (indexingStatsReader == null)
 				return false; // index does not exists
 
-			VoronReducingWorkStats reduceStats;
-			if (TryLoadStruct(tableStorage.ReduceStats, key, writeBatch.Value, out reduceStats, out version) == false)
+			var reducingStatsReader = LoadStruct(tableStorage.ReduceStats, key, tableStorage.Structures.ReducingWorkStatsSchema, writeBatch.Value, out version);
+			if (reducingStatsReader == null)
 				throw new ArgumentException("reduceStats");
 
-			var hasReduce = reduceStats.LastReducedEtag.Restarts != Etag.InvalidEtag.Restarts && reduceStats.LastReducedEtag.Changes != Etag.InvalidEtag.Changes;
+			var hasReduce = Etag.Parse(reducingStatsReader.ReadBytes(ReducingWorkStatsFields.LastReducedEtag)).CompareTo(Etag.InvalidEtag) != 0;
 
 			if (IsMapStale(id) || hasReduce && IsReduceStale(id))
 			{
-				VoronLastIndexedStats lastIndexedEtags;
-				
-				if(TryLoadStruct(tableStorage.LastIndexedEtags, key, writeBatch.Value, out lastIndexedEtags, out version) == false)
+				var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, tableStorage.Structures.LastIndexedStatsSchema, writeBatch.Value, out version);
+				if(lastIndexedEtagsReader == null)
 					throw new ArgumentException("lastIndexedEtags");
 
 				if (cutOff != null)
 				{
-					var lastIndexedTime = new DateTime(lastIndexedEtags.LastTimestampTicks, DateTimeKind.Utc);
+					var lastIndexedTime = DateTime.FromBinary(lastIndexedEtagsReader.ReadLong(LastIndexedStatsFields.LastTimestamp));
 					if (cutOff.Value >= lastIndexedTime)
 						return true;
 
-					var lastReducedTime = reduceStats.LastReducedTimestampTicks != -1 ? new DateTime(reduceStats.LastReducedTimestampTicks, DateTimeKind.Utc) : (DateTime?) null;
+					var lastReducedTimestamp = reducingStatsReader.ReadLong(ReducingWorkStatsFields.LastReducedTimestamp);
+
+					var lastReducedTime = lastReducedTimestamp != -1 ? DateTime.FromBinary(lastReducedTimestamp) : (DateTime?)null;
 
 					if (lastReducedTime != null && cutOff.Value >= lastReducedTime.Value)
 						return true;
 				}
 				else if (cutoffEtag != null)
 				{
-					var lastIndexedEtag = lastIndexedEtags.LastEtag.ToEtag();
+					var lastIndexedEtag = Etag.Parse(lastIndexedEtagsReader.ReadBytes(LastIndexedStatsFields.LastEtag));
 
 					if (lastIndexedEtag.CompareTo(cutoffEtag) < 0)
 						return true;
@@ -117,11 +118,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			VoronLastIndexedStats lastIndexed;
-			if (TryLoadStruct(tableStorage.LastIndexedEtags, key, writeBatch.Value, out lastIndexed, out version) == false)
+			var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, tableStorage.Structures.LastIndexedStatsSchema, writeBatch.Value, out version);
+			if (lastIndexedEtagsReader == null)
 				return false;
 
-			var lastIndexedEtag = lastIndexed.LastEtag.ToEtag();
+			var lastIndexedEtag = Etag.Parse(lastIndexedEtagsReader.ReadBytes(LastIndexedStatsFields.LastEtag));
 			var lastDocumentEtag = GetMostRecentDocumentEtag();
 
 			return lastDocumentEtag.CompareTo(lastIndexedEtag) > 0;
@@ -132,27 +133,29 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			VoronIndexingWorkStats indexingStats;
-			if (TryLoadStruct(tableStorage.IndexingStats, key, writeBatch.Value, out indexingStats, out version) == false)
+			var indexingStatsReader = LoadStruct(tableStorage.IndexingStats, key, tableStorage.Structures.IndexingWorkStatsSchema, writeBatch.Value, out version);
+			if (indexingStatsReader == null)
 				throw new IndexDoesNotExistsException("Could not find index named: " + id);
 
-			VoronReducingWorkStats reduceStats;
-			if (TryLoadStruct(tableStorage.ReduceStats, key, writeBatch.Value, out reduceStats, out version) == false)
+			var reducingStatsReader = LoadStruct(tableStorage.ReduceStats, key, tableStorage.Structures.ReducingWorkStatsSchema, writeBatch.Value, out version);
+			if (reducingStatsReader == null)
 				throw new ArgumentException("reduceStats");
 
-			if (reduceStats.LastReducedTimestampTicks != -1)
+			var lastReducedTimestamp = reducingStatsReader.ReadLong(ReducingWorkStatsFields.LastReducedTimestamp);
+
+			if (lastReducedTimestamp != -1)
 			{
 				return Tuple.Create(
-					new DateTime(reduceStats.LastReducedTimestampTicks, DateTimeKind.Utc),
-					reduceStats.LastReducedEtag.ToEtag());
+					DateTime.FromBinary(lastReducedTimestamp),
+					Etag.Parse(reducingStatsReader.ReadBytes(ReducingWorkStatsFields.LastReducedEtag)));
 			}
 
-			VoronLastIndexedStats lastIndexedEtags;
-			if(TryLoadStruct(tableStorage.LastIndexedEtags, key, writeBatch.Value, out lastIndexedEtags, out version) == false)
+			var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, tableStorage.Structures.LastIndexedStatsSchema, writeBatch.Value, out version);
+			if (lastIndexedEtagsReader == null)
 				throw new ArgumentException("lastIndexedEtags");
 
-			return Tuple.Create(new DateTime(lastIndexedEtags.LastTimestampTicks, DateTimeKind.Utc),
-				 lastIndexedEtags.LastEtag.ToEtag());
+			return Tuple.Create(DateTime.FromBinary(lastIndexedEtagsReader.ReadLong(LastIndexedStatsFields.LastTimestamp)),
+				Etag.Parse(lastIndexedEtagsReader.ReadBytes(LastIndexedStatsFields.LastEtag)));
 		}
 
 		public Etag GetMostRecentDocumentEtag()
