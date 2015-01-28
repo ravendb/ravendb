@@ -9,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using Voron.Impl;
 using Voron.Util;
 
 namespace Voron
@@ -36,8 +35,6 @@ namespace Voron
 			public int Index;
 		}
 
-		public static int VariableFieldOffsetSize = sizeof(int);
-
 		private readonly StructureSchema<T> _schema;
 		internal readonly Dictionary<T, FixedSizeWrite> _fixedSizeWrites = new Dictionary<T, FixedSizeWrite>();
 		internal readonly Dictionary<T, VariableSizeWrite> _variableSizeWrites = new Dictionary<T, VariableSizeWrite>();
@@ -53,19 +50,19 @@ namespace Voron
 			VariableSizeField variableSizeField = null;
 
 			if (_schema._fixedSizeFields.TryGetValue(field, out fixedSizeField) == false && _schema._variableSizeFields.TryGetValue(field, out variableSizeField) == false)
-				throw new InvalidOperationException("No such field in schema defined. Field name: " + field); //TODO arek - add test for that
+				throw new ArgumentException("No such field in schema defined. Field name: " + field);
 
 			var type = value.GetType();
 
 			if (fixedSizeField != null)
 			{
 				if (type != fixedSizeField.Type)
-					throw new InvalidDataException(string.Format("Attempt to set a field value which type is different than defined in the structure schema. Expected: {0}, got: {1}", fixedSizeField.Type, type));  //TODO arek - add test for that
+					throw new InvalidDataException(string.Format("Attempt to set a field value which type is different than defined in the structure schema. Expected: {0}, got: {1}", fixedSizeField.Type, type));
 
 				var valueTypeValue = value as ValueType;
 
 				if (valueTypeValue == null)
-					throw new NotSupportedException("Unexpected fixed size value type: " + value.GetType());  //TODO arek - add test for that
+					throw new NotSupportedException("Unexpected fixed size value type: " + type);
 
 				_fixedSizeWrites.Add(field, new FixedSizeWrite { Value = valueTypeValue, FieldInfo = fixedSizeField });
 			}
@@ -77,13 +74,15 @@ namespace Voron
 				var stringValue = value as string;
 
 				if (stringValue == null)
-					throw new NotSupportedException("Unexpected variable size value type: " + value.GetType());  //TODO arek - add test for that
+					throw new NotSupportedException("Unexpected variable size value type: " + type);
 
 				var bytesValue = Encoding.UTF8.GetBytes(stringValue);
 
 				_variableSizeWrites.Add(field, new VariableSizeWrite
 				{
-					Value = bytesValue, ValueSizeLength = SizeOf7BitEncodedInt(bytesValue.Length), Index = variableSizeField.Index
+					Value = bytesValue,
+					ValueSizeLength = SizeOf7BitEncodedInt(bytesValue.Length),
+					Index = variableSizeField.Index
 				});
 			}
 
@@ -96,7 +95,7 @@ namespace Voron
 			{
 				var missingFields = _schema._variableSizeFields.Select(x => x.Key).Except(_variableSizeWrites.Keys).Select(x => x.ToString());
 
-				throw new InvalidOperationException("Your structure has variable size fields. You have to set all of them to properly write a structure and avoid overlapping fields. Missing fields: " + string.Join(", ", missingFields));  //TODO arek - add test for that
+				throw new InvalidOperationException("Your structure has variable size fields. You have to set all of them to properly write a structure and avoid overlapping fields. Missing fields: " + string.Join(", ", missingFields));
 			}
 
 			foreach (var fixedSizeWrite in _fixedSizeWrites.Values)
@@ -114,10 +113,10 @@ namespace Voron
 			}
 
 			_fixedSizeWrites.Clear();
-			
+
 			ptr += _schema.FixedSize;
 
-			foreach (var write in _variableSizeWrites.Values.OrderBy(x => x.Index)) // TODO arek write test for that
+			foreach (var write in _variableSizeWrites.Values.OrderBy(x => x.Index))
 			{
 				var valueLength = write.Value.Length;
 

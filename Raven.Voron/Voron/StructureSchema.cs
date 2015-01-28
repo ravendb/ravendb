@@ -58,7 +58,7 @@ namespace Voron
 			else if (type.IsPrimitive)
 			{
 				if (IsFixedSize == false)
-					throw new ArgumentException("Cannot define fixed size fields after fields of variable size");
+					throw new ArgumentException("Cannot define a fixed size field after variable size fields");
 
 				var size = SizeOf.Primitive(type);
 

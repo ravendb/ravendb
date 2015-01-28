@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -124,7 +123,7 @@ namespace Voron
 				return new string((sbyte*)(_ptr + filedInfo.Offset), 0, filedInfo.Length, Encoding.UTF8);
 			}
 
-			throw new NotImplementedException();
+			return Encoding.UTF8.GetString(_value._variableSizeWrites[field].Value);
 		}
 	}
 }
