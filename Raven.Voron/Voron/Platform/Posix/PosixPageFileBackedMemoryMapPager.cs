@@ -20,10 +20,12 @@ namespace Voron.Platform.Posix
 		public PosixPageFileBackedMemoryMapPager(string file, long? initialFileSize = null)
 		{
 			var instanceId = Interlocked.Increment(ref _counter);
-			_file = "/" + Syscall.getpid() + "-" + instanceId + "-" + file;
-			_fd = Rt.shm_open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT, (int)FilePermissions.ALLPERMS);
+			_file = "/var/tmp/ravendb-" + Syscall.getpid() + "-" + instanceId + "-" + file;
+            _fd = Syscall.open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_EXCL, 
+                FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 			if (_fd == -1)
 				PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+		    DeleteOnClose = true;
 
 			SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
@@ -175,7 +177,8 @@ namespace Voron.Platform.Posix
 			if (_fd != -1) 
 			{
 				Syscall.close (_fd);
-				Rt.shm_unlink (_file);
+                if(DeleteOnClose)
+                    Syscall.unlink
 				_fd = -1;
 			}		
 		}
