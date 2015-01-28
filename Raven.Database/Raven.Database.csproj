@@ -238,7 +238,9 @@
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\Retriever\ConfigurationDocument.cs" />
     <Compile Include="Config\Retriever\ConfigurationRetriever.cs" />
+    <Compile Include="Config\Retriever\ConfigurationRetrieverBase.cs" />
     <Compile Include="Config\Retriever\ReplicationConfigurationRetriever.cs" />
+    <Compile Include="Config\Retriever\VersioningConfigurationRetriever.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />

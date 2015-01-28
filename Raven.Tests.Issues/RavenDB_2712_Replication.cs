@@ -18,7 +18,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void IfThereIsNoLocalConfigurationThenGlobalShouldBeUsed()
 		{
-			using (var store = NewRemoteDocumentStore(databaseName: "Northwind"))
+			using (NewRemoteDocumentStore(databaseName: "Northwind"))
 			{
 				var server = servers[0];
 				var systemDatabase = server.SystemDatabase;
@@ -31,31 +31,30 @@ namespace Raven.Tests.Issues
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.RavenGlobalReplicationDestinations,
+						Constants.Global.RavenGlobalReplicationDestinations,
 						null,
 						RavenJObject.FromObject(new ReplicationDocument
 												{
-													Id = Constants.RavenGlobalReplicationDestinations,
+													Id = Constants.Global.RavenGlobalReplicationDestinations,
 													Destinations =
-													{
-														new ReplicationDestination
-														{
-															ApiKey = "key1", 
-															Database = "db1", 
-															ClientVisibleUrl = "curl1", 
-															Disabled = true, 
-															Domain = "d1", 
-															IgnoredClient = true, 
-															Password = "p1", 
-															SkipIndexReplication = false, 
-															TransitiveReplicationBehavior = TransitiveReplicationOptions.Replicate, 
-															Url = "http://localhost:8080", 
-															Username = "u1"
-														}
-													}
+							                        {
+								                        new ReplicationDestination
+								                        {
+									                        ApiKey = "key1", 
+									                        Database = "db1", 
+									                        ClientVisibleUrl = "curl1", 
+									                        Disabled = true, 
+									                        Domain = "d1", 
+									                        IgnoredClient = true, 
+									                        Password = "p1", 
+									                        SkipIndexReplication = false, 
+									                        TransitiveReplicationBehavior = TransitiveReplicationOptions.Replicate, 
+									                        Url = "http://localhost:8080", 
+									                        Username = "u1"
+								                        }
+							                        }
 												}), new RavenJObject(), null);
 
-				var z = retriever.GetConfigurationDocument<object>(Constants.RavenReplicationDestinations);
 				document = retriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
 
 				Assert.NotNull(document);
@@ -84,7 +83,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void LocalConfigurationTakesPrecedenceBeforeGlobal()
 		{
-			using (var store = NewRemoteDocumentStore(databaseName: "Northwind"))
+			using (NewRemoteDocumentStore(databaseName: "Northwind"))
 			{
 				var server = servers[0];
 				var systemDatabase = server.SystemDatabase;
@@ -97,53 +96,53 @@ namespace Raven.Tests.Issues
 						Constants.RavenReplicationDestinations,
 						null,
 						RavenJObject.FromObject(new ReplicationDocument
-						{
-							Id = Constants.RavenReplicationDestinations,
-							Destinations = {
-												new ReplicationDestination
 												{
-													ApiKey = "key2", 
-													Database = "Northwind", 
-													ClientVisibleUrl = "curl2", 
-													Disabled = false, 
-													Domain = "d2", 
-													IgnoredClient = false, 
-													Password = "p2", 
-													SkipIndexReplication = true, 
-													TransitiveReplicationBehavior = TransitiveReplicationOptions.None, 
-													Url = "http://localhost:8080", 
-													Username = "u2"
-												}
-											},
-							Source = database.TransactionalStorage.Id.ToString()
-						}), new RavenJObject(), null);
+													Id = Constants.RavenReplicationDestinations,
+													Destinations = {
+								                                       new ReplicationDestination
+								                                       {
+									                                       ApiKey = "key2", 
+									                                       Database = "Northwind", 
+									                                       ClientVisibleUrl = "curl2", 
+									                                       Disabled = false, 
+									                                       Domain = "d2", 
+									                                       IgnoredClient = false, 
+									                                       Password = "p2", 
+									                                       SkipIndexReplication = true, 
+									                                       TransitiveReplicationBehavior = TransitiveReplicationOptions.None, 
+									                                       Url = "http://localhost:8080", 
+									                                       Username = "u2"
+								                                       }
+							                                       },
+													Source = database.TransactionalStorage.Id.ToString()
+												}), new RavenJObject(), null);
 
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.RavenGlobalReplicationDestinations,
+						Constants.Global.RavenGlobalReplicationDestinations,
 						null,
 						RavenJObject.FromObject(new ReplicationDocument
-						{
-							Id = Constants.RavenGlobalReplicationDestinations,
-							Destinations = {
-												new ReplicationDestination
 												{
-													ApiKey = "key1", 
-													Database = "db1", 
-													ClientVisibleUrl = "curl1", 
-													Disabled = true, 
-													Domain = "d1", 
-													IgnoredClient = true, 
-													Password = "p1", 
-													SkipIndexReplication = false, 
-													TransitiveReplicationBehavior = TransitiveReplicationOptions.Replicate, 
-													Url = "http://localhost:8080", 
-													Username = "u1"
-												}
-											},
-							Source = systemDatabase.TransactionalStorage.Id.ToString()
-						}), new RavenJObject(), null);
+													Id = Constants.Global.RavenGlobalReplicationDestinations,
+													Destinations = {
+								                                       new ReplicationDestination
+								                                       {
+									                                       ApiKey = "key1", 
+									                                       Database = "db1", 
+									                                       ClientVisibleUrl = "curl1", 
+									                                       Disabled = true, 
+									                                       Domain = "d1", 
+									                                       IgnoredClient = true, 
+									                                       Password = "p1", 
+									                                       SkipIndexReplication = false, 
+									                                       TransitiveReplicationBehavior = TransitiveReplicationOptions.Replicate, 
+									                                       Url = "http://localhost:8080", 
+									                                       Username = "u1"
+								                                       }
+							                                       },
+													Source = systemDatabase.TransactionalStorage.Id.ToString()
+												}), new RavenJObject(), null);
 
 				var document = retriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
 
@@ -173,7 +172,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void GlobalConfigurationWillBeAppliedToLocalButWithoutOverwrites()
 		{
-			using (var store = NewRemoteDocumentStore(databaseName: "Northwind"))
+			using (NewRemoteDocumentStore(databaseName: "Northwind"))
 			{
 				var server = servers[0];
 				var systemDatabase = server.SystemDatabase;
@@ -186,53 +185,53 @@ namespace Raven.Tests.Issues
 						Constants.RavenReplicationDestinations,
 						null,
 						RavenJObject.FromObject(new ReplicationDocument
-						{
-							Id = Constants.RavenReplicationDestinations,
-							Destinations = {
-												new ReplicationDestination
 												{
-													ApiKey = "key2", 
-													Database = "db2", 
-													ClientVisibleUrl = "curl2", 
-													Disabled = false, 
-													Domain = "d2", 
-													IgnoredClient = false, 
-													Password = "p2", 
-													SkipIndexReplication = true, 
-													TransitiveReplicationBehavior = TransitiveReplicationOptions.None, 
-													Url = "http://localhost:8080", 
-													Username = "u2"
-												}
-											},
-							Source = database.TransactionalStorage.Id.ToString()
-						}), new RavenJObject(), null);
+													Id = Constants.RavenReplicationDestinations,
+													Destinations = {
+								                                       new ReplicationDestination
+								                                       {
+									                                       ApiKey = "key2", 
+									                                       Database = "db2", 
+									                                       ClientVisibleUrl = "curl2", 
+									                                       Disabled = false, 
+									                                       Domain = "d2", 
+									                                       IgnoredClient = false, 
+									                                       Password = "p2", 
+									                                       SkipIndexReplication = true, 
+									                                       TransitiveReplicationBehavior = TransitiveReplicationOptions.None, 
+									                                       Url = "http://localhost:8080", 
+									                                       Username = "u2"
+								                                       }
+							                                       },
+													Source = database.TransactionalStorage.Id.ToString()
+												}), new RavenJObject(), null);
 
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.RavenGlobalReplicationDestinations,
+						Constants.Global.RavenGlobalReplicationDestinations,
 						null,
 						RavenJObject.FromObject(new ReplicationDocument
-						{
-							Id = Constants.RavenGlobalReplicationDestinations,
-							Destinations = {
-												new ReplicationDestination
 												{
-													ApiKey = "key1", 
-													Database = "db1", 
-													ClientVisibleUrl = "curl1", 
-													Disabled = true, 
-													Domain = "d1", 
-													IgnoredClient = true, 
-													Password = "p1", 
-													SkipIndexReplication = false, 
-													TransitiveReplicationBehavior = TransitiveReplicationOptions.Replicate, 
-													Url = "http://localhost:8080", 
-													Username = "u1"
-												}
-											},
-							Source = systemDatabase.TransactionalStorage.Id.ToString()
-						}), new RavenJObject(), null);
+													Id = Constants.Global.RavenGlobalReplicationDestinations,
+													Destinations = {
+								                                       new ReplicationDestination
+								                                       {
+									                                       ApiKey = "key1", 
+									                                       Database = "db1", 
+									                                       ClientVisibleUrl = "curl1", 
+									                                       Disabled = true, 
+									                                       Domain = "d1", 
+									                                       IgnoredClient = true, 
+									                                       Password = "p1", 
+									                                       SkipIndexReplication = false, 
+									                                       TransitiveReplicationBehavior = TransitiveReplicationOptions.Replicate, 
+									                                       Url = "http://localhost:8080", 
+									                                       Username = "u1"
+								                                       }
+							                                       },
+													Source = systemDatabase.TransactionalStorage.Id.ToString()
+												}), new RavenJObject(), null);
 
 				var document = retriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
 

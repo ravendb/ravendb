@@ -120,7 +120,6 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationConflictDocument = "Raven-Replication-Conflict-Document";
 		public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
 		public const string RavenReplicationDestinations = "Raven/Replication/Destinations";
-		public const string RavenGlobalReplicationDestinations = "Raven/Global/Replication/Destinations";
 		public const string RavenReplicationDestinationsBasePath = "Raven/Replication/Destinations/";
 		public const string RavenReplicationConfig = "Raven/Replication/Config";
 
@@ -221,5 +220,19 @@ namespace Raven.Abstractions.Data
             public const string InitialSize = "Raven/Voron/InitialSize";
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
         }
+
+	    public class Versioning
+	    {
+			public const string RavenVersioningPrefix = "Raven/Versioning/";
+			public const string RavenVersioningDefaultConfiguration = "Raven/Versioning/DefaultConfiguration";
+	    }
+
+	    public class Global
+	    {
+			public const string RavenGlobalReplicationDestinations = "Raven/Global/Replication/Destinations";
+
+			public const string RavenGlobalVersioningPrefix = "Raven/Versioning/";
+			public const string RavenGlobalVersioningDefaultConfiguration = "Raven/Versioning/DefaultConfiguration";
+	    }
 	}
 }

@@ -3,8 +3,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Config.Retriever
 {
-	public class ConfigurationDocument<TClass> where
-		                                           TClass : class
+	public class ConfigurationDocument<TClass>
+		where TClass : class
 	{
 		public bool LocalExists { get; set; }
 
