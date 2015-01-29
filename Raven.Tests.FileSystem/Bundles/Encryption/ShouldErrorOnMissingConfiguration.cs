@@ -5,12 +5,14 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Tests.Helpers;
+
 using Xunit;
 
-namespace Raven.Tests.FileSystem.Encryption
+namespace Raven.Tests.FileSystem.Bundles.Encryption
 {
 	public class ShouldErrorOnMissingConfiguration : RavenFilesTestBase
 	{

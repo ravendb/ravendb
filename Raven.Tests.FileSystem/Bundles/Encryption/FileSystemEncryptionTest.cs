@@ -4,12 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Runtime.CompilerServices;
+
 using Raven.Client.FileSystem;
 using Raven.Database.Extensions;
 using Raven.Tests.Common.Util;
 using Raven.Tests.Helpers;
 
-namespace Raven.Tests.FileSystem.Encryption
+namespace Raven.Tests.FileSystem.Bundles.Encryption
 {
 	public class FileSystemEncryptionTest : RavenFilesTestBase
 	{
