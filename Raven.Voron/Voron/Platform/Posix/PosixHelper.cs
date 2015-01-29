@@ -102,14 +102,4 @@ namespace Voron.Platform.Posix
 			}
 		}
 	}
-
-	internal static class Rt
-	{
-		[DllImport("rt", SetLastError = true)]
-		public extern static int shm_open (string name, OpenFlags oflag, int mode);
-
-		[DllImport("rt", SetLastError = true)]
-		public extern static int shm_unlink (string name);
-
-	}
 }
