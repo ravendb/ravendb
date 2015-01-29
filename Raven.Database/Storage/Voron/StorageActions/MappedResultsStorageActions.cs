@@ -149,7 +149,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				var currentValue = reduceKeyCount.Value<int>("mappedItemsCount");
 				if (currentValue == val)
 				{
-					var reduceKeyTypeVersion = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, key);
+					var reduceKeyTypeVersion = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, key, writeBatch.Value);
 
 					DeleteReduceKeyCount(key, view, reduceKeyCountVersion);
 					DeleteReduceKeyType(key, view, reduceKeyTypeVersion);
@@ -758,7 +758,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
             var reduceKeyHash = HashKey(reduceKey);
 			var key = CreateKey(view, reduceKey, reduceKeyHash);
-			var version = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, key);
+			var version = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, key, writeBatch.Value);
 
 			AddReduceKeyType(key, view, reduceKey, reduceType, version);
 		}

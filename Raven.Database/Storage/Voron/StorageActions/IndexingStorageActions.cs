@@ -190,7 +190,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var key = CreateKey(id);
 
-			var version = tableStorage.LastIndexedEtags.ReadVersion(Snapshot, key);
+			var version = tableStorage.LastIndexedEtags.ReadVersion(Snapshot, key, writeBatch.Value);
 
 			if(version == null)
 				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", id));
@@ -229,31 +229,33 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var key = CreateKey(id);
 
-			ushort version;
-			var index = LoadStruct(tableStorage.IndexingStats, key, out version);
+			var version = tableStorage.IndexingStats.ReadVersion(Snapshot, key, writeBatch.Value);
 
-			var updated = new Structure<IndexingWorkStatsFields>(tableStorage.IndexingStats.Schema);
+			if (version == null)
+				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", id));
 
-			updated.Set(IndexingWorkStatsFields.IndexingAttempts, index.ReadInt(IndexingWorkStatsFields.IndexingAttempts) + stats.IndexingAttempts)
-				.Set(IndexingWorkStatsFields.IndexingSuccesses, index.ReadInt(IndexingWorkStatsFields.IndexingSuccesses) + stats.IndexingSuccesses)
-				.Set(IndexingWorkStatsFields.IndexingErrors, index.ReadInt(IndexingWorkStatsFields.IndexingErrors) + stats.IndexingErrors)
+			var indexStats = new Structure<IndexingWorkStatsFields>(tableStorage.IndexingStats.Schema)
+				.Increment(IndexingWorkStatsFields.IndexingAttempts, stats.IndexingAttempts)
+				.Increment(IndexingWorkStatsFields.IndexingSuccesses, stats.IndexingSuccesses)
+				.Increment(IndexingWorkStatsFields.IndexingErrors, stats.IndexingErrors)
 				.Set(IndexingWorkStatsFields.LastIndexingTime, SystemTime.UtcNow.ToBinary());
 
-			tableStorage.IndexingStats.AddStruct(writeBatch.Value, key, updated, version);
+			tableStorage.IndexingStats.AddStruct(writeBatch.Value, key, indexStats, version);
 		}
 
 		public void UpdateReduceStats(int id, IndexingWorkStats stats)
 		{
 			var key = CreateKey(id);
 
-			ushort version;
-			var reduceStats = LoadStruct(tableStorage.ReduceStats, key, out version);
+			var  version = tableStorage.ReduceStats.ReadVersion(Snapshot, key, writeBatch.Value);
+			if (version == null)
+				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", id));
 
 			var updated = new Structure<ReducingWorkStatsFields>(tableStorage.ReduceStats.Schema);
 
-			updated.Set(ReducingWorkStatsFields.ReduceAttempts, reduceStats.ReadInt(ReducingWorkStatsFields.ReduceAttempts) + stats.ReduceAttempts)
-				.Set(ReducingWorkStatsFields.ReduceSuccesses, reduceStats.ReadInt(ReducingWorkStatsFields.ReduceSuccesses) + stats.ReduceSuccesses)
-				.Set(ReducingWorkStatsFields.ReduceErrors, reduceStats.ReadInt(ReducingWorkStatsFields.ReduceErrors) + stats.ReduceErrors);
+			updated.Increment(ReducingWorkStatsFields.ReduceAttempts, stats.ReduceAttempts)
+				.Increment(ReducingWorkStatsFields.ReduceSuccesses, stats.ReduceSuccesses)
+				.Increment(ReducingWorkStatsFields.ReduceErrors, stats.ReduceErrors);
 
 			tableStorage.ReduceStats.AddStruct(writeBatch.Value, key, updated, version);
 		}
