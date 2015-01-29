@@ -25,7 +25,7 @@ namespace Raven.Database.Config.Retriever
 			return global;
 		}
 
-		protected override string GetGlobalConfigurationDocumentKey(string key)
+		public override string GetGlobalConfigurationDocumentKey(string key)
 		{
 			if (string.Equals(key, Constants.Versioning.RavenVersioningDefaultConfiguration, StringComparison.OrdinalIgnoreCase))
 				return Constants.Global.RavenGlobalVersioningDefaultConfiguration;

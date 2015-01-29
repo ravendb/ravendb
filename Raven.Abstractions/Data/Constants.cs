@@ -233,6 +233,8 @@ namespace Raven.Abstractions.Data
 
 			public const string RavenGlobalVersioningPrefix = "Raven/Versioning/";
 			public const string RavenGlobalVersioningDefaultConfiguration = "Raven/Versioning/DefaultConfiguration";
+
+			public const string RavenGlobalPeriodicExport = "Raven/Global/Backup/Periodic/Setup";
 	    }
 	}
 }

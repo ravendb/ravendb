@@ -40,14 +40,25 @@ namespace Raven.Database.Bundles.PeriodicExports
 		{
 			Database = database;
 
+			Database.ConfigurationRetriever.SubscribeToConfigurationChanges(PeriodicExportSetup.RavenDocumentKey, ResetSetupValuesFromDocument);
+
 			Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>
 			{
 				if (notification.Id == null)
 					return;
-				if (PeriodicExportSetup.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false &&
-					PeriodicExportStatus.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false)
+				if (PeriodicExportStatus.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false)
 					return;
 
+				ResetSetupValuesFromDocument();
+			};
+
+			ReadSetupValuesFromDocument();
+		}
+
+		private void ResetSetupValuesFromDocument()
+		{
+			lock (this)
+			{
 				if (incrementalBackupTimer != null)
 					Database.TimerManager.ReleaseTimer(incrementalBackupTimer);
 
@@ -55,9 +66,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 					Database.TimerManager.ReleaseTimer(fullBackupTimer);
 
 				ReadSetupValuesFromDocument();
-			};
-
-			ReadSetupValuesFromDocument();
+			}
 		}
 
 		private void ReadSetupValuesFromDocument()
@@ -67,8 +76,8 @@ namespace Raven.Database.Bundles.PeriodicExports
 				try
 				{
 					// Not having a setup doc means this DB isn't enabled for periodic exports
-					var document = Database.Documents.Get(PeriodicExportSetup.RavenDocumentKey, null);
-					if (document == null)
+					var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<PeriodicExportSetup>(PeriodicExportSetup.RavenDocumentKey);
+					if (configurationDocument == null)
 					{
 						exportConfigs = null;
 						exportStatus = null;
@@ -78,8 +87,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 					var status = Database.Documents.Get(PeriodicExportStatus.RavenDocumentKey, null);
 
 					exportStatus = status == null ? new PeriodicExportStatus() : status.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
-					exportConfigs = document.DataAsJson.JsonDeserialization<PeriodicExportSetup>();
-
+					exportConfigs = configurationDocument.Document;
 
 					awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
 					awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
@@ -132,18 +140,16 @@ namespace Raven.Database.Bundles.PeriodicExports
 			}
 		}
 
-
-
 		private void TimerCallback(bool fullBackup)
 		{
-		    if (currentTask != null)
+			if (currentTask != null)
 				return;
 
-            if (Database.Disposed)
-            {
-                Dispose();
-                return;
-            }
+			if (Database.Disposed)
+			{
+				Dispose();
+				return;
+			}
 
 			// we have shared lock for both incremental and full backup.
 			lock (this)
@@ -198,7 +204,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								}
 							}
 
-                            var smugglerOptions = dataDumper.Options;
+							var smugglerOptions = dataDumper.Options;
 							if (fullBackup == false)
 							{
 								smugglerOptions.StartDocsEtag = localBackupStatus.LastDocsEtag;
@@ -208,7 +214,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								smugglerOptions.Incremental = true;
 								smugglerOptions.ExportDeletions = true;
 							}
-                            var exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
+							var exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
 
 							if (fullBackup == false)
 							{
@@ -334,7 +340,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 		private void UploadToGlacier(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
 		{
 			if (awsAccessKey == Constants.DataCouldNotBeDecrypted ||
-			    awsSecretKey == Constants.DataCouldNotBeDecrypted)
+				awsSecretKey == Constants.DataCouldNotBeDecrypted)
 			{
 				throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
 			}

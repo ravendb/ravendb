@@ -3,13 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Config.Retriever
 {
-	public abstract class ConfigurationRetrieverBase<TClass>
-		where TClass : class
+	public interface IConfigurationRetriever
+	{
+		string GetGlobalConfigurationDocumentKey(string key);
+
+		object GetConfigurationDocument(string key);
+	}
+
+	public interface IConfigurationRetriever<TClass> : IConfigurationRetriever
+	{
+		new ConfigurationDocument<TClass> GetConfigurationDocument(string key);
+	}
+
+	public abstract class ConfigurationRetrieverBase<TClass> : IConfigurationRetriever<TClass>
 	{
 		protected DocumentDatabase SystemDatabase { get; private set; }
 
@@ -25,9 +35,7 @@ namespace Raven.Database.Config.Retriever
 
 		protected abstract TClass ConvertGlobalDocumentToLocal(TClass global);
 
-		protected abstract string GetGlobalConfigurationDocumentKey(string key);
-
-		public virtual ConfigurationDocument<TClass> GetConfigurationDocument(string key)
+		public ConfigurationDocument<TClass> GetConfigurationDocument(string key)
 		{
 			var global = SystemDatabase.Documents.Get(GetGlobalConfigurationDocumentKey(key), null);
 			var local = LocalDatabase.Documents.Get(key, null);
@@ -62,5 +70,12 @@ namespace Raven.Database.Config.Retriever
 			configurationDocument.Document = ApplyGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>(), local.DataAsJson.JsonDeserialization<TClass>());
 			return configurationDocument;
 		}
+
+		object IConfigurationRetriever.GetConfigurationDocument(string key)
+		{
+			return GetConfigurationDocument(key);
+		}
+
+		public abstract string GetGlobalConfigurationDocumentKey(string key);
 	}
 }
