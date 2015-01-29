@@ -152,7 +152,7 @@ namespace Voron.Platform.Posix
 			ThrowObjectDisposedIfNeeded();
 
 			int toCopy = pagesToWrite * PageSize;
-            MemoryUtils.Copy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
+            MemoryUtils.BulkCopy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
 
 			return toCopy;
 		}
