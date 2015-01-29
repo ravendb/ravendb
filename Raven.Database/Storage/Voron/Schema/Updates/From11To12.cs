@@ -25,6 +25,8 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 
 		public override void Update(TableStorage tableStorage, Action<string> output)
 		{
+			//TODO arek - add output info
+
 			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				var indexingStats = tx.ReadTree(Tables.IndexingStats.TableName);
@@ -132,6 +134,38 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 				}
 
 				tx.Commit();
+			}
+
+			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var documentReferences = tx.ReadTree(Tables.DocumentReferences.TableName);
+
+				var iterator = documentReferences.Iterate();
+
+				if (iterator.Seek(Slice.BeforeAllKeys))
+				{
+					do
+					{
+						var result = documentReferences.Read(iterator.CurrentKey);
+
+						using (var stream = result.Reader.AsStream())
+						{
+							var value = stream.ToJObject();
+
+							var view = value.Value<int>("view");
+							var reference = value.Value<string>("ref");
+							var key = value.Value<string>("key");
+
+							var voronValue = new Structure<DocumentReferencesFields>(tableStorage.DocumentReferences.Schema);
+
+							voronValue.Set(DocumentReferencesFields.IndexId, view)
+								.Set(DocumentReferencesFields.Reference, reference)
+								.Set(DocumentReferencesFields.Key, key);
+							
+							documentReferences.WriteStruct(iterator.CurrentKey, voronValue);
+						}
+					} while (iterator.MoveNext());
+				}
 			}
 
 			UpdateSchemaVersion(tableStorage, output);
