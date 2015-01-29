@@ -4,8 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.IO;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Storage.Voron.Impl;

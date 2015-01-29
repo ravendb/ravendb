@@ -53,6 +53,9 @@ namespace Voron.Tests.Trees
 		{
 			var notSupportedException = Assert.Throws<NotSupportedException>(() => new StructureSchema<string>().Add<DateTime>("DateTime"));
 			Assert.Equal("Not supported structure field type: System.DateTime", notSupportedException.Message);
+
+			notSupportedException = Assert.Throws<NotSupportedException>(() => new StructureSchema<string>().Add<Foo>("Field"));
+			Assert.True(notSupportedException.Message.StartsWith("Not supported structure field type:"));
 		}
 
 		[Fact]
