@@ -103,6 +103,28 @@ namespace Voron.Tests.Trees
 		}
 
 		[Fact]
+		public void ShouldNotAllowToDefineSchemaWithDuplicatedFields()
+		{
+			var ae = Assert.Throws<ArgumentException>(() => new StructureSchema<string>()
+				.Add<string>("Message")
+				.Add<string>("Message"));
+
+			Assert.Equal("Field 'Message' is already defined", ae.Message);
+
+			ae = Assert.Throws<ArgumentException>(() => new StructureSchema<string>()
+				.Add<int>("Message")
+				.Add<string>("Message"));
+
+			Assert.Equal("Field 'Message' is already defined", ae.Message);
+
+			ae = Assert.Throws<ArgumentException>(() => new StructureSchema<string>()
+				.Add<byte[]>("Message")
+				.Add<long>("Message"));
+
+			Assert.Equal("Field 'Message' is already defined", ae.Message);
+		}
+
+		[Fact]
 		public void CanReadAndWriteStructsFromTrees()
 		{
 			var indexedAt = new DateTime(2015, 1, 20);

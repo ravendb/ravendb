@@ -61,6 +61,9 @@ namespace Voron
 		{
 			var type = typeof(T);
 
+			if(_fixedSizeFields.ContainsKey(field) || _variableSizeFields.ContainsKey(field))
+				throw new ArgumentException(string.Format("Field '{0}' is already defined", field));
+
 			if (type == typeof(string) || type == typeof(byte[]))
 			{
 				IsFixedSize = false;
