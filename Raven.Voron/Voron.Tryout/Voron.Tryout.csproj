@@ -67,7 +67,7 @@
     </Reference>
     <Reference Include="Mono.Posix" />
     <Reference Include="xunit.runner.utility">
-      <HintPath>..\packages\xunit.runners.1.9.2\tools\xunit.runner.utility.dll</HintPath>
+      <HintPath>..\..\SharedLibs\xunit\xunit.runner.utility.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

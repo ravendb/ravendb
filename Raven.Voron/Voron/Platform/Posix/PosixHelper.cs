@@ -69,7 +69,7 @@ namespace Voron.Platform.Posix
 
 		public static unsafe bool TryReadFileHeader(FileHeader* header, string path)
 		{
-			var fd = Syscall.open(path, OpenFlags.O_RDONLY);
+			var fd = Syscall.open(path, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
 			try
 			{
 				if (fd == -1)

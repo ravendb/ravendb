@@ -21,10 +21,8 @@ namespace Voron.Platform.Posix
         public PosixMemoryMapPager(string file, long? initialFileSize = null)
         {
             _file = file;
-            //todo, do we need O_SYNC here? 
-            //todo, ALLPERMS ? 
             _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_SYNC,
-                               FilePermissions.ALLPERMS);
+                              FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
                 PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
 
@@ -86,59 +84,33 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize));
-
-            //disabled until http://issues.hibernatingrhinos.com/issue/RavenDB-3012 is fixed
-            //this will prevent usage of mremap - preventing segmentation faults
-            //if (TryAllocateMoreContinuousPages(allocationSize) == false)
+            PosixHelper.AllocateFileSpace(_fd, (ulong) (_totalAllocationSize + allocationSize));
+            PagerState newPagerState = CreatePagerState();
+            if (newPagerState == null)
             {
-                PagerState newPagerState = CreatePagerState();
-                if (newPagerState == null)
-                {
-                    var errorMessage = string.Format(
-                        "Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
-                        (_totalAllocationSize + allocationSize));
+                var errorMessage = string.Format(
+                    "Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
+                    (_totalAllocationSize + allocationSize));
 
-                    throw new OutOfMemoryException(errorMessage);
-                }
-
-                newPagerState.DebugVerify(newLengthAfterAdjustment);
-
-                if (tx != null)
-                {
-                    newPagerState.AddRef();
-                    tx.AddPagerState(newPagerState);
-                }
-
-                var tmp = PagerState;
-                PagerState = newPagerState;
-                tmp.Release(); //replacing the pager state --> so one less reference for it
+                throw new OutOfMemoryException(errorMessage);
             }
+
+            newPagerState.DebugVerify(newLengthAfterAdjustment);
+
+            if (tx != null)
+            {
+                newPagerState.AddRef();
+                tx.AddPagerState(newPagerState);
+            }
+
+            var tmp = PagerState;
+            PagerState = newPagerState;
+            tmp.Release(); //replacing the pager state --> so one less reference for it
 
             _totalAllocationSize += allocationSize;
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize/PageSize;
         }
 
-
-        private bool TryAllocateMoreContinuousPages(long allocationSize)
-        {
-            if (PagerState == null || PagerState.AllocationInfos == null ||
-                PagerState.AllocationInfos.Length != 1)
-                throw new InvalidOperationException("Assertion, this shouldn't be happening");
-
-            var result = Syscall.mremap(new IntPtr(PagerState.MapBase),
-                                         (ulong)PagerState.AllocationInfos[0].Size,
-                                         (ulong)allocationSize,
-                                         (MremapFlags)0);
-            if (result.ToInt64() == -1)
-            {
-                if (Marshal.GetLastWin32Error() == (int)Errno.ENOMEM)
-                    return false;
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
-            }
-
-            return true;
-        }
 
         private PagerState CreatePagerState()
         {

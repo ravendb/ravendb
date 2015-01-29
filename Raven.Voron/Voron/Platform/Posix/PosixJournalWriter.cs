@@ -125,7 +125,7 @@ namespace Voron.Platform.Posix
 		{
 			if (_fdReads == -1)
 			{
-				_fdReads = Syscall.open(_filename, OpenFlags.O_RDONLY);
+				_fdReads = Syscall.open(_filename, OpenFlags.O_RDONLY,FilePermissions.S_IRUSR);
 				if (_fdReads == -1)
 					PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
 			}
