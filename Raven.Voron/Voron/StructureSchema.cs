@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Voron.Impl;
 
 namespace Voron
 {
@@ -36,7 +35,7 @@ namespace Voron
 			{typeof (float), sizeof (float)},
 			{typeof (double), sizeof (double)},
 			{typeof (decimal), sizeof (decimal)},
-			{typeof (bool), sizeof (byte)}, // booleans are non-blittable so we store them as bytes
+			{typeof (bool), sizeof (byte)}, // bool is non-blittable so we store it as byte
 		};
 
 		private int _fixedFieldOffset = 0;

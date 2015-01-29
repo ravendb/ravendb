@@ -28,6 +28,12 @@ namespace Voron
 			public FixedSizeField FieldInfo;
 		}
 
+		internal class IncrementWrite
+		{
+			public FixedSizeField FieldInfo;
+			public long IncrementValue;
+		}
+
 		internal class VariableSizeWrite
 		{
 			public byte[] Value;
@@ -37,6 +43,7 @@ namespace Voron
 
 		private readonly StructureSchema<T> _schema;
 		internal readonly Dictionary<T, FixedSizeWrite> _fixedSizeWrites = new Dictionary<T, FixedSizeWrite>();
+		internal readonly Dictionary<T, IncrementWrite> _incrementWrites = new Dictionary<T, IncrementWrite>();
 		internal readonly Dictionary<T, VariableSizeWrite> _variableSizeWrites = new Dictionary<T, VariableSizeWrite>();
 
 		public Structure(StructureSchema<T> schema)
@@ -97,6 +104,18 @@ namespace Voron
 			return this;
 		}
 
+		public Structure<T> Increment(T field, long delta)
+		{
+			FixedSizeField fixedSizeField;
+
+			if (_schema._fixedSizeFields.TryGetValue(field, out fixedSizeField) == false)
+				throw new ArgumentException("No such fixed size field in schema defined. Field name: " + field);
+
+			_incrementWrites.Add(field, new IncrementWrite { IncrementValue = delta, FieldInfo = fixedSizeField });
+
+			return this;
+		}
+
 		public override void Write(byte* ptr)
 		{
 			if (_schema.IsFixedSize == false && _variableSizeWrites.Count != 0 && _variableSizeWrites.Count != _schema._variableSizeFields.Count)
@@ -107,6 +126,7 @@ namespace Voron
 			}
 
 			WriteFixedSizeFields(ptr);
+			WriteIncrements(ptr);
 			WriteVariableSizeFields(ptr);
 		}
 
@@ -118,62 +138,133 @@ namespace Voron
 
 			foreach (var fixedSizeWrite in _fixedSizeWrites.Values)
 			{
-				if (fixedSizeWrite.FieldInfo.Type == typeof(int))
+				var fieldInfo = fixedSizeWrite.FieldInfo;
+
+				if (fieldInfo.Type == typeof(int))
 				{
-					*((int*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (int) fixedSizeWrite.Value;
+					*((int*) (ptr + fieldInfo.Offset)) = (int) fixedSizeWrite.Value;
 				}
-				else if (fixedSizeWrite.FieldInfo.Type == typeof(long))
+				else if (fieldInfo.Type == typeof(long))
 				{
-					*((long*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (long) fixedSizeWrite.Value;
+					*((long*) (ptr + fieldInfo.Offset)) = (long) fixedSizeWrite.Value;
 				}
-				else if (fixedSizeWrite.FieldInfo.Type == typeof(byte))
+				else if (fieldInfo.Type == typeof(byte))
 				{
-					*(ptr + fixedSizeWrite.FieldInfo.Offset) = (byte) fixedSizeWrite.Value;
+					*(ptr + fieldInfo.Offset) = (byte) fixedSizeWrite.Value;
 				}
-				else if (fixedSizeWrite.FieldInfo.Type == typeof(float))
+				else if (fieldInfo.Type == typeof(float))
 				{
-					*((float*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (float) fixedSizeWrite.Value;
+					*((float*) (ptr + fieldInfo.Offset)) = (float) fixedSizeWrite.Value;
 				}
-				else if (fixedSizeWrite.FieldInfo.Type == typeof(double))
+				else if (fieldInfo.Type == typeof(double))
 				{
-					*((double*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (double) fixedSizeWrite.Value;
+					*((double*) (ptr + fieldInfo.Offset)) = (double) fixedSizeWrite.Value;
 				}
-				else if (fixedSizeWrite.FieldInfo.Type == typeof(decimal))
+				else if (fieldInfo.Type == typeof(decimal))
 				{
-					*((decimal*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (decimal) fixedSizeWrite.Value;
+					*((decimal*) (ptr + fieldInfo.Offset)) = (decimal) fixedSizeWrite.Value;
 				}
-				else if (fixedSizeWrite.FieldInfo.Type == typeof(short))
+				else if (fieldInfo.Type == typeof(short))
 				{
-					*((short*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (short) fixedSizeWrite.Value;
+					*((short*) (ptr + fieldInfo.Offset)) = (short) fixedSizeWrite.Value;
 				}
-				else if (fixedSizeWrite.FieldInfo.Type == typeof(bool))
+				else if (fieldInfo.Type == typeof(bool))
 				{
 					var booleanValue = (bool) fixedSizeWrite.Value;
-					*(ptr + fixedSizeWrite.FieldInfo.Offset) = booleanValue ? (byte) 1 : (byte) 0;
+					*(ptr + fieldInfo.Offset) = booleanValue ? (byte) 1 : (byte) 0;
 				}
-				else if (fixedSizeWrite.FieldInfo.Type == typeof(char))
+				else if (fieldInfo.Type == typeof(char))
 				{
-					*((char*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (char) fixedSizeWrite.Value;
+					*((char*) (ptr + fieldInfo.Offset)) = (char) fixedSizeWrite.Value;
 				}
-				else if (fixedSizeWrite.FieldInfo.Type == typeof(uint))
+				else if (fieldInfo.Type == typeof(uint))
 				{
-					*((uint*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (uint) fixedSizeWrite.Value;
+					*((uint*) (ptr + fieldInfo.Offset)) = (uint) fixedSizeWrite.Value;
 				}
-				else if (fixedSizeWrite.FieldInfo.Type == typeof(ulong))
+				else if (fieldInfo.Type == typeof(ulong))
 				{
-					*((ulong*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (ulong) fixedSizeWrite.Value;
+					*((ulong*) (ptr + fieldInfo.Offset)) = (ulong) fixedSizeWrite.Value;
 				}
-				else if (fixedSizeWrite.FieldInfo.Type == typeof(sbyte))
+				else if (fieldInfo.Type == typeof(sbyte))
 				{
-					*((sbyte*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (sbyte) fixedSizeWrite.Value;
+					*((sbyte*) (ptr + fieldInfo.Offset)) = (sbyte) fixedSizeWrite.Value;
 				}
-				else if (fixedSizeWrite.FieldInfo.Type == typeof(ushort))
+				else if (fieldInfo.Type == typeof(ushort))
 				{
-					*((ushort*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (ushort) fixedSizeWrite.Value;
+					*((ushort*) (ptr + fieldInfo.Offset)) = (ushort) fixedSizeWrite.Value;
 				}
 				else
 				{
-					throw new NotSupportedException("Unexpected fixed size type: " + fixedSizeWrite.FieldInfo.Type);
+					throw new NotSupportedException("Unexpected fixed size type: " + fieldInfo.Type);
+				}
+			}
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void WriteIncrements(byte* ptr)
+		{
+			if (_incrementWrites.Count == 0)
+				return;
+
+			foreach (var incrementWrite in _incrementWrites.Values)
+			{
+				var fieldInfo = incrementWrite.FieldInfo;
+
+				if (fieldInfo.Type == typeof (int))
+				{
+					*((int*) (ptr + fieldInfo.Offset)) += (int) incrementWrite.IncrementValue;
+				}
+				else if (fieldInfo.Type == typeof (long))
+				{
+					*((long*) (ptr + fieldInfo.Offset)) += incrementWrite.IncrementValue;
+				}
+				else if (fieldInfo.Type == typeof (byte))
+				{
+					*(ptr + fieldInfo.Offset) += (byte) incrementWrite.IncrementValue;
+				}
+				else if (fieldInfo.Type == typeof (float))
+				{
+					*((float*) (ptr + fieldInfo.Offset)) += incrementWrite.IncrementValue;
+				}
+				else if (fieldInfo.Type == typeof (double))
+				{
+					*((double*) (ptr + fieldInfo.Offset)) += incrementWrite.IncrementValue;
+				}
+				else if (fieldInfo.Type == typeof (decimal))
+				{
+					*((decimal*) (ptr + fieldInfo.Offset)) += incrementWrite.IncrementValue;
+				}
+				else if (fieldInfo.Type == typeof (short))
+				{
+					*((short*) (ptr + fieldInfo.Offset)) += (short) incrementWrite.IncrementValue;
+				}
+				else if (fieldInfo.Type == typeof (bool))
+				{
+					throw new InvalidOperationException("Cannot increment boolean field");
+				}
+				else if (fieldInfo.Type == typeof (char))
+				{
+					*((char*) (ptr + fieldInfo.Offset)) += (char) incrementWrite.IncrementValue;
+				}
+				else if (fieldInfo.Type == typeof (uint))
+				{
+					*((uint*) (ptr + fieldInfo.Offset)) += (uint) incrementWrite.IncrementValue;
+				}
+				else if (fieldInfo.Type == typeof (ulong))
+				{
+					*((ulong*) (ptr + fieldInfo.Offset)) += (ulong) incrementWrite.IncrementValue;
+				}
+				else if (fieldInfo.Type == typeof (sbyte))
+				{
+					*((sbyte*) (ptr + fieldInfo.Offset)) += (sbyte) incrementWrite.IncrementValue;
+				}
+				else if (fieldInfo.Type == typeof (ushort))
+				{
+					*((ushort*) (ptr + fieldInfo.Offset)) += (ushort) incrementWrite.IncrementValue;
+				}
+				else
+				{
+					throw new NotSupportedException("Unexpected fixed size type: " + fieldInfo.Type);
 				}
 			}
 		}

@@ -6,7 +6,6 @@
 using System;
 using System.Globalization;
 using System.IO;
-using System.Runtime.InteropServices;
 using Voron.Impl;
 using Xunit;
 
@@ -471,6 +470,55 @@ namespace Voron.Tests.Trees
 				Assert.Equal(double.MaxValue, primitives.ReadDouble("double"));
 				Assert.Equal(decimal.MaxValue, primitives.ReadDecimal("decimal"));
 				Assert.Equal(false, primitives.ReadBool("bool"));
+
+
+				tree.WriteStruct("primitives/1",
+					new Structure<string>(schema)
+						.Increment("sbyte", -1 * sbyte.MaxValue)
+						.Increment("short", -1 * short.MaxValue)
+						.Increment("int", -1 * int.MaxValue)
+						.Increment("long", -1 * long.MaxValue));
+
+				primitives = tree.ReadStruct("primitives/1", schema).Reader;
+
+				Assert.Equal(0, primitives.ReadSByte("sbyte"));
+				Assert.Equal(0, primitives.ReadShort("short"));
+				Assert.Equal(0, primitives.ReadInt("int"));
+				Assert.Equal(0, primitives.ReadLong("long"));
+				
+
+				tree.WriteStruct("primitives/2",
+					new Structure<string>(schema)
+						.Set("byte", (byte) 0)
+						.Set("ushort", (ushort) 0)
+						.Set("uint", (uint) 0)
+						.Set("ulong", (ulong) 0)
+						.Set("float", 0f)
+						.Set("double", 0d)
+						.Set("decimal", (decimal) 0)
+						.Set("char", 'a'));
+
+				tree.WriteStruct("primitives/2",
+					new Structure<string>(schema)
+						.Increment("byte", 1)
+						.Increment("ushort", 2)
+						.Increment("uint", 3)
+						.Increment("ulong", 4)
+						.Increment("float", -1)
+						.Increment("double", -2)
+						.Increment("decimal", -3)
+						.Increment("char", 1));
+
+				var primitives2 = tree.ReadStruct("primitives/2", schema).Reader;
+
+				Assert.Equal(1, primitives2.ReadByte("byte"));
+				Assert.Equal(2, primitives2.ReadUShort("ushort"));
+				Assert.Equal((uint) 3, primitives2.ReadUInt("uint"));
+				Assert.Equal((ulong) 4, primitives2.ReadULong("ulong"));
+				Assert.Equal(-1, primitives2.ReadFloat("float"));
+				Assert.Equal(-2, primitives2.ReadDouble("double"));
+				Assert.Equal(-3, primitives2.ReadDecimal("decimal"));
+				Assert.Equal('b', primitives2.ReadChar("char"));
 			}
 		}
 	}
