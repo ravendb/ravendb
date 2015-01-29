@@ -117,7 +117,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public TableOfStructures<LastIndexedStatsFields> LastIndexedEtags { get; private set; }
 
-		public Table DocumentReferences { get; private set; }
+		public TableOfStructures<DocumentReferencesFields> DocumentReferences { get; private set; }
 
 		public Table Queues { get; private set; }
 
@@ -225,7 +225,13 @@ namespace Raven.Database.Storage.Voron.Impl
 					.Add<byte[]>(LastIndexedStatsFields.LastEtag),
 				bufferPool);
 
-			DocumentReferences = new Table(Tables.DocumentReferences.TableName, bufferPool, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
+			DocumentReferences = new TableOfStructures<DocumentReferencesFields>(Tables.DocumentReferences.TableName,
+				new StructureSchema<DocumentReferencesFields>()
+					.Add<int>(DocumentReferencesFields.IndexId)
+					.Add<string>(DocumentReferencesFields.Key)
+					.Add<string>(DocumentReferencesFields.Reference),
+				bufferPool, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
+
 			Queues = new Table(Tables.Queues.TableName, bufferPool, Tables.Queues.Indices.ByName, Tables.Queues.Indices.Data);
 			Lists = new Table(Tables.Lists.TableName, bufferPool, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
 			Tasks = new Table(Tables.Tasks.TableName, bufferPool, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType, Tables.Tasks.Indices.ByIndex);

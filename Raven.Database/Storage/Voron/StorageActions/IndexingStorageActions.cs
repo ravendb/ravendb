@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Globalization;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 
@@ -305,15 +306,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			foreach (var reference in references)
 			{
 				var newKey = generator.CreateSequentialUuid(UuidType.DocumentReferences);
-				var newKeyAsString = newKey.ToString();
-				var value = new RavenJObject
-				            {
-					            { "view", id }, 
-								{ "key", key }, 
-								{ "ref", reference }
-				            };
 
-				tableStorage.DocumentReferences.Add(writeBatch.Value, newKeyAsString, value);
+				var value = new Structure<DocumentReferencesFields>(tableStorage.DocumentReferences.Schema)
+					.Set(DocumentReferencesFields.IndexId, id)
+					.Set(DocumentReferencesFields.Key, key)
+					.Set(DocumentReferencesFields.Reference, reference);
+
+				var newKeyAsString = newKey.ToString();
+
+				tableStorage.DocumentReferences.AddStruct(writeBatch.Value, newKeyAsString, value);
 				documentReferencesByKey.MultiAdd(writeBatch.Value, CreateKey(key), newKeyAsString);
 				documentReferencesByRef.MultiAdd(writeBatch.Value, CreateKey(reference), newKeyAsString);
 				documentReferencesByView.MultiAdd(writeBatch.Value, CreateKey(id), newKeyAsString);
@@ -335,9 +336,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
+					var structReader = LoadStruct(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
 
-				    var item = value.Value<string>("key");
+				    var item = structReader.ReadString(DocumentReferencesFields.Key);
 				    if (result.Add(item))
 				        yield return item;
 				}
@@ -412,9 +413,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
 
-					result.Add(value.Value<string>("ref"));
+					result.Add(value.ReadString(DocumentReferencesFields.Reference));
 				}
 				while (iterator.MoveNext());
 
@@ -490,10 +491,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var documentReferencesByViewAndKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByViewAndKey);
 
 			ushort version;
-			var value = LoadJson(tableStorage.DocumentReferences, id, writeBatch.Value, out version);
-			var reference = value.Value<string>("ref");
-			var view = value.Value<string>("view");
-			var key = value.Value<string>("key");
+			var value = LoadStruct(tableStorage.DocumentReferences, id, writeBatch.Value, out version);
+			var reference = value.ReadString(DocumentReferencesFields.Reference);
+			var view = value.ReadInt(DocumentReferencesFields.IndexId).ToString(CultureInfo.InvariantCulture);
+			var key = value.ReadString(DocumentReferencesFields.Key);
 
 			tableStorage.DocumentReferences.Delete(writeBatch.Value, id);
 			documentReferencesByKey.MultiDelete(writeBatch.Value, CreateKey(key), id);
