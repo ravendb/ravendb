@@ -6,6 +6,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using Voron.Impl;
 using Xunit;
 
@@ -30,14 +31,6 @@ namespace Voron.Tests.Trees
 			var ae = Assert.Throws<ArgumentException>(() => new StructureSchema<Foo>());
 
 			Assert.Equal("Structure schema can have fields of the following types: string, enum, primitives.", ae.Message);
-		}
-
-		[Fact]
-		public void ShouldNotAllowToDefineBoolBecauseItsNonBlittable()
-		{
-			var ae = Assert.Throws<ArgumentException>(() => new StructureSchema<string>().Add<bool>("IsValid"));
-
-			Assert.Equal("bool is the non-blittable type", ae.Message);
 		}
 
 		[Fact]
@@ -422,6 +415,62 @@ namespace Voron.Tests.Trees
 				Assert.Equal("orders/1", mappedResults.ReadString(MappedResults.DocId));
 				Assert.Equal(etag, mappedResults.ReadBytes(MappedResults.Etag));
 				Assert.Equal(now, DateTime.FromBinary(mappedResults.ReadLong(MappedResults.TimestampBinary)));
+			}
+		}
+
+		[Fact]
+		public void CanWriteAndReadAllPrimitiveTypesAndDecimals()
+		{
+			var schema = new StructureSchema<string>()
+				.Add<sbyte>("sbyte")
+				.Add<byte>("byte")
+				.Add<short>("short")
+				.Add<ushort>("ushort")
+				.Add<int>("int")
+				.Add<uint>("uint")
+				.Add<long>("long")
+				.Add<ulong>("ulong")
+				.Add<char>("char")
+				.Add<float>("float")
+				.Add<double>("double")
+				.Add<decimal>("decimal")
+				.Add<bool>("bool");
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "primitives");
+
+				tree.WriteStruct("primitives/1",
+					new Structure<string>(schema)
+						.Set("sbyte", sbyte.MaxValue)
+						.Set("byte", byte.MaxValue)
+						.Set("short", short.MaxValue)
+						.Set("ushort", ushort.MaxValue)
+						.Set("int", int.MaxValue)
+						.Set("uint", uint.MaxValue)
+						.Set("long", long.MaxValue)
+						.Set("ulong", ulong.MaxValue)
+						.Set("char", char.MaxValue)
+						.Set("float", float.MaxValue)
+						.Set("double", double.MaxValue)
+						.Set("decimal", decimal.MaxValue)
+						.Set("bool", false));
+
+				var primitives = tree.ReadStruct("primitives/1", schema).Reader;
+
+				Assert.Equal(sbyte.MaxValue, primitives.ReadSByte("sbyte"));
+				Assert.Equal(byte.MaxValue, primitives.ReadByte("byte"));
+				Assert.Equal(short.MaxValue, primitives.ReadShort("short"));
+				Assert.Equal(ushort.MaxValue, primitives.ReadUShort("ushort"));
+				Assert.Equal(int.MaxValue, primitives.ReadInt("int"));
+				Assert.Equal(uint.MaxValue, primitives.ReadUInt("uint"));
+				Assert.Equal(long.MaxValue, primitives.ReadLong("long"));
+				Assert.Equal(ulong.MaxValue, primitives.ReadULong("ulong"));
+				Assert.Equal(char.MaxValue, primitives.ReadChar("char"));
+				Assert.Equal(float.MaxValue, primitives.ReadFloat("float"));
+				Assert.Equal(double.MaxValue, primitives.ReadDouble("double"));
+				Assert.Equal(decimal.MaxValue, primitives.ReadDecimal("decimal"));
+				Assert.Equal(false, primitives.ReadBool("bool"));
 			}
 		}
 	}

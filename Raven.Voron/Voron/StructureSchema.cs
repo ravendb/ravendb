@@ -22,6 +22,23 @@ namespace Voron
 
 	public class StructureSchema<TField>
 	{
+		private static readonly Dictionary<Type, int> SizeOfPrimitives = new Dictionary<Type, int>
+		{
+			{typeof (sbyte), sizeof (sbyte)},
+			{typeof (byte), sizeof (byte)},
+			{typeof (short), sizeof (short)},
+			{typeof (ushort), sizeof (ushort)},
+			{typeof (int), sizeof (int)},
+			{typeof (uint), sizeof (uint)},
+			{typeof (long), sizeof (long)},
+			{typeof (ulong), sizeof (ulong)},
+			{typeof (char), sizeof (char)},
+			{typeof (float), sizeof (float)},
+			{typeof (double), sizeof (double)},
+			{typeof (decimal), sizeof (decimal)},
+			{typeof (bool), sizeof (byte)}, // booleans are non-blittable so we store them as bytes
+		};
+
 		private int _fixedFieldOffset = 0;
 		private int _variableFieldIndex = 0;
 		internal readonly Dictionary<TField, FixedSizeField> _fixedSizeFields = new Dictionary<TField, FixedSizeField>();
@@ -45,9 +62,6 @@ namespace Voron
 		{
 			var type = typeof(T);
 
-			if (type == typeof(bool))
-				throw new ArgumentException("bool is the non-blittable type");
-
 			if (type == typeof(string) || type == typeof(byte[]))
 			{
 				IsFixedSize = false;
@@ -60,12 +74,12 @@ namespace Voron
 
 				_variableFieldIndex++;
 			}
-			else if (type.IsPrimitive)
+			else if (type.IsPrimitive || type == typeof(decimal))
 			{
 				if (IsFixedSize == false)
 					throw new ArgumentException("Cannot define a fixed size field after variable size fields");
 
-				var size = SizeOf.Primitive(type);
+				var size = SizeOfPrimitives[type];
 
 				_fixedSizeFields.Add(field, new FixedSizeField
 				{

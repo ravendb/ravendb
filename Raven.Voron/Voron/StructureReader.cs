@@ -99,6 +99,14 @@ namespace Voron
 			return (int) _value._fixedSizeWrites[field].Value;
 		}
 
+		public uint ReadUInt(T field)
+		{
+			if (_ptr != null)
+				return *((uint*) (_ptr + FixedFieldOffset(field)));
+
+			return (uint) _value._fixedSizeWrites[field].Value;
+		}
+
 		public long ReadLong(T field)
 		{
 			if (_ptr != null)
@@ -107,12 +115,99 @@ namespace Voron
 			return (long) _value._fixedSizeWrites[field].Value;
 		}
 
+		public ulong ReadULong(T field)
+		{
+			if (_ptr != null)
+				return *((ulong*) (_ptr + FixedFieldOffset(field)));
+
+			return (ulong) _value._fixedSizeWrites[field].Value;
+		}
+
+		public char ReadChar(T field)
+		{
+			if (_ptr != null)
+				return *((char*) (_ptr + FixedFieldOffset(field)));
+
+			return (char) _value._fixedSizeWrites[field].Value;
+		}
+
 		public byte ReadByte(T field)
 		{
 			if (_ptr != null)
 				return *(_ptr + FixedFieldOffset(field));
 
 			return (byte) _value._fixedSizeWrites[field].Value;
+		}
+
+		public bool ReadBool(T field)
+		{
+			byte value;
+			if (_ptr != null)
+			{
+				value = (*(_ptr + FixedFieldOffset(field)));
+			}
+			else
+			{
+				value = (byte) _value._fixedSizeWrites[field].Value;
+			}
+
+			switch (value)
+			{
+				case 0:
+					return false;
+				case 1:
+					return true;
+				default:
+					throw new InvalidDataException("Unexpected boolean value: " + value);
+			}
+		}
+
+		public sbyte ReadSByte(T field)
+		{
+			if (_ptr != null)
+				return *((sbyte*) (_ptr + FixedFieldOffset(field)));
+
+			return (sbyte) _value._fixedSizeWrites[field].Value;
+		}
+
+		public short ReadShort(T field)
+		{
+			if (_ptr != null)
+				return *((short*) (_ptr + FixedFieldOffset(field)));
+
+			return (short) _value._fixedSizeWrites[field].Value;
+		}
+
+		public ushort ReadUShort(T field)
+		{
+			if (_ptr != null)
+				return *((ushort*) (_ptr + FixedFieldOffset(field)));
+
+			return (ushort) _value._fixedSizeWrites[field].Value;
+		}
+
+		public float ReadFloat(T field)
+		{
+			if (_ptr != null)
+				return *((float*) (_ptr + FixedFieldOffset(field)));
+
+			return (float) _value._fixedSizeWrites[field].Value;
+		}
+
+		public double ReadDouble(T field)
+		{
+			if (_ptr != null)
+				return *((double*) (_ptr + FixedFieldOffset(field)));
+
+			return (double) _value._fixedSizeWrites[field].Value;
+		}
+
+		public decimal ReadDecimal(T field)
+		{
+			if (_ptr != null)
+				return *((decimal*) (_ptr + FixedFieldOffset(field)));
+
+			return (decimal) _value._fixedSizeWrites[field].Value;
 		}
 
 		public string ReadString(T field)

@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Voron.Util;
 
@@ -69,12 +69,12 @@ namespace Voron
 			else if (variableSizeField != null)
 			{
 				if (type != variableSizeField.Type)
-					throw new InvalidDataException(string.Format("Attempt to set a field value which type is different than defined in the structure schema. Expected: {0}, got: {1}", variableSizeField.Type, type));  //TODO arek - add test for that
+					throw new InvalidDataException(string.Format("Attempt to set a field value which type is different than defined in the structure schema. Expected: {0}, got: {1}", variableSizeField.Type, type)); 
 
 				var stringValue = value as string;
 				var bytesValue = value as byte[];
 
-				byte[] bytes = null;
+				byte[] bytes;
 				if (stringValue != null)
 				{
 					bytes = Encoding.UTF8.GetBytes(stringValue);
@@ -106,21 +106,83 @@ namespace Voron
 				throw new InvalidOperationException("Your structure has variable size fields. You have to set all of them to properly write a structure and avoid overlapping fields. Missing fields: " + string.Join(", ", missingFields));
 			}
 
+			WriteFixedSizeFields(ptr);
+			WriteVariableSizeFields(ptr);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private void WriteFixedSizeFields(byte* ptr)
+		{
+			if (_fixedSizeWrites.Count == 0)
+				return;
+
 			foreach (var fixedSizeWrite in _fixedSizeWrites.Values)
 			{
-				var handle = GCHandle.Alloc(fixedSizeWrite.Value, GCHandleType.Pinned);
-				try
+				if (fixedSizeWrite.FieldInfo.Type == typeof(int))
 				{
-					var fieldInfo = fixedSizeWrite.FieldInfo;
-					MemoryUtils.Copy(ptr + fieldInfo.Offset, (byte*)handle.AddrOfPinnedObject(), fieldInfo.Size);
+					*((int*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (int) fixedSizeWrite.Value;
 				}
-				finally
+				else if (fixedSizeWrite.FieldInfo.Type == typeof(long))
 				{
-					handle.Free();
+					*((long*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (long) fixedSizeWrite.Value;
+				}
+				else if (fixedSizeWrite.FieldInfo.Type == typeof(byte))
+				{
+					*(ptr + fixedSizeWrite.FieldInfo.Offset) = (byte) fixedSizeWrite.Value;
+				}
+				else if (fixedSizeWrite.FieldInfo.Type == typeof(float))
+				{
+					*((float*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (float) fixedSizeWrite.Value;
+				}
+				else if (fixedSizeWrite.FieldInfo.Type == typeof(double))
+				{
+					*((double*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (double) fixedSizeWrite.Value;
+				}
+				else if (fixedSizeWrite.FieldInfo.Type == typeof(decimal))
+				{
+					*((decimal*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (decimal) fixedSizeWrite.Value;
+				}
+				else if (fixedSizeWrite.FieldInfo.Type == typeof(short))
+				{
+					*((short*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (short) fixedSizeWrite.Value;
+				}
+				else if (fixedSizeWrite.FieldInfo.Type == typeof(bool))
+				{
+					var booleanValue = (bool) fixedSizeWrite.Value;
+					*(ptr + fixedSizeWrite.FieldInfo.Offset) = booleanValue ? (byte) 1 : (byte) 0;
+				}
+				else if (fixedSizeWrite.FieldInfo.Type == typeof(char))
+				{
+					*((char*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (char) fixedSizeWrite.Value;
+				}
+				else if (fixedSizeWrite.FieldInfo.Type == typeof(uint))
+				{
+					*((uint*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (uint) fixedSizeWrite.Value;
+				}
+				else if (fixedSizeWrite.FieldInfo.Type == typeof(ulong))
+				{
+					*((ulong*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (ulong) fixedSizeWrite.Value;
+				}
+				else if (fixedSizeWrite.FieldInfo.Type == typeof(sbyte))
+				{
+					*((sbyte*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (sbyte) fixedSizeWrite.Value;
+				}
+				else if (fixedSizeWrite.FieldInfo.Type == typeof(ushort))
+				{
+					*((ushort*) (ptr + fixedSizeWrite.FieldInfo.Offset)) = (ushort) fixedSizeWrite.Value;
+				}
+				else
+				{
+					throw new NotSupportedException("Unexpected fixed size type: " + fixedSizeWrite.FieldInfo.Type);
 				}
 			}
+		}
 
-			_fixedSizeWrites.Clear();
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private void WriteVariableSizeFields(byte* ptr)
+		{
+			if (_variableSizeWrites.Count == 0)
+				return;
 
 			ptr += _schema.FixedSize;
 
@@ -137,8 +199,6 @@ namespace Voron
 				}
 				ptr += valueLength;
 			}
-
-			_variableSizeWrites.Clear();
 		}
 
 		public override int GetSize()
@@ -152,7 +212,7 @@ namespace Voron
 		private static byte SizeOf7BitEncodedInt(int value)
 		{
 			byte size = 1;
-			var v = (uint)value;
+			var v = (uint) value;
 			while (v >= 0x80)
 			{
 				size++;
@@ -165,14 +225,14 @@ namespace Voron
 		{
 			// Write out an int 7 bits at a time.  The high bit of the byte, 
 			// when on, tells reader to continue reading more bytes. 
-			var v = (uint)value;   // support negative numbers
+			var v = (uint) value;   // support negative numbers
 			while (v >= 0x80)
 			{
-				*ptr = (byte)(v | 0x80);
+				*ptr = (byte) (v | 0x80);
 				ptr++;
 				v >>= 7;
 			}
-			*ptr = (byte)(v);
+			*ptr = (byte) (v);
 		}
 	}
 }
