@@ -33,13 +33,13 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.Versioning.RavenVersioningDefaultConfiguration,
+						Constants.Global.VersioningDefaultConfiguration,
 						null,
 						RavenJObject.FromObject(new VersioningConfiguration
 												{
 													Exclude = true,
 													ExcludeUnlessExplicit = true,
-													Id = Constants.Global.RavenGlobalVersioningDefaultConfiguration,
+													Id = Constants.Global.VersioningDefaultConfiguration,
 													MaxRevisions = 17,
 													PurgeOnDelete = true
 												}),
@@ -76,13 +76,13 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.Versioning.RavenVersioningDefaultConfiguration,
+						Constants.Global.VersioningDefaultConfiguration,
 						null,
 						RavenJObject.FromObject(new VersioningConfiguration
 						{
 							Exclude = true,
 							ExcludeUnlessExplicit = true,
-							Id = Constants.Global.RavenGlobalVersioningDefaultConfiguration,
+							Id = Constants.Global.VersioningDefaultConfiguration,
 							MaxRevisions = 17,
 							PurgeOnDelete = true
 						}),
@@ -98,7 +98,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 						{
 							Exclude = false,
 							ExcludeUnlessExplicit = false,
-							Id = Constants.Global.RavenGlobalVersioningDefaultConfiguration,
+							Id = Constants.Versioning.RavenVersioningDefaultConfiguration,
 							MaxRevisions = 5,
 							PurgeOnDelete = false
 						}),
@@ -135,13 +135,13 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.Versioning.RavenVersioningPrefix + "Orders",
+						Constants.Global.VersioningPrefix + "Orders",
 						null,
 						RavenJObject.FromObject(new VersioningConfiguration
 						{
 							Exclude = true,
 							ExcludeUnlessExplicit = true,
-							Id = Constants.Global.RavenGlobalVersioningDefaultConfiguration,
+							Id = Constants.Global.VersioningDefaultConfiguration,
 							MaxRevisions = 17,
 							PurgeOnDelete = true
 						}),
@@ -157,7 +157,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 						{
 							Exclude = false,
 							ExcludeUnlessExplicit = false,
-							Id = Constants.Global.RavenGlobalVersioningDefaultConfiguration,
+							Id = Constants.Global.VersioningDefaultConfiguration,
 							MaxRevisions = 5,
 							PurgeOnDelete = false
 						}),
@@ -194,13 +194,13 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.Versioning.RavenVersioningPrefix + "Orders",
+						Constants.Global.VersioningPrefix + "Orders",
 						null,
 						RavenJObject.FromObject(new VersioningConfiguration
 						{
 							Exclude = true,
 							ExcludeUnlessExplicit = true,
-							Id = Constants.Global.RavenGlobalVersioningDefaultConfiguration,
+							Id = Constants.Global.VersioningDefaultConfiguration,
 							MaxRevisions = 17,
 							PurgeOnDelete = true
 						}),
@@ -216,7 +216,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 						{
 							Exclude = false,
 							ExcludeUnlessExplicit = false,
-							Id = Constants.Global.RavenGlobalVersioningDefaultConfiguration,
+							Id = Constants.Versioning.RavenVersioningDefaultConfiguration,
 							MaxRevisions = 5,
 							PurgeOnDelete = false
 						}),

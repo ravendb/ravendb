@@ -50,7 +50,7 @@ namespace Raven.Database.Config.Retriever
 
 		public override string GetGlobalConfigurationDocumentKey(string key)
 		{
-			return Constants.Global.RavenGlobalReplicationDestinations;
+			return Constants.Global.ReplicationDestinations;
 		}
 	}
 }

@@ -3,12 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+
 using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Config.Retriever
 {
 	public interface IConfigurationRetriever
 	{
+		string GetConfigurationSetting(string key);
+
 		string GetGlobalConfigurationDocumentKey(string key);
 
 		object GetConfigurationDocument(string key);
@@ -74,6 +78,11 @@ namespace Raven.Database.Config.Retriever
 		object IConfigurationRetriever.GetConfigurationDocument(string key)
 		{
 			return GetConfigurationDocument(key);
+		}
+
+		public virtual string GetConfigurationSetting(string key)
+		{
+			throw new NotSupportedException(GetType().Name + " does not support configuration settings.");
 		}
 
 		public abstract string GetGlobalConfigurationDocumentKey(string key);

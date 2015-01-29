@@ -229,12 +229,17 @@ namespace Raven.Abstractions.Data
 
 	    public class Global
 	    {
-			public const string RavenGlobalReplicationDestinations = "Raven/Global/Replication/Destinations";
+			public const string ReplicationDestinations = "Raven/Global/Replication/Destinations";
 
-			public const string RavenGlobalVersioningPrefix = "Raven/Versioning/";
-			public const string RavenGlobalVersioningDefaultConfiguration = "Raven/Versioning/DefaultConfiguration";
+			public const string VersioningPrefix = "Raven/Global/Versioning/";
+			public const string VersioningDefaultConfiguration = "Raven/Global/Versioning/DefaultConfiguration";
 
-			public const string RavenGlobalPeriodicExport = "Raven/Global/Backup/Periodic/Setup";
+			public const string PeriodicExport = "Raven/Global/Backup/Periodic/Setup";
+
+			public const string DocsHardLimit = "Raven/Global/Quotas/Documents/HardLimit";
+			public const string DocsSoftLimit = "Raven/Global/Quotas/Documents/SoftLimit";
+			public const string SizeHardLimitInKB = "Raven/Global/Quotas/Size/HardLimitInKB";
+			public const string SizeSoftLimitInKB = "Raven/Global/Quotas/Size/SoftMarginInKB";
 	    }
 	}
 }

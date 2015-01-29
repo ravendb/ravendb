@@ -40,7 +40,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 		{
 			Database = database;
 
-			Database.ConfigurationRetriever.SubscribeToConfigurationChanges(PeriodicExportSetup.RavenDocumentKey, ResetSetupValuesFromDocument);
+			Database.ConfigurationRetriever.SubscribeToConfigurationDocumentChanges(PeriodicExportSetup.RavenDocumentKey, ResetSetupValuesFromDocument);
 
 			Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>
 			{

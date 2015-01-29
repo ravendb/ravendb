@@ -32,7 +32,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.Global.RavenGlobalPeriodicExport,
+						Constants.Global.PeriodicExport,
 						null,
 						RavenJObject.FromObject(new PeriodicExportSetup
 						{
@@ -81,7 +81,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.Global.RavenGlobalPeriodicExport,
+						Constants.Global.PeriodicExport,
 						null,
 						RavenJObject.FromObject(new PeriodicExportSetup
 						{

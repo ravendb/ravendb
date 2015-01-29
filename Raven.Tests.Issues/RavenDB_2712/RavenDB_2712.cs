@@ -18,13 +18,24 @@ namespace Raven.Tests.Issues.RavenDB_2712
 	public class RavenDB_2712 : RavenTest
 	{
 		[Fact]
+		public void DocumentRetrieverShouldThrowIfSettingIsNotSupported()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var retriever = store.DocumentDatabase.ConfigurationRetriever;
+
+				Assert.Throws<NotSupportedException>(() => retriever.GetConfigurationSetting("notSupportedKey"));
+			}
+		}
+
+		[Fact]
 		public void DocumentRetrieverSubscribtionsShouldThrowIfDocumentTypeIsNotSupported()
 		{
 			using (var store = NewDocumentStore())
 			{
 				var retriever = store.DocumentDatabase.ConfigurationRetriever;
 
-				Assert.Throws<NotSupportedException>(() => retriever.SubscribeToConfigurationChanges("notSupportedKey", () => { }));
+				Assert.Throws<NotSupportedException>(() => retriever.SubscribeToConfigurationDocumentChanges("notSupportedKey", () => { }));
 			}
 		}
 
@@ -40,12 +51,12 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				var database = server.Server.GetDatabaseInternal("Northwind").ResultUnwrap();
 				var retriever = database.ConfigurationRetriever;
 
-				retriever.SubscribeToConfigurationChanges(PeriodicExportSetup.RavenDocumentKey, manualResetEventSlim.Set);
+				retriever.SubscribeToConfigurationDocumentChanges(PeriodicExportSetup.RavenDocumentKey, manualResetEventSlim.Set);
 
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.Global.RavenGlobalPeriodicExport,
+						Constants.Global.PeriodicExport,
 						null,
 						RavenJObject.FromObject(new PeriodicExportSetup
 						{

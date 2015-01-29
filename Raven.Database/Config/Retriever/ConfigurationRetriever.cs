@@ -23,7 +23,11 @@ namespace Raven.Database.Config.Retriever
 		                                                                  {
 			                                                                  {Constants.RavenReplicationDestinations, DocumentType.ReplicationDestinations},
 																			  {Constants.Versioning.RavenVersioningDefaultConfiguration, DocumentType.VersioningConfiguration},
-																			  {PeriodicExportSetup.RavenDocumentKey, DocumentType.PeriodicExportConfiguration}
+																			  {PeriodicExportSetup.RavenDocumentKey, DocumentType.PeriodicExportConfiguration},
+																			  {Constants.DocsHardLimit, DocumentType.QuotasConfiguration},
+																			  {Constants.DocsSoftLimit, DocumentType.QuotasConfiguration},
+																			  {Constants.SizeHardLimitInKB, DocumentType.QuotasConfiguration},
+																			  {Constants.SizeSoftLimitInKB, DocumentType.QuotasConfiguration}
 		                                                                  };
 
 		private readonly ReplicationConfigurationRetriever replicationConfigurationRetriever;
@@ -31,6 +35,8 @@ namespace Raven.Database.Config.Retriever
 		private readonly VersioningConfigurationRetriever versioningConfigurationRetriever;
 
 		private readonly PeriodicExportConfigurationRetriever periodicExportConfigurationRetriever;
+
+		private readonly ConfigurationSettingRetriever configurationSettingRetriever;
 
 		public ConfigurationRetriever(DocumentDatabase systemDatabase, DocumentDatabase database)
 		{
@@ -42,6 +48,7 @@ namespace Raven.Database.Config.Retriever
 			replicationConfigurationRetriever = new ReplicationConfigurationRetriever(systemDatabase, database);
 			versioningConfigurationRetriever = new VersioningConfigurationRetriever(systemDatabase, database);
 			periodicExportConfigurationRetriever = new PeriodicExportConfigurationRetriever(systemDatabase, database);
+			configurationSettingRetriever = new ConfigurationSettingRetriever(systemDatabase, database);
 		}
 
 		public ConfigurationDocument<TType> GetConfigurationDocument<TType>(string key)
@@ -59,7 +66,12 @@ namespace Raven.Database.Config.Retriever
 			return RavenJObject.FromObject(result);
 		}
 
-		public void SubscribeToConfigurationChanges(string key, Action action)
+		public string GetConfigurationSetting(string key)
+		{
+			return GetConfigurationRetriever(key).GetConfigurationSetting(key);
+		}
+
+		public void SubscribeToConfigurationDocumentChanges(string key, Action action)
 		{
 			var globalKey = GetGlobalConfigurationDocumentKey(key);
 
@@ -88,6 +100,8 @@ namespace Raven.Database.Config.Retriever
 					return versioningConfigurationRetriever;
 				case DocumentType.PeriodicExportConfiguration:
 					return periodicExportConfigurationRetriever;
+				case DocumentType.QuotasConfiguration:
+					return configurationSettingRetriever;
 				default:
 					throw new NotSupportedException("Document type is not supported: " + documentType);
 			}
@@ -128,7 +142,8 @@ namespace Raven.Database.Config.Retriever
 		{
 			ReplicationDestinations,
 			VersioningConfiguration,
-			PeriodicExportConfiguration
+			PeriodicExportConfiguration,
+			QuotasConfiguration
 		}
 	}
 }
