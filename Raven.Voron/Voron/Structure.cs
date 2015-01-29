@@ -18,6 +18,8 @@ namespace Voron
 		public abstract void Write(byte* ptr);
 
 		public abstract int GetSize();
+
+		public abstract void AssertValidStructure();
 	}
 
 	public unsafe class Structure<T> : Structure
@@ -42,9 +44,9 @@ namespace Voron
 		}
 
 		private readonly StructureSchema<T> _schema;
-		internal readonly Dictionary<T, FixedSizeWrite> _fixedSizeWrites = new Dictionary<T, FixedSizeWrite>();
-		internal readonly Dictionary<T, IncrementWrite> _incrementWrites = new Dictionary<T, IncrementWrite>();
-		internal readonly Dictionary<T, VariableSizeWrite> _variableSizeWrites = new Dictionary<T, VariableSizeWrite>();
+		internal readonly Dictionary<T, FixedSizeWrite> FixedSizeWrites = new Dictionary<T, FixedSizeWrite>();
+		internal readonly Dictionary<T, IncrementWrite> IncrementWrites = new Dictionary<T, IncrementWrite>();
+		internal VariableSizeWrite[] VariableSizeWrites = null;
 
 		public Structure(StructureSchema<T> schema)
 		{
@@ -71,7 +73,7 @@ namespace Voron
 				if (valueTypeValue == null)
 					throw new NotSupportedException("Unexpected fixed size value type: " + type);
 
-				_fixedSizeWrites.Add(field, new FixedSizeWrite { Value = valueTypeValue, FieldInfo = fixedSizeField });
+				FixedSizeWrites.Add(field, new FixedSizeWrite { Value = valueTypeValue, FieldInfo = fixedSizeField });
 			}
 			else if (variableSizeField != null)
 			{
@@ -93,12 +95,14 @@ namespace Voron
 				else
 					throw new NotSupportedException("Unexpected variable size value type: " + type);
 
-				_variableSizeWrites.Add(field, new VariableSizeWrite
-				{
-					Value = bytes,
-					ValueSizeLength = SizeOf7BitEncodedInt(bytes.Length),
-					Index = variableSizeField.Index
-				});
+				if(VariableSizeWrites == null)
+					VariableSizeWrites = new VariableSizeWrite[_schema._variableSizeFields.Count];
+
+				VariableSizeWrites[variableSizeField.Index] = new VariableSizeWrite
+																{
+																	Value = bytes,
+																	ValueSizeLength = SizeOf7BitEncodedInt(bytes.Length),
+																};
 			}
 
 			return this;
@@ -111,20 +115,35 @@ namespace Voron
 			if (_schema._fixedSizeFields.TryGetValue(field, out fixedSizeField) == false)
 				throw new ArgumentException("No such fixed size field in schema defined. Field name: " + field);
 
-			_incrementWrites.Add(field, new IncrementWrite { IncrementValue = delta, FieldInfo = fixedSizeField });
+			IncrementWrites.Add(field, new IncrementWrite { IncrementValue = delta, FieldInfo = fixedSizeField });
 
 			return this;
 		}
 
-		public override void Write(byte* ptr)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public override void AssertValidStructure()
 		{
-			if (_schema.IsFixedSize == false && _variableSizeWrites.Count != 0 && _variableSizeWrites.Count != _schema._variableSizeFields.Count)
+			//if (_schema.IsFixedSize == false && VariableSizeWrites == null)
+			//	throw // TODO arek - is it allowed not to push any variable size fields?
+
+			if (_schema.IsFixedSize == false && VariableSizeWrites != null && VariableSizeWrites.Any(x => x == null))
 			{
-				var missingFields = _schema._variableSizeFields.Select(x => x.Key).Except(_variableSizeWrites.Keys).Select(x => x.ToString());
+				var missingFields = new List<T>();
+
+				for (int i = 0; i < VariableSizeWrites.Length; i++)
+				{
+					if (VariableSizeWrites[i] != null)
+						continue;
+
+					missingFields.Add(_schema._variableSizeFields.First(x => x.Value.Index == i).Key);
+				}
 
 				throw new InvalidOperationException("Your structure has variable size fields. You have to set all of them to properly write a structure and avoid overlapping fields. Missing fields: " + string.Join(", ", missingFields));
 			}
+		}
 
+		public override void Write(byte* ptr)
+		{
 			WriteFixedSizeFields(ptr);
 			WriteIncrements(ptr);
 			WriteVariableSizeFields(ptr);
@@ -133,10 +152,10 @@ namespace Voron
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private void WriteFixedSizeFields(byte* ptr)
 		{
-			if (_fixedSizeWrites.Count == 0)
+			if (FixedSizeWrites.Count == 0)
 				return;
 
-			foreach (var fixedSizeWrite in _fixedSizeWrites.Values)
+			foreach (var fixedSizeWrite in FixedSizeWrites.Values)
 			{
 				var fieldInfo = fixedSizeWrite.FieldInfo;
 
@@ -203,10 +222,10 @@ namespace Voron
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void WriteIncrements(byte* ptr)
 		{
-			if (_incrementWrites.Count == 0)
+			if (IncrementWrites.Count == 0)
 				return;
 
-			foreach (var incrementWrite in _incrementWrites.Values)
+			foreach (var incrementWrite in IncrementWrites.Values)
 			{
 				var fieldInfo = incrementWrite.FieldInfo;
 
@@ -272,23 +291,37 @@ namespace Voron
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private void WriteVariableSizeFields(byte* ptr)
 		{
-			if (_variableSizeWrites.Count == 0)
+			if (VariableSizeWrites == null)
 				return;
 
-			ptr += _schema.FixedSize;
+			var fieldOffsetsSize = sizeof (uint)* VariableSizeWrites.Length;
 
-			foreach (var write in _variableSizeWrites.Values.OrderBy(x => x.Index))
+			var offsetsPointer = ptr + _schema.FixedSize;
+			var fieldPointer = offsetsPointer + fieldOffsetsSize;
+
+			var offsets = new uint[VariableSizeWrites.Length];
+
+			for (int i = 0; i < VariableSizeWrites.Length; i++)
 			{
+				var write = VariableSizeWrites[i];
+
 				var valueLength = write.Value.Length;
 
-				Write7BitEncodedInt(ptr, valueLength);
-				ptr += write.ValueSizeLength;
+				offsets[i] = (uint) (fieldPointer - ptr);
+
+				Write7BitEncodedInt(fieldPointer, valueLength);
+				fieldPointer += write.ValueSizeLength;
 
 				fixed (byte* valuePtr = write.Value)
 				{
-					MemoryUtils.Copy(ptr, valuePtr, valueLength);
+					MemoryUtils.Copy(fieldPointer, valuePtr, valueLength);
 				}
-				ptr += valueLength;
+				fieldPointer += valueLength;
+			}
+
+			fixed (uint* p = offsets)
+			{
+				MemoryUtils.Copy(offsetsPointer, (byte*) p, fieldOffsetsSize);
 			}
 		}
 
@@ -297,7 +330,9 @@ namespace Voron
 			if (_schema.IsFixedSize)
 				return _schema.FixedSize;
 
-			return _schema.FixedSize + _variableSizeWrites.Sum(x => x.Value.Value.Length + x.Value.ValueSizeLength);
+			return _schema.FixedSize + // fixed size fields 
+				   (VariableSizeWrites == null ? 0 : sizeof(uint) * VariableSizeWrites.Length + // offsets of variable size fields // TODO arek what if someone doesnt overwrite variable string values - then we have invalid size here?
+				       VariableSizeWrites.Sum(x => x.Value.Length + x.ValueSizeLength)); // variable size fields
 		}
 
 		private static byte SizeOf7BitEncodedInt(int value)

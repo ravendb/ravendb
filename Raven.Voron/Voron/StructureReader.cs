@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Voron.Util;
 
@@ -7,17 +8,9 @@ namespace Voron
 {
 	public unsafe class StructureReader<T>
 	{
-		class ReadVariableSizeFieldInfo
-		{
-			public int Length;
-			public int Offset;
-		}
-
 		private readonly Structure<T> _value;
 		private readonly byte* _ptr;
 		private readonly StructureSchema<T> _schema;
-		private Dictionary<T, ReadVariableSizeFieldInfo> _variableFieldInfo = null;
-
 		public StructureReader(byte* ptr, StructureSchema<T> schema)
 		{
 			_ptr = ptr;
@@ -30,40 +23,16 @@ namespace Voron
 			_schema = schema;
 		}
 
-		private int FixedFieldOffset(T field)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private int FixedOffset(T field)
 		{
 			return _schema._fixedSizeFields[field].Offset;
 		}
 
-		private ReadVariableSizeFieldInfo VariableFieldSizeInfo(T field)
+		public uint* VariableOffsets
 		{
-			if (_variableFieldInfo != null) 
-				return _variableFieldInfo[field];
-			
-			_variableFieldInfo = new Dictionary<T, ReadVariableSizeFieldInfo>(_schema._variableSizeFields.Count);
-
-			var variableFieldsPtr = _ptr + _schema.FixedSize;
-
-			var offset = _schema.FixedSize;
-
-			foreach (var fieldKey in _schema._variableSizeFields.Keys)
-			{
-				int valueLengthSize;
-				var length = Read7BitEncodedInt(variableFieldsPtr, out valueLengthSize);
-
-				offset += valueLengthSize;
-
-				_variableFieldInfo.Add(fieldKey, new ReadVariableSizeFieldInfo
-				{
-					Length = length,
-					Offset = offset
-				});
-
-				variableFieldsPtr += valueLengthSize + length;
-				offset += length;
-			}
-
-			return _variableFieldInfo[field];
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { return (uint*) (_ptr + _schema.FixedSize); }
 		}
 
 		private int Read7BitEncodedInt(byte* ptr, out int size)
@@ -94,49 +63,49 @@ namespace Voron
 		public int ReadInt(T field)
 		{
 			if(_ptr != null)
-				return *((int*)(_ptr + FixedFieldOffset(field)));
+				return *((int*)(_ptr + FixedOffset(field)));
 
-			return (int) _value._fixedSizeWrites[field].Value;
+			return (int) _value.FixedSizeWrites[field].Value;
 		}
 
 		public uint ReadUInt(T field)
 		{
 			if (_ptr != null)
-				return *((uint*) (_ptr + FixedFieldOffset(field)));
+				return *((uint*) (_ptr + FixedOffset(field)));
 
-			return (uint) _value._fixedSizeWrites[field].Value;
+			return (uint) _value.FixedSizeWrites[field].Value;
 		}
 
 		public long ReadLong(T field)
 		{
 			if (_ptr != null)
-				return *((long*)(_ptr + FixedFieldOffset(field)));
+				return *((long*)(_ptr + FixedOffset(field)));
 
-			return (long) _value._fixedSizeWrites[field].Value;
+			return (long) _value.FixedSizeWrites[field].Value;
 		}
 
 		public ulong ReadULong(T field)
 		{
 			if (_ptr != null)
-				return *((ulong*) (_ptr + FixedFieldOffset(field)));
+				return *((ulong*) (_ptr + FixedOffset(field)));
 
-			return (ulong) _value._fixedSizeWrites[field].Value;
+			return (ulong) _value.FixedSizeWrites[field].Value;
 		}
 
 		public char ReadChar(T field)
 		{
 			if (_ptr != null)
-				return *((char*) (_ptr + FixedFieldOffset(field)));
+				return *((char*) (_ptr + FixedOffset(field)));
 
-			return (char) _value._fixedSizeWrites[field].Value;
+			return (char) _value.FixedSizeWrites[field].Value;
 		}
 
 		public byte ReadByte(T field)
 		{
 			if (_ptr != null)
-				return *(_ptr + FixedFieldOffset(field));
+				return *(_ptr + FixedOffset(field));
 
-			return (byte) _value._fixedSizeWrites[field].Value;
+			return (byte) _value.FixedSizeWrites[field].Value;
 		}
 
 		public bool ReadBool(T field)
@@ -144,11 +113,11 @@ namespace Voron
 			byte value;
 			if (_ptr != null)
 			{
-				value = (*(_ptr + FixedFieldOffset(field)));
+				value = (*(_ptr + FixedOffset(field)));
 			}
 			else
 			{
-				value = (byte) _value._fixedSizeWrites[field].Value;
+				value = (byte) _value.FixedSizeWrites[field].Value;
 			}
 
 			switch (value)
@@ -165,80 +134,88 @@ namespace Voron
 		public sbyte ReadSByte(T field)
 		{
 			if (_ptr != null)
-				return *((sbyte*) (_ptr + FixedFieldOffset(field)));
+				return *((sbyte*) (_ptr + FixedOffset(field)));
 
-			return (sbyte) _value._fixedSizeWrites[field].Value;
+			return (sbyte) _value.FixedSizeWrites[field].Value;
 		}
 
 		public short ReadShort(T field)
 		{
 			if (_ptr != null)
-				return *((short*) (_ptr + FixedFieldOffset(field)));
+				return *((short*) (_ptr + FixedOffset(field)));
 
-			return (short) _value._fixedSizeWrites[field].Value;
+			return (short) _value.FixedSizeWrites[field].Value;
 		}
 
 		public ushort ReadUShort(T field)
 		{
 			if (_ptr != null)
-				return *((ushort*) (_ptr + FixedFieldOffset(field)));
+				return *((ushort*) (_ptr + FixedOffset(field)));
 
-			return (ushort) _value._fixedSizeWrites[field].Value;
+			return (ushort) _value.FixedSizeWrites[field].Value;
 		}
 
 		public float ReadFloat(T field)
 		{
 			if (_ptr != null)
-				return *((float*) (_ptr + FixedFieldOffset(field)));
+				return *((float*) (_ptr + FixedOffset(field)));
 
-			return (float) _value._fixedSizeWrites[field].Value;
+			return (float) _value.FixedSizeWrites[field].Value;
 		}
 
 		public double ReadDouble(T field)
 		{
 			if (_ptr != null)
-				return *((double*) (_ptr + FixedFieldOffset(field)));
+				return *((double*) (_ptr + FixedOffset(field)));
 
-			return (double) _value._fixedSizeWrites[field].Value;
+			return (double) _value.FixedSizeWrites[field].Value;
 		}
 
 		public decimal ReadDecimal(T field)
 		{
 			if (_ptr != null)
-				return *((decimal*) (_ptr + FixedFieldOffset(field)));
+				return *((decimal*) (_ptr + FixedOffset(field)));
 
-			return (decimal) _value._fixedSizeWrites[field].Value;
+			return (decimal) _value.FixedSizeWrites[field].Value;
 		}
 
 		public string ReadString(T field)
 		{
+			var fieldIndex = _schema._variableSizeFields[field].Index;
+
 			if (_ptr != null)
 			{
-				var filedInfo = VariableFieldSizeInfo(field);
+				var offset = VariableOffsets[fieldIndex];
+				int valueLengthSize;
+				var length = Read7BitEncodedInt(_ptr + offset, out valueLengthSize);
 
-				return new string((sbyte*)(_ptr + filedInfo.Offset), 0, filedInfo.Length, Encoding.UTF8);
+				return new string((sbyte*)(_ptr + offset + valueLengthSize), 0, length, Encoding.UTF8);
 			}
 
-			return Encoding.UTF8.GetString(_value._variableSizeWrites[field].Value);
+			return Encoding.UTF8.GetString(_value.VariableSizeWrites[fieldIndex].Value);
 		}
 
 		public byte[] ReadBytes(T field)
 		{
+			var fieldIndex = _schema._variableSizeFields[field].Index;
+
 			if (_ptr != null)
 			{
-				var filedInfo = VariableFieldSizeInfo(field);
+				var offset = VariableOffsets[fieldIndex];
+				int valueLengthSize;
+				var length = Read7BitEncodedInt(_ptr + offset, out valueLengthSize);
 
-				var result = new byte[filedInfo.Length];
+				var result = new byte[length];
 
 				fixed (byte* rPtr = result)
 				{
-					MemoryUtils.Copy(rPtr, _ptr + filedInfo.Offset, filedInfo.Length);
+					MemoryUtils.Copy(rPtr, _ptr + offset + valueLengthSize, length);
 				}
 
 				return result;
 			}
 
-			return _value._variableSizeWrites[field].Value;
+			return _value.VariableSizeWrites[fieldIndex].Value;
 		}
 	}
 }

@@ -110,6 +110,8 @@ namespace Voron.Trees
 
 		public void WriteStruct(Slice key, Structure structure, ushort? version = null)
 		{
+			structure.AssertValidStructure();
+
 			State.IsModified = true;
 			var pos = DirectAdd(key, structure.GetSize(), version: version);
 
