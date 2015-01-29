@@ -544,6 +544,7 @@ namespace Raven.Storage.Esent
 
                             do
                             {
+								current.Value.General.MaybePulseTransaction();
                                 var updater = Updaters.FirstOrDefault(update => update.Value.FromSchemaVersion == schemaVersion);
                                 if (updater == null)
                                     throw new InvalidOperationException(
@@ -553,7 +554,6 @@ namespace Raven.Storage.Esent
 
                                 log.Info("Updating schema from version {0}: ", schemaVersion);
                                 Console.WriteLine("Updating schema from version {0}: ", schemaVersion);
-
                                 ticker.Start();
 
 									updater.Value.Init(generator, configuration);
@@ -573,12 +573,25 @@ namespace Raven.Storage.Esent
 					}
                 });
             }
+			catch (EsentVersionStoreOutOfMemoryException esentOutOfMemoryException)
+			{
+				var message = "Schema Update Process for " + database + " Failed due to Esent Out Of Memory Exception!" +
+							  Environment.NewLine +
+							  "This might be caused by exceptionally large files, Consider enlarging the value of Raven/Esent/MaxVerPages (default:512)";
+				log.Error(message);
+
+				Console.WriteLine(message);
+				throw new InvalidOperationException(message, esentOutOfMemoryException);
+			}
             catch (Exception e)
             {
+	            var message = "Could not read db details from disk. It is likely that there is a version difference between the library and the db on the disk." +
+	                          Environment.NewLine +
+	                          "You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.";
+				log.Error(message);
+				Console.WriteLine(message);
                 throw new InvalidOperationException(
-                    "Could not read db details from disk. It is likely that there is a version difference between the library and the db on the disk." +
-                        Environment.NewLine +
-                            "You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.",
+					message,
                     e);
             }
         }
