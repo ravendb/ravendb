@@ -18,7 +18,7 @@ namespace Raven.Database.Counters.Controllers
 			using (var reader = Storage.CreateReader())
 			{
 				var sourceId = reader.SourceIdFor(serverUrl);
-				var result = reader.GetServerEtags().FirstOrDefault(x => x.SourceId == sourceId) ?? new CounterStorage.ServerEtag();
+				var result = reader.GetServerEtags().FirstOrDefault(x => x.ServerId == sourceId) ?? new CounterStorage.ServerEtag();
 				return Request.CreateResponse(HttpStatusCode.OK, result.Etag);
 			}
 		}
@@ -51,47 +51,21 @@ namespace Raven.Database.Counters.Controllers
 	            foreach (var counter in replicationMessage.Counters)
 	            {
 		            lastEtag = Math.Max(counter.Etag, lastEtag);
-		            var currentCounter = writer.GetCountersByPrefix(counter.CounterName);
-		            foreach (var serverValue in counter.ServerValues)
-		            {
-                        Counter.PerServerValue currentServerValue;
-		                if (currentCounter != null)
-		                {
-				            currentServerValue = currentCounter.ServerValues
-								.FirstOrDefault(x => x.SourceId == writer.SourceIdFor(serverValue.ServerName)) ??
-				                                    new Counter.PerServerValue
-				                                    {
-					                                    Negative = 0,
-					                                    Positive = 0,
-				                                    };
+					var currentCounter = writer.GetCounterValue(counter.FullCounterName);
 
-			                // old update, have updates after it already
-		                    if (serverValue.Positive <= currentServerValue.Positive &&
-		                        serverValue.Negative <= currentServerValue.Negative)
-		                        continue;
-		                }
-		                else
-		                {
-		                    currentServerValue = new Counter.PerServerValue
-		                    {
-		                        Negative = 0,
-                                Positive = 0
-		                    };
-		                }
+					//if current counter exists and current value is less than received value
+		            if (currentCounter != null && currentCounter.Value <= counter.CounterValue.Value)
+						continue;
 
-		                wroteCounter = true;
-			            writer.Store(serverValue.ServerName,
-				            counter.CounterName,
-				            Math.Max(serverValue.Positive, currentServerValue.Positive),
-				            Math.Max(serverValue.Negative, currentServerValue.Negative)
-				        );
-		            }
+					wroteCounter = true;
+					writer.Store(counter.FullCounterName, counter.CounterValue);
 	            }
 
 				var sendingServerName = replicationMessage.SendingServerName;
 				if (wroteCounter || writer.GetLastEtagFor(sendingServerName) < lastEtag)
                 {
-					writer.RecordLastEtagFor(sendingServerName, lastEtag);
+					//TODO: fix this
+					writer.RecordLastEtagFor(sendingServerName, sendingServerName, lastEtag);
                     writer.Commit();
                 }
 

@@ -165,11 +165,12 @@ namespace Raven.Abstractions.Data
 		
 		//Counters
 		public const string RavenCounterStoragePathPrefix = "Raven/Counters/";
-		public const byte GroupSeparator = 29;
+		/*public const byte GroupSeparator = 29;
 	    public const byte ServerIdSeparator = 28;
-		public const char GroupSeparatorChar = (char)GroupSeparator;
-		public const string GroupSeperatorString = "/";
-		public const string ServerIdSeperatorString = GroupSeperatorString;
+		public const char GroupSeparatorChar = (char)GroupSeparator;*/
+		public const byte CountersSeperatorByte = 47;
+		public const char CountersSeperator = '/';
+		public const string CountersSeperatorString = "/";
 
         public const string MetadataEtagField = "ETag";
 

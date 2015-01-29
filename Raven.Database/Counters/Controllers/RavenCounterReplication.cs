@@ -283,7 +283,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				long etag = 0;
 				var url = string.Format("{0}/lastEtag?serverUrl={1}", counterStorageUrl, storage.CounterStorageUrl);
-				var request = httpRavenRequestFactory.Create(url, "GET", connectionStringOptions);
+				var request = httpRavenRequestFactory.Create(url, HttpMethods.Get, connectionStringOptions);
 				request.ExecuteRequest(etagString => etag = long.Parse(etagString.ReadToEnd()));
 
 				lastEtag = etag;
@@ -324,7 +324,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				var url = string.Format("{0}/replication", counterStorageUrl);
 				lastError = string.Empty;
-				var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+				var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
 				request.Write(RavenJObject.FromObject(message));
 				request.ExecuteRequest();
                 
@@ -386,7 +386,7 @@ namespace Raven.Database.Counters.Controllers
             using (var reader = storage.CreateReader())
             {
                 message.Counters = reader.GetCountersSinceEtag(etag + 1).Take(10240).ToList(); //TODO: Capped this...how to get remaining values?
-                lastEtagSent = message.Counters.Count > 0 ? message.Counters.Max(x=>x.Etag):etag; // change this once changed this function do a reall paging
+                lastEtagSent = message.Counters.Count > 0 ? message.Counters.Max(x => x.Etag) : etag; // change this once changed this function do a reall paging
             }
 
 	        return message;
@@ -462,7 +462,7 @@ namespace Raven.Database.Counters.Controllers
 				try
 				{
 					var url = connectionStringOptions.Url + "/counters/" + storage.Name + "/replication/heartbeat?from=" + Uri.EscapeDataString(storage.CounterStorageUrl);
-					var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+					var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
 					request.WebRequest.ContentLength = 0;
 					request.ExecuteRequest();
 				}

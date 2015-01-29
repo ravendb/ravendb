@@ -238,6 +238,10 @@
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
     <Compile Include="Counters\Controllers\CountersStatsController.cs" />
+    <Compile Include="Counters\CounterGroup.cs" />
+    <Compile Include="Counters\CounterValue.cs" />
+    <Compile Include="Counters\ReplicationCounter.cs" />
+    <Compile Include="Counters\ValueSign.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />

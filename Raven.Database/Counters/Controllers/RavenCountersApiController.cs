@@ -264,10 +264,5 @@ namespace Raven.Database.Counters.Controllers
 				return counter.Result;
 			}
 		}
-
-		protected static string CounterFullName(string groupName, string counterName)
-		{
-			return String.Join(Constants.GroupSeperatorString, new[] { groupName, counterName });
-		}
 	}
 }
