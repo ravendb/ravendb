@@ -77,7 +77,6 @@
     <Reference Include="xunit.extensions">
       <HintPath>..\..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
     </Reference>
-    <Reference Include="Mono.Posix" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Backups\Full.cs" />
