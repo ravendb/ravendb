@@ -544,7 +544,6 @@ namespace Raven.Storage.Esent
 
                             do
                             {
-								current.Value.General.MaybePulseTransaction();
                                 var updater = Updaters.FirstOrDefault(update => update.Value.FromSchemaVersion == schemaVersion);
                                 if (updater == null)
                                     throw new InvalidOperationException(
@@ -558,7 +557,9 @@ namespace Raven.Storage.Esent
 
 									updater.Value.Init(generator, configuration);
                                 updater.Value.Update(session, dbid, Output);
+
                                 schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
+                                current.Value.General.MaybePulseTransaction();
 
                                 ticker.Stop();
 
