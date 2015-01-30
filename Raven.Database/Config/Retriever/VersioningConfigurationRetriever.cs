@@ -7,17 +7,12 @@ namespace Raven.Database.Config.Retriever
 {
 	public class VersioningConfigurationRetriever : ConfigurationRetrieverBase<VersioningConfiguration>
 	{
-		public VersioningConfigurationRetriever(DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
-			: base(systemDatabase, localDatabase)
-		{
-		}
-
-		protected override VersioningConfiguration ApplyGlobalDocumentToLocal(VersioningConfiguration global, VersioningConfiguration local)
+		protected override VersioningConfiguration ApplyGlobalDocumentToLocal(VersioningConfiguration global, VersioningConfiguration local, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			return local;
 		}
 
-		protected override VersioningConfiguration ConvertGlobalDocumentToLocal(VersioningConfiguration global)
+		protected override VersioningConfiguration ConvertGlobalDocumentToLocal(VersioningConfiguration global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			if (string.IsNullOrEmpty(global.Id) == false) 
 				global.Id = global.Id.Replace(Constants.Global.VersioningDocumentPrefix, Constants.Versioning.RavenVersioningPrefix);
@@ -25,7 +20,7 @@ namespace Raven.Database.Config.Retriever
 			return global;
 		}
 
-		public override string GetGlobalConfigurationDocumentKey(string key)
+		public override string GetGlobalConfigurationDocumentKey(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			if (string.Equals(key, Constants.Versioning.RavenVersioningDefaultConfiguration, StringComparison.OrdinalIgnoreCase))
 				return Constants.Global.VersioningDefaultConfigurationDocumentName;

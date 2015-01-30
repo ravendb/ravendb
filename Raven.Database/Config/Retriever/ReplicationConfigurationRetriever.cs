@@ -13,12 +13,7 @@ namespace Raven.Database.Config.Retriever
 {
 	internal class ReplicationConfigurationRetriever : ConfigurationRetrieverBase<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>
 	{
-		public ReplicationConfigurationRetriever(DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
-			: base(systemDatabase, localDatabase)
-		{
-		}
-
-		protected override ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> ApplyGlobalDocumentToLocal(ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> global, ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> local)
+		protected override ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> ApplyGlobalDocumentToLocal(ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> global, ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> local, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			local.ClientConfiguration = local.ClientConfiguration ?? global.ClientConfiguration;
 
@@ -33,33 +28,33 @@ namespace Raven.Database.Config.Retriever
 				globalDestination.IsLocal = false;
 				globalDestination.IsGlobal = true;
 
-				var localDestinationExists = local.Destinations.Any(x => string.Equals(x.Url, globalDestination.Url, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Database, LocalDatabase.Name, StringComparison.OrdinalIgnoreCase));
+				var localDestinationExists = local.Destinations.Any(x => string.Equals(x.Url, globalDestination.Url, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Database, localDatabase.Name, StringComparison.OrdinalIgnoreCase));
 				if (localDestinationExists)
 					continue;
 
-				globalDestination.Database = LocalDatabase.Name;
+				globalDestination.Database = localDatabase.Name;
 				local.Destinations.Add(globalDestination);
 			}
 
 			return local;
 		}
 
-		protected override ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> ConvertGlobalDocumentToLocal(ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> global)
+		protected override ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> ConvertGlobalDocumentToLocal(ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			global.Id = Constants.RavenReplicationDestinations;
-			global.Source = LocalDatabase.TransactionalStorage.Id.ToString();
+			global.Source = localDatabase.TransactionalStorage.Id.ToString();
 
 			foreach (var destination in global.Destinations)
 			{
 				destination.IsGlobal = true;
 				destination.IsLocal = false;
-				destination.Database = LocalDatabase.Name;
+				destination.Database = localDatabase.Name;
 			}
 
 			return global;
 		}
 
-		public override string GetGlobalConfigurationDocumentKey(string key)
+		public override string GetGlobalConfigurationDocumentKey(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			return Constants.Global.ReplicationDestinationsDocumentName;
 		}

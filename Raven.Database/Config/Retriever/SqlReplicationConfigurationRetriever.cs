@@ -13,12 +13,7 @@ namespace Raven.Database.Config.Retriever
 {
 	public class SqlReplicationConfigurationRetriever : ConfigurationRetrieverBase<SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>>
 	{
-		public SqlReplicationConfigurationRetriever(DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
-			: base(systemDatabase, localDatabase)
-		{
-		}
-
-		protected override SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> ApplyGlobalDocumentToLocal(SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> global, SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> local)
+		protected override SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> ApplyGlobalDocumentToLocal(SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> global, SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> local, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			foreach (var localConnection in local.PredefinedConnections)
 			{
@@ -41,7 +36,7 @@ namespace Raven.Database.Config.Retriever
 			return local;
 		}
 
-		protected override SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> ConvertGlobalDocumentToLocal(SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> global)
+		protected override SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> ConvertGlobalDocumentToLocal(SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			foreach (var localConnection in global.PredefinedConnections)
 			{
@@ -52,7 +47,7 @@ namespace Raven.Database.Config.Retriever
 			return global;
 		}
 
-		public override string GetGlobalConfigurationDocumentKey(string key)
+		public override string GetGlobalConfigurationDocumentKey(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			return Constants.Global.SqlReplicationConnectionsDocumentName;
 		}

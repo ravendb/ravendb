@@ -48,11 +48,11 @@ namespace Raven.Database.Config.Retriever
 			this.systemDatabase = systemDatabase;
 			this.database = database;
 
-			replicationConfigurationRetriever = new ReplicationConfigurationRetriever(systemDatabase, database);
-			versioningConfigurationRetriever = new VersioningConfigurationRetriever(systemDatabase, database);
-			periodicExportConfigurationRetriever = new PeriodicExportConfigurationRetriever(systemDatabase, database);
-			configurationSettingRetriever = new ConfigurationSettingRetriever(systemDatabase, database);
-			sqlReplicationConfigurationRetriever = new SqlReplicationConfigurationRetriever(systemDatabase, database);
+			replicationConfigurationRetriever = new ReplicationConfigurationRetriever();
+			versioningConfigurationRetriever = new VersioningConfigurationRetriever();
+			periodicExportConfigurationRetriever = new PeriodicExportConfigurationRetriever();
+			configurationSettingRetriever = new ConfigurationSettingRetriever();
+			sqlReplicationConfigurationRetriever = new SqlReplicationConfigurationRetriever();
 		}
 
 		public ConfigurationDocument<TType> GetConfigurationDocument<TType>(string key)
@@ -72,7 +72,7 @@ namespace Raven.Database.Config.Retriever
 
 		public string GetConfigurationSetting(string key)
 		{
-			return GetConfigurationRetriever(key).GetConfigurationSetting(key);
+			return GetConfigurationRetriever(key).GetConfigurationSetting(key, systemDatabase, database);
 		}
 
 		public void SubscribeToConfigurationDocumentChanges(string key, Action action)
@@ -85,12 +85,12 @@ namespace Raven.Database.Config.Retriever
 
 		private object GetConfigurationDocumentInternal(string key)
 		{
-			return GetConfigurationRetriever(key).GetConfigurationDocument(key);
+			return GetConfigurationRetriever(key).GetConfigurationDocument(key, systemDatabase, database);
 		}
 
 		private ConfigurationDocument<TType> GetConfigurationDocumentInternal<TType>(string key)
 		{
-			return ((IConfigurationRetriever<TType>)GetConfigurationRetriever(key)).GetConfigurationDocument(key);
+			return ((IConfigurationRetriever<TType>)GetConfigurationRetriever(key)).GetConfigurationDocument(key, systemDatabase, database);
 		}
 
 		private IConfigurationRetriever GetConfigurationRetriever(string key)
@@ -115,7 +115,7 @@ namespace Raven.Database.Config.Retriever
 
 		private string GetGlobalConfigurationDocumentKey(string key)
 		{
-			return GetConfigurationRetriever(key).GetGlobalConfigurationDocumentKey(key);
+			return GetConfigurationRetriever(key).GetGlobalConfigurationDocumentKey(key, systemDatabase, database);
 		}
 
 		private static void SendNotification(DocumentChangeNotification notification, string key, Action action)

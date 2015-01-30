@@ -20,22 +20,17 @@ namespace Raven.Database.Config.Retriever
 																	 {Constants.SizeSoftLimitInKB, Constants.Global.QuotasSizeSoftLimitInKBSettingKey}
 		                                                         };
 
-		public ConfigurationSettingRetriever(DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
-			: base(systemDatabase, localDatabase)
-		{
-		}
-
-		protected override object ApplyGlobalDocumentToLocal(object global, object local)
+		protected override object ApplyGlobalDocumentToLocal(object global, object local, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			throw new NotSupportedException();
 		}
 
-		protected override object ConvertGlobalDocumentToLocal(object global)
+		protected override object ConvertGlobalDocumentToLocal(object global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			throw new NotSupportedException();
 		}
 
-		public override string GetGlobalConfigurationDocumentKey(string key)
+		public override string GetGlobalConfigurationDocumentKey(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			string globalKey;
 			if (keys.TryGetValue(key, out globalKey))
@@ -44,14 +39,14 @@ namespace Raven.Database.Config.Retriever
 			throw new NotSupportedException("Not supported key: " + key);
 		}
 
-		public override string GetConfigurationSetting(string key)
+		public override string GetConfigurationSetting(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
-			var localKey = LocalDatabase.Configuration.Settings[key];
+			var localKey = localDatabase.Configuration.Settings[key];
 			if (localKey != null)
 				return localKey;
 
-			var globalKey = GetGlobalConfigurationDocumentKey(key);
-			return SystemDatabase.Configuration.Settings[globalKey];
+			var globalKey = GetGlobalConfigurationDocumentKey(key, systemDatabase, localDatabase);
+			return systemDatabase.Configuration.Settings[globalKey];
 		}
 	}
 }

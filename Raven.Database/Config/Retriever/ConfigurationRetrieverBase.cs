@@ -11,38 +11,28 @@ namespace Raven.Database.Config.Retriever
 {
 	public interface IConfigurationRetriever
 	{
-		string GetConfigurationSetting(string key);
+		string GetConfigurationSetting(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
 
-		string GetGlobalConfigurationDocumentKey(string key);
+		string GetGlobalConfigurationDocumentKey(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
 
-		object GetConfigurationDocument(string key);
+		object GetConfigurationDocument(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
 	}
 
 	public interface IConfigurationRetriever<TClass> : IConfigurationRetriever
 	{
-		new ConfigurationDocument<TClass> GetConfigurationDocument(string key);
+		new ConfigurationDocument<TClass> GetConfigurationDocument(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
 	}
 
 	public abstract class ConfigurationRetrieverBase<TClass> : IConfigurationRetriever<TClass>
 	{
-		protected DocumentDatabase SystemDatabase { get; private set; }
+		protected abstract TClass ApplyGlobalDocumentToLocal(TClass global, TClass local, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
 
-		protected DocumentDatabase LocalDatabase { get; private set; }
+		protected abstract TClass ConvertGlobalDocumentToLocal(TClass global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
 
-		protected ConfigurationRetrieverBase(DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
+		public ConfigurationDocument<TClass> GetConfigurationDocument(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
-			SystemDatabase = systemDatabase;
-			LocalDatabase = localDatabase;
-		}
-
-		protected abstract TClass ApplyGlobalDocumentToLocal(TClass global, TClass local);
-
-		protected abstract TClass ConvertGlobalDocumentToLocal(TClass global);
-
-		public ConfigurationDocument<TClass> GetConfigurationDocument(string key)
-		{
-			var global = SystemDatabase.Documents.Get(GetGlobalConfigurationDocumentKey(key), null);
-			var local = LocalDatabase.Documents.Get(key, null);
+			var global = systemDatabase.Documents.Get(GetGlobalConfigurationDocumentKey(key, systemDatabase, localDatabase), null);
+			var local = localDatabase.Documents.Get(key, null);
 
 			if (global == null && local == null)
 				return null;
@@ -67,24 +57,24 @@ namespace Raven.Database.Config.Retriever
 
 			if (local == null)
 			{
-				configurationDocument.Document = ConvertGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>());
+				configurationDocument.Document = ConvertGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>(), systemDatabase, localDatabase);
 				return configurationDocument;
 			}
 
-			configurationDocument.Document = ApplyGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>(), local.DataAsJson.JsonDeserialization<TClass>());
+			configurationDocument.Document = ApplyGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>(), local.DataAsJson.JsonDeserialization<TClass>(), systemDatabase, localDatabase);
 			return configurationDocument;
 		}
 
-		object IConfigurationRetriever.GetConfigurationDocument(string key)
+		object IConfigurationRetriever.GetConfigurationDocument(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
-			return GetConfigurationDocument(key);
+			return GetConfigurationDocument(key, systemDatabase, localDatabase);
 		}
 
-		public virtual string GetConfigurationSetting(string key)
+		public virtual string GetConfigurationSetting(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			throw new NotSupportedException(GetType().Name + " does not support configuration settings.");
 		}
 
-		public abstract string GetGlobalConfigurationDocumentKey(string key);
+		public abstract string GetGlobalConfigurationDocumentKey(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
 	}
 }
