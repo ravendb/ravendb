@@ -147,6 +147,21 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 					.Set(ReduceKeyTypeFields.ReduceKey, reduceKey);
 			});
 
+			MigrateToStructures(tableStorage.Environment, tableStorage.Tasks, output, (json, structure) =>
+			{
+				var taskId = json.Value<byte[]>("id");
+				var addedTime = DateTime.Parse(json.Value<string>("time"));
+				var type = json.Value<string>("type");
+				var indexId = json.Value<int>("index");
+				var serializedTask = json.Value<byte[]>("task");
+
+				structure.Set(TaskFields.TaskId, taskId)
+					.Set(TaskFields.AddedAt, addedTime.ToBinary())
+					.Set(TaskFields.Type, type)
+					.Set(TaskFields.IndexId, indexId)
+					.Set(TaskFields.SerializedTask, serializedTask);
+			});
+
 			UpdateSchemaVersion(tableStorage, output);
 		}
 

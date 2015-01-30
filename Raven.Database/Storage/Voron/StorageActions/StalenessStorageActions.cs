@@ -90,8 +90,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
-					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
-					var time = value.Value<DateTime>("time");
+					var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
+					var time = DateTime.FromBinary(value.ReadLong(TaskFields.AddedAt));
 
 					if (time <= cutOff.Value)
 						return true;
