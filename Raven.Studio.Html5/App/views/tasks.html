@@ -2,7 +2,7 @@
     <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
     <li>
         <h3>
-            <a href="#databases">
+            <a href="#resources">
                 Databases
             </a>
         </h3>
@@ -10,8 +10,8 @@
     <li data-bind="with: activeDatabase">
         <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
     </li>
-    <li>
-        <a data-bind="attr: { href: appUrls.tasks }">Tasks</a>
+    <li class="active">
+        <span>Tasks</span>
     </li>
     <li class="active" data-bind="text: activeSubViewTitle">
     </li>

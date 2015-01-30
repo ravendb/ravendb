@@ -88,7 +88,7 @@ class query extends viewModelBase {
         this.appUrls = appUrl.forCurrentDatabase();
         this.editIndexUrl = ko.computed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : null);
         this.visualizerUrl = ko.computed(() => this.selectedIndex() ? appUrl.forVisualizer(this.activeDatabase(), this.selectedIndex()) : null);
-        this.indexPerfStatsUrl = ko.computed(() => this.selectedIndex() ? appUrl.forIndexingPerfStats(this.activeDatabase(), this.selectedIndex()) : null);
+        this.indexPerfStatsUrl = ko.computed(() => this.selectedIndex() ? appUrl.forIndexPerformance(this.activeDatabase()) : null);
         this.termsUrl = ko.computed(() => this.selectedIndex() ? appUrl.forTerms(this.selectedIndex(), this.activeDatabase()) : null);
         this.statsUrl = ko.computed(() => appUrl.forStatus(this.activeDatabase()));
         this.hasSelectedIndex = ko.computed(() => this.selectedIndex() != null);

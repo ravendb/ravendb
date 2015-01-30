@@ -402,14 +402,6 @@ class appUrl {
         return url;
     }
 
-    static forIndexingPerfStats(db: database, index: string = null): string {
-        var url = "#databases/status/metrics/indexing?" + appUrl.getEncodedDbPart(db);
-        if (index) {
-            url += "&index=" + index;
-        }
-        return url;
-    }
-
     static forDatabaseSettings(db: database): string {
         return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
     }
