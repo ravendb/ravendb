@@ -506,6 +506,8 @@ namespace Raven.Database.Queries
 
 			public static bool IsAggregationTypeNumerical(string aggregationType)
 			{
+			    if (aggregationType == null)
+			        return false;
 				var type = Type.GetType(aggregationType, false, true);
 				if (type == null)
 					return false;
