@@ -14,10 +14,10 @@ namespace Raven.Database.Config.Retriever
 	{
 		private readonly Dictionary<string, string> keys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
 		                                                         {
-			                                                         {Constants.DocsSoftLimit, Constants.Global.DocsSoftLimit},
-																	 {Constants.DocsHardLimit, Constants.Global.DocsHardLimit},
-																	 {Constants.SizeHardLimitInKB, Constants.Global.SizeHardLimitInKB},
-																	 {Constants.SizeSoftLimitInKB, Constants.Global.SizeSoftLimitInKB}
+			                                                         {Constants.DocsSoftLimit, Constants.Global.QuotasDocsSoftLimitSettingKey},
+																	 {Constants.DocsHardLimit, Constants.Global.QuotasDocsHardLimitSettingKey},
+																	 {Constants.SizeHardLimitInKB, Constants.Global.QuotasSizeHardLimitInKBSettingKey},
+																	 {Constants.SizeSoftLimitInKB, Constants.Global.QuotasSizeSoftLimitInKBSettingKey}
 		                                                         };
 
 		public ConfigurationSettingRetriever(DocumentDatabase systemDatabase, DocumentDatabase localDatabase)

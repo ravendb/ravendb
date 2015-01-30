@@ -23,10 +23,10 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				var database = server.Server.GetDatabaseInternal("Northwind").ResultUnwrap();
 				var retriever = database.ConfigurationRetriever;
 
-				systemDatabase.Configuration.Settings[Constants.Global.SizeSoftLimitInKB] = "10";
-				systemDatabase.Configuration.Settings[Constants.Global.SizeHardLimitInKB] = "11";
-				systemDatabase.Configuration.Settings[Constants.Global.DocsHardLimit] = "12";
-				systemDatabase.Configuration.Settings[Constants.Global.DocsSoftLimit] = "13";
+				systemDatabase.Configuration.Settings[Constants.Global.QuotasSizeSoftLimitInKBSettingKey] = "10";
+				systemDatabase.Configuration.Settings[Constants.Global.QuotasSizeHardLimitInKBSettingKey] = "11";
+				systemDatabase.Configuration.Settings[Constants.Global.QuotasDocsHardLimitSettingKey] = "12";
+				systemDatabase.Configuration.Settings[Constants.Global.QuotasDocsSoftLimitSettingKey] = "13";
 
 				Assert.Equal("10", retriever.GetConfigurationSetting(Constants.SizeSoftLimitInKB));
 				Assert.Equal("11", retriever.GetConfigurationSetting(Constants.SizeHardLimitInKB));
@@ -45,10 +45,10 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				var database = server.Server.GetDatabaseInternal("Northwind").ResultUnwrap();
 				var retriever = database.ConfigurationRetriever;
 
-				systemDatabase.Configuration.Settings[Constants.Global.SizeSoftLimitInKB] = "10";
-				systemDatabase.Configuration.Settings[Constants.Global.SizeHardLimitInKB] = "11";
-				systemDatabase.Configuration.Settings[Constants.Global.DocsHardLimit] = "12";
-				systemDatabase.Configuration.Settings[Constants.Global.DocsSoftLimit] = "13";
+				systemDatabase.Configuration.Settings[Constants.Global.QuotasSizeSoftLimitInKBSettingKey] = "10";
+				systemDatabase.Configuration.Settings[Constants.Global.QuotasSizeHardLimitInKBSettingKey] = "11";
+				systemDatabase.Configuration.Settings[Constants.Global.QuotasDocsHardLimitSettingKey] = "12";
+				systemDatabase.Configuration.Settings[Constants.Global.QuotasDocsSoftLimitSettingKey] = "13";
 
 				database.Configuration.Settings[Constants.SizeSoftLimitInKB] = "20";
 				database.Configuration.Settings[Constants.SizeHardLimitInKB] = "21";

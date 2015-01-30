@@ -24,8 +24,8 @@ namespace Raven.Database.Config.Retriever
 
 			foreach (var globalDestination in global.Destinations)
 			{
-				var localDestination = local.Destinations.FirstOrDefault(x => string.Equals(x.Url, globalDestination.Url, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Database, LocalDatabase.Name, StringComparison.OrdinalIgnoreCase));
-				if (localDestination != null)
+				var localDestinationExists = local.Destinations.Any(x => string.Equals(x.Url, globalDestination.Url, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Database, LocalDatabase.Name, StringComparison.OrdinalIgnoreCase));
+				if (localDestinationExists)
 					continue;
 
 				globalDestination.Database = LocalDatabase.Name;
@@ -50,7 +50,7 @@ namespace Raven.Database.Config.Retriever
 
 		public override string GetGlobalConfigurationDocumentKey(string key)
 		{
-			return Constants.Global.ReplicationDestinations;
+			return Constants.Global.ReplicationDestinationsDocumentName;
 		}
 	}
 }

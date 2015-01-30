@@ -21,7 +21,7 @@ namespace Raven.Database.Config.Retriever
 
 		public override string GetGlobalConfigurationDocumentKey(string key)
 		{
-			return Constants.Global.PeriodicExport;
+			return Constants.Global.PeriodicExportDocumentName;
 		}
 	}
 }

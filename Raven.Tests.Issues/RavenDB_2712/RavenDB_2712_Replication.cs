@@ -32,11 +32,11 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.Global.ReplicationDestinations,
+						Constants.Global.ReplicationDestinationsDocumentName,
 						null,
 						RavenJObject.FromObject(new ReplicationDocument
 												{
-													Id = Constants.Global.ReplicationDestinations,
+													Id = Constants.Global.ReplicationDestinationsDocumentName,
 													Destinations =
 							                        {
 								                        new ReplicationDestination
@@ -121,11 +121,11 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.Global.ReplicationDestinations,
+						Constants.Global.ReplicationDestinationsDocumentName,
 						null,
 						RavenJObject.FromObject(new ReplicationDocument
 												{
-													Id = Constants.Global.ReplicationDestinations,
+													Id = Constants.Global.ReplicationDestinationsDocumentName,
 													Destinations = {
 								                                       new ReplicationDestination
 								                                       {
@@ -210,11 +210,11 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.Global.ReplicationDestinations,
+						Constants.Global.ReplicationDestinationsDocumentName,
 						null,
 						RavenJObject.FromObject(new ReplicationDocument
 												{
-													Id = Constants.Global.ReplicationDestinations,
+													Id = Constants.Global.ReplicationDestinationsDocumentName,
 													Destinations = {
 								                                       new ReplicationDestination
 								                                       {

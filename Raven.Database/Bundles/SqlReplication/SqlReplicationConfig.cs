@@ -59,19 +59,30 @@ namespace Raven.Database.Bundles.SqlReplication
 		}
 	}
 
-    public class SqlReplicationConnections
-    {
-        public List<PredefinedSqlConnection> PredefinedConnections { get; set; }
+	public class SqlReplicationConnections<TClass> where TClass : SqlReplicationConnections.PredefinedSqlConnection
+	{
+		public List<TClass> PredefinedConnections { get; set; }
 
-        public SqlReplicationConnections()
-        {
-            PredefinedConnections = new List<PredefinedSqlConnection>();
-        }
+		public SqlReplicationConnections()
+		{
+			PredefinedConnections = new List<TClass>();
+		}
+	}
+
+	public class SqlReplicationConnections : SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnection>
+    {
         public class PredefinedSqlConnection
         {
             public string Name { get; set; }
             public string FactoryName { get; set; }
             public string ConnectionString { get; set; }
         }
+
+		public class PredefinedSqlConnectionWithConfigurationOrigin : PredefinedSqlConnection
+		{
+			public bool IsGlobal { get; set; }
+
+			public bool IsLocal { get; set; }
+		}
     }
 }

@@ -27,7 +27,8 @@ namespace Raven.Database.Config.Retriever
 																			  {Constants.DocsHardLimit, DocumentType.QuotasConfiguration},
 																			  {Constants.DocsSoftLimit, DocumentType.QuotasConfiguration},
 																			  {Constants.SizeHardLimitInKB, DocumentType.QuotasConfiguration},
-																			  {Constants.SizeSoftLimitInKB, DocumentType.QuotasConfiguration}
+																			  {Constants.SizeSoftLimitInKB, DocumentType.QuotasConfiguration},
+																			  {Constants.SqlReplication.SqlReplicationConnectionsDocumentName, DocumentType.SqlReplicationConnections}
 		                                                                  };
 
 		private readonly ReplicationConfigurationRetriever replicationConfigurationRetriever;
@@ -37,6 +38,8 @@ namespace Raven.Database.Config.Retriever
 		private readonly PeriodicExportConfigurationRetriever periodicExportConfigurationRetriever;
 
 		private readonly ConfigurationSettingRetriever configurationSettingRetriever;
+
+		private readonly SqlReplicationConfigurationRetriever sqlReplicationConfigurationRetriever;
 
 		public ConfigurationRetriever(DocumentDatabase systemDatabase, DocumentDatabase database)
 		{
@@ -49,6 +52,7 @@ namespace Raven.Database.Config.Retriever
 			versioningConfigurationRetriever = new VersioningConfigurationRetriever(systemDatabase, database);
 			periodicExportConfigurationRetriever = new PeriodicExportConfigurationRetriever(systemDatabase, database);
 			configurationSettingRetriever = new ConfigurationSettingRetriever(systemDatabase, database);
+			sqlReplicationConfigurationRetriever = new SqlReplicationConfigurationRetriever(systemDatabase, database);
 		}
 
 		public ConfigurationDocument<TType> GetConfigurationDocument<TType>(string key)
@@ -102,6 +106,8 @@ namespace Raven.Database.Config.Retriever
 					return periodicExportConfigurationRetriever;
 				case DocumentType.QuotasConfiguration:
 					return configurationSettingRetriever;
+				case DocumentType.SqlReplicationConnections:
+					return sqlReplicationConfigurationRetriever;
 				default:
 					throw new NotSupportedException("Document type is not supported: " + documentType);
 			}
@@ -143,7 +149,8 @@ namespace Raven.Database.Config.Retriever
 			ReplicationDestinations,
 			VersioningConfiguration,
 			PeriodicExportConfiguration,
-			QuotasConfiguration
+			QuotasConfiguration,
+			SqlReplicationConnections
 		}
 	}
 }

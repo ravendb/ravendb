@@ -227,19 +227,26 @@ namespace Raven.Abstractions.Data
 			public const string RavenVersioningDefaultConfiguration = "Raven/Versioning/DefaultConfiguration";
 	    }
 
+	    public class SqlReplication
+	    {
+			public const string SqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
+	    }
+
 	    public class Global
 	    {
-			public const string ReplicationDestinations = "Raven/Global/Replication/Destinations";
+			public const string ReplicationDestinationsDocumentName = "Raven/Global/Replication/Destinations";
 
-			public const string VersioningPrefix = "Raven/Global/Versioning/";
-			public const string VersioningDefaultConfiguration = "Raven/Global/Versioning/DefaultConfiguration";
+			public const string VersioningDocumentPrefix = "Raven/Global/Versioning/";
+			public const string VersioningDefaultConfigurationDocumentName = "Raven/Global/Versioning/DefaultConfiguration";
 
-			public const string PeriodicExport = "Raven/Global/Backup/Periodic/Setup";
+			public const string PeriodicExportDocumentName = "Raven/Global/Backup/Periodic/Setup";
 
-			public const string DocsHardLimit = "Raven/Global/Quotas/Documents/HardLimit";
-			public const string DocsSoftLimit = "Raven/Global/Quotas/Documents/SoftLimit";
-			public const string SizeHardLimitInKB = "Raven/Global/Quotas/Size/HardLimitInKB";
-			public const string SizeSoftLimitInKB = "Raven/Global/Quotas/Size/SoftMarginInKB";
+			public const string QuotasDocsHardLimitSettingKey = "Raven/Global/Quotas/Documents/HardLimit";
+			public const string QuotasDocsSoftLimitSettingKey = "Raven/Global/Quotas/Documents/SoftLimit";
+			public const string QuotasSizeHardLimitInKBSettingKey = "Raven/Global/Quotas/Size/HardLimitInKB";
+			public const string QuotasSizeSoftLimitInKBSettingKey = "Raven/Global/Quotas/Size/SoftMarginInKB";
+
+			public const string SqlReplicationConnectionsDocumentName = "Raven/Global/SqlReplication/Connections";
 	    }
 	}
 }

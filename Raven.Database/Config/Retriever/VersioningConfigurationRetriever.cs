@@ -20,7 +20,7 @@ namespace Raven.Database.Config.Retriever
 		protected override VersioningConfiguration ConvertGlobalDocumentToLocal(VersioningConfiguration global)
 		{
 			if (string.IsNullOrEmpty(global.Id) == false) 
-				global.Id = global.Id.Replace(Constants.Global.VersioningPrefix, Constants.Versioning.RavenVersioningPrefix);
+				global.Id = global.Id.Replace(Constants.Global.VersioningDocumentPrefix, Constants.Versioning.RavenVersioningPrefix);
 
 			return global;
 		}
@@ -28,10 +28,10 @@ namespace Raven.Database.Config.Retriever
 		public override string GetGlobalConfigurationDocumentKey(string key)
 		{
 			if (string.Equals(key, Constants.Versioning.RavenVersioningDefaultConfiguration, StringComparison.OrdinalIgnoreCase))
-				return Constants.Global.VersioningDefaultConfiguration;
+				return Constants.Global.VersioningDefaultConfigurationDocumentName;
 
 			if (key.StartsWith(Constants.Versioning.RavenVersioningPrefix, StringComparison.OrdinalIgnoreCase))
-				return key.Replace(Constants.Versioning.RavenVersioningPrefix, Constants.Global.VersioningPrefix);
+				return key.Replace(Constants.Versioning.RavenVersioningPrefix, Constants.Global.VersioningDocumentPrefix);
 
 			throw new NotSupportedException("Not supported key: " + key);
 		}

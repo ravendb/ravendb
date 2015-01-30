@@ -56,7 +56,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				systemDatabase
 					.Documents
 					.Put(
-						Constants.Global.PeriodicExport,
+						Constants.Global.PeriodicExportDocumentName,
 						null,
 						RavenJObject.FromObject(new PeriodicExportSetup
 						{
