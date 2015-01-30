@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="Structure.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="IStructure.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -13,16 +13,16 @@ using Voron.Util;
 
 namespace Voron
 {
-	public unsafe abstract class Structure
+	public unsafe interface IStructure
 	{
-		public abstract void Write(byte* ptr);
+		void Write(byte* ptr);
 
-		public abstract int GetSize();
+		int GetSize();
 
-		public abstract void AssertValidStructure();
+		void AssertValidStructure();
 	}
 
-	public unsafe class Structure<T> : Structure
+	public unsafe class Structure<T> : IStructure
 	{
 		internal class FixedSizeWrite
 		{
@@ -124,7 +124,7 @@ namespace Voron
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public override void AssertValidStructure()
+		public void AssertValidStructure()
 		{
 			if (_schema.IsFixedSize == false && VariableSizeWrites == null && AllowToSkipVariableSizeFields == false)
 				throw new InvalidOperationException("Your structure schema defines variable size fields but you haven't set any. If you really want to skip those fields set AllowToSkipVariableSizeFields = true.");
@@ -145,7 +145,7 @@ namespace Voron
 			}
 		}
 
-		public override void Write(byte* ptr)
+		public void Write(byte* ptr)
 		{
 			WriteFixedSizeFields(ptr);
 			WriteIncrements(ptr);
@@ -328,7 +328,7 @@ namespace Voron
 			}
 		}
 
-		public override int GetSize()
+		public int GetSize()
 		{
 			if (_schema.IsFixedSize)
 				return _schema.FixedSize;

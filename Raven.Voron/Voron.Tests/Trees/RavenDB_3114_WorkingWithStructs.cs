@@ -29,7 +29,7 @@ namespace Voron.Tests.Trees
 
 			var ae = Assert.Throws<ArgumentException>(() => new StructureSchema<Foo>());
 
-			Assert.Equal("Structure schema can have fields of the following types: string, enum, primitives.", ae.Message);
+			Assert.Equal("IStructure schema can have fields of the following types: string, enum, primitives.", ae.Message);
 		}
 
 		[Fact]

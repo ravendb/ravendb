@@ -420,7 +420,7 @@ namespace Mono.Unix.Native
 		EALREADY = 114, // Operation already in progress 
 		EINPROGRESS = 115, // Operation now in progress 
 		ESTALE = 116, // Stale NFS file handle 
-		EUCLEAN = 117, // Structure needs cleaning 
+		EUCLEAN = 117, // IStructure needs cleaning 
 		ENOTNAM = 118, // Not a XENIX named type file 
 		ENAVAIL = 119, // No XENIX semaphores available 
 		EISNAM = 120, // Is a named type file 

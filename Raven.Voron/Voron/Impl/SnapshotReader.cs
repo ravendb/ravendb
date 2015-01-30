@@ -25,7 +25,7 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
-				Structure _;
+				IStructure _;
 				ushort? version;
 				if (writeBatch.TryGetValue(treeName, key, out stream, out _, out version, out operationType))
 				{
@@ -59,7 +59,7 @@ namespace Voron.Impl
 			if (writeBatch != null && writeBatch.IsEmpty == false)
 			{
 				WriteBatch.BatchOperationType operationType;
-				Structure value;
+				IStructure value;
 				Stream _;
 				ushort? version;
 				if (writeBatch.TryGetValue(treeName, key, out _, out value, out version, out operationType))
@@ -95,8 +95,8 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
-				Structure valueType;
-				if (writeBatch.TryGetValue(treeName, key, out stream, out valueType, out version, out operationType))
+				IStructure _;
+				if (writeBatch.TryGetValue(treeName, key, out stream, out _, out version, out operationType))
 				{
 					switch (operationType)
 					{
@@ -128,9 +128,9 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
-				Structure valueType;
+				IStructure _;
 				ushort? version;
-				if (writeBatch.TryGetValue(treeName, key, out stream, out valueType, out version, out operationType) && version.HasValue)
+				if (writeBatch.TryGetValue(treeName, key, out stream, out _, out version, out operationType) && version.HasValue)
 				{
 					switch (operationType)
 					{

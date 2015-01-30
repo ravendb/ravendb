@@ -94,7 +94,7 @@
     <Compile Include="SliceComparisonMethods.cs" />
     <Compile Include="SliceWriter.cs" />
     <Compile Include="StructReadResult.cs" />
-    <Compile Include="Structure.cs" />
+    <Compile Include="IStructure.cs" />
     <Compile Include="StructureReader.cs" />
     <Compile Include="StructureSchema.cs" />
     <Compile Include="Trees\PageIterator.cs" />

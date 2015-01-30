@@ -108,7 +108,7 @@ namespace Voron.Trees
 			return new StructReadResult<T>(new StructureReader<T>(readResult.Reader.Base, schema), readResult.Version);
 		}
 
-		public void WriteStruct(Slice key, Structure structure, ushort? version = null)
+		public void WriteStruct(Slice key, IStructure structure, ushort? version = null)
 		{
 			structure.AssertValidStructure();
 
