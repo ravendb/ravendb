@@ -173,6 +173,12 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 				entriesCount = tx.ReadTree(table.TableName).State.EntriesCount;
 			}
 
+			if (entriesCount == 0)
+			{
+				output(string.Format("No records to migrate in '{0}' table.", table.TableName));
+				return;
+			}
+
 			output(string.Format("Starting to migrate '{0}' table to use structures. Records to process: {1}", table.TableName, entriesCount));
 
 			var migratedEntries = 0L;
