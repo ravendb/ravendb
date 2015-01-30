@@ -20,7 +20,7 @@ class statusDebugQueries extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('JHZ574');
         this.activeDatabase.subscribe(() => this.fetchCurrentQueries());
         return this.fetchCurrentQueries();
     }

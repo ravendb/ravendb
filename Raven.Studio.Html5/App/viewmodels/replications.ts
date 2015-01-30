@@ -52,6 +52,7 @@ class replications extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink('7K1KES');
         
         this.serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([this.prefixForHilo]);
         this.isServerPrefixForHiLoSaveEnabled = ko.computed(() => this.serverPrefixForHiLoDirtyFlag().isDirty());

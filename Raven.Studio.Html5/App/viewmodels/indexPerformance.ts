@@ -232,12 +232,7 @@ class metrics extends viewModelBase {
                 var oldAllIndexes = this.allIndexNames();
 
                 if (oldAllIndexes.length == 0) {
-                    if (mapResult.length > 0 && reduceResult.length > 0) {
-                        // we have to trim data to match common start date
-                        var mapMinDate = d3.min(mapResult, r => r.StartedAtDate);
-                        var reduceMinDate = d3.min(reduceResult, r => r.StartedAtDate);
-                        this.edgeDate = d3.max([mapMinDate, reduceMinDate]);
-                    } else if (mapResult.length > 0) {
+                    if (mapResult.length > 0) {
                         this.edgeDate = d3.min(mapResult, r => r.StartedAtDate);
                     } else if (reduceResult.length > 0) {
                         this.edgeDate = d3.min(reduceResult, r => r.StartedAtDate);

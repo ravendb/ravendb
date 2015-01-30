@@ -126,6 +126,7 @@ class editIndex extends viewModelBase {
         else {
             this.priority(indexPriority.normal);
         }
+        this.updateHelpLink('CQ5AYO');
 
         this.initializeDirtyFlag();
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);

@@ -11,6 +11,7 @@ class userInfo extends viewModelBase {
         super.activate(args);
 
         this.activeDatabase.subscribe(() => this.fetchUserInfo());
+        this.updateHelpLink('JSVY4P');
         return this.fetchUserInfo();
     }
 

@@ -66,6 +66,7 @@ class logs extends viewModelBase {
             ko.observable<number>(360)
         ];
         this.registerColumnResizing();
+        this.updateHelpLink('3Z9IJS');
         return this.fetchLogs();
     }
 

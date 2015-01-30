@@ -29,6 +29,11 @@ class customFunctionsEditor extends viewModelBase {
         });
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('XLDBRW');
+    }
+
     attached() {
         $("#customFunctionsExample").popover({
             html: true,

@@ -19,6 +19,11 @@ class createSampleData extends viewModelBase{
         });
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('OGRN53');
+    }
+
     showSampleDataClass() {
         require(["commands/createSampleDataClassCommand"], createSampleDataClassCommand => {
             new createSampleDataClassCommand(this.activeDatabase())

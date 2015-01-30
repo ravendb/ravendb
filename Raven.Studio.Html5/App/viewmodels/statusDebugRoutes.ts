@@ -33,6 +33,7 @@ class statusDebugRoutes extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink('JHZ574');
         return this.fetchRoutes();
     }
 

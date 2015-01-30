@@ -26,6 +26,11 @@ class statusDebugIndexFields extends viewModelBase {
         $("#statusDebugIndexFieldsEditor").on('DynamicHeightSet', () => this.editor.resize());
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('JHZ574');
+    }
+
     detached() {
         super.detached();
         $("#statusDebugIndexFieldsEditor").off('DynamicHeightSet');

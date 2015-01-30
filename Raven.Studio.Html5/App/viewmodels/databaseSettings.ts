@@ -71,7 +71,7 @@ class databaseSettings extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('3QMLGH');
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText], false, jsonUtil.newLineNormalizingHashFunction);
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }

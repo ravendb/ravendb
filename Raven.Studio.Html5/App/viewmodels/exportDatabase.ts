@@ -32,6 +32,7 @@ class exportDatabase extends viewModelBase {
 
     activate(args: any) {
         super.activate(args);
+        this.updateHelpLink('YD9M1R');
 
         new getCollectionsCommand(this.activeDatabase())
             .execute()
