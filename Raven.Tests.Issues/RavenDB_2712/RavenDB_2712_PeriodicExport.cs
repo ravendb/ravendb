@@ -59,7 +59,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.Equal(17, document.Document.FullBackupIntervalMilliseconds);
 				Assert.Equal("g1", document.Document.GlacierVaultName);
 				Assert.Equal(12, document.Document.IntervalMilliseconds);
-				Assert.Equal("f1", document.Document.LocalFolderName);
+				Assert.Equal("f1\\Northwind", document.Document.LocalFolderName);
 				Assert.Equal("s1", document.Document.S3BucketName);
 			}
 		}

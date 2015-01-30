@@ -1,3 +1,5 @@
+using System.IO;
+
 using Raven.Abstractions.Data;
 
 namespace Raven.Database.Config.Retriever
@@ -11,6 +13,9 @@ namespace Raven.Database.Config.Retriever
 
 		protected override PeriodicExportSetup ConvertGlobalDocumentToLocal(PeriodicExportSetup global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
+			if (string.IsNullOrEmpty(global.LocalFolderName) == false)
+				global.LocalFolderName = Path.Combine(global.LocalFolderName, localDatabase.Name);
+
 			return global;
 		}
 
