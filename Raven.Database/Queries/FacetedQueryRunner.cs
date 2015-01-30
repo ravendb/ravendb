@@ -49,10 +49,6 @@ namespace Raven.Database.Queries
 						throw new InvalidOperationException("Facet " + facet.Name + " cannot have aggregation set to " +
 															facet.Aggregation + " without having a value in AggregationField");
 
-					if (string.IsNullOrEmpty(facet.AggregationType))
-						throw new InvalidOperationException("Facet " + facet.Name + " cannot have aggregation set to " +
-															facet.Aggregation + " without having a value in AggregationType");
-
 					if (facet.AggregationField.EndsWith("_Range") == false)
 					{
 						if (QueryForFacets.IsAggregationTypeNumerical(facet.AggregationType))
@@ -261,7 +257,8 @@ namespace Raven.Database.Queries
 
 				var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
 
-			    if (IndexQuery.IsDistinct)
+			    bool isDistinct = IndexQuery.IsDistinct;
+			    if (isDistinct)
 			    {
                     _fieldsCrc = IndexQuery.FieldsToFetch.Aggregate<string, uint>(0, (current, field) => Crc.Value(field, current));
 			    }
@@ -282,7 +279,7 @@ namespace Raven.Database.Queries
 
                         Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
                         HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
-                        if(IndexQuery.IsDistinct)
+                        if(isDistinct)
                             distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
 
 					    foreach (var readerFacetInfo in returnedReaders)
@@ -298,7 +295,7 @@ namespace Raven.Database.Queries
 
                             foreach (var kvp in termsForField)
                             {
-                                if (IndexQuery.IsDistinct)
+                                if (isDistinct)
                                 {
                                     if (distinctItems.TryGetValue(kvp.Key, out alreadySeen) == false)
                                     {
@@ -342,13 +339,13 @@ namespace Raven.Database.Queries
 				        var facet = Facets[range.Key];
                         Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
                         HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
-                        if (IndexQuery.IsDistinct)
+                        if (isDistinct)
                             distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
 
 				        foreach (var readerFacetInfo in returnedReaders)
 				        {
                             var termsForField = IndexedTerms.GetTermsAndDocumenstFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name);
-                            if (IndexQuery.IsDistinct)
+                            if (isDistinct)
                             {
                                 if (distinctItems.TryGetValue(range.Key, out alreadySeen) == false)
                                 {

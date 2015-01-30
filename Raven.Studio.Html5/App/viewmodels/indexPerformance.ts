@@ -1029,8 +1029,18 @@ class metrics extends viewModelBase {
         var html = '<div data-bind="template: { name : \'' + templateName + '\' }"></div>';
         var clickLocation = d3.mouse(container);
         nv.tooltip.show([clickLocation[0], clickLocation[1]], html, 'n', 0, container, "selectable-tooltip");
-        var node = $(".nvtooltip")[0];
+        var tool = $(".nvtooltip");
+        var node = tool[0];
         ko.applyBindings({ data: data, tooltipClose: nv.tooltip.cleanup }, node);
+
+        var drag = d3.behavior.drag()
+            .on('drag', function () {
+                var o = tool.offset();
+                tool.offset({ top: o.top + d3.event.dy, left: o.left + d3.event.dx });
+            });
+
+        d3.select('.nvtooltip').call(drag);
+
     }
 
     private indexStatClicked(data: indexNameAndMapPerformanceStats) {

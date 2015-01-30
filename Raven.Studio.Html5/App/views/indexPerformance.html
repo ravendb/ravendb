@@ -31,7 +31,7 @@
     .batchRange {
         cursor: pointer;
     }
-    .selectable-tooltip .close {
+    .selectable-tooltip .close, .selectable-tooltip .handle {
         pointer-events: all;
         -webkit-touch-callout: all;
         -webkit-user-select: all;
@@ -40,6 +40,7 @@
         -ms-user-select: all;
         user-select: all;
     }
+
     line.reduce_split_line {
         stroke:black;
         stroke-width: 1;
@@ -86,8 +87,12 @@
 <script type="text/html" id="map-batch-info-template">
     <div style="padding: 10px">
         <form>
+             <div class="handle"><i class="fa fa-arrows"></i> Map batch information</div>
             <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
+            <div class="clearfix"></div>
         </form>
+        
+        <hr class="tight" />
         <table class="table table-condensed table-striped" data-bind="with: data">
             <thead>
                 <tr>
@@ -129,8 +134,12 @@
 <script type="text/html" id="reduce-batch-info-template">
     <div style="padding: 10px">
         <form>
+             <div class="handle"><i class="fa fa-arrows"></i> Reduce batch information</div>
             <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
+            <div class="clearfix"></div>
         </form>
+        
+        <hr class="tight" />
         <table class="table table-condensed table-striped" data-bind="with: data">
             <tbody>
                 <tr>
@@ -161,8 +170,11 @@
 <script type="text/html" id="index-stat-template">
     <div style="padding: 10px">
         <form>
+            <div class="handle"><i class="fa fa-arrows"></i> Indexing information</div>
             <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
+            <div class="clearfix"></div>
         </form>
+        <hr class="tight" />
 
         <table class="table table-condensed table-striped" data-bind="with: data">
             <thead>
@@ -238,8 +250,12 @@
 <script type="text/html" id="reduce-stat-template">
     <div style="padding: 10px">
         <form>
+             <div class="handle"><i class="fa fa-arrows"></i> Reducing information</div>
             <button type="button" class="close" data-bind="click: tooltipClose"><i class="fa fa-times"></i></button>
+            <div class="clearfix"></div>
         </form>
+        
+        <hr class="tight" />
 
         <table class="table table-condensed table-striped" data-bind="with: data">
             <thead>

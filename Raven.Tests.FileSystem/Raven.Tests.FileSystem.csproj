@@ -100,6 +100,7 @@
     <Compile Include="Bugs\UpdatingMetadata.cs" />
     <Compile Include="Bugs\UploadFilesWithTheSameContentConcurrently.cs" />
     <Compile Include="Bugs\UploadDownload.cs" />
+    <Compile Include="Bundles\Versioning\VersioningTests.cs" />
     <Compile Include="ClientApi\FileQueryTests.cs" />
     <Compile Include="ClientApi\FileSessionListenersTests.cs" />
     <Compile Include="ClientApi\FileSessionTests.cs" />
@@ -109,10 +110,10 @@
     <Compile Include="CommandsUsage.cs" />
     <Compile Include="CompleteUsage.cs" />
     <Compile Include="Config.cs" />
-    <Compile Include="Encryption\Crud.cs" />
-    <Compile Include="Encryption\EncryptedFileSystemBackupRestore.cs" />
-    <Compile Include="Encryption\FileSystemEncryptionTest.cs" />
-    <Compile Include="Encryption\ShouldErrorOnMissingConfiguration.cs" />
+    <Compile Include="Bundles\Encryption\Crud.cs" />
+    <Compile Include="Bundles\Encryption\EncryptedFileSystemBackupRestore.cs" />
+    <Compile Include="Bundles\Encryption\FileSystemEncryptionTest.cs" />
+    <Compile Include="Bundles\Encryption\ShouldErrorOnMissingConfiguration.cs" />
     <Compile Include="FileHandling.cs" />
     <Compile Include="FileNamingTests.cs" />
     <Compile Include="Folders.cs" />
@@ -210,6 +211,7 @@
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

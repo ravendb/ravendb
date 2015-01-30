@@ -23,16 +23,24 @@ namespace Raven.Database.FileSystem.Storage.Voron
 {
 	internal abstract class StorageActionsBase
 	{
-	    private readonly IBufferPool bufferPool;
+		private readonly Reference<SnapshotReader> snapshotReference;
 
-		protected SnapshotReader Snapshot { get; private set; }
+		private readonly IBufferPool bufferPool;
 
-        protected IdGenerator IdGenerator { get; private set; }
-
-        protected StorageActionsBase(SnapshotReader snapshot, IdGenerator idGenerator, IBufferPool bufferPool)
+		protected SnapshotReader Snapshot
 		{
-		    this.bufferPool = bufferPool;
-			Snapshot = snapshot;
+			get
+			{
+				return snapshotReference.Value;
+			}
+		}
+
+		protected IdGenerator IdGenerator { get; private set; }
+
+		protected StorageActionsBase(Reference<SnapshotReader> snapshotReference, IdGenerator idGenerator, IBufferPool bufferPool)
+		{
+			this.snapshotReference = snapshotReference;
+			this.bufferPool = bufferPool;
 		    IdGenerator = idGenerator;
 		}
 

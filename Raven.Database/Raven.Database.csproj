@@ -237,6 +237,14 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideVersionedFilesFromIndexingTrigger.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningDeleteTrigger.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningPutTrigger.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="FileSystem\Plugins\AbstractFileDeleteTrigger.cs" />
+    <Compile Include="FileSystem\Plugins\AbstractFileReadTrigger.cs" />
+    <Compile Include="FileSystem\Plugins\AbstractFilePutTrigger.cs" />
+    <Compile Include="FileSystem\Plugins\TriggerExtensions.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />

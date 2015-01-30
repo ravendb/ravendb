@@ -12,6 +12,7 @@ using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
+using Raven.Database.Plugins;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -398,6 +399,9 @@ namespace Raven.Database.FileSystem.Search
 
         private void Index(IndexWriter writer, string key, RavenJObject metadata)
         {
+	        if (filesystem.ReadTriggers.CanReadFile(key, metadata, ReadOperation.Index) == false)
+				return;
+
             lock (writerLock)
             {
                 var lowerKey = key.ToLowerInvariant();
@@ -435,7 +439,7 @@ namespace Raven.Database.FileSystem.Search
             }
         }
 
-        public virtual void Index(string key, RavenJObject metadata)
+	    public virtual void Index(string key, RavenJObject metadata)
         {
             Index(writer, key, metadata);
         }
@@ -680,6 +684,5 @@ namespace Raven.Database.FileSystem.Search
             {
             }
         }
-
     }
 }

@@ -69,7 +69,7 @@ namespace Voron.Platform.Posix
 
 		public static unsafe bool TryReadFileHeader(FileHeader* header, string path)
 		{
-			var fd = Syscall.open(path, OpenFlags.O_RDONLY);
+			var fd = Syscall.open(path, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
 			try
 			{
 				if (fd == -1)
@@ -101,15 +101,5 @@ namespace Voron.Platform.Posix
 					Syscall.close(fd);
 			}
 		}
-	}
-
-	internal static class Rt
-	{
-		[DllImport("rt", SetLastError = true)]
-		public extern static int shm_open (string name, OpenFlags oflag, int mode);
-
-		[DllImport("rt", SetLastError = true)]
-		public extern static int shm_unlink (string name);
-
 	}
 }

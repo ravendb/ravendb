@@ -86,6 +86,7 @@ namespace Raven.Client.FileSystem
         Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 1024);
 
         Task<FileHeader[]> GetAsync(string[] filename);
+		Task<FileHeader[]> StartsWithAsync(string prefix, int start, int pageSize);
 
         Task<IAsyncEnumerator<FileHeader>> StreamFilesAsync(Etag fromEtag, int pageSize = int.MaxValue);
 
