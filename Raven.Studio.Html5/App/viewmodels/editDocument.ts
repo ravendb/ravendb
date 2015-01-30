@@ -233,6 +233,7 @@ class editDocument extends viewModelBase {
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
+        this.updateHelpLink('M72H1R');
 
         this.lodaedDocumentName(this.userSpecifiedId());
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId],false, jsonUtil.newLineNormalizingHashFunction);

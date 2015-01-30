@@ -31,7 +31,7 @@ class quotas extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('594W7T');
         this.initializeDirtyFlag();
 
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty() === true);

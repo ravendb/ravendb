@@ -63,6 +63,7 @@ class indexes extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink('AIHAR1');
 
         this.appUrls = appUrl.forCurrentDatabase();
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), null));

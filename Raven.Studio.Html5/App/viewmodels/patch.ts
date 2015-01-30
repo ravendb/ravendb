@@ -49,7 +49,9 @@ class patch extends viewModelBase {
         aceEditorBindingHandler.install();
     }
 
-    activate() {
+    activate(navigationArgs) {
+        super.activate(navigationArgs);
+        this.updateHelpLink('QGGJR5');
         this.patchDocument(patchDocument.empty());
         this.isExecuteAllowed = ko.computed(() => ((this.patchDocument().script()) && (this.beforePatch())) ? true : false);
         this.keyOfTestedDocument = ko.computed(() => {

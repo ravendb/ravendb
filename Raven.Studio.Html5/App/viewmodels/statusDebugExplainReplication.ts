@@ -32,6 +32,11 @@ class statusDebugExplainReplication extends viewModelBase {
         return deferred;
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('JHZ574');
+    }
+
     fetchReplicationDestinations() {
         return new getReplicationsCommand(this.activeDatabase())
             .execute()

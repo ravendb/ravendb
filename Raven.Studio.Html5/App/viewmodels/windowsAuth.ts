@@ -21,6 +21,7 @@ class windowsAuth extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink('ZDGUY9');
 
         this.dirtyFlag = new ko.DirtyFlag([this.setup]);
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());

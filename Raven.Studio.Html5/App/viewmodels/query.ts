@@ -167,6 +167,8 @@ class query extends viewModelBase {
 
         this.fetchRecentQueries();
 
+        this.updateHelpLink('KCIMJK');
+
         $.when(this.fetchAllCollections(), this.fetchAllIndexes())
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
 

@@ -77,6 +77,7 @@ class replicationStats extends viewModelBase {
             this.fetchReplStats();
             this.checkIfHasReplicationEnabled();
         });
+        this.updateHelpLink('ES8PCB');
         this.fetchReplStats();
     }
 

@@ -64,6 +64,11 @@ class ioTest extends viewModelBase {
         return deffered;
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('ZL2H8E');
+    }
+
     onIoTestCompleted(result: diskPerformanceResultWrappedDto) {
         this.testResult(new performanceTestResultWrapped(result)); 
 

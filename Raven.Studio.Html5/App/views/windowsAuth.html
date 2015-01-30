@@ -1,6 +1,7 @@
 ﻿<form class="form-horizontal" role="form" data-bind="submit: saveChanges">
     <div class="panel panel-default">
         <div class="panel-heading">
+            <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
             <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             <button type="button" class="btn btn-default" data-bind="click: addUserSettings, visible: isUsersSectionActive" title="Add user settings(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add User Settings</button>
             <button type="button" class="btn btn-default" data-bind="click: addGroupSettings, visible: !isUsersSectionActive()"><i class="fa fa-plus"></i> Add Group Settings</button>
