@@ -142,15 +142,6 @@ namespace Mono.Unix.Native
 
 	}
 
-
-
-	[CLSCompliant(false)]
-	public enum MremapFlags : ulong
-	{
-		MREMAP_MAYMOVE = 0x1,
-	}
-
-
 	[CLSCompliant(false)]
 	public enum MmapProts : int
 	{
