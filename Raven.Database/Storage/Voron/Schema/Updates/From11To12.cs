@@ -108,6 +108,23 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 					.Set(ReduceResultFields.Timestamp, timestamp.ToBinary());
 			});
 
+			MigrateToStructures(tableStorage.Environment, tableStorage.ScheduledReductions, output, (json, structure) =>
+			{
+				var view = json.Value<int>("view");
+				var reduceKey = json.Value<string>("reduceKey");
+				var etag = json.Value<byte[]>("etag");
+				var timestamp = json.Value<DateTime>("timestamp");
+				var bucket = json.Value<int>("bucket");
+				var level = json.Value<int>("level");
+
+				structure.Set(ScheduledReductionFields.IndexId, view)
+					.Set(ScheduledReductionFields.ReduceKey, reduceKey)
+					.Set(ScheduledReductionFields.Etag, etag)
+					.Set(ScheduledReductionFields.Timestamp, timestamp.ToBinary())
+					.Set(ScheduledReductionFields.Bucket, bucket)
+					.Set(ScheduledReductionFields.Level, level);
+			});
+
 			UpdateSchemaVersion(tableStorage, output);
 		}
 

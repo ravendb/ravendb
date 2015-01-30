@@ -3,6 +3,7 @@ using System.Text;
 
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
+using Raven.Client.Extensions;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Raven.Database.Util;
 
@@ -385,15 +386,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
 
 					yield return new ScheduledReductionDebugInfo
 					{
-						Key = value.Value<string>("reduceKey"),
-						Bucket = value.Value<int>("bucket"),
-						Etag = new Guid(value.Value<byte[]>("etag")),
-						Level = value.Value<int>("level"),
-						Timestamp = value.Value<DateTime>("timestamp"),
+						Key = value.ReadString(ScheduledReductionFields.ReduceKey),
+						Bucket = value.ReadInt(ScheduledReductionFields.Bucket),
+						Etag = new Guid(value.ReadBytes(ScheduledReductionFields.Etag)),
+						Level = value.ReadInt(ScheduledReductionFields.Level),
+						Timestamp = DateTime.FromBinary(value.ReadLong(ScheduledReductionFields.Timestamp)),
 					};
 
 					count++;
@@ -411,15 +412,16 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var idAsString = id.ToString();
 		    var reduceHashKey = HashKey(reduceKeysAndBuckets.ReduceKey);
 
-			tableStorage.ScheduledReductions.Add(writeBatch.Value, idAsString, new RavenJObject
-			{
-				{"view", view},
-				{"reduceKey", reduceKeysAndBuckets.ReduceKey},
-				{"bucket", reduceKeysAndBuckets.Bucket},
-				{"level", level},
-				{"etag", id.ToByteArray()},
-				{"timestamp", SystemTime.UtcNow}
-			});
+			var scheduledReduction = new Structure<ScheduledReductionFields>(tableStorage.ScheduledReductions.Schema);
+
+			scheduledReduction.Set(ScheduledReductionFields.IndexId, view)
+				.Set(ScheduledReductionFields.ReduceKey, reduceKeysAndBuckets.ReduceKey)
+				.Set(ScheduledReductionFields.Bucket, reduceKeysAndBuckets.Bucket)
+				.Set(ScheduledReductionFields.Level, level)
+				.Set(ScheduledReductionFields.Etag, id.ToByteArray())
+				.Set(ScheduledReductionFields.Timestamp, SystemTime.UtcNow.ToBinary());
+
+			tableStorage.ScheduledReductions.AddStruct(writeBatch.Value, idAsString, scheduledReduction);
 
 			scheduledReductionsByView.MultiAdd(writeBatch.Value, CreateKey(view), idAsString);
 			scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch.Value, CreateKey(view, level, reduceKeysAndBuckets.ReduceKey, reduceHashKey), idAsString);
@@ -430,11 +432,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
             var deleter = new ScheduledReductionDeleter(getItemsToReduceParams.ItemsToDelete, o =>
             {
-                var json = o as RavenJObject;
-                if (json == null) 
+                var etag = o as Etag;
+                if (etag == null) 
                     return null;
 
-                var etag = Etag.Parse(json.Value<byte[]>("etag"));
                 return etag.ToString();
             });
 
@@ -454,13 +455,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 							break;
 
 						ushort version;
-						var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
+						var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
 
-						var reduceKeyFromDb = value.Value<string>("reduceKey");
+						var reduceKeyFromDb = value.ReadString(ScheduledReductionFields.ReduceKey);
 
-						var bucket = value.Value<int>("bucket");
+						var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
 						var rowKey = Tuple.Create(reduceKeyFromDb, bucket);
-					    var thisIsNewScheduledReductionRow = deleter.Delete(iterator.CurrentKey, value);
+					    var thisIsNewScheduledReductionRow = deleter.Delete(iterator.CurrentKey, Etag.Parse(value.ReadBytes(ScheduledReductionFields.Etag)));
 						var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
 						if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
 						{
@@ -595,13 +596,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var result = new ScheduledReductionInfo();
 			var hasResult = false;
 			var currentEtag = Etag.Empty;
-			foreach (RavenJToken token in itemsToDelete)
+			foreach (Etag etag in itemsToDelete)
 			{
-				var etag = Etag.Parse(token.Value<byte[]>("etag"));
 				var etagAsString = etag.ToString();
 
 				ushort version;
-				var value = LoadJson(tableStorage.ScheduledReductions, etagAsString, writeBatch.Value, out version);
+				var value = LoadStruct(tableStorage.ScheduledReductions, etagAsString, writeBatch.Value, out version);
 				if (value == null)
 					continue;
 
@@ -609,12 +609,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					hasResult = true;
 					result.Etag = etag;
-					result.Timestamp = value.Value<DateTime>("timestamp");
+					result.Timestamp = DateTime.FromBinary(value.ReadLong(ScheduledReductionFields.Timestamp));
 				}
 
-				var view = value.Value<int>("view");
-				var level = value.Value<int>("level");
-				var reduceKey = value.Value<string>("reduceKey");
+				var view = value.ReadInt(ScheduledReductionFields.IndexId);
+				var level = value.ReadInt(ScheduledReductionFields.Level);
+				var reduceKey = value.ReadString(ScheduledReductionFields.ReduceKey);
 
 				DeleteScheduledReduction(etagAsString, view, level, reduceKey);
 			}
@@ -728,9 +728,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
 
-					allKeysToReduce.Add(value.Value<string>("reduceKey"));
+					allKeysToReduce.Add(value.ReadString(ScheduledReductionFields.ReduceKey));
                     processedItems++;
 				}
 				while (iterator.MoveNext() && processedItems < take);
@@ -946,13 +946,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var id = iterator.CurrentKey.Clone();
 
 					ushort version;
-					var value = LoadJson(tableStorage.ScheduledReductions, id, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.ScheduledReductions, id, writeBatch.Value, out version);
 					if (value == null)
 						continue;
 
-					var v = value.Value<int>("view");
-					var level = value.Value<int>("level");
-					var reduceKey = value.Value<string>("reduceKey");
+					var v = value.ReadInt(ScheduledReductionFields.IndexId);
+					var level = value.ReadInt(ScheduledReductionFields.Level);
+					var reduceKey = value.ReadString(ScheduledReductionFields.ReduceKey);
 
 					DeleteScheduledReduction(id, v, level, reduceKey);
 					storageActionsAccessor.General.MaybePulseTransaction();

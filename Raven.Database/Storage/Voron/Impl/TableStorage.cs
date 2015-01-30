@@ -125,7 +125,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table Tasks { get; private set; }
 
-		public Table ScheduledReductions { get; private set; }
+		public TableOfStructures<ScheduledReductionFields> ScheduledReductions { get; private set; }
 
 		public TableOfStructures<MappedResultFields> MappedResults { get; private set; }
 
@@ -235,7 +235,15 @@ namespace Raven.Database.Storage.Voron.Impl
 			Queues = new Table(Tables.Queues.TableName, bufferPool, Tables.Queues.Indices.ByName, Tables.Queues.Indices.Data);
 			Lists = new Table(Tables.Lists.TableName, bufferPool, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
 			Tasks = new Table(Tables.Tasks.TableName, bufferPool, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType, Tables.Tasks.Indices.ByIndex);
-			ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, bufferPool, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
+			ScheduledReductions = new TableOfStructures<ScheduledReductionFields>(Tables.ScheduledReductions.TableName,
+				new StructureSchema<ScheduledReductionFields>()
+					.Add<int>(ScheduledReductionFields.IndexId)
+					.Add<int>(ScheduledReductionFields.Bucket)
+					.Add<int>(ScheduledReductionFields.Level)
+					.Add<long>(ScheduledReductionFields.Timestamp)
+					.Add<string>(ScheduledReductionFields.ReduceKey)
+					.Add<byte[]>(ScheduledReductionFields.Etag),
+				bufferPool, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
 			
 			MappedResults = new TableOfStructures<MappedResultFields>(Tables.MappedResults.TableName,
 				new StructureSchema<MappedResultFields>()
