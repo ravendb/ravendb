@@ -43,6 +43,7 @@ namespace Voron
 			public int Index;
 		}
 
+		private const int VariableFieldOffsetSize = sizeof(uint);
 		private readonly StructureSchema<T> _schema;
 		internal readonly Dictionary<T, FixedSizeWrite> FixedSizeWrites = new Dictionary<T, FixedSizeWrite>();
 		internal readonly Dictionary<T, IncrementWrite> IncrementWrites = new Dictionary<T, IncrementWrite>();
@@ -52,6 +53,8 @@ namespace Voron
 		{
 			_schema = schema;
 		}
+
+		public bool AllowToSkipVariableSizeFields { get; set; }
 
 		public Structure<T> Set<TValue>(T field, TValue value)
 		{
@@ -78,7 +81,7 @@ namespace Voron
 			else if (variableSizeField != null)
 			{
 				if (type != variableSizeField.Type)
-					throw new InvalidDataException(string.Format("Attempt to set a field value which type is different than defined in the structure schema. Expected: {0}, got: {1}", variableSizeField.Type, type)); 
+					throw new InvalidDataException(string.Format("Attempt to set a field value which type is different than defined in the structure schema. Expected: {0}, got: {1}", variableSizeField.Type, type));
 
 				var stringValue = value as string;
 				var bytesValue = value as byte[];
@@ -95,7 +98,7 @@ namespace Voron
 				else
 					throw new NotSupportedException("Unexpected variable size value type: " + type);
 
-				if(VariableSizeWrites == null)
+				if (VariableSizeWrites == null)
 					VariableSizeWrites = new VariableSizeWrite[_schema._variableSizeFields.Count];
 
 				VariableSizeWrites[variableSizeField.Index] = new VariableSizeWrite
@@ -123,8 +126,8 @@ namespace Voron
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public override void AssertValidStructure()
 		{
-			//if (_schema.IsFixedSize == false && VariableSizeWrites == null)
-			//	throw // TODO arek - is it allowed not to push any variable size fields?
+			if (_schema.IsFixedSize == false && VariableSizeWrites == null && AllowToSkipVariableSizeFields == false)
+				throw new InvalidOperationException("Your structure schema defines variable size fields but you haven't set any. If you really want to skip those fields set AllowToSkipVariableSizeFields = true.");
 
 			if (_schema.IsFixedSize == false && VariableSizeWrites != null && VariableSizeWrites.Any(x => x == null))
 			{
@@ -229,55 +232,55 @@ namespace Voron
 			{
 				var fieldInfo = incrementWrite.FieldInfo;
 
-				if (fieldInfo.Type == typeof (int))
+				if (fieldInfo.Type == typeof(int))
 				{
 					*((int*) (ptr + fieldInfo.Offset)) += (int) incrementWrite.IncrementValue;
 				}
-				else if (fieldInfo.Type == typeof (long))
+				else if (fieldInfo.Type == typeof(long))
 				{
 					*((long*) (ptr + fieldInfo.Offset)) += incrementWrite.IncrementValue;
 				}
-				else if (fieldInfo.Type == typeof (byte))
+				else if (fieldInfo.Type == typeof(byte))
 				{
 					*(ptr + fieldInfo.Offset) += (byte) incrementWrite.IncrementValue;
 				}
-				else if (fieldInfo.Type == typeof (float))
+				else if (fieldInfo.Type == typeof(float))
 				{
 					*((float*) (ptr + fieldInfo.Offset)) += incrementWrite.IncrementValue;
 				}
-				else if (fieldInfo.Type == typeof (double))
+				else if (fieldInfo.Type == typeof(double))
 				{
 					*((double*) (ptr + fieldInfo.Offset)) += incrementWrite.IncrementValue;
 				}
-				else if (fieldInfo.Type == typeof (decimal))
+				else if (fieldInfo.Type == typeof(decimal))
 				{
 					*((decimal*) (ptr + fieldInfo.Offset)) += incrementWrite.IncrementValue;
 				}
-				else if (fieldInfo.Type == typeof (short))
+				else if (fieldInfo.Type == typeof(short))
 				{
 					*((short*) (ptr + fieldInfo.Offset)) += (short) incrementWrite.IncrementValue;
 				}
-				else if (fieldInfo.Type == typeof (bool))
+				else if (fieldInfo.Type == typeof(bool))
 				{
 					throw new InvalidOperationException("Cannot increment boolean field");
 				}
-				else if (fieldInfo.Type == typeof (char))
+				else if (fieldInfo.Type == typeof(char))
 				{
 					*((char*) (ptr + fieldInfo.Offset)) += (char) incrementWrite.IncrementValue;
 				}
-				else if (fieldInfo.Type == typeof (uint))
+				else if (fieldInfo.Type == typeof(uint))
 				{
 					*((uint*) (ptr + fieldInfo.Offset)) += (uint) incrementWrite.IncrementValue;
 				}
-				else if (fieldInfo.Type == typeof (ulong))
+				else if (fieldInfo.Type == typeof(ulong))
 				{
 					*((ulong*) (ptr + fieldInfo.Offset)) += (ulong) incrementWrite.IncrementValue;
 				}
-				else if (fieldInfo.Type == typeof (sbyte))
+				else if (fieldInfo.Type == typeof(sbyte))
 				{
 					*((sbyte*) (ptr + fieldInfo.Offset)) += (sbyte) incrementWrite.IncrementValue;
 				}
-				else if (fieldInfo.Type == typeof (ushort))
+				else if (fieldInfo.Type == typeof(ushort))
 				{
 					*((ushort*) (ptr + fieldInfo.Offset)) += (ushort) incrementWrite.IncrementValue;
 				}
@@ -294,7 +297,7 @@ namespace Voron
 			if (VariableSizeWrites == null)
 				return;
 
-			var fieldOffsetsSize = sizeof (uint)* VariableSizeWrites.Length;
+			var fieldOffsetsSize = VariableFieldOffsetSize * VariableSizeWrites.Length;
 
 			var offsetsPointer = ptr + _schema.FixedSize;
 			var fieldPointer = offsetsPointer + fieldOffsetsSize;
@@ -331,8 +334,8 @@ namespace Voron
 				return _schema.FixedSize;
 
 			return _schema.FixedSize + // fixed size fields 
-				   (VariableSizeWrites == null ? 0 : sizeof(uint) * VariableSizeWrites.Length + // offsets of variable size fields // TODO arek what if someone doesnt overwrite variable string values - then we have invalid size here?
-				       VariableSizeWrites.Sum(x => x.Value.Length + x.ValueSizeLength)); // variable size fields
+				   (VariableSizeWrites == null ? 0 : VariableFieldOffsetSize * VariableSizeWrites.Length + // offsets of variable size fields 
+					   VariableSizeWrites.Sum(x => x.Value.Length + x.ValueSizeLength)); // variable size fields
 		}
 
 		private static byte SizeOf7BitEncodedInt(int value)

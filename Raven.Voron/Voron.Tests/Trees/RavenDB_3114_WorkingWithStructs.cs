@@ -543,5 +543,38 @@ namespace Voron.Tests.Trees
 				Assert.Equal('b', primitives2.ReadChar("char"));
 			}
 		}
+
+		[Fact]
+		public void ShouldNotAllowToSkipVariableSizeFieldsByDefault()
+		{
+			var schema = new StructureSchema<MappedResults>()
+				.Add<int>(MappedResults.View)
+				.Add<string>(MappedResults.ReduceKey)
+				.Add<string>(MappedResults.DocId);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				tx.State.Root.WriteStruct("structures/1", new Structure<MappedResults>(schema)
+					.Set(MappedResults.View, 1)
+					.Set(MappedResults.ReduceKey, "reduce")
+					.Set(MappedResults.DocId, "doc"));
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var ex = Assert.Throws<InvalidOperationException>(() => tx.State.Root.WriteStruct("structures/1", new Structure<MappedResults>(schema)
+					.Set(MappedResults.View, 2)));
+
+				Assert.Equal("Your structure schema defines variable size fields but you haven't set any. If you really want to skip those fields set AllowToSkipVariableSizeFields = true.", ex.Message);
+
+				Assert.DoesNotThrow(() => tx.State.Root.WriteStruct("structures/1", new Structure<MappedResults>(schema)
+				{
+					AllowToSkipVariableSizeFields = true
+				}.Set(MappedResults.View, 2)));
+			}
+
+		}
 	}
 }
