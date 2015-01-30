@@ -315,6 +315,7 @@
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\LastIndexedStatsFields.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\MappedResultFields.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ReduceKeyCountFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ReduceKeyTypeFields.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ReduceResultFields.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ReducingWorkStatsFields.cs" />
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ScheduledReductionFields.cs" />

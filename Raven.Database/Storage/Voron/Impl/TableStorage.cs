@@ -136,7 +136,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public TableOfStructures<ReduceKeyCountFields> ReduceKeyCounts { get; private set; }
 
-		public Table ReduceKeyTypes { get; private set; }
+		public TableOfStructures<ReduceKeyTypeFields> ReduceKeyTypes { get; private set; }
 
 		public Table General { get; private set; }
 
@@ -262,7 +262,13 @@ namespace Raven.Database.Storage.Voron.Impl
 					.Add<string>(ReduceKeyCountFields.ReduceKey),
 				bufferPool, Tables.ReduceKeyCounts.Indices.ByView);
 
-			ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, bufferPool, Tables.ReduceKeyTypes.Indices.ByView);
+			ReduceKeyTypes = new TableOfStructures<ReduceKeyTypeFields>(Tables.ReduceKeyTypes.TableName,
+				new StructureSchema<ReduceKeyTypeFields>()
+					.Add<int>(ReduceKeyTypeFields.IndexId)
+					.Add<int>(ReduceKeyTypeFields.ReduceType)
+					.Add<string>(ReduceKeyTypeFields.ReduceKey),
+				bufferPool, Tables.ReduceKeyTypes.Indices.ByView);
+
 			Attachments = new Table(Tables.Attachments.TableName, bufferPool, Tables.Attachments.Indices.ByEtag, Tables.Attachments.Indices.Metadata);
 
 			ReduceResults = new TableOfStructures<ReduceResultFields>(Tables.ReduceResults.TableName,

@@ -136,6 +136,17 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 					.Set(ReduceKeyCountFields.MappedItemsCount, mappedItemsCount);
 			});
 
+			MigrateToStructures(tableStorage.Environment, tableStorage.ReduceKeyTypes, output, (json, structure) =>
+			{
+				var view = json.Value<int>("view");
+				var reduceKey = json.Value<string>("reduceKey");
+				var reduceType = json.Value<int>("reduceType");
+
+				structure.Set(ReduceKeyTypeFields.IndexId, view)
+					.Set(ReduceKeyTypeFields.ReduceType, reduceType)
+					.Set(ReduceKeyTypeFields.ReduceKey, reduceKey);
+			});
+
 			UpdateSchemaVersion(tableStorage, output);
 		}
 

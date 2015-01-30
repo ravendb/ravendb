@@ -802,15 +802,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var reduceKeyTypesByView = tableStorage.ReduceKeyTypes.GetIndex(Tables.ReduceKeyTypes.Indices.ByView);
 
-			tableStorage.ReduceKeyTypes.Add(
-						writeBatch.Value,
-						key,
-						new RavenJObject
-						{
-							{ "view", view },
-							{ "reduceKey", reduceKey },
-							{ "reduceType", (int)status }
-						}, expectedVersion);
+			tableStorage.ReduceKeyTypes.AddStruct(
+				writeBatch.Value,
+				key,
+				new Structure<ReduceKeyTypeFields>(tableStorage.ReduceKeyTypes.Schema)
+					.Set(ReduceKeyTypeFields.IndexId, view)
+					.Set(ReduceKeyTypeFields.ReduceType, (int) status)
+					.Set(ReduceKeyTypeFields.ReduceKey, reduceKey),
+				expectedVersion);
 
 			reduceKeyTypesByView.MultiAdd(writeBatch.Value, CreateKey(view), key);
 		}
@@ -821,11 +820,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(view, reduceKey, reduceKeyHash);
 
 			ushort version;
-			var value = LoadJson(tableStorage.ReduceKeyTypes, key, writeBatch.Value, out version);
+			var value = LoadStruct(tableStorage.ReduceKeyTypes, key, writeBatch.Value, out version);
 			if (value == null)
 				return ReduceType.None;
 
-			return (ReduceType)value.Value<int>("reduceType");
+			return (ReduceType)value.ReadInt(ReduceKeyTypeFields.ReduceType);
 		}
 
 		public IEnumerable<int> GetMappedBuckets(int view, string reduceKey)
@@ -921,9 +920,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ReduceKeyTypes, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.ReduceKeyTypes, iterator.CurrentKey, writeBatch.Value, out version);
 
-					yield return new ReduceTypePerKey(value.Value<string>("reduceKey"), (ReduceType)value.Value<int>("reduceType"));
+					yield return new ReduceTypePerKey(value.ReadString(ReduceKeyTypeFields.ReduceKey), (ReduceType) value.ReadInt(ReduceKeyTypeFields.ReduceType));
 
 					count++;
 				}
