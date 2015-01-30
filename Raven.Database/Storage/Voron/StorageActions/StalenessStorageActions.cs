@@ -1,7 +1,7 @@
 ﻿
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
-using Raven.Database.Util.Streams;
+using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -29,33 +29,39 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch.Value, out version);
-			if (indexingStats == null)
+
+			var indexingStatsReader = LoadStruct(tableStorage.IndexingStats, key, writeBatch.Value, out version);
+			if (indexingStatsReader == null)
 				return false; // index does not exists
 
-			var reduceStats = LoadJson(tableStorage.ReduceStats, key, writeBatch.Value, out version);
-			if (reduceStats == null)
+			var reducingStatsReader = LoadStruct(tableStorage.ReduceStats, key, writeBatch.Value, out version);
+			if (reducingStatsReader == null)
 				throw new ArgumentException("reduceStats");
 
-			var hasReduce = reduceStats.Value<byte[]>("lastReducedEtag") != null;
+			var hasReduce = Etag.Parse(reducingStatsReader.ReadBytes(ReducingWorkStatsFields.LastReducedEtag)).CompareTo(Etag.InvalidEtag) != 0;
 
 			if (IsMapStale(id) || hasReduce && IsReduceStale(id))
 			{
-				var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
+				var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
+				if(lastIndexedEtagsReader == null)
+					throw new ArgumentException("lastIndexedEtags");
 
 				if (cutOff != null)
 				{
-					var lastIndexedTime = lastIndexedEtags.Value<DateTime>("lastTimestamp");
+					var lastIndexedTime = DateTime.FromBinary(lastIndexedEtagsReader.ReadLong(LastIndexedStatsFields.LastTimestamp));
 					if (cutOff.Value >= lastIndexedTime)
 						return true;
 
-					var lastReducedTime = lastIndexedEtags.Value<DateTime?>("lastReducedTimestamp");
+					var lastReducedTimestamp = reducingStatsReader.ReadLong(ReducingWorkStatsFields.LastReducedTimestamp);
+
+					var lastReducedTime = lastReducedTimestamp != -1 ? DateTime.FromBinary(lastReducedTimestamp) : (DateTime?)null;
+
 					if (lastReducedTime != null && cutOff.Value >= lastReducedTime.Value)
 						return true;
 				}
 				else if (cutoffEtag != null)
 				{
-					var lastIndexedEtag = Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag"));
+					var lastIndexedEtag = Etag.Parse(lastIndexedEtagsReader.ReadBytes(LastIndexedStatsFields.LastEtag));
 
 					if (lastIndexedEtag.CompareTo(cutoffEtag) < 0)
 						return true;
@@ -84,8 +90,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
-					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
-					var time = value.Value<DateTime>("time");
+					var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
+					var time = DateTime.FromBinary(value.ReadLong(TaskFields.AddedAt));
 
 					if (time <= cutOff.Value)
 						return true;
@@ -112,11 +118,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var read = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
-			if (read == null)
+			var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
+			if (lastIndexedEtagsReader == null)
 				return false;
 
-			var lastIndexedEtag = Etag.Parse(read.Value<byte[]>("lastEtag"));
+			var lastIndexedEtag = Etag.Parse(lastIndexedEtagsReader.ReadBytes(LastIndexedStatsFields.LastEtag));
 			var lastDocumentEtag = GetMostRecentDocumentEtag();
 
 			return lastDocumentEtag.CompareTo(lastIndexedEtag) > 0;
@@ -127,25 +133,29 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch.Value, out version);
-			if (indexingStats == null)
+			var indexingStatsReader = LoadStruct(tableStorage.IndexingStats, key, writeBatch.Value, out version);
+			if (indexingStatsReader == null)
 				throw new IndexDoesNotExistsException("Could not find index named: " + id);
 
-			var reduceStats = LoadJson(tableStorage.ReduceStats, key, writeBatch.Value, out version);
-			if (reduceStats == null)
+			var reducingStatsReader = LoadStruct(tableStorage.ReduceStats, key, writeBatch.Value, out version);
+			if (reducingStatsReader == null)
 				throw new ArgumentException("reduceStats");
 
-			if (reduceStats.Value<object>("lastReducedTimestamp") != null)
+			var lastReducedTimestamp = reducingStatsReader.ReadLong(ReducingWorkStatsFields.LastReducedTimestamp);
+
+			if (lastReducedTimestamp != -1)
 			{
 				return Tuple.Create(
-					reduceStats.Value<DateTime>("lastReducedTimestamp"),
-					Etag.Parse(reduceStats.Value<byte[]>("lastReducedEtag")));
+					DateTime.FromBinary(lastReducedTimestamp),
+					Etag.Parse(reducingStatsReader.ReadBytes(ReducingWorkStatsFields.LastReducedEtag)));
 			}
 
-			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
+			var lastIndexedEtagsReader = LoadStruct(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
+			if (lastIndexedEtagsReader == null)
+				throw new ArgumentException("lastIndexedEtags");
 
-			return Tuple.Create(lastIndexedEtags.Value<DateTime>("lastTimestamp"),
-				Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag")));
+			return Tuple.Create(DateTime.FromBinary(lastIndexedEtagsReader.ReadLong(LastIndexedStatsFields.LastTimestamp)),
+				Etag.Parse(lastIndexedEtagsReader.ReadBytes(LastIndexedStatsFields.LastEtag)));
 		}
 
 		public Etag GetMostRecentDocumentEtag()
