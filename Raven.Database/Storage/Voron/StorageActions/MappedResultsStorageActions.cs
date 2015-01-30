@@ -3,6 +3,7 @@ using System.Text;
 
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
+using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Raven.Database.Util;
 
 namespace Raven.Database.Storage.Voron.StorageActions
@@ -98,18 +99,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		    var reduceKeyHash = HashKey(reduceKey);
 
-			tableStorage.MappedResults.Add(
+			var mappedResult = new Structure<MappedResultFields>(tableStorage.MappedResults.Schema)
+				.Set(MappedResultFields.IndexId, view)
+				.Set(MappedResultFields.Bucket, bucket)
+				.Set(MappedResultFields.Timestamp, SystemTime.UtcNow.ToBinary())
+				.Set(MappedResultFields.ReduceKey, reduceKey)
+				.Set(MappedResultFields.DocId, docId)
+				.Set(MappedResultFields.Etag, id.ToByteArray());
+
+			tableStorage.MappedResults.AddStruct(
 				writeBatch.Value,
 				idAsString,
-				new RavenJObject
-				{
-					{ "view", view },
-					{ "reduceKey", reduceKey },
-					{ "docId", docId },
-					{ "etag", id.ToByteArray() },
-					{ "bucket", bucket },
-					{ "timestamp", SystemTime.UtcNow }
-				}, 0);
+				mappedResult, 0);
 
 			ms.Position = 0;
 			mappedResultsData.Add(writeBatch.Value, idAsString, ms, 0);
@@ -177,9 +178,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var id = iterator.CurrentKey.Clone();
 
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, id, writeBatch.Value, out version);
-					var reduceKey = value.Value<string>("reduceKey");
-					var bucket = value.Value<int>("bucket");
+					var value = LoadStruct(tableStorage.MappedResults, id, writeBatch.Value, out version);
+					var reduceKey = value.ReadString(MappedResultFields.ReduceKey);
+					var bucket = value.ReadInt(MappedResultFields.Bucket);
 
 					DeleteMappedResult(id, view, documentId, reduceKey, bucket.ToString(CultureInfo.InvariantCulture));
 
@@ -213,11 +214,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var id = iterator.CurrentKey.Clone();
 
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, id, writeBatch.Value, out version);
-					var reduceKey = value.Value<string>("reduceKey");
-					var bucket = value.Value<string>("bucket");
+					var value = LoadStruct(tableStorage.MappedResults, id, writeBatch.Value, out version);
+					var reduceKey = value.ReadString(MappedResultFields.ReduceKey);
+					var bucket = value.ReadInt(MappedResultFields.Bucket);
+					var docId = value.ReadString(MappedResultFields.DocId);
 
-					DeleteMappedResult(id, view, value.Value<string>("docId"), reduceKey, bucket);
+					DeleteMappedResult(id, view, docId, reduceKey, bucket.ToString(CultureInfo.InvariantCulture));
 
 					deletedReduceKeys.Add(reduceKey);
 					storageActionsAccessor.General.MaybePulseTransaction();
@@ -243,16 +245,16 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
 
 					if (string.IsNullOrEmpty(sourceId) == false)
 					{
-						var docId = value.Value<string>("docId");
+						var docId = value.ReadString(MappedResultFields.DocId);
 						if (string.Equals(sourceId, docId, StringComparison.OrdinalIgnoreCase) == false)
 							continue;
 					}
 
-					var reduceKey = value.Value<string>("reduceKey");
+					var reduceKey = value.ReadString(MappedResultFields.ReduceKey);
 
 					if (string.IsNullOrEmpty(startsWith) == false && reduceKey.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) == false)
 						continue;
@@ -284,17 +286,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 do
                 {
                     ushort version;
-                    var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+                    var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
                     var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
                     yield return new MappedResultInfo
                     {
-                        ReduceKey = value.Value<string>("reduceKey"),
-                        Etag = Etag.Parse(value.Value<byte[]>("etag")),
-                        Timestamp = value.Value<DateTime>("timestamp"),
-                        Bucket = value.Value<int>("bucket"),
-                        Source = value.Value<string>("docId"),
+                        ReduceKey = value.ReadString(MappedResultFields.ReduceKey),
+                        Etag = Etag.Parse(value.ReadBytes(MappedResultFields.Etag)),
+                        Timestamp = DateTime.FromBinary(value.ReadLong(MappedResultFields.Timestamp)),
+                        Bucket = value.ReadInt(MappedResultFields.Bucket),
+                        Source = value.ReadString(MappedResultFields.DocId),
                         Size = size,
-                        Data = LoadMappedResult(iterator.CurrentKey, value, mappedResultsData)
+						Data = LoadMappedResult(iterator.CurrentKey, value.ReadString(MappedResultFields.ReduceKey), mappedResultsData)
                     };
 
                     count++;
@@ -315,9 +317,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 do
                 {
                     ushort version;
-                    var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+                    var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
 
-                    var docId = value.Value<string>("docId");
+                    var docId = value.ReadString(MappedResultFields.DocId);
 
                     if (string.IsNullOrEmpty(startsWith) == false && docId.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
@@ -351,16 +353,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var value = LoadJson(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch.Value, out version);
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
+					var readReduceKey = value.Value<string>("reduceKey");
+
 					yield return
 						new MappedResultInfo
 						{
-							ReduceKey = value.Value<string>("reduceKey"),
+							ReduceKey = readReduceKey,
 							Etag = Etag.Parse(value.Value<byte[]>("etag")),
 							Timestamp = value.Value<DateTime>("timestamp"),
 							Bucket = value.Value<int>("bucket"),
 							Source = value.Value<string>("sourceBucket"),
 							Size = size,
-							Data = LoadMappedResult(iterator.CurrentKey, value, reduceResultsData)
+							Data = LoadMappedResult(iterator.CurrentKey, readReduceKey, reduceResultsData)
 						};
 
 					count++;
@@ -523,15 +527,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var value = LoadJson(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch.Value, out version);
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
+					var readReduceKey = value.Value<string>("reduceKey");
+
 					yield return new MappedResultInfo
 					{
-						ReduceKey = value.Value<string>("reduceKey"),
+						ReduceKey = readReduceKey,
 						Etag = Etag.Parse(value.Value<byte[]>("etag")),
 						Timestamp = value.Value<DateTime>("timestamp"),
 						Bucket = value.Value<int>("bucket"),
 						Source = null,
 						Size = size,
-						Data = loadData ? LoadMappedResult(iterator.CurrentKey, value, reduceResultsData) : null
+						Data = loadData ? LoadMappedResult(iterator.CurrentKey, readReduceKey, reduceResultsData) : null
 					};
 				}
 				while (iterator.MoveNext());
@@ -562,18 +568,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
 					var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
+					var readReduceKey = value.ReadString(MappedResultFields.ReduceKey);
 					yield return new MappedResultInfo
 					{
-						ReduceKey = value.Value<string>("reduceKey"),
-						Etag = Etag.Parse(value.Value<byte[]>("etag")),
-						Timestamp = value.Value<DateTime>("timestamp"),
-						Bucket = value.Value<int>("bucket"),
+						ReduceKey = readReduceKey,
+						Etag = Etag.Parse(value.ReadBytes(MappedResultFields.Etag)),
+						Timestamp = DateTime.FromBinary(value.ReadLong(MappedResultFields.Timestamp)),
+						Bucket = value.ReadInt(MappedResultFields.Bucket),
 						Source = null,
 						Size = size,
-						Data = loadData ? LoadMappedResult(iterator.CurrentKey, value, mappedResultsData) : null
+						Data = loadData ? LoadMappedResult(iterator.CurrentKey, readReduceKey, mappedResultsData) : null
 					};
 				}
 				while (iterator.MoveNext());
@@ -840,9 +847,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
 
-					yield return value.Value<int>("bucket");
+					yield return value.ReadInt(MappedResultFields.Bucket);
 				}
 				while (iterator.MoveNext());
 			}
@@ -869,16 +876,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					do
 					{
 						ushort version;
-						var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
+						var value = LoadStruct(tableStorage.MappedResults, iterator.CurrentKey, writeBatch.Value, out version);
 						var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
+
+						var readReduceKey = value.ReadString(MappedResultFields.ReduceKey);
 
 						yield return new MappedResultInfo
 						{
-							Bucket = value.Value<int>("bucket"),
-							ReduceKey = value.Value<string>("reduceKey"),
-							Etag = Etag.Parse(value.Value<byte[]>("etag")),
-							Timestamp = value.Value<DateTime>("timestamp"),
-							Data = loadData ? LoadMappedResult(iterator.CurrentKey, value, mappedResultsData) : null,
+							Bucket = value.ReadInt(MappedResultFields.Bucket),
+							ReduceKey = readReduceKey,
+							Etag = Etag.Parse(value.ReadBytes(MappedResultFields.Etag)),
+							Timestamp = DateTime.FromBinary(value.ReadLong(MappedResultFields.Timestamp)),
+							Data = loadData ? LoadMappedResult(iterator.CurrentKey, readReduceKey, mappedResultsData) : null,
 							Size = size
 						};
 					}
@@ -892,10 +901,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		private RavenJObject LoadMappedResult(Slice key, RavenJObject value, Index dataIndex)
+		private RavenJObject LoadMappedResult(Slice key, string reduceKey, Index dataIndex)
 		{
-			var reduceKey = value.Value<string>("reduceKey");
-
 			var read = dataIndex.Read(Snapshot, key, writeBatch.Value);
 			if (read == null)
 				return null;

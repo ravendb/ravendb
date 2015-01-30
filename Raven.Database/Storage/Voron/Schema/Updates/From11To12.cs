@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Storage.Voron.Impl;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
+using Raven.Json.Linq;
 using Voron;
 
 namespace Raven.Database.Storage.Voron.Schema.Updates
@@ -25,150 +26,128 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 
 		public override void Update(TableStorage tableStorage, Action<string> output)
 		{
-			//TODO arek - add output info
+			MigrateToStructures(tableStorage.Environment, tableStorage.IndexingStats, output, (json, structure) => structure
+				.Set(IndexingWorkStatsFields.IndexId, json.Value<int>("index"))
+				.Set(IndexingWorkStatsFields.CreatedTimestamp, json.Value<DateTime>("createdTimestamp").ToBinary())
+				.Set(IndexingWorkStatsFields.LastIndexingTime, json.Value<DateTime>("lastIndexingTime").ToBinary())
+				.Set(IndexingWorkStatsFields.IndexingAttempts, json.Value<int>("attempts"))
+				.Set(IndexingWorkStatsFields.IndexingSuccesses, json.Value<int>("successes"))
+				.Set(IndexingWorkStatsFields.IndexingErrors, json.Value<int>("failures")));
 
-			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+			MigrateToStructures(tableStorage.Environment, tableStorage.ReduceStats, output, (json, structure) =>
 			{
-				var indexingStats = tx.ReadTree(Tables.IndexingStats.TableName);
+				var hasReduce = json.Value<byte[]>("lastReducedEtag") != null;
 
-				var iterator = indexingStats.Iterate();
-
-				if (iterator.Seek(Slice.BeforeAllKeys))
+				if (hasReduce)
 				{
-					do
-					{
-						var result = indexingStats.Read(iterator.CurrentKey);
-
-						using (var stream = result.Reader.AsStream())
-						{
-							var indexStats = stream.ToJObject();
-
-							var statsStructure = new Structure<IndexingWorkStatsFields>(tableStorage.IndexingStats.Schema)
-								.Set(IndexingWorkStatsFields.IndexId, indexStats.Value<int>("index"))
-								.Set(IndexingWorkStatsFields.CreatedTimestamp, indexStats.Value<DateTime>("createdTimestamp").ToBinary())
-								.Set(IndexingWorkStatsFields.LastIndexingTime, indexStats.Value<DateTime>("lastIndexingTime").ToBinary())
-								.Set(IndexingWorkStatsFields.IndexingAttempts, indexStats.Value<int>("attempts"))
-								.Set(IndexingWorkStatsFields.IndexingSuccesses, indexStats.Value<int>("successes"))
-								.Set(IndexingWorkStatsFields.IndexingErrors, indexStats.Value<int>("failures"));
-
-							indexingStats.WriteStruct(iterator.CurrentKey, statsStructure);
-						}
-
-					} while (iterator.MoveNext());
+					structure.Set(ReducingWorkStatsFields.LastReducedEtag, json.Value<byte[]>("lastReducedEtag"))
+						.Set(ReducingWorkStatsFields.LastReducedTimestamp, json.Value<DateTime>("lastReducedTimestamp").ToBinary())
+						.Set(ReducingWorkStatsFields.ReduceAttempts, json.Value<int>("reduce_attempts"))
+						.Set(ReducingWorkStatsFields.ReduceErrors, json.Value<int>("reduce_failures"))
+						.Set(ReducingWorkStatsFields.ReduceSuccesses, json.Value<int>("reduce_successes"));
 				}
+				else
+				{
+					structure.Set(ReducingWorkStatsFields.ReduceAttempts, -1)
+						.Set(ReducingWorkStatsFields.ReduceSuccesses, -1)
+						.Set(ReducingWorkStatsFields.ReduceErrors, -1)
+						.Set(ReducingWorkStatsFields.LastReducedEtag, Etag.InvalidEtag.ToByteArray())
+						.Set(ReducingWorkStatsFields.LastReducedTimestamp, -1L);
+				}
+			});
 
-				tx.Commit();
-			}
+			MigrateToStructures(tableStorage.Environment, tableStorage.LastIndexedEtags, output, (json, structure) => structure
+				.Set(LastIndexedStatsFields.IndexId, json.Value<int>("index"))
+				.Set(LastIndexedStatsFields.LastEtag, json.Value<byte[]>("lastEtag"))
+				.Set(LastIndexedStatsFields.LastTimestamp, json.Value<DateTime>("lastTimestamp").ToBinary()));
 
-			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+			MigrateToStructures(tableStorage.Environment, tableStorage.DocumentReferences, output, (json, structure) =>
 			{
-				var reducingStats = tx.ReadTree(Tables.ReduceStats.TableName);
+				var view = json.Value<int>("view");
+				var reference = json.Value<string>("ref");
+				var key = json.Value<string>("key");
 
-				var iterator = reducingStats.Iterate();
+				structure.Set(DocumentReferencesFields.IndexId, view)
+					.Set(DocumentReferencesFields.Reference, reference)
+					.Set(DocumentReferencesFields.Key, key);
+			});
 
-				if (iterator.Seek(Slice.BeforeAllKeys))
-				{
-					do
-					{
-						var result = reducingStats.Read(iterator.CurrentKey);
-
-						using (var stream = result.Reader.AsStream())
-						{
-							var reduceStats = stream.ToJObject();
-
-							var hasReduce = reduceStats.Value<byte[]>("lastReducedEtag") != null;
-
-							var voronStats = new Structure<ReducingWorkStatsFields>(tableStorage.ReduceStats.Schema);
-
-							if (hasReduce)
-							{
-								voronStats.Set(ReducingWorkStatsFields.LastReducedEtag, reduceStats.Value<byte[]>("lastReducedEtag"))
-									.Set(ReducingWorkStatsFields.LastReducedTimestamp, reduceStats.Value<DateTime>("lastReducedTimestamp").ToBinary())
-									.Set(ReducingWorkStatsFields.ReduceAttempts, reduceStats.Value<int>("reduce_attempts"))
-									.Set(ReducingWorkStatsFields.ReduceErrors, reduceStats.Value<int>("reduce_failures"))
-									.Set(ReducingWorkStatsFields.ReduceSuccesses, reduceStats.Value<int>("reduce_successes"));
-							}
-							else
-							{
-								voronStats.Set(ReducingWorkStatsFields.ReduceAttempts, -1)
-									.Set(ReducingWorkStatsFields.ReduceSuccesses, -1)
-									.Set(ReducingWorkStatsFields.ReduceErrors, -1)
-									.Set(ReducingWorkStatsFields.LastReducedEtag, Etag.InvalidEtag.ToByteArray())
-									.Set(ReducingWorkStatsFields.LastReducedTimestamp, -1L);
-							}
-
-							reducingStats.WriteStruct(iterator.CurrentKey, voronStats);
-						}
-
-					} while (iterator.MoveNext());
-				}
-
-				tx.Commit();
-			}
-
-			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
+			MigrateToStructures(tableStorage.Environment, tableStorage.MappedResults, output, (json, structure) =>
 			{
-				var lastIndexedEtags = tx.ReadTree(Tables.LastIndexedEtags.TableName);
+				var view = json.Value<int>("view");
+				var reduceKey = json.Value<string>("reduceKey");
+				var etag = json.Value<byte[]>("etag");
+				var timestamp = json.Value<DateTime>("timestamp");
+				var bucket = json.Value<int>("bucket");
+				var docId = json.Value<string>("docId");
 
-				var iterator = lastIndexedEtags.Iterate();
-
-				if (iterator.Seek(Slice.BeforeAllKeys))
-				{
-					do
-					{
-						var result = lastIndexedEtags.Read(iterator.CurrentKey);
-
-						using (var stream = result.Reader.AsStream())
-						{
-							var stats = stream.ToJObject();
-
-							var voronStats = new Structure<LastIndexedStatsFields>(tableStorage.LastIndexedEtags.Schema);
-
-							voronStats.Set(LastIndexedStatsFields.IndexId, stats.Value<int>("index"))
-								.Set(LastIndexedStatsFields.LastEtag, stats.Value<byte[]>("lastEtag"))
-								.Set(LastIndexedStatsFields.LastTimestamp, stats.Value<DateTime>("lastTimestamp").ToBinary());
-
-							lastIndexedEtags.WriteStruct(iterator.CurrentKey, voronStats);
-						}
-					} while (iterator.MoveNext());
-				}
-
-				tx.Commit();
-			}
-
-			using (var tx = tableStorage.Environment.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var documentReferences = tx.ReadTree(Tables.DocumentReferences.TableName);
-
-				var iterator = documentReferences.Iterate();
-
-				if (iterator.Seek(Slice.BeforeAllKeys))
-				{
-					do
-					{
-						var result = documentReferences.Read(iterator.CurrentKey);
-
-						using (var stream = result.Reader.AsStream())
-						{
-							var value = stream.ToJObject();
-
-							var view = value.Value<int>("view");
-							var reference = value.Value<string>("ref");
-							var key = value.Value<string>("key");
-
-							var voronValue = new Structure<DocumentReferencesFields>(tableStorage.DocumentReferences.Schema);
-
-							voronValue.Set(DocumentReferencesFields.IndexId, view)
-								.Set(DocumentReferencesFields.Reference, reference)
-								.Set(DocumentReferencesFields.Key, key);
-							
-							documentReferences.WriteStruct(iterator.CurrentKey, voronValue);
-						}
-					} while (iterator.MoveNext());
-				}
-			}
+				structure.Set(MappedResultFields.IndexId, view)
+					.Set(MappedResultFields.ReduceKey, reduceKey)
+					.Set(MappedResultFields.Etag, etag)
+					.Set(MappedResultFields.Timestamp, timestamp.ToBinary())
+					.Set(MappedResultFields.Bucket, bucket)
+					.Set(MappedResultFields.DocId, docId);
+			});
 
 			UpdateSchemaVersion(tableStorage, output);
+		}
+
+		public void MigrateToStructures<T>(StorageEnvironment env, TableOfStructures<T> table, Action<string> output, Action<RavenJObject, Structure<T>> copyToStructure)
+		{
+			long entriesCount;
+			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				entriesCount = tx.ReadTree(table.TableName).State.EntriesCount;
+			}
+
+			output(string.Format("Starting to migrate '{0}' table to use structures.", table.TableName));
+
+			var migratedEntries = 0L;
+			var keyToSeek = Slice.BeforeAllKeys;
+
+			do
+			{
+				using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = txw.ReadTree(table.TableName);
+
+					var iterator = tree.Iterate();
+
+					if (iterator.Seek(keyToSeek) == false)
+						break;
+
+					var writtenStructsSize = 0;
+
+					do
+					{
+						keyToSeek = iterator.CurrentKey;
+
+						if (writtenStructsSize > 8 * 1024 * 1024) // 8 MB
+							break;
+
+						var result = tree.Read(iterator.CurrentKey);
+
+						using (var stream = result.Reader.AsStream())
+						{
+							var jsonValue = stream.ToJObject();
+							var structValue = new Structure<T>(table.Schema);
+
+							copyToStructure(jsonValue, structValue);
+
+							tree.WriteStruct(iterator.CurrentKey, structValue);
+
+							migratedEntries++;
+							writtenStructsSize += structValue.GetSize();
+						}
+					} while (iterator.MoveNext());
+
+					txw.Commit();
+
+					output(string.Format("{0} of {1} records processed.", migratedEntries, entriesCount));
+				}
+			} while (migratedEntries < entriesCount);
+
+			output(string.Format("All records of '{0}' table have been migrated to structures.", table.TableName));
 		}
 	}
 }

@@ -236,6 +236,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", id));
 
 			var indexStats = new Structure<IndexingWorkStatsFields>(tableStorage.IndexingStats.Schema)
+				.Set(IndexingWorkStatsFields.IndexId, id)
 				.Increment(IndexingWorkStatsFields.IndexingAttempts, stats.IndexingAttempts)
 				.Increment(IndexingWorkStatsFields.IndexingSuccesses, stats.IndexingSuccesses)
 				.Increment(IndexingWorkStatsFields.IndexingErrors, stats.IndexingErrors)
@@ -248,15 +249,16 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var key = CreateKey(id);
 
-			var  version = tableStorage.ReduceStats.ReadVersion(Snapshot, key, writeBatch.Value);
-			if (version == null)
-				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", id));
+			var existingStats = tableStorage.ReduceStats.ReadStruct(Snapshot, key, writeBatch.Value);
 
-			var updated = new Structure<ReducingWorkStatsFields>(tableStorage.ReduceStats.Schema);
+			var version = existingStats.Version;
 
-			updated.Increment(ReducingWorkStatsFields.ReduceAttempts, stats.ReduceAttempts)
+			var updated = new Structure<ReducingWorkStatsFields>(tableStorage.ReduceStats.Schema)
+				.Increment(ReducingWorkStatsFields.ReduceAttempts, stats.ReduceAttempts)
 				.Increment(ReducingWorkStatsFields.ReduceSuccesses, stats.ReduceSuccesses)
-				.Increment(ReducingWorkStatsFields.ReduceErrors, stats.ReduceErrors);
+				.Increment(ReducingWorkStatsFields.ReduceErrors, stats.ReduceErrors)
+				.Set(ReducingWorkStatsFields.LastReducedEtag, existingStats.Reader.ReadBytes(ReducingWorkStatsFields.LastReducedEtag))
+				.Set(ReducingWorkStatsFields.LastReducedTimestamp, existingStats.Reader.ReadLong(ReducingWorkStatsFields.LastReducedTimestamp));
 
 			tableStorage.ReduceStats.AddStruct(writeBatch.Value, key, updated, version);
 		}
