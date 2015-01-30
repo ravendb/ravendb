@@ -134,7 +134,7 @@ namespace Raven.Database.Storage.Voron.Impl
         [Obsolete("Use RavenFS instead.")]
 		public Table Attachments { get; private set; }
 
-		public Table ReduceKeyCounts { get; private set; }
+		public TableOfStructures<ReduceKeyCountFields> ReduceKeyCounts { get; private set; }
 
 		public Table ReduceKeyTypes { get; private set; }
 
@@ -255,7 +255,13 @@ namespace Raven.Database.Storage.Voron.Impl
 					.Add<byte[]>(MappedResultFields.Etag),
 				bufferPool, Tables.MappedResults.Indices.ByView, Tables.MappedResults.Indices.ByViewAndDocumentId, Tables.MappedResults.Indices.ByViewAndReduceKey, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket, Tables.MappedResults.Indices.Data);
 
-			ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, bufferPool, Tables.ReduceKeyCounts.Indices.ByView);
+			ReduceKeyCounts = new TableOfStructures<ReduceKeyCountFields>(Tables.ReduceKeyCounts.TableName,
+				new StructureSchema<ReduceKeyCountFields>()
+					.Add<int>(ReduceKeyCountFields.IndexId)
+					.Add<int>(ReduceKeyCountFields.MappedItemsCount)
+					.Add<string>(ReduceKeyCountFields.ReduceKey),
+				bufferPool, Tables.ReduceKeyCounts.Indices.ByView);
+
 			ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, bufferPool, Tables.ReduceKeyTypes.Indices.ByView);
 			Attachments = new Table(Tables.Attachments.TableName, bufferPool, Tables.Attachments.Indices.ByEtag, Tables.Attachments.Indices.Metadata);
 

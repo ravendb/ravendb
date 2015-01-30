@@ -63,14 +63,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ReduceKeyCounts, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.ReduceKeyCounts, iterator.CurrentKey, writeBatch.Value, out version);
 
 					Debug.Assert(value != null);
 					yield return new ReduceKeyAndCount
-								 {
-									 Count = value.Value<int>("mappedItemsCount"),
-									 Key = value.Value<string>("reduceKey")
-								 };
+					{
+						Count = value.ReadInt(ReduceKeyCountFields.MappedItemsCount),
+						Key = value.ReadString(ReduceKeyCountFields.ReduceKey)
+					};
 
 					count++;
 				}
@@ -128,11 +128,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var key = CreateKey(view, reduceKey, reduceKeyHash);
 
 			ushort version;
-			var value = LoadJson(tableStorage.ReduceKeyCounts, key, writeBatch.Value, out version);
+			var value = LoadStruct(tableStorage.ReduceKeyCounts, key, writeBatch.Value, out version);
 
 			var newValue = val;
 			if (value != null)
-				newValue += value.Value<int>("mappedItemsCount");
+				newValue += value.ReadInt(ReduceKeyCountFields.MappedItemsCount);
 
 			AddReduceKeyCount(key, view, reduceKey, newValue, version);
 		}
@@ -143,12 +143,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(view, reduceKey, reduceKeyHash);
 
 			ushort reduceKeyCountVersion;
-			var reduceKeyCount = LoadJson(tableStorage.ReduceKeyCounts, key, writeBatch.Value, out reduceKeyCountVersion);
+			var reduceKeyCount = LoadStruct(tableStorage.ReduceKeyCounts, key, writeBatch.Value, out reduceKeyCountVersion);
 
 			var newValue = -val;
 			if (reduceKeyCount != null)
 			{
-				var currentValue = reduceKeyCount.Value<int>("mappedItemsCount");
+				var currentValue = reduceKeyCount.ReadInt(ReduceKeyCountFields.MappedItemsCount);
 				if (currentValue == val)
 				{
 					var reduceKeyTypeVersion = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, key, writeBatch.Value);
@@ -750,11 +750,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var key = CreateKey(view, reduceKey, reduceKeyHash);
 
 			ushort version;
-			var value = LoadJson(tableStorage.ReduceKeyCounts, key, writeBatch.Value, out version);
+			var value = LoadStruct(tableStorage.ReduceKeyCounts, key, writeBatch.Value, out version);
 			if (value == null)
 				return 0;
 
-			return value.Value<int>("mappedItemsCount");
+			return value.ReadInt(ReduceKeyCountFields.MappedItemsCount);
 		}
 
 		public void UpdatePerformedReduceType(int view, string reduceKey, ReduceType reduceType)
@@ -786,15 +786,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
 
-			tableStorage.ReduceKeyCounts.Add(
-						writeBatch.Value,
-						key,
-						new RavenJObject
-						{
-							{ "view", view },
-							{ "reduceKey", reduceKey },
-							{ "mappedItemsCount", count }
-						}, expectedVersion);
+			tableStorage.ReduceKeyCounts.AddStruct(
+				writeBatch.Value,
+				key,
+				new Structure<ReduceKeyCountFields>(tableStorage.ReduceKeyCounts.Schema)
+					.Set(ReduceKeyCountFields.IndexId, view)
+					.Set(ReduceKeyCountFields.MappedItemsCount, count)
+					.Set(ReduceKeyCountFields.ReduceKey, reduceKey), 
+				expectedVersion);
 
 			reduceKeyCountsByView.MultiAdd(writeBatch.Value, CreateKey(view), key);
 		}
