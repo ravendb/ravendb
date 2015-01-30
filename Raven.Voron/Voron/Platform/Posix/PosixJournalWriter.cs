@@ -65,7 +65,7 @@ namespace Voron.Platform.Posix
 			Dispose();
 		}
 
-		public unsafe void WriteGather(long position, byte*[] pages)
+		public unsafe void WriteGather(long position, IntPtr[] pages)
 		{
 			if (pages.Length == 0)
 				return; // nothing to do
@@ -79,7 +79,7 @@ namespace Voron.Platform.Posix
 				{
 					new Iovec
 					{
-						iov_base = new IntPtr(pages[start]),
+						iov_base = pages[start],
 						iov_len = AbstractPager.PageSize
 					}
 				};
@@ -89,7 +89,7 @@ namespace Voron.Platform.Posix
 				{
 					byteLen += AbstractPager.PageSize;
 					var cur = locs[locs.Count - 1];
-					if (((byte*)cur.iov_base.ToPointer() + cur.iov_len) == pages[i])
+					if (((byte*)cur.iov_base.ToPointer() + cur.iov_len) == (byte*)pages[i].ToPointer())
 					{
 						cur.iov_len = cur.iov_len + AbstractPager.PageSize;
 						locs[locs.Count - 1] = cur;
@@ -98,7 +98,7 @@ namespace Voron.Platform.Posix
 					{
 						locs.Add(new Iovec
 						{
-							iov_base = new IntPtr( pages[i]),
+							iov_base = pages[i],
 							iov_len = AbstractPager.PageSize
 						});
 					}
