@@ -97,11 +97,24 @@ namespace Raven.Database.FileSystem.Controllers
 
 			var fileSystemsData = fileSystems
 				.Select(fileSystem =>
-					new FileSystemData
-					{
-                        Name = fileSystem.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.FileSystem.Prefix, string.Empty),
-						Disabled = fileSystem.Value<bool>("Disabled")
-					}).ToList();
+				{
+                    var bundles = new string[] { };
+                    var settings = fileSystem.Value<RavenJObject>("Settings");
+                    if (settings != null)
+                    {
+                        var activeBundles = settings.Value<string>("Raven/ActiveBundles");
+                        if (activeBundles != null)
+                        {
+                            bundles = activeBundles.Split(';');
+                        }
+                    }
+				    return new FileSystemData
+				    {
+				        Name = fileSystem.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.FileSystem.Prefix, string.Empty),
+				        Disabled = fileSystem.Value<bool>("Disabled"),
+				        Bundles = bundles
+				    };
+				}).ToList();
 
 			var fileSystemsNames = fileSystemsData.Select(fileSystemObject => fileSystemObject.Name).ToArray();
 
@@ -132,6 +145,7 @@ namespace Raven.Database.FileSystem.Controllers
 		{
 			public string Name;
 			public bool Disabled;
+		    public string[] Bundles;
 		}
 	}
 }

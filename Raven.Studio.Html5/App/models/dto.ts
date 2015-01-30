@@ -814,6 +814,7 @@ interface histogramDataDto {
 interface fileSystemDto {
     Name: string;
     Disabled: boolean;
+    Bundles: Array<string>;
 }
 
 interface statusDebugDocrefsDto {
