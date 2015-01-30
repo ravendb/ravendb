@@ -7,6 +7,12 @@ namespace Raven.Database.Storage.Voron.StorageActions.StructureSchemas
 {
 	public enum ReduceResultFields
 	{
-		
+		IndexId,
+		Level,
+		SourceBucket,
+		Bucket,
+		Timestamp,
+		ReduceKey,
+		Etag
 	}
 }

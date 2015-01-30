@@ -350,19 +350,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch.Value, out version);
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
-					var readReduceKey = value.Value<string>("reduceKey");
+					var readReduceKey = value.ReadString(ReduceResultFields.ReduceKey);
 
 					yield return
 						new MappedResultInfo
 						{
 							ReduceKey = readReduceKey,
-							Etag = Etag.Parse(value.Value<byte[]>("etag")),
-							Timestamp = value.Value<DateTime>("timestamp"),
-							Bucket = value.Value<int>("bucket"),
-							Source = value.Value<string>("sourceBucket"),
+							Etag = Etag.Parse(value.ReadBytes(ReduceResultFields.Etag)),
+							Timestamp = DateTime.FromBinary(value.ReadLong(ReduceResultFields.Timestamp)),
+							Bucket = value.ReadInt(ReduceResultFields.Bucket),
+							Source = value.ReadInt(ReduceResultFields.SourceBucket).ToString(),
 							Size = size,
 							Data = LoadMappedResult(iterator.CurrentKey, readReduceKey, reduceResultsData)
 						};
@@ -524,17 +524,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch.Value, out version);
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
-					var readReduceKey = value.Value<string>("reduceKey");
+					var readReduceKey = value.ReadString(ReduceResultFields.ReduceKey);
 
 					yield return new MappedResultInfo
 					{
 						ReduceKey = readReduceKey,
-						Etag = Etag.Parse(value.Value<byte[]>("etag")),
-						Timestamp = value.Value<DateTime>("timestamp"),
-						Bucket = value.Value<int>("bucket"),
+						Etag = Etag.Parse(value.ReadBytes(ReduceResultFields.Etag)),
+						Timestamp = DateTime.FromBinary(value.ReadLong(ReduceResultFields.Timestamp)),
+						Bucket = value.ReadInt(ReduceResultFields.Bucket),
 						Source = null,
 						Size = size,
 						Data = loadData ? LoadMappedResult(iterator.CurrentKey, readReduceKey, reduceResultsData) : null
@@ -665,20 +665,16 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var idAsString = id.ToString();
 		    var reduceKeyHash = HashKey(reduceKey);
 
-			tableStorage.ReduceResults.Add(
-				writeBatch.Value,
-				idAsString,
-				new RavenJObject
-				{
-					{ "view", view },
-					{ "etag", id.ToByteArray() },
-					{ "reduceKey", reduceKey },
-					{ "level", level },
-					{ "sourceBucket", sourceBucket },
-					{ "bucket", bucket },
-					{ "timestamp", SystemTime.UtcNow }
-				},
-				0);
+			var reduceResult = new Structure<ReduceResultFields>(tableStorage.ReduceResults.Schema)
+				.Set(ReduceResultFields.IndexId, view)
+				.Set(ReduceResultFields.Etag, id.ToByteArray())
+				.Set(ReduceResultFields.ReduceKey, reduceKey)
+				.Set(ReduceResultFields.Level, level)
+				.Set(ReduceResultFields.SourceBucket, sourceBucket)
+				.Set(ReduceResultFields.Bucket, bucket)
+				.Set(ReduceResultFields.Timestamp, SystemTime.UtcNow.ToBinary());
+
+			tableStorage.ReduceResults.AddStruct(writeBatch.Value, idAsString, reduceResult, 0);
 
 			ms.Position = 0;
 			reduceResultsData.Add(writeBatch.Value, idAsString, ms, 0);
@@ -1023,13 +1019,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private void RemoveReduceResult(Slice id)
 		{
 			ushort version;
-			var value = LoadJson(tableStorage.ReduceResults, id, writeBatch.Value, out version);
+			var value = LoadStruct(tableStorage.ReduceResults, id, writeBatch.Value, out version);
 
-			var view = value.Value<string>("view");
-			var reduceKey = value.Value<string>("reduceKey");
-			var level = value.Value<int>("level");
-			var bucket = value.Value<int>("bucket");
-			var sourceBucket = value.Value<int>("sourceBucket");
+			var view = value.ReadInt(ReduceResultFields.IndexId);
+			var reduceKey = value.ReadString(ReduceResultFields.ReduceKey);
+			var level = value.ReadInt(ReduceResultFields.Level);
+			var bucket = value.ReadInt(ReduceResultFields.Bucket);
+			var sourceBucket = value.ReadInt(ReduceResultFields.SourceBucket);
 		    var reduceKeyHash = HashKey(reduceKey);
 
             var viewAndReduceKeyAndLevelAndSourceBucket = CreateKey(view, reduceKey, reduceKeyHash, level, sourceBucket);

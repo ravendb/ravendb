@@ -89,6 +89,25 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 					.Set(MappedResultFields.DocId, docId);
 			});
 
+			MigrateToStructures(tableStorage.Environment, tableStorage.ReduceResults, output, (json, structure) =>
+			{
+				var view = json.Value<int>("view");
+				var level = json.Value<int>("level");
+				var reduceKey = json.Value<string>("reduceKey");
+				var etag = json.Value<byte[]>("etag");
+				var timestamp = json.Value<DateTime>("timestamp");
+				var bucket = json.Value<int>("bucket");
+				var sourceBucket = json.Value<int>("sourceBucket");
+
+				structure.Set(ReduceResultFields.IndexId, view)
+					.Set(ReduceResultFields.Etag, etag)
+					.Set(ReduceResultFields.ReduceKey, reduceKey)
+					.Set(ReduceResultFields.Level, level)
+					.Set(ReduceResultFields.SourceBucket, sourceBucket)
+					.Set(ReduceResultFields.Bucket, bucket)
+					.Set(ReduceResultFields.Timestamp, timestamp.ToBinary());
+			});
+
 			UpdateSchemaVersion(tableStorage, output);
 		}
 
@@ -100,7 +119,7 @@ namespace Raven.Database.Storage.Voron.Schema.Updates
 				entriesCount = tx.ReadTree(table.TableName).State.EntriesCount;
 			}
 
-			output(string.Format("Starting to migrate '{0}' table to use structures.", table.TableName));
+			output(string.Format("Starting to migrate '{0}' table to use structures. Records to process: {1}", table.TableName, entriesCount));
 
 			var migratedEntries = 0L;
 			var keyToSeek = Slice.BeforeAllKeys;

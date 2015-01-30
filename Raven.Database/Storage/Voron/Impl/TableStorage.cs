@@ -129,7 +129,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public TableOfStructures<MappedResultFields> MappedResults { get; private set; }
 
-		public Table ReduceResults { get; private set; }
+		public TableOfStructures<ReduceResultFields> ReduceResults { get; private set; }
 
         [Obsolete("Use RavenFS instead.")]
 		public Table Attachments { get; private set; }
@@ -250,7 +250,18 @@ namespace Raven.Database.Storage.Voron.Impl
 			ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, bufferPool, Tables.ReduceKeyCounts.Indices.ByView);
 			ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, bufferPool, Tables.ReduceKeyTypes.Indices.ByView);
 			Attachments = new Table(Tables.Attachments.TableName, bufferPool, Tables.Attachments.Indices.ByEtag, Tables.Attachments.Indices.Metadata);
-			ReduceResults = new Table(Tables.ReduceResults.TableName, bufferPool, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
+
+			ReduceResults = new TableOfStructures<ReduceResultFields>(Tables.ReduceResults.TableName,
+				new StructureSchema<ReduceResultFields>()
+					.Add<int>(ReduceResultFields.IndexId)
+					.Add<int>(ReduceResultFields.Level)
+					.Add<int>(ReduceResultFields.SourceBucket)
+					.Add<int>(ReduceResultFields.Bucket)
+					.Add<long>(ReduceResultFields.Timestamp)
+					.Add<string>(ReduceResultFields.ReduceKey)
+					.Add<byte[]>(ReduceResultFields.Etag),
+				bufferPool, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
+
 			General = new Table(Tables.General.TableName, bufferPool);
 			ReduceStats = new TableOfStructures<ReducingWorkStatsFields>(Tables.ReduceStats.TableName,
 				new StructureSchema<ReducingWorkStatsFields>()
