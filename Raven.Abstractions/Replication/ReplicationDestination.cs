@@ -138,6 +138,13 @@ namespace Raven.Abstractions.Replication
 				return hashCode;
 			}
 		}
+
+		public class ReplicationDestinationWithConfigurationOrigin : ReplicationDestination
+		{
+			public bool IsGlobal { get; set; }
+
+			public bool IsLocal { get; set; }
+		}
 	}
 
 	/// <summary>

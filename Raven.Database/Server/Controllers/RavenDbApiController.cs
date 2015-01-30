@@ -107,13 +107,13 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-		protected ReplicationDocument GetReplicationDocument(out HttpResponseMessage erroResponseMessage)
+		protected ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> GetReplicationDocument(out HttpResponseMessage erroResponseMessage)
 		{
-			ConfigurationDocument<ReplicationDocument> configurationDocument;
+			ConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>> configurationDocument;
 			erroResponseMessage = null;
 			try
 			{
-				configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
+				configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 			}
 			catch (Exception e)
 			{

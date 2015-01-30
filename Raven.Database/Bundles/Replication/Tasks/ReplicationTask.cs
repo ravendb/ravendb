@@ -1336,10 +1336,10 @@ namespace Raven.Bundles.Replication.Tasks
 
 		internal ReplicationStrategy[] GetReplicationDestinations(Predicate<ReplicationDestination> predicate = null)
 		{
-			ConfigurationDocument<ReplicationDocument> configurationDocument;
+			ConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>> configurationDocument;
 			try
 			{
-				configurationDocument = docDb.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
+				configurationDocument = docDb.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 			}
 			catch (Exception e)
 			{

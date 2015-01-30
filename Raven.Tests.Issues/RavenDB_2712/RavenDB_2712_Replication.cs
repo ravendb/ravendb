@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				var systemDatabase = server.SystemDatabase;
 				var database = server.Server.GetDatabaseInternal("Northwind").ResultUnwrap();
 				var retriever = database.ConfigurationRetriever;
-				var document = retriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
+				var document = retriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 
 				Assert.Null(document);
 
@@ -56,7 +56,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 							                        }
 												}), new RavenJObject(), null);
 
-				document = retriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
+				document = retriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
@@ -67,6 +67,8 @@ namespace Raven.Tests.Issues.RavenDB_2712
 
 				var destination = document.Document.Destinations[0];
 
+				Assert.True(destination.IsGlobal);
+				Assert.False(destination.IsLocal);
 				Assert.Equal("key1", destination.ApiKey);
 				Assert.Equal("Northwind", destination.Database);
 				Assert.Equal("curl1", destination.ClientVisibleUrl);
@@ -145,7 +147,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 													Source = systemDatabase.TransactionalStorage.Id.ToString()
 												}), new RavenJObject(), null);
 
-				var document = retriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
+				var document = retriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
@@ -156,6 +158,8 @@ namespace Raven.Tests.Issues.RavenDB_2712
 
 				var destination = document.Document.Destinations[0];
 
+				Assert.False(destination.IsGlobal);
+				Assert.True(destination.IsLocal);
 				Assert.Equal("key2", destination.ApiKey);
 				Assert.Equal("Northwind", destination.Database);
 				Assert.Equal("curl2", destination.ClientVisibleUrl);
@@ -234,7 +238,7 @@ namespace Raven.Tests.Issues.RavenDB_2712
 													Source = systemDatabase.TransactionalStorage.Id.ToString()
 												}), new RavenJObject(), null);
 
-				var document = retriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
+				var document = retriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
@@ -245,6 +249,8 @@ namespace Raven.Tests.Issues.RavenDB_2712
 
 				var destination = document.Document.Destinations[0];
 
+				Assert.False(destination.IsGlobal);
+				Assert.True(destination.IsLocal);
 				Assert.Equal("key2", destination.ApiKey);
 				Assert.Equal("db2", destination.Database);
 				Assert.Equal("curl2", destination.ClientVisibleUrl);
@@ -259,6 +265,8 @@ namespace Raven.Tests.Issues.RavenDB_2712
 
 				destination = document.Document.Destinations[1];
 
+				Assert.True(destination.IsGlobal);
+				Assert.False(destination.IsLocal);
 				Assert.Equal("key1", destination.ApiKey);
 				Assert.Equal("Northwind", destination.Database);
 				Assert.Equal("curl1", destination.ClientVisibleUrl);

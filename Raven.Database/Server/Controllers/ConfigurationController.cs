@@ -38,7 +38,7 @@ namespace Raven.Database.Server.Controllers
 			if (Database == null)
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
+			var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 			if (configurationDocument == null)
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 

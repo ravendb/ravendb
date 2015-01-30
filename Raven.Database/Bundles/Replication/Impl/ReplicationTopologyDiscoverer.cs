@@ -45,10 +45,10 @@ namespace Raven.Database.Bundles.Replication.Impl
 			if (ttl <= 0)
 				return root;
 
-			ConfigurationDocument<ReplicationDocument> configurationDocument = null;
+			ConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>> configurationDocument = null;
 			try
 			{
-				configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
+				configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 			}
 			catch (Exception)
 			{
@@ -128,7 +128,7 @@ namespace Raven.Database.Bundles.Replication.Impl
 			return offline;
 		}
 
-		private List<ReplicationTopologyDestinationNode> HandleDestinations(ReplicationDocument destinations)
+		private List<ReplicationTopologyDestinationNode> HandleDestinations(ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> destinations)
 		{
 			return destinations
 				.Destinations

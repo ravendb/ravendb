@@ -310,7 +310,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				return;
 
 			var database = databaseTask.Result;
-			var configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument>(Constants.RavenReplicationDestinations);
+			var configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 			if (configurationDocument != null)
 			{
 				var replicationDocument = configurationDocument.Document;
