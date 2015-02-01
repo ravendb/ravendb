@@ -305,7 +305,7 @@ namespace Raven.Tests.Storage.Voron
 			{
 				storage.Batch(accessor => accessor.Indexing.AddIndex(101, true));
 
-				var etag = new Etag(Guid.NewGuid().ToString());
+				var etag = new Etag().Setup(UuidType.ScheduledReductions, 2);
 				var date = DateTime.Now.AddDays(1);
 
 				storage.Batch(accessor => accessor.Indexing.UpdateLastReduced(101, etag, date));

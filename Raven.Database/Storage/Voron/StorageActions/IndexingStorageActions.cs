@@ -3,9 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Concurrent;
 
+using System.Globalization;
 using Raven.Abstractions.Util.Streams;
+using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -59,16 +60,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					var key = indexingStatsIterator.CurrentKey.ToString();
-
-					RavenJObject indexStats;
-					using (var stream = indexingStatsIterator.CreateReaderForCurrent().AsStream())
-					{
-						indexStats = stream.ToJObject();
-					}
-
 					ushort version;
-					var reduceStats = Load(tableStorage.ReduceStats, key, out version);
-					var lastIndexedEtag = Load(tableStorage.LastIndexedEtags, key, out version);
+					var indexStats = indexingStatsIterator.ReadStructForCurrent(tableStorage.IndexingStats.Schema);
+					
+					var reduceStats = LoadStruct(tableStorage.ReduceStats, key, out version);
+					var lastIndexedEtag = LoadStruct(tableStorage.LastIndexedEtags, key, out version);
 					var priority = ReadPriority(key);
 					var touches = ReadTouches(key);
 
@@ -84,9 +80,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			ushort version;
 
-			var indexStats = Load(tableStorage.IndexingStats, key, out version);
-			var reduceStats = Load(tableStorage.ReduceStats, key, out version);
-			var lastIndexedEtags = Load(tableStorage.LastIndexedEtags, key, out version);
+			var indexStats = LoadStruct(tableStorage.IndexingStats, key, out version);
+			var reduceStats = LoadStruct(tableStorage.ReduceStats, key, out version);
+			var lastIndexedEtags = LoadStruct(tableStorage.LastIndexedEtags, key, out version);
 			var priority = ReadPriority(key);
 			var touches = ReadTouches(key);
 
@@ -100,43 +96,40 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (tableStorage.IndexingStats.Contains(Snapshot, key, writeBatch.Value))
 				throw new ArgumentException(string.Format("There is already an index with the name: '{0}'", id));
 
-			tableStorage.IndexingStats.Add(
+			tableStorage.IndexingStats.AddStruct(
 				writeBatch.Value,
 				key,
-				new RavenJObject
-				{
-					{ "index", id },
-					{ "attempts", 0 },
-					{ "successes", 0 },
-					{ "failures", 0 },
-					{ "createdTimestamp", SystemTime.UtcNow },
-					{ "lastIndexingTime", DateTime.MinValue }
-				}, 0);
+				new Structure<IndexingWorkStatsFields>(tableStorage.IndexingStats.Schema)
+					.Set(IndexingWorkStatsFields.IndexId, id)
+					.Set(IndexingWorkStatsFields.IndexingAttempts, 0)
+					.Set(IndexingWorkStatsFields.IndexingSuccesses, 0)
+					.Set(IndexingWorkStatsFields.IndexingErrors, 0)
+					.Set(IndexingWorkStatsFields.CreatedTimestamp, SystemTime.UtcNow.ToBinary())
+					.Set(IndexingWorkStatsFields.LastIndexingTime, DateTime.MinValue.ToBinary()),
+				0);
 
 			tableStorage.IndexingMetadata.Add(writeBatch.Value, CreateKey(id, "priority"), BitConverter.GetBytes(1), 0);
 			tableStorage.IndexingMetadata.Increment(writeBatch.Value, CreateKey(id, "touches"), 0, 0);
 
-			tableStorage.ReduceStats.Add(
+			tableStorage.ReduceStats.AddStruct(
 				writeBatch.Value,
 				key,
-				new RavenJObject
-				{
-					{ "reduce_attempts", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
-					{ "reduce_successes", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
-					{ "reduce_failures", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
-					{ "lastReducedEtag", createMapReduce ? Etag.Empty.ToByteArray() : (RavenJToken)RavenJValue.Null },
-					{ "lastReducedTimestamp", createMapReduce ? DateTime.MinValue : (RavenJToken)RavenJValue.Null }
-				}, 0);
+				new Structure<ReducingWorkStatsFields>(tableStorage.ReduceStats.Schema)
+					.Set(ReducingWorkStatsFields.ReduceAttempts, createMapReduce ? 0 : -1)
+					.Set(ReducingWorkStatsFields.ReduceSuccesses, createMapReduce ? 0 : -1)
+					.Set(ReducingWorkStatsFields.ReduceErrors, createMapReduce ? 0 : -1)
+					.Set(ReducingWorkStatsFields.LastReducedEtag, createMapReduce ? Etag.Empty.ToByteArray() : Etag.InvalidEtag.ToByteArray())
+					.Set(ReducingWorkStatsFields.LastReducedTimestamp, createMapReduce ? DateTime.MinValue.ToBinary() : -1L),
+				0);
 
-			tableStorage.LastIndexedEtags.Add(
+			tableStorage.LastIndexedEtags.AddStruct(
 				writeBatch.Value,
 				key,
-				new RavenJObject
-				{
-					{ "index", id },
-					{ "lastEtag", Etag.Empty.ToByteArray() },
-					{ "lastTimestamp", DateTime.MinValue },
-				}, 0);
+				new Structure<LastIndexedStatsFields>(tableStorage.LastIndexedEtags.Schema)
+					.Set(LastIndexedStatsFields.IndexId, id)
+					.Set(LastIndexedStatsFields.LastEtag, Etag.Empty.ToByteArray())
+					.Set(LastIndexedStatsFields.LastTimestamp, DateTime.MinValue.ToBinary()),
+				0);
 		}
 
 		public void PrepareIndexForDeletion(int id)
@@ -173,18 +166,22 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var indexStats = Load(tableStorage.IndexingStats, key, out version);
-			var reduceStats = Load(tableStorage.ReduceStats, key, out version);
+			var indexStats = LoadStruct(tableStorage.IndexingStats, key, out version);
+			var reduceStats = LoadStruct(tableStorage.ReduceStats, key, out version);
+
+			var reduceAttempts = reduceStats.ReadInt(ReducingWorkStatsFields.ReduceAttempts);
+			var reduceErrors = reduceStats.ReadInt(ReducingWorkStatsFields.ReduceErrors);
+			var reduceSuccesses = reduceStats.ReadInt(ReducingWorkStatsFields.ReduceSuccesses);
 
 			var indexFailureInformation = new IndexFailureInformation
 			{
-				Attempts = indexStats.Value<int>("attempts"),
-				Errors = indexStats.Value<int>("failures"),
-				Successes = indexStats.Value<int>("successes"),
-				ReduceAttempts = reduceStats.Value<int?>("reduce_attempts"),
-				ReduceErrors = reduceStats.Value<int?>("reduce_failures"),
-				ReduceSuccesses = reduceStats.Value<int?>("reduce_successes"),
-				Id = indexStats.Value<int>("index")
+				Attempts = indexStats.ReadInt(IndexingWorkStatsFields.IndexingAttempts),
+				Errors = indexStats.ReadInt(IndexingWorkStatsFields.IndexingErrors),
+				Successes = indexStats.ReadInt(IndexingWorkStatsFields.IndexingSuccesses),
+				ReduceAttempts = reduceAttempts == -1 ? (int?)null : reduceAttempts,
+				ReduceErrors = reduceErrors == -1 ? (int?)null : reduceErrors,
+				ReduceSuccesses = reduceSuccesses == -1 ? (int?)null : reduceSuccesses,
+				Id = indexStats.ReadInt(IndexingWorkStatsFields.IndexId)
 			};
 
 			return indexFailureInformation;
@@ -194,13 +191,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var key = CreateKey(id);
 
-			ushort version;
-			var indexStats = Load(tableStorage.LastIndexedEtags, key, out version);
+			var version = tableStorage.LastIndexedEtags.ReadVersion(Snapshot, key, writeBatch.Value);
 
-			indexStats["lastEtag"] = etag.ToByteArray();
-			indexStats["lastTimestamp"] = timestamp;
+			if(version == null)
+				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", id));
 
-			tableStorage.LastIndexedEtags.Add(writeBatch.Value, key, indexStats, version);
+			var indexStats = new Structure<LastIndexedStatsFields>(tableStorage.LastIndexedEtags.Schema)
+				.Set(LastIndexedStatsFields.IndexId, id)
+				.Set(LastIndexedStatsFields.LastEtag, etag.ToByteArray())
+				.Set(LastIndexedStatsFields.LastTimestamp, timestamp.ToBinary());
+
+			tableStorage.LastIndexedEtags.AddStruct(writeBatch.Value, key, indexStats, version);
 		}
 
 		public void UpdateLastReduced(int id, Etag etag, DateTime timestamp)
@@ -208,15 +209,16 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var reduceStats = Load(tableStorage.ReduceStats, key, out version);
+			var reduceStats = LoadStruct(tableStorage.ReduceStats, key, out version);
 
-			if (Buffers.Compare(reduceStats.Value<byte[]>("lastReducedEtag"), etag.ToByteArray()) >= 0)
+			if (Etag.Parse(reduceStats.ReadBytes(ReducingWorkStatsFields.LastReducedEtag)).CompareTo(etag) >= 0)
 				return;
 
-			reduceStats["lastReducedEtag"] = etag.ToByteArray();
-			reduceStats["lastReducedTimestamp"] = timestamp;
+			var updated = new Structure<ReducingWorkStatsFields>(tableStorage.ReduceStats.Schema)
+				.Set(ReducingWorkStatsFields.LastReducedEtag, etag.ToByteArray())
+				.Set(ReducingWorkStatsFields.LastReducedTimestamp, timestamp.ToBinary());
 
-			tableStorage.ReduceStats.Add(writeBatch.Value, key, reduceStats, version);
+			tableStorage.ReduceStats.AddStruct(writeBatch.Value, key, updated, version);
 		}
 
 		public void TouchIndexEtag(int id)
@@ -228,29 +230,37 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var key = CreateKey(id);
 
-			ushort version;
-			var index = Load(tableStorage.IndexingStats, key, out version);
+			var version = tableStorage.IndexingStats.ReadVersion(Snapshot, key, writeBatch.Value);
 
-			index["attempts"] = index.Value<int>("attempts") + stats.IndexingAttempts;
-			index["successes"] = index.Value<int>("successes") + stats.IndexingSuccesses;
-			index["failures"] = index.Value<int>("failures") + stats.IndexingErrors;
-			index["lastIndexingTime"] = SystemTime.UtcNow;
+			if (version == null)
+				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", id));
 
-			tableStorage.IndexingStats.Add(writeBatch.Value, key, index, version);
+			var indexStats = new Structure<IndexingWorkStatsFields>(tableStorage.IndexingStats.Schema)
+				.Set(IndexingWorkStatsFields.IndexId, id)
+				.Increment(IndexingWorkStatsFields.IndexingAttempts, stats.IndexingAttempts)
+				.Increment(IndexingWorkStatsFields.IndexingSuccesses, stats.IndexingSuccesses)
+				.Increment(IndexingWorkStatsFields.IndexingErrors, stats.IndexingErrors)
+				.Set(IndexingWorkStatsFields.LastIndexingTime, SystemTime.UtcNow.ToBinary());
+
+			tableStorage.IndexingStats.AddStruct(writeBatch.Value, key, indexStats, version);
 		}
 
 		public void UpdateReduceStats(int id, IndexingWorkStats stats)
 		{
 			var key = CreateKey(id);
 
-			ushort version;
-			var reduceStats = Load(tableStorage.ReduceStats, key, out version);
+			var existingStats = tableStorage.ReduceStats.ReadStruct(Snapshot, key, writeBatch.Value);
 
-			reduceStats["reduce_attempts"] = reduceStats.Value<int>("reduce_attempts") + stats.ReduceAttempts;
-			reduceStats["reduce_successes"] = reduceStats.Value<int>("reduce_successes") + stats.ReduceSuccesses;
-			reduceStats["reduce_failures"] = reduceStats.Value<int>("reduce_failures") + stats.ReduceErrors;
+			var version = existingStats.Version;
 
-			tableStorage.ReduceStats.Add(writeBatch.Value, key, reduceStats, version);
+			var updated = new Structure<ReducingWorkStatsFields>(tableStorage.ReduceStats.Schema)
+				.Increment(ReducingWorkStatsFields.ReduceAttempts, stats.ReduceAttempts)
+				.Increment(ReducingWorkStatsFields.ReduceSuccesses, stats.ReduceSuccesses)
+				.Increment(ReducingWorkStatsFields.ReduceErrors, stats.ReduceErrors)
+				.Set(ReducingWorkStatsFields.LastReducedEtag, existingStats.Reader.ReadBytes(ReducingWorkStatsFields.LastReducedEtag))
+				.Set(ReducingWorkStatsFields.LastReducedTimestamp, existingStats.Reader.ReadLong(ReducingWorkStatsFields.LastReducedTimestamp));
+
+			tableStorage.ReduceStats.AddStruct(writeBatch.Value, key, updated, version);
 		}
 
 		public void RemoveAllDocumentReferencesFrom(string key)
@@ -298,15 +308,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			foreach (var reference in references)
 			{
 				var newKey = generator.CreateSequentialUuid(UuidType.DocumentReferences);
-				var newKeyAsString = newKey.ToString();
-				var value = new RavenJObject
-				            {
-					            { "view", id }, 
-								{ "key", key }, 
-								{ "ref", reference }
-				            };
 
-				tableStorage.DocumentReferences.Add(writeBatch.Value, newKeyAsString, value);
+				var value = new Structure<DocumentReferencesFields>(tableStorage.DocumentReferences.Schema)
+					.Set(DocumentReferencesFields.IndexId, id)
+					.Set(DocumentReferencesFields.Key, key)
+					.Set(DocumentReferencesFields.Reference, reference);
+
+				var newKeyAsString = newKey.ToString();
+
+				tableStorage.DocumentReferences.AddStruct(writeBatch.Value, newKeyAsString, value);
 				documentReferencesByKey.MultiAdd(writeBatch.Value, CreateKey(key), newKeyAsString);
 				documentReferencesByRef.MultiAdd(writeBatch.Value, CreateKey(reference), newKeyAsString);
 				documentReferencesByView.MultiAdd(writeBatch.Value, CreateKey(id), newKeyAsString);
@@ -328,9 +338,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
+					var structReader = LoadStruct(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
 
-				    var item = value.Value<string>("key");
+				    var item = structReader.ReadString(DocumentReferencesFields.Key);
 				    if (result.Add(item))
 				        yield return item;
 				}
@@ -405,9 +415,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
 
-					result.Add(value.Value<string>("ref"));
+					result.Add(value.ReadString(DocumentReferencesFields.Reference));
 				}
 				while (iterator.MoveNext());
 
@@ -415,37 +425,44 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		private RavenJObject Load(Table table, string name, out ushort version)
+		private StructureReader<T> LoadStruct<T>(TableOfStructures<T> table, string name, out ushort version) where T : struct
 		{
-			var value = LoadJson(table, CreateKey(name), writeBatch.Value, out version);
-			if (value == null)
+			var reader = LoadStruct(table, CreateKey(name), writeBatch.Value, out version);
+
+			if(reader == null)
 				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", name));
 
-			return value;
+			return reader;
 		}
 
-		private static IndexStats GetIndexStats(RavenJToken indexingStats, RavenJToken reduceStats, RavenJToken lastIndexedEtags, int priority, int touches)
+		private static IndexStats GetIndexStats(StructureReader<IndexingWorkStatsFields> indexingStats, StructureReader<ReducingWorkStatsFields> reduceStats, StructureReader<LastIndexedStatsFields> lastIndexedEtags, int priority, int touches)
 		{
+			var lastReducedEtag = Etag.Parse(reduceStats.ReadBytes(ReducingWorkStatsFields.LastReducedEtag));
+			var reduceAttempts = reduceStats.ReadInt(ReducingWorkStatsFields.ReduceAttempts);
+			var reduceErrors = reduceStats.ReadInt(ReducingWorkStatsFields.ReduceErrors);
+			var reduceSuccesses = reduceStats.ReadInt(ReducingWorkStatsFields.ReduceSuccesses);
+			var lastReducedTimestamp = reduceStats.ReadLong(ReducingWorkStatsFields.LastReducedTimestamp);
+
 			return new IndexStats
 			{
 				TouchCount = touches,
-				IndexingAttempts = indexingStats.Value<int>("attempts"),
-				IndexingErrors = indexingStats.Value<int>("failures"),
-				IndexingSuccesses = indexingStats.Value<int>("successes"),
-				ReduceIndexingAttempts = reduceStats.Value<int?>("reduce_attempts"),
-				ReduceIndexingErrors = reduceStats.Value<int?>("reduce_failures"),
-				ReduceIndexingSuccesses = reduceStats.Value<int?>("reduce_successes"),
-				Id = indexingStats.Value<int>("index"),
+				IndexingAttempts = indexingStats.ReadInt(IndexingWorkStatsFields.IndexingAttempts),
+				IndexingErrors = indexingStats.ReadInt(IndexingWorkStatsFields.IndexingErrors),
+				IndexingSuccesses = indexingStats.ReadInt(IndexingWorkStatsFields.IndexingSuccesses),
+				ReduceIndexingAttempts = reduceAttempts == -1 ? (int?)null : reduceAttempts,
+				ReduceIndexingErrors = reduceErrors == -1 ? (int?)null : reduceErrors,
+				ReduceIndexingSuccesses = reduceSuccesses == -1 ? (int?)null : reduceSuccesses,
+				Id = indexingStats.ReadInt(IndexingWorkStatsFields.IndexId),
 				Priority = (IndexingPriority)priority,
-				LastIndexedEtag = Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag")),
-				LastIndexedTimestamp = lastIndexedEtags.Value<DateTime>("lastTimestamp"),
-				CreatedTimestamp = indexingStats.Value<DateTime>("createdTimestamp"),
-				LastIndexingTime = indexingStats.Value<DateTime>("lastIndexingTime"),
+				LastIndexedEtag = Etag.Parse(lastIndexedEtags.ReadBytes(LastIndexedStatsFields.LastEtag)),
+				LastIndexedTimestamp = DateTime.FromBinary(lastIndexedEtags.ReadLong(LastIndexedStatsFields.LastTimestamp)),
+				CreatedTimestamp = DateTime.FromBinary(indexingStats.ReadLong(IndexingWorkStatsFields.CreatedTimestamp)),
+				LastIndexingTime = DateTime.FromBinary(indexingStats.ReadLong(IndexingWorkStatsFields.LastIndexingTime)),
 				LastReducedEtag =
-					reduceStats.Value<byte[]>("lastReducedEtag") != null
-						? Etag.Parse(reduceStats.Value<byte[]>("lastReducedEtag"))
+					lastReducedEtag.CompareTo(Etag.InvalidEtag) != 0
+						? lastReducedEtag
 						: null,
-				LastReducedTimestamp = reduceStats.Value<DateTime?>("lastReducedTimestamp")
+				LastReducedTimestamp = lastReducedTimestamp == -1 ? (DateTime?)null : DateTime.FromBinary(lastReducedTimestamp)
 			};
 		}
 
@@ -476,10 +493,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var documentReferencesByViewAndKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByViewAndKey);
 
 			ushort version;
-			var value = LoadJson(tableStorage.DocumentReferences, id, writeBatch.Value, out version);
-			var reference = value.Value<string>("ref");
-			var view = value.Value<string>("view");
-			var key = value.Value<string>("key");
+			var value = LoadStruct(tableStorage.DocumentReferences, id, writeBatch.Value, out version);
+			var reference = value.ReadString(DocumentReferencesFields.Reference);
+			var view = value.ReadInt(DocumentReferencesFields.IndexId).ToString(CultureInfo.InvariantCulture);
+			var key = value.ReadString(DocumentReferencesFields.Key);
 
 			tableStorage.DocumentReferences.Delete(writeBatch.Value, id);
 			documentReferencesByKey.MultiDelete(writeBatch.Value, CreateKey(key), id);

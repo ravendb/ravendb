@@ -95,8 +95,8 @@ namespace Raven.Database.Indexing
 			get
 			{
 				var currentNumberOfParallelTasks = Configuration.MaxNumberOfParallelProcessingTasks*BackgroundTaskExecuter.Instance.MaxNumberOfParallelProcessingTasksRatio;
-				var numberOfParallelTasks = Math.Max((int)currentNumberOfParallelTasks, Configuration.MaxNumberOfParallelProcessingTasks);
-				return Math.Min(numberOfParallelTasks, 1);
+				var numberOfParallelTasks = Math.Min((int)currentNumberOfParallelTasks, Configuration.MaxNumberOfParallelProcessingTasks);
+				return Math.Max(numberOfParallelTasks, 1);
 			}
 		}
 

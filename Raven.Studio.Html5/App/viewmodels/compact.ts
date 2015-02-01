@@ -64,6 +64,11 @@ class compact extends viewModelBase {
         return true;
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('7HZGOE');
+    }
+
     compositionComplete() {
         super.compositionComplete();
         $('form :input[name="databaseName"]').on("keypress", (e) => e.which != 13);

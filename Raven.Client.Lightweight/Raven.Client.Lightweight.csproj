@@ -142,6 +142,7 @@
     <Compile Include="Extensions\Internal\HttpJsonRequestExtensions.cs" />
     <Compile Include="FileSystem\AbstractFilesQuery.cs" />
     <Compile Include="FileSystem\AsyncFilesSession.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\VersioningExtensions.cs" />
     <Compile Include="FileSystem\Changes\FilesChangesClient.cs" />
     <Compile Include="FileSystem\Changes\FilesConnectionState.cs" />
     <Compile Include="FileSystem\Connection\FilesReplicationInformer.cs" />

@@ -1,146 +1,146 @@
-﻿#if !MONO
-using System;
+﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 
-// ReSharper disable once CheckNamespace
 namespace Mono.Unix.Native
 {
-
+    // Take from https://github.com/mono/mono/blob/master/mcs/class/Mono.Posix/Mono.Unix.Native/Syscall.cs
+    // Used this way to avoid taking a hard dependency on the Mono.Posix.dll
 	public static class Syscall
 	{
-		// ftruncate(2)
-		//    int ftruncate(int fd, off_t length);
-		[DllImport("not.relevant", SetLastError = true,
-				EntryPoint = "Mono_Posix_Syscall_ftruncate")]
-		public static extern int ftruncate(int fd, long length);
 
-		[DllImport("not.relevant", SetLastError = true)]
-		public static extern int close(int fd);
+        internal const string LIBC = "libc";
+        internal const string MPH = "MonoPosixHelper";
 
-		[DllImport("not.relevant", SetLastError = true,
-						EntryPoint = "Mono_Posix_Syscall_mremap")]
-		public static extern IntPtr mremap(IntPtr old_address, ulong old_size,
-				ulong new_size, MremapFlags flags);
+        [DllImport(LIBC, SetLastError = true)]
+        public static extern int close(int fd);
+        // pread(2)
+        //    ssize_t pread(int fd, void *buf, size_t count, off_t offset);
+        [DllImport(MPH, SetLastError = true,
+                EntryPoint = "Mono_Posix_Syscall_pread")]
+        public static extern long pread(int fd, IntPtr buf, ulong count, long offset);
 
-		// pread(2)
-		//    ssize_t pread(int fd, void *buf, size_t count, off_t offset);
-		[DllImport("not.relevant", SetLastError = true,
-								EntryPoint = "Mono_Posix_Syscall_pread")]
-		public static extern long pread(int fd, IntPtr buf, ulong count, long offset);
+        public static unsafe long pread(int fd, void* buf, ulong count, long offset)
+        {
+            return pread(fd, (IntPtr)buf, count, offset);
+        }
 
-		public static unsafe long pread(int fd, void* buf, ulong count, long offset)
-		{
-			return pread(fd, (IntPtr)buf, count, offset);
-		}
+        // posix_fallocate(P)
+        //    int posix_fallocate(int fd, off_t offset, size_t len);
+        [DllImport(MPH, SetLastError = true,
+                EntryPoint = "Mono_Posix_Syscall_posix_fallocate")]
+        public static extern int posix_fallocate(int fd, long offset, ulong len);
 
-		// posix_fallocate(P)
-		//    int posix_fallocate(int fd, off_t offset, size_t len);
-		[DllImport("not.relevant", SetLastError = true,
-				EntryPoint = "Mono_Posix_Syscall_posix_fallocate")]
-		public static extern int posix_fallocate(int fd, long offset, ulong len);
+        [DllImport(MPH, SetLastError = true,
+                EntryPoint = "Mono_Posix_Syscall_msync")]
+        public static extern int msync(IntPtr start, ulong len, MsyncFlags flags);
 
 
-		[DllImport("not.relevant", SetLastError = true,
-					EntryPoint = "Mono_Posix_Syscall_msync")]
-		public static extern int msync(IntPtr start, ulong len, MsyncFlags flags);
+        [DllImport(MPH, SetLastError = true,
+                EntryPoint = "Mono_Posix_Syscall_mmap")]
+        public static extern IntPtr mmap(IntPtr start, ulong length,
+                MmapProts prot, MmapFlags flags, int fd, long offset);
 
-		[DllImport("not.relevant", SetLastError = true,
-				EntryPoint = "Mono_Posix_Syscall_mmap")]
-		public static extern IntPtr mmap(IntPtr start, ulong length,
-				MmapProts prot, MmapFlags flags, int fd, long offset);
-
-		[DllImport("not.relevant", SetLastError = true,
-			EntryPoint = "Mono_Posix_Syscall_munmap")]
-		public static extern int munmap(IntPtr start, ulong length);
-
-		// getpid(2)
-		//    pid_t getpid(void);
-		[DllImport("not.relevant", SetLastError = true)]
-		public static extern int getpid();
-
-		// open(2)
-		//    int open(const char *pathname, int flags, mode_t mode);
-		[DllImport("not.relevant", SetLastError = true,
-				EntryPoint = "Mono_Posix_Syscall_open_mode")]
-		public static extern int open(
-				string pathname, OpenFlags flags, FilePermissions mode);
-
-		[DllImport("not.relevant", SetLastError = true,
-				EntryPoint = "Mono_Posix_Syscall_open")]
-		public static extern int open(
-				string pathname, OpenFlags flags);
+        [DllImport(MPH, SetLastError = true,
+                EntryPoint = "Mono_Posix_Syscall_munmap")]
+        public static extern int munmap(IntPtr start, ulong length);
 
 
-		[DllImport("not.relevant", SetLastError = true)]
-		public static extern int fsync(int fd);
+        // getpid(2)
+        //    pid_t getpid(void);
+        [DllImport(LIBC, SetLastError = true)]
+        public static extern int getpid();
 
-		// read(2)
-		//    ssize_t read(int fd, void *buf, size_t count);
-		[DllImport("not.relevant", SetLastError = true,
-					EntryPoint = "Mono_Posix_Syscall_read")]
-		public static extern long read(int fd, IntPtr buf, ulong count);
+        [DllImport(LIBC, SetLastError = true)]
+        private static extern int unlink(
+				IntPtr pathname);
 
-		public static unsafe long read(int fd, void* buf, ulong count)
-		{
-			return read(fd, (IntPtr)buf, count);
-		}
+	    public static  int unlink(string pathname)
+	    {
+            IntPtr pathNamePtr = Marshal.StringToHGlobalAuto(pathname);
+            try
+            {
+                return unlink(pathNamePtr);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(pathNamePtr);
+            }
+	    }
+        // open(2)
+        //    int open(const char *pathname, int flags, mode_t mode);
+        [DllImport(MPH, SetLastError = true,
+                EntryPoint = "Mono_Posix_Syscall_open_mode")]
+        private static extern int open(
+				IntPtr pathname, OpenFlags flags, FilePermissions mode);
 
-		// preadv(2)
-		//    ssize_t preadv(int fd, const struct iovec *iov, int iovcnt, off_t offset);
-		[DllImport("not.relevant", SetLastError = true,
-				EntryPoint = "Mono_Posix_Syscall_preadv")]
-		private static extern long sys_preadv(int fd, Iovec[] iov, int iovcnt, long offset);
-
-		public static long preadv(int fd, Iovec[] iov, long offset)
-		{
-			return sys_preadv(fd, iov, iov.Length, offset);
-		}
-
-		// pwritev(2)
-		//    ssize_t pwritev(int fd, const struct iovec *iov, int iovcnt, off_t offset);
-		[DllImport("not.relevant", SetLastError = true,
-				EntryPoint = "Mono_Posix_Syscall_pwritev")]
-		private static extern long sys_pwritev(int fd, Iovec[] iov, int iovcnt, long offset);
-
-		public static long pwritev(int fd, Iovec[] iov, long offset)
-		{
-			return sys_pwritev(fd, iov, iov.Length, offset);
-		}
-
-		// write(2)
-		//    ssize_t write(int fd, const void *buf, size_t count);
-		[DllImport("not.relevant", SetLastError = true,
-				EntryPoint = "Mono_Posix_Syscall_write")]
-		public static extern long write(int fd, IntPtr buf, ulong count);
-
-		public static unsafe long write(int fd, void* buf, ulong count)
-		{
-			return write(fd, (IntPtr)buf, count);
-		}
+	    public static int open(
+	        string pathname, OpenFlags flags, FilePermissions mode)
+	    {
+	        IntPtr pathNamePtr = Marshal.StringToHGlobalAuto(pathname);
+	        try
+	        {
+	            return open(pathNamePtr, flags, mode);
+	        }
+	        finally
+	        {
+	            Marshal.FreeHGlobal(pathNamePtr);
+	        }
+	    }
 
 
-		[DllImport("not.relevant", SetLastError = true,
-			EntryPoint = "Mono_Posix_Syscall_open_mode")]
-		public static extern long sysconf(SysconfName name, Errno defaultError);
-		public static long sysconf(SysconfName name)
-		{
-			return sysconf(name, (Errno)0);
-		}
+	    [DllImport(LIBC, SetLastError = true)]
+        public static extern int fsync(int fd);
 
 
-		[DllImport("not.relevant", SetLastError = true,
-			EntryPoint = "Mono_Posix_Syscall_open_mode")]
-		public static extern int fstat(int filedes, out Stat buf);
+        // read(2)
+        //    ssize_t read(int fd, void *buf, size_t count);
+        [DllImport(MPH, SetLastError = true,
+                EntryPoint = "Mono_Posix_Syscall_read")]
+        public static extern long read(int fd, IntPtr buf, ulong count);
+
+        public static unsafe long read(int fd, void* buf, ulong count)
+        {
+            return read(fd, (IntPtr)buf, count);
+        }
+
+        // pwritev(2)
+        //    ssize_t pwritev(int fd, const struct iovec *iov, int iovcnt, off_t offset);
+        [DllImport(MPH, SetLastError = true,
+                EntryPoint = "Mono_Posix_Syscall_pwritev")]
+        private static extern long sys_pwritev(int fd, Iovec[] iov, int iovcnt, long offset);
+
+        public static long pwritev(int fd, Iovec[] iov, long offset)
+        {
+            return sys_pwritev(fd, iov, iov.Length, offset);
+        }
+
+        // write(2)
+        //    ssize_t write(int fd, const void *buf, size_t count);
+        [DllImport(MPH, SetLastError = true,
+                EntryPoint = "Mono_Posix_Syscall_write")]
+        public static extern long write(int fd, IntPtr buf, ulong count);
+
+        public static unsafe long write(int fd, void* buf, ulong count)
+        {
+            return write(fd, (IntPtr)buf, count);
+        }
+
+
+        [DllImport(MPH, SetLastError = true,
+                EntryPoint = "Mono_Posix_Syscall_sysconf")]
+        public static extern long sysconf(SysconfName name, Errno defaultError);
+
+        public static long sysconf(SysconfName name)
+        {
+            return sysconf(name, (Errno)0);
+        }
+
+        [DllImport(MPH, SetLastError = true,
+                EntryPoint = "Mono_Posix_Syscall_fstat")]
+        public static extern int fstat(int filedes, out Stat buf);
+
 	}
-
-
-
-	[CLSCompliant(false)]
-	public enum MremapFlags : ulong
-	{
-		MREMAP_MAYMOVE = 0x1,
-	}
-
 
 	[CLSCompliant(false)]
 	public enum MmapProts : int
@@ -420,7 +420,7 @@ namespace Mono.Unix.Native
 		EALREADY = 114, // Operation already in progress 
 		EINPROGRESS = 115, // Operation now in progress 
 		ESTALE = 116, // Stale NFS file handle 
-		EUCLEAN = 117, // Structure needs cleaning 
+		EUCLEAN = 117, // IStructure needs cleaning 
 		ENOTNAM = 118, // Not a XENIX named type file 
 		ENAVAIL = 119, // No XENIX semaphores available 
 		EISNAM = 120, // Is a named type file 
@@ -748,4 +748,3 @@ namespace Mono.Unix.Native
 
 
 }
-#endif

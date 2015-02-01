@@ -63,10 +63,7 @@ class status extends viewModelBase {
         var isLegalBundelName = (this.bundleMap[bundelName] != undefined);
         var isBundleExists = this.userDatabasePages.indexOf(this.bundleMap[bundelName]) > -1;
 
-        if (db.isSystem) {
-            return appUrl.forDocuments(null, db);
-        }
-        else if (isLegalBundelName && isBundleExists == false) {
+        if (isLegalBundelName && isBundleExists == false) {
             return appUrl.forCurrentDatabase().databaseSettings();
         }
 

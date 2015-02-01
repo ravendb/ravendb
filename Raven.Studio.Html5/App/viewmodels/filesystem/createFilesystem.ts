@@ -20,6 +20,7 @@ class createFilesystem extends viewModelBase {
     logsCustomValidityError: KnockoutComputed<string>;
 
     isEncryptionBundleEnabled = ko.observable(false);
+    isVersioningBundleEnabled = ko.observable(false);
 
     constructor(private filesystems: KnockoutObservableArray<filesystem>, private licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
         super();
@@ -132,10 +133,17 @@ class createFilesystem extends viewModelBase {
         this.isEncryptionBundleEnabled.toggle();
     }
 
+    toggleVersioningBundle() {
+        this.isVersioningBundleEnabled.toggle();
+    }
+
     private getActiveBundles(): string[] {
         var activeBundles: string[] = [];
         if (this.isEncryptionBundleEnabled()) {
             activeBundles.push("Encryption");
+        }
+        if (this.isVersioningBundleEnabled()) {
+            activeBundles.push("Versioning");
         }
         return activeBundles;
     }

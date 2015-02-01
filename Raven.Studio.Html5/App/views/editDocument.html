@@ -1,6 +1,7 @@
 ﻿<div id="editDocumentContainer" tabindex="-1">
     <!-- We use a container with a tab index so that we can capture keyboard events, such as CTRL+S. -->
     <ul class="breadcrumb" style="display: inline-block">
+        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <li style="display: inline-block">
             <h3 style="display: inline-block">
                 <i class="fa fa-file-text-o" style="display: inline-block"></i>

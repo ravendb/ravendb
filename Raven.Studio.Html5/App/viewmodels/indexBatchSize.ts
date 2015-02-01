@@ -64,7 +64,7 @@ class metricsIndexBatchSize extends viewModelBase {
                     .tickFormat(function (d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
 
                 chart.yAxis
-                    .axisLabel('batch size')
+                    .axisLabel('batch size [bytes]')
                     .tickFormat(d3.format(',f'));
 
                 nv.utils.windowResize(function () { chart.update() });

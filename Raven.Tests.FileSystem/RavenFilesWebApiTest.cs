@@ -14,7 +14,7 @@ namespace Raven.Tests.FileSystem
 
         public RavenFilesWebApiTest()
         {
-            var ravenFsClient = (IAsyncFilesCommandsImpl) NewAsyncClient(fileSystemName: WebApiTestName);
+			var ravenFsClient = (IAsyncFilesCommandsImpl)NewAsyncClient(fileSystemName: WebApiTestName, activeBundles: "Versioning");
 
             WebClient = new WebClient()
             {

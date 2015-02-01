@@ -347,6 +347,9 @@
     <TypeScriptCompile Include="App\commands\explainReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCachedCollectionsCount.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
     <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
@@ -399,6 +402,8 @@
     <TypeScriptCompile Include="App\common\changesApiWarnStorage.ts" />
     <TypeScriptCompile Include="App\common\apiKeyLocalStorage.ts" />
     <TypeScriptCompile Include="App\models\adminLogsConfigEntry.ts" />
+    <TypeScriptCompile Include="App\common\helpBindingHandler.ts" />
+    <Content Include="App\models\adminLogsConfigEntry.ts" />
     <TypeScriptCompile Include="App\models\performanceTestRequest.ts" />
     <TypeScriptCompile Include="App\models\performanceTestResultWrapped.ts" />
     <TypeScriptCompile Include="App\models\indexMergeSuggestion.ts" />
@@ -440,6 +445,10 @@
     <TypeScriptCompile Include="App\commands\monitorCompactCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\monitorCompactCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\startCompactCommand.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\versioningEntry.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemSettingsDialog.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\versioning.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\settings.ts" />
     <Content Include="App\views\adminSettings.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
@@ -447,6 +456,9 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
+    <Content Include="App\views\filesystem\filesystemSettingsDialog.html" />
+    <Content Include="App\views\filesystem\settings.html" />
+    <Content Include="App\views\filesystem\versioning.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
     <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\statusDebugPersistAutoIndex.html" />

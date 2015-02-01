@@ -13,14 +13,13 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
     simulationResults = ko.observableArray<sqlReplicationSimulatedCommand>([]);
     rolledBackTransactionPassed = ko.observable<boolean>(false);
     documentAutocompletes = ko.observableArray<string>();
-    documentId = ko.observable<string>();
     lastSearchedDocumentID = ko.observable<string>("");
     isAutoCompleteVisible: KnockoutComputed<boolean>;
     rolledbackTransactionPerformed = ko.observable<boolean>(false);
     lastAlert = ko.observable<string>("");
     waitingToAnswer = ko.observable<boolean>(false);
     
-    constructor(private db: database, private simulatedSqlReplication: sqlReplication) {
+    constructor(private db: database, private simulatedSqlReplication: sqlReplication, private documentId: KnockoutObservable<string>) {
         super();
         this.documentId.throttle(250).subscribe(search => this.fetchDocumentIdAutocompletes(search));
         this.isAutoCompleteVisible = ko.computed(() => {

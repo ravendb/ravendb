@@ -53,6 +53,15 @@ class editSqlReplication extends viewModelBase {
     sqlReplicationStatsAndMetricsHref = appUrl.forCurrentDatabase().statusDebugSqlReplication;
     appUrls: computedAppUrls;
     docEditor: AceAjax.Editor;
+    script = ko.computed({
+        read: () => {
+            var r = this.editedReplication();
+            return r ? r.script() : "";
+        },
+        write: v => this.editedReplication().script(v)
+        });
+
+    simulationDocumentId = ko.observable<string>();
 
     isBusy = ko.observable(false);
     initialReplicationId: string = '';
@@ -264,6 +273,7 @@ class editSqlReplication extends viewModelBase {
 
     save() {
         var currentDocumentId = this.editedReplication().name();
+        this.editedReplication().script(this.script());
 
         if (this.initialReplicationId !== currentDocumentId) {
             delete this.editedReplication().__metadata.etag;
@@ -329,7 +339,8 @@ class editSqlReplication extends viewModelBase {
     }
 
     simulateSqlReplication() {
-        var viewModel = new sqlReplicationSimulationDialog(this.activeDatabase(), this.editedReplication());
+        this.editedReplication().script(this.script());
+        var viewModel = new sqlReplicationSimulationDialog(this.activeDatabase(), this.editedReplication(), this.simulationDocumentId);
         app.showDialog(viewModel);
     }
 

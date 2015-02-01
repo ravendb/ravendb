@@ -44,6 +44,11 @@ class backupDatabase extends viewModelBase {
         return true;
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('FT7RV6');
+    }
+
     compositionComplete() {
         super.compositionComplete();
         $('form :input[name="databaseName"]').on("keypress", (e) => e.which != 13);

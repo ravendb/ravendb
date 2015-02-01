@@ -15,7 +15,7 @@ class transformer {
     initFromLoad(dto: transformerDto): transformer {
         this.originalName(dto.name.toString());
         this.name(dto.name);
-        this.editUrl = appUrl.forCurrentDatabase().editTransformer(encodeURIComponent(this.name()));
+        this.editUrl = appUrl.forCurrentDatabase().editTransformer(this.name());
         this.transformResults(dto.definition.TransformResults);
         return this;
     }
@@ -23,7 +23,7 @@ class transformer {
     initFromSave(dto: savedTransformerDto): transformer{
         this.originalName(dto.Transformer.Name.toString());
         this.name(dto.Transformer.Name);
-        this.editUrl = appUrl.forCurrentDatabase().editTransformer(encodeURIComponent(this.name()));
+        this.editUrl = appUrl.forCurrentDatabase().editTransformer(this.name());
         this.transformResults(dto.Transformer.TransformResults);
         return this;
     }

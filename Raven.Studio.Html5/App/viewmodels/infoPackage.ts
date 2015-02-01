@@ -110,6 +110,7 @@ class infoPackage extends viewModelBase {
     }
 
     attached() {
+        this.updateHelpLink('KVLC4Y');
         var self = this;
         $("#stacksContainer").resize();
         this.diagonal = d3.svg.diagonal().projection(d => [self.xScale(d.x), self.yScale(d.y)]);

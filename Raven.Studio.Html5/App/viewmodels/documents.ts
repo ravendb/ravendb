@@ -111,6 +111,7 @@ class documents extends viewModelBase {
             shell.hasContinueTestOption(true);
         }
         this.fetchCustomFunctions();
+        this.updateHelpLink('G8CDCP');
 
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
         this.collectionToSelectName = args ? args.collection : null;

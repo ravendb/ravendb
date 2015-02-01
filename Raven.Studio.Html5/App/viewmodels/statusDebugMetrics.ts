@@ -65,7 +65,7 @@ class statusDebugMetrics extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('JHZ574');
         this.activeDatabase.subscribe(() => this.fetchStatusDebugMetrics());
         return this.fetchStatusDebugMetrics();
     }

@@ -3,6 +3,7 @@ import license = require("models/license");
 
 class filesystem extends resource {
     //isDefault = false;
+    activeBundles = ko.observableArray<string>();
     statistics = ko.observable<filesystemStatisticsDto>();    
     files = ko.observableArray<filesystemFileHeaderDto>();
     static type = 'filesystem';
@@ -10,6 +11,7 @@ class filesystem extends resource {
     constructor(public name: string, isDisabled: boolean = false, bundles: string[] = null) {
         super(name, filesystem.type);
         this.disabled(isDisabled);
+        this.activeBundles(bundles);
         this.itemCount = ko.computed(() => this.statistics() ? this.statistics().FileCount : 0);
         this.itemCountText = ko.computed(() => {
             var itemCount = this.itemCount();

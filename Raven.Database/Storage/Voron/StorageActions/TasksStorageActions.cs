@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
+using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
@@ -53,17 +54,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var id = generator.CreateSequentialUuid(UuidType.Tasks);
 			var idAsString = id.ToString();
 
-			tableStorage.Tasks.Add(
-				writeBatch.Value,
-				idAsString,
-				new RavenJObject
-				{
-					{ "index", index },
-					{ "id", id.ToByteArray() },
-					{ "time", addedAt },
-					{ "type", type },
-					{ "task", task.AsBytes() }
-				}, 0);
+			var taskStructure = new Structure<TaskFields>(tableStorage.Tasks.Schema)
+				.Set(TaskFields.IndexId, index)
+				.Set(TaskFields.TaskId, id.ToByteArray())
+				.Set(TaskFields.AddedAt, addedAt.ToBinary())
+				.Set(TaskFields.Type, type)
+				.Set(TaskFields.SerializedTask, task.AsBytes());
+
+			tableStorage.Tasks.AddStruct(writeBatch.Value, idAsString, taskStructure, 0);
 
 			tasksByType.MultiAdd(writeBatch.Value, CreateKey(type), idAsString);
 			tasksByIndex.MultiAdd(writeBatch.Value, CreateKey(index), idAsString);
@@ -96,12 +94,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
 
 					DatabaseTask task;
 					try
 					{
-						task = DatabaseTask.ToTask(value.Value<string>("type"), value.Value<byte[]>("task"));
+						task = DatabaseTask.ToTask(value.ReadString(TaskFields.Type), value.ReadBytes(TaskFields.SerializedTask));
 					}
 					catch (Exception e)
 					{
@@ -111,7 +109,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						continue;
 					}
 
-					MergeSimilarTasks(task, value.Value<byte[]>("id"));
+					MergeSimilarTasks(task, value.ReadBytes(TaskFields.TaskId));
 					RemoveTask(iterator.CurrentKey, task.Index, type);
 
 					return (T)task;
@@ -142,12 +140,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						continue;
 
 					ushort version;
-					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
+					var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
 
 					DatabaseTask existingTask;
 					try
 					{
-						existingTask = DatabaseTask.ToTask(value.Value<string>("type"), value.Value<byte[]>("task"));
+						existingTask = DatabaseTask.ToTask(value.ReadString(TaskFields.Type), value.ReadBytes(TaskFields.SerializedTask));
 					}
 					catch (Exception e)
 					{
@@ -195,7 +193,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var taskData = LoadJson(tableStorage.Tasks, taskIterator.CurrentKey, writeBatch.Value, out version); 
+					var taskData = LoadStruct(tableStorage.Tasks, taskIterator.CurrentKey, writeBatch.Value, out version); 
 					if (taskData == null) 
 							throw new InvalidOperationException("Retrieved a pending task object, but was unable to parse it. This is probably a data corruption or a bug.");
 
@@ -204,10 +202,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						{
 							pendingTasksForDebug = new TaskMetadata
 							{
-								Id = Etag.Parse(taskData.Value<byte[]>("id")),
-								AddedTime = DateTime.Parse(taskData.Value<string>("time")),
-								Type = taskData.Value<string>("type"),
-								IndexId = taskData.Value<int>("index")
+								Id = Etag.Parse(taskData.ReadBytes(TaskFields.TaskId)),
+								AddedTime = DateTime.FromBinary(taskData.ReadLong(TaskFields.AddedAt)),
+								Type = taskData.ReadString(TaskFields.Type),
+								IndexId = taskData.ReadInt(TaskFields.IndexId)
 							};
 						}
 						catch (Exception e)

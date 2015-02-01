@@ -2,16 +2,17 @@ using System;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.MEF;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Notifications;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Search;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 using Xunit;
 using Raven.Database.Config;
-using Raven.Database.FileSystem;
 
 namespace Raven.Tests.FileSystem
 {
@@ -32,7 +33,7 @@ namespace Raven.Tests.FileSystem
 		{
 			using (var stream = StorageStream.CreatingNewAndWritting(
                                                     transactionalStorage, new MockIndexStorage(CreateIndexConfiguration()),
-                                                    new StorageOperationsTask(transactionalStorage, new MockIndexStorage(CreateIndexConfiguration()), new EmptyNotificationsPublisher()),
+                                                    new StorageOperationsTask(transactionalStorage, new OrderedPartCollection<AbstractFileDeleteTrigger>(), new MockIndexStorage(CreateIndexConfiguration()), new EmptyNotificationsPublisher()),
 				                                    "file", EmptyETagMetadata))
 			{
 				var buffer = new byte[StorageConstants.MaxPageSize];
@@ -58,7 +59,7 @@ namespace Raven.Tests.FileSystem
 		{
             using (var stream = SynchronizingFileStream.CreatingOrOpeningAndWriting(
                                                             transactionalStorage, new MockIndexStorage(CreateIndexConfiguration()),
-                                                            new StorageOperationsTask(transactionalStorage, new MockIndexStorage(CreateIndexConfiguration()), new EmptyNotificationsPublisher()),
+                                                            new StorageOperationsTask(transactionalStorage, new OrderedPartCollection<AbstractFileDeleteTrigger>(), new MockIndexStorage(CreateIndexConfiguration()), new EmptyNotificationsPublisher()),
                                                             "file", EmptyETagMetadata))
 			{
 				var buffer = new byte[StorageConstants.MaxPageSize];
@@ -90,7 +91,7 @@ namespace Raven.Tests.FileSystem
 
 			using (var stream = StorageStream.CreatingNewAndWritting(
                                                     transactionalStorage, new MockIndexStorage(CreateIndexConfiguration()),
-                                                    new StorageOperationsTask(transactionalStorage, new MockIndexStorage(CreateIndexConfiguration()), new EmptyNotificationsPublisher()),
+                                                    new StorageOperationsTask(transactionalStorage, new OrderedPartCollection<AbstractFileDeleteTrigger>(), new MockIndexStorage(CreateIndexConfiguration()), new EmptyNotificationsPublisher()),
 				                                    "file", EmptyETagMetadata))
 			{
 				stream.Write(buffer, 0, StorageConstants.MaxPageSize);
