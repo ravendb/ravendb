@@ -1,11 +1,14 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Voron.Impl;
 
 namespace Voron.Util
 {
-	public unsafe static class MemoryUtils
-	{
-		public static SliceComparer MemoryComparerInstance = Compare;
+    public unsafe static class MemoryUtils
+    {
+        public static SliceComparer MemoryComparerInstance = Compare;
 
         private const int sizeOfUlong = sizeof(ulong);
         private const int sizeOfUlongThreshold = sizeOfUlong * 4;
@@ -107,10 +110,7 @@ namespace Voron.Util
                 switch (n)
                 {
                     case 0: return 0;
-                    case 1:
-                        {
-                            return lhs[0] - rhs[0];
-                        }
+                    case 1: return lhs[0] - rhs[0];
                     case 2:
                         {
                             var v = lhs[0] - rhs[0];
@@ -160,16 +160,195 @@ namespace Voron.Util
 
         /// <summary>
         /// Bulk copy is optimized to handle copy operations where n is statistically big. While it will use a faster copy operation for 
-        /// small amounts of memory, when you have smaller than 2048-4096 bytes calls (depending on the target CPU) it will always be
+        /// small amounts of memory, when you have smaller than 2048 bytes calls (depending on the target CPU) it will always be
         /// faster to call .Copy() directly.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void BulkCopy(byte* dest, byte* src, int n)
+        public unsafe static void BulkCopy(byte* dest, byte* src, int n)
         {
-            if (n >= 2048)
+            if (n < 1024 * 1024 * 4)
+            {
                 StdLib.memcpy(dest, src, n);
+            }
             else
-                Copy(dest, src, n);
+            {
+                InnerBulkCopyMT(dest, src, n);
+            }               
+        }
+
+        public unsafe static void Memcpy(byte* dest, byte* src, int len)
+        {
+            //
+            // This is portable version of memcpy. It mirrors what the hand optimized assembly versions of memcpy typically do.
+            //
+            // Ideally, we would just use the cpblk IL instruction here. Unfortunately, cpblk IL instruction is not as efficient as
+            // possible yet and so we have this implementation here for now.
+            //
+
+            switch (len)
+            {
+                case 0:
+                    return;
+                case 1:
+                    *dest = *src;
+                    return;
+                case 2:
+                    *(short*)dest = *(short*)src;
+                    return;
+                case 3:
+                    *(short*)dest = *(short*)src;
+                    *(dest + 2) = *(src + 2);
+                    return;
+                case 4:
+                    *(int*)dest = *(int*)src;
+                    return;
+                case 5:
+                    *(int*)dest = *(int*)src;
+                    *(dest + 4) = *(src + 4);
+                    return;
+                case 6:
+                    *(int*)dest = *(int*)src;
+                    *(short*)(dest + 4) = *(short*)(src + 4);
+                    return;
+                case 7:
+                    *(int*)dest = *(int*)src;
+                    *(short*)(dest + 4) = *(short*)(src + 4);
+                    *(dest + 6) = *(src + 6);
+                    return;
+                case 8:
+                    *(long*)dest = *(long*)src;
+                    return;
+                case 9:
+                    *(long*)dest = *(long*)src;
+                    *(dest + 8) = *(src + 8);
+                    return;
+                case 10:
+                    *(long*)dest = *(long*)src;
+                    *(short*)(dest + 8) = *(short*)(src + 8);
+                    return;
+                case 11:
+                    *(long*)dest = *(long*)src;
+                    *(short*)(dest + 8) = *(short*)(src + 8);
+                    *(dest + 10) = *(src + 10);
+                    return;
+                case 12:
+                    *(long*)dest = *(long*)src;
+                    *(int*)(dest + 8) = *(int*)(src + 8);
+                    return;
+                case 13:
+                    *(long*)dest = *(long*)src;
+                    *(int*)(dest + 8) = *(int*)(src + 8);
+                    *(dest + 12) = *(src + 12);
+                    return;
+                case 14:
+                    *(long*)dest = *(long*)src;
+                    *(int*)(dest + 8) = *(int*)(src + 8);
+                    *(short*)(dest + 12) = *(short*)(src + 12);
+                    return;
+                case 15:
+                    *(long*)dest = *(long*)src;
+                    *(int*)(dest + 8) = *(int*)(src + 8);
+                    *(short*)(dest + 12) = *(short*)(src + 12);
+                    *(dest + 14) = *(src + 14);
+                    return;
+                case 16:
+                    *(long*)dest = *(long*)src;
+                    *(long*)(dest + 8) = *(long*)(src + 8);
+                    return;
+                default:
+                    break;
+            }
+
+            // P/Invoke into the native version for large lengths
+            if (len >= 512)
+            {
+                StdLib.memcpy(dest, src, len);
+                return;
+            }
+
+            if (((int)dest & 3) != 0)
+            {
+                if (((int)dest & 1) != 0)
+                {
+                    *dest = *src;
+                    src++;
+                    dest++;
+                    len--;
+                    if (((int)dest & 2) == 0)
+                        goto Aligned;
+                }
+                *(short*)dest = *(short*)src;
+                src += 2;
+                dest += 2;
+                len -= 2;
+            Aligned: ;
+            }
+
+            if (((int)dest & 4) != 0)
+            {
+                *(int*)dest = *(int*)src;
+                src += 4;
+                dest += 4;
+                len -= 4;
+            }
+
+            int count = len / 16;
+            while (count > 0)
+            {
+                ((long*)dest)[0] = ((long*)src)[0];
+                ((long*)dest)[1] = ((long*)src)[1];
+
+                dest += 16;
+                src += 16;
+                count--;
+            }
+
+            if ((len & 8) != 0)
+            {
+                ((long*)dest)[0] = ((long*)src)[0];
+                dest += 8;
+                src += 8;
+            }
+
+            if ((len & 4) != 0)
+            {
+                ((int*)dest)[0] = ((int*)src)[0];
+                dest += 4;
+                src += 4;
+            }
+
+            if ((len & 2) != 0)
+            {
+                ((short*)dest)[0] = ((short*)src)[0];
+                dest += 2;
+                src += 2;
+            }
+
+            if ((len & 1) != 0)
+                *dest++ = *src++;
+        }
+
+        private unsafe static void InnerBulkCopyMT(byte* dest, byte* src, int n)
+        {
+            var threadcount = Math.Min(3, Environment.ProcessorCount);
+            var chunksize = n / threadcount;
+            var remainder = n % threadcount;
+
+            var tasks = new Action[threadcount];
+            for (var i = 0; i < threadcount - 1; ++i)
+            {
+                var offset = i * chunksize;
+                var newSrc = src + offset;
+                var newDst = dest + offset;
+                tasks[i] = () => StdLib.memcpy(newSrc, newDst, chunksize);
+            }
+
+            var finalOffset = (threadcount - 1) * chunksize;
+            var finalSrc = src + finalOffset;
+            var finalDst = dest + finalOffset;
+            tasks[threadcount - 1] = () => StdLib.memcpy(finalSrc, finalDst, remainder);
+
+            Parallel.Invoke(tasks);
         }
 
         /// <summary>
@@ -177,95 +356,109 @@ namespace Voron.Util
         /// This method is optimized at the IL level to be extremely efficient for copies smaller than
         /// 4096 bytes or heterogeneous workloads with occasional big copies.         
         /// </summary>
-        public static unsafe void Copy(byte* dest, byte* src, int n)
+        public unsafe static void Copy(byte* dest, byte* src, int n)
         {
-            while (true) // Unrolling while with no pointers
+            SMALLTABLE:
+            switch (n)
             {
-                switch (n)
+                case 0:
+                    return;
+                case 1:
+                    *dest = *src;
+                    return;
+                case 2:
+                    *(short*)dest = *(short*)src;
+                    return;
+                case 3:
+                    *(dest + 2) = *(src + 2);
+                    goto case 2;
+                case 4:
+                    *(int*)dest = *(int*)src;
+                    return;
+                case 5:
+                    *(dest + 4) = *(src + 4);
+                    goto case 4;
+                case 6:
+                    *(short*)(dest + 4) = *(short*)(src + 4);
+                    goto case 4;
+                case 7:
+                    *(short*)(dest + 4) = *(short*)(src + 4);
+                    *(dest + 6) = *(src + 6);
+                    goto case 4;
+                case 8:
+                    *(long*)dest = *(long*)src;
+                    return;
+                case 9:
+                    *(dest + 8) = *(src + 8);
+                    goto case 8;
+                case 10:
+                    *(short*)(dest + 8) = *(short*)(src + 8);
+                    goto case 8;
+                case 11:
+                    *(short*)(dest + 8) = *(short*)(src + 8);
+                    *(dest + 10) = *(src + 10);
+                    goto case 8;
+                case 12:
+                    *(long*)dest = *(long*)src;
+                    *(int*)(dest + 8) = *(int*)(src + 8);
+                    return;
+                case 13:                    
+                    *(dest + 12) = *(src + 12);
+                    goto case 12;
+                case 14:
+                    *(short*)(dest + 12) = *(short*)(src + 12);
+                    goto case 12;
+                case 15:
+                    *(short*)(dest + 12) = *(short*)(src + 12);
+                    *(dest + 14) = *(src + 14);
+                    goto case 12;
+                case 16:
+                    *(long*)dest = *(long*)src;
+                    *(long*)(dest + 8) = *(long*)(src + 8);
+                    return;
+                default:
+                    break;
+            }
+
+            if (n <= 2048)
+            {
+                int count = n / 32;
+                n -= count * 32;
+
+                while (count > 0)
                 {
-                    case 0: return;
-                    case 1:
-                        {
-                            dest[0] = src[0];
-                            return;
-                        }
-                    case 2:
-                        {
-                            dest[0] = src[0];
-                            dest[1] = src[1];
-                            return;
-                        }
-                    case 3:
-                        {
-                            dest[0] = src[0];
-                            dest[1] = src[1];
-                            dest[2] = src[2];
-                            return;
-                        }
-                    default:
-                        {
-                            if (n <= sizeOfUlong * 2)
-                            {
-                                dest[0] = src[0];
-                                dest[1] = src[1];
-                                dest[2] = src[2];
-                                dest[3] = src[3];
+                    ((long*)dest)[0] = ((long*)src)[0];
+                    ((long*)dest)[1] = ((long*)src)[1];
+                    ((long*)dest)[2] = ((long*)src)[2];
+                    ((long*)dest)[3] = ((long*)src)[3];
 
-                                n -= 4;
-                                src += 4;
-                                dest += 4;
-                            }
-                            else 
-                            {
-                                ulong* srcPtr = (ulong*)src;
-                                ulong* destPtr = (ulong*)dest;
-
-                                while (n > sizeOfUlong * 8)
-                                {
-                                    destPtr[0] = srcPtr[0];
-                                    destPtr[1] = srcPtr[1];
-                                    destPtr[2] = srcPtr[2];
-                                    destPtr[3] = srcPtr[3];
-
-                                    destPtr[4] = srcPtr[4];
-                                    destPtr[5] = srcPtr[5];
-                                    destPtr[6] = srcPtr[6];
-                                    destPtr[7] = srcPtr[7];
-
-                                    srcPtr += 8;
-                                    destPtr += 8;
-                                    n -= sizeOfUlong * 8;
-                                }
-
-                                while (n > sizeOfUlong * 4)
-                                {
-                                    destPtr[0] = srcPtr[0];
-                                    destPtr[1] = srcPtr[1];
-                                    destPtr[2] = srcPtr[2];
-                                    destPtr[3] = srcPtr[3];
-
-                                    srcPtr += 4;
-                                    destPtr += 4;
-                                    n -= sizeOfUlong * 4;
-                                }
-
-                                while (n > sizeOfUlong * 2)
-                                {
-                                    destPtr[0] = srcPtr[0];
-                                    destPtr[1] = srcPtr[1];
-
-                                    srcPtr += 2;
-                                    destPtr += 2;
-                                    n -= sizeOfUlong * 2;
-                                }
-
-                                src = (byte*)srcPtr;
-                                dest = (byte*)destPtr;
-                            }
-                            break;
-                        }
+                    dest += 32;
+                    src += 32;
+                    count--;
                 }
+
+                if (n > 16)
+                {
+                    ((long*)dest)[0] = ((long*)src)[0];
+                    ((long*)dest)[1] = ((long*)src)[1];
+
+                    src += 16;
+                    dest += 16;
+                    n -= 16;
+                }                
+
+                goto SMALLTABLE;
+            }
+
+            if ( n < 1024 * 1024 * 4)
+            {
+                StdLib.memcpy(dest, src, n);
+            }
+            else
+            {
+                InnerBulkCopyMT(dest, src, n);
             }
         }
+
     }
 }
