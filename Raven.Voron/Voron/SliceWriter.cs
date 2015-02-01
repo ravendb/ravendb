@@ -65,9 +65,9 @@ namespace Voron
             _pos += sizeof(short);
         }
 
-        public Slice CreateSlice()
+        public Slice CreateSlice(int requiredBufferSize)
         {
-            return new Slice(_buffer);
+			return new Slice(_buffer, (ushort)requiredBufferSize);
         }
     }
 }

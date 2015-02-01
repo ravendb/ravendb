@@ -94,6 +94,22 @@ namespace Voron.Trees
 		    CopyStreamToPointer(_tx, value, pos);
 		}
 
+		public void ReplaceValueIfBigger(Slice key, long value, ushort? version = null)
+		{
+			State.IsModified = true;
+
+			long currentValue = 0;
+			var read = Read(key);
+			if (read != null)
+				currentValue = *(long*)read.Reader.Base;
+
+			if (value > currentValue)
+			{
+				var result = (long*)DirectAdd(key, sizeof(long), version: version);
+				*result = value;
+			}
+		}
+
 		public long Increment(Slice key, long delta, ushort? version = null)
 		{
 			State.IsModified = true;

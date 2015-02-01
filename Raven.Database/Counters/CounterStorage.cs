@@ -260,7 +260,7 @@ namespace Raven.Database.Counters
 		[CLSCompliant(false)]
 		public Reader CreateReader()
 		{
-			return new Reader(this, storageEnvironment);
+			return new Reader(storageEnvironment);
 		}
 
 		[CLSCompliant(false)]
@@ -286,16 +286,14 @@ namespace Raven.Database.Counters
 		[CLSCompliant(false)]
 		public class Reader : IDisposable
 		{
-			private readonly CounterStorage parent;
 			private readonly Transaction transaction;
 			private readonly Tree serverNamesToIds, serverIdsToNames, serversLastEtag, counters, countersToEtags, countersGroups, etagsToCounters, metadata;
 			private readonly byte[] serverIdBytes = new byte[16];
 			private readonly byte[] signBytes = new byte[sizeof(char)];
 
 			[CLSCompliant(false)]
-			public Reader(CounterStorage parent, StorageEnvironment storageEnvironment)
+			public Reader(StorageEnvironment storageEnvironment)
 			{
-				this.parent = parent;
 				transaction = storageEnvironment.NewTransaction(TransactionFlags.Read);
 				serverNamesToIds = transaction.State.GetTree(transaction, "serverNames->Ids");
 				serverIdsToNames = transaction.State.GetTree(transaction, "Ids->serverNames");
@@ -322,9 +320,9 @@ namespace Raven.Database.Counters
                 return serverNamesToIds.State.EntriesCount;
             }
 
-			public IEnumerable<string> GetCounterNames(string prefix)
+			public IEnumerable<string> GetFullCounterNames(string prefix)
 			{
-				using (var it = countersToEtags.Iterate())
+				using (var it = counters.Iterate())
 				{
 					it.RequiredPrefix = prefix;
 					if (it.Seek(it.RequiredPrefix) == false)
@@ -375,13 +373,14 @@ namespace Raven.Database.Counters
 				}
 			}
 
-			public Counter GetCountersByPrefix(string groupName, string counterName)
+			public Counter GetCounterValuesByPrefix(string groupName, string counterName)
 			{
 				var fullCounterName = FullCounterName(groupName, counterName);
-				return GetCountersByPrefix(fullCounterName);
+				return GetCounterValuesByPrefix(fullCounterName);
 			}
 
-			public Counter GetCountersByPrefix(string namePrefix)
+			//namePrefix: foo/bar/
+			public Counter GetCounterValuesByPrefix(string namePrefix)
 			{
 	            using (var it = counters.Iterate())
 				{
@@ -392,15 +391,15 @@ namespace Raven.Database.Counters
 					var result = new Counter();
 					do
 					{
-						//TODO: better extract
+						//TODO: better extract using bytes array
 						var x = it.CurrentKey.ToString();
 						it.CurrentKey.CopyTo(it.CurrentKey.Size - 17, serverIdBytes, 0, 16);
-						/*var serverId = EndianBitConverter.ToString(serverIdBytes);
-						var serverIdGuid = new Guid(serverId);*/
-						var serverIdGuid = new Guid(x.Substring(x.Length - 38, 36));
+						/*var serverId = EndianBitConverter.ToString(serverIdBytes);*/
+						//var serverIdGuid = new Guid(serverIdBytes);
+						var serverIdGuid = new Guid(x.Substring(x.Length - 37, 36));
 						it.CurrentKey.CopyTo(it.CurrentKey.Size - 1, signBytes, 0, 1);
 						//var sign = EndianBitConverter.ToString(signBytes);//EndianBitConverter.Big.ToChar(signBytes, 1);
-						var sign = x.Substring(x.Length - 2, 1);
+						var sign = x.Substring(x.Length - 1, 1);
 						result.CounterValues.Add(new CounterValue
 						{
 							ServerId = serverIdGuid,
@@ -513,15 +512,15 @@ namespace Raven.Database.Counters
 			public string ServerNameFor(Guid serverId)
 			{
 				string serverName;
-				parent.ServerNamesToIds.TryGetValue(serverId.ToString(), out serverName);
+				parent.ServerIdsToNames.TryGetValue(serverId.ToString(), out serverName);
 				return serverName;
 			}
 
-			public string SourceIdFor(string serverName)
+			public string ServerIdFor(string serverName)
 			{
-				string sourceServerId;
-				parent.ServerNamesToIds.TryGetValue(serverName, out sourceServerId);
-				return sourceServerId;
+				string serverId;
+				parent.ServerNamesToIds.TryGetValue(serverName, out serverId);
+				return serverId;
 			}
 
             public void Dispose()
@@ -571,9 +570,9 @@ namespace Raven.Database.Counters
 				return parent.CreateReader().GetCounterValue(fullCounterName);
 			}
 
-			private Counter GetCountersByPrefix(string name)
+			private Counter GetCounterValuesByPrefix(string groupName, string counterName)
             {
-                return parent.CreateReader().GetCountersByPrefix(name);
+				return parent.CreateReader().GetCounterValuesByPrefix(groupName, counterName);
             }
 
 			public long GetLastEtagFor(string serverName)
@@ -583,7 +582,7 @@ namespace Raven.Database.Counters
 
 			public string ServerIdFor(string serverName)
 			{
-				return parent.CreateReader().SourceIdFor(serverName);
+				return parent.CreateReader().ServerIdFor(serverName);
 			}
 
 			/*public void Store(string serverName, string fullCounterName, long delta)
@@ -651,7 +650,7 @@ namespace Raven.Database.Counters
 			private void Store(string serverId, string fullCounterName, string sign, Action<Slice> storeAction)
 			{
 				var fullCounterNameSize = Encoding.UTF8.GetByteCount(fullCounterName);
-				var requiredBufferSize = fullCounterNameSize + 16;
+				var requiredBufferSize = fullCounterNameSize + 36 + 1;
 				EnsureBufferSize(requiredBufferSize);
 				Debug.Assert(requiredBufferSize < UInt16.MaxValue);
 
@@ -665,7 +664,7 @@ namespace Raven.Database.Counters
 				if (endOfGroupNameIndex == -1)
 					throw new InvalidOperationException("Could not find group name in counter, no separator");
 
-				var counterKey = sliceWriter.CreateSlice();
+				var counterKey = sliceWriter.CreateSlice(requiredBufferSize);
 				var readResult = snapshotReader.Read(counters.Name, counterKey, writeBatch); //= counters.Read(counterKey);
 				if (readResult == null && !IsCounterExists(fullCounterName)) //it's a new counter
 				{
@@ -681,10 +680,11 @@ namespace Raven.Database.Counters
 					}
 				}
 
+
+				countersGroups.Increment()
 				//save counter full name and its value into the counters tree
 				storeAction(counterKey);
 
-				counterKey = new Slice(counterFullNameInBytes, (ushort) fullCounterNameSize);
 				readResult = snapshotReader.Read(countersToEtag.Name, counterKey, writeBatch);
 				
 				if (readResult != null) // remove old etag entry
@@ -704,19 +704,15 @@ namespace Raven.Database.Counters
 
 			public bool Reset(string groupName, string counterName)
 			{
-				var fullCounterName = FullCounterName(groupName, counterName);
-				var countersByPrefix = GetCountersByPrefix(fullCounterName);
-				if (countersByPrefix == null)
+				var counterValuesByPrefix = GetCounterValuesByPrefix(groupName, counterName);
+				if (counterValuesByPrefix == null)
 					return false;
 
-				var overallTotalPositive = countersByPrefix.CounterValues.Where(x => x.IsPositive).Sum(x => x.Value);
-				var overallTotalNegative = countersByPrefix.CounterValues.Where(x => !x.IsPositive).Sum(x => x.Value);
-				var difference = overallTotalPositive - overallTotalNegative;
-
+				var difference = CalculateOverallTotal(counterValuesByPrefix);
 				if (difference != 0)
 				{
 					difference = -difference;
-					Store(parent.ServerId, fullCounterName, difference);
+					Store(groupName, counterName, difference);
 					parent.MetricsCounters.Resets.Mark();
 					return true;
 				}
@@ -749,8 +745,6 @@ namespace Raven.Database.Counters
 				if (counterFullNameInBytes.Length < requiredBufferSize)
 					counterFullNameInBytes = new byte[Utils.NearestPowerOfTwo(requiredBufferSize)];
 			}
-
-
 
 			private void UpdateServers(string serverId, string serverName)
 			{
@@ -811,12 +805,19 @@ namespace Raven.Database.Counters
 
 			public void Dispose()
 			{
-				//writeBatch.Dispose();
+				writeBatch.Dispose();
 				//snapshotReader.Dispose();
 				parent.LastWrite = SystemTime.UtcNow;
                 if (transaction != null)
 					transaction.Dispose();
 			}
+		}
+
+		public static long CalculateOverallTotal(Counter counter)
+		{
+			var overallTotalPositive = counter.CounterValues.Where(x => x.IsPositive).Sum(x => x.Value);
+			var overallTotalNegative = counter.CounterValues.Where(x => !x.IsPositive).Sum(x => x.Value);
+			return overallTotalPositive - overallTotalNegative;
 		}
 
 		private static string FullCounterName(string groupName, string counterName)

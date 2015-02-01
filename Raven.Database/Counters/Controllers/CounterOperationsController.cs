@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -80,11 +81,8 @@ namespace Raven.Database.Counters.Controllers
 			if (HttpContext.Current != null)
 				HttpContext.Current.Server.ScriptTimeout = 60 * 60 * 6; // six hours should do it, I think.
 
-			//var operationId = ExtractOperationId();
 			var sp = Stopwatch.StartNew();
-
 			var status = new BatchStatus {IsTimedOut = false};
-
 			var timeoutTokenSource = new CancellationTokenSource();
 			var counterChanges = 0;
 			
@@ -92,17 +90,21 @@ namespace Raven.Database.Counters.Controllers
 			var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
 			var task = Task.Factory.StartNew(() =>
             {
-				
 				var timeout = timeoutTokenSource.TimeoutAfter(TimeSpan.FromSeconds(360)); //TODO : make this configurable
 
 				var changeBatches = YieldChangeBatches(inputStream, timeout, countOfChanges => counterChanges += countOfChanges);
 	            try
 	            {
-		            using (var writer = Storage.CreateWriter())
+		            foreach (var changeBatch in changeBatches)
 		            {
-			            changeBatches.ForEach(batch =>
-				            batch.ForEach(change => StoreChange(change, writer)));
-			            writer.Commit();
+						using (var writer = Storage.CreateWriter())
+						{
+							foreach (var counterChange in changeBatch)
+							{
+								writer.Store(counterChange.Group, counterChange.Name, counterChange.Delta);
+							}
+							writer.Commit();
+						}
 		            }
 	            }
 	            catch (OperationCanceledException)
@@ -203,11 +205,6 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		private void StoreChange(CounterChange counterChange, CounterStorage.Writer writer)
-		{
-			writer.Store(counterChange.Group, counterChange.Name, counterChange.Delta);
-		}
-
 		public class BatchStatus : IOperationState
 		{
 			public int Counters { get; set; }
@@ -238,25 +235,36 @@ namespace Raven.Database.Counters.Controllers
 
 		[RavenRoute("cs/{counterStorageName}/counters")]
 		[HttpGet]
-		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string groupName = null)
+		public HttpResponseMessage GetCounters(int skip = 0, int take = 20, string inputGroupName = null)
 		{
 			using (var reader = Storage.CreateReader())
 			{
-				var prefix = (groupName == null) ? string.Empty : (groupName + Constants.CountersSeperator);
+				var prefix = (inputGroupName == null) ? string.Empty : (inputGroupName + Constants.CountersSeperator);
+				//todo: get only the counter prefixes: foo/bar/
 				var results = (
-					from counterFullName in reader.GetCounterNames(prefix)
-					let counter = reader.GetCountersByPrefix(counterFullName)
+					from fullCounterName in reader.GetFullCounterNames(prefix)
+					let groupName = fullCounterName.Split(Constants.CountersSeperator)[0]
+					let counterName = fullCounterName.Split(Constants.CountersSeperator)[1]
+					let counter = reader.GetCounterValuesByPrefix(groupName, counterName)
 					/*let overallTotalPositive = counter.CounterValues.Where(x => x.IsPositive).Sum(x => x.Value)
 					let overallTotalNegative = counter.CounterValues.Where(x => !x.IsPositive).Sum(x => x.Value)*/
 					select new CounterView
 					{
-						Name = counterFullName.Split(Constants.CountersSeperator)[1],
-						Group = counterFullName.Split(Constants.CountersSeperator)[0],
-						/*OverallTotal = counter.CounterValues.Sum(x => x.Positive - x.Negative),
-
-						Servers = counter.CounterValues.Select(s => new CounterView.ServerValue
+						Name = counterName,
+						Group = groupName,
+						OverallTotal = CounterStorage.CalculateOverallTotal(counter),
+						Servers = (from counterValue in counter.CounterValues
+								  group counterValue by counterValue.ServerId into g
+								  select new CounterView.ServerValue{
+									  Name = g.Select(x => x.ServerName).ToString(),
+									  Positive = g.Where(x => x.IsPositive).Select(x => x.Value).FirstOrDefault(),
+									  Negative = g.Where(x => !x.IsPositive).Select(x => x.Value).FirstOrDefault(),
+								  }).ToList()
+						/*Servers = counter.CounterValues.Select(s => new CounterView.ServerValue
 						{
-							Negative = s.Negative, Positive = s.Positive, Name = CounterStorage.Reader.ServerNameFor(s.SourceId)
+							Negative = s.Negative, 
+							Positive = s.Positive, 
+							Name = CounterStorage.Reader.ServerNameFor(s.SourceId)
 						}).ToList()*/
 					}).ToList();
 				return Request.CreateResponse(HttpStatusCode.OK, results);
@@ -269,14 +277,11 @@ namespace Raven.Database.Counters.Controllers
         {
 			using (var reader = Storage.CreateReader())
 			{
-				var countersByPrefix = reader.GetCountersByPrefix(groupName, counterName);
-
+				var countersByPrefix = reader.GetCounterValuesByPrefix(groupName, counterName);
 				if (countersByPrefix == null)
 					return GetMessageWithObject(new {Message = "Specified counter not found within the specified group"}, HttpStatusCode.NotFound);
 
-				var overallTotalPositive = countersByPrefix.CounterValues.Where(x => x.IsPositive).Sum(x => x.Value);
-				var overallTotalNegative = countersByPrefix.CounterValues.Where(x => !x.IsPositive).Sum(x => x.Value);
-				var overallTotal = overallTotalPositive - overallTotalNegative; 
+				var overallTotal = CounterStorage.CalculateOverallTotal(countersByPrefix);
 				return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
 			}
         }
@@ -287,10 +292,10 @@ namespace Raven.Database.Counters.Controllers
         {
             using (var reader = Storage.CreateReader())
             {
-				var countersByPrefix = reader.GetCountersByPrefix(groupName, counterName);
+				var countersByPrefix = reader.GetCounterValuesByPrefix(groupName, counterName);
                 if (countersByPrefix == null)
-                {
-                    return Request.CreateResponse(HttpStatusCode.NotFound);
+				{
+					return GetMessageWithObject(new { Message = "Specified counter not found within the specified group" }, HttpStatusCode.NotFound);
                 }
 
 	            var serverValuesDictionary = new Dictionary<Guid, ServerValue>();

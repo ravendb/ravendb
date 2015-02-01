@@ -81,7 +81,7 @@ namespace Raven.Tests.Counters
 
 
 		[Theory]
-		//[InlineData(33)]
+		[InlineData(33)]
 		[InlineData(50)]
 		public async Task CountersBatch_with_multiple_batches_should_work(int countOfOperationsInBatch)
 		{

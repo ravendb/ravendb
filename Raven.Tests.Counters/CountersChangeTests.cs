@@ -55,7 +55,7 @@ namespace Raven.Tests.Counters
 					},
 				}, CounterStorageName);
 
-				const string CounterGroupName = "FooBarGroup";
+				const string CounterGroupName = "FooBarGroup12";
 				await client.Commands.IncrementAsync(CounterGroupName, CounterName);
 
 				var total = await client.Commands.GetOverallTotalAsync(CounterGroupName, CounterName);

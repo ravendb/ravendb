@@ -17,7 +17,7 @@ namespace Raven.Database.Counters.Controllers
 		{
 			using (var reader = Storage.CreateReader())
 			{
-				var sourceId = reader.SourceIdFor(serverUrl);
+				var sourceId = reader.ServerIdFor(serverUrl);
 				var result = reader.GetServerEtags().FirstOrDefault(x => x.ServerId == sourceId) ?? new CounterStorage.ServerEtag();
 				return Request.CreateResponse(HttpStatusCode.OK, result.Etag);
 			}

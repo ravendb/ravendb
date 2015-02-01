@@ -330,7 +330,7 @@ namespace Raven.Client.Counters.Actions
 
 		public void ScheduleDecrement(string groupName, string counterName)
 		{
-			ScheduleChange(groupName, counterName,-1);
+			ScheduleChange(groupName, counterName, -1);
 		}
 
 		public virtual void Dispose()
