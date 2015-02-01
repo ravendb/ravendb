@@ -260,7 +260,7 @@ namespace Raven.Database.Counters
 		[CLSCompliant(false)]
 		public Reader CreateReader()
 		{
-			return new Reader(storageEnvironment);
+			return new Reader(this, storageEnvironment);
 		}
 
 		[CLSCompliant(false)]
@@ -286,14 +286,16 @@ namespace Raven.Database.Counters
 		[CLSCompliant(false)]
 		public class Reader : IDisposable
 		{
+			private readonly CounterStorage parent;
 			private readonly Transaction transaction;
 			private readonly Tree serverNamesToIds, serverIdsToNames, serversLastEtag, counters, countersToEtags, countersGroups, etagsToCounters, metadata;
 			private readonly byte[] serverIdBytes = new byte[16];
 			private readonly byte[] signBytes = new byte[sizeof(char)];
 
 			[CLSCompliant(false)]
-			public Reader(StorageEnvironment storageEnvironment)
+			public Reader(CounterStorage parent, StorageEnvironment storageEnvironment)
 			{
+				this.parent = parent;
 				transaction = storageEnvironment.NewTransaction(TransactionFlags.Read);
 				serverNamesToIds = transaction.State.GetTree(transaction, "serverNames->Ids");
 				serverIdsToNames = transaction.State.GetTree(transaction, "Ids->serverNames");
@@ -317,7 +319,7 @@ namespace Raven.Database.Counters
 
             public long GetServersCount()
             {
-                return serverNamesToIds.State.EntriesCount;
+                return parent.ServerNamesToIds.Count;
             }
 
 			public IEnumerable<string> GetFullCounterNames(string prefix)
@@ -680,8 +682,6 @@ namespace Raven.Database.Counters
 					}
 				}
 
-
-				countersGroups.Increment()
 				//save counter full name and its value into the counters tree
 				storeAction(counterKey);
 
