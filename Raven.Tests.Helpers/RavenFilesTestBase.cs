@@ -33,6 +33,8 @@ namespace Raven.Tests.Helpers
 {
     public class RavenFilesTestBase : IDisposable
     {
+	    private static int pathCount;
+
         public static IEnumerable<object[]> Storages
         {
             get
@@ -134,7 +136,7 @@ namespace Raven.Tests.Helpers
 
         protected virtual FilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
                                                 ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null, 
-                                                bool runInMemory = true, Action<RavenConfiguration> customConfig = null)
+                                                bool runInMemory = true, Action<RavenConfiguration> customConfig = null, string activeBundles = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
@@ -143,7 +145,8 @@ namespace Raven.Tests.Helpers
                 enableAuthentication: enableAuthentication, 
                 customConfig: customConfig,
                 requestedStorage: requestedStorage, 
-                runInMemory:runInMemory);
+                runInMemory:runInMemory,
+				activeBundles:activeBundles);
 
             server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
@@ -231,7 +234,7 @@ namespace Raven.Tests.Helpers
             // The truncation of the Guid to 8 still provides enough entropy to avoid collisions.
             string suffix = Guid.NewGuid().ToString("N").Substring(0, 8);
 
-            var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "RavenFS_Test", suffix));
+			var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}-{3}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "RavenFS_Test", suffix, Interlocked.Increment(ref pathCount)));
             Directory.CreateDirectory(newDataDir);
 
 			if(deleteOnDispose)

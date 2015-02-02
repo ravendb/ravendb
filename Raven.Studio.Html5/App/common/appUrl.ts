@@ -105,8 +105,11 @@ class appUrl {
         filesystemSearch: ko.computed(() => appUrl.forFilesystemSearch(appUrl.currentFilesystem())),
         filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
         filesystemStatus: ko.computed(() => appUrl.forFilesystemStatus(appUrl.currentFilesystem())),
+        filesystemSettings: ko.computed(() => appUrl.forFilesystemSettings(appUrl.currentFilesystem())),
         filesystemSynchronizationDestinations: ko.computed(() => appUrl.forFilesystemSynchronizationDestinations(appUrl.currentFilesystem())),
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
+
+        filesystemVersioning: ko.computed(() => appUrl.forFilesystemVersioning(appUrl.currentFilesystem())),
 
         couterStorages: ko.computed(() => appUrl.forCounterStorages()),
         counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(appUrl.currentCounterStorage())),
@@ -399,14 +402,6 @@ class appUrl {
         return url;
     }
 
-    static forIndexingPerfStats(db: database, index: string = null): string {
-        var url = "#databases/status/metrics/indexing?" + appUrl.getEncodedDbPart(db);
-        if (index) {
-            url += "&index=" + index;
-        }
-        return url;
-    }
-
     static forDatabaseSettings(db: database): string {
         return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
     }
@@ -637,9 +632,19 @@ class appUrl {
         return "#filesystems/status?" + filesystemPart;
     }
 
+    static forFilesystemSettings(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/settings?" + filesystemPart;
+    }
+
     static forFilesystemConfiguration(fs: filesystem): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs);
         return "#filesystems/configuration?" + filesystemPart;
+    }
+
+    static forFilesystemVersioning(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/settings?" + filesystemPart;
     }
 
     static forFilesystemConfigurationWithKey(fs: filesystem, key: string): string {

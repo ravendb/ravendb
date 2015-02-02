@@ -8,7 +8,7 @@ class synchronization extends viewModelBase {
     router: DurandalRootRouter;
     static statusRouter: DurandalRouter; //TODO: is it better way of exposing this router to child router?
 
-    currentRouteTitle: KnockoutComputed<string>;
+    activeSubViewTitle: KnockoutComputed<string>;
     appUrls: computedAppUrls;
 
     constructor() {
@@ -27,9 +27,9 @@ class synchronization extends viewModelBase {
 
         appUrl.mapUnknownRoutes(this.router);
 
-        this.currentRouteTitle = ko.computed(() => {
+        this.activeSubViewTitle = ko.computed(() => {
             // Is there a better way to get the active route?
-            var activeRoute = this.router.navigationModel().first(r => r.isActive());
+            var activeRoute = this.router.navigationModel().first(r=> r.isActive());
             return activeRoute != null ? activeRoute.title : "";
         });
     }

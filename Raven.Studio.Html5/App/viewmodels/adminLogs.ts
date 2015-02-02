@@ -25,6 +25,11 @@ class adminLogs extends viewModelBase {
     canActivate(args): any {
         return true;
     }
+    
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('57BGF7');
+    }
 
     redraw() {
         if (this.pendingLogs.length > 0) {

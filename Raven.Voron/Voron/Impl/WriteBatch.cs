@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using Voron.Exceptions;
+using Voron.Util;
 
 namespace Voron.Impl
 {
@@ -74,9 +76,10 @@ namespace Voron.Impl
 			set { _disposeAfterWrite = value; }
 		}
 
-		internal bool TryGetValue(string treeName, Slice key, out Stream value, out ushort? version, out BatchOperationType operationType)
+		internal bool TryGetValue(string treeName, Slice key, out Stream streamValue, out IStructure structValue, out ushort? version, out BatchOperationType operationType)
 		{
-			value = null;
+			streamValue = null;
+			structValue = null;
 			version = null;
 			operationType = BatchOperationType.None;
 
@@ -108,10 +111,11 @@ namespace Voron.Impl
 				if (operation.Type == BatchOperationType.Delete)
 					return true;
 
-				value = operation.ValueStream;
+				streamValue = operation.ValueStream;
 				operation.Reset(); // will reset stream position
+				structValue = operation.ValueStruct;
 
-				if (operation.Type == BatchOperationType.Add)
+				if (operation.Type == BatchOperationType.Add || operation.Type == BatchOperationType.AddStruct)
 					return true;
 			}
 
@@ -143,6 +147,14 @@ namespace Voron.Impl
 			if (value.Length > int.MaxValue)
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
+			var batchOperation = BatchOperation.Add(key, value, version, treeName);
+			if (shouldIgnoreConcurrencyExceptions)
+				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
+			AddOperation(batchOperation);
+		}
+
+		public void AddStruct(Slice key, IStructure value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
+		{
 			var batchOperation = BatchOperation.Add(key, value, version, treeName);
 			if (shouldIgnoreConcurrencyExceptions)
 				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
@@ -250,6 +262,8 @@ namespace Voron.Impl
 
 			public readonly Slice ValueSlice;
 
+			public readonly IStructure ValueStruct;
+
 			public readonly long ValueLong;
 
 			public static BatchOperation Add(Slice key, Slice value, ushort? version, string treeName)
@@ -260,6 +274,11 @@ namespace Voron.Impl
 			public static BatchOperation Add(Slice key, Stream stream, ushort? version, string treeName)
 			{
 				return new BatchOperation(key, stream, version, treeName, BatchOperationType.Add);
+			}
+
+			public static BatchOperation Add(Slice key, IStructure value, ushort? version, string treeName)
+			{
+				return new BatchOperation(key, value, version, treeName, BatchOperationType.AddStruct);
 			}
 
 			public static BatchOperation Delete(Slice key, ushort? version, string treeName)
@@ -306,6 +325,12 @@ namespace Voron.Impl
 				}
 
 				ValueSlice = value;
+			}
+
+			private BatchOperation(Slice key, IStructure value, ushort? version, string treeName, BatchOperationType type)
+				: this(key, version, treeName, type)
+			{
+				ValueStruct = value;
 			}
 
 			private BatchOperation(Slice key, long value, ushort? version, string treeName)
@@ -398,7 +423,8 @@ namespace Voron.Impl
 			Delete = 2,
 			MultiAdd = 3,
 			MultiDelete = 4,
-			Increment = 5
+			Increment = 5,
+			AddStruct = 6,
 		}
 
 		public void Dispose()

@@ -24,6 +24,7 @@ class statusDebugIdentities extends viewModelBase {
             new customColumnParams({ Header: "Key", Binding: "Key", DefaultWidth: 300 }),
             new customColumnParams({ Header: "Value", Binding: "Value", DefaultWidth: 300 }),
         ]);
+        this.updateHelpLink('JHZ574');
         this.fetchIdentities();
     }
 

@@ -25,8 +25,9 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
+				IStructure _;
 				ushort? version;
-				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
+				if (writeBatch.TryGetValue(treeName, key, out stream, out _, out version, out operationType))
 				{
 					if (!version.HasValue)
 						tree = GetTree(treeName);
@@ -50,6 +51,38 @@ namespace Voron.Impl
 			return tree.Read(key);
 		}
 
+		public StructReadResult<T> ReadStruct<T>(string treeName, Slice key, StructureSchema<T> schema, WriteBatch writeBatch = null)
+		{
+
+			Tree tree = null;
+
+			if (writeBatch != null && writeBatch.IsEmpty == false)
+			{
+				WriteBatch.BatchOperationType operationType;
+				IStructure value;
+				Stream _;
+				ushort? version;
+				if (writeBatch.TryGetValue(treeName, key, out _, out value, out version, out operationType))
+				{
+					if (!version.HasValue)
+						tree = GetTree(treeName);
+
+					switch (operationType)
+					{
+						case WriteBatch.BatchOperationType.AddStruct:
+							return new StructReadResult<T>(new StructureReader<T>((Structure<T>) value, schema),  version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(key));
+						case WriteBatch.BatchOperationType.Delete:
+							return null;
+					}
+				}
+			}
+
+			if (tree == null)
+				tree = GetTree(treeName);
+
+			return tree.ReadStruct(key, schema);
+		}
+
 		public int GetDataSize(string treeName, Slice key)
 		{
 			var tree = GetTree(treeName);
@@ -62,11 +95,14 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
-				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
+				IStructure _;
+				if (writeBatch.TryGetValue(treeName, key, out stream, out _, out version, out operationType))
 				{
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
+							return true;
+						case WriteBatch.BatchOperationType.AddStruct:
 							return true;
 						case WriteBatch.BatchOperationType.Delete:
 							return false;
@@ -92,12 +128,14 @@ namespace Voron.Impl
 			{
 				WriteBatch.BatchOperationType operationType;
 				Stream stream;
+				IStructure _;
 				ushort? version;
-				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType) && version.HasValue)
+				if (writeBatch.TryGetValue(treeName, key, out stream, out _, out version, out operationType) && version.HasValue)
 				{
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
+						case WriteBatch.BatchOperationType.AddStruct:
 						case WriteBatch.BatchOperationType.Delete:
 							return (ushort)(version.Value + 1);
 					}

@@ -27,6 +27,7 @@ import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
+import helpBindingHandler = require("common/helpBindingHandler");
 import changesApi = require("common/changesApi");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
@@ -151,6 +152,7 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
+        helpBindingHandler.install();
 
         this.isSystemConnected = ko.computed(() => {
             var activeDb = this.activeDatabase();
@@ -185,6 +187,8 @@ class shell extends viewModelBase {
             }
             return shell.resources();
         });
+
+        this.clientBuildVersion.subscribe(v => viewModelBase.clientVersion("3.0." + v.BuildVersion));
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -216,6 +220,7 @@ class shell extends viewModelBase {
             { route: "filesystems/search", title: "Search", moduleId: "viewmodels/filesystem/search", nav: true, hash: this.appUrls.filesystemSearch },
             { route: "filesystems/synchronization*details", title: "Synchronization", moduleId: "viewmodels/filesystem/synchronization", nav: true, hash: this.appUrls.filesystemSynchronization },
             { route: "filesystems/status*details", title: "Status", moduleId: "viewmodels/filesystem/status", nav: true, hash: this.appUrls.filesystemStatus },
+            { route: "filesystems/settings*details", title: "Settings", moduleId: "viewmodels/filesystem/settings", nav: true, hash: this.appUrls.filesystemSettings },
             { route: "filesystems/configuration", title: "Configuration", moduleId: "viewmodels/filesystem/configuration", nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: "filesystems/edit", title: "Edit File", moduleId: "viewmodels/filesystem/filesystemEditFile", nav: false },
             { route: ["", "counterstorages"], title: "Counter Storages", moduleId: "viewmodels/counter/counterStorages", nav: true, hash: this.appUrls.couterStorages },

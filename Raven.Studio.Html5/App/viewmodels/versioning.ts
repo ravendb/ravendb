@@ -32,7 +32,7 @@ class versioning extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('1UZ5WL');
         this.toRemove = [];
 
         this.dirtyFlag = new ko.DirtyFlag([this.versionings]);

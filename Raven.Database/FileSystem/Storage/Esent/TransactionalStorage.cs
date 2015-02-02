@@ -17,6 +17,7 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
@@ -36,6 +37,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
 		private OrderedPartCollection<AbstractFileCodec> fileCodecs;
 		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
+		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
 		private readonly string database;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
@@ -219,13 +221,27 @@ namespace Raven.Database.FileSystem.Storage.Esent
 					}
 				});
 			}
+			catch (EsentVersionStoreOutOfMemoryException esentOutOfMemoryException)
+			{
+				var message = "Schema Update Process for " + database + " Failed due to Esent Out Of Memory Exception!" +
+							  Environment.NewLine +
+							  "This might be caused by exceptionally large files, Consider enlarging the value of Raven/Esent/MaxVerPages (default:512)";
+				log.Error(message);
+
+				Console.WriteLine(message);
+				throw new InvalidOperationException(message, esentOutOfMemoryException);
+			}
 			catch (Exception e)
 			{
-				throw new InvalidOperationException(
-					"Could not read db details from disk. It is likely that there is a version difference between the library and the db on the disk." +
-					Environment.NewLine +
-					"You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.",
-					e);
+				var message = "Could not read db details from disk. It is likely that there is a version difference between the library and the db on the disk." +
+	                          Environment.NewLine +
+	                          "You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.";
+				log.Error(message);
+				Console.WriteLine(message);
+                throw new InvalidOperationException(
+					message,
+                    e);
+            
 			}
 		}
 
@@ -318,21 +334,22 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			}
 		}
 
-		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+		[CLSCompliant(false)]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
-			if (Id == Guid.Empty)
-				throw new InvalidOperationException("Cannot use Storage before Initialize was called");
-			if (disposed)
+			var batchNestingAllowed = disableBatchNesting.Value == null;
+
+			if (disposerLock.IsReadLockHeld && batchNestingAllowed) // we are currently in a nested Batch call and allow to nest batches
 			{
-				Trace.WriteLine("Storage.Batch was called after it was disposed, call was ignored.");
-				return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+				if (current.Value != null) // check again, just to be sure
+				{
+					current.Value.IsNested = true;
+					action(current.Value);
+					current.Value.IsNested = false;
+					return;
+				}
 			}
-			if (current.Value != null)
-			{
-				action(current.Value);
-				return;
-			}
+
 			disposerLock.EnterReadLock();
 			try
 			{
@@ -340,6 +357,12 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			}
 			catch (EsentErrorException e)
 			{
+				if (disposed)
+				{
+					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
+					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+				}
+
 				switch (e.Error)
 				{
 					case JET_err.WriteConflict:
@@ -353,24 +376,20 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			finally
 			{
 				disposerLock.ExitReadLock();
-				current.Value = null;
+				if (disposed == false && disableBatchNesting.Value == null)
+					current.Value = null;
 			}
 		}
 
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		private void ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{
-			if (current.Value != null)
-			{
-				action(current.Value);
-				return;
-			}
-
 			try
 			{
 				using (var storageActionsAccessor = new StorageActionsAccessor(tableColumnsCache, instance, database, fileCodecs))
 				{
-					current.Value = storageActionsAccessor;
+					if (disableBatchNesting.Value == null)
+						current.Value = storageActionsAccessor;
 
 					action(storageActionsAccessor);
 					storageActionsAccessor.Commit();
@@ -497,7 +516,13 @@ namespace Raven.Database.FileSystem.Storage.Esent
             });
         }
 
-	    private void Output(string message)
+		public IDisposable DisableBatchNesting()
+		{
+			disableBatchNesting.Value = new object();
+			return new DisposableAction(() => disableBatchNesting.Value = null);
+		}
+
+		private void Output(string message)
 		{
 			Console.Write(message);
 			Console.WriteLine();

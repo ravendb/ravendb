@@ -81,7 +81,7 @@ class index {
         this.isDisabled(this.priority && this.priority.indexOf(index.priorityDisabled) !== -1);
         this.isErrored(this.priority && this.priority.indexOf(index.priorityErrored) !== -1);
         this.isIdle(this.priority && this.priority.indexOf(index.priorityIdle) !== -1);
-        this.editUrl = appUrl.forCurrentDatabase().editIndex(encodeURIComponent(this.name));
+        this.editUrl = appUrl.forCurrentDatabase().editIndex(this.name);
         this.queryUrl = appUrl.forCurrentDatabase().query(this.name);
     }
 

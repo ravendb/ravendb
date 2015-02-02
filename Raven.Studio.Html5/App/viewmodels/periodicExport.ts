@@ -29,6 +29,7 @@ class periodicExport extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink('OU78CB');
         
         this.backupStatusDirtyFlag = new ko.DirtyFlag([this.backupSetup().disabled]);
         this.backupConfigDirtyFlag = new ko.DirtyFlag([this.backupSetup]);
