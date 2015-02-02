@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Voron
 {
 	public abstract class StructureField
 	{
+		public object Name;
 		public Type Type;
 	}
 
@@ -40,15 +43,15 @@ namespace Voron
 
 		private int _fixedFieldOffset = 0;
 		private int _variableFieldIndex = 0;
-		internal readonly Dictionary<TField, FixedSizeField> _fixedSizeFields = new Dictionary<TField, FixedSizeField>();
-		internal readonly Dictionary<TField, VariableSizeField> _variableSizeFields = new Dictionary<TField, VariableSizeField>();
+		internal StructureField[] Fields = new StructureField[0];
 
 		public StructureSchema()
 		{
 			var fieldType = typeof(TField);
 
-			if(fieldType != typeof(string) && fieldType != typeof(Enum) && fieldType.IsEnum == false && fieldType.IsPrimitive == false)
-				throw new ArgumentException("IStructure schema can have fields of the following types: string, enum, primitives.");
+			if (fieldType != typeof(Enum) && fieldType.IsEnum == false)
+				throw new ArgumentException("IStructure schema can only have fields of enum type.");
+
 
 			IsFixedSize = true;
 		}
@@ -57,19 +60,47 @@ namespace Voron
 
 		public int FixedSize { get { return _fixedFieldOffset; } }
 
+		public int VariableFieldsCount { get { return _variableFieldIndex; } }
+
+		private void AddField(int index, StructureField field)
+		{
+			if (index >= Fields.Length)
+			{
+				var biggerArray = new StructureField[index + 1];
+				Array.Copy(Fields, biggerArray, Fields.Length);
+				Fields = biggerArray;
+			}
+			if (index >= Fields.Length)
+				throw new IndexOutOfRangeException("You can only add fields at the end of the structure, but got " + index + " when the end of the fields is " + Fields.Length);
+
+			Fields[index] = field;
+		}
+
+		public StructureField this[int index]
+		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)] 
+			get
+			{
+				return index >= Fields.Length ? null : Fields[index];
+			}
+		}
+
 		public StructureSchema<TField> Add<T>(TField field)
 		{
-			var type = typeof(T);
+			var index = field.GetHashCode();
 
-			if(_fixedSizeFields.ContainsKey(field) || _variableSizeFields.ContainsKey(field))
+			if (Fields.Length - 1 >= index && Fields[index] != null)
 				throw new ArgumentException(string.Format("Field '{0}' is already defined", field));
+
+			var type = typeof (T);
 
 			if (type == typeof(string) || type == typeof(byte[]))
 			{
 				IsFixedSize = false;
 
-				_variableSizeFields.Add(field, new VariableSizeField
+				AddField(index, new VariableSizeField
 				{
+					Name = field,
 					Type = type,
 					Index = _variableFieldIndex
 				});
@@ -83,8 +114,9 @@ namespace Voron
 
 				var size = SizeOfPrimitives[type];
 
-				_fixedSizeFields.Add(field, new FixedSizeField
+				AddField(index, new FixedSizeField
 				{
+					Name = field,
 					Type = type,
 					Offset = _fixedFieldOffset,
 					Size = size
