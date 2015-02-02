@@ -10,152 +10,96 @@ namespace Voron.Util
     {
         public static SliceComparer MemoryComparerInstance = Compare;
 
-        private const int sizeOfUlong = sizeof(ulong);
-        private const int sizeOfUlongThreshold = sizeOfUlong * 4;
-
-        public static int Compare(byte* lhs, byte* rhs, int n)
+        public static int Compare(byte* bpx, byte* bpy, int n)
         {
             // Fast switch (20% from original)
             switch (n)
             {
                 case 0: return 0;
-                case 1: return lhs[0] - rhs[0];
-                case 2:
+                case 1: return *bpx - *bpy;
+                case 2:                     
                     {
-                        var v = lhs[0] - rhs[0];
+                        int v = *bpx - *bpy;
                         if (v != 0)
                             return v;
 
-                        return lhs[1] - rhs[1];
+                        bpx++;
+                        bpy++;
+
+                        return *bpx - *bpy;
                     }
-                case 3:
+                case 3: 
                     {
-                        var v = lhs[0] - rhs[0];
-                        if (v != 0)
-                            return v;
+                        if (*((ushort*)bpx) != *((ushort*)bpy))
+                            goto BYTECOMPARISON;
 
-                        v = lhs[1] - rhs[1];
-                        if (v != 0)
-                            return v;
+                        bpx += 2;
+                        bpy += 2;
 
-                        return lhs[2] - rhs[2];
+                        return *bpx - *bpy;
+                    }
+                case 4:
+                    {
+                        if (*((uint*)bpx) != *((uint*)bpy))
+                            goto BYTECOMPARISON;
+
+                        return 0;
+                    }
+                case 5:
+                case 6:
+                case 7:
+                    {
+                        if (*((uint*)bpx) != *((uint*)bpy))
+                            goto BYTECOMPARISON;
+
+                        bpx += 2;
+                        bpy += 2;
+                        n -= 2;
+
+                        goto BYTECOMPARISON;
                     }
                 default:
                     {
-                        var v = lhs[0] - rhs[0];
-                        if (v != 0)
-                            return v;
+                        if (*((ulong*)bpx) != *((ulong*)bpy))
+                            goto BYTECOMPARISON;
 
-                        v = lhs[1] - rhs[1];
-                        if (v != 0)
-                            return v;
-
-                        v = lhs[2] - rhs[2];
-                        if (v != 0)
-                            return v;
-
-                        v = lhs[3] - rhs[3];
-                        if (v != 0)
-                            return v;
-
+                        bpx += 4;
+                        bpy += 4;
                         n -= 4;
-                        lhs += 4;
-                        rhs += 4;
-                        break;
+
+                        if ( n <= 512 )
+                            goto WORDCOMPARE;
+
+                        return StdLib.memcmp(bpx, bpy, n);                        
                     }
             }
 
-            if (n >= sizeOfUlongThreshold)
+        WORDCOMPARE:
+            // Higher bandwidth will improve more with longer memory compares (20% with 32bytes, 50% with 256)
+            ulong* lpx = (ulong*)bpx;
+            ulong* lpy = (ulong*)bpy;
+
+            while (n > 8 && *lpx == *lpy)
             {
-                var lUintAlignment = (long)lhs % sizeOfUlong;
-                var rUintAlignment = (long)rhs % sizeOfUlong;
-
-                if (lUintAlignment != 0 && lUintAlignment == rUintAlignment)
-                {
-                    var toAlign = sizeOfUlong - lUintAlignment;
-                    while (toAlign > 0)
-                    {
-                        var r = lhs[0] - rhs[0]; // No pointers access
-                        if (r != 0)
-                            return r;
-
-                        lhs++;
-                        rhs++;
-                        n--;
-
-                        toAlign--;
-                    }
-                }
-
-                // Higher bandwidth will improve more with longer memory compares (20% with 32bytes, 50% with 256)
-                ulong* lp = (ulong*)lhs;
-                ulong* rp = (ulong*)rhs;
-
-                while (n > sizeOfUlong) // No pointers improvement
-                {
-                    if (lp[0] != rp[0])
-                        break;
-
-                    lp += 1;
-                    rp += 1;
-                    n -= sizeOfUlong;
-                }
-
-                lhs = (byte*)lp;
-                rhs = (byte*)rp;
+                lpx++;
+                lpy++;
+                n -= 8;
             }
 
-            while (true) // Unrolling while with no pointers
+            bpx = (byte*)lpx;
+            bpy = (byte*)lpy;
+
+        BYTECOMPARISON:
+            while (n > 0 && *bpx == *bpy)
             {
-                switch (n)
-                {
-                    case 0: return 0;
-                    case 1: return lhs[0] - rhs[0];
-                    case 2:
-                        {
-                            var v = lhs[0] - rhs[0];
-                            if (v != 0)
-                                return v;
-
-                            return lhs[1] - rhs[1];
-                        }
-                    case 3:
-                        {
-                            var v = lhs[0] - rhs[0];
-                            if (v != 0)
-                                return v;
-
-                            v = lhs[1] - rhs[1];
-                            if (v != 0)
-                                return v;
-
-                            return lhs[2] - rhs[2];
-                        }
-                    default:
-                        {
-                            var v = lhs[0] - rhs[0];
-                            if (v != 0)
-                                return v;
-
-                            v = lhs[1] - rhs[1];
-                            if (v != 0)
-                                return v;
-
-                            v = lhs[2] - rhs[2];
-                            if (v != 0)
-                                return v;
-
-                            v = lhs[3] - rhs[3];
-                            if (v != 0)
-                                return v;
-
-                            n -= 4;
-                            lhs += 4;
-                            rhs += 4;
-                            break;
-                        }
-                }
+                bpx++;
+                bpy++;
+                n--;
             }
+
+            if (n != 0)
+                return *bpx - *bpy;
+            return 0;
         }
 
         /// <summary>
@@ -174,158 +118,6 @@ namespace Voron.Util
             {
                 InnerBulkCopyMT(dest, src, n);
             }               
-        }
-
-        public unsafe static void Memcpy(byte* dest, byte* src, int len)
-        {
-            //
-            // This is portable version of memcpy. It mirrors what the hand optimized assembly versions of memcpy typically do.
-            //
-            // Ideally, we would just use the cpblk IL instruction here. Unfortunately, cpblk IL instruction is not as efficient as
-            // possible yet and so we have this implementation here for now.
-            //
-
-            switch (len)
-            {
-                case 0:
-                    return;
-                case 1:
-                    *dest = *src;
-                    return;
-                case 2:
-                    *(short*)dest = *(short*)src;
-                    return;
-                case 3:
-                    *(short*)dest = *(short*)src;
-                    *(dest + 2) = *(src + 2);
-                    return;
-                case 4:
-                    *(int*)dest = *(int*)src;
-                    return;
-                case 5:
-                    *(int*)dest = *(int*)src;
-                    *(dest + 4) = *(src + 4);
-                    return;
-                case 6:
-                    *(int*)dest = *(int*)src;
-                    *(short*)(dest + 4) = *(short*)(src + 4);
-                    return;
-                case 7:
-                    *(int*)dest = *(int*)src;
-                    *(short*)(dest + 4) = *(short*)(src + 4);
-                    *(dest + 6) = *(src + 6);
-                    return;
-                case 8:
-                    *(long*)dest = *(long*)src;
-                    return;
-                case 9:
-                    *(long*)dest = *(long*)src;
-                    *(dest + 8) = *(src + 8);
-                    return;
-                case 10:
-                    *(long*)dest = *(long*)src;
-                    *(short*)(dest + 8) = *(short*)(src + 8);
-                    return;
-                case 11:
-                    *(long*)dest = *(long*)src;
-                    *(short*)(dest + 8) = *(short*)(src + 8);
-                    *(dest + 10) = *(src + 10);
-                    return;
-                case 12:
-                    *(long*)dest = *(long*)src;
-                    *(int*)(dest + 8) = *(int*)(src + 8);
-                    return;
-                case 13:
-                    *(long*)dest = *(long*)src;
-                    *(int*)(dest + 8) = *(int*)(src + 8);
-                    *(dest + 12) = *(src + 12);
-                    return;
-                case 14:
-                    *(long*)dest = *(long*)src;
-                    *(int*)(dest + 8) = *(int*)(src + 8);
-                    *(short*)(dest + 12) = *(short*)(src + 12);
-                    return;
-                case 15:
-                    *(long*)dest = *(long*)src;
-                    *(int*)(dest + 8) = *(int*)(src + 8);
-                    *(short*)(dest + 12) = *(short*)(src + 12);
-                    *(dest + 14) = *(src + 14);
-                    return;
-                case 16:
-                    *(long*)dest = *(long*)src;
-                    *(long*)(dest + 8) = *(long*)(src + 8);
-                    return;
-                default:
-                    break;
-            }
-
-            // P/Invoke into the native version for large lengths
-            if (len >= 512)
-            {
-                StdLib.memcpy(dest, src, len);
-                return;
-            }
-
-            if (((int)dest & 3) != 0)
-            {
-                if (((int)dest & 1) != 0)
-                {
-                    *dest = *src;
-                    src++;
-                    dest++;
-                    len--;
-                    if (((int)dest & 2) == 0)
-                        goto Aligned;
-                }
-                *(short*)dest = *(short*)src;
-                src += 2;
-                dest += 2;
-                len -= 2;
-            Aligned: ;
-            }
-
-            if (((int)dest & 4) != 0)
-            {
-                *(int*)dest = *(int*)src;
-                src += 4;
-                dest += 4;
-                len -= 4;
-            }
-
-            int count = len / 16;
-            while (count > 0)
-            {
-                ((long*)dest)[0] = ((long*)src)[0];
-                ((long*)dest)[1] = ((long*)src)[1];
-
-                dest += 16;
-                src += 16;
-                count--;
-            }
-
-            if ((len & 8) != 0)
-            {
-                ((long*)dest)[0] = ((long*)src)[0];
-                dest += 8;
-                src += 8;
-            }
-
-            if ((len & 4) != 0)
-            {
-                ((int*)dest)[0] = ((int*)src)[0];
-                dest += 4;
-                src += 4;
-            }
-
-            if ((len & 2) != 0)
-            {
-                ((short*)dest)[0] = ((short*)src)[0];
-                dest += 2;
-                src += 2;
-            }
-
-            if ((len & 1) != 0)
-                *dest++ = *src++;
         }
 
         private unsafe static void InnerBulkCopyMT(byte* dest, byte* src, int n)
