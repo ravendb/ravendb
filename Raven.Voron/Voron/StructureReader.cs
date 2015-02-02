@@ -25,7 +25,7 @@ namespace Voron
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private int FixedOffset(T field)
 		{
-			return ((FixedSizeField) _schema.Fields[(int) (object) field]).Offset;
+			return ((FixedSizeField) _schema.Fields[field.GetHashCode()]).Offset;
 		}
 
 		public uint* VariableOffsets
@@ -180,7 +180,7 @@ namespace Voron
 
 		public string ReadString(T field)
 		{
-			var fieldIndex = ((VariableSizeField) _schema.Fields[(int) (object) field]).Index;
+			var fieldIndex = ((VariableSizeField)_schema.Fields[field.GetHashCode()]).Index;
 
 			if (_ptr != null)
 			{
@@ -196,7 +196,7 @@ namespace Voron
 
 		public byte[] ReadBytes(T field)
 		{
-			var fieldIndex = ((VariableSizeField) _schema.Fields[(int) (object) field]).Index;
+			var fieldIndex = ((VariableSizeField)_schema.Fields[field.GetHashCode()]).Index;
 
 			if (_ptr != null)
 			{

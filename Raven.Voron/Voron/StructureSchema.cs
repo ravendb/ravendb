@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Voron
 {
@@ -69,6 +70,8 @@ namespace Voron
 				Array.Copy(Fields, biggerArray, Fields.Length);
 				Fields = biggerArray;
 			}
+			if (index >= Fields.Length)
+				throw new IndexOutOfRangeException("You can only add fields at the end of the structure, but got " + index + " when the end of the fields is " + Fields.Length);
 
 			Fields[index] = field;
 		}
@@ -84,7 +87,7 @@ namespace Voron
 
 		public StructureSchema<TField> Add<T>(TField field)
 		{
-			var index = (int) (object) field;
+			var index = field.GetHashCode();
 
 			if (Fields.Length - 1 >= index && Fields[index] != null)
 				throw new ArgumentException(string.Format("Field '{0}' is already defined", field));
