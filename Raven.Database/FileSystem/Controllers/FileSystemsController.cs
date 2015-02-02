@@ -8,6 +8,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Server;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
@@ -112,7 +113,8 @@ namespace Raven.Database.FileSystem.Controllers
 				    {
 				        Name = fileSystem.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.FileSystem.Prefix, string.Empty),
 				        Disabled = fileSystem.Value<bool>("Disabled"),
-				        Bundles = bundles
+				        Bundles = bundles,
+						IsAdminCurrentTenant = true,
 				    };
 				}).ToList();
 
@@ -121,16 +123,39 @@ namespace Raven.Database.FileSystem.Controllers
 			List<string> approvedFileSystems = null;
 			if (DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
+				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+				/*HttpResponseMessage authMsg;
+				if (authorizer.TryAuthorize(this, out authMsg) == false)
+					return authMsg;
+
+				var user = authorizer.GetUser(this);
+				if (user == null)
+					return authMsg;*/
+
 				var user = User;
 				if (user == null)
 					return null;
 
 				if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
-					var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
-
 					approvedFileSystems = authorizer.GetApprovedResources(user, this, fileSystemsNames);
 				}
+
+				//TODO: fix this!
+				/*fileSystemsData.ForEach(x =>
+				{
+					var principalWithDatabaseAccess = user as PrincipalWithDatabaseAccess;
+					if (principalWithDatabaseAccess != null)
+					{
+						var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(
+							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode);
+						x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
+					}
+					else
+					{
+						x.IsAdminCurrentTenant = user.IsAdministrator(x.Name);
+					}
+				});*/
 			}
 
 			if (approvedFileSystems != null)
@@ -141,11 +166,8 @@ namespace Raven.Database.FileSystem.Controllers
 			return fileSystemsData;
 		}
 
-		private class FileSystemData
+		private class FileSystemData : TenantData
 		{
-			public string Name;
-			public bool Disabled;
-		    public string[] Bundles;
 		}
 	}
 }

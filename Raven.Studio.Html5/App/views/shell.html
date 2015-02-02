@@ -184,7 +184,7 @@
                             <button data-bind="click: continueTest" class="btn btn-danger"><i class="fa fa-play"></i> Continue test</button>
                         </li>
                         <!-- /ko -->
-                        <li class="dropdown navbar-right" data-bind="visible: canShowResourcesNavbar()">
+                        <li id="tenantName" class="dropdown navbar-right" data-bind="visible: canShowResourcesNavbar()">
                             <a class="dropdown-toggle resource-link" data-toggle="dropdown" href="#" data-bind="with: lastActivatedResource, css: { 'resource-link-disabled': $root.listedResources().length == 0 }">
                                 <span data-bind="text: name"></span>
                                 <b class="caret" data-bind="visible: $root.listedResources().length > 0"></b>

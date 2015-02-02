@@ -44,6 +44,7 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
+import getUserInfoCommand = require("commands/getUserInfoCommand");
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
 
 import recentErrors = require("viewmodels/recentErrors");
@@ -52,13 +53,14 @@ import latestBuildReminder = require("viewmodels/latestBuildReminder");
 import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
+
 class shell extends viewModelBase {
     private router = router;
 
     renewOAuthTokenTimeoutId: number;
-
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
     showLogOutButton: KnockoutComputed<boolean>;
+    static isGlobalAdmin = ko.observable<boolean>(false);
 
     static databases = ko.observableArray<database>();
     listedResources: KnockoutComputed<resource[]>;
@@ -283,6 +285,11 @@ class shell extends viewModelBase {
             console.error(e);
             messagePublisher.reportError("Failed to load routed module!", e);
         };
+
+        /*$("#tenantName").resizable({
+            handles: "w" ,autoHide:true
+        });
+$('.ui-resizable-sw').addClass('ui-icon ui-icon-gripsmall-diagonal-sw');*/
     }
 
     private preLoadRecentErrorsView() {
@@ -553,26 +560,14 @@ class shell extends viewModelBase {
         shell.databases(databases.concat([this.systemDatabase]));
     }
 
-    private static fileSystemsLoaded(fileSystems: filesystem[]) {
-        shell.fileSystems(fileSystems);
-    }
-
-    private counterStoragesLoaded(results: counterStorage[]) {
-        shell.counterStorages(results);
-    }
-
     launchDocEditor(docId?: string, docsList?: pagedList) {
         var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null, this.activeDatabase());
         this.navigate(editDocUrl);
     }
 
-    static loadFileSystems() {
-        return new getFileSystemsCommand()
-            .execute()
-            .done((results: filesystem[]) => shell.fileSystemsLoaded(results));
-    }
+    loadDatabases(): JQueryPromise<any>{
+        var deferred = $.Deferred();
 
-    connectToRavenServer() {
         this.databasesLoadedTask = new getDatabasesCommand()
             .execute()
             .fail(result => this.handleRavenConnectionFailure(result))
@@ -584,15 +579,54 @@ class shell extends viewModelBase {
                 this.fetchLicenseStatus();
                 this.fetchSystemDatabaseAlerts();
                 router.activate();
-            });
+            })
+            .always(() => deferred.resolve());
 
-        var fileSystemsLoadedTask: JQueryPromise<any> = shell.loadFileSystems();
+        return deferred;
+    }
 
-        var counterStoragesLoadedTask: JQueryPromise < any> = new getCounterStoragesCommand()
+    loadFileSystems(): JQueryPromise<any>{
+        var deferred = $.Deferred();
+
+        new getFileSystemsCommand()
             .execute()
-            .done((results: counterStorage[]) => this.counterStoragesLoaded(results));
+            .done((results: filesystem[]) => shell.fileSystems(results))
+            .always(() => deferred.resolve());
 
-        $.when(this.databasesLoadedTask, fileSystemsLoadedTask, counterStoragesLoadedTask)
+        return deferred;
+    }
+
+    loadCounterStorages(): JQueryPromise<any> {
+        return $.Deferred().resolve();
+        
+        //TODO: uncomment this for counter storages
+        /*var deferred = $.Deferred();
+
+        new getCounterStoragesCommand()
+            .execute()
+            .done((results: counterStorage[]) => shell.counterStorages(results))
+            .always(() => deferred.resolve());
+
+        return deferred;*/
+    }
+
+    loadUserInfo() {
+        var deferred = $.Deferred();
+
+        new getUserInfoCommand()
+            .execute()
+            .done((userInfo: userInfoDto) => shell.isGlobalAdmin(userInfo.IsAdminGlobal))
+            .always(() => deferred.resolve());
+
+        return deferred;
+    }
+
+    connectToRavenServer() {
+        var userInfoLoadTask: JQueryPromise<any> = this.loadUserInfo();
+        var databasesLoadedTask: JQueryPromise<any> = this.loadDatabases();
+        var fileSystemsLoadedTask: JQueryPromise<any> = this.loadFileSystems();
+        var counterStoragesLoadedTask: JQueryPromise<any> = this.loadCounterStorages();
+        $.when(userInfoLoadTask, databasesLoadedTask, fileSystemsLoadedTask, counterStoragesLoadedTask)
             .always(() => {
                 var locationHash = window.location.hash;
                 if (appUrl.getFileSystem()) { //filesystems section

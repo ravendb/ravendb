@@ -78,7 +78,7 @@ class copyTransformerDialog extends dialogViewModelBase {
                 .execute()
                 .done(() => messagePublisher.reportError("Duplicate transformer name. Change the name and try again."))
                 .fail((xhr: JQueryXHR, status: any, error: string) => {
-                    if (xhr.status === 404) {
+                    if (xhr.status === ResponseCodes.NotFound) {
                         // Good. No existing transformer with this name. We can proceed saving it.
                         new saveTransformerCommand(transformerObj, this.db)
                             .execute()

@@ -1,4 +1,4 @@
-@font-face {
+﻿@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -7059,8 +7059,7 @@ body {
 }
 .resource-link {
   padding-left: 5px;
-  overflow-x: hidden;
-  max-width: 150px;
+  max-width: 250px;
   -ms-text-overflow: ellipsis;
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
@@ -8389,3 +8388,4 @@ a.global_help_link:focus {
   margin-top: 3px;
   margin-bottom: 3px;
 }
+/*# sourceMappingURL=app.css.map */

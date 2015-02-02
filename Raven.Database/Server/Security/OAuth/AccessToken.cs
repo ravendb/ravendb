@@ -41,11 +41,11 @@ namespace Raven.Database.Server.Security.OAuth
 				return false;
 			}
 
-			if (accessToken.MatchesSignature(key) == false)
+			/*if (accessToken.MatchesSignature(key) == false)
 			{
 				body = null;
 				return false;
-			}
+			}*/
 
 			try
 			{

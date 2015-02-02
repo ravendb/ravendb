@@ -12,8 +12,8 @@ class database extends resource {
     mergedIndexLocalStoragePrefix: string;
     static type = 'database';
 
-    constructor(public name: string, isDisabled: boolean = false, bundles: Array<string> = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false) {
-        super(name, database.type);
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: Array<string> = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false) {
+        super(name, database.type, isAdminCurrentTenant);
         this.disabled(isDisabled);
         this.activeBundles(bundles);
         this.indexingDisabled(isIndexingDisabled);

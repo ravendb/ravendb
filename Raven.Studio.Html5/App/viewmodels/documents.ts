@@ -129,8 +129,8 @@ class documents extends viewModelBase {
         // A. Because if the focus isn't on the grid, but on the docs page itself, we still need to catch the shortcuts.
         var docsPageSelector = ".documents-page";
         this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
-        this.createKeyboardShortcut("Ctrl+C,D", () => this.copySelectedDocs(), docsPageSelector);
-        this.createKeyboardShortcut("Ctrl+C,I", () => this.copySelectedDocIds(), docsPageSelector);
+        this.createKeyboardShortcut("Ctrl+C, D", () => this.copySelectedDocs(), docsPageSelector);
+        this.createKeyboardShortcut("Ctrl+C, I", () => this.copySelectedDocIds(), docsPageSelector);
     }
 
     private fetchAlerts() {

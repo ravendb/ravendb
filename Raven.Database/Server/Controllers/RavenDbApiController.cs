@@ -659,5 +659,13 @@ namespace Raven.Database.Server.Controllers
 	            return values.All(x => string.IsNullOrEmpty(x) == false && (x[0] != '1' && x[0] != '2'));
 	        }
 	    }
+
+		protected class TenantData
+		{
+			public string Name { get; set; }
+			public bool Disabled { get; set; }
+			public string[] Bundles { get; set; }
+			public bool IsAdminCurrentTenant { get; set; }
+		}
 	}
 }

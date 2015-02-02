@@ -5,25 +5,35 @@ import savePeriodicExportSetupCommand = require("commands/savePeriodicExportSetu
 import document = require("models/document");
 import periodicExportSetup = require("models/periodicExportSetup");
 import appUrl = require("common/appUrl");
+import database = require("models/database");
 
 class periodicExport extends viewModelBase {
-
     backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
     isSaveEnabled: KnockoutComputed<boolean>;
     backupStatusDirtyFlag = new ko.DirtyFlag([]);
     backupConfigDirtyFlag = new ko.DirtyFlag([]);
+    isForbidden = ko.observable<boolean>(false);
+
+    constructor() {
+        super();
+        this.activeDatabase.subscribe((db: database) => this.isForbidden(db.isAdminCurrentTenant() == false));
+    }
 
     canActivate(args: any): any {
         super.canActivate(args);
         this.backupSetup(new periodicExportSetup);
-
         var deferred = $.Deferred();
+
         var db = this.activeDatabase();
-        if (db) {
+        this.isForbidden(db.isAdminCurrentTenant() == false);
+        if (db.isAdminCurrentTenant()) {
             $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db))
                 .done(() => deferred.resolve({ can: true }))
                 .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+        } else {
+            deferred.resolve({ can: true });
         }
+
         return deferred;
     }
 

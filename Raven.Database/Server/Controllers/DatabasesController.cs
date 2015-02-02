@@ -3,9 +3,12 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
@@ -55,13 +58,14 @@ namespace Raven.Database.Server.Controllers
 						}
 					}
 
-					return new
+					return new DatabaseData
 					{
 						Name = database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty),
 						Disabled = database.Value<bool>("Disabled"),
                         IndexingDisabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"),Constants.IndexingDisabled),
                         RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.RejectClientsModeEnabled),
-						Bundles = bundles
+						Bundles = bundles,
+						IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
 					};
 				}).ToList();
 
@@ -77,14 +81,28 @@ namespace Raven.Database.Server.Controllers
                     return authMsg;
 
 			    var user = authorizer.GetUser(this);
-
 				if (user == null)
-					return null;
+					return authMsg;
 
 				if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
 					approvedDatabases = authorizer.GetApprovedResources(user, this, databasesNames);
 				}
+
+				databasesData.ForEach(x =>
+				{
+					var principalWithDatabaseAccess = user as PrincipalWithDatabaseAccess;
+					if (principalWithDatabaseAccess != null)
+					{
+						var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(
+							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode);
+						x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
+					}
+					else
+					{
+						x.IsAdminCurrentTenant = user.IsAdministrator(x.Name);
+					}
+				});
 			}
 
 			var lastDocEtag = Etag.Empty;
@@ -106,6 +124,13 @@ namespace Raven.Database.Server.Controllers
 			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
 			return responseMessage;
 		}
+
+		private class DatabaseData : TenantData
+		{
+			public bool IndexingDisabled { get; set; }
+			public bool RejectClientsEnabled { get; set; }
+		}
+
         /// <summary>
         /// Gets a boolean value out of the setting object.
         /// </summary>
