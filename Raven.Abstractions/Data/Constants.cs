@@ -247,6 +247,8 @@ namespace Raven.Abstractions.Data
 			public const string QuotasSizeSoftLimitInKBSettingKey = "Raven/Global/Quotas/Size/SoftMarginInKB";
 
 			public const string SqlReplicationConnectionsDocumentName = "Raven/Global/SqlReplication/Connections";
+
+			public const string JavascriptFunctions = "Raven/Global/Javascript/Functions";
 	    }
 	}
 }

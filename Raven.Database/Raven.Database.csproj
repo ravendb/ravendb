@@ -240,6 +240,7 @@
     <Compile Include="Config\Retriever\ConfigurationRetriever.cs" />
     <Compile Include="Config\Retriever\ConfigurationRetrieverBase.cs" />
     <Compile Include="Config\Retriever\ConfigurationSettingRetriever.cs" />
+    <Compile Include="Config\Retriever\JavascriptFunctionsRetriever.cs" />
     <Compile Include="Config\Retriever\PeriodicExportConfigurationRetriever.cs" />
     <Compile Include="Config\Retriever\ReplicationConfigurationRetriever.cs" />
     <Compile Include="Config\Retriever\SqlReplicationConfigurationRetriever.cs" />

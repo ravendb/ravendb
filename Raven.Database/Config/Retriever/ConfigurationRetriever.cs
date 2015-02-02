@@ -28,7 +28,8 @@ namespace Raven.Database.Config.Retriever
 																			  {Constants.DocsSoftLimit, DocumentType.QuotasConfiguration},
 																			  {Constants.SizeHardLimitInKB, DocumentType.QuotasConfiguration},
 																			  {Constants.SizeSoftLimitInKB, DocumentType.QuotasConfiguration},
-																			  {Constants.SqlReplication.SqlReplicationConnectionsDocumentName, DocumentType.SqlReplicationConnections}
+																			  {Constants.SqlReplication.SqlReplicationConnectionsDocumentName, DocumentType.SqlReplicationConnections},
+																			  {Constants.RavenJavascriptFunctions, DocumentType.JavascriptFunctions}
 		                                                                  };
 
 		private readonly ReplicationConfigurationRetriever replicationConfigurationRetriever;
@@ -40,6 +41,8 @@ namespace Raven.Database.Config.Retriever
 		private readonly ConfigurationSettingRetriever configurationSettingRetriever;
 
 		private readonly SqlReplicationConfigurationRetriever sqlReplicationConfigurationRetriever;
+
+		private readonly JavascriptFunctionsRetriever javascriptFunctionsRetriever;
 
 		public ConfigurationRetriever(DocumentDatabase systemDatabase, DocumentDatabase database)
 		{
@@ -53,6 +56,7 @@ namespace Raven.Database.Config.Retriever
 			periodicExportConfigurationRetriever = new PeriodicExportConfigurationRetriever();
 			configurationSettingRetriever = new ConfigurationSettingRetriever();
 			sqlReplicationConfigurationRetriever = new SqlReplicationConfigurationRetriever();
+			javascriptFunctionsRetriever = new JavascriptFunctionsRetriever();
 		}
 
 		public ConfigurationDocument<TType> GetConfigurationDocument<TType>(string key)
@@ -88,7 +92,8 @@ namespace Raven.Database.Config.Retriever
 			return GetConfigurationRetriever(key).GetConfigurationDocument(key, systemDatabase, database);
 		}
 
-		private ConfigurationDocument<TType> GetConfigurationDocumentInternal<TType>(string key)
+		private ConfigurationDocument<TType> GetConfigurationDocumentInternal<TType>(string key) 
+			where TType : class 
 		{
 			return ((IConfigurationRetriever<TType>)GetConfigurationRetriever(key)).GetConfigurationDocument(key, systemDatabase, database);
 		}
@@ -108,6 +113,8 @@ namespace Raven.Database.Config.Retriever
 					return configurationSettingRetriever;
 				case DocumentType.SqlReplicationConnections:
 					return sqlReplicationConfigurationRetriever;
+				case DocumentType.JavascriptFunctions:
+					return javascriptFunctionsRetriever;
 				default:
 					throw new NotSupportedException("Document type is not supported: " + documentType);
 			}
@@ -150,7 +157,8 @@ namespace Raven.Database.Config.Retriever
 			VersioningConfiguration,
 			PeriodicExportConfiguration,
 			QuotasConfiguration,
-			SqlReplicationConnections
+			SqlReplicationConnections,
+			JavascriptFunctions
 		}
 	}
 }
