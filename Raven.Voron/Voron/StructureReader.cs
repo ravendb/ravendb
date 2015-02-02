@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Voron.Util;
@@ -26,7 +25,7 @@ namespace Voron
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private int FixedOffset(T field)
 		{
-			return _schema._fixedSizeFields[field].Offset;
+			return ((FixedSizeField) _schema.Fields[(int) (object) field]).Offset;
 		}
 
 		public uint* VariableOffsets
@@ -181,7 +180,7 @@ namespace Voron
 
 		public string ReadString(T field)
 		{
-			var fieldIndex = _schema._variableSizeFields[field].Index;
+			var fieldIndex = ((VariableSizeField) _schema.Fields[(int) (object) field]).Index;
 
 			if (_ptr != null)
 			{
@@ -197,7 +196,7 @@ namespace Voron
 
 		public byte[] ReadBytes(T field)
 		{
-			var fieldIndex = _schema._variableSizeFields[field].Index;
+			var fieldIndex = ((VariableSizeField) _schema.Fields[(int) (object) field]).Index;
 
 			if (_ptr != null)
 			{
