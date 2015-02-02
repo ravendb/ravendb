@@ -14,13 +14,11 @@ namespace Raven.Abstractions.Counters
 
         public long GroupsCount { get; set; }
 
-        public long ServersCount { get; set; }
-
         public long LastCounterEtag { get; set; }
 
         public int TasksCount { get; set; }
 
-        public decimal CounterStorageSizeOnDiskInMB { get; set; } // convert to counters
+        public string CounterStorageSize { get; set; } 
     }
 
     public class CountersStorageMetrics
