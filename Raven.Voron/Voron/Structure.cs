@@ -58,13 +58,20 @@ namespace Voron
 
 		public Structure<T> Set<TValue>(T field, TValue value)
 		{
-			FixedSizeField fixedSizeField;
-			VariableSizeField variableSizeField = null;
-
-			if (_schema._fixedSizeFields.TryGetValue(field, out fixedSizeField) == false && _schema._variableSizeFields.TryGetValue(field, out variableSizeField) == false)
+			StructureField structureField;
+			try
+			{
+				structureField = _schema.Fields[(int) (object) field];
+			}
+			catch (IndexOutOfRangeException)
+			{
 				throw new ArgumentException("No such field in schema defined. Field name: " + field);
+			}
 
-			var type = value.GetType();
+			var type = typeof(TValue);
+
+			var fixedSizeField = structureField as FixedSizeField;
+			var variableSizeField = structureField as VariableSizeField;
 
 			if (fixedSizeField != null)
 			{
@@ -76,7 +83,10 @@ namespace Voron
 				if (valueTypeValue == null)
 					throw new NotSupportedException("Unexpected fixed size value type: " + type);
 
-				FixedSizeWrites.Add(field, new FixedSizeWrite { Value = valueTypeValue, FieldInfo = fixedSizeField });
+				FixedSizeWrites.Add(field, new FixedSizeWrite
+				{
+					Value = valueTypeValue, FieldInfo = fixedSizeField
+				});
 			}
 			else if (variableSizeField != null)
 			{
@@ -99,14 +109,16 @@ namespace Voron
 					throw new NotSupportedException("Unexpected variable size value type: " + type);
 
 				if (VariableSizeWrites == null)
-					VariableSizeWrites = new VariableSizeWrite[_schema._variableSizeFields.Count];
+					VariableSizeWrites = new VariableSizeWrite[_schema.VariableFieldsCount];
 
 				VariableSizeWrites[variableSizeField.Index] = new VariableSizeWrite
-																{
-																	Value = bytes,
-																	ValueSizeLength = SizeOf7BitEncodedInt(bytes.Length),
-																};
+				{
+					Value = bytes,
+					ValueSizeLength = SizeOf7BitEncodedInt(bytes.Length),
+				};
 			}
+			else
+				throw new NotSupportedException("Unexpected structure field type: " + type);
 
 			return this;
 		}
@@ -114,9 +126,14 @@ namespace Voron
 		public Structure<T> Increment(T field, long delta)
 		{
 			FixedSizeField fixedSizeField;
-
-			if (_schema._fixedSizeFields.TryGetValue(field, out fixedSizeField) == false)
-				throw new ArgumentException("No such fixed size field in schema defined. Field name: " + field);
+			try
+			{
+				fixedSizeField = (FixedSizeField) _schema.Fields[(int) (object) field];
+			}
+			catch (IndexOutOfRangeException)
+			{
+				throw new ArgumentException("No such field in schema defined. Field name: " + field);
+			}
 
 			IncrementWrites.Add(field, new IncrementWrite { IncrementValue = delta, FieldInfo = fixedSizeField });
 
@@ -131,14 +148,14 @@ namespace Voron
 
 			if (_schema.IsFixedSize == false && VariableSizeWrites != null && VariableSizeWrites.Any(x => x == null))
 			{
-				var missingFields = new List<T>();
+				var missingFields = new List<object>();
 
 				for (int i = 0; i < VariableSizeWrites.Length; i++)
 				{
 					if (VariableSizeWrites[i] != null)
 						continue;
 
-					missingFields.Add(_schema._variableSizeFields.First(x => x.Value.Index == i).Key);
+					missingFields.Add(_schema.Fields.OfType<VariableSizeField>().First(x => x.Index == i).Name);
 				}
 
 				throw new InvalidOperationException("Your structure has variable size fields. You have to set all of them to properly write a structure and avoid overlapping fields. Missing fields: " + string.Join(", ", missingFields));
