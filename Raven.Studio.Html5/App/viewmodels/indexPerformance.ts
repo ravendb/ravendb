@@ -189,6 +189,7 @@ class metrics extends viewModelBase {
             this.redrawGraph();
         });
         $("#visibleIndexesSelector").multiselect();
+        this.svg = d3.select("#indexPerformanceGraph");
     }
 
     createNotifications(): Array<changeSubscription> {
@@ -221,6 +222,23 @@ class metrics extends viewModelBase {
                 this.reduceJsonData.push(rawCopy);
             }
         });
+    }
+
+    showHideNoData(show: boolean) {
+        if (show) {
+            var metricsContainer = $("#metricsContainer");
+            this.svg.append('text')
+                .attr('class', 'no_data')
+                .text('No data available')
+                .attr('fill', 'black')
+                .attr('text-anchor', 'middle')
+                .attr('x', metricsContainer.width() / 2)
+                .attr('y', 50);
+            this.svg.select('.controlls').style('display', 'none');
+        } else {
+            this.svg.select('.no_data').remove();
+            this.svg.select('.controlls').style('display', null);
+        }
     }
 
     refresh() {
@@ -405,6 +423,10 @@ class metrics extends viewModelBase {
             + self.margin.left
             + self.margin.right
             + 10; // add few more extra pixels
+
+        totalWidthWithMargins = Math.max(totalWidthWithMargins, this.width);
+        
+
         var totalHeight =
             self.selectedMapIndexNames().length * (self.yBarHeight + self.yBarMargin * 2)
             + self.margin.between
@@ -521,6 +543,7 @@ class metrics extends viewModelBase {
         this.updateMapOperations();
         this.updateReduceOperations();
         this.updateGaps(gapsFinder.gapsPositions);
+        this.showHideNoData(this.rawMapJsonData.length == 0 && this.rawReduceJsonData.length == 0);
     }
 
     private updateGroupNames(controllsEnter: D3.Selection, totalWidth: number) {
