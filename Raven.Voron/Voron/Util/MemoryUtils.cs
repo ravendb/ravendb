@@ -132,13 +132,13 @@ namespace Voron.Util
                 var offset = i * chunksize;
                 var newSrc = src + offset;
                 var newDst = dest + offset;
-                tasks[i] = () => StdLib.memcpy(newSrc, newDst, chunksize);
+                tasks[i] = () => StdLib.memcpy(newDst, newSrc, chunksize);
             }
 
             var finalOffset = (threadcount - 1) * chunksize;
             var finalSrc = src + finalOffset;
             var finalDst = dest + finalOffset;
-            tasks[threadcount - 1] = () => StdLib.memcpy(finalSrc, finalDst, remainder);
+            tasks[threadcount - 1] = () => StdLib.memcpy(finalDst, finalSrc, remainder);
 
             Parallel.Invoke(tasks);
         }
