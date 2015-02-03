@@ -28,11 +28,17 @@ namespace Raven.Database.Indexing
 			{
 				return source.Select(func).ToList();
 			}
-
-			return source.AsParallel()
+			var list = source.AsParallel()
 				.Select(func)
-				.Where(x => x != null)
 				.ToList();
+			for (int i = 0; i < list.Count; i++)
+			{
+				if(list[i] != null)
+					continue;
+				list.RemoveAt(i);
+				i--;
+			}
+			return list;
 		}
 
 		/// <summary>
@@ -165,7 +171,7 @@ namespace Raven.Database.Indexing
 
 		public void HandleLowCpuUsage()
 		{
-			maxNumberOfParallelProcessingTasksRatio = Math.Min(1, maxNumberOfParallelProcessingTasksRatio * 1.1);
+			maxNumberOfParallelProcessingTasksRatio = Math.Min(1, maxNumberOfParallelProcessingTasksRatio * 1.2);
 		}
 
 		public double MaxNumberOfParallelProcessingTasksRatio
