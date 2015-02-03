@@ -45,15 +45,15 @@ namespace Raven.Abstractions.Spatial
 					return true;
 				}
 
-				var keyValues = list.OfType<KeyValuePair<string, object>>()
+				var keyValues = list.OfType<KeyValuePair<object, object>>()
 				                    .Where(x => IsNumber(x.Value))
-				                    .ToDictionary(x => x.Key, x => x.Value);
+									.ToDictionary(x => x.Key.ToString(), x => x.Value);
 
 				if (keyValues.Count == 0)
 				{
 					keyValues = list.OfType<KeyValuePair<string, RavenJToken>>()
 									.Where(x => IsNumber(x.Value))
-									.ToDictionary(x => x.Key, x => (object) x.Value);
+									.ToDictionary(x => x.Key, x => (object)x.Value);
 				}
 
 				if (keyValues.Count > 1)
