@@ -13,6 +13,7 @@ import queryIndexCommand = require("commands/queryIndexCommand");
 import moment = require("moment");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import indexesShell = require("viewmodels/indexesShell");
+import database = require("models/database");
 import querySort = require("models/querySort");
 import collection = require("models/collection");
 import getTransformersCommand = require("commands/getTransformersCommand");
@@ -36,7 +37,6 @@ import getIndexSuggestionsCommand = require("commands/getIndexSuggestionsCommand
 import recentQueriesStorage = require("common/recentQueriesStorage");
 
 class query extends viewModelBase {
-
     isTestIndex = ko.observable<boolean>(false);
     isStaticIndexSelected: KnockoutComputed<boolean>;
     selectedIndex = ko.observable<string>();
@@ -69,7 +69,7 @@ class query extends viewModelBase {
     selectedIndexLabel: KnockoutComputed<string>;
     appUrls: computedAppUrls;
     isIndexMapReduce: KnockoutComputed<boolean>;
-    isLoading = ko.observable<boolean>(false).extend({ rateLimit: 1000 });
+    isLoading = ko.observable<boolean>(false);
 
     contextName = ko.observable<string>();
     didDynamicChangeIndex: KnockoutComputed<boolean>;
@@ -159,20 +159,41 @@ class query extends viewModelBase {
         app.showDialog(viewModel);
     }
 
+    canActivate(args: any): any {
+        super.canActivate(args);
+        var deferred = $.Deferred();
+
+        var db = this.activeDatabase();
+        if (!!db) {
+            this.fetchRecentQueries();
+            $.when(this.fetchCustomFunctions(db), this.fetchAllTransformers(db))
+                .done(() => deferred.resolve({ can: true }));
+        } else {
+            deferred.resolve({ redirect: "#resources" });
+        }
+        /*var db = this.activeDatabase();
+        this.isForbidden(db.isAdminCurrentTenant() == false);
+        if (db.isAdminCurrentTenant()) {
+            // fetch current quotas from the database
+            this.fetchQuotas(db)
+                .done(() => deferred.resolve({ can: true }))
+                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+        } else {
+            deferred.resolve({ can: true });
+        }*/
+
+        return deferred;
+    }
+
     activate(indexNameOrRecentQueryHash?: string) {
         super.activate(indexNameOrRecentQueryHash);
 
-        this.fetchAllTransformers();
-        this.fetchCustomFunctions();
-
-        this.fetchRecentQueries();
-
         this.updateHelpLink('KCIMJK');
 
-        $.when(this.fetchAllCollections(), this.fetchAllIndexes())
-            .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
-
         this.selectedIndex.subscribe(index => this.onIndexChanged(index));
+        var db = this.activeDatabase();
+        return $.when(this.fetchAllCollections(db), this.fetchAllIndexes(db))
+            .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
 
     attached() {
@@ -195,6 +216,67 @@ class query extends viewModelBase {
         $(window).bind('storage', () => {
             self.fetchRecentQueries();
         });
+
+        this.isLoading.extend({ rateLimit: 100 });
+    }
+
+    private fetchRecentQueries() {
+        this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
+    }
+
+    private fetchCustomFunctions(db: database): JQueryPromise<any> {
+        var deferred = $.Deferred();
+
+        var task = new getCustomFunctionsCommand(db).execute();
+        task.done((cf: customFunctions) => this.currentCustomFunctions(cf))
+            .always(() => deferred.resolve());
+
+        return deferred;
+    }
+    
+    private fetchAllTransformers(db: database): JQueryPromise<any> {
+        var deferred = $.Deferred();
+
+        new getTransformersCommand(db)
+            .execute()
+            .done((results: transformerDto[]) => {
+                this.allTransformers(results);
+                deferred.resolve();
+            });
+
+        return deferred;
+    }
+
+    private fetchAllCollections(db: database): JQueryPromise<any> {
+        var deferred = $.Deferred();
+
+        new getCollectionsCommand(db)
+            .execute()
+            .done((results: collection[]) => {
+                this.collections(results);
+                this.collectionNames(results.map(c => c.name));
+                deferred.resolve();
+            });
+
+        return deferred;
+    }
+
+    private fetchAllIndexes(db: database): JQueryPromise<any> {
+        var deferred = $.Deferred();
+
+        new getDatabaseStatsCommand(db)
+            .execute()
+            .done((results: databaseStatisticsDto) => {
+                this.indexes(results.Indexes.map(i => {
+                    return {
+                        name: i.Name,
+                        hasReduce: !!i.LastReducedTimestamp
+                    };
+                }));
+                deferred.resolve();
+            });
+
+        return deferred;
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
@@ -257,36 +339,6 @@ class query extends viewModelBase {
         this.navigate(this.editIndexUrl());
     }
 
-    fetchAllIndexes(): JQueryPromise<any> {
-        return new getDatabaseStatsCommand(this.activeDatabase())
-            .execute()
-            .done((results: databaseStatisticsDto) => this.indexes(results.Indexes.map(i=> {
-                return {
-                    name: i.Name,
-                    hasReduce: !!i.LastReducedTimestamp
-                };
-            })));
-    }
-
-    fetchAllCollections(): JQueryPromise<any> {
-        return new getCollectionsCommand(this.activeDatabase())
-            .execute()
-            .done((results: collection[]) => {
-                this.collections(results);
-                this.collectionNames(results.map(c => c.name));
-            });
-    }
-
-    fetchRecentQueries() {
-        this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
-    }
-
-    fetchAllTransformers() {
-        new getTransformersCommand(this.activeDatabase())
-            .execute()
-            .done((results: transformerDto[]) => this.allTransformers(results));
-    }
-
     runRecentQuery(query: storedQueryDto) {
         this.selectedIndex(query.IndexName);
         this.queryText(query.QueryText);
@@ -342,16 +394,16 @@ class query extends viewModelBase {
             var db = this.activeDatabase();
             this.rawJsonUrl(appUrl.forResourceQuery(db) + queryCommand.getUrl());
             this.exportUrl(appUrl.forResourceQuery(db) + queryCommand.getCsvUrl());
-            
+
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
-                return command
-                    .execute().always(() => {
+                return command.execute()
+                    .always(() => {
                         this.isLoading(false);
                         this.focusOnQuery();
-                        })
-                    .done((queryResults: pagedResultSet) => this.queryStats(queryResults.additionalResultInfo))
+                    })
                     .done((queryResults: pagedResultSet) => {
+                        this.queryStats(queryResults.additionalResultInfo);
                         this.indexSuggestions([]);
                         if (queryResults.totalResultCount == 0) {
                             var queryFields = this.extractQueryFields();
@@ -364,8 +416,7 @@ class query extends viewModelBase {
                     })
                     .fail(() => {
                         recentQueriesStorage.removeIndexFromRecentQueries(db, selectedIndex);
-                    })
-                    ;
+                    });
             };
             var resultsList = new pagedList(resultsFetcher);
             this.queryResults(resultsList);
@@ -596,13 +647,6 @@ class query extends viewModelBase {
 
             this.runQuery();
 
-        });
-    }
-
-    fetchCustomFunctions() {
-        var task = new getCustomFunctionsCommand(this.activeDatabase()).execute();
-        task.done((cf: customFunctions) => {
-            this.currentCustomFunctions(cf);
         });
     }
 

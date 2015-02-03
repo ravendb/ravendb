@@ -108,7 +108,7 @@
                             </ul>
                         </li>
                     </ul>
-                    <form class="navbar-form pull-left hidden-xs hidden-sm col-sm-2">
+                    <form id="goToDocument" class="navbar-form pull-left hidden-xs hidden-sm col-sm-2">
                         <input id="goToDocInput" title="Search for a document (Alt+G)" accesskey="G"
                                type="text" class="form-control" placeholder="Go to document" data-bind="value: goToDocumentSearch, valueUpdate: 'afterkeydown', disable: isActiveDatabaseDisabled" autocomplete="off" />
                         <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#goToDocInput', foreach: goToDocumentSearchResults">
@@ -169,27 +169,32 @@
 
                 <div>
                     <ul class="nav navbar-nav navbar-right hidden-xs hidden-sm databases">
-                        <li class="navbar-right" style="padding-left: 5px;">
+                        <li id="brand" class="navbar-right" style="padding-left: 5px;">
                             <a class="navbar-brand" href="http://ravendb.net" target="_blank">
                                 <img style="height: 24px" src="content/images/raven.png" />
                             </a>
                         </li>
                         <!-- ko if:showLogOutButton -->
-                        <li class="navbar-right" style="padding-left: 5px; padding-top: 5px">
+                        <li id="logOut" class="navbar-right" style="padding-left: 5px; padding-top: 5px">
                             <button data-bind="click: logOut" class="btn btn-danger"><i class="fa fa-sign-out"></i> Log out</button>
                         </li>
                         <!-- /ko -->
                         <!-- ko if:showContinueTestButton() -->
-                        <li class="navbar-right" style="padding-left: 5px; padding-top: 5px">
+                        <li id="continueTest" class="navbar-right" style="padding-left: 5px; padding-top: 5px">
                             <button data-bind="click: continueTest" class="btn btn-danger"><i class="fa fa-play"></i> Continue test</button>
                         </li>
                         <!-- /ko -->
-                        <li id="tenantName" class="dropdown navbar-right" data-bind="visible: canShowResourcesNavbar()">
-                            <a class="dropdown-toggle resource-link" data-toggle="dropdown" href="#" data-bind="with: lastActivatedResource, css: { 'resource-link-disabled': $root.listedResources().length == 0 }">
-                                <span data-bind="text: name"></span>
-                                <b class="caret" data-bind="visible: $root.listedResources().length > 0"></b>
+                        <li class="dropdown navbar-right" data-bind="visible: canShowResourcesNavbar()">
+                            <a id="tenantNameLink" class="dropdown-toggle" data-toggle="dropdown" href="#" data-bind="with: lastActivatedResource, css: { 'resource-link-disabled': $root.listedResources().length == 0 }">
+                                <span class="resource-link" data-bind="style: { maxWidth: $root.maxResourceNameWidth() }">
+                                    <span data-bind="text: name, attr: { title: name }"></span>
+                                </span>
+
+                                <b class="caret resource-caret" data-bind="visible: $root.listedResources().length > 0"></b>
+
+
                             </a>
-                            <ul class="dropdown-menu" data-bind="foreach: listedResources">
+                            <ul class="dropdown-menu" data-bind="foreach: listedResources, visible: $root.listedResources().length > 0">
                                 <li>
                                     <a href="#" data-bind="click: $root.selectResource.bind($root, $data)">
                                         <span data-bind="attr: { class: $root.iconName($data) }"></span>
@@ -198,7 +203,7 @@
                                 </li>
                             </ul>
                         </li>
-                        <li class="navbar-right">
+                        <li id="featureName" class="navbar-right">
                             <div>
                                 <ul class="nav navbar-nav">
                                     <li class="vertical-navbar-menu-item">

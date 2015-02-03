@@ -638,7 +638,7 @@ namespace Raven.Database.Server.Controllers
 
 	    public override string TenantName
 	    {
-            get { return DatabaseName;}
+            get { return DatabaseName; }
 	    }
 
 	    public override void MarkRequestDuration(long duration)

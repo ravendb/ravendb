@@ -70,6 +70,8 @@ class periodicExportSetup {
             ) !== -1;
     }, this);
 
+    isGlaceirVault = ko.computed(() => this.remoteUploadEnabled() && this.type() == this.GLACIER_VAULT)
+    isS3Bucket = ko.computed(() => this.remoteUploadEnabled() && this.type() == this.S3_BUCKET)
 
     additionalAzureInfoRequired = ko.computed(() => {
         var type = this.type();
@@ -125,14 +127,25 @@ class periodicExportSetup {
             return 'Bucket name must be at least 3 and no more than 63 characters long';
         }
 
+        if (bucketName[0] == '.') {
+            return 'Bucket name cannot start with a period (.)';
+        }
+
+        if (bucketName[bucketName.length - 1] == '.') {
+            return 'Bucket name cannot end with a period (.)';
+        }
+
+        if (bucketName.indexOf("..") > -1) {
+            return 'There can be only one period between labels';
+        }
+
         var labels = bucketName.split(".");
         var labelRegExp = /^[a-z0-9-]+$/;
-
         var validLabel = label => {
             if (label == null || label.length == 0) {
                 return false;
             }
-            if (!labelRegExp.test(label)) {
+            if (labelRegExp.test(label) == false) {
                 return false;
             }
             if (label[0] == '-' || label[label.length - 1] == '-') {
@@ -181,8 +194,6 @@ class periodicExportSetup {
 
         return '';
     }
-
-
 
     fromDto(dto: periodicExportSetupDto) {
         this.awsRegionEndpoint(dto.AwsRegionEndpoint);

@@ -23,7 +23,7 @@
                 <i class="fa fa-plus"></i> New transformer
             </a>
         </div>
-        <div class="btn-group">
+        <div class="btn-group" data-bind="visible: transformersGroups().length > 0">
             <button class="btn btn-default" data-bind="click: toggleExpandAll, attr: { title: expandCollapseTitle }" accesskey="=">
                 <i data-bind="css: { 'fa-plus-square-o': !allTransformersExpanded(), 'fa-minus-square-o': allTransformersExpanded }" class="fa fa-fw"></i>
             </button>
@@ -33,7 +33,7 @@
                 <i class="fa fa-paste"></i>
             </button>
         </div>
-        <div class="btn-group">
+        <div class="btn-group" data-bind="visible: transformersGroups().length > 0">
             <button type="button" class="btn btn-danger" data-bind="click: deleteAllTransformers" title="Delete All Transformers"><i class="fa fa-trash-o"></i></button>
         </div>
     </div>

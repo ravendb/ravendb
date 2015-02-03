@@ -14,7 +14,7 @@
             </span>
             <br />
             <br />
-            <p data-bind="text: importStatus"></p>
+            <p data-bind="text: importStatus, visible: $root.isUploading || isImporting()"></p>
             <br />
             <div class="progress progress-striped active" data-bind="visible: isImporting">
                 <div class="progress-bar" role="progressbar" style="width: 100%"></div>

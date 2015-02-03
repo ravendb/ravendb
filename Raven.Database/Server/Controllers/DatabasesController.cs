@@ -3,10 +3,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
@@ -41,34 +39,10 @@ namespace Raven.Database.Server.Controllers
 
 			var start = GetStart();
 			var nextPageStart = start; // will trigger rapid pagination
-			var databases = Database.Documents.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, start,
+			var databases = Database.Documents.GetDocumentsWithIdStartingWith(Constants.RavenDatabasesPrefix, null, null, start,
 										GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
 
-			var databasesData = databases
-				.Select(database =>
-				{
-					var bundles = new string[]{};
-					var settings = database.Value<RavenJObject>("Settings");
-					if (settings != null)
-					{
-						var activeBundles = settings.Value<string>("Raven/ActiveBundles");
-						if (activeBundles != null)
-						{
-							bundles = activeBundles.Split(';');
-						}
-					}
-
-					return new DatabaseData
-					{
-						Name = database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty),
-						Disabled = database.Value<bool>("Disabled"),
-                        IndexingDisabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"),Constants.IndexingDisabled),
-                        RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.RejectClientsModeEnabled),
-						Bundles = bundles,
-						IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
-					};
-				}).ToList();
-
+			var databasesData = GetDatabasesData(databases);
 			var databasesNames = databasesData.Select(databaseObject => databaseObject.Name).ToArray();
 
 			List<string> approvedDatabases = null;
@@ -123,6 +97,34 @@ namespace Raven.Database.Server.Controllers
 			var responseMessage = getAdditionalData ? GetMessageWithObject(databasesData) : GetMessageWithObject(databasesNames);
 			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
 			return responseMessage;
+		}
+
+		private List<DatabaseData> GetDatabasesData(IEnumerable<RavenJToken> databases)
+		{
+			return databases
+				.Select(database =>
+				{
+					var bundles = new string[] {};
+					var settings = database.Value<RavenJObject>("Settings");
+					if (settings != null)
+					{
+						var activeBundles = settings.Value<string>("Raven/ActiveBundles");
+						if (activeBundles != null)
+						{
+							bundles = activeBundles.Split(';');
+						}
+					}
+
+					return new DatabaseData
+					{
+						Name = database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty),
+						Disabled = database.Value<bool>("Disabled"),
+						IndexingDisabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.IndexingDisabled),
+						RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.RejectClientsModeEnabled),
+						Bundles = bundles,
+						IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
+					};
+				}).ToList();
 		}
 
 		private class DatabaseData : TenantData

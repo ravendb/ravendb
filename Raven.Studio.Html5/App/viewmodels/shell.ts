@@ -255,8 +255,51 @@ class shell extends viewModelBase {
                 this.onLogOut();
             }
         });
+
+        this.maxResourceNameWidth = ko.computed(() => {
+            if (this.canShowResourcesNavbar() && !!this.lastActivatedResource() && !!this.getCurrentActiveFeatureName() && this.) {
+                var goToDocumentLeftOffset = $("#goToDocument").offset().left + $("#goToDocument").width();
+                var brandWidth = this.getWidth("brand");
+                var logOutWidth = this.getWidth("logOut");
+                var continueTestWidth = this.getWidth("continueTest");
+                var featureNameWidth = this.getWidth("featureName");
+
+                var freeSpace = $(window).width() - (goToDocumentLeftOffset + brandWidth + logOutWidth + continueTestWidth + featureNameWidth) - 230;
+
+
+                var featureNameLeftOffset = $("#featureName").offset().left;
+                
+                //var elementWidth = $(".resource-link").width();
+                var newNameLength = this.lastActivatedResource().name;
+                var newElementWidth = newNameLength.length * 7;
+                var maxWidth = Math.floor(freeSpace);
+                return maxWidth + "px";
+            }
+            return "1px";
+        });
+        /*this.lastActivatedResource.subscribe((lastActivatedResource: resource) => {
+            var goToDocumentLeftOffset = $("#goToDocument").offset().left + $("#goToDocument").width();
+            var featureNameLeftOffset = $("#featureName").offset().left;
+            var freeSpace = featureNameLeftOffset - goToDocumentLeftOffset;
+            //var elementWidth = $(".resource-link").width();
+            var newNameLength = lastActivatedResource.name;
+            var newElementWidth = newNameLength.length * 8;
+            var maxWidth = Math.floor(newElementWidth + freeSpace);
+
+            if (!!maxWidth) {
+                $(".resource-link").css("maxWidth", 874);
+            }
+        });*/
     }
 
+        private getWidth(tag: string): number {
+            var width = $("#" + tag).width();
+            if (!!width) {
+                width = 0;
+            }
+            return width;
+        }
+        maxResourceNameWidth: KnockoutComputed<string>;
     private destroyChangesApi() {
         this.cleanupNotifications();
         this.globalChangesApi.dispose();
@@ -285,11 +328,6 @@ class shell extends viewModelBase {
             console.error(e);
             messagePublisher.reportError("Failed to load routed module!", e);
         };
-
-        /*$("#tenantName").resizable({
-            handles: "w" ,autoHide:true
-        });
-$('.ui-resizable-sw').addClass('ui-icon ui-icon-gripsmall-diagonal-sw');*/
     }
 
     private preLoadRecentErrorsView() {
@@ -337,7 +375,6 @@ $('.ui-resizable-sw').addClass('ui-icon ui-icon-gripsmall-diagonal-sw');*/
             if (match && match.length == 2) {
                 oauthContext.apiKey(match[1]);
                 apiKeyLocalStorage.setValue(match[1]);
-                window.location.hash = "#";
             }
         } else {
             var apiKeyFromStorage = apiKeyLocalStorage.get();
