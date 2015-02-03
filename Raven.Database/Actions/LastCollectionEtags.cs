@@ -43,7 +43,9 @@ namespace Raven.Database.Actions
 				IndexStats stats = null;
 				context.Database.TransactionalStorage.Batch(accessor =>
 				{
-					stats = accessor.Indexing.GetIndexStats(indexId);
+					var isStale = accessor.Staleness.IsIndexStale(indexId, null, null);
+					if (isStale == false)
+						stats = accessor.Indexing.GetIndexStats(indexId);
 				});
 
 				if (stats == null)

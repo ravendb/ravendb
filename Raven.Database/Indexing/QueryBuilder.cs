@@ -21,11 +21,14 @@ namespace Raven.Database.Indexing
 {
 	public static class QueryBuilder
 	{
-		private const string FieldRegexVal = @"([@\w\d<>_]+?):"; 
+		private const string FieldRegexVal = @"([@\w\d<>_,]+?):";
+	    private const string MethodRegexVal = @"(@\w+<[^>]+>):";
+	    private const string DateTimeVal = @"\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)";
 		static readonly Regex fieldQuery = new Regex(FieldRegexVal, RegexOptions.Compiled);
 		static readonly Regex untokenizedQuery = new Regex( FieldRegexVal + @"[\s\(]*(\[\[.+?\]\])|(?<=,)\s*(\[\[.+?\]\])(?=\s*[,\)])", RegexOptions.Compiled);
 		static readonly Regex searchQuery = new Regex(FieldRegexVal + @"\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
-		static readonly Regex dateQuery = new Regex(FieldRegexVal + @"\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
+        static readonly Regex dateQuery = new Regex(FieldRegexVal + DateTimeVal, RegexOptions.Compiled);
+        static readonly Regex inDatesQuery = new Regex(MethodRegexVal + @"\s*(\(.*" + DateTimeVal + @".*\))", RegexOptions.Compiled | RegexOptions.Singleline);
 		static readonly Regex rightOpenRangeQuery = new Regex(FieldRegexVal + @"\[(\S+)\sTO\s(\S+)\}", RegexOptions.Compiled);
 		static readonly Regex leftOpenRangeQuery = new Regex(FieldRegexVal + @"\{(\S+)\sTO\s(\S+)\]", RegexOptions.Compiled);
 		static readonly Regex commentsRegex = new Regex(@"( //[^""]+?)$", RegexOptions.Compiled | RegexOptions.Multiline);
@@ -198,28 +201,36 @@ namespace Raven.Database.Indexing
 		private static string PreProcessDateTerms(string query, RangeQueryParser queryParser)
 		{
 			var searchMatches = dateQuery.Matches(query);
-			if (searchMatches.Count < 1)
-				return query;
-
-			var queryStringBuilder = new StringBuilder(query);
-			for (var i = searchMatches.Count - 1; i >= 0; i--) // reversing the scan so we won't affect positions of later items
-			{
-				var searchMatch = searchMatches[i];
-				var field = searchMatch.Groups[1].Value;
-				var termReplacement = searchMatch.Groups[2].Value;
-
-				var replaceToken = queryParser.ReplaceToken(field, termReplacement);
-				queryStringBuilder.Remove(searchMatch.Index, searchMatch.Length);
-				queryStringBuilder
-					.Insert(searchMatch.Index, field)
-					.Insert(searchMatch.Index + field.Length, ":")
-					.Insert(searchMatch.Index + field.Length + 1, replaceToken);
-			}
-
-			return queryStringBuilder.ToString();
+		    if (searchMatches.Count > 0)
+		    {
+		        query = TokenReplace(query, searchMatches,queryParser.ReplaceToken);
+		    }
+		    searchMatches = inDatesQuery.Matches(query);
+		    if (searchMatches.Count == 0)
+		        return query;
+            return TokenReplace(query, searchMatches,queryParser.ReplaceDateTimeTokensInMethod);
 		}
 
-		private static string PreProcessSearchTerms(string query)
+	    private static string TokenReplace(string query, MatchCollection searchMatches, Func<string,string,string> replacFunc)
+	    {
+	        var queryStringBuilder = new StringBuilder(query);
+	        for (var i = searchMatches.Count - 1; i >= 0; i--) // reversing the scan so we won't affect positions of later items
+	        {
+	            var searchMatch = searchMatches[i];
+	            var field = searchMatch.Groups[1].Value;
+	            var termReplacement = searchMatch.Groups[2].Value;
+
+                var replaceToken = replacFunc(field, termReplacement);
+	            queryStringBuilder.Remove(searchMatch.Index, searchMatch.Length);
+	            queryStringBuilder
+	                .Insert(searchMatch.Index, field)
+	                .Insert(searchMatch.Index + field.Length, ":")
+	                .Insert(searchMatch.Index + field.Length + 1, replaceToken);
+	        }
+	        return queryStringBuilder.ToString();
+	    }
+
+	    private static string PreProcessSearchTerms(string query)
 		{
 			var searchMatches = searchQuery.Matches(query);
 			if (searchMatches.Count < 1)

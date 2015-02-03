@@ -219,7 +219,7 @@ namespace Voron.Impl
 										actionType = DebugActionType.Increment;
 										break;
 									case WriteBatch.BatchOperationType.AddStruct:
-										actionType = DebugActionType.AddStruct; // TODO arek - debugjournal should handle structs
+										actionType = DebugActionType.AddStruct;
 										break;
 									default:
 										throw new ArgumentOutOfRangeException();

@@ -18,7 +18,7 @@ namespace Raven.Database.Config
 	public static class CpuStatistics
 	{
 		private const int HighNotificationThreshold = 80;
-        private const int LowNotificationThreshold = 20;
+        private const int LowNotificationThreshold = 60;
 
 		private const int NumberOfItemsInQueue = 5;
 
