@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Config.Retriever
@@ -19,12 +20,21 @@ namespace Raven.Database.Config.Retriever
 	}
 
 	public interface IConfigurationRetriever<TClass> : IConfigurationRetriever
+		where TClass : class
 	{
 		new ConfigurationDocument<TClass> GetConfigurationDocument(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
 	}
 
 	public abstract class ConfigurationRetrieverBase<TClass> : IConfigurationRetriever<TClass>
+		where TClass : class
 	{
+		private readonly bool shouldDeserialize;
+
+		protected ConfigurationRetrieverBase()
+		{
+			shouldDeserialize = typeof(TClass) != typeof(JsonDocument);
+		}
+
 		protected abstract TClass ApplyGlobalDocumentToLocal(TClass global, TClass local, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
 
 		protected abstract TClass ConvertGlobalDocumentToLocal(TClass global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
@@ -59,11 +69,11 @@ namespace Raven.Database.Config.Retriever
 
 			if (local == null)
 			{
-				configurationDocument.MergedDocument = ConvertGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>(), systemDatabase, localDatabase);
+				configurationDocument.MergedDocument = ConvertGlobalDocumentToLocal(Deserialize(global), systemDatabase, localDatabase);
 				return configurationDocument;
 			}
 
-			configurationDocument.MergedDocument = ApplyGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>(), local.DataAsJson.JsonDeserialization<TClass>(), systemDatabase, localDatabase);
+			configurationDocument.MergedDocument = ApplyGlobalDocumentToLocal(Deserialize(global), Deserialize(local), systemDatabase, localDatabase);
 			return configurationDocument;
 		}
 
@@ -78,5 +88,13 @@ namespace Raven.Database.Config.Retriever
 		}
 
 		public abstract string GetGlobalConfigurationDocumentKey(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
+
+		private TClass Deserialize(JsonDocument document)
+		{
+			if (shouldDeserialize)
+				return document.DataAsJson.JsonDeserialization<TClass>();
+
+			return document as TClass;
+		}
 	}
 }

@@ -244,6 +244,8 @@ namespace Raven.Abstractions.Data
 			public const string PeriodicExportDocumentName = "Raven/Global/Backup/Periodic/Setup";
 
 			public const string SqlReplicationConnectionsDocumentName = "Raven/Global/SqlReplication/Connections";
+
+			public const string JavascriptFunctions = "Raven/Global/Javascript/Functions";
 	    }
 	}
 }
