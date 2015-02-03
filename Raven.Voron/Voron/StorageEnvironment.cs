@@ -286,7 +286,7 @@ namespace Voron
 			tx.AddTree(toName, fromTree);
 
 			if (IsDebugRecording)
-				DebugJournal.RecordWriteAction(DebugActionType.RenameTree, tx, fromName, toName, Stream.Null);
+				DebugJournal.RecordWriteAction(DebugActionType.RenameTree, tx, toName, fromName, Stream.Null);
 	    }
 
         public unsafe Tree CreateTree(Transaction tx, string name, bool keysPrefixing = false)

@@ -118,6 +118,26 @@ namespace Voron.Tests
 
 					env.Writer.Write(writeBatch);
 				}
+
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					env.CreateTree(tx, "rename-me");
+					tx.Commit();
+				}
+
+				using (var writeBatch = new WriteBatch())
+				{
+					writeBatch.Add("item", "renaming tree test", "rename-me");
+
+					env.Writer.Write(writeBatch);
+				}
+
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					env.RenameTree(tx, "rename-me", "renamed");
+
+					tx.Commit();
+				}
 			}
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
@@ -152,7 +172,8 @@ namespace Voron.Tests
 
 					Assert.Equal(13, structReader.ReadInt(SampleStruct.Foo));
 					Assert.Equal("debug journal testing", structReader.ReadString(SampleStruct.Bar));
-					
+
+					Assert.Equal("renaming tree test", snapshot.Read("renamed", "item").Reader.ToStringValue());
 				}
 			}			
 

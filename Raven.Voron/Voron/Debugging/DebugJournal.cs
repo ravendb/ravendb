@@ -609,8 +609,11 @@ namespace Voron.Debugging
 				case DebugActionType.AddStruct:
 					tx.ReadTree(activityEntry.TreeName).Add(activityEntry.Key, activityEntry.ValueStream);
 					break;
+				case DebugActionType.RenameTree:
+					_env.RenameTree(tx, activityEntry.TreeName, activityEntry.Key.ToString());
+					break;
                 default: //precaution against newly added action types
-                    throw new InvalidOperationException("unsupported tree action type");
+					throw new InvalidOperationException("unsupported tree action type: " + activityEntry.ActionType);
             }
         }
 
