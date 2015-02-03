@@ -23,6 +23,10 @@ namespace Voron.Tests
 		[Fact]
 		public void Record_debug_journal_and_replay_it()
 		{
+			var structSchema = new StructureSchema<SampleStruct>()
+					.Add<int>(SampleStruct.Foo)
+					.Add<string>(SampleStruct.Bar);
+
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
 				env.DebugJournal = new DebugJournal(debugJouralName, env, true);
@@ -98,6 +102,22 @@ namespace Voron.Tests
 					writeBatch.Add("foo-bar", valueBuffer, "test-tree2");
 					env.Writer.Write(writeBatch);
 				}
+
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					env.CreateTree(tx, "structures-tree");
+					tx.Commit();
+				}
+
+				using (var writeBatch = new WriteBatch())
+				{
+					writeBatch.AddStruct("structs/1", new Structure<SampleStruct>(structSchema)
+						.Set(SampleStruct.Foo, 13)
+						.Set(SampleStruct.Bar, "debug journal testing"),
+						"structures-tree");
+
+					env.Writer.Write(writeBatch);
+				}
 			}
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
@@ -127,12 +147,24 @@ namespace Voron.Tests
 						Assert.DoesNotThrow(() => iter.MoveNext());
 						Assert.Equal("CC",iter.CurrentKey.ToString());
 					}
+
+					var structReader = snapshot.ReadStruct("structures-tree", "structs/1", structSchema).Reader;
+
+					Assert.Equal(13, structReader.ReadInt(SampleStruct.Foo));
+					Assert.Equal("debug journal testing", structReader.ReadString(SampleStruct.Bar));
+					
 				}
 			}			
 
 		}
 
-        [Fact]
+		public enum SampleStruct
+		{
+			Foo,
+			Bar
+		}
+
+		[Fact]
         public void Record_debug_journal_and_replay_it_size_only()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
