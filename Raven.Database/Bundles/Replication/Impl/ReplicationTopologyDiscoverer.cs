@@ -63,7 +63,7 @@ namespace Raven.Database.Bundles.Replication.Impl
             }
 
 			if (configurationDocument != null)
-				root.Destinations = HandleDestinations(configurationDocument.Document);
+				root.Destinations = HandleDestinations(configurationDocument.MergedDocument);
 
 			root.Sources = HandleSources(sources, root);
 

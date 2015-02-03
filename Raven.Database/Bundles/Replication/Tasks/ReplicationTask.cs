@@ -1352,7 +1352,7 @@ namespace Raven.Bundles.Replication.Tasks
 				return new ReplicationStrategy[0];
 			}
 
-			var replicationDocument = configurationDocument.Document;
+			var replicationDocument = configurationDocument.MergedDocument;
 
 			if (configurationDocument.LocalExists && string.IsNullOrWhiteSpace(replicationDocument.Source))
 			{

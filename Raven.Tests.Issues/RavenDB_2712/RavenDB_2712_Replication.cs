@@ -61,14 +61,14 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
 				Assert.False(document.LocalExists);
-				Assert.Equal(Constants.RavenReplicationDestinations, document.Document.Id);
-				Assert.Equal(database.TransactionalStorage.Id.ToString(), document.Document.Source);
-				Assert.Equal(1, document.Document.Destinations.Count);
+                Assert.Equal(Constants.RavenReplicationDestinations, document.MergedDocument.Id);
+                Assert.Equal(database.TransactionalStorage.Id.ToString(), document.MergedDocument.Source);
+                Assert.Equal(1, document.MergedDocument.Destinations.Count);
 
-				var destination = document.Document.Destinations[0];
+                var destination = document.MergedDocument.Destinations[0];
 
-				Assert.True(destination.IsGlobal);
-				Assert.False(destination.IsLocal);
+				Assert.True(destination.HasGlobal);
+				Assert.False(destination.HasLocal);
 				Assert.Equal("key1", destination.ApiKey);
 				Assert.Equal("Northwind", destination.Database);
 				Assert.Equal("curl1", destination.ClientVisibleUrl);
@@ -152,14 +152,14 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
 				Assert.True(document.LocalExists);
-				Assert.Equal(Constants.RavenReplicationDestinations, document.Document.Id);
-				Assert.Equal(database.TransactionalStorage.Id.ToString(), document.Document.Source);
-				Assert.Equal(1, document.Document.Destinations.Count);
+                Assert.Equal(Constants.RavenReplicationDestinations, document.MergedDocument.Id);
+                Assert.Equal(database.TransactionalStorage.Id.ToString(), document.MergedDocument.Source);
+                Assert.Equal(1, document.MergedDocument.Destinations.Count);
 
-				var destination = document.Document.Destinations[0];
+                var destination = document.MergedDocument.Destinations[0];
 
-				Assert.False(destination.IsGlobal);
-				Assert.True(destination.IsLocal);
+				Assert.True(destination.HasGlobal);
+				Assert.True(destination.HasLocal);
 				Assert.Equal("key2", destination.ApiKey);
 				Assert.Equal("Northwind", destination.Database);
 				Assert.Equal("curl2", destination.ClientVisibleUrl);
@@ -243,14 +243,14 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
 				Assert.True(document.LocalExists);
-				Assert.Equal(Constants.RavenReplicationDestinations, document.Document.Id);
-				Assert.Equal(database.TransactionalStorage.Id.ToString(), document.Document.Source);
-				Assert.Equal(2, document.Document.Destinations.Count);
+                Assert.Equal(Constants.RavenReplicationDestinations, document.MergedDocument.Id);
+                Assert.Equal(database.TransactionalStorage.Id.ToString(), document.MergedDocument.Source);
+                Assert.Equal(2, document.MergedDocument.Destinations.Count);
 
-				var destination = document.Document.Destinations[0];
+                var destination = document.MergedDocument.Destinations[0];
 
-				Assert.False(destination.IsGlobal);
-				Assert.True(destination.IsLocal);
+				Assert.False(destination.HasGlobal);
+				Assert.True(destination.HasLocal);
 				Assert.Equal("key2", destination.ApiKey);
 				Assert.Equal("db2", destination.Database);
 				Assert.Equal("curl2", destination.ClientVisibleUrl);
@@ -263,10 +263,10 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.Equal("http://localhost:8080", destination.Url);
 				Assert.Equal("u2", destination.Username);
 
-				destination = document.Document.Destinations[1];
+                destination = document.MergedDocument.Destinations[1];
 
-				Assert.True(destination.IsGlobal);
-				Assert.False(destination.IsLocal);
+				Assert.True(destination.HasGlobal);
+				Assert.False(destination.HasLocal);
 				Assert.Equal("key1", destination.ApiKey);
 				Assert.Equal("Northwind", destination.Database);
 				Assert.Equal("curl1", destination.ClientVisibleUrl);

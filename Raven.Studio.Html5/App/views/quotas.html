@@ -8,8 +8,11 @@
                 <div class="form-group">
                     <div class="col-md-4 control-label">Maximum size:</div>
                     <div class="col-md-8">
-                        <div class="input-group">
-                            <input required type="number" class="form-control" data-bind="numericValue: maximumSize,valueUpdate: 'afterkeydown'" />
+                        <div class="input-group" data-bind="with: maximumSize">
+                            <span class="input-group-addon" data-bind="if: globalExists">
+                                <input data-bind="checked: localExists, click: $root.override.bind($root)" type="checkbox" aria-label="Use global" title="Override global">
+                            </span>
+                            <input required type="number" class="form-control" data-bind="numericValue: effectiveValue, enable: canEdit, valueUpdate: 'afterkeydown'" />
                             <span class="input-group-addon">MB</span>
                         </div>
                     </div>
@@ -18,8 +21,11 @@
                 <div class="form-group">
                     <div class="col-md-4 control-label">Warning limit threshold:</div>
                     <div class="col-md-8">
-                        <div class="input-group">
-                            <input required type="number" class="form-control" data-bind="numericValue: warningLimitThreshold, valueUpdate: 'afterkeydown'" />
+                        <div class="input-group" data-bind="with: warningLimitThreshold">
+                            <span class="input-group-addon" data-bind="if: globalExists">
+                               <input data-bind="checked: localExists, click: $root.override.bind($root)" type="checkbox" aria-label="Use global" title="Override global">
+                            </span>
+                            <input required type="number" class="form-control" data-bind="numericValue: effectiveValue, enable: canEdit, valueUpdate: 'afterkeydown'" />
                             <span class="input-group-addon">MB</span>
                         </div>
                     </div>
@@ -28,8 +34,11 @@
                 <div class="form-group">
                     <div class="col-md-4 control-label">Maximum number of docs:</div>
                     <div class="col-md-8">
-                        <div class="input-group">
-                            <input required type="number" class="form-control" data-bind="numericValue: maxNumberOfDocs,valueUpdate: 'afterkeydown'" />
+                        <div class="input-group" data-bind="with: maxNumberOfDocs">
+                            <span class="input-group-addon" data-bind="if: globalExists">
+                               <input data-bind="checked: localExists, click: $root.override.bind($root)" type="checkbox" aria-label="Use global" title="Override global">
+                            </span>
+                            <input required type="number" class="form-control" data-bind="numericValue: effectiveValue, enable: canEdit, valueUpdate: 'afterkeydown'" />
                             <span class="input-group-addon">docs</span>
                         </div>
                     </div>
@@ -38,8 +47,11 @@
                 <div class="form-group">
                     <div class="col-md-4 control-label">Warning threshold for docs:</div>
                     <div class="col-md-8">
-                        <div class="input-group">
-                            <input required type="number" class="form-control" data-bind="numericValue: warningThresholdForDocs,valueUpdate: 'afterkeydown'" />
+                        <div class="input-group" data-bind="with: warningThresholdForDocs">
+                            <span class="input-group-addon" data-bind="if: globalExists">
+                               <input data-bind="checked: localExists, click: $root.override.bind($root)" type="checkbox" aria-label="Use global" title="Override global">
+                            </span>
+                            <input required type="number" class="form-control" data-bind="numericValue: effectiveValue, enable: canEdit, valueUpdate: 'afterkeydown'" />
                             <span class="input-group-addon">docs</span>
                         </div>
                     </div>

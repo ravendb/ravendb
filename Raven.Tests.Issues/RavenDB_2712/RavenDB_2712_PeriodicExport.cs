@@ -53,14 +53,14 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
 				Assert.False(document.LocalExists);
-				Assert.Equal("e1", document.Document.AwsRegionEndpoint);
-				Assert.Equal("c1", document.Document.AzureStorageContainer);
-				Assert.True(document.Document.Disabled);
-				Assert.Equal(17, document.Document.FullBackupIntervalMilliseconds);
-				Assert.Equal("g1", document.Document.GlacierVaultName);
-				Assert.Equal(12, document.Document.IntervalMilliseconds);
-				Assert.Equal("f1\\Northwind", document.Document.LocalFolderName);
-				Assert.Equal("s1", document.Document.S3BucketName);
+				Assert.Equal("e1", document.MergedDocument.AwsRegionEndpoint);
+                Assert.Equal("c1", document.MergedDocument.AzureStorageContainer);
+                Assert.True(document.MergedDocument.Disabled);
+                Assert.Equal(17, document.MergedDocument.FullBackupIntervalMilliseconds);
+                Assert.Equal("g1", document.MergedDocument.GlacierVaultName);
+                Assert.Equal(12, document.MergedDocument.IntervalMilliseconds);
+                Assert.Equal("f1\\Northwind", document.MergedDocument.LocalFolderName);
+                Assert.Equal("s1", document.MergedDocument.S3BucketName);
 			}
 		}
 
@@ -121,14 +121,14 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
 				Assert.True(document.LocalExists);
-				Assert.Equal("e2", document.Document.AwsRegionEndpoint);
-				Assert.Equal("c2", document.Document.AzureStorageContainer);
-				Assert.False(document.Document.Disabled);
-				Assert.Equal(2, document.Document.FullBackupIntervalMilliseconds);
-				Assert.Equal("g2", document.Document.GlacierVaultName);
-				Assert.Equal(16, document.Document.IntervalMilliseconds);
-				Assert.Equal("f2", document.Document.LocalFolderName);
-				Assert.Equal("s2", document.Document.S3BucketName);
+                Assert.Equal("e2", document.MergedDocument.AwsRegionEndpoint);
+                Assert.Equal("c2", document.MergedDocument.AzureStorageContainer);
+                Assert.False(document.MergedDocument.Disabled);
+                Assert.Equal(2, document.MergedDocument.FullBackupIntervalMilliseconds);
+                Assert.Equal("g2", document.MergedDocument.GlacierVaultName);
+                Assert.Equal(16, document.MergedDocument.IntervalMilliseconds);
+                Assert.Equal("f2", document.MergedDocument.LocalFolderName);
+                Assert.Equal("s2", document.MergedDocument.S3BucketName);
 			}
 		}
 	}

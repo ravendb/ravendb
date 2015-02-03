@@ -129,8 +129,8 @@ namespace Raven.Database.Server.Controllers
 				return null;
 			}
 
-			if (configurationDocument.Document.Destinations.Count != 0) 
-				return configurationDocument.Document;
+			if (configurationDocument.MergedDocument.Destinations.Count != 0) 
+				return configurationDocument.MergedDocument;
 
 			erroResponseMessage = GetMessageWithObject(new
 			{

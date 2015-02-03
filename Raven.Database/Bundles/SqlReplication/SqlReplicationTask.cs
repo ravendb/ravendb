@@ -645,7 +645,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 				var sqlReplicationConnections = Database.ConfigurationRetriever.GetConfigurationDocument<SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>>(Constants.SqlReplication.SqlReplicationConnectionsDocumentName);
 
-				if (PrepareSqlReplicationConfig(sqlReplication, sqlReplication.Name, stats, sqlReplicationConnections.Document, false, false))
+				if (PrepareSqlReplicationConfig(sqlReplication, sqlReplication.Name, stats, sqlReplicationConnections.MergedDocument, false, false))
 				{
 					if (performRolledbackTransaction)
 					{
@@ -702,7 +702,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				const string prefix = "Raven/SqlReplication/Configuration/";
 
 				var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>>(Constants.SqlReplication.SqlReplicationConnectionsDocumentName);
-				var sqlReplicationConnections = configurationDocument != null ? configurationDocument.Document : new SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>(); // backward compatibility
+				var sqlReplicationConnections = configurationDocument != null ? configurationDocument.MergedDocument : new SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>(); // backward compatibility
 
 				foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(prefix, 0, int.MaxValue, null))
 				{

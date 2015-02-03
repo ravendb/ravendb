@@ -10,6 +10,7 @@ using System.Diagnostics;
 
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Database.Config.Retriever
 {
@@ -51,7 +52,7 @@ namespace Raven.Database.Config.Retriever
 			replicationConfigurationRetriever = new ReplicationConfigurationRetriever();
 			versioningConfigurationRetriever = new VersioningConfigurationRetriever();
 			periodicExportConfigurationRetriever = new PeriodicExportConfigurationRetriever();
-			configurationSettingRetriever = new ConfigurationSettingRetriever();
+			configurationSettingRetriever = new ConfigurationSettingRetriever(systemDatabase);
 			sqlReplicationConfigurationRetriever = new SqlReplicationConfigurationRetriever();
 		}
 
@@ -70,7 +71,22 @@ namespace Raven.Database.Config.Retriever
 			return RavenJObject.FromObject(result);
 		}
 
-		public string GetConfigurationSetting(string key)
+        public ConfigurationSettings GetConfigurationSettings(string[] keys)
+        {
+            var items = keys.ToDictionary(x => x, GetConfigurationSetting);
+            return new ConfigurationSettings
+            {
+                Results = items
+            };
+        }
+
+        public string GetEffectiveConfigurationSetting(string key)
+        {
+            var conf = GetConfigurationSetting(key);
+            return (conf != null) ? conf.EffectiveValue : null;
+        }
+
+		public ConfigurationSetting GetConfigurationSetting(string key)
 		{
 			return GetConfigurationRetriever(key).GetConfigurationSetting(key, systemDatabase, database);
 		}

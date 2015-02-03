@@ -347,6 +347,10 @@
     <TypeScriptCompile Include="App\commands\explainReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCachedCollectionsCount.ts" />
+    <TypeScriptCompile Include="App\commands\getGlobalConfigReplicationsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getGlobalSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveGlobalSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getConfigurationSettingsCommand.ts" />
     <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
@@ -434,6 +438,12 @@
     <TypeScriptCompile Include="App\viewmodels\statusDebugExplainReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\cancelSideBySizeConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfig.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigPeriodicExport.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigReplications.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigQuotas.ts" />
+    <TypeScriptCompile Include="App\models\configurationSettings.ts" />
+    <TypeScriptCompile Include="App\models\configurationSetting.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\resetIndexConfirm.ts" />
@@ -447,6 +457,10 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
+    <Content Include="App\views\globalConfigQuotas.html" />
+    <Content Include="App\views\globalConfigReplications.html" />
+    <Content Include="App\views\globalConfigPeriodicExport.html" />
+    <Content Include="App\views\globalConfig.html" />
     <Content Include="App\views\statusDebugExplainReplication.html" />
     <Content Include="App\views\filesystem\resetIndexConfirm.html" />
     <Content Include="App\views\statusDebugPersistAutoIndex.html" />

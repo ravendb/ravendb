@@ -95,7 +95,6 @@ namespace Raven.Database
 			DocumentLock = new PutSerialLock();
 			Name = configuration.DatabaseName;
 			Configuration = configuration;
-			ConfigurationRetriever = new ConfigurationRetriever(systemDatabase ?? this, this);
 			transportState = recievedTransportState ?? new TransportState();
 			ExtensionsState = new AtomicDictionary<object>();
 
@@ -161,6 +160,8 @@ namespace Raven.Database
 					Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
 					Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
 					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
+
+                    ConfigurationRetriever = new ConfigurationRetriever(systemDatabase ?? this, this);
 
 					inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, Documents.Put, Documents.Delete);
 

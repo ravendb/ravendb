@@ -87,7 +87,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 					var status = Database.Documents.Get(PeriodicExportStatus.RavenDocumentKey, null);
 
 					exportStatus = status == null ? new PeriodicExportStatus() : status.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
-					exportConfigs = configurationDocument.Document;
+					exportConfigs = configurationDocument.MergedDocument;
 
 					awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
 					awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];

@@ -51,11 +51,11 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
 				Assert.False(document.LocalExists);
-				Assert.True(document.Document.Exclude);
-				Assert.True(document.Document.ExcludeUnlessExplicit);
-				Assert.Equal(Constants.Versioning.RavenVersioningDefaultConfiguration, document.Document.Id);
-				Assert.Equal(17, document.Document.MaxRevisions);
-				Assert.True(document.Document.PurgeOnDelete);
+                Assert.True(document.MergedDocument.Exclude);
+                Assert.True(document.MergedDocument.ExcludeUnlessExplicit);
+                Assert.Equal(Constants.Versioning.RavenVersioningDefaultConfiguration, document.MergedDocument.Id);
+                Assert.Equal(17, document.MergedDocument.MaxRevisions);
+                Assert.True(document.MergedDocument.PurgeOnDelete);
 			}
 		}
 
@@ -110,11 +110,11 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
 				Assert.True(document.LocalExists);
-				Assert.False(document.Document.Exclude);
-				Assert.False(document.Document.ExcludeUnlessExplicit);
-				Assert.Equal(Constants.Versioning.RavenVersioningDefaultConfiguration, document.Document.Id);
-				Assert.Equal(5, document.Document.MaxRevisions);
-				Assert.False(document.Document.PurgeOnDelete);
+                Assert.False(document.MergedDocument.Exclude);
+                Assert.False(document.MergedDocument.ExcludeUnlessExplicit);
+                Assert.Equal(Constants.Versioning.RavenVersioningDefaultConfiguration, document.MergedDocument.Id);
+                Assert.Equal(5, document.MergedDocument.MaxRevisions);
+                Assert.False(document.MergedDocument.PurgeOnDelete);
 			}
 		}
 
@@ -169,11 +169,11 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
 				Assert.False(document.LocalExists);
-				Assert.True(document.Document.Exclude);
-				Assert.True(document.Document.ExcludeUnlessExplicit);
-				Assert.Equal(Constants.Versioning.RavenVersioningDefaultConfiguration, document.Document.Id);
-				Assert.Equal(17, document.Document.MaxRevisions);
-				Assert.True(document.Document.PurgeOnDelete);
+                Assert.True(document.MergedDocument.Exclude);
+                Assert.True(document.MergedDocument.ExcludeUnlessExplicit);
+                Assert.Equal(Constants.Versioning.RavenVersioningDefaultConfiguration, document.MergedDocument.Id);
+                Assert.Equal(17, document.MergedDocument.MaxRevisions);
+                Assert.True(document.MergedDocument.PurgeOnDelete);
 			}
 		}
 
@@ -228,11 +228,11 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
 				Assert.True(document.LocalExists);
-				Assert.False(document.Document.Exclude);
-				Assert.False(document.Document.ExcludeUnlessExplicit);
-				Assert.Equal(Constants.Versioning.RavenVersioningDefaultConfiguration, document.Document.Id);
-				Assert.Equal(5, document.Document.MaxRevisions);
-				Assert.False(document.Document.PurgeOnDelete);
+                Assert.False(document.MergedDocument.Exclude);
+                Assert.False(document.MergedDocument.ExcludeUnlessExplicit);
+                Assert.Equal(Constants.Versioning.RavenVersioningDefaultConfiguration, document.MergedDocument.Id);
+                Assert.Equal(5, document.MergedDocument.MaxRevisions);
+                Assert.False(document.MergedDocument.PurgeOnDelete);
 			}
 		}
 	}

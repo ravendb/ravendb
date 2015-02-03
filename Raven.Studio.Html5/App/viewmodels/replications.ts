@@ -19,7 +19,7 @@ class replications extends viewModelBase {
 
     prefixForHilo = ko.observable<string>('');
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None", AttachmentConflictResolution: "None" }));
-    replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ Destinations: [], Source: null }));
+    replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ MergedDocument: { Destinations: [], Source: null }}));
 
     serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([]);
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);
@@ -89,7 +89,7 @@ class replications extends viewModelBase {
         var deferred = $.Deferred();
         new getReplicationsCommand(db)
             .execute()
-            .done(repSetup => this.replicationsSetup(new replicationsSetup(repSetup)))
+            .done((repSetup: configurationDocumentDto<replicationsDto>) => this.replicationsSetup(new replicationsSetup(repSetup)))
             .always(() => deferred.resolve({ can: true }));
         return deferred;
     }
@@ -172,6 +172,13 @@ class replications extends viewModelBase {
             new saveAutomaticConflictResolutionDocument(this.replicationConfig().toDto(), db)
                 .execute()
                 .done(() => this.replicationConfigDirtyFlag().reset() );
+        }
+    }
+
+    override(value: boolean, destination: replicationDestination) {
+        destination.hasLocal(value);
+        if (!destination.hasLocal()) {
+            destination.copyFromGlobal();
         }
     }
 }

@@ -11,7 +11,7 @@ namespace Raven.Database.Config.Retriever
 {
 	public interface IConfigurationRetriever
 	{
-		string GetConfigurationSetting(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
+		ConfigurationSetting GetConfigurationSetting(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
 
 		string GetGlobalConfigurationDocumentKey(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase);
 
@@ -51,17 +51,19 @@ namespace Raven.Database.Config.Retriever
 
 			if (global == null)
 			{
-				configurationDocument.Document = local.DataAsJson.JsonDeserialization<TClass>();
+				configurationDocument.MergedDocument = local.DataAsJson.JsonDeserialization<TClass>();
 				return configurationDocument;
 			}
+
+            configurationDocument.GlobalDocument = ConvertGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>(), systemDatabase, localDatabase);
 
 			if (local == null)
 			{
-				configurationDocument.Document = ConvertGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>(), systemDatabase, localDatabase);
+				configurationDocument.MergedDocument = ConvertGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>(), systemDatabase, localDatabase);
 				return configurationDocument;
 			}
 
-			configurationDocument.Document = ApplyGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>(), local.DataAsJson.JsonDeserialization<TClass>(), systemDatabase, localDatabase);
+			configurationDocument.MergedDocument = ApplyGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>(), local.DataAsJson.JsonDeserialization<TClass>(), systemDatabase, localDatabase);
 			return configurationDocument;
 		}
 
@@ -70,7 +72,7 @@ namespace Raven.Database.Config.Retriever
 			return GetConfigurationDocument(key, systemDatabase, localDatabase);
 		}
 
-		public virtual string GetConfigurationSetting(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
+		public virtual ConfigurationSetting GetConfigurationSetting(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
 			throw new NotSupportedException(GetType().Name + " does not support configuration settings.");
 		}

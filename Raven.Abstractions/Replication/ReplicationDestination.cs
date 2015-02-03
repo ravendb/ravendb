@@ -141,9 +141,9 @@ namespace Raven.Abstractions.Replication
 
 		public class ReplicationDestinationWithConfigurationOrigin : ReplicationDestination
 		{
-			public bool IsGlobal { get; set; }
+		    public bool HasGlobal { get; set; }
 
-			public bool IsLocal { get; set; }
+		    public bool HasLocal { get; set; }
 		}
 	}
 

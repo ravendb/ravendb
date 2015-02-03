@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
-
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 
@@ -19,20 +19,21 @@ namespace Raven.Database.Config.Retriever
 
 			foreach (var localDestination in local.Destinations)
 			{
-				localDestination.IsLocal = true;
-				localDestination.IsGlobal = false;
+				localDestination.HasLocal = true;
 			}
 
 			foreach (var globalDestination in global.Destinations)
 			{
-				globalDestination.IsLocal = false;
-				globalDestination.IsGlobal = true;
+				globalDestination.HasGlobal = true;
 
-				var localDestinationExists = local.Destinations.Any(x => string.Equals(x.Url, globalDestination.Url, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Database, localDatabase.Name, StringComparison.OrdinalIgnoreCase));
-				if (localDestinationExists)
-					continue;
+				var localDestination = local.Destinations.FirstOrDefault(x => string.Equals(x.Url, globalDestination.Url, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Database, localDatabase.Name, StringComparison.OrdinalIgnoreCase));
+			    if (localDestination != null)
+			    {
+			        localDestination.HasGlobal = true;
+			        continue;
+			    }
 
-				globalDestination.Database = localDatabase.Name;
+			    globalDestination.Database = localDatabase.Name;
 				local.Destinations.Add(globalDestination);
 			}
 
@@ -41,13 +42,14 @@ namespace Raven.Database.Config.Retriever
 
 		protected override ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> ConvertGlobalDocumentToLocal(ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin> global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
+
 			global.Id = Constants.RavenReplicationDestinations;
 			global.Source = localDatabase.TransactionalStorage.Id.ToString();
 
 			foreach (var destination in global.Destinations)
 			{
-				destination.IsGlobal = true;
-				destination.IsLocal = false;
+				destination.HasGlobal = true;
+				destination.HasLocal = false;
 				destination.Database = localDatabase.Name;
 			}
 

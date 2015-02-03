@@ -9,7 +9,9 @@ namespace Raven.Database.Config.Retriever
 
 		public bool GlobalExists { get; set; }
 
-		public TClass Document { get; set; }
+		public TClass MergedDocument { get; set; }
+
+        public TClass GlobalDocument { get; set; }
 
 		public Etag Etag { get; set; }
 

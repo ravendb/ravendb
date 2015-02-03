@@ -78,7 +78,7 @@ interface computedAppUrls {
     filesystemSynchronizationDestinations: KnockoutComputed<string>;
     filesystemConfiguration: KnockoutComputed<string>;
 
-    couterStorages:KnockoutComputed<string>;
+    couterStorages: KnockoutComputed<string>;
     counterStorageCounters: KnockoutComputed<string>;
     counterStorageReplication: KnockoutComputed<string>;
     counterStorageStats: KnockoutComputed<string>;

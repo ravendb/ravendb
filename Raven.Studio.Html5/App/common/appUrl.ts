@@ -160,6 +160,22 @@ class appUrl {
         return "#admin/settings/windowsAuth";
     }
 
+    static forGlobalConfig(): string {
+        return '#admin/settings/globalConfig';
+    }
+
+    static forGlobalConfigPeriodicExport(): string {
+        return '#admin/settings/globalConfig';
+    }
+
+    static forGlobalConfigReplication(): string {
+        return '#admin/settings/globalConfigReplication';
+    }
+
+    static forGlobalConfigQuotas(): string {
+        return '#admin/settings/globalConfigQuotas';
+    }
+
     static forBackup(): string {
         return "#admin/settings/backup";
     }

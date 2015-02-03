@@ -313,7 +313,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			var configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
 			if (configurationDocument != null)
 			{
-				var replicationDocument = configurationDocument.Document;
+				var replicationDocument = configurationDocument.MergedDocument;
 				foreach (var destination in replicationDocument.Destinations)
 				{
 					destination.Disabled = true;

@@ -30,8 +30,8 @@ namespace Raven.Bundles.Quotas.Documents
 		public DocQuotaConfiguration(DocumentDatabase database)
 		{
 			this.database = database;
-			var hardLimitQuotaAsString = database.ConfigurationRetriever.GetConfigurationSetting(Constants.DocsHardLimit);
-			var softLimitQuotaAsString = database.ConfigurationRetriever.GetConfigurationSetting(Constants.DocsSoftLimit);
+			var hardLimitQuotaAsString = database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.DocsHardLimit);
+            var softLimitQuotaAsString = database.ConfigurationRetriever.GetEffectiveConfigurationSetting(Constants.DocsSoftLimit);
 
 			if (long.TryParse(hardLimitQuotaAsString, out hardLimit) == false)
 			{
