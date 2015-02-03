@@ -22,7 +22,7 @@ namespace Raven.Tests.Issues
         {
             var dt = new DateTime(1982, 11, 28);
             var dates = new List<object>() {7,dt,"Shalom",17.3};
-            using (var store = NewRemoteDocumentStore(runInMemory:false,fiddler:true,databaseName:"mashu"))
+            using (var store = NewDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
