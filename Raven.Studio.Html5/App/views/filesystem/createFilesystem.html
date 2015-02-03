@@ -43,4 +43,7 @@
         <button type="button" class="btn btn-default" data-bind="click: toggleEncryptionBundle, css: { 'license-inactive': !isBundleActive('encryption') }">
             <i data-bind="css: { 'fa-check': isEncryptionBundleEnabled }" class="fa fa-fw"></i> Encryption
         </button>
+         <button type="button" class="btn btn-default" data-bind="click: toggleVersioningBundle, css: { 'license-inactive': !isBundleActive('versioning') }">
+            <i data-bind="css: { 'fa-check': isVersioningBundleEnabled }" class="fa fa-fw"></i> Versioning
+        </button>
     </div>

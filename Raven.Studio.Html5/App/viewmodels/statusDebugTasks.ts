@@ -9,7 +9,7 @@ class statusDebugTasks extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('JHZ574');
         this.activeDatabase.subscribe(() => this.fetchTasks());
         return this.fetchTasks();
     }

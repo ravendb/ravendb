@@ -21,7 +21,7 @@ namespace Voron.Impl.Journal
 				return _copiedPages;
 			}
 		}
-		public byte*[] CompressedPages { get; set; }
+		public IntPtr[] CompressedPages { get; set; }
 
 		public TransactionToShip(TransactionHeader header)
 		{
@@ -35,7 +35,7 @@ namespace Voron.Impl.Journal
 	        {
 				for (int i = 0; i < CompressedPages.Length; i++)
 	            {
-                    MemoryUtils.Copy(p + (i * AbstractPager.PageSize), CompressedPages[i], AbstractPager.PageSize);
+					MemoryUtils.Copy(p + (i * AbstractPager.PageSize), (byte*)CompressedPages[i].ToPointer(), AbstractPager.PageSize);
 	            }
 	        }
 	    }

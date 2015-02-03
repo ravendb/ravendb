@@ -2152,11 +2152,24 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     margin-bottom:10px
 }
 
-.help_link {
+.help_link, a.global_help_link  {
     color: #152894;
     &:hover {
+        color: darken(#152894, 10%);
+    }
+    &:focus {
         color: #152894;
     }
+}
+
+.global_help_link {
+    float: right;
+    margin-top: 5px;
+}
+
+.breadcrumb .global_help_link {
+    float: right;
+    margin-top: 10px;
 }
 
 .negative-margin {

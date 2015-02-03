@@ -27,6 +27,7 @@ class indexErrors extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink('ABUXGF');
         this.fetchIndexErrors();
     }
 

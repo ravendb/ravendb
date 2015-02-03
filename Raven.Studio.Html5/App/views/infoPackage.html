@@ -31,6 +31,7 @@ text.trace {
 <section id="infoPackageSection">
     
     <div class="btn-group" data-bind="visible: adminView()">
+        
         <button class="btn btn-default" title="Creates package with stacktrace (available ONLY for system database)" data-bind="click: createPackageWithStacks" >Create info package with stacktraces <span class="text-danger">(This is resource consuming)</span></button>
         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
             <span class="caret"></span>
@@ -78,7 +79,9 @@ text.trace {
     
     <div class="btn-group">
         <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon" style="width: 30px; height: 30px;"><span class="fa fa-spinner fa-spin fa-2x"></span></div>
+        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
     </div>
+
     
     <div class="alert alert-danger" style="margin-top: 10px" role="alert" data-bind="text: fetchException, visible: hasFetchException">
     </div>

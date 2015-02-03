@@ -53,6 +53,7 @@ class trafficWatch extends viewModelBase {
             ko.observable<number>(100 * widthUnit)
         ];
         this.registerColumnResizing();    
+        this.updateHelpLink('EVEP6I');
     }
 
     attached() {

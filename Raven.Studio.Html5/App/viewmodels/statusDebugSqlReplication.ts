@@ -38,7 +38,7 @@ class statusDebugSqlReplication extends viewModelBase {
             ko.observable<number>(6)
         ];
         super.activate(args);
-
+        this.updateHelpLink('JHZ574');
         this.activeDatabase.subscribe(() => this.fetchSqlReplicationStats());
         this.registerColumnResizing();
         return this.fetchSqlReplicationStats();

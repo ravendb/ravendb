@@ -34,7 +34,7 @@ class statusDebugConfig extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('JHZ574');
         this.activeDatabase.subscribe(() => this.fetchStatusDebugConfig());
         return this.fetchStatusDebugConfig();
     }
