@@ -1149,6 +1149,9 @@ namespace Raven.Database.Config
 
             if (string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
                 Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "Databases", tenantId);
+
+            if (string.IsNullOrEmpty(Settings["Raven/Voron/TempPath"]) == false)
+                Settings["Raven/Voron/TempPath"] = Path.Combine(Settings["Raven/Voron/TempPath"], "Databases", tenantId, "VoronTemp");
         }
 
         public void CustomizeValuesForFileSystemTenant(string tenantId)

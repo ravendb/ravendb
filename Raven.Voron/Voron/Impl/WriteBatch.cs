@@ -412,6 +412,9 @@ namespace Voron.Impl
 				if (ValueSlice != null)
 					return ValueSlice;
 
+				if (ValueStruct != null)
+					return ValueStruct;
+
 				return null;
 			}
 		}

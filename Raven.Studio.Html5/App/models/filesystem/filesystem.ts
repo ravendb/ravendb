@@ -2,7 +2,6 @@
 import license = require("models/license");
 
 class filesystem extends resource {
-    //isDefault = false;
     activeBundles = ko.observableArray<string>();
     statistics = ko.observable<filesystemStatisticsDto>();    
     files = ko.observableArray<filesystemFileHeaderDto>();
