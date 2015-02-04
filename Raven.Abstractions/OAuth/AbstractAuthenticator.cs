@@ -27,7 +27,7 @@ namespace Raven.Abstractions.OAuth
 			}
 
 			if (e.Request != null)
-				SetHeader(e.Request.Headers, "Authorization", CurrentOauthToken);
+				SetHeader(e.Request.Headers, "Authorization", CurrentOauthTokenWithBearer);
 		}
 
 		protected void SetAuthorization(HttpClient e)
