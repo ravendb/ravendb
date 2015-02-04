@@ -165,15 +165,7 @@ enum conflictStatus {
 interface fileChangeNotification {
     FileSystemName: string;
     File: string;
-    Action: fileChangeAction;
-}
-
-enum fileChangeAction {
-    Add,
-    Delete,
-    Update,
-    Renaming,
-    Renamed
+    Action: string;
 }
 
 interface filesystemConfigNotification {

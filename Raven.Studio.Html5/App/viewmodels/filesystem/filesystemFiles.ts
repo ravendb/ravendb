@@ -109,7 +109,7 @@ class filesystemFiles extends viewModelBase {
                         return;
                     switch (e.Action) {
 
-                        case fileChangeAction.Add: {
+                        case "Add": {
                             var eventFolder = folder.getFolderFromFilePath(e.File);
 
                             if (!eventFolder || !treeBindingHandler.isNodeExpanded(filesystemFiles.treeSelector, callbackFolder.path)) {
@@ -136,7 +136,7 @@ class filesystemFiles extends viewModelBase {
 
                             break;
                         }
-                        case fileChangeAction.Delete: {
+                        case "Delete": {
                             var eventFolder = folder.getFolderFromFilePath(e.File);
 
                             //check if the file is new at the folder level to remove it from the table
@@ -149,17 +149,17 @@ class filesystemFiles extends viewModelBase {
                             }
                             break;
                         }
-                        case fileChangeAction.Renaming: {
+                        case "Renaming": {
                             //nothing to do here
                         }
-                        case fileChangeAction.Renamed: {
+                        case "Renamed": {
                             //reload files to load the new names
                             if (callbackFolder.isFileAtFolderLevel(e.File)) {
                                 this.loadFiles();
                             }
                             break;
                         }
-                        case fileChangeAction.Update: {
+                        case "Update": {
                             //check if the file is new at the folder level to add it
                             if (callbackFolder.isFileAtFolderLevel(e.File)) {
                                 this.loadFiles();
