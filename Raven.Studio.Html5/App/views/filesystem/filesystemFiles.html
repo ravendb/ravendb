@@ -20,7 +20,6 @@
     <div class="row">
         <div class="col-md-2">
             <div class="btn-toolbar" role="toolbar">
-
                 <div class="btn-group">
                     <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: createFolder, enable: inRevisionsFolder() == false" title="Create folder">
                         <span>New Folder</span>
@@ -33,14 +32,13 @@
                         <input id="upload" name="upload" type="file" multiple="multiple" data-bind="value: uploadFiles, fileUpload: { files: uploadFiles, directory: selectedFolder, uploads: uploadQueue, before: expandUploadQueuePanel, success: uploadSuccess.bind($data), fail: uploadFailed.bind($data) }" />
                     </span>
                 </div>
-
             </div>
             <span><br/></span>
-            <div id="filesTree" data-bind="tree: {selectedNode: selectedFolder, addedNode: addedFolder, currentLevelNodes: currentLevelSubdirectories}" />
+            <div id="filesTree" data-bind="tree: {selectedNode: selectedFolder, addedNode: addedFolder, currentLevelNodes: currentLevelSubdirectories}" ></div>
         </div>
         <div class="col-md-10">
             <div class="btn-toolbar" role="toolbar">
-                <div class="btn-group">
+                <div class="btn-group" data-bind="style: { visibility : hasFiles() ? 'visible' : 'hidden' }">
                     <button type="button" class="btn btn-link" style="margin-left: 10px;" data-bind="click: toggleSelectAll" title="Select all or none">
                         <img data-bind="attr: { src: isSelectAll() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
                     </button>

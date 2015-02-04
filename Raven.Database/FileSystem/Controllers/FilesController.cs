@@ -477,7 +477,7 @@ namespace Raven.Database.FileSystem.Controllers
 				throw;
 			}
 
-            return GetEmptyMessage(HttpStatusCode.Created);
+			return GetMessageWithString("", HttpStatusCode.Created);
 		}
 
 	    private void AssertPutOperationNotVetoed(string name, RavenJObject headers)
