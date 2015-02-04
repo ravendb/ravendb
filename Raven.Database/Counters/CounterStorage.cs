@@ -1,12 +1,10 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
@@ -20,7 +18,6 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Util;
 using Voron;
-using Voron.Debugging;
 using Voron.Impl;
 using Voron.Trees;
 using Voron.Util;
@@ -201,7 +198,7 @@ namespace Raven.Database.Counters
 		public Writer CreateWriter()
 		{
 			LastWrite = SystemTime.UtcNow;
-			return new Writer(this, storageEnvironment);
+			return new Writer(this, storageEnvironment.NewTransaction(TransactionFlags.ReadWrite));
 		}
 
 		private void Notify()
@@ -421,19 +418,16 @@ namespace Raven.Database.Counters
 		{
 			private readonly CounterStorage parent;
 			private readonly Transaction transaction;
-			private readonly WriteBatch writeBatch;
-			private readonly SnapshotReader snapshotReader;
-			private readonly Tree serversLastEtag, counters, etagsToCounters, countersToEtag, countersGroups, metadata;
+			private readonly Reader reader;
+			private readonly Tree counters, serversLastEtag, etagsToCounters, countersToEtag, countersGroups, metadata;
 			private readonly byte[] tempThrowawayBuffer;
 			private readonly byte[] etagBuffer = new byte[sizeof(long)];
-			private Reader reader;
-			public Writer(CounterStorage parent, StorageEnvironment storageEnvironment)
+			
+			public Writer(CounterStorage parent, Transaction transaction)
 			{
 				this.parent = parent;
-				transaction = storageEnvironment.NewTransaction(TransactionFlags.Read);
+				this.transaction = transaction;
 				reader = new Reader(transaction);
-				writeBatch = new WriteBatch();
-				snapshotReader = new SnapshotReader(transaction);
 				serversLastEtag = transaction.State.GetTree(transaction, "servers->lastEtag");
 				counters = transaction.State.GetTree(transaction, "counters");
 				countersGroups = transaction.State.GetTree(transaction, "countersGroups");
@@ -467,7 +461,7 @@ namespace Raven.Database.Counters
 				{
 					if (delta < 0)
 						delta = -delta;
-					writeBatch.Increment(counterKey, delta, counters.Name);
+					counters.Increment(counterKey, delta);
 				});
 			}
 
@@ -478,8 +472,7 @@ namespace Raven.Database.Counters
 				Store(serverId, fullCounterName, sign, counterKey =>
 				{
 					EndianBitConverter.Big.CopyBytes(counterValue.Value, tempThrowawayBuffer, 0);
-					var valueSlice = new Slice(tempThrowawayBuffer);
-					writeBatch.Add(counterKey, valueSlice, counters.Name, shouldIgnoreConcurrencyExceptions: true);
+					counters.Add(counterKey, tempThrowawayBuffer);
 				});
 			}
 
@@ -501,30 +494,29 @@ namespace Raven.Database.Counters
 					throw new InvalidOperationException("Could not find group name in counter, no separator");
 
 				var counterKey = sliceWriter.CreateSlice(requiredBufferSize);
-				var readResult = snapshotReader.Read(counters.Name, counterKey, writeBatch);
-				if (readResult == null && DoesCounterExist(counterName) == false) //it's a new counter
+				if (DoesCounterExist(counterKey) == false) //it's a new counter
 				{
 					Slice groupKey = counterName.Substring(0, endOfGroupNameIndex);
-					writeBatch.Add(groupKey, new MemoryStream(), countersGroups.Name);
+					countersGroups.Increment(groupKey, 1);
 				}
 
 				//save counter full name and its value into the counters tree
+				
 				storeAction(counterKey);
 
-				readResult = snapshotReader.Read(countersToEtag.Name, counterKey, writeBatch);
-
+				var readResult = countersToEtag.Read(counterKey);
 				if (readResult != null) // remove old etag entry
 				{
 					readResult.Reader.Read(etagBuffer, 0, sizeof(long));
 					var oldEtagSlice = new Slice(etagBuffer);
-					writeBatch.Delete(oldEtagSlice, etagsToCounters.Name);
+					etagsToCounters.Delete(oldEtagSlice);
 				}
 
-				var lastEtag = Interlocked.Increment(ref parent.lastEtag);
-				EndianBitConverter.Big.CopyBytes(lastEtag, etagBuffer, 0);
+				parent.lastEtag++;
+				EndianBitConverter.Big.CopyBytes(parent.lastEtag, etagBuffer, 0);
 				var newEtagSlice = new Slice(etagBuffer);
-				writeBatch.Add(newEtagSlice, counterKey, etagsToCounters.Name, shouldIgnoreConcurrencyExceptions: true);
-				writeBatch.Add(counterKey, newEtagSlice, etagsToCounters.Name, shouldIgnoreConcurrencyExceptions: true);
+				etagsToCounters.Add(newEtagSlice, counterKey);
+				countersToEtag.Add(counterKey, newEtagSlice);
 			}
 
 			public bool Reset(string groupName, string counterName)
@@ -544,8 +536,14 @@ namespace Raven.Database.Counters
 				return false;
 			}
 
+			private long CalculateOverallTotal(Counter counterValuesByPrefix)
+			{
+				return counterValuesByPrefix.CounterValues.Sum(x => x.IsPositive ? x.Value : -x.Value);
+			}
+
 			public void RecordLastEtagFor(string serverId, string serverName, long lastEtag)
 			{
+				//TODO: remove server name
 				serversLastEtag.Add(serverId, EndianBitConverter.Big.GetBytes(lastEtag));
 			}
 
@@ -564,7 +562,7 @@ namespace Raven.Database.Counters
 				parent.ReplicationTask.SignalCounterUpdate();
 			}
 
-			private bool DoesCounterExist(string name)
+			private bool DoesCounterExist(Slice name)
 			{
 				using (var it = counters.Iterate())
 				{
@@ -575,7 +573,7 @@ namespace Raven.Database.Counters
 
 			public void Commit(bool notifyParent = true)
 			{
-				parent.storageEnvironment.Writer.Write(writeBatch);
+				transaction.Commit();
 				if (notifyParent)
 				{
 					parent.Notify();
@@ -584,8 +582,6 @@ namespace Raven.Database.Counters
 
 			public void Dispose()
 			{
-				writeBatch.Dispose();
-				//snapshotReader.Dispose();
 				parent.LastWrite = SystemTime.UtcNow;
 				if (transaction != null)
 					transaction.Dispose();

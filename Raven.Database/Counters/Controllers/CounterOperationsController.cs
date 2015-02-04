@@ -315,7 +315,7 @@ namespace Raven.Database.Counters.Controllers
                     {
 						Positive = s.Value.Positive,
                         Negative = s.Value.Negative,
-                        Name = reader.ServerNameFor(s.Key)
+                        //Name = reader.ServerNameFor(s.Key)
                     }).ToList();
                 return Request.CreateResponse(HttpStatusCode.OK, serverValues);
             }
