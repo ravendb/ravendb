@@ -444,6 +444,7 @@
     <TypeScriptCompile Include="App\viewmodels\globalConfigQuotas.ts" />
     <TypeScriptCompile Include="App\models\configurationSettings.ts" />
     <TypeScriptCompile Include="App\models\configurationSetting.ts" />
+    <TypeScriptCompile Include="App\viewmodels\globalConfigCustomFunctions.ts" />
     <Content Include="App\viewmodels\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\customFunctionsEditor.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\resetIndexConfirm.ts" />
@@ -457,6 +458,7 @@
     <Content Include="App\views\backup.html" />
     <Content Include="App\views\compact.html" />
     <Content Include="App\views\cancelSideBySizeConfirm.html" />
+    <Content Include="App\views\globalConfigCustomFunctions.html" />
     <Content Include="App\views\globalConfigQuotas.html" />
     <Content Include="App\views\globalConfigReplications.html" />
     <Content Include="App\views\globalConfigPeriodicExport.html" />

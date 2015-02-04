@@ -8,6 +8,8 @@ import appUrl = require("common/appUrl");
 class globalConfigQuotas extends viewModelBase {
     settingsDocument = ko.observable<document>();
 
+    activated = ko.observable<boolean>(false);
+
     maximumSize = ko.observable<number>();
     warningLimitThreshold = ko.observable<number>();
     maxNumberOfDocs = ko.observable<number>();
@@ -31,9 +33,7 @@ class globalConfigQuotas extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
         this.initializeDirtyFlag();
-
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty() === true);
     }
 
@@ -42,10 +42,15 @@ class globalConfigQuotas extends viewModelBase {
             .execute()
             .done((doc: document) => {
                 this.settingsDocument(doc);
-                this.maximumSize(doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"] / 1024);
-                this.warningLimitThreshold(doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] / 1024);
-                this.maxNumberOfDocs(doc["Settings"]["Raven/Quotas/Documents/HardLimit"]);
-                this.warningThresholdForDocs(doc["Settings"]["Raven/Quotas/Documents/SoftLimit"]);
+                // we make decision based on first available property 
+                var activated = !!doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"];
+                this.activated(activated);
+                if (activated) {
+                    this.maximumSize(doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"] / 1024);
+                    this.warningLimitThreshold(doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] / 1024);
+                    this.maxNumberOfDocs(doc["Settings"]["Raven/Quotas/Documents/HardLimit"]);
+                    this.warningThresholdForDocs(doc["Settings"]["Raven/Quotas/Documents/SoftLimit"]);
+                }
             });
     }
 
@@ -59,31 +64,32 @@ class globalConfigQuotas extends viewModelBase {
     }
 
     saveChanges() {
+        this.syncChanges(false);
+    }
+
+    syncChanges(deleteConfig:boolean) {
         var db = appUrl.getSystemDatabase();
         if (db) {
             var settingsDocument = this.settingsDocument();
             settingsDocument['@metadata'] = this.settingsDocument().__metadata;
             settingsDocument['@metadata']['@etag'] = this.settingsDocument().__metadata['@etag'];
             var doc = new document(settingsDocument.toDto(true));
-            if (this.maximumSize()) {
-                doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"] = this.maximumSize() * 1024;
-            } else {
+
+            if (deleteConfig) {
                 delete doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"];
-            }
-            if (this.warningLimitThreshold()) {
-                doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] = this.warningLimitThreshold() * 1024;
-            } else {
                 delete doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"];
-            }
-            if (this.maxNumberOfDocs()) {
-                doc["Settings"]["Raven/Quotas/Documents/HardLimit"] = this.maxNumberOfDocs();
-            } else {
                 delete doc["Settings"]["Raven/Quotas/Documents/HardLimit"];
-            }
-            if (this.warningThresholdForDocs()) {
-                doc["Settings"]["Raven/Quotas/Documents/SoftLimit"] = this.warningThresholdForDocs();
-            } else {
                 delete doc["Settings"]["Raven/Quotas/Documents/SoftLimit"];
+
+                this.maximumSize(null);
+                this.warningLimitThreshold(null);
+                this.maxNumberOfDocs(null);
+                this.warningThresholdForDocs(null);
+            } else {
+                doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"] = this.maximumSize() * 1024;
+                doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] = this.warningLimitThreshold() * 1024;
+                doc["Settings"]["Raven/Quotas/Documents/HardLimit"] = this.maxNumberOfDocs();
+                doc["Settings"]["Raven/Quotas/Documents/SoftLimit"] = this.warningThresholdForDocs();
             }
 
             var saveTask = new saveGlobalSettingsCommand(db, doc).execute();
@@ -92,6 +98,18 @@ class globalConfigQuotas extends viewModelBase {
                 this.dirtyFlag().reset(); //Resync Changes
             });
         }
+    }
+
+    activateConfig() {
+        this.activated(true);
+    }
+
+    disactivateConfig() {
+        this.confirmationMessage("Delete global configuration for quotas?", "Please note that databases with quotas bundle enabled and without local configuration may crash.")
+            .done(() => {
+                this.activated(false);
+                this.syncChanges(true);
+            });
     }
 }
 

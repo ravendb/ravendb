@@ -17,7 +17,8 @@ class globalConfig extends viewModelBase {
             .map([
                 { route: 'admin/settings/globalConfig', moduleId: 'viewmodels/globalConfigPeriodicExport', title: 'Periodic export', tooltip: "", nav: true, hash: appUrl.forGlobalConfigPeriodicExport() },
                 { route: 'admin/settings/globalConfigReplication', moduleId: 'viewmodels/globalConfigReplications', title: 'Replication', tooltip: 'Global replication settings', nav: true, hash: appUrl.forGlobalConfigReplication() },
-                { route: 'admin/settings/globalConfigQuotas', moduleId: 'viewmodels/globalConfigQuotas', title: 'Quotas', tooltip: 'Global quotas settings', nav: true, hash: appUrl.forGlobalConfigQuotas() }
+                { route: 'admin/settings/globalConfigQuotas', moduleId: 'viewmodels/globalConfigQuotas', title: 'Quotas', tooltip: 'Global quotas settings', nav: true, hash: appUrl.forGlobalConfigQuotas() },
+                { route: 'admin/settings/globalConfigCustomFunctions', moduleId: 'viewmodels/globalConfigCustomFunctions', title: 'Custom functions', tooltip: 'Global custom functions settings', nav: true, hash: appUrl.forGlobalConfigCustomFunctions() }
             ])
             .buildNavigationModel();
 

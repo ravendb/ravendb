@@ -237,6 +237,7 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\GlobalSettingsDocument.cs" />
+    <Compile Include="Config\GlobalSettingsDocumentProtector.cs" />
     <Compile Include="Config\Retriever\ConfigurationDocument.cs" />
     <Compile Include="Config\Retriever\ConfigurationRetriever.cs" />
     <Compile Include="Config\Retriever\ConfigurationRetrieverBase.cs" />

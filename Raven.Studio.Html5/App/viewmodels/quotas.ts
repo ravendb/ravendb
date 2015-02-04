@@ -17,6 +17,8 @@ class quotas extends viewModelBase {
     warningThresholdForDocs: configurationSetting;
  
     isSaveEnabled: KnockoutComputed<boolean>;
+    usingGlobal = ko.observable<boolean>(false);
+    hasGlobalValues = ko.observable<boolean>(false);
 
     canActivate(args: any): any {
         super.canActivate(args);
@@ -33,9 +35,7 @@ class quotas extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
         this.initializeDirtyFlag();
-
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty() === true);
     }
 
@@ -52,6 +52,9 @@ class quotas extends viewModelBase {
                 this.warningLimitThreshold = result.results["Raven/Quotas/Size/SoftMarginInKB"];
                 this.maxNumberOfDocs = result.results["Raven/Quotas/Documents/HardLimit"];
                 this.warningThresholdForDocs = result.results["Raven/Quotas/Documents/SoftLimit"];
+
+                this.usingGlobal(this.maximumSize.globalExists() && this.maximumSize.localExists() == false);
+                this.hasGlobalValues(this.maximumSize.globalExists());
 
                 var divideBy1024 = (x: KnockoutObservable<any>) => {
                     if (x()) {
@@ -73,7 +76,8 @@ class quotas extends viewModelBase {
             this.maximumSize.effectiveValue, this.maximumSize.localExists,
             this.warningLimitThreshold.effectiveValue, this.warningLimitThreshold.localExists,
             this.maxNumberOfDocs.effectiveValue, this.maxNumberOfDocs.localExists,
-            this.warningThresholdForDocs.effectiveValue, this.warningThresholdForDocs.localExists
+            this.warningThresholdForDocs.effectiveValue, this.warningThresholdForDocs.localExists,
+            this.usingGlobal
         ]);
     }
 
@@ -84,25 +88,16 @@ class quotas extends viewModelBase {
             settingsDocument['@metadata'] = this.settingsDocument().__metadata;
             settingsDocument['@metadata']['@etag'] = this.settingsDocument().__metadata['@etag'];
             var doc = new document(settingsDocument.toDto(true));
-            if (this.maximumSize.canEdit()) {
-                doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"] = <any>this.maximumSize.effectiveValue() * 1024;
-            } else {
-                delete doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"];
-            }
-            if (this.warningLimitThreshold.canEdit()) {
-                doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] = <any>this.warningLimitThreshold.effectiveValue() * 1024;
-            } else {
+            if (this.usingGlobal()) {
+                delete doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"]; 
                 delete doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"];
-            }
-            if (this.maxNumberOfDocs.canEdit()) {
-                doc["Settings"]["Raven/Quotas/Documents/HardLimit"] = this.maxNumberOfDocs.effectiveValue();
-            } else {
                 delete doc["Settings"]["Raven/Quotas/Documents/HardLimit"];
-            }
-            if (this.warningThresholdForDocs.canEdit()) {
-                doc["Settings"]["Raven/Quotas/Documents/SoftLimit"] = this.warningThresholdForDocs.effectiveValue();
-            } else {
                 delete doc["Settings"]["Raven/Quotas/Documents/SoftLimit"];
+            } else {
+                doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"] = <any>this.maximumSize.effectiveValue() * 1024;
+                doc["Settings"]["Raven/Quotas/Size/SoftMarginInKB"] = <any>this.warningLimitThreshold.effectiveValue() * 1024;
+                doc["Settings"]["Raven/Quotas/Documents/HardLimit"] = this.maxNumberOfDocs.effectiveValue();
+                doc["Settings"]["Raven/Quotas/Documents/SoftLimit"] = this.warningThresholdForDocs.effectiveValue();
             }
             
             var saveTask = new saveDatabaseSettingsCommand(db, doc).execute();
@@ -113,11 +108,16 @@ class quotas extends viewModelBase {
         }
     }
 
-    override(config: configurationSetting) {
-        if (!config.localExists()) {
-            config.copyFromGlobal();
-        }
-        return true;
+    useLocal() {
+        this.usingGlobal(false);
+    }
+
+    useGlobal() {
+        this.usingGlobal(true);
+        this.maximumSize.copyFromGlobal();
+        this.warningLimitThreshold.copyFromGlobal();
+        this.maxNumberOfDocs.copyFromGlobal();
+        this.warningThresholdForDocs.copyFromGlobal();
     }
 }
 

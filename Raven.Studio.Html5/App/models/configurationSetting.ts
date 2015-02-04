@@ -5,12 +5,6 @@ class configurationSetting {
     effectiveValue = ko.observable<string>();
     globalValue = ko.observable<string>();
 
-    canEdit = ko.computed(() => {
-        var g = this.globalExists();
-        var l = this.localExists();
-        return l || !g;
-    });
-
     constructor(dto: configurationSettingDto) {
         this.localExists(dto.LocalExists);
         this.globalExists(dto.GlobalExists);

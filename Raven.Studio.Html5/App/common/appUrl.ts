@@ -176,6 +176,10 @@ class appUrl {
         return '#admin/settings/globalConfigQuotas';
     }
 
+    static forGlobalConfigCustomFunctions(): string {
+        return '#admin/settings/globalConfigCustomFunctions';
+    }
+
     static forBackup(): string {
         return "#admin/settings/backup";
     }
