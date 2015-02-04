@@ -70,6 +70,7 @@ class query extends viewModelBase {
     appUrls: computedAppUrls;
     isIndexMapReduce: KnockoutComputed<boolean>;
     isLoading = ko.observable<boolean>(false).extend({ rateLimit: 1000 });
+    isCacheDisable = ko.observable<boolean>(false);
 
     contextName = ko.observable<string>();
     didDynamicChangeIndex: KnockoutComputed<boolean>;
@@ -299,6 +300,10 @@ class query extends viewModelBase {
         this.runQuery();
     }
 
+    toggleCacheEnable() {
+        this.isCacheDisable(!this.isCacheDisable());
+    }
+
     runQuery(): pagedList {
         var selectedIndex = this.selectedIndex();
         if (selectedIndex) {
@@ -338,13 +343,14 @@ class query extends viewModelBase {
             var useAndOperator = this.isDefaultOperatorOr() === false;
 
             var queryCommand = new queryIndexCommand(selectedIndex, database, 0, 25, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
-
+            if (this.isCacheDisable()) queryCommand.cacheDisable();
             var db = this.activeDatabase();
             this.rawJsonUrl(appUrl.forResourceQuery(db) + queryCommand.getUrl());
             this.exportUrl(appUrl.forResourceQuery(db) + queryCommand.getCsvUrl());
             
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
+                if (this.isCacheDisable()) command.cacheDisable();
                 return command
                     .execute().always(() => {
                         this.isLoading(false);
