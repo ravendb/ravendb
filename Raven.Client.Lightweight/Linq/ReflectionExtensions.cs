@@ -11,10 +11,6 @@ namespace Raven.Client.Linq
 {
 	internal static class ReflectionExtensions
 	{
-		public static Assembly Assembly(this Type type)
-		{
-			return type.Assembly;
-		}
 
 		public static Type GetMemberType(this MemberInfo member)
 		{

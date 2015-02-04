@@ -25,8 +25,8 @@
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
-  public class GenericImpl : AbstractGenericBase<int>
-  {
-    public override int Id { get; set; }
-  }
+    public class GenericImpl : AbstractGenericBase<int>
+    {
+        public override int Id { get; set; }
+    }
 }

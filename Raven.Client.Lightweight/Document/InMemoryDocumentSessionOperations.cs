@@ -536,16 +536,21 @@ more responsive application.
 													ex);
 			}
 		}
-
-		private void RegisterMissingProperties(object o, string key, JToken value)
+        
+		private void RegisterMissingProperties(object o, string key, object value)
 		{
-			Dictionary<string, JToken> dictionary;
-			if (EntityToJson.MissingDictionary.TryGetValue(o, out dictionary) == false)
-			{
-				EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, JToken>();
-			}
+            var token = value as JToken;
+            if ( token != null )
+            {
+                Dictionary<string, JToken> dictionary;
+                if (EntityToJson.MissingDictionary.TryGetValue(o, out dictionary) == false)
+                {
+                    EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, JToken>();
+                }
 
-			dictionary[key] = value;
+                dictionary[key] = token;
+            }
+            else throw new NotImplementedException();
 		}
 
 		/// <summary>

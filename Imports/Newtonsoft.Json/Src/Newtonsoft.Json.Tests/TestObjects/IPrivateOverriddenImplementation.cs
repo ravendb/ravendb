@@ -25,8 +25,8 @@
 
 namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
-  public interface IPrivateOverriddenImplementation
-  {
-    object OverriddenProperty { get; set; }
-  }
+    public interface IPrivateOverriddenImplementation
+    {
+        object OverriddenProperty { get; set; }
+    }
 }
