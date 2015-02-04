@@ -237,7 +237,7 @@
     <Compile Include="Actions\TaskActions.cs" />
     <Compile Include="Config\CpuStatistics.cs" />
     <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
-    <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideDeletingRevisionFilesFromQueryTrigger.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideDeletingFilesTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideVersionedFilesFromIndexingTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningDeleteTrigger.cs" />
     <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningPutTrigger.cs" />
