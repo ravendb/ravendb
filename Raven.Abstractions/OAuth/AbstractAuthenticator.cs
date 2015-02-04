@@ -9,6 +9,7 @@ namespace Raven.Abstractions.OAuth
 	public abstract class AbstractAuthenticator
 	{
 		protected string CurrentOauthToken { get; set; }
+        protected string CurrentOauthTokenWithBearer { get; set; }
 
 		public virtual void ConfigureRequest(object sender, WebRequestEventArgs e)
 		{
