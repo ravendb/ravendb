@@ -13,6 +13,7 @@ using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Server.WebApi.Attributes;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -40,12 +41,45 @@ namespace Raven.Database.FileSystem.Controllers
 			var startsWith = GetQueryStringValue("startsWith");
 			if (string.IsNullOrEmpty(startsWith) == false)
 			{
+				var matches = GetQueryStringValue("matches");
+
 				var endsWithSlash = startsWith.EndsWith("/") || startsWith.EndsWith("\\");
 				startsWith = FileHeader.Canonize(startsWith);
 				if (endsWithSlash) 
 					startsWith += "/";
 
-				Storage.Batch(accessor => list.AddRange(accessor.GetFilesStartingWith(startsWith, Paging.Start, Paging.PageSize)));
+				Storage.Batch(accessor =>
+				{
+					var actualStart = 0;
+					var filesToSkip = Paging.Start;
+					int fileCount, matchedFiles = 0, addedFiles = 0;
+
+					do
+					{
+						fileCount = 0;
+						
+						foreach (var file in accessor.GetFilesStartingWith(startsWith, actualStart, Paging.PageSize))
+						{
+							fileCount++;
+
+							var keyTest = file.FullPath.Substring(startsWith.Length);
+
+							if (WildcardMatcher.Matches(matches, keyTest) == false)
+								continue;
+
+							matchedFiles++;
+
+							if (matchedFiles <= filesToSkip)
+								continue;
+
+							list.Add(file);
+							addedFiles++;
+						}
+
+						actualStart += Paging.PageSize;
+					}
+					while (fileCount > 0 && addedFiles < Paging.PageSize && actualStart > 0 && actualStart < int.MaxValue);
+				});
 			}
 			else
 			{
