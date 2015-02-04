@@ -61,6 +61,8 @@ class shell extends viewModelBase {
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
     showLogOutButton: KnockoutComputed<boolean>;
     static isGlobalAdmin = ko.observable<boolean>(false);
+    maxResourceNameWidth: KnockoutComputed<string>;
+    isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ rateLimit: 100 });
 
     static databases = ko.observableArray<database>();
     listedResources: KnockoutComputed<resource[]>;
@@ -257,49 +259,37 @@ class shell extends viewModelBase {
         });
 
         this.maxResourceNameWidth = ko.computed(() => {
-            if (this.canShowResourcesNavbar() && !!this.lastActivatedResource() && !!this.getCurrentActiveFeatureName() && this.) {
-                var goToDocumentLeftOffset = $("#goToDocument").offset().left + $("#goToDocument").width();
+            if (this.canShowResourcesNavbar() && !!this.lastActivatedResource()) {
+                var navigationLinksWidth = 50;
+                if (this.canShowDatabaseNavbar()) {
+                    navigationLinksWidth += 804;
+                }
+                else if (this.canShowFileSystemNavbar()) {
+                    navigationLinksWidth += 600;
+                }
+                else if (this.canShowCountersNavbar()) {
+                    navigationLinksWidth += 600; //todo: calculate
+                }
+
                 var brandWidth = this.getWidth("brand");
                 var logOutWidth = this.getWidth("logOut");
                 var continueTestWidth = this.getWidth("continueTest");
                 var featureNameWidth = this.getWidth("featureName");
 
-                var freeSpace = $(window).width() - (goToDocumentLeftOffset + brandWidth + logOutWidth + continueTestWidth + featureNameWidth) - 230;
-
-
-                var featureNameLeftOffset = $("#featureName").offset().left;
-                
-                //var elementWidth = $(".resource-link").width();
-                var newNameLength = this.lastActivatedResource().name;
-                var newElementWidth = newNameLength.length * 7;
+                var freeSpace = $(window).width() - (navigationLinksWidth + brandWidth + logOutWidth + continueTestWidth + featureNameWidth);
                 var maxWidth = Math.floor(freeSpace);
                 return maxWidth + "px";
             }
             return "1px";
         });
-        /*this.lastActivatedResource.subscribe((lastActivatedResource: resource) => {
-            var goToDocumentLeftOffset = $("#goToDocument").offset().left + $("#goToDocument").width();
-            var featureNameLeftOffset = $("#featureName").offset().left;
-            var freeSpace = featureNameLeftOffset - goToDocumentLeftOffset;
-            //var elementWidth = $(".resource-link").width();
-            var newNameLength = lastActivatedResource.name;
-            var newElementWidth = newNameLength.length * 8;
-            var maxWidth = Math.floor(newElementWidth + freeSpace);
 
-            if (!!maxWidth) {
-                $(".resource-link").css("maxWidth", 874);
-            }
-        });*/
+        $(window).resize(() => self.lastActivatedResource.valueHasMutated());
     }
 
-        private getWidth(tag: string): number {
-            var width = $("#" + tag).width();
-            if (!!width) {
-                width = 0;
-            }
-            return width;
-        }
-        maxResourceNameWidth: KnockoutComputed<string>;
+    private getWidth(tag: string): number {
+        return $("#" + tag).length > 0 ? $("#" + tag).width() : 0;
+    }
+
     private destroyChangesApi() {
         this.cleanupNotifications();
         this.globalChangesApi.dispose();
@@ -869,7 +859,7 @@ class shell extends viewModelBase {
         if (db && !db.disabled() && db.isLicensed()) {
             new getDatabaseStatsCommand(db)
                 .execute()
-                .done(result => db.statistics(result));
+                .done((result: databaseStatisticsDto) => db.saveStatistics(result));
         }
     }
 
@@ -877,7 +867,7 @@ class shell extends viewModelBase {
         if (fs && !fs.disabled() && fs.isLicensed()) {
             new getFileSystemStatsCommand(fs)
                 .execute()
-                .done(result=> fs.statistics(result));
+                .done((result: filesystemStatisticsDto) => fs.statistics(result));
         }
     }
 

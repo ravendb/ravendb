@@ -37,6 +37,7 @@ class documents extends viewModelBase {
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
     currentCustomFunctions = ko.observable<customFunctions>(customFunctions.empty());
     selectedDocumentIndices = ko.observableArray<number>();
+    selectedDocumentsText: KnockoutComputed<string>;
     hasDocuments: KnockoutComputed<boolean>;
     contextName = ko.observable<string>('');
     currentCollection = ko.observable<collection>();
@@ -102,6 +103,17 @@ class documents extends viewModelBase {
                 return appUrl.forExportCollectionCsv(collection, collection.ownerDatabase);
             }
             return null;
+        });
+
+        this.selectedDocumentsText = ko.computed(() => {
+            if (!!this.selectedDocumentIndices()) {
+                var documentsText = "document";
+                if (this.selectedDocumentIndices().length != 1) {
+                    documentsText += "s";
+                }
+                return documentsText;
+            }
+            return "";
         });
     }
 

@@ -108,7 +108,7 @@
                             </ul>
                         </li>
                     </ul>
-                    <form id="goToDocument" class="navbar-form pull-left hidden-xs hidden-sm col-sm-2">
+                    <form class="navbar-form pull-left hidden-xs hidden-sm col-sm-2">
                         <input id="goToDocInput" title="Search for a document (Alt+G)" accesskey="G"
                                type="text" class="form-control" placeholder="Go to document" data-bind="value: goToDocumentSearch, valueUpdate: 'afterkeydown', disable: isActiveDatabaseDisabled" autocomplete="off" />
                         <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#goToDocInput', foreach: goToDocumentSearchResults">
@@ -139,7 +139,7 @@
                         <li data-bind="css: { active: appUrls.isActive('Status') }">
                             <a data-bind="attr: { href: appUrls.filesystemStatus }">Status</a>
                         </li>
-                        
+
                         <li data-bind="css: { active: appUrls.isActive('Settings') }">
                             <a data-bind="attr: { href: appUrls.filesystemSettings }">Settings</a>
                         </li>
@@ -150,7 +150,7 @@
                     </ul>
                 </div>
 
-                <div id="countingNavbar" data-bind="visible: canShowCountersNavbar">
+                <div data-bind="visible: canShowCountersNavbar">
                     <ul class=" nav navbar-nav">
                         <li data-bind="css: { active: appUrls.isActive('Counters') }">
                             <a data-bind="attr: { href: appUrls.counterStorageCounters }">Counters</a>
@@ -247,29 +247,37 @@
             <a class="alert alert-link" href="#" data-bind="visible: details, click: $root.showErrorsDialog.bind($root)">Details</a>
         </div>
     </div>
-
+    
     <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
 </div>
 
 <footer style="z-index: 999" id="shellFooter">
     <div class="navbar navbar-fixed-bottom navbar-inverse">
         <div class="navbar-inner">
-            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases')() && !isActiveDatabaseDisabled()">
+            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: !isActiveDatabaseDisabled() && canShowDatabaseNavbar()">
                 <li class="status-link"><a data-bind="attr: { href: $root.appUrls.status }" class="navbar-link">Status</a></li>
+                <li data-bind="visible: $root.isLoadingStatistics()" style="margin-top: 5px; margin-left: 5px;">
+                    <span class="navbar-link">Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
+                </li>
+                
                 <!-- ko with: statistics -->
-                <li><a class="navbar-link" data-bind="text: CountOfDocuments.toLocaleString() + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
-                <li><a class="navbar-link" data-bind="text: CountOfIndexes.toLocaleString() + ' indexes', attr: { href: $parents[1].appUrls.indexes }"></a></li>
-                <li><a class="navbar-link" data-bind="text: StaleIndexes.length.toLocaleString() + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
-                <li><a class="navbar-link" data-bind="text: Errors.length.toLocaleString() + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
+                <li><a class="navbar-link" data-bind="text: countOfDocumentsText, attr: { href: $parents[1].appUrls.documents }"></a></li>
+                <li><a class="navbar-link" data-bind="text: countOfIndexesText, attr: { href: $parents[1].appUrls.indexes }"></a></li>
+                <li><a class="navbar-link" data-bind="text: staleIndexesCountText, attr: { href: $parents[1].appUrls.status }"></a></li>
+                <li><a class="navbar-link" data-bind="text: errorsCountText, attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
                 <!--<li><a class="navbar-link" data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>-->
-                <li class="raw-url hidden-sm" data-bind="visible:$root.rawUrlIsVisible">
+                <li class="raw-url hidden-sm" data-bind="visible: $root.rawUrlIsVisible">
                     <a class="navbar-link" href="#" target='_blank' data-bind="text: $root.currentRawUrl, attr: { href: $root.currentRawUrl, title: $root.currentRawUrl }" style="max-width: 180px; -ms-text-overflow: ellipsis; -o-text-overflow: ellipsis; text-overflow: ellipsis; overflow-x: hidden; white-space: nowrap;"></a>
                 </li>
                 <!-- /ko -->
             </ul>
 
-            <ul class="nav navbar-nav" data-bind="with: activeFilesystem, visible: appUrls.isAreaActive('filesystems')() && !isActiveFileSystemDisabled()">
-                <li><a data-bind="text:'Status'" class="navbar-link" href="#/filesystems/status"></a></li>
+            <ul class="nav navbar-nav" data-bind="with: activeFilesystem, visible: !isActiveFileSystemDisabled() && canShowFileSystemNavbar()">
+                <li class="status-link"><a data-bind="attr: { href: $root.appUrls.filesystemStatus }" class="navbar-link" href="#">Status</a></li>
+                <li data-bind="visible: $root.isLoadingStatistics()" style="margin-top: 5px; margin-left: 5px;">
+                    <span class="navbar-link">Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
+                </li>
+
                 <!-- ko with: statistics -->
                 <li><a data-bind="text: FileCount + ' files', attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
                 <li><a data-bind="text: Metrics.RequestsPerSecond + ' requests per second', attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>

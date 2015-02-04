@@ -75,7 +75,7 @@
                 </h4>
                 <br />                              
                 <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                <span class="stats" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
+                <span class="stats" data-bind="style: { visibility: !!statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
                 <!-- /ko -->               
                 <!-- ko if: $data.disabled -->
                 <span class="stats-disabled">Disabled</span>
@@ -149,7 +149,7 @@
                 </h4>
                 <br />
                 <!-- ko if: !$data.disabled() && $data.isLicensed() -->
-                <span class="stats" data-bind="style: { visibility: statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
+                <span class="stats" data-bind="style: { visibility: !!statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
                 <!-- /ko -->
                 <!-- ko if: $data.disabled -->
                 <span class="stats-disabled">Disabled</span>
