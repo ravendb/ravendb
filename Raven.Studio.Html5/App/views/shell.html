@@ -279,9 +279,9 @@
                 </li>
 
                 <!-- ko with: statistics -->
-                <li><a data-bind="text: FileCount + ' files', attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
-                <li><a data-bind="text: Metrics.RequestsPerSecond + ' requests per second', attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
-                <li><a data-bind="text: Metrics.RequestsDuration.Mean.toFixed(1) + 'ms mean duration', attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: fileCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: requestsCountText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
+                <li><a data-bind="text: meanDurationText, attr: { href: $parents[1].appUrls.filesystemFiles }"></a></li>
                 <!-- /ko -->
             </ul>
 

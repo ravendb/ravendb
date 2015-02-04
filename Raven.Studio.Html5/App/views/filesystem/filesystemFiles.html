@@ -59,7 +59,7 @@
                 <span></span>
             </div>
             <div class="files-select" data-bind="visible: selectedFilesIndices().length > 0">
-                You have selected <strong data-bind="text: $root.selectedFilesIndices().length"></strong> files.
+                You have selected <strong data-bind="text: $root.selectedFilesIndices().length"></strong> <span data-bind="text: $root.selectedFilesText"></span>.
             </div>
             <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, dynamicHeightTargetSelector: '#uploadQueueContainer', gridSelector: '#filesGrid', contextMenuOptions: ['Delete'] }"></div>
         </div>
