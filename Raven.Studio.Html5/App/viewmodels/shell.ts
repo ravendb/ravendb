@@ -867,7 +867,7 @@ class shell extends viewModelBase {
         if (fs && !fs.disabled() && fs.isLicensed()) {
             new getFileSystemStatsCommand(fs)
                 .execute()
-                .done((result: filesystemStatisticsDto) => fs.statistics(result));
+                .done((result: filesystemStatisticsDto) => fs.saveStatistics(result));
         }
     }
 

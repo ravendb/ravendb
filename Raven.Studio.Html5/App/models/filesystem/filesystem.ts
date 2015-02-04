@@ -1,9 +1,10 @@
 ﻿import resource = require("models/resource");
 import license = require("models/license");
+import fileSystemStatistics = require("models/filesystem/fileSystemStatistics");
 
 class filesystem extends resource {
     activeBundles = ko.observableArray<string>();
-    statistics = ko.observable<filesystemStatisticsDto>();    
+    statistics = ko.observable<fileSystemStatistics>();
     files = ko.observableArray<filesystemFileHeaderDto>();
     static type = 'filesystem';
 
@@ -11,7 +12,7 @@ class filesystem extends resource {
         super(name, filesystem.type, isAdminCurrentTenant);
         this.disabled(isDisabled);
         this.activeBundles(bundles);
-        this.itemCount = ko.computed(() => this.statistics() ? this.statistics().FileCount : 0);
+        this.itemCount = ko.computed(() => this.statistics() ? this.statistics().fileCount() : 0);
         this.itemCountText = ko.computed(() => {
             var itemCount = this.itemCount();
             var text = itemCount + ' file';
@@ -36,6 +37,10 @@ class filesystem extends resource {
     static getNameFromUrl(url: string) {
         var index = url.indexOf("filesystems/");
         return (index > 0) ? url.substring(index + 10) : "";
+    }
+
+    saveStatistics(dto: filesystemStatisticsDto) {
+        this.statistics(new fileSystemStatistics(dto));
     }
 }
 export = filesystem;
