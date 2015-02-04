@@ -267,7 +267,7 @@ namespace SpellChecker.Net.Search.Spell
 					sugWord.termString = indexSearcher.Doc(hits[i].Doc).Get(F_WORD); // get orig word
 
 					// don't suggest a word for itself, that would be silly
-					if (sugWord.termString.Equals(word))
+					if (sugWord.termString.Equals(word,StringComparison.OrdinalIgnoreCase))
 					{
 						continue;
 					}
