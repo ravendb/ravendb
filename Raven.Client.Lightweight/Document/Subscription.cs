@@ -40,6 +40,7 @@ namespace Raven.Client.Document
 		private bool completed;
 		private readonly long id;
 		private bool disposed;
+		private bool firstConnection = true;
 
 		public event Action BeforeBatch = delegate { };
 		public event Action AfterBatch = delegate { };
@@ -256,6 +257,8 @@ namespace Raven.Client.Document
 
 		private void StartWatchingDocs()
 		{
+			changes.ConnectionStatusChanged += ChangesApiConnectionChanged;
+
 			PutDocumentsObserver = changes.ForAllDocuments().Subscribe(notification =>
 			{
 				if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) == false)
@@ -271,6 +274,20 @@ namespace Raven.Client.Document
 					newDocuments.Set();
 				}
 			});
+		}
+
+		private void ChangesApiConnectionChanged(object sender, EventArgs e)
+		{
+			if (firstConnection)
+			{
+				firstConnection = false;
+				return;
+			}
+
+			var changesApi = (RemoteDatabaseChanges) sender;
+
+			if (changesApi.Connected)
+				newDocuments.Set();
 		}
 
 		public IDisposable Subscribe(IObserver<T> observer)
@@ -359,6 +376,8 @@ namespace Raven.Client.Document
 
 			newDocuments.Set();
 			anySubscriber.Set();
+
+			changes.ConnectionStatusChanged -= ChangesApiConnectionChanged;
 
 			foreach (var task in new []{PullingTask, StartPullingTask})
 			{
