@@ -9,9 +9,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Threading;
-
+using NLog.Internal;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
+using ConfigurationManager = System.Configuration.ConfigurationManager;
 
 namespace Raven.Database.Config
 {
@@ -33,6 +34,11 @@ namespace Raven.Database.Config
         private static readonly ManualResetEventSlim _domainUnload = new ManualResetEventSlim();
 		static CpuStatistics()
 		{
+		    var dynamicLoadBalancding = ConfigurationManager.AppSettings["Raven/DynamicLoadBalancing"];
+
+		    bool result;
+		    if (bool.TryParse(dynamicLoadBalancding, out result) && result == false)
+		        return; // disabled, so we avoid it
 
 		    AppDomain.CurrentDomain.DomainUnload += (sender, args) => _domainUnload.Set();
 
