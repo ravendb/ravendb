@@ -12,6 +12,7 @@ using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
+using Raven.Database.Plugins;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
 using Raven.Json.Linq;
@@ -66,6 +67,9 @@ namespace Raven.Database.FileSystem.Controllers
 
 							if (WildcardMatcher.Matches(matches, keyTest) == false)
 								continue;
+
+                            if (FileSystem.ReadTriggers.CanReadFile(FileHeader.Canonize(file.FullPath), file.Metadata, ReadOperation.Query) == false) 
+                                continue;
 
 							matchedFiles++;
 

@@ -6,6 +6,7 @@ import shell = require("viewmodels/shell");
 import filesystem = require("models/filesystem/filesystem");
 import pagedList = require("common/pagedList");
 import getFilesystemFilesCommand = require("commands/filesystem/getFilesCommand");
+import getFilesystemRevisionsCommand = require('commands/filesystem/getFilesystemRevisionsCommand');
 import createFolderInFilesystem = require("viewmodels/filesystem/createFolderInFilesystem");
 import treeBindingHandler = require("common/treeBindingHandler");
 import pagedResultSet = require("common/pagedResultSet");
@@ -18,6 +19,8 @@ import fileUploadBindingHandler = require("common/fileUploadBindingHandler");
 import uploadQueueHelper = require("common/uploadQueueHelper");
 
 class filesystemFiles extends viewModelBase {
+
+    static revisionsFolderId = "/$$revisions$$";
 
     appUrls: computedAppUrls;
     fileName = ko.observable<file>();
@@ -34,6 +37,8 @@ class filesystemFiles extends viewModelBase {
     hasAnyFilesSelected: KnockoutComputed<boolean>;
     hasAllFilesSelected: KnockoutComputed<boolean>;
 
+    inRevisionsFolder = ko.observable<boolean>(false);
+
     private activeFilesystemSubscription: any;
 
     static treeSelector = "#filesTree";
@@ -49,6 +54,7 @@ class filesystemFiles extends viewModelBase {
         this.uploadQueue.subscribe(x => this.newUpload(x));
         fileUploadBindingHandler.install();
         treeBindingHandler.install();
+        treeBindingHandler.includeRevisionsFunc = () => this.activeFilesystem().activeBundles.contains('Versioning');
     }
 
     activate(args) {
@@ -84,6 +90,8 @@ class filesystemFiles extends viewModelBase {
 
     folderChanged(newFolder: string) {
         this.loadFiles();
+
+        this.inRevisionsFolder(newFolder == filesystemFiles.revisionsFolderId);
 
         // treat notifications events
         if (!newFolder) {
@@ -163,7 +171,11 @@ class filesystemFiles extends viewModelBase {
     }
 
     createPagedList(directory): pagedList {
-        var fetcher = (skip: number, take: number) => this.fetchFiles(directory, skip, take);
+        if (directory == filesystemFiles.revisionsFolderId) { 
+            var fetcher = (skip: number, take: number) => this.fetchRevisions(skip, take);
+        } else {
+            var fetcher = (skip: number, take: number) => this.fetchFiles(directory, skip, take);
+        }
         var list = new pagedList(fetcher);
         return list;
     }
@@ -171,6 +183,11 @@ class filesystemFiles extends viewModelBase {
     fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
         var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), directory, skip, take).execute();
 
+        return task;
+    }
+
+    fetchRevisions(skip: number, take: number): JQueryPromise<pagedResultSet> {
+        var task = new getFilesystemRevisionsCommand(appUrl.getFileSystem(), skip, take).execute();
         return task;
     }
 
