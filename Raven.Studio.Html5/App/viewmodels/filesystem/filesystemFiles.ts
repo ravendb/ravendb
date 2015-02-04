@@ -27,6 +27,7 @@ class filesystemFiles extends viewModelBase {
     allFilesPagedItems = ko.observable<pagedList>();
     selectedFilesIndices = ko.observableArray<number>();
     selectedFilesText: KnockoutComputed<string>;
+    hasFiles: KnockoutComputed<boolean>;
     isSelectAll = ko.observable(false);
     hasAnyFileSelected: KnockoutComputed<boolean>;
     selectedFolder = ko.observable<string>();
@@ -55,6 +56,7 @@ class filesystemFiles extends viewModelBase {
         fileUploadBindingHandler.install();
         treeBindingHandler.install();
         treeBindingHandler.includeRevisionsFunc = () => this.activeFilesystem().activeBundles.contains('Versioning');
+
         this.selectedFilesText = ko.computed(() => {
             if (!!this.selectedFilesIndices()) {
                 var documentsText = "file";
@@ -64,6 +66,14 @@ class filesystemFiles extends viewModelBase {
                 return documentsText;
             }
             return "";
+        });
+
+        this.hasFiles = ko.computed(() => {
+            if (!!this.allFilesPagedItems()) {
+                var p: pagedList = this.allFilesPagedItems();
+                return p.totalResultCount() > 0;
+            }
+            return false;
         });
     }
 
@@ -94,8 +104,6 @@ class filesystemFiles extends viewModelBase {
 
     loadFiles() {
         this.allFilesPagedItems(this.createPagedList(this.selectedFolder()));
-
-        return this.allFilesPagedItems;
     }
 
     folderChanged(newFolder: string) {
@@ -181,18 +189,19 @@ class filesystemFiles extends viewModelBase {
     }
 
     createPagedList(directory): pagedList {
+        var fetcher;
         if (directory == filesystemFiles.revisionsFolderId) { 
-            var fetcher = (skip: number, take: number) => this.fetchRevisions(skip, take);
+            fetcher = (skip: number, take: number) => this.fetchRevisions(skip, take);
         } else {
-            var fetcher = (skip: number, take: number) => this.fetchFiles(directory, skip, take);
+            fetcher = (skip: number, take: number) => this.fetchFiles(directory, skip, take);
         }
+
         var list = new pagedList(fetcher);
         return list;
     }
 
     fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
         var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), directory, skip, take).execute();
-
         return task;
     }
 
