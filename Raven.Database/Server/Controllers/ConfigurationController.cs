@@ -3,13 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -40,6 +35,16 @@ namespace Raven.Database.Server.Controllers
 		}
 
         [HttpGet]
+        [RavenRoute("configuration/global/settings")]
+        public HttpResponseMessage ConfigurationGlobalSettingsGet()
+        {
+            var json = Database.Documents.Get(Constants.Global.GlobalSettingsDocumentKey, null);
+            var globalSettings = json != null ? json.ToJson().JsonDeserialization<GlobalSettingsDocument>() : new GlobalSettingsDocument();
+            GlobalSettingsDocumentProtector.Unprotect(globalSettings);
+            return GetMessageWithObject(globalSettings, HttpStatusCode.OK, (json != null ) ? json.Etag : null);
+        }
+
+        [HttpGet]
         [RavenRoute("configuration/settings")]
         [RavenRoute("databases/{databaseName}/configuration/settings")]
         public HttpResponseMessage ConfigurationSettingsGet()
@@ -61,7 +66,7 @@ namespace Raven.Database.Server.Controllers
             var etag = GetEtag();
             var globalSettingsDoc = await ReadJsonObjectAsync<GlobalSettingsDocument>();
 
-            Protect(globalSettingsDoc);
+            GlobalSettingsDocumentProtector.Protect(globalSettingsDoc);
             var json = RavenJObject.FromObject(globalSettingsDoc);
 
             var metadata = (etag != null) ? ReadInnerHeaders.FilterHeadersToObject() : new RavenJObject();
@@ -70,24 +75,7 @@ namespace Raven.Database.Server.Controllers
             return (etag == null) ? GetEmptyMessage() : GetMessageWithObject(putResult);
         }
 
-        private void Protect(GlobalSettingsDocument settings)
-        {
-            if (settings.SecuredSettings == null)
-            {
-                settings.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                return;
-            }
-
-            foreach (var prop in settings.SecuredSettings.ToList())
-            {
-                if (prop.Value == null)
-                    continue;
-                var bytes = Encoding.UTF8.GetBytes(prop.Value);
-                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-                var protectedValue = ProtectedData.Protect(bytes, entrophy, DataProtectionScope.CurrentUser);
-                settings.SecuredSettings[prop.Key] = Convert.ToBase64String(protectedValue);
-            }
-        }
+      
 
 		[HttpGet]
 		[RavenRoute("configuration/replication")]

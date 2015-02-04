@@ -1,15 +1,17 @@
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import commandBase = require("commands/commandBase");
 import database = require("models/database");
 
-class getReplicationsCommand extends getDocumentWithMetadataCommand {
+class getReplicationsCommand extends commandBase {
 
-    constructor(db: database) {
-        super("Raven/Replication/Destinations", db);
+    constructor(private db: database) {
+        super();
     }
 
-    execute(): JQueryPromise<replicationsDto> {
-        return super.execute();
+    execute(): JQueryPromise<configurationDocumentDto<replicationsDto>> {
+        var url = "/configuration/document/Raven/Replication/Destinations";
+        return this.query<configurationDocumentDto<replicationsDto>>(url, null, this.db);
     }
+
 }
 
 export = getReplicationsCommand; 

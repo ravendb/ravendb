@@ -42,8 +42,8 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
 				Assert.False(document.LocalExists);
-				Assert.Equal(Constants.RavenJavascriptFunctions, document.Document.Key);
-				Assert.Equal("exports.test = function(value) { return 'global ' + value; };", document.Document.DataAsJson["Functions"]);
+				Assert.Equal(Constants.RavenJavascriptFunctions, document.MergedDocument.Key);
+                Assert.Equal("exports.test = function(value) { return 'global ' + value; };", document.MergedDocument.DataAsJson["Functions"]);
 			}
 		}
 
@@ -82,8 +82,8 @@ namespace Raven.Tests.Issues.RavenDB_2712
 				Assert.NotNull(document);
 				Assert.True(document.GlobalExists);
 				Assert.True(document.LocalExists);
-				Assert.Equal(Constants.RavenJavascriptFunctions, document.Document.Key);
-				Assert.Equal("exports.test = function(value) { return 'global ' + value; }; exports.test = function(value) { return 'local ' + value; };", document.Document.DataAsJson["Functions"]);
+                Assert.Equal(Constants.RavenJavascriptFunctions, document.MergedDocument.Key);
+				Assert.Equal("exports.test = function(value) { return 'global ' + value; }; exports.test = function(value) { return 'local ' + value; };", document.MergedDocument.DataAsJson["Functions"]);
 
 				using (var session = store.OpenSession())
 				{

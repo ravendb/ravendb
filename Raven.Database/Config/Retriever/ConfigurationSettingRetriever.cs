@@ -5,9 +5,12 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Config.Retriever
 {
@@ -58,6 +61,7 @@ namespace Raven.Database.Config.Retriever
         {
             var json = systemDatabase.Documents.Get(Constants.Global.GlobalSettingsDocumentKey, null);
             globalSettings = json != null ? json.ToJson().JsonDeserialization<GlobalSettingsDocument>() : new GlobalSettingsDocument();
+            GlobalSettingsDocumentProtector.Unprotect(globalSettings);
         }
 
 	    public override ConfigurationSetting GetConfigurationSetting(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
