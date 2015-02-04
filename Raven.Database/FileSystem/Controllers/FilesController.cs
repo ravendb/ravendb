@@ -68,7 +68,7 @@ namespace Raven.Database.FileSystem.Controllers
 							if (WildcardMatcher.Matches(matches, keyTest) == false)
 								continue;
 
-                            if (FileSystem.ReadTriggers.CanReadFile(FileHeader.Canonize(file.FullPath), file.Metadata, ReadOperation.Query) == false) 
+                            if (FileSystem.ReadTriggers.CanReadFile(FileHeader.Canonize(file.FullPath), file.Metadata, ReadOperation.Load) == false) 
                                 continue;
 
 							matchedFiles++;
