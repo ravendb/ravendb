@@ -12,7 +12,6 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -176,13 +175,13 @@ namespace Raven.Client.Connection
             return await ReadJsonInternalAsync().ConfigureAwait(false); 
 		}
 
-        private async Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage, bool readErrorString = true)
+        private Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage, bool readErrorString = true)
 		{
 			if (isRequestSentToServer && Debugger.IsAttached == false)
 				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
 			isRequestSentToServer = true;
 
-			return await RunWithAuthRetry(async () =>
+			return RunWithAuthRetry(async () =>
 			{
 				try
 				{
@@ -200,7 +199,7 @@ namespace Raven.Client.Connection
 
 				// throw the conflict exception
                 return await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString).ConfigureAwait(false);
-            }).ConfigureAwait(false);
+            });
 		}
 
 	    private void AssertServerVersionSupported()
@@ -638,13 +637,13 @@ namespace Raven.Client.Connection
 			return await RunWithAuthRetry(async () =>
 			{
 				var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
-				Response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead);
+				Response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
 				SetResponseHeaders(Response);
                 AssertServerVersionSupported();
 
 			    await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true).ConfigureAwait(false);
 
-				var stream = await Response.Content.ReadAsStreamAsync();
+				var stream = await Response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 				var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());
 				observableLineStream.Start();
 				return (IObservable<string>)observableLineStream;
@@ -664,50 +663,50 @@ namespace Raven.Client.Connection
             return WriteAsync(JsonExtensions.ToJObject(data));           
         }
 
-        public async Task WriteAsync(RavenJToken tokenToWrite)
+        public Task WriteAsync(RavenJToken tokenToWrite)
         {
             writeCalled = true;
-	        await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+	        return SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 	        {
 		        Content = new JsonContent(tokenToWrite),
 		        Headers =
 		        {
 			        TransferEncodingChunked = true
 		        }
-	        }).ConfigureAwait(false);
+	        });
         }
 
-		public async Task WriteAsync(Stream streamToWrite)
+		public Task WriteAsync(Stream streamToWrite)
 		{
 			postedStream = streamToWrite;
 			writeCalled = true;
 
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+			return SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
 				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression, disposeStream: false).SetContentType(headers)
-			}).ConfigureAwait(false);
+			});
 		}
 
-		public async Task WriteAsync(HttpContent content)
+		public Task WriteAsync(HttpContent content)
 		{
 			writeCalled = true;
 
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+			return SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
 				Content = content,
 				Headers =
 				{
 					TransferEncodingChunked = true,
 				}
-			}).ConfigureAwait(false);
+			});
 		}
 
-		public async Task WriteAsync(string data)
+		public Task WriteAsync(string data)
 		{
 			postedData = data;
 			writeCalled = true;
 
-			await SendRequestInternal(() =>
+			return SendRequestInternal(() =>
 			{
 				var request = new HttpRequestMessage(new HttpMethod(Method), Url)
 				{
@@ -715,7 +714,7 @@ namespace Raven.Client.Connection
 				};
 				request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
 				return request;
-			}).ConfigureAwait(false);
+			});
 		}
         
 		public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
