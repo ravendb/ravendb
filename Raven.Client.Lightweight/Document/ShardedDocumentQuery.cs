@@ -109,6 +109,7 @@ namespace Raven.Client.Document
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
 				isDistinct = isDistinct,
+                allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
 				rootTypes = {typeof(T)},
@@ -130,7 +131,13 @@ namespace Raven.Client.Document
 				disableEntitiesTracking = disableEntitiesTracking,
 				disableCaching = disableCaching,
 				showQueryTimings = showQueryTimings,
-				shouldExplainScores = shouldExplainScores
+				shouldExplainScores = shouldExplainScores,
+                resultsTransformer = resultsTransformer,
+                transformerParameters = transformerParameters,
+                defaultOperator = defaultOperator,
+                highlighterKeyName = highlighterKeyName,
+                lastEquality = lastEquality
+                
 			};
 			return documentQuery;
 		}

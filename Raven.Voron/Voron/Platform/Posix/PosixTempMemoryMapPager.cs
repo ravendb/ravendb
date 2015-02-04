@@ -9,7 +9,20 @@ using Voron.Util;
 
 namespace Voron.Platform.Posix
 {
-	public unsafe class PosixPageFileBackedMemoryMapPager : AbstractPager
+	/// <summary>
+	/// In Windows, we use page file based memory mapped file pager.
+	/// In Linux, we cannot use the same approach, because using shm_open (similar to anonymous memory mapped file in Windows)
+	/// will not actually commit the memory reservation, and it is actually possible that we might allocate memory "successfully"
+	/// but only get around to actually using it later. In this case, Linux will realize that it can't meet its promise about using
+	/// this memory, and it will throw its hands up in the air and give up. At this point, the OOM killer will get involved and assasinate
+	/// us in cold blood, all for believing what the OS said. 
+	/// This has to do with overcommit and the process model for Linux requiring duplicate memory at fork().
+	/// 
+	/// In short, it means that to be reliable, we cannot use swap space in Linux for anything that may be large. We have to create temporary
+	/// files for that purpose (so we'll get assured allocation of space on disk, and then be able to mmap them).
+	/// 
+	/// </summary>
+	public unsafe class PosixTempMemoryMapPager : AbstractPager
 	{
 		private readonly string _file;
 		private int _fd;
@@ -17,25 +30,20 @@ namespace Voron.Platform.Posix
 		private long _totalAllocationSize;
 		private static int _counter;
 
-		public PosixPageFileBackedMemoryMapPager(string file, long? initialFileSize = null)
+		public PosixTempMemoryMapPager(string file, long? initialFileSize = null)
 		{
 			var instanceId = Interlocked.Increment(ref _counter);
-			_file = "/" + Syscall.getpid() + "-" + instanceId + "-" + file;
-			_fd = Rt.shm_open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT, (int)FilePermissions.ALLPERMS);
+			_file = "/var/tmp/ravendb-" + Syscall.getpid() + "-" + instanceId + "-" + file;
+            _fd = Syscall.open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_EXCL, 
+                FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 			if (_fd == -1)
 				PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+		    DeleteOnClose = true;
 
 			SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
-			if (initialFileSize.HasValue)
-			{
-				_totalAllocationSize = NearestSizeToPageSize(initialFileSize.Value);
-			}
-
-			_totalAllocationSize = NearestSizeToPageSize(_totalAllocationSize);
-			var result = Syscall.ftruncate (_fd, _totalAllocationSize);
-			if (result != 0)
-				PosixHelper.ThrowLastError (result);
+			_totalAllocationSize = NearestSizeToPageSize(initialFileSize ?? _totalAllocationSize);
+			PosixHelper.AllocateFileSpace(_fd, (ulong)_totalAllocationSize);
 
 			NumberOfAllocatedPages = _totalAllocationSize / PageSize;
 			PagerState.Release();
@@ -71,7 +79,7 @@ namespace Voron.Platform.Posix
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-			Syscall.ftruncate(_fd, _totalAllocationSize + allocationSize);
+            PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize));
 			_totalAllocationSize += allocationSize;
 
 			PagerState newPagerState = CreatePagerState();
@@ -154,7 +162,7 @@ namespace Voron.Platform.Posix
 			ThrowObjectDisposedIfNeeded();
 
 			int toCopy = pagesToWrite * PageSize;
-            MemoryUtils.Copy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
+            MemoryUtils.BulkCopy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
 
 			return toCopy;
 		}
@@ -176,8 +184,16 @@ namespace Voron.Platform.Posix
 			base.Dispose ();
 			if (_fd != -1) 
 			{
+				// note that the orders of operations is important here, we first unlink the file
+				// we are supposed to be the only one using it, so Linux would be ready to delete it
+				// and hopefully when we close it, won't waste any time trying to sync the memory state
+				// to disk just to discard it
+				if (DeleteOnClose) {
+					Syscall.unlink (_file);
+					// explicitly ignoring the result here, there isn't
+					// much we can do to recover from being unable to delete it
+				}
 				Syscall.close (_fd);
-				Rt.shm_unlink (_file);
 				_fd = -1;
 			}		
 		}

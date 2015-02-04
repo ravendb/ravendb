@@ -8,6 +8,7 @@ using Voron.Impl;
 using Voron.Platform.Win32;
 using Xunit;
 using Xunit.Extensions;
+using Mono.Unix.Native;
 
 namespace Voron.Tests.Storage
 {
@@ -139,6 +140,34 @@ namespace Voron.Tests.Storage
 			}
 		}
 
+		byte* AllocateMemoryAtEndOfPager (long totalAllocationSize)
+		{
+			if(StorageEnvironmentOptions.RunningOnPosix)
+			{
+				var p = Syscall.mmap (new IntPtr (Env.Options.DataPager.PagerState.MapBase + totalAllocationSize), 16,
+					MmapProts.PROT_READ | MmapProts.PROT_WRITE, MmapFlags.MAP_ANONYMOUS, -1, 0);
+				if(p.ToInt64() == -1)
+				{
+					return null;
+				}
+				return (byte*)p.ToPointer ();
+			}
+			return Win32NativeMethods.VirtualAlloc (Env.Options.DataPager.PagerState.MapBase + totalAllocationSize, new UIntPtr (16), 
+				Win32NativeMethods.AllocationType.RESERVE, Win32NativeMethods.MemoryProtection.EXECUTE_READWRITE);
+		}
+
+		static void FreeMemoryAtEndOfPager (byte* adjacentBlockAddress)
+		{
+			if (adjacentBlockAddress == null || adjacentBlockAddress == (byte*)0)
+				return;
+			if(StorageEnvironmentOptions.RunningOnPosix)
+			{
+				Syscall.munmap (new IntPtr (adjacentBlockAddress), 16);
+				return;
+			}
+			Win32NativeMethods.VirtualFree (adjacentBlockAddress, UIntPtr.Zero, Win32NativeMethods.FreeType.MEM_RELEASE);
+		}
+
 		[Fact]
 		public void Should_be_able_to_allocate_new_pages_with_remapping()
 		{
@@ -159,9 +188,7 @@ namespace Voron.Tests.Storage
 			{
 				//if this fails and adjacentBlockAddress == 0 or null --> this means the remapping will occur anyway. 
 				//the allocation is here to make sure the remapping does happen in any case
-				adjacentBlockAddress = Win32NativeMethods.VirtualAlloc(
-					Env.Options.DataPager.PagerState.MapBase + totalAllocationSize, new UIntPtr(16),
-					Win32NativeMethods.AllocationType.RESERVE, Win32NativeMethods.MemoryProtection.EXECUTE_READWRITE);
+				adjacentBlockAddress = AllocateMemoryAtEndOfPager (totalAllocationSize);
 
 				pagerSize *= 2;
 				var numberOfPagesBeforeAllocation = Env.Options.DataPager.NumberOfAllocatedPages;
@@ -171,8 +198,7 @@ namespace Voron.Tests.Storage
 			}
 			finally
 			{
-				if(adjacentBlockAddress != null && adjacentBlockAddress != (byte*)0)
-					Win32NativeMethods.VirtualFree(adjacentBlockAddress, UIntPtr.Zero, Win32NativeMethods.FreeType.MEM_RELEASE);
+				FreeMemoryAtEndOfPager (adjacentBlockAddress);
 			}
 		}
 	}

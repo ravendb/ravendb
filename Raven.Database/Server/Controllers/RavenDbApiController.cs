@@ -574,7 +574,7 @@ namespace Raven.Database.Server.Controllers
             {
                 try
                 {
-					const int TimeToWaitForDatabaseToLoad = 5;
+					int TimeToWaitForDatabaseToLoad = MaxSecondsForTaskToWaitForDatabaseToLoad;
 					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
 					{
 						if (MaxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
@@ -638,7 +638,7 @@ namespace Raven.Database.Server.Controllers
 
 	    public override string TenantName
 	    {
-            get { return DatabaseName;}
+            get { return DatabaseName; }
 	    }
 
 	    public override void MarkRequestDuration(long duration)
@@ -659,5 +659,13 @@ namespace Raven.Database.Server.Controllers
 	            return values.All(x => string.IsNullOrEmpty(x) == false && (x[0] != '1' && x[0] != '2'));
 	        }
 	    }
+
+		protected class TenantData
+		{
+			public string Name { get; set; }
+			public bool Disabled { get; set; }
+			public string[] Bundles { get; set; }
+			public bool IsAdminCurrentTenant { get; set; }
+		}
 	}
 }

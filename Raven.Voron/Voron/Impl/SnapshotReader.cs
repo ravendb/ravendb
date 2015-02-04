@@ -23,21 +23,19 @@ namespace Voron.Impl
 
 			if (writeBatch != null && writeBatch.IsEmpty == false)
 			{
-				WriteBatch.BatchOperationType operationType;
-				Stream stream;
-				ushort? version;
-				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
+				WriteBatch.InBatchValue result;
+				if (writeBatch.TryGetValue(treeName, key, out result))
 				{
-					if (!version.HasValue)
+					if (!result.Version.HasValue)
 						tree = GetTree(treeName);
 
-					switch (operationType)
+					switch (result.OperationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
-							{
-								var reader = new ValueReader(stream);
-								return new ReadResult(reader, version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(key));
-							}
+						{
+							var reader = new ValueReader(result.Stream);
+							return new ReadResult(reader, result.Version.HasValue ? (ushort) (result.Version.Value + 1) : tree.ReadVersion(key));
+						}
 						case WriteBatch.BatchOperationType.Delete:
 							return null;
 					}
@@ -50,6 +48,35 @@ namespace Voron.Impl
 			return tree.Read(key);
 		}
 
+		public StructReadResult<T> ReadStruct<T>(string treeName, Slice key, StructureSchema<T> schema, WriteBatch writeBatch = null)
+		{
+
+			Tree tree = null;
+
+			if (writeBatch != null && writeBatch.IsEmpty == false)
+			{
+				WriteBatch.InBatchValue result;
+				if (writeBatch.TryGetValue(treeName, key, out result))
+				{
+					if (!result.Version.HasValue)
+						tree = GetTree(treeName);
+
+					switch (result.OperationType)
+					{
+						case WriteBatch.BatchOperationType.AddStruct:
+							return new StructReadResult<T>(new StructureReader<T>((Structure<T>) result.Struct, schema),  result.Version.HasValue ? (ushort)(result.Version.Value + 1) : tree.ReadVersion(key));
+						case WriteBatch.BatchOperationType.Delete:
+							return null;
+					}
+				}
+			}
+
+			if (tree == null)
+				tree = GetTree(treeName);
+
+			return tree.ReadStruct(key, schema);
+		}
+
 		public int GetDataSize(string treeName, Slice key)
 		{
 			var tree = GetTree(treeName);
@@ -60,18 +87,21 @@ namespace Voron.Impl
 		{
 			if (writeBatch != null && writeBatch.IsEmpty == false)
 			{
-				WriteBatch.BatchOperationType operationType;
-				Stream stream;
-				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
+				WriteBatch.InBatchValue result;
+				if (writeBatch.TryGetValue(treeName, key, out result))
 				{
-					switch (operationType)
+					version = result.Version;
+
+					switch (result.OperationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
+							return true;
+						case WriteBatch.BatchOperationType.AddStruct:
 							return true;
 						case WriteBatch.BatchOperationType.Delete:
 							return false;
 						default:
-							throw new ArgumentOutOfRangeException(operationType.ToString());
+							throw new ArgumentOutOfRangeException(result.OperationType.ToString());
 					}
 				}
 			}
@@ -90,16 +120,15 @@ namespace Voron.Impl
 		{
 			if (writeBatch != null)
 			{
-				WriteBatch.BatchOperationType operationType;
-				Stream stream;
-				ushort? version;
-				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType) && version.HasValue)
+				WriteBatch.InBatchValue result;
+				if (writeBatch.TryGetValue(treeName, key, out result) && result.Version.HasValue)
 				{
-					switch (operationType)
+					switch (result.OperationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
+						case WriteBatch.BatchOperationType.AddStruct:
 						case WriteBatch.BatchOperationType.Delete:
-							return (ushort)(version.Value + 1);
+							return (ushort)(result.Version.Value + 1);
 					}
 				}
 			}
@@ -108,10 +137,10 @@ namespace Voron.Impl
 			return tree.ReadVersion(key);
 		}
 
-		public IIterator Iterate(string treeName, WriteBatch writeBatch = null)
+		public IIterator Iterate(string treeName)
 		{
 			var tree = GetTree(treeName);
-			return tree.Iterate(writeBatch);
+			return tree.Iterate();
 		}
 
 		public void Dispose()

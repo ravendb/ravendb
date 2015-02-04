@@ -258,6 +258,37 @@ namespace Voron
             tx.RemoveTree(name);
         }
 
+	    public unsafe void RenameTree(Transaction tx, string fromName, string toName)
+	    {
+			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
+				throw new ArgumentException("Cannot rename a new tree with a read only transaction");
+
+			if (toName.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase) ||
+				toName.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
+				throw new InvalidOperationException("Cannot create a tree with reserved name: " + toName);
+
+		    if (tx.ReadTree(toName) != null)
+			    throw new ArgumentException("Cannot rename a tree with the name of an existing tree: " + toName);
+
+		    Tree fromTree = tx.ReadTree(fromName);
+		    if (fromTree == null)
+			    throw new ArgumentException("Tree " + fromName + " does not exists");
+			
+		    Slice key = toName;
+			var ptr = tx.State.Root.DirectAdd(key, sizeof(TreeRootHeader));
+		    fromTree.State.CopyTo((TreeRootHeader*) ptr);
+		    fromTree.Name = toName;
+		    fromTree.State.IsModified = true;
+		    
+			tx.RemoveTree(fromName);
+			tx.RemoveTree(toName);
+
+			tx.AddTree(toName, fromTree);
+
+			if (IsDebugRecording)
+				DebugJournal.RecordWriteAction(DebugActionType.RenameTree, tx, toName, fromName, Stream.Null);
+	    }
+
         public unsafe Tree CreateTree(Transaction tx, string name, bool keysPrefixing = false)
         {
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)

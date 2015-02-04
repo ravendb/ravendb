@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
+using System.Runtime.InteropServices;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Voron.Trees
 {
@@ -177,6 +176,13 @@ namespace Voron.Trees
 		public ValueReader CreateReaderForCurrent()
 		{
 			return NodeHeader.Reader(_tx, Current);
+		}
+
+		public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
+		{
+			var valueReader = NodeHeader.Reader(_tx, Current);
+
+			return new StructureReader<T>(valueReader.Base, schema);
 		}
 
 		public void Dispose()

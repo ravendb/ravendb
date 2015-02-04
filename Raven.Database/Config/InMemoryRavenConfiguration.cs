@@ -108,6 +108,7 @@ namespace Raven.Database.Config
 
 			MaxConcurrentRequestsForDatabaseDuringLoad = ravenSettings.MaxConcurrentRequestsForDatabaseDuringLoad.Value;
 
+            MaxSecondsForTaskToWaitForDatabaseToLoad = ravenSettings.MaxSecondsForTaskToWaitForDatabaseToLoad.Value;
 			MaxConcurrentMultiGetRequests = ravenSettings.MaxConcurrentMultiGetRequests.Value;
 			if (ConcurrentMultiGetRequests == null)
 				ConcurrentMultiGetRequests = new SemaphoreSlim(MaxConcurrentMultiGetRequests);
@@ -305,7 +306,9 @@ namespace Raven.Database.Config
 			return this;
 		}
 
-		public int IndexAndTransformerReplicationLatencyInSec { get; internal set; }
+	    public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
+
+	    public int IndexAndTransformerReplicationLatencyInSec { get; internal set; }
 
 		/// <summary>
 		/// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
@@ -1146,6 +1149,9 @@ namespace Raven.Database.Config
 
             if (string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
                 Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "Databases", tenantId);
+
+            if (string.IsNullOrEmpty(Settings["Raven/Voron/TempPath"]) == false)
+                Settings["Raven/Voron/TempPath"] = Path.Combine(Settings["Raven/Voron/TempPath"], "Databases", tenantId, "VoronTemp");
         }
 
         public void CustomizeValuesForFileSystemTenant(string tenantId)

@@ -26,6 +26,7 @@ class filesystemFiles extends viewModelBase {
     fileName = ko.observable<file>();
     allFilesPagedItems = ko.observable<pagedList>();
     selectedFilesIndices = ko.observableArray<number>();
+    selectedFilesText: KnockoutComputed<string>;
     isSelectAll = ko.observable(false);
     hasAnyFileSelected: KnockoutComputed<boolean>;
     selectedFolder = ko.observable<string>();
@@ -47,7 +48,6 @@ class filesystemFiles extends viewModelBase {
     static uploadQueueSelector = "#uploadQueue";
     static uploadQueuePanelCollapsedSelector = "#uploadQueuePanelCollapsed";
 
-
     constructor() {
         super();
 
@@ -55,6 +55,16 @@ class filesystemFiles extends viewModelBase {
         fileUploadBindingHandler.install();
         treeBindingHandler.install();
         treeBindingHandler.includeRevisionsFunc = () => this.activeFilesystem().activeBundles.contains('Versioning');
+        this.selectedFilesText = ko.computed(() => {
+            if (!!this.selectedFilesIndices()) {
+                var documentsText = "file";
+                if (this.selectedFilesIndices().length != 1) {
+                    documentsText += "s";
+                }
+                return documentsText;
+            }
+            return "";
+        });
     }
 
     activate(args) {
@@ -319,7 +329,6 @@ class filesystemFiles extends viewModelBase {
         $(filesystemFiles.uploadQueuePanelCollapsedSelector).removeClass("hidden");
         $(".upload-queue").addClass("upload-queue-min");
     }
-
 }
 
 export = filesystemFiles;

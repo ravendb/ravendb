@@ -36,6 +36,10 @@ class viewModelBase {
     public static isConfirmedUsingSystemDatabase: boolean = false;
     dirtyFlag = new ko.DirtyFlag([]);
 
+    currentHelpLink = ko.observable<string>().subscribeTo('globalHelpLink', true);
+
+    //holds full studio version eg. 3.0.3528
+    static clientVersion = ko.observable<string>();
 
     static hasContinueTestOption = ko.observable<boolean>(false);
     /*
@@ -98,6 +102,7 @@ class viewModelBase {
         window.addEventListener("beforeunload", this.beforeUnloadListener, false);
 
         ko.postbox.publish("SetRawJSONUrl", "");
+        this.updateHelpLink(null); // clean link
     }
 
     /*
@@ -314,6 +319,16 @@ class viewModelBase {
         new saveDocumentCommand("Debug/Done", doc, this.activeDatabase(), false)
             .execute()
             .done(() => viewModelBase.hasContinueTestOption(false));
+    }
+
+    public updateHelpLink(hash: string = null) {
+        if (hash) {
+            var version = viewModelBase.clientVersion();
+            var href = "http://ravendb.net/l/" + hash + "/" + version + "/";
+            ko.postbox.publish('globalHelpLink', href);
+        } else {
+            ko.postbox.publish('globalHelpLink', null);
+        }
     }
 }
 

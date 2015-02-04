@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
@@ -92,6 +96,26 @@ namespace Voron.Trees
 			var pos = DirectAdd(key, (int)value.Length, version: version);
 		    
 		    CopyStreamToPointer(_tx, value, pos);
+		}
+
+		public StructReadResult<T> ReadStruct<T>(Slice key, StructureSchema<T> schema)
+		{
+			var readResult = Read(key);
+
+			if (readResult == null)
+				return null;
+
+			return new StructReadResult<T>(new StructureReader<T>(readResult.Reader.Base, schema), readResult.Version);
+		}
+
+		public void WriteStruct(Slice key, IStructure structure, ushort? version = null)
+		{
+			structure.AssertValidStructure();
+
+			State.IsModified = true;
+			var pos = DirectAdd(key, structure.GetSize(), version: version);
+
+			structure.Write(pos);
 		}
 
 		public long Increment(Slice key, long delta, ushort? version = null)
@@ -530,7 +554,7 @@ namespace Voron.Trees
 			page.DebugValidate(_tx, State.RootPageNumber);
 		}
 
-		public TreeIterator Iterate(WriteBatch writeBatch = null)
+		public TreeIterator Iterate()
 		{
 			return new TreeIterator(this, _tx);
 		}

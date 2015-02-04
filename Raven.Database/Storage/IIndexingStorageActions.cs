@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Database.Data;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Storage

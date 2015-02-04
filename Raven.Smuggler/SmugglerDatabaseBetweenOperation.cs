@@ -127,10 +127,10 @@ namespace Raven.Smuggler
 			var filteredIdentities = identities.Where(x =>
 			{
 				if ("Raven/Etag".Equals(x.Key, StringComparison.InvariantCultureIgnoreCase))
-					return true;
+					return false;
 
 				if ("IndexId".Equals(x.Key, StringComparison.InvariantCultureIgnoreCase) && operateOnTypes.HasFlag(ItemType.Indexes))
-					return true;
+					return false;
 
 				if (operateOnTypes.HasFlag(ItemType.Documents))
 					return true;

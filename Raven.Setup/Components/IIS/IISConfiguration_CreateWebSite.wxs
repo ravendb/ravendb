@@ -60,7 +60,7 @@
         </iis:WebVirtualDir>
       </Component>
 
-      <Component Id="NewApplicationPoolWithApplicationPoolIdentity_New" Guid="{D08D8A4A-31BD-436D-B2D0-EC8C6C9DD6B1}" KeyPath="yes">
+      <Component Id="NewApplicationPoolWithApplicationPoolIdentity_New" Guid="{D08D8A4A-31BD-436D-B2D0-EC8C6C9DD6B1}" KeyPath="yes" Win64="yes">
         <Condition><![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "NEW" AND APPLICATION_POOL_IDENTITY_TYPE = "ApplicationPoolIdentity" AND WEBSITE_TYPE = "NEW"]]></Condition>
         <iis:WebAppPool Id="AppPool2_New"
                         Name="[WEB_APP_POOL_NAME]"
@@ -79,7 +79,7 @@
         </iis:WebVirtualDir>
       </Component>
 
-      <Component Id="NewApplicationPoolWithLocalServiceIdentity_New" Guid="{203658CA-E7D2-48EE-AB2C-FBAF3B4555D1}" KeyPath="yes">
+      <Component Id="NewApplicationPoolWithLocalServiceIdentity_New" Guid="{203658CA-E7D2-48EE-AB2C-FBAF3B4555D1}" KeyPath="yes" Win64="yes">
         <Condition>
           <![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "NEW" AND APPLICATION_POOL_IDENTITY_TYPE = "LocalService" AND WEBSITE_TYPE = "NEW"]]>
         </Condition>
@@ -100,7 +100,7 @@
         </iis:WebVirtualDir>
       </Component>
 
-      <Component Id="NewApplicationPoolWithLocalSystemIdentity_New" Guid="{05396449-CCD3-4A2A-BA4F-552C0BC55F61}" KeyPath="yes">
+      <Component Id="NewApplicationPoolWithLocalSystemIdentity_New" Guid="{05396449-CCD3-4A2A-BA4F-552C0BC55F61}" KeyPath="yes" Win64="yes">
         <Condition>
           <![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "NEW" AND APPLICATION_POOL_IDENTITY_TYPE = "LocalSystem" AND WEBSITE_TYPE = "NEW"]]>
         </Condition>
@@ -121,7 +121,7 @@
         </iis:WebVirtualDir>
       </Component>
 
-      <Component Id="NewApplicationPoolWithNetworkServiceIdentity_New" Guid="{708A3B8B-7C8A-4B16-B5AC-E53FD78DF041}" KeyPath="yes">
+      <Component Id="NewApplicationPoolWithNetworkServiceIdentity_New" Guid="{708A3B8B-7C8A-4B16-B5AC-E53FD78DF041}" KeyPath="yes" Win64="yes">
         <Condition>
           <![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "NEW" AND APPLICATION_POOL_IDENTITY_TYPE = "NetworkService" AND WEBSITE_TYPE = "NEW"]]>
         </Condition>
@@ -142,7 +142,7 @@
         </iis:WebVirtualDir>
       </Component>
 
-      <Component Id="NewApplicationPoolWithOtherIdentity_New" Guid="{909ED83E-B447-4E0A-85D4-9F767A027B91}" KeyPath="yes">
+      <Component Id="NewApplicationPoolWithOtherIdentity_New" Guid="{909ED83E-B447-4E0A-85D4-9F767A027B91}" KeyPath="yes" Win64="yes">
         <Condition>
           <![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "NEW" AND APPLICATION_POOL_IDENTITY_TYPE = "other" AND WEBSITE_TYPE = "NEW"]]>
         </Condition>

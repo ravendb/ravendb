@@ -27,7 +27,7 @@ namespace Voron.Platform.Posix
 			_filename = filename;
 
 			_fd = Syscall.open(filename, OpenFlags.O_WRONLY | OpenFlags.O_SYNC | OpenFlags.O_CREAT,
-			                   FilePermissions.ALLPERMS);
+				FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 			if (_fd == -1)
 			{
 				PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
@@ -65,7 +65,7 @@ namespace Voron.Platform.Posix
 			Dispose();
 		}
 
-		public unsafe void WriteGather(long position, byte*[] pages)
+		public unsafe void WriteGather(long position, IntPtr[] pages)
 		{
 			if (pages.Length == 0)
 				return; // nothing to do
@@ -74,22 +74,22 @@ namespace Voron.Platform.Posix
 			const int IOV_MAX = 1024;
 			while (start < pages.Length)
 			{
-				start++;
 				var byteLen = 0L;
 				var locs = new List<Iovec>
 				{
 					new Iovec
 					{
-						iov_base = new IntPtr(pages[start]),
+						iov_base = pages[start],
 						iov_len = AbstractPager.PageSize
 					}
 				};
+                start++;
 				byteLen += AbstractPager.PageSize;
 				for (int i = 1; i < pages.Length && locs.Count < IOV_MAX; i++, start++)
 				{
 					byteLen += AbstractPager.PageSize;
 					var cur = locs[locs.Count - 1];
-					if (((byte*)cur.iov_base.ToPointer() + cur.iov_len) == pages[i])
+					if (((byte*)cur.iov_base.ToPointer() + cur.iov_len) == (byte*)pages[i].ToPointer())
 					{
 						cur.iov_len = cur.iov_len + AbstractPager.PageSize;
 						locs[locs.Count - 1] = cur;
@@ -98,7 +98,7 @@ namespace Voron.Platform.Posix
 					{
 						locs.Add(new Iovec
 						{
-							iov_base = new IntPtr( pages[i]),
+							iov_base = pages[i],
 							iov_len = AbstractPager.PageSize
 						});
 					}
@@ -125,7 +125,7 @@ namespace Voron.Platform.Posix
 		{
 			if (_fdReads == -1)
 			{
-				_fdReads = Syscall.open(_filename, OpenFlags.O_RDONLY);
+				_fdReads = Syscall.open(_filename, OpenFlags.O_RDONLY,FilePermissions.S_IRUSR);
 				if (_fdReads == -1)
 					PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
 			}

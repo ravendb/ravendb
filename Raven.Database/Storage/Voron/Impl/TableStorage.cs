@@ -5,8 +5,10 @@
 // -----------------------------------------------------------------------
 using System.Threading;
 using System.Web.UI;
+using Mono.CSharp;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Indexing.Collation.Cultures;
+using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Voron.Impl.Paging;
 
 namespace Raven.Database.Storage.Voron.Impl
@@ -107,34 +109,34 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table Documents { get; private set; }
 
-		public Table IndexingStats { get; private set; }
+		public TableOfStructures<IndexingWorkStatsFields> IndexingStats { get; private set; }
 
-		public Table ReduceStats { get; private set; }
+		public TableOfStructures<ReducingWorkStatsFields> ReduceStats { get; private set; }
 
 		public Table IndexingMetadata { get; private set; }
 
-		public Table LastIndexedEtags { get; private set; }
+		public TableOfStructures<LastIndexedStatsFields> LastIndexedEtags { get; private set; }
 
-		public Table DocumentReferences { get; private set; }
+		public TableOfStructures<DocumentReferencesFields> DocumentReferences { get; private set; }
 
 		public Table Queues { get; private set; }
 
 		public Table Lists { get; private set; }
 
-		public Table Tasks { get; private set; }
+		public TableOfStructures<TaskFields> Tasks { get; private set; }
 
-		public Table ScheduledReductions { get; private set; }
+		public TableOfStructures<ScheduledReductionFields> ScheduledReductions { get; private set; }
 
-		public Table MappedResults { get; private set; }
+		public TableOfStructures<MappedResultFields> MappedResults { get; private set; }
 
-		public Table ReduceResults { get; private set; }
+		public TableOfStructures<ReduceResultFields> ReduceResults { get; private set; }
 
         [Obsolete("Use RavenFS instead.")]
 		public Table Attachments { get; private set; }
 
-		public Table ReduceKeyCounts { get; private set; }
+		public TableOfStructures<ReduceKeyCountFields> ReduceKeyCounts { get; private set; }
 
-		public Table ReduceKeyTypes { get; private set; }
+		public TableOfStructures<ReduceKeyTypeFields> ReduceKeyTypes { get; private set; }
 
 		public Table General { get; private set; }
 
@@ -205,21 +207,99 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			Documents = new Table(Tables.Documents.TableName, bufferPool, Tables.Documents.Indices.KeyByEtag, Tables.Documents.Indices.Metadata);
 			Details = new Table(Tables.Details.TableName, bufferPool);
-			IndexingStats = new Table(Tables.IndexingStats.TableName, bufferPool);
+			IndexingStats = new TableOfStructures<IndexingWorkStatsFields>(Tables.IndexingStats.TableName,
+				new StructureSchema<IndexingWorkStatsFields>()
+					.Add<int>(IndexingWorkStatsFields.IndexId)
+					.Add<int>(IndexingWorkStatsFields.IndexingAttempts)
+					.Add<int>(IndexingWorkStatsFields.IndexingSuccesses)
+					.Add<int>(IndexingWorkStatsFields.IndexingErrors)
+					.Add<long>(IndexingWorkStatsFields.LastIndexingTime)
+					.Add<long>(IndexingWorkStatsFields.CreatedTimestamp),
+				bufferPool);
+
 			IndexingMetadata = new Table(Tables.IndexingMetadata.TableName, bufferPool);
-			LastIndexedEtags = new Table(Tables.LastIndexedEtags.TableName, bufferPool);
-			DocumentReferences = new Table(Tables.DocumentReferences.TableName, bufferPool, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
+			LastIndexedEtags = new TableOfStructures<LastIndexedStatsFields>(Tables.LastIndexedEtags.TableName,
+				new StructureSchema<LastIndexedStatsFields>()
+					.Add<int>(LastIndexedStatsFields.IndexId)
+					.Add<long>(LastIndexedStatsFields.LastTimestamp)
+					.Add<byte[]>(LastIndexedStatsFields.LastEtag),
+				bufferPool);
+
+			DocumentReferences = new TableOfStructures<DocumentReferencesFields>(Tables.DocumentReferences.TableName,
+				new StructureSchema<DocumentReferencesFields>()
+					.Add<int>(DocumentReferencesFields.IndexId)
+					.Add<string>(DocumentReferencesFields.Key)
+					.Add<string>(DocumentReferencesFields.Reference),
+				bufferPool, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
+
 			Queues = new Table(Tables.Queues.TableName, bufferPool, Tables.Queues.Indices.ByName, Tables.Queues.Indices.Data);
 			Lists = new Table(Tables.Lists.TableName, bufferPool, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
-			Tasks = new Table(Tables.Tasks.TableName, bufferPool, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType, Tables.Tasks.Indices.ByIndex);
-			ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, bufferPool, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
-			MappedResults = new Table(Tables.MappedResults.TableName, bufferPool, Tables.MappedResults.Indices.ByView, Tables.MappedResults.Indices.ByViewAndDocumentId, Tables.MappedResults.Indices.ByViewAndReduceKey, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket, Tables.MappedResults.Indices.Data);
-			ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, bufferPool, Tables.ReduceKeyCounts.Indices.ByView);
-			ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, bufferPool, Tables.ReduceKeyTypes.Indices.ByView);
+
+			Tasks = new TableOfStructures<TaskFields>(Tables.Tasks.TableName,
+				new StructureSchema<TaskFields>()
+					.Add<int>(TaskFields.IndexId)
+					.Add<long>(TaskFields.AddedAt)
+					.Add<byte[]>(TaskFields.TaskId)
+					.Add<string>(TaskFields.Type)
+					.Add<byte[]>(TaskFields.SerializedTask),
+				bufferPool, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType, Tables.Tasks.Indices.ByIndex);
+
+			ScheduledReductions = new TableOfStructures<ScheduledReductionFields>(Tables.ScheduledReductions.TableName,
+				new StructureSchema<ScheduledReductionFields>()
+					.Add<int>(ScheduledReductionFields.IndexId)
+					.Add<int>(ScheduledReductionFields.Bucket)
+					.Add<int>(ScheduledReductionFields.Level)
+					.Add<long>(ScheduledReductionFields.Timestamp)
+					.Add<string>(ScheduledReductionFields.ReduceKey)
+					.Add<byte[]>(ScheduledReductionFields.Etag),
+				bufferPool, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
+			
+			MappedResults = new TableOfStructures<MappedResultFields>(Tables.MappedResults.TableName,
+				new StructureSchema<MappedResultFields>()
+					.Add<int>(MappedResultFields.IndexId)
+					.Add<int>(MappedResultFields.Bucket)
+					.Add<long>(MappedResultFields.Timestamp)
+					.Add<string>(MappedResultFields.ReduceKey)
+					.Add<string>(MappedResultFields.DocId)
+					.Add<byte[]>(MappedResultFields.Etag),
+				bufferPool, Tables.MappedResults.Indices.ByView, Tables.MappedResults.Indices.ByViewAndDocumentId, Tables.MappedResults.Indices.ByViewAndReduceKey, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket, Tables.MappedResults.Indices.Data);
+
+			ReduceKeyCounts = new TableOfStructures<ReduceKeyCountFields>(Tables.ReduceKeyCounts.TableName,
+				new StructureSchema<ReduceKeyCountFields>()
+					.Add<int>(ReduceKeyCountFields.IndexId)
+					.Add<int>(ReduceKeyCountFields.MappedItemsCount)
+					.Add<string>(ReduceKeyCountFields.ReduceKey),
+				bufferPool, Tables.ReduceKeyCounts.Indices.ByView);
+
+			ReduceKeyTypes = new TableOfStructures<ReduceKeyTypeFields>(Tables.ReduceKeyTypes.TableName,
+				new StructureSchema<ReduceKeyTypeFields>()
+					.Add<int>(ReduceKeyTypeFields.IndexId)
+					.Add<int>(ReduceKeyTypeFields.ReduceType)
+					.Add<string>(ReduceKeyTypeFields.ReduceKey),
+				bufferPool, Tables.ReduceKeyTypes.Indices.ByView);
+
 			Attachments = new Table(Tables.Attachments.TableName, bufferPool, Tables.Attachments.Indices.ByEtag, Tables.Attachments.Indices.Metadata);
-			ReduceResults = new Table(Tables.ReduceResults.TableName, bufferPool, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
+
+			ReduceResults = new TableOfStructures<ReduceResultFields>(Tables.ReduceResults.TableName,
+				new StructureSchema<ReduceResultFields>()
+					.Add<int>(ReduceResultFields.IndexId)
+					.Add<int>(ReduceResultFields.Level)
+					.Add<int>(ReduceResultFields.SourceBucket)
+					.Add<int>(ReduceResultFields.Bucket)
+					.Add<long>(ReduceResultFields.Timestamp)
+					.Add<string>(ReduceResultFields.ReduceKey)
+					.Add<byte[]>(ReduceResultFields.Etag),
+				bufferPool, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
+
 			General = new Table(Tables.General.TableName, bufferPool);
-			ReduceStats = new Table(Tables.ReduceStats.TableName, bufferPool);
+			ReduceStats = new TableOfStructures<ReducingWorkStatsFields>(Tables.ReduceStats.TableName,
+				new StructureSchema<ReducingWorkStatsFields>()
+					.Add<int>(ReducingWorkStatsFields.ReduceAttempts)
+					.Add<int>(ReducingWorkStatsFields.ReduceSuccesses)
+					.Add<int>(ReducingWorkStatsFields.ReduceErrors)
+					.Add<long>(ReducingWorkStatsFields.LastReducedTimestamp)
+					.Add<byte[]>(ReducingWorkStatsFields.LastReducedEtag),
+				bufferPool);
 		}
 
 		private static string FindGraphviz()

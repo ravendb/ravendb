@@ -75,8 +75,15 @@ namespace Voron.Tests.Storage
 				var dataFile = Path.Combine(path, Constants.DatabaseFilename);
 				var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
 
-				Assert.Equal(GetExpectedInitialSize() * 3, new FileInfo(dataFile).Length);
-				Assert.Equal(GetExpectedInitialSize() * 3, new FileInfo(scratchFile).Length);
+				if (StorageEnvironmentOptions.RunningOnPosix) {
+					// on Linux, we use 4K as the allocation granularity
+					Assert.Equal (GetExpectedInitialSize ()*2 +4096, new FileInfo (dataFile).Length);
+					Assert.Equal (GetExpectedInitialSize ()*2  +4096, new FileInfo (scratchFile).Length);
+				} else {
+					// on Windows, we use 64K as the allocation granularity
+					Assert.Equal (GetExpectedInitialSize () * 3, new FileInfo (dataFile).Length);
+					Assert.Equal (GetExpectedInitialSize () * 3, new FileInfo (scratchFile).Length);
+				}
 			}
 		}
 

@@ -846,7 +846,7 @@ namespace Voron.Impl.Journal
 				CurrentFile = null;
 		}
 
-		private byte*[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager,uint previousTransactionCrc)
+		private IntPtr[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager,uint previousTransactionCrc)
 		{
 			// numberOfPages include the tx header page, which we don't compress
 			var dataPagesCount = numberOfPages - 1;
@@ -882,7 +882,7 @@ namespace Voron.Impl.Journal
 				StdLib.memset(compressionBuffer + len, 0, remainder);
 		    }
 
-			var pages = new byte*[compressedPages + 1];
+			var pages = new IntPtr[compressedPages + 1];
 
 			var txHeaderBase = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPages[0].ScratchFileNumber, txPages[0].PositionInScratchBuffer);
 			var txHeader = (TransactionHeader*)txHeaderBase;
@@ -892,10 +892,10 @@ namespace Voron.Impl.Journal
 			txHeader->UncompressedSize = sizeInBytes;
 			txHeader->PreviousTransactionCrc = previousTransactionCrc;
 
-			pages[0] = txHeaderBase;
+			pages[0] = new IntPtr(txHeaderBase);
 			for (int index = 0; index < compressedPages; index++)
 			{
-				pages[index + 1] = compressionBuffer + (index * AbstractPager.PageSize);
+				pages[index + 1] = new IntPtr(compressionBuffer + (index * AbstractPager.PageSize));
 			}
 
 			txHeader->Crc = Crc.Value(compressionBuffer, 0, compressedPages * AbstractPager.PageSize);

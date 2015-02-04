@@ -6,6 +6,7 @@ namespace Raven.Database.Indexing
 {
 	public interface IBackgroundTaskExecuter
 	{
+		double MaxNumberOfParallelProcessingTasksRatio { get; }
 		IList<TResult> Apply<T, TResult>(WorkContext context, IEnumerable<T> source, Func<T, TResult> func)
 			where TResult : class;
 

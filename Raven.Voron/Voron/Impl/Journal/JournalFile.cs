@@ -134,7 +134,7 @@ namespace Voron.Impl.Journal
 		/// <summary>
 		/// write transaction's raw page data into journal. returns write page position
 		/// </summary>
-		public long Write(Transaction tx, byte*[] pages)
+		public long Write(Transaction tx, IntPtr[] pages)
 		{
 			var ptt = new Dictionary<long, PagePosition>();
 			var unused = new HashSet<PagePosition>();

@@ -27,6 +27,7 @@ import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
+import helpBindingHandler = require("common/helpBindingHandler");
 import changesApi = require("common/changesApi");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
@@ -43,6 +44,7 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
+import getUserInfoCommand = require("commands/getUserInfoCommand");
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
 
 import recentErrors = require("viewmodels/recentErrors");
@@ -51,13 +53,16 @@ import latestBuildReminder = require("viewmodels/latestBuildReminder");
 import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
+
 class shell extends viewModelBase {
     private router = router;
 
     renewOAuthTokenTimeoutId: number;
-
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
     showLogOutButton: KnockoutComputed<boolean>;
+    static isGlobalAdmin = ko.observable<boolean>(false);
+    maxResourceNameWidth: KnockoutComputed<string>;
+    isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ rateLimit: 100 });
 
     static databases = ko.observableArray<database>();
     listedResources: KnockoutComputed<resource[]>;
@@ -151,6 +156,7 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
+        helpBindingHandler.install();
 
         this.isSystemConnected = ko.computed(() => {
             var activeDb = this.activeDatabase();
@@ -185,6 +191,8 @@ class shell extends viewModelBase {
             }
             return shell.resources();
         });
+
+        this.clientBuildVersion.subscribe(v => viewModelBase.clientVersion("3.0." + v.BuildVersion));
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -249,6 +257,37 @@ class shell extends viewModelBase {
                 this.onLogOut();
             }
         });
+
+        this.maxResourceNameWidth = ko.computed(() => {
+            if (this.canShowResourcesNavbar() && !!this.lastActivatedResource()) {
+                var navigationLinksWidth = 50;
+                if (this.canShowDatabaseNavbar()) {
+                    navigationLinksWidth += 804;
+                }
+                else if (this.canShowFileSystemNavbar()) {
+                    navigationLinksWidth += 600;
+                }
+                else if (this.canShowCountersNavbar()) {
+                    navigationLinksWidth += 600; //todo: calculate
+                }
+
+                var brandWidth = this.getWidth("brand");
+                var logOutWidth = this.getWidth("logOut");
+                var continueTestWidth = this.getWidth("continueTest");
+                var featureNameWidth = this.getWidth("featureName");
+
+                var freeSpace = $(window).width() - (navigationLinksWidth + brandWidth + logOutWidth + continueTestWidth + featureNameWidth);
+                var maxWidth = Math.floor(freeSpace);
+                return maxWidth + "px";
+            }
+            return "1px";
+        });
+
+        $(window).resize(() => self.lastActivatedResource.valueHasMutated());
+    }
+
+    private getWidth(tag: string): number {
+        return $("#" + tag).length > 0 ? $("#" + tag).width() : 0;
     }
 
     private destroyChangesApi() {
@@ -326,7 +365,6 @@ class shell extends viewModelBase {
             if (match && match.length == 2) {
                 oauthContext.apiKey(match[1]);
                 apiKeyLocalStorage.setValue(match[1]);
-                window.location.hash = "#";
             }
         } else {
             var apiKeyFromStorage = apiKeyLocalStorage.get();
@@ -549,26 +587,14 @@ class shell extends viewModelBase {
         shell.databases(databases.concat([this.systemDatabase]));
     }
 
-    private static fileSystemsLoaded(fileSystems: filesystem[]) {
-        shell.fileSystems(fileSystems);
-    }
-
-    private counterStoragesLoaded(results: counterStorage[]) {
-        shell.counterStorages(results);
-    }
-
     launchDocEditor(docId?: string, docsList?: pagedList) {
         var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null, this.activeDatabase());
         this.navigate(editDocUrl);
     }
 
-    static loadFileSystems() {
-        return new getFileSystemsCommand()
-            .execute()
-            .done((results: filesystem[]) => shell.fileSystemsLoaded(results));
-    }
+    loadDatabases(): JQueryPromise<any>{
+        var deferred = $.Deferred();
 
-    connectToRavenServer() {
         this.databasesLoadedTask = new getDatabasesCommand()
             .execute()
             .fail(result => this.handleRavenConnectionFailure(result))
@@ -580,15 +606,54 @@ class shell extends viewModelBase {
                 this.fetchLicenseStatus();
                 this.fetchSystemDatabaseAlerts();
                 router.activate();
-            });
+            })
+            .always(() => deferred.resolve());
 
-        var fileSystemsLoadedTask: JQueryPromise<any> = shell.loadFileSystems();
+        return deferred;
+    }
 
-        var counterStoragesLoadedTask: JQueryPromise < any> = new getCounterStoragesCommand()
+    loadFileSystems(): JQueryPromise<any>{
+        var deferred = $.Deferred();
+
+        new getFileSystemsCommand()
             .execute()
-            .done((results: counterStorage[]) => this.counterStoragesLoaded(results));
+            .done((results: filesystem[]) => shell.fileSystems(results))
+            .always(() => deferred.resolve());
 
-        $.when(this.databasesLoadedTask, fileSystemsLoadedTask, counterStoragesLoadedTask)
+        return deferred;
+    }
+
+    loadCounterStorages(): JQueryPromise<any> {
+        return $.Deferred().resolve();
+        
+        //TODO: uncomment this for counter storages
+        /*var deferred = $.Deferred();
+
+        new getCounterStoragesCommand()
+            .execute()
+            .done((results: counterStorage[]) => shell.counterStorages(results))
+            .always(() => deferred.resolve());
+
+        return deferred;*/
+    }
+
+    loadUserInfo() {
+        var deferred = $.Deferred();
+
+        new getUserInfoCommand()
+            .execute()
+            .done((userInfo: userInfoDto) => shell.isGlobalAdmin(userInfo.IsAdminGlobal))
+            .always(() => deferred.resolve());
+
+        return deferred;
+    }
+
+    connectToRavenServer() {
+        var userInfoLoadTask: JQueryPromise<any> = this.loadUserInfo();
+        var databasesLoadedTask: JQueryPromise<any> = this.loadDatabases();
+        var fileSystemsLoadedTask: JQueryPromise<any> = this.loadFileSystems();
+        var counterStoragesLoadedTask: JQueryPromise<any> = this.loadCounterStorages();
+        $.when(userInfoLoadTask, databasesLoadedTask, fileSystemsLoadedTask, counterStoragesLoadedTask)
             .always(() => {
                 var locationHash = window.location.hash;
                 if (appUrl.getFileSystem()) { //filesystems section
@@ -794,7 +859,7 @@ class shell extends viewModelBase {
         if (db && !db.disabled() && db.isLicensed()) {
             new getDatabaseStatsCommand(db)
                 .execute()
-                .done(result => db.statistics(result));
+                .done((result: databaseStatisticsDto) => db.saveStatistics(result));
         }
     }
 
@@ -802,7 +867,7 @@ class shell extends viewModelBase {
         if (fs && !fs.disabled() && fs.isLicensed()) {
             new getFileSystemStatsCommand(fs)
                 .execute()
-                .done(result=> fs.statistics(result));
+                .done((result: filesystemStatisticsDto) => fs.saveStatistics(result));
         }
     }
 

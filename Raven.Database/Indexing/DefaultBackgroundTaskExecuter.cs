@@ -1,34 +1,44 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using Raven.Abstractions.Logging;
+using Raven.Database.Config;
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
-using Raven.Database.Server;
-using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
-	public class DefaultBackgroundTaskExecuter : IBackgroundTaskExecuter
+	public class DefaultBackgroundTaskExecuter : IBackgroundTaskExecuter, ICpuUsageHandler
 	{
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+
+		private double maxNumberOfParallelProcessingTasksRatio = 1;
+
+		public DefaultBackgroundTaskExecuter()
+		{
+			CpuStatistics.RegisterCpuUsageHandler(this);
+		}
 
 		public IList<TResult> Apply<T, TResult>(WorkContext context, IEnumerable<T> source, Func<T, TResult> func)
 			where TResult : class
 		{
-			if (context.Configuration.MaxNumberOfParallelProcessingTasks == 1)
+			var maxNumberOfParallelIndexTasks = context.CurrentNumberOfParallelTasks;
+			if (maxNumberOfParallelIndexTasks == 1)
 			{
 				return source.Select(func).ToList();
 			}
-
-			return source.AsParallel()
+			var list = source.AsParallel()
 				.Select(func)
-				.Where(x => x != null)
 				.ToList();
+			for (int i = 0; i < list.Count; i++)
+			{
+				if(list[i] != null)
+					continue;
+				list.RemoveAt(i);
+				i--;
+			}
+			return list;
 		}
 
 		/// <summary>
@@ -36,7 +46,7 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public void ExecuteAllBuffered<T>(WorkContext context, IList<T> source, Action<IEnumerator<T>> action)
 		{
-			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelProcessingTasks;
+			var maxNumberOfParallelIndexTasks = context.CurrentNumberOfParallelTasks;
 			var size = Math.Max(source.Count / maxNumberOfParallelIndexTasks, 1024);
 			if (maxNumberOfParallelIndexTasks == 1 || source.Count <= size)
 			{
@@ -75,7 +85,8 @@ namespace Raven.Database.Indexing
 			WorkContext context,
 			IList<T> source, Action<T, long> action)
 		{
-			if (context.Configuration.MaxNumberOfParallelProcessingTasks == 1)
+			var maxNumberOfParallelProcessingTasks = context.CurrentNumberOfParallelTasks;
+			if (maxNumberOfParallelProcessingTasks == 1)
 			{
 				long i = 0;
 				foreach (var item in source)
@@ -84,8 +95,9 @@ namespace Raven.Database.Indexing
 				}
 				return;
 			}
+
 			context.CancellationToken.ThrowIfCancellationRequested();
-			var partitioneds = Partition(source, context.Configuration.MaxNumberOfParallelProcessingTasks).ToList();
+			var partitioneds = Partition(source, maxNumberOfParallelProcessingTasks).ToList();
 			int start = 0;
 			foreach (var partitioned in partitioneds)
 			{
@@ -94,7 +106,7 @@ namespace Raven.Database.Indexing
 				Parallel.ForEach(partitioned, new ParallelOptions
 				{
 					TaskScheduler = context.TaskScheduler,
-					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelProcessingTasks
+					MaxDegreeOfParallelism = maxNumberOfParallelProcessingTasks
 				}, (item, _, index) =>
 				{
 					using (LogContext.WithDatabase(context.DatabaseName))
@@ -128,7 +140,7 @@ namespace Raven.Database.Indexing
 			}
 
 			using (LogContext.WithDatabase(context.DatabaseName))
-			using (var semaphoreSlim = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelProcessingTasks))
+			using (var semaphoreSlim = new SemaphoreSlim(context.CurrentNumberOfParallelTasks))
 			{
 				var tasks = new Task[result.Count];
 				for (int i = 0; i < result.Count; i++)
@@ -150,6 +162,21 @@ namespace Raven.Database.Indexing
 
 				Task.WaitAll(tasks);
 			}
+		}
+
+		public void HandleHighCpuUsage()
+		{
+			maxNumberOfParallelProcessingTasksRatio = Math.Min(1, maxNumberOfParallelProcessingTasksRatio / 2);
+		}
+
+		public void HandleLowCpuUsage()
+		{
+			maxNumberOfParallelProcessingTasksRatio = Math.Min(1, maxNumberOfParallelProcessingTasksRatio * 1.2);
+		}
+
+		public double MaxNumberOfParallelProcessingTasksRatio
+		{
+			get { return maxNumberOfParallelProcessingTasksRatio; }
 		}
 	}
 }

@@ -77,6 +77,7 @@ class replicationStats extends viewModelBase {
             this.fetchReplStats();
             this.checkIfHasReplicationEnabled();
         });
+        this.updateHelpLink('ES8PCB');
         this.fetchReplStats();
     }
 
@@ -611,10 +612,11 @@ class replicationStats extends viewModelBase {
     }
 
     getTooltip(d) {
-        return "<strong>Destionation:</strong> <span>" + d.Destination + "</span><br />"
-            + "<strong>Duration milliseconds:</strong> <span>" + d.DurationMilliseconds + "</span><br />"
-            + "<strong>Batch size:</strong> <span>" + d.BatchSize + "</span><br />"
-            ;
+        return "<table>"
+            + "<tr><td><strong>Destination:</strong></td><td>" + d.Destination + "</td></tr>"
+            + "<tr><td><strong>Duration milliseconds:</strong></td><td>" + d.DurationMilliseconds + "</td></tr>"
+            + "<tr><td><strong>Batch size:</strong></td><td>" + d.BatchSize + "</td></tr>"
+            + "</table>";
     }
 
     findDestinations(jsonData) {

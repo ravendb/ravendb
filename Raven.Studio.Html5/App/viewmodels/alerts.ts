@@ -36,6 +36,7 @@ class alerts extends viewModelBase {
         super.activate(args);
         this.fetchAlerts();
         var item = !!args.item && !isNaN(args.item) ? args.item : 0;
+        this.updateHelpLink('HL46QE');
         this.selectedAlertIndex(item);
     }
 

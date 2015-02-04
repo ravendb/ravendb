@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Data;
+﻿using System.Net;
+using Raven.Abstractions.Data;
 // -----------------------------------------------------------------------
 //  <copyright file="FileSystemsController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -8,6 +9,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Server;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
@@ -27,23 +29,121 @@ namespace Raven.Database.FileSystem.Controllers
 		[RavenRoute("fs")]
 		public HttpResponseMessage FileSystems(bool getAdditionalData = false)
 		{
-			HttpResponseMessage responseMessage;
+			if (EnsureSystemDatabase() == false)
+				return
+					GetMessageWithString(
+						"The request '" + InnerRequest.RequestUri.AbsoluteUri + "' can only be issued on the system database",
+						HttpStatusCode.BadRequest);
 
-			if (getAdditionalData)
+			// This method is NOT secured, and anyone can access it.
+			// Because of that, we need to provide explicit security here.
+
+			// Anonymous Access - All / Get / Admin
+			// Show all file systems
+
+			// Anonymous Access - None
+			// Show only the file system that you have access to (read / read-write / admin)
+
+			// If admin, show all file systems
+
+			var fileSystemsDocument = GetFileSystemsDocuments();
+			var fileSystemsData = GetFileSystemsData(fileSystemsDocument);
+			var fileSystemsNames = fileSystemsData.Select(fileSystemObject => fileSystemObject.Name).ToArray();
+
+			List<string> approvedFileSystems = null;
+			if (DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
-				var data = GetFileSystemsData();
-				responseMessage = GetMessageWithObject(data);
-			}
-			else
-			{
-				var names = GetFileSystemNames();
-				responseMessage = GetMessageWithObject(names);
+				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+				HttpResponseMessage authMsg;
+				if (authorizer.TryAuthorize(this, out authMsg) == false)
+					return authMsg;
+
+				var user = authorizer.GetUser(this);
+				if (user == null)
+					return authMsg;
+
+				if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false)
+				{
+					approvedFileSystems = authorizer.GetApprovedResources(user, this, fileSystemsNames);
+				}
+
+				fileSystemsData.ForEach(x =>
+				{
+					var principalWithDatabaseAccess = user as PrincipalWithDatabaseAccess;
+					if (principalWithDatabaseAccess != null)
+					{
+						var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(
+							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode);
+						x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
+					}
+					else
+					{
+						x.IsAdminCurrentTenant = user.IsAdministrator(x.Name);
+					}
+				});
 			}
 
+			var lastDocEtag = Etag.Empty;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+			});
+
+			if (MatchEtag(lastDocEtag))
+				return GetEmptyMessage(HttpStatusCode.NotModified);
+
+			if (approvedFileSystems != null)
+			{
+				fileSystemsData = fileSystemsData.Where(databaseData => approvedFileSystems.Contains(databaseData.Name)).ToList();
+				fileSystemsNames = fileSystemsNames.Where(databaseName => approvedFileSystems.Contains(databaseName)).ToArray();
+			}
+
+			var responseMessage = getAdditionalData ? GetMessageWithObject(fileSystemsData) : GetMessageWithObject(fileSystemsNames);
+			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
 			return responseMessage.WithNoCache();
 		}
 
-        [HttpGet]
+		private static List<FileSystemData> GetFileSystemsData(IEnumerable<RavenJToken> fileSystems)
+		{
+			var fileSystemsData = fileSystems
+				.Select(fileSystem =>
+				{
+					var bundles = new string[] { };
+					var settings = fileSystem.Value<RavenJObject>("Settings");
+					if (settings != null)
+					{
+						var activeBundles = settings.Value<string>("Raven/ActiveBundles");
+						if (activeBundles != null)
+						{
+							bundles = activeBundles.Split(';');
+						}
+					}
+					return new FileSystemData
+					{
+						Name = fileSystem.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.FileSystem.Prefix, string.Empty),
+						Disabled = fileSystem.Value<bool>("Disabled"),
+						Bundles = bundles,
+						IsAdminCurrentTenant = true,
+					};
+				}).ToList();
+			return fileSystemsData;
+		}
+
+		private class FileSystemData : TenantData
+		{
+		}
+
+		private RavenJArray GetFileSystemsDocuments()
+		{
+			var start = GetStart();
+			var nextPageStart = start; // will trigger rapid pagination
+			var fileSystemsDocuments = Database.Documents.GetDocumentsWithIdStartingWith(Constants.FileSystem.Prefix, null, null, start,
+				GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
+
+			return fileSystemsDocuments;
+		}
+
+		[HttpGet]
         [RavenRoute("fs/status")]
         public HttpResponseMessage Status()
         {
@@ -60,11 +160,12 @@ namespace Raven.Database.FileSystem.Controllers
 		[RavenRoute("fs/stats")]
 		public async Task<HttpResponseMessage> Stats()
 		{
+			var fileSystemsDocument = GetFileSystemsDocuments();
+			var fileSystemsData = GetFileSystemsData(fileSystemsDocument);
+			var fileSystemsNames = fileSystemsData.Select(fileSystemObject => fileSystemObject.Name).ToArray();
+
 			var stats = new List<FileSystemStats>();
-
-			string[] fileSystemNames = GetFileSystemNames();
-
-			foreach (var fileSystemName in fileSystemNames)
+			foreach (var fileSystemName in fileSystemsNames)
 			{
 				Task<RavenFileSystem> fsTask;
 				if (!FileSystemsLandlord.TryGetFileSystem(fileSystemName, out fsTask)) // we only care about active file systems
@@ -79,73 +180,6 @@ namespace Raven.Database.FileSystem.Controllers
 			}
 
             return GetMessageWithObject(stats).WithNoCache();
-		}
-
-		private string[] GetFileSystemNames()
-		{
-			var fileSystemsData = GetFileSystemsData();
-			var fileSystemsNames = fileSystemsData.Select(fileSystemData => fileSystemData.Name);
-			return fileSystemsNames.ToArray();
-		}
-
-		private IEnumerable<FileSystemData> GetFileSystemsData()
-		{
-			var start = GetStart();
-			var nextPageStart = start; // will trigger rapid pagination
-            var fileSystems = Database.Documents.GetDocumentsWithIdStartingWith(Constants.FileSystem.Prefix, null, null, start,
-										GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
-
-			var fileSystemsData = fileSystems
-				.Select(fileSystem =>
-				{
-                    var bundles = new string[] { };
-                    var settings = fileSystem.Value<RavenJObject>("Settings");
-                    if (settings != null)
-                    {
-                        var activeBundles = settings.Value<string>("Raven/ActiveBundles");
-                        if (activeBundles != null)
-                        {
-                            bundles = activeBundles.Split(';');
-                        }
-                    }
-				    return new FileSystemData
-				    {
-				        Name = fileSystem.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.FileSystem.Prefix, string.Empty),
-				        Disabled = fileSystem.Value<bool>("Disabled"),
-				        Bundles = bundles
-				    };
-				}).ToList();
-
-			var fileSystemsNames = fileSystemsData.Select(fileSystemObject => fileSystemObject.Name).ToArray();
-
-			List<string> approvedFileSystems = null;
-			if (DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
-			{
-				var user = User;
-				if (user == null)
-					return null;
-
-				if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false)
-				{
-					var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
-
-					approvedFileSystems = authorizer.GetApprovedResources(user, this, fileSystemsNames);
-				}
-			}
-
-			if (approvedFileSystems != null)
-			{
-				fileSystemsData = fileSystemsData.Where(fileSystemData => approvedFileSystems.Contains(fileSystemData.Name)).ToList();
-			}
-
-			return fileSystemsData;
-		}
-
-		private class FileSystemData
-		{
-			public string Name;
-			public bool Disabled;
-		    public string[] Bundles;
 		}
 	}
 }

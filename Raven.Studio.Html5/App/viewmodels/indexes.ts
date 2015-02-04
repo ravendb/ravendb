@@ -63,6 +63,7 @@ class indexes extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink('AIHAR1');
 
         this.appUrls = appUrl.forCurrentDatabase();
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), null));
@@ -277,6 +278,23 @@ class indexes extends viewModelBase {
 
     deleteIndexGroup(i: { entityName: string; indexes: KnockoutObservableArray<index> }) {
         this.promptDeleteIndexes(i.indexes());
+    }
+
+    cancelIndex(i: index) {
+        require(["viewmodels/cancelSideBySizeConfirm"], cancelSideBySizeConfirm => {
+            var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
+            app.showDialog(cancelSideBySideIndexViewModel);
+            cancelSideBySideIndexViewModel.cancelTask
+                .done((closedWithoutDeletion: boolean) => {
+                    if (closedWithoutDeletion == false) {
+                        this.removeIndexesFromAllGroups([i]);
+                    }
+                })
+                .fail(() => {
+                    this.removeIndexesFromAllGroups([i]);
+                    this.fetchIndexes();
+                });
+        });
     }
 
     promptDeleteIndexes(indexes: index[]) {
