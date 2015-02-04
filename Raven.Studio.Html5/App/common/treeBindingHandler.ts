@@ -12,6 +12,8 @@ class treeBindingHandler {
 
     static transientNodeStyle = "temp-folder";
 
+    static includeRevisionsFunc: () => boolean;
+
     static install() {
         if (!ko.bindingHandlers["tree"]) {
             ko.bindingHandlers["tree"] = new treeBindingHandler();
@@ -65,6 +67,11 @@ class treeBindingHandler {
         var command = new getFoldersCommand(appUrl.getFileSystem(), 0, 1024, dir);
         command.execute().done((results: folderNodeDto[]) => {
             node.setLazyNodeStatus(0);
+
+            var versioningEnabled = this.includeRevisionsFunc(); 
+            if (!dir && versioningEnabled) {
+                results.unshift({ key: "/$$revisions$$", title: "$revisions", isLazy: false, isFolder: true });
+            }
 
             var newSet: { [key: string]: folderNodeDto; } = {};
             var differenceSet: { [key: string]: DynaTreeNode; } = {};

@@ -375,9 +375,9 @@ namespace Raven.Client.FileSystem
             return ExecuteWithReplication("GET", operation => GetAsyncImpl(filename, operation));
         }
 
-	    public Task<FileHeader[]> StartsWithAsync(string prefix, int start, int pageSize)
+	    public Task<FileHeader[]> StartsWithAsync(string prefix, string matches, int start, int pageSize)
 	    {
-			return ExecuteWithReplication("GET", operation => StartsWithAsyncImpl(prefix, start, pageSize, operation));
+			return ExecuteWithReplication("GET", operation => StartsWithAsyncImpl(prefix, matches, start, pageSize, operation));
 	    }
 
 	    public async Task<IAsyncEnumerator<FileHeader>> StreamFilesAsync(Etag fromEtag, int pageSize = int.MaxValue)
@@ -619,9 +619,9 @@ namespace Raven.Client.FileSystem
             public FileHeader Current { get; private set; }
         }
 
-		private async Task<FileHeader[]> StartsWithAsyncImpl(string prefix, int start, int pageSize, OperationMetadata operation)
+		private async Task<FileHeader[]> StartsWithAsyncImpl(string prefix, string matches, int start, int pageSize, OperationMetadata operation)
 		{
-			var uri = string.Format("/files?startsWith={0}&start={1}&pageSize={2}", Uri.EscapeDataString(prefix), start, pageSize);
+			var uri = string.Format("/files?startsWith={0}&matches={1}&start={2}&pageSize={3}", string.IsNullOrEmpty(prefix) ? null : Uri.EscapeDataString(prefix), string.IsNullOrEmpty(matches) ? null : Uri.EscapeDataString(matches), start, pageSize);
 
 			using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operation.Url + uri, "GET", operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
 			{
