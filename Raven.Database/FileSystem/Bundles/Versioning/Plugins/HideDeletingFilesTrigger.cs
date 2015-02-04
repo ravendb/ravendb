@@ -12,16 +12,11 @@ using Raven.Json.Linq;
 namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 {
 	[InheritedExport(typeof(AbstractFileReadTrigger))]
-	public class HideDeletingRevisionFilesFromQueryTrigger : AbstractFileReadTrigger
+	public class HideDeletingFilesTrigger : AbstractFileReadTrigger
 	{
 		public override ReadVetoResult AllowRead(string name, RavenJObject metadata, ReadOperation operation)
 		{
-			if (operation != ReadOperation.Query)
-				return ReadVetoResult.Allowed;
-
-			if (metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker) 
-                && metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical" 
-                && FileSystem.IsVersioningActive())
+			if (metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker))
 				return ReadVetoResult.Ignore;
 
 			return ReadVetoResult.Allowed;
