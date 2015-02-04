@@ -6,6 +6,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -236,6 +237,47 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 					var revisions = await session.GetRevisionsForAsync(FileName, 0, 100);
 					Assert.Equal(3, revisions.Length);
 				}
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public async Task GetRevisionsWithoutKnowingTheFileName(string requestedStorage)
+		{
+			const string FileName1 = "/file1.txt";
+			const string FileName2 = "/file2.txt";
+
+			using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning"))
+			{
+				await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new VersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
+
+				await store.AsyncFilesCommands.UploadAsync(FileName1, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(FileName1, StringToStream(Content2));
+				await store.AsyncFilesCommands.UploadAsync(FileName1, StringToStream(Content3));
+
+				await store.AsyncFilesCommands.UploadAsync(FileName2, StringToStream(Content1));
+				await store.AsyncFilesCommands.UploadAsync(FileName2, StringToStream(Content2));
+				await store.AsyncFilesCommands.UploadAsync(FileName2, StringToStream(Content3));
+
+				var revisions = await store.AsyncFilesCommands.StartsWithAsync("/", "*/revisions/*", 0, 128);
+				Assert.Equal(6, revisions.Length);
+
+				revisions = await store.AsyncFilesCommands.StartsWithAsync("/", "*/revisions/*", 0, 2);
+				Assert.Equal(2, revisions.Length);
+				Assert.True(revisions.Any(x => x.FullPath == FileName1 + "/revisions/1"));
+				Assert.True(revisions.Any(x => x.FullPath == FileName1 + "/revisions/2"));
+
+				revisions = await store.AsyncFilesCommands.StartsWithAsync("/", "*/revisions/*", 2, 5);
+				Assert.Equal(4, revisions.Length);
+				Assert.True(revisions.Any(x => x.FullPath == FileName1 + "/revisions/3"));
+				Assert.True(revisions.Any(x => x.FullPath == FileName2 + "/revisions/1"));
+				Assert.True(revisions.Any(x => x.FullPath == FileName2 + "/revisions/2"));
+				Assert.True(revisions.Any(x => x.FullPath == FileName2 + "/revisions/3"));
+
+				revisions = await store.AsyncFilesCommands.StartsWithAsync("/", "*/revisions/*", 3, 2);
+				Assert.Equal(2, revisions.Length);
+				Assert.True(revisions.Any(x => x.FullPath == FileName2 + "/revisions/1"));
+				Assert.True(revisions.Any(x => x.FullPath == FileName2 + "/revisions/2"));
 			}
 		}
 

@@ -352,6 +352,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemRevisionsCommand.ts" />
     <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
