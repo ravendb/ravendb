@@ -123,24 +123,25 @@ namespace Voron.Util
         private unsafe static void InnerBulkCopyMT(byte* dest, byte* src, int n)
         {
             var threadcount = Math.Min(3, Environment.ProcessorCount);
-            var chunksize = n / threadcount;
-            var remainder = n % threadcount;
+            var chunksize = n / threadcount;           
 
             var tasks = new Action[threadcount];
-            for (var i = 0; i < threadcount - 1; ++i)
+            for (var i = 0; i < threadcount; ++i)
             {
                 var offset = i * chunksize;
                 var newSrc = src + offset;
                 var newDst = dest + offset;
+
                 tasks[i] = () => StdLib.memcpy(newDst, newSrc, chunksize);
             }
 
-            var finalOffset = (threadcount - 1) * chunksize;
+            Parallel.Invoke(tasks);
+
+            var finalOffset = threadcount * chunksize;
             var finalSrc = src + finalOffset;
             var finalDst = dest + finalOffset;
-            tasks[threadcount - 1] = () => StdLib.memcpy(finalDst, finalSrc, remainder);
-
-            Parallel.Invoke(tasks);
+            var remainder = n - finalOffset;
+            Copy(finalDst, finalSrc, remainder);
         }
 
         /// <summary>
