@@ -261,10 +261,9 @@ namespace Raven.Database.Bundles.SqlReplication
 						try
 						{
 							var lastReplicatedEtag = GetLastEtagFor(localReplicationStatus, replicationConfig);
-
 							var deletedDocs = deletedDocsByConfig[replicationConfig];
 							var docsToReplicate = itemsToReplicate
-								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
+								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) < 0) // haven't replicate the etag yet
                                 .Where(document =>
                                 {
                                     var info = Database.GetRecentTouchesFor(document.Key);
@@ -280,7 +279,6 @@ namespace Raven.Database.Bundles.SqlReplication
                                     }
 	                                return true;
                                 });
-
 							if (deletedDocs.Count >= MaxNumberOfDeletionsToReplicate + 1)
 								docsToReplicate = docsToReplicate.Where(x => EtagUtil.IsGreaterThan(x.Etag, deletedDocs[deletedDocs.Count - 1].Etag) == false);
 
