@@ -232,6 +232,14 @@ namespace Raven.Abstractions.Data
 			public const string SqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
 	    }
 
+        public class PeriodicExport
+        {
+            public const string AwsAccessKey = "Raven/AWSAccessKey";
+            public const string AwsSecretKey = "Raven/AWSSecretKey";
+            public const string AzureStorageAccount = "Raven/AzureStorageAccount";
+            public const string AzureStorageKey = "Raven/AzureStorageKey";
+        }
+
 	    public class Global
 	    {
 	        public const string GlobalSettingsDocumentKey = "Raven/Global/Settings";

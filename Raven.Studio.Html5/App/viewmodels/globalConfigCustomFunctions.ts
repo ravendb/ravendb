@@ -2,6 +2,7 @@
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import viewModelBase = require('viewmodels/viewModelBase');
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
+import deleteDocumentCommand = require('commands/deleteDocumentCommand');
 import saveCustomFunctionsCommand = require("commands/saveCustomFunctionsCommand");
 import customFunctions = require("models/customFunctions");
 import execJs = require("common/execJs");
@@ -10,6 +11,8 @@ import messagePublisher = require("common/messagePublisher");
 import appUrl = require('common/appUrl');
 
 class globalConfigCustomFunctions extends viewModelBase {
+
+    activated = ko.observable<boolean>(false);
 
     docEditor: AceAjax.Editor;
     textarea: any;
@@ -46,6 +49,7 @@ class globalConfigCustomFunctions extends viewModelBase {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
 
+        this.docEditor.resize();
         $("#customFunctionsEditor").on('DynamicHeightSet', () => this.docEditor.resize());
         this.fetchCustomFunctions();
     }
@@ -59,30 +63,58 @@ class globalConfigCustomFunctions extends viewModelBase {
         var fetchTask = new getCustomFunctionsCommand(appUrl.getSystemDatabase(), true).execute();
         fetchTask.done((cf: customFunctions) => {
             this.documentText(cf.functions);
+            this.activated(true);
             this.dirtyFlag().reset();
+        }).fail((xhr) => {
+            if (xhr.status == 404) {
+                this.activated(false);
+            }
         });
     }
 
     saveChanges() {
-        var annotations = this.docEditor.getSession().getAnnotations();
-        var hasErrors = false;
-        for (var i = 0; i < annotations.length; i++) {
-            if (annotations[i].type === "error") {
-                hasErrors = true;
-                break;
+        this.syncChanges(false);
+    }
+
+    syncChanges(deleteConfig: boolean) {
+        if (deleteConfig) {
+            new deleteDocumentCommand('Raven/Global/Javascript/Functions', appUrl.getSystemDatabase())
+                .execute();
+        } else {
+            var annotations = this.docEditor.getSession().getAnnotations();
+            var hasErrors = false;
+            for (var i = 0; i < annotations.length; i++) {
+                if (annotations[i].type === "error") {
+                    hasErrors = true;
+                    break;
+                }
+            }
+
+            if (!hasErrors) {
+                var cf = new customFunctions({
+                    Functions: this.documentText()
+                });
+                var saveTask = new saveCustomFunctionsCommand(appUrl.getSystemDatabase(), cf, true).execute();
+                saveTask.done(() => this.dirtyFlag().reset());
+            }
+            else {
+                messagePublisher.reportError("Errors in the functions file", "Please correct the errors in the file in order to save it.");
             }
         }
+    }
 
-        if (!hasErrors) {
-            var cf = new customFunctions({
-                Functions: this.documentText()
+    activateConfig() {
+        this.activated(true);
+        this.docEditor.resize();
+    }
+
+    disactivateConfig() {
+        this.confirmationMessage("Delete global configuration for custom functions?", "Are you sure?")
+            .done(() => {
+                this.documentText("");
+                this.activated(false);
+                this.syncChanges(true);
             });
-            var saveTask = new saveCustomFunctionsCommand(appUrl.getSystemDatabase(), cf, true).execute();
-            saveTask.done(() => this.dirtyFlag().reset());
-        }
-        else {
-            messagePublisher.reportError("Errors in the functions file", "Please correct the errors in the file in order to save it.");
-        }
     }
 }
 

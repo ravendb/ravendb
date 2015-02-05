@@ -72,7 +72,7 @@ namespace Raven.Database.Server.Controllers
             var metadata = (etag != null) ? ReadInnerHeaders.FilterHeadersToObject() : new RavenJObject();
             var putResult = Database.Documents.Put(Constants.Global.GlobalSettingsDocumentKey, etag, json, metadata, null);
 
-            return (etag == null) ? GetEmptyMessage() : GetMessageWithObject(putResult);
+            return GetMessageWithObject(putResult);
         }
 
       

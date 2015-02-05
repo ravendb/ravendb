@@ -29,6 +29,10 @@ namespace Raven.Database.Config.Retriever
 																			  {Constants.DocsSoftLimit, DocumentType.QuotasConfiguration},
 																			  {Constants.SizeHardLimitInKB, DocumentType.QuotasConfiguration},
 																			  {Constants.SizeSoftLimitInKB, DocumentType.QuotasConfiguration},
+                                                                              {Constants.PeriodicExport.AwsAccessKey, DocumentType.PeriodicExportSettingsConfiguration},
+                                                                              {Constants.PeriodicExport.AwsSecretKey, DocumentType.PeriodicExportSettingsConfiguration},
+                                                                              {Constants.PeriodicExport.AzureStorageAccount, DocumentType.PeriodicExportSettingsConfiguration},
+                                                                              {Constants.PeriodicExport.AzureStorageKey, DocumentType.PeriodicExportSettingsConfiguration},
 																			  {Constants.SqlReplication.SqlReplicationConnectionsDocumentName, DocumentType.SqlReplicationConnections},
 																			  {Constants.RavenJavascriptFunctions, DocumentType.JavascriptFunctions}
 		                                                                  };
@@ -131,6 +135,8 @@ namespace Raven.Database.Config.Retriever
 					return sqlReplicationConfigurationRetriever;
 				case DocumentType.JavascriptFunctions:
 					return javascriptFunctionsRetriever;
+                case DocumentType.PeriodicExportSettingsConfiguration:
+			        return configurationSettingRetriever;
 				default:
 					throw new NotSupportedException("Document type is not supported: " + documentType);
 			}
@@ -174,7 +180,8 @@ namespace Raven.Database.Config.Retriever
 			PeriodicExportConfiguration,
 			QuotasConfiguration,
 			SqlReplicationConnections,
-			JavascriptFunctions
+			JavascriptFunctions,
+		    PeriodicExportSettingsConfiguration
 		}
 	}
 }

@@ -3,6 +3,7 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import viewModelBase = require('viewmodels/viewModelBase');
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 import saveCustomFunctionsCommand = require("commands/saveCustomFunctionsCommand");
+import getGlobalCustomFunctionsCommand = require('commands/getGlobalCustomFunctionsCommand');
 import customFunctions = require("models/customFunctions");
 import execJs = require("common/execJs");
 import jsonUtil = require("common/jsonUtil");
@@ -14,6 +15,8 @@ class customFunctionsEditor extends viewModelBase {
     textarea: any;
     text: KnockoutComputed<string>;
     documentText: KnockoutObservable<string>;
+    globalDocumentText: KnockoutObservable<string>;
+    hasGlobal = ko.observable<boolean>(false);
 
     isSaveEnabled: KnockoutComputed<boolean>;
 
@@ -21,7 +24,7 @@ class customFunctionsEditor extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
         this.documentText = ko.observable<string>("");
-        this.fetchCustomFunctions();
+        this.globalDocumentText = ko.observable<string>("");
 
         this.dirtyFlag = new ko.DirtyFlag([this.documentText], false, jsonUtil.newLineNormalizingHashFunction);
         this.isSaveEnabled = ko.computed<boolean>(() => {
@@ -40,7 +43,7 @@ class customFunctionsEditor extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        var editorElement = $(".custom-functions-form .editor");
+        var editorElement = $("#customFunctionsEditor.editor");
         if (editorElement.length > 0) {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
@@ -59,6 +62,14 @@ class customFunctionsEditor extends viewModelBase {
         fetchTask.done((cf: customFunctions) => {
             this.documentText(cf.functions);
             this.dirtyFlag().reset();
+        });
+
+        var globalFetchTask = new getGlobalCustomFunctionsCommand(this.activeDatabase()).execute();
+        globalFetchTask.done((result: configurationDocumentDto<any>) => {
+            this.hasGlobal(result.GlobalExists);
+            if (result.GlobalExists) {
+                this.globalDocumentText(result.GlobalDocument.DataAsJson.Functions);
+            }
         });
     }
 

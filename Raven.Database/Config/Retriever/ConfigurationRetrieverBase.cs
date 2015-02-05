@@ -65,11 +65,11 @@ namespace Raven.Database.Config.Retriever
 				return configurationDocument;
 			}
 
-            configurationDocument.GlobalDocument = ConvertGlobalDocumentToLocal(global.DataAsJson.JsonDeserialization<TClass>(), systemDatabase, localDatabase);
+            configurationDocument.GlobalDocument = ConvertGlobalDocumentToLocal(Deserialize(global), systemDatabase, localDatabase);
 
 			if (local == null)
 			{
-				configurationDocument.MergedDocument = ConvertGlobalDocumentToLocal(Deserialize(global), systemDatabase, localDatabase);
+			    configurationDocument.MergedDocument = configurationDocument.GlobalDocument;
 				return configurationDocument;
 			}
 

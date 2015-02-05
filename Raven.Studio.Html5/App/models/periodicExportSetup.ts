@@ -302,6 +302,29 @@ class periodicExportSetup {
     private isValidTimeValue(value: number): boolean {
         return value >= 1 && value % 1 === 0;
     }
+
+    copyFrom(from: periodicExportSetup) {
+        this.onDiskExportEnabled(from.onDiskExportEnabled());
+        this.remoteUploadEnabled(from.remoteUploadEnabled());
+        this.localFolderName(from.localFolderName());
+        this.unsupported(from.unsupported());
+        this.disabled(from.disabled());
+        this.type(from.type());
+        this.mainValue(from.mainValue());
+
+        this.awsAccessKey(from.awsAccessKey());
+        this.awsSecretKey(from.awsSecretKey());
+        this.awsRegionEndpoint(from.awsRegionEndpoint());
+
+        this.azureStorageAccount(from.azureStorageAccount());
+        this.azureStorageKey(from.azureStorageKey());
+
+        this.incrementalBackupInterval(from.incrementalBackupInterval());
+        this.incrementalBackupIntervalUnit(from.incrementalBackupIntervalUnit());
+
+        this.fullBackupInterval(from.fullBackupInterval());
+        this.fullBackupIntervalUnit(from.fullBackupIntervalUnit());
+    }
 }
 
 export = periodicExportSetup;

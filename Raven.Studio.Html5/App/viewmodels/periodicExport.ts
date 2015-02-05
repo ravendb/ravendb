@@ -4,18 +4,26 @@ import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand
 import savePeriodicExportSetupCommand = require("commands/savePeriodicExportSetupCommand");
 import document = require("models/document");
 import periodicExportSetup = require("models/periodicExportSetup");
+import getGlobalPeriodicExportCommand = require('commands/getGlobalPeriodicExportCommand');
 import appUrl = require("common/appUrl");
+import configurationSetting = require('models/configurationSetting');
+import configurationSettings = require('models/configurationSettings');
+import getConfigurationSettingsCommand = require('commands/getConfigurationSettingsCommand');
+import deleteDocumentCommand = require('commands/deleteDocumentCommand');
 
 class periodicExport extends viewModelBase {
 
     backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
+    globalBackupSetup = ko.observable<periodicExportSetup>();
     isSaveEnabled: KnockoutComputed<boolean>;
-    backupStatusDirtyFlag = new ko.DirtyFlag([]);
-    backupConfigDirtyFlag = new ko.DirtyFlag([]);
+
+    usingGlobal = ko.observable<boolean>(false);
+    hasGlobalValues = ko.observable<boolean>(false);
 
     canActivate(args: any): any {
         super.canActivate(args);
         this.backupSetup(new periodicExportSetup);
+        this.globalBackupSetup(new periodicExportSetup);
 
         var deferred = $.Deferred();
         var db = this.activeDatabase();
@@ -30,55 +38,84 @@ class periodicExport extends viewModelBase {
     activate(args) {
         super.activate(args);
         
-        this.backupStatusDirtyFlag = new ko.DirtyFlag([this.backupSetup().disabled]);
-        this.backupConfigDirtyFlag = new ko.DirtyFlag([this.backupSetup]);
-        
+        this.dirtyFlag = new ko.DirtyFlag([this.backupSetup, this.usingGlobal]);
+
         var self = this;
         this.isSaveEnabled = ko.computed(() => {
             var onDisk = self.backupSetup().onDiskExportEnabled();
             var remote = self.backupSetup().remoteUploadEnabled();
             var hasAnyOption = onDisk || remote;
-            return (self.backupConfigDirtyFlag().isDirty() && hasAnyOption) &&
-                (!self.backupSetup().disabled() || self.backupConfigDirtyFlag().isDirty());
+            var isDirty = this.dirtyFlag().isDirty();
+            return hasAnyOption && isDirty;
         });
-
-        this.dirtyFlag = new ko.DirtyFlag([this.isSaveEnabled]);
     }
 
     fetchPeriodicExportSetup(db): JQueryPromise<any> {
         var deferred = $.Deferred();
-        new getPeriodicExportSetupCommand(db)
+        new getGlobalPeriodicExportCommand(db)
             .execute()
-            .done((result: periodicExportSetupDto) => this.backupSetup().fromDto(result) )
+            .done((result: configurationDocumentDto<periodicExportSetupDto>) => {
+                this.backupSetup().fromDto(result.MergedDocument);
+                this.hasGlobalValues(result.GlobalExists);
+                this.usingGlobal(result.GlobalExists && !result.LocalExists);
+                if (this.hasGlobalValues()) {
+                    this.globalBackupSetup().fromDto(result.GlobalDocument);
+                }
+                
+                })
             .always(() => deferred.resolve());
         return deferred;
     }
 
     fetchPeriodicExportAccountsSettings(db): JQueryPromise<any> {
         var deferred = $.Deferred();
-        new getDatabaseSettingsCommand(db)
+        var dbSettingsTask = new getDatabaseSettingsCommand(db)
             .execute()
             .done((document: document)=> { this.backupSetup().fromDatabaseSettingsDto(document.toDto(true)); })
             .always(() => deferred.resolve());
-        return deferred;
-    }
 
-    activatePeriodicExport() {
-        var action: boolean = !this.backupSetup().disabled();
-        this.backupSetup().disabled(action);
+
+        var configTask = new getConfigurationSettingsCommand(db,
+            ['Raven/AWSAccessKey', 'Raven/AWSSecretKey', 'Raven/AzureStorageAccount', 'Raven/AzureStorageKey'])
+            .execute()
+            .done((result: configurationSettings) => {
+                var awsAccess = result.results['Raven/AWSAccessKey'];
+                var awsSecret = result.results['Raven/AWSSecretKey'];
+                var azureAccess = result.results['Raven/AzureStorageAccount'];
+                var azureSecret = result.results['Raven/AzureStorageKey'];
+                this.globalBackupSetup().awsAccessKey(awsAccess.globalValue());
+                this.globalBackupSetup().awsSecretKey(awsSecret.globalValue());
+                this.globalBackupSetup().azureStorageAccount(azureAccess.globalValue());
+                this.globalBackupSetup().azureStorageKey(azureSecret.globalValue());
+            });
+
+        return $.when(dbSettingsTask, configTask);
     }
 
     saveChanges() {
         var db = this.activeDatabase();
         if (db) {
-            var saveTask = new savePeriodicExportSetupCommand(this.backupSetup(), db).execute();
-            saveTask.done((resultArray) => {
-                var newEtag = resultArray[0].ETag;
-                this.backupSetup().setEtag(newEtag);
-                this.backupStatusDirtyFlag().reset(); //Resync Changes
-                this.backupConfigDirtyFlag().reset(); //Resync Changes
-            });
+            if (this.usingGlobal()) {
+                new deleteDocumentCommand('Raven/Backup/Periodic/Setup', db).execute();
+
+            } else {
+                var saveTask = new savePeriodicExportSetupCommand(this.backupSetup(), db).execute();
+                saveTask.done((resultArray) => {
+                    var newEtag = resultArray[0].ETag;
+                    this.backupSetup().setEtag(newEtag);
+                    this.dirtyFlag().reset(); // Resync changes
+                });
+            }
         }
+    }
+
+    useLocal() {
+        this.usingGlobal(false);
+    }
+
+    useGlobal() {
+        this.usingGlobal(true);
+        this.backupSetup().copyFrom(this.globalBackupSetup());
     }
 }
 

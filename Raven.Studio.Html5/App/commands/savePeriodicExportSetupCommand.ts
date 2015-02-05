@@ -17,11 +17,12 @@ class savePeriodicExportSetupCommand extends commandBase {
     }
 
     private saveAccountInformation(): JQueryPromise<any> {
-        var jQueryOptions: JQueryAjaxSettings = {
-            headers: {
+        var jQueryOptions: JQueryAjaxSettings = {};
+        if (this.setupToPersist.getEtag()) {
+            jQueryOptions.headers = {
                 'If-None-Match': this.setupToPersist.getEtag()
             }
-        };
+        }
         var url = this.globalConfig? "/configuration/global/settings" : "/admin/databases/" + this.db.name;
         var putArgs = JSON.stringify(this.setupToPersist.toDatabaseSettingsDto());
         return this.put(url, putArgs, null, jQueryOptions);
@@ -29,13 +30,8 @@ class savePeriodicExportSetupCommand extends commandBase {
 
     private saveSetup(): JQueryPromise<any> {
         var url = this.globalConfig ? "/docs/Raven/Global/Backup/Periodic/Setup" : "/docs/Raven/Backup/Periodic/Setup";
-        if (this.globalConfig && this.setupToPersist.disabled()) {
-            // in case of global config we don't support disable - we simply remove document
-            return this.del(url, null, this.db);
-        } else {
-            var putArgs = JSON.stringify(this.setupToPersist.toDto());
-            return this.put(url, putArgs, this.db);
-        }
+        var putArgs = JSON.stringify(this.setupToPersist.toDto());
+        return this.put(url, putArgs, this.db);
     }
 }
 export = savePeriodicExportSetupCommand;

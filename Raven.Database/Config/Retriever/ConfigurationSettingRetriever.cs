@@ -16,14 +16,6 @@ namespace Raven.Database.Config.Retriever
 {
 	public class ConfigurationSettingRetriever : ConfigurationRetrieverBase<object>
 	{
-		private readonly Dictionary<string, string> keys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-		                                                         {
-			                                                         {Constants.DocsSoftLimit, Constants.DocsSoftLimit},
-																	 {Constants.DocsHardLimit, Constants.DocsHardLimit},
-																	 {Constants.SizeHardLimitInKB, Constants.SizeHardLimitInKB},
-																	 {Constants.SizeSoftLimitInKB, Constants.SizeSoftLimitInKB}
-		                                                         };
-
 	    private readonly DocumentDatabase systemDatabase;
 	    private GlobalSettingsDocument globalSettings;
 
@@ -50,11 +42,7 @@ namespace Raven.Database.Config.Retriever
 
 		public override string GetGlobalConfigurationDocumentKey(string key, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
 		{
-			string globalKey;
-			if (keys.TryGetValue(key, out globalKey))
-				return globalKey;
-
-			throw new NotSupportedException("Not supported key: " + key);
+		    return key;
 		}
 
         private void LoadGlobalSettings()
@@ -73,7 +61,11 @@ namespace Raven.Database.Config.Retriever
 
 	        string globalValue;
             var globalKey = GetGlobalConfigurationDocumentKey(key, systemDatabase, localDatabase);
-            globalSettings.Settings.TryGetValue(globalKey, out globalValue);
+            if (globalSettings.Settings.TryGetValue(globalKey, out globalValue) == false)
+            {
+                // fall back to secured settings
+                globalSettings.SecuredSettings.TryGetValue(globalKey, out globalValue);
+            }
 			
             var localValue = localDatabase.Configuration.Settings[key];
 

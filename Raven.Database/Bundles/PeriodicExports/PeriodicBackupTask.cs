@@ -89,10 +89,10 @@ namespace Raven.Database.Bundles.PeriodicExports
 					exportStatus = status == null ? new PeriodicExportStatus() : status.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
 					exportConfigs = configurationDocument.MergedDocument;
 
-					awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
-					awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
-					azureStorageAccount = Database.Configuration.Settings["Raven/AzureStorageAccount"];
-					azureStorageKey = Database.Configuration.Settings["Raven/AzureStorageKey"];
+					awsAccessKey = Database.Configuration.Settings[Constants.PeriodicExport.AwsAccessKey];
+					awsSecretKey = Database.Configuration.Settings[Constants.PeriodicExport.AwsSecretKey];
+					azureStorageAccount = Database.Configuration.Settings[Constants.PeriodicExport.AzureStorageAccount];
+					azureStorageKey = Database.Configuration.Settings[Constants.PeriodicExport.AzureStorageKey];
 
 					if (exportConfigs.IntervalMilliseconds.GetValueOrDefault() > 0)
 					{

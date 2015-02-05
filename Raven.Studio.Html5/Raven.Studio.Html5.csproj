@@ -351,6 +351,8 @@
     <TypeScriptCompile Include="App\commands\getGlobalSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveGlobalSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getConfigurationSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getGlobalCustomFunctionsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getGlobalPeriodicExportCommand.ts" />
     <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />
