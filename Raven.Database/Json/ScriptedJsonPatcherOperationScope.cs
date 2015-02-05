@@ -21,7 +21,7 @@ namespace Raven.Database.Json
 
 		protected DocumentDatabase Database { get; private set; }
 
-		public JsonDocument CustomFunctions { get; private set; }
+		public JsonDocument CustomFunctions { get; set; }
 
 		public RavenJObject DebugActions { get; private set; }
 
