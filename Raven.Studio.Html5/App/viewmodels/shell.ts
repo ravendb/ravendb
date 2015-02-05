@@ -366,6 +366,9 @@ class shell extends viewModelBase {
                 oauthContext.apiKey(match[1]);
                 apiKeyLocalStorage.setValue(match[1]);
             }
+            var splittedHash = hash.split("&#api-key");
+            var url = (splittedHash.length == 1) ? "#resources" : splittedHash[0];
+            window.location.href = url;
         } else {
             var apiKeyFromStorage = apiKeyLocalStorage.get();
             if (apiKeyFromStorage) {
@@ -514,7 +517,7 @@ class shell extends viewModelBase {
                 getSystemDocumentTask.done((dto: databaseDocumentDto) => {
                     var existingResource = resourceObservableArray.first((rs: resource) => rs.name == receivedResourceName);
 
-                    if (existingResource == null) { // new database
+                    if (existingResource == null) { // new resource
                         existingResource = this.createNewResource(resourceType, receivedResourceName, dto);
                         resourceObservableArray.unshift(existingResource);
                     } else {
@@ -556,13 +559,13 @@ class shell extends viewModelBase {
         var newResource = null;
 
         if (resourceType == logTenantType.Database) {
-            newResource = new database(resourceName, dto.Disabled);
+            newResource = new database(resourceName, true, dto.Disabled);
         }
         else if (resourceType == logTenantType.Filesystem) {
-            newResource = new filesystem(resourceName, dto.Disabled);
+            newResource = new filesystem(resourceName, true, dto.Disabled);
         }
         else if (resourceType == logTenantType.CounterStorage) {
-            newResource = new counterStorage(resourceName, dto.Disabled);
+            newResource = new counterStorage(resourceName, true, dto.Disabled);
         }
 
         return newResource;
@@ -959,7 +962,7 @@ class shell extends viewModelBase {
 
     showApiKeyDialog() {
         var dialog = new enterApiKey();
-        return app.showDialog(dialog).then(() => window.location.href = "#");
+        return app.showDialog(dialog).then(() => window.location.href = "#resources");
     }
 
     showErrorsDialog() {
