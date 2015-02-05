@@ -110,38 +110,7 @@ namespace Voron.Util
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void BulkCopy(byte* dest, byte* src, int n)
         {
-            if (n < 1024 * 1024 * 4)
-            {
-                StdLib.memcpy(dest, src, n);
-            }
-            else
-            {
-                InnerBulkCopyMT(dest, src, n);
-            }               
-        }
-
-        private unsafe static void InnerBulkCopyMT(byte* dest, byte* src, int n)
-        {
-            var threadcount = Math.Min(3, Environment.ProcessorCount);
-            var chunksize = n / threadcount;           
-
-            var tasks = new Action[threadcount];
-            for (var i = 0; i < threadcount; ++i)
-            {
-                var offset = i * chunksize;
-                var newSrc = src + offset;
-                var newDst = dest + offset;
-
-                tasks[i] = () => StdLib.memcpy(newDst, newSrc, chunksize);
-            }
-
-            Parallel.Invoke(tasks);
-
-            var finalOffset = threadcount * chunksize;
-            var finalSrc = src + finalOffset;
-            var finalDst = dest + finalOffset;
-            var remainder = n - finalOffset;
-            Copy(finalDst, finalSrc, remainder);
+            StdLib.memcpy(dest, src, n);            
         }
 
         /// <summary>
@@ -243,14 +212,7 @@ namespace Voron.Util
                 goto SMALLTABLE;
             }
 
-            if ( n < 1024 * 1024 * 4)
-            {
-                StdLib.memcpy(dest, src, n);
-            }
-            else
-            {
-                InnerBulkCopyMT(dest, src, n);
-            }
+            StdLib.memcpy(dest, src, n);
         }
 
     }
