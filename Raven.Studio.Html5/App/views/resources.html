@@ -62,10 +62,8 @@
             <div class="checkbox" data-bind="click: function(){ checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
                 <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }, visible: isAdminCurrentTenant" />
             </div>
-
             <div class="details">
                 <h4>
-                    
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->
                     <a class="resource-name" data-bind="attr: { href: $root.getDocumentsUrl($data) }"><i class="fa fa-database"></i> db/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
@@ -132,12 +130,12 @@
             </div>
         </div>
         <!-- /ko -->
+
         <!-- ko if: $data.isFilesystem() -->
         <div class="resource fs" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
             <div class="checkbox" data-bind="click: function () { checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
                 <img data-bind="attr: { src: isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }, visible: isAdminCurrentTenant" />
             </div>
-
             <div class="details">
                 <h4>
                     <!-- ko if: !$data.disabled() && $data.isLicensed() -->

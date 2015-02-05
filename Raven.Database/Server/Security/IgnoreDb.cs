@@ -10,7 +10,8 @@ namespace Raven.Database.Server.Security
 			// allow to get files not secret if you have access to the server (not for the specific DB)
 			"/databases",
 			"/fs",
-			"/license/status"
+			"/license/status",
+			"/studio-tasks/server-configs"
 		};
 	}
 }

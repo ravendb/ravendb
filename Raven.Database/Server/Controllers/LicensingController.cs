@@ -10,7 +10,7 @@ namespace Raven.Database.Server.Controllers
 	public class LicensingController : RavenDbApiController
 	{
 		[HttpGet]
-		[RavenRoute("license/status")]
+		[RavenRoute("server-configs")]
 		public HttpResponseMessage LicenseStatusGet()
 		{
 			if (EnsureSystemDatabase() == false)

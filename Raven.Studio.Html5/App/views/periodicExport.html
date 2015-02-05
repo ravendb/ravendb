@@ -1,7 +1,8 @@
 ﻿<div id="periodicExportPage">
     <div data-bind="visible: isForbidden" class="text-center">
-        <h4 class="page-header text-info">You are not authorized to view this page</h4>
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
     </div>
+
     <section data-bind="with: backupSetup, visible: isForbidden() == false">
         <div data-bind="visible: unsupported()">
             <div class="alert alert-danger">Too many periodic export types found. This isn't a supported scenario for the UI.</div>

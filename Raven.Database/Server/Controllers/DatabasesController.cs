@@ -46,9 +46,9 @@ namespace Raven.Database.Server.Controllers
 			var databasesNames = databasesData.Select(databaseObject => databaseObject.Name).ToArray();
 
 			List<string> approvedDatabases = null;
-			if (DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
+			if (SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
-                var authorizer = (MixedModeRequestAuthorizer)this.ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+                var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
                 HttpResponseMessage authMsg;
                 if (authorizer.TryAuthorize(this, out authMsg) == false)
@@ -58,7 +58,7 @@ namespace Raven.Database.Server.Controllers
 				if (user == null)
 					return authMsg;
 
-				if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false)
+				if (user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
 					approvedDatabases = authorizer.GetApprovedResources(user, this, databasesNames);
 				}
@@ -68,8 +68,7 @@ namespace Raven.Database.Server.Controllers
 					var principalWithDatabaseAccess = user as PrincipalWithDatabaseAccess;
 					if (principalWithDatabaseAccess != null)
 					{
-						var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(
-							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode);
+						var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode);
 						x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
 					}
 					else

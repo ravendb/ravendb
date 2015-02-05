@@ -273,6 +273,11 @@ interface userInfoDto {
     AccessTokenBody: string;
 }
 
+interface serverConfigsDto {
+    IsGlobalAdmin: boolean;
+    CanExposeConfigOverTheWire: boolean;
+}
+
 interface logDto {
     TimeStamp: string;
     Message: string;
