@@ -1980,13 +1980,13 @@ public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery su
 		public Task<RavenJToken> ExecuteGetRequest(string requestUrl)
 		{
 			EnsureIsNotNullOrEmpty(requestUrl, "url");
-			return ExecuteWithReplication("GET", operationMetadata =>
+			return ExecuteWithReplication("GET", async operationMetadata =>
 			{
 				var metadata = new RavenJObject();
 				AddTransactionInformation(metadata);
 				using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, "GET", metadata, operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
 				{
-					return request.ReadResponseJsonAsync();
+					return await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				}
 			});
 		}
