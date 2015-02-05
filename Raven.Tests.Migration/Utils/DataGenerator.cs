@@ -13,6 +13,7 @@ using FakeData;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Migration.Indexes;
 using Raven.Tests.Migration.Utils.Orders;
 
 namespace Raven.Tests.Migration.Utils
@@ -250,6 +251,8 @@ select new
 
 		private const int NumberOfCompaniesPerIteration = 1;
 
+		private const int NumberOfEmployeesPerIteration = 1;
+
 		private const int NumberOfProductsPerIteration = 10;
 
 		private readonly ThinClient client;
@@ -286,12 +289,30 @@ select new
 			}
 		}
 
+		public int ExpectedNumberOfEmployees
+		{
+			get
+			{
+				return numberOfIterations * NumberOfEmployeesPerIteration;
+			}
+		}
+
+		public int ExpectedNumberOfIndexes
+		{
+			get
+			{
+				return 6;
+			}
+		}
+
 		public void Generate()
 		{
 			client.PutIndex(new RavenDocumentsByEntityName());
 			client.PutIndex(new OrdersByCompany());
 			client.PutIndex(new OrdersTotals());
 			client.PutIndex(new ProductSales());
+			client.PutIndex(new OrdersByEmployeeAndCompany());
+			client.PutIndex(new OrdersByEmployeeAndCompanyReduce());
 
 			for (var it = 0; it < numberOfIterations; it++)
 			{
@@ -302,12 +323,12 @@ select new
 
 					entities.Add(new Order
 					{
-						Company = "companies/" + new Random().Next(1, 80),
+						Company = "companies/" + new Random().Next(1, ExpectedNumberOfCompanies - 1),
 						Lines = CollectionData.GetElement(10, new List<OrderLine>
 							{
 								new OrderLine
 								{
-									Product = "products/" + new Random().Next(1, 60),
+									Product = "products/" + new Random().Next(1, ExpectedNumberOfProducts - 1),
 									Quantity = new Random().Next(1, 100),
 									PricePerUnit = new Random().Next(1000)
 								}
@@ -331,6 +352,25 @@ select new
 					{
 						Name = NameData.GetCompanyName(),
 						Fax = PhoneNumberData.GetInternationalPhoneNumber(),
+						Address = new Address
+						{
+							Country = PlaceData.GetCountry(),
+							City = PlaceData.GetCity(),
+							PostalCode = PlaceData.GetZipCode(),
+							Line1 = PlaceData.GetStreetName()
+						}
+					});
+				}
+
+				for (var i = 0; i < NumberOfEmployeesPerIteration; i++)
+				{
+					entities.Add(new Employee
+					{
+						Birthday = DateTimeData.GetDatetime(),
+						FirstName = NameData.GetFirstName(),
+						LastName = NameData.GetSurname(),
+						HomePhone = PhoneNumberData.GetPhoneNumber(),
+						HiredAt = DateTimeData.GetDatetime(),
 						Address = new Address
 						{
 							Country = PlaceData.GetCountry(),

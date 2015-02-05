@@ -46,6 +46,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.Owin.Hosting.3.0.0\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
     </Reference>
+    <Reference Include="NLog, Version=3.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\NLog.3.1.0.0\lib\net45\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
@@ -72,6 +76,8 @@
     <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
       <Link>Properties\TestAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Indexes\OrdersByEmployeeAndCompanyReduce.cs" />
+    <Compile Include="Indexes\OrdersByEmployeeAndCompany.cs" />
     <Compile Include="Utils\DataGenerator.cs" />
     <Compile Include="MigrationTests.cs" />
     <Compile Include="Utils\ServerRunner.cs" />
@@ -79,6 +85,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="NLog.config">
+      <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>

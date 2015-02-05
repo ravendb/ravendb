@@ -5,16 +5,13 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Threading;
 
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
@@ -30,11 +27,14 @@ namespace Raven.Tests.Migration.Utils
 
 		private readonly HttpClient httpClient;
 
+		private readonly DocumentConvention convention;
+
 		public ThinClient(string serverUrl, string databaseName)
 		{
 			baseUrl = serverUrl;
 			databaseUrl = serverUrl + "/databases/" + databaseName;
 			httpClient = new HttpClient();
+			convention = new DocumentConvention();
 		}
 
 		public void PutDatabase(string databaseName)
@@ -126,14 +126,12 @@ namespace Raven.Tests.Migration.Utils
 				var data = RavenJToken.TryLoad(countingStream);
 
 				var docKey = Uri.UnescapeDataString(response.Headers.GetFirstValue(Constants.DocumentIdFieldName));
-				var etag = response.Headers.GetFirstValue("ETag");
 
 				response.Headers.Remove(Constants.DocumentIdFieldName);
 
 				return new JsonDocument
 				{
 					DataAsJson = (RavenJObject)data,
-					Etag = Etag.Parse(etag),
 					Metadata = response.Headers.FilterHeadersToObject(),
 					Key = docKey
 				};
@@ -146,20 +144,20 @@ namespace Raven.Tests.Migration.Utils
 				httpClient.Dispose();
 		}
 
-		private static RavenJObject CreateMetadata(object entity)
+		private RavenJObject CreateMetadata(object entity)
 		{
 			var type = entity.GetType();
 			return new RavenJObject
 			       {
-				       {Constants.RavenEntityName, type.Name},
-					   {Constants.RavenClrType, ReflectionUtil.GetFullNameWithoutVersionInformation(type)}
+				       {Constants.RavenEntityName, convention.FindTypeTagName(type)},
+					   {Constants.RavenClrType, convention.GetClrTypeName(type)}
 			       };
 		}
 
-		private static string GenerateId(object entity)
+		private string GenerateId(object entity)
 		{
 			var type = entity.GetType();
-			return type.Name.ToLowerInvariant() + "/";
+			return convention.FindTypeTagName(type).ToLowerInvariant() + "/";
 		}
 	}
 }

@@ -10,9 +10,13 @@ using System.Linq;
 using System.Xml.Linq;
 
 using Raven.Abstractions.Data;
+using Raven.Client;
+using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Raven.Tests.Common;
+using Raven.Tests.Migration.Indexes;
 using Raven.Tests.Migration.Utils;
+using Raven.Tests.Migration.Utils.Orders;
 
 using Xunit;
 
@@ -52,10 +56,12 @@ namespace Raven.Tests.Migration
 		}
 
 		[Fact]
-		public void T1()
+		public void LargeMigration()
 		{
 			foreach (var packageName in packageNames)
 			{
+				Console.WriteLine("|> Processing " + packageName);
+
 				var backupLocation = NewDataPath(packageName + "-Backup", forceCreateDir: true);
 				using (var client = new ThinClient(string.Format("http://localhost:{0}", Port), DatabaseName))
 				{
@@ -85,9 +91,105 @@ namespace Raven.Tests.Migration
 
 						operation.WaitForCompletion();
 
-						WaitForUserToContinueTheTest(store);
+						ValidateBackup(store, generator);
 					}
 				}
+			}
+		}
+
+		private static void ValidateBackup(IDocumentStore store, DataGenerator generator)
+		{
+			WaitForIndexing(store, timeout: TimeSpan.FromMinutes(10));
+
+			ValidateCounts(store, generator);
+			ValidateIndexes(store, generator);
+		}
+
+		private static void ValidateIndexes(IDocumentStore store, DataGenerator generator)
+		{
+			ValidateOrdersByCompany(store);
+			ValidateProductSales(store);
+			ValidateOrdersTotals(store, generator);
+			ValidateOrdersByEmployeeAndCompany(store, generator);
+			ValidateOrdersByEmployeeAndCompanyReduce(store, generator);
+		}
+
+		private static void ValidateOrdersByEmployeeAndCompany(IDocumentStore store, DataGenerator generator)
+		{
+			using (var session = store.OpenSession())
+			{
+				var count = session
+					.Query<Order, OrdersByEmployeeAndCompany>()
+					.Count();
+
+				Assert.Equal(generator.ExpectedNumberOfOrders, count);
+			}
+		}
+
+		private static void ValidateOrdersByEmployeeAndCompanyReduce(IDocumentStore store, DataGenerator generator)
+		{
+			using (var session = store.OpenSession())
+			{
+				var count = session
+					.Query<OrdersByEmployeeAndCompanyReduce.Result, OrdersByEmployeeAndCompanyReduce>()
+					.Count();
+
+				Assert.Equal(generator.ExpectedNumberOfOrders, count);
+			}
+		}
+
+		private static void ValidateOrdersTotals(IDocumentStore store, DataGenerator generator)
+		{
+			using (var session = store.OpenSession())
+			{
+				var count = session
+					.Query<OrdersTotals.Result, OrdersTotals>()
+					.Count();
+
+				Assert.Equal(generator.ExpectedNumberOfOrders, count);
+			}
+		}
+
+		private static void ValidateProductSales(IDocumentStore store)
+		{
+			using (var session = store.OpenSession())
+			{
+				var count = session
+					.Query<ProductSales.Result, ProductSales>()
+					.Count();
+
+				Assert.True(count > 0);
+			}
+		}
+
+		private static void ValidateOrdersByCompany(IDocumentStore store)
+		{
+			using (var session = store.OpenSession())
+			{
+				var count = session
+					.Query<OrdersByCompany.Result, OrdersByCompany>()
+					.Count();
+
+				Assert.True(count > 0);
+			}
+		}
+
+		private static void ValidateCounts(IDocumentStore store, DataGenerator generator)
+		{
+			using (var session = store.OpenSession())
+			{
+				var statistics = store.DatabaseCommands.GetStatistics();
+				Assert.Equal(0, statistics.CountOfAttachments);
+				Assert.Equal(generator.ExpectedNumberOfIndexes, statistics.Indexes.Length);
+
+				Assert.Equal(generator.ExpectedNumberOfOrders, session.Query<Order>().Count());
+				Assert.Equal(generator.ExpectedNumberOfCompanies, session.Query<Company>().Count());
+				Assert.Equal(generator.ExpectedNumberOfProducts, session.Query<Product>().Count());
+				Assert.Equal(generator.ExpectedNumberOfEmployees, session.Query<Employee>().Count());
+
+				var total = generator.ExpectedNumberOfCompanies + generator.ExpectedNumberOfEmployees + generator.ExpectedNumberOfOrders + generator.ExpectedNumberOfProducts;
+
+				Assert.Equal(total, session.Query<dynamic, RavenDocumentsByEntityName>().Count());
 			}
 		}
 
