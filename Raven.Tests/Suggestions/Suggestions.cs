@@ -60,8 +60,7 @@ namespace Raven.Tests.Suggestions
 					MaxSuggestions = 10,
 				});
 
-				Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-				Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
+				Assert.Equal(0, suggestionQueryResult.Suggestions.Length);
 			}
 		}
 
@@ -71,7 +70,7 @@ namespace Raven.Tests.Suggestions
 			using (var s = documentStore.OpenSession())
 			{
 				var suggestionQueryResult = s.Query<User>("test")
-					.Where(x => x.Name == "Oren")
+					.Where(x => x.Name == "Owen")
 					.Suggest();
 
 				Assert.Equal(1, suggestionQueryResult.Suggestions.Length);

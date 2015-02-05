@@ -21,13 +21,16 @@ namespace Raven.Abstractions.Connection
 	{
 		private static readonly Encoding DefaultEncoding = new UTF8Encoding(false);
 
-		public JsonContent(RavenJToken data = null)
-		{
-		    Data = data;
-		    Headers.ContentType = string.IsNullOrEmpty(Jsonp) ? 
-                new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" } :
-                new MediaTypeHeaderValue("application/javascript") { CharSet = "utf-8" };
-		}
+	    public JsonContent(RavenJToken data = null)
+	    {
+	        Data = data;
+	        if (data != null)
+	        {
+	            Headers.ContentType = string.IsNullOrEmpty(Jsonp) ?
+	                new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"} :
+	                new MediaTypeHeaderValue("application/javascript") {CharSet = "utf-8"};
+	        }
+	    }
 
 	    public RavenJToken Data { get; set; }
 
