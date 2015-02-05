@@ -19,7 +19,7 @@
                     </ul>
                 </div>
 
-                <div data-bind="visible: canShowDatabaseNavbar(), css: { 'menu-item-disabled': isActiveResourceDisabled }">
+                <div data-bind="visible: canShowDatabaseNavbar(), css: { 'menu-item-disabled': isActiveDatabaseDisabled }">
                     <ul class="nav navbar-nav">
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
                             <a data-bind="attr: { href: appUrls.documents }">Documents</a>

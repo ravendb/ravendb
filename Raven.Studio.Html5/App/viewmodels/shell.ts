@@ -44,8 +44,8 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
-import getUserInfoCommand = require("commands/getUserInfoCommand");
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
+import getServerConfigsCommand = require("commands/getServerConfigsCommand");
 
 import recentErrors = require("viewmodels/recentErrors");
 import enterApiKey = require("viewmodels/enterApiKey");
@@ -61,6 +61,7 @@ class shell extends viewModelBase {
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
     showLogOutButton: KnockoutComputed<boolean>;
     static isGlobalAdmin = ko.observable<boolean>(false);
+    static canExposeConfigOverTheWire = ko.observable<boolean>(false);
     maxResourceNameWidth: KnockoutComputed<string>;
     isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ rateLimit: 100 });
 
@@ -97,8 +98,6 @@ class shell extends viewModelBase {
         var canCnt = this.canShowCountersNavbar();
         return canDb || canFs || canCnt;
     });
-
-    isActiveResourceDisabled: KnockoutComputed<boolean>;
 
     static resources = ko.computed(() => {
         var result = [].concat(shell.databases(), shell.fileSystems());
@@ -177,11 +176,6 @@ class shell extends viewModelBase {
         this.isCounterStorageDisabled = ko.computed(() => {
             var activeCs = this.activeCounterStorage();
             return !!activeCs ? activeCs.disabled() : false;
-        });
-
-        this.isActiveResourceDisabled = ko.computed(() => {
-            var activeRs = this.lastActivatedResource();
-            return !!activeRs ? activeRs.disabled() : false;
         });
 
         this.listedResources = ko.computed(() => {
@@ -366,6 +360,9 @@ class shell extends viewModelBase {
                 oauthContext.apiKey(match[1]);
                 apiKeyLocalStorage.setValue(match[1]);
             }
+            var splittedHash = hash.split("&#api-key");
+            var url = (splittedHash.length == 1) ? "#resources" : splittedHash[0];
+            window.location.href = url;
         } else {
             var apiKeyFromStorage = apiKeyLocalStorage.get();
             if (apiKeyFromStorage) {
@@ -514,7 +511,7 @@ class shell extends viewModelBase {
                 getSystemDocumentTask.done((dto: databaseDocumentDto) => {
                     var existingResource = resourceObservableArray.first((rs: resource) => rs.name == receivedResourceName);
 
-                    if (existingResource == null) { // new database
+                    if (existingResource == null) { // new resource
                         existingResource = this.createNewResource(resourceType, receivedResourceName, dto);
                         resourceObservableArray.unshift(existingResource);
                     } else {
@@ -556,13 +553,13 @@ class shell extends viewModelBase {
         var newResource = null;
 
         if (resourceType == logTenantType.Database) {
-            newResource = new database(resourceName, dto.Disabled);
+            newResource = new database(resourceName, true, dto.Disabled);
         }
         else if (resourceType == logTenantType.Filesystem) {
-            newResource = new filesystem(resourceName, dto.Disabled);
+            newResource = new filesystem(resourceName, true, dto.Disabled);
         }
         else if (resourceType == logTenantType.CounterStorage) {
-            newResource = new counterStorage(resourceName, dto.Disabled);
+            newResource = new counterStorage(resourceName, true, dto.Disabled);
         }
 
         return newResource;
@@ -637,23 +634,26 @@ class shell extends viewModelBase {
         return deferred;*/
     }
 
-    loadUserInfo() {
+    loadServerConfig() {
         var deferred = $.Deferred();
 
-        new getUserInfoCommand()
+        new getServerConfigsCommand()
             .execute()
-            .done((userInfo: userInfoDto) => shell.isGlobalAdmin(userInfo.IsAdminGlobal))
+            .done((serverConfigs: serverConfigsDto) => {
+                shell.isGlobalAdmin(serverConfigs.IsGlobalAdmin);
+                shell.canExposeConfigOverTheWire(serverConfigs.CanExposeConfigOverTheWire);
+            })
             .always(() => deferred.resolve());
 
         return deferred;
     }
 
     connectToRavenServer() {
-        var userInfoLoadTask: JQueryPromise<any> = this.loadUserInfo();
+        var serverConfigsTask: JQueryPromise<any> = this.loadServerConfig();
         var databasesLoadedTask: JQueryPromise<any> = this.loadDatabases();
         var fileSystemsLoadedTask: JQueryPromise<any> = this.loadFileSystems();
         var counterStoragesLoadedTask: JQueryPromise<any> = this.loadCounterStorages();
-        $.when(userInfoLoadTask, databasesLoadedTask, fileSystemsLoadedTask, counterStoragesLoadedTask)
+        $.when(serverConfigsTask, databasesLoadedTask, fileSystemsLoadedTask, counterStoragesLoadedTask)
             .always(() => {
                 var locationHash = window.location.hash;
                 if (appUrl.getFileSystem()) { //filesystems section
@@ -818,7 +818,7 @@ class shell extends viewModelBase {
             this.currentConnectedResource = fs;
         }
 
-        if (!fs.disabled() && fs.isLicensed() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('filesystems')())) {
+        if (!fs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('filesystems')())) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
             shell.currentResourceChangesApi(new changesApi(fs, 5000));
             shell.changeSubscriptionArray = [
@@ -829,7 +829,7 @@ class shell extends viewModelBase {
 
     private updateCsChangesApi(cs: counterStorage) {
         if (this.currentConnectedResource.name != cs.name || this.currentConnectedResource.name == cs.name && cs.disabled()) {
-            // disconnect from the current filesystem changes api and set the current connected filesystem
+            // disconnect from the current filesystem changes api and set the current connected
             shell.disconnectFromResourceChangesApi();
             this.currentConnectedResource = cs;
         }
@@ -959,7 +959,7 @@ class shell extends viewModelBase {
 
     showApiKeyDialog() {
         var dialog = new enterApiKey();
-        return app.showDialog(dialog).then(() => window.location.href = "#");
+        return app.showDialog(dialog).then(() => window.location.href = "#resources");
     }
 
     showErrorsDialog() {

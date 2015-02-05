@@ -63,6 +63,14 @@ class database extends resource {
     saveStatistics(dto: databaseStatisticsDto) {
         this.statistics(new databaseStatistics(dto));
     }
+
+    isBundleActive(bundleName: string) {
+        if (!!bundleName) {
+            var bundle = this.activeBundles.first((x: string) => x.toLowerCase() == bundleName.toLowerCase());
+            return !!bundle;
+        }
+        return false;
+    }
 }
 
 export = database;

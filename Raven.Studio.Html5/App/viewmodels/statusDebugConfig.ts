@@ -4,16 +4,30 @@ import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
-
 class statusDebugConfig extends viewModelBase {
-    data = ko.observable<string>();
-
-   editor: AceAjax.Editor;
+    data = ko.observable<string>("");
+    editor: AceAjax.Editor;
+    isForbidden: KnockoutComputed<boolean>;
 
     constructor() {
         super();
 
         aceEditorBindingHandler.install();
+        this.isForbidden = ko.computed(() => !this.data());
+    }
+
+    canActivate(args) {
+        super.canActivate(args);
+
+        var deffered = $.Deferred();
+        this.fetchStatusDebugConfig().always(() => deffered.resolve({ can: true }));
+        return deffered;
+    }
+
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('JHZ574');
+        this.activeDatabase.subscribe(() => this.fetchStatusDebugConfig());
     }
 
     compositionComplete() {
@@ -32,23 +46,11 @@ class statusDebugConfig extends viewModelBase {
         $("#statusDebugConfigEditor").off('DynamicHeightSet');
     }
 
-    activate(args) {
-        super.activate(args);
-        this.updateHelpLink('JHZ574');
-        this.activeDatabase.subscribe(() => this.fetchStatusDebugConfig());
-        return this.fetchStatusDebugConfig();
-    }
-
-    fetchStatusDebugConfig(): JQueryPromise<any> {
+    private fetchStatusDebugConfig(): JQueryPromise<any> {
         var db = this.activeDatabase();
-        if (db) {
-            return new getStatusDebugConfigCommand(db)
-                .execute()
-                .done((results: any) =>
-                    this.data(JSON.stringify(results, null, 4)));
-        }
-
-        return null;
+        return new getStatusDebugConfigCommand(db)
+            .execute()
+            .done((results: any) => this.data(JSON.stringify(results, null, 4)));
     }
 }
 

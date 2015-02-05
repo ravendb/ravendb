@@ -51,7 +51,7 @@ namespace Raven.Database.FileSystem.Controllers
 			var fileSystemsNames = fileSystemsData.Select(fileSystemObject => fileSystemObject.Name).ToArray();
 
 			List<string> approvedFileSystems = null;
-			if (DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
+			if (SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
 				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 				HttpResponseMessage authMsg;
@@ -62,7 +62,7 @@ namespace Raven.Database.FileSystem.Controllers
 				if (user == null)
 					return authMsg;
 
-				if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false)
+				if (user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
 					approvedFileSystems = authorizer.GetApprovedResources(user, this, fileSystemsNames);
 				}
@@ -72,8 +72,7 @@ namespace Raven.Database.FileSystem.Controllers
 					var principalWithDatabaseAccess = user as PrincipalWithDatabaseAccess;
 					if (principalWithDatabaseAccess != null)
 					{
-						var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(
-							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode);
+						var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode);
 						x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
 					}
 					else

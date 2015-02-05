@@ -1,7 +1,8 @@
 ﻿<div id="databaseSettingsContainer">
     <div data-bind="visible: isForbidden" class="text-center">
-        <h4 class="page-header text-info">You are not authorized to view this page</h4>
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
     </div>
+
     <form data-bind="submit: saveChanges, visible: isForbidden() == false">
         <div class="btn-toolbar">
             <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, visible: isEditingEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
