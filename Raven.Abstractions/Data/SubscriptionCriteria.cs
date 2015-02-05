@@ -15,7 +15,7 @@ namespace Raven.Abstractions.Data
 	{
 		public string KeyStartsWith { get; set; }
 
-		public string BelongsToCollection { get; set; }
+		public string[] BelongsToAnyCollection { get; set; }
 
 		public Dictionary<string, RavenJToken> PropertiesMatch { get; set; }
 

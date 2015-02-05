@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -259,8 +260,8 @@ namespace Raven.Database.Server.Controllers
 
 		private static bool MatchCriteria(SubscriptionCriteria criteria, JsonDocument doc)
 		{
-			if (criteria.BelongsToCollection != null &&
-			    criteria.BelongsToCollection.Equals(doc.Metadata.Value<string>(Constants.RavenEntityName), StringComparison.OrdinalIgnoreCase) == false)
+			if (criteria.BelongsToAnyCollection != null &&
+			    criteria.BelongsToAnyCollection.Contains(doc.Metadata.Value<string>(Constants.RavenEntityName), StringComparer.InvariantCultureIgnoreCase) == false)
 				return false;
 
 			if (criteria.KeyStartsWith != null && doc.Key.StartsWith(criteria.KeyStartsWith) == false)
