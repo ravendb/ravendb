@@ -616,16 +616,10 @@ namespace Raven.Database.Server.Controllers
                 }
                 catch (Exception e)
                 {
-                    string exceptionMessage = e.Message;
-                    var aggregateException = e as AggregateException;
-                    if (aggregateException != null)
-                    {
-                        exceptionMessage = aggregateException.ExtractSingleInnerException().Message;
-                    }
-                    var msg = "Could not open database named: " + tenantId + Environment.NewLine + exceptionMessage;
+	                var msg = "Could not open database named: " + tenantId + Environment.NewLine + e;
 
                     Logger.WarnException(msg, e);
-                    throw new HttpException(503, msg, e);
+                    throw new HttpException(503, msg,e);
                 }
 
                 landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
