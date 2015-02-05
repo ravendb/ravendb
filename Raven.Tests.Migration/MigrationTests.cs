@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Xml.Linq;
 
 using Raven.Abstractions.Data;
@@ -14,6 +15,7 @@ using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 using Raven.Tests.Migration.Indexes;
 using Raven.Tests.Migration.Utils;
 using Raven.Tests.Migration.Utils.Orders;
