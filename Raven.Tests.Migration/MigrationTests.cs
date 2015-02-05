@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -101,10 +102,29 @@ namespace Raven.Tests.Migration
 
 		private static void ValidateBackup(IDocumentStore store, DataGenerator generator)
 		{
-			WaitForIndexing(store, timeout: TimeSpan.FromMinutes(10));
+			WaitForIndexingOfLargeDatabase(store, timeout: TimeSpan.FromMinutes(10));
 
 			ValidateCounts(store, generator);
 			ValidateIndexes(store, generator);
+		}
+
+		private static void WaitForIndexingOfLargeDatabase(IDocumentStore store, TimeSpan timeout)
+		{
+			var databaseOpenTimeout = TimeSpan.FromMinutes(1);
+			var stopWatch = Stopwatch.StartNew();
+			while (true)
+			{
+				try
+				{
+					WaitForIndexing(store, timeout: timeout);
+					return;
+				}
+				catch (Exception)
+				{
+					if (stopWatch.Elapsed >= databaseOpenTimeout) 
+						throw;
+				}
+			}
 		}
 
 		private static void ValidateIndexes(IDocumentStore store, DataGenerator generator)
