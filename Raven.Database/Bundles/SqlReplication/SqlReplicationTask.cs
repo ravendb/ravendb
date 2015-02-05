@@ -288,7 +288,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 								var deletedDocs = deletedDocsByConfig[replicationConfig];
 								var docsToReplicate = itemsToReplicate
-									.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
+									.Where(x => lastReplicatedEtag.CompareTo(x.Etag) < 0) // haven't replicate the etag yet
 									.Where(document =>
 									{
 										var info = Database.Documents.GetRecentTouchesFor(document.Key);
