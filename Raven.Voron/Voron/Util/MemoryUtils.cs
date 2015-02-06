@@ -10,14 +10,14 @@ namespace Voron.Util
     {
         public static SliceComparer MemoryComparerInstance = Compare;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Compare(byte* bpx, byte* bpy, int n)
         {
-            // Fast switch (20% from original)
             switch (n)
             {
                 case 0: return 0;
                 case 1: return *bpx - *bpy;
-                case 2:                     
+                case 2:
                     {
                         int v = *bpx - *bpy;
                         if (v != 0)
@@ -28,78 +28,9 @@ namespace Voron.Util
 
                         return *bpx - *bpy;
                     }
-                case 3: 
-                    {
-                        if (*((ushort*)bpx) != *((ushort*)bpy))
-                            goto BYTECOMPARISON;
-
-                        bpx += 2;
-                        bpy += 2;
-
-                        return *bpx - *bpy;
-                    }
-                case 4:
-                    {
-                        if (*((uint*)bpx) != *((uint*)bpy))
-                            goto BYTECOMPARISON;
-
-                        return 0;
-                    }
-                case 5:
-                case 6:
-                case 7:
-                    {
-                        if (*((uint*)bpx) != *((uint*)bpy))
-                            goto BYTECOMPARISON;
-
-                        bpx += 2;
-                        bpy += 2;
-                        n -= 2;
-
-                        goto BYTECOMPARISON;
-                    }
-                default:
-                    {
-                        if (*((ulong*)bpx) != *((ulong*)bpy))
-                            goto BYTECOMPARISON;
-
-                        bpx += 4;
-                        bpy += 4;
-                        n -= 4;
-
-                        if ( n <= 512 )
-                            goto WORDCOMPARE;
-
-                        return StdLib.memcmp(bpx, bpy, n);                        
-                    }
+             
+                default: return StdLib.memcmp(bpx, bpy, n);
             }
-
-        WORDCOMPARE:
-            // Higher bandwidth will improve more with longer memory compares (20% with 32bytes, 50% with 256)
-            ulong* lpx = (ulong*)bpx;
-            ulong* lpy = (ulong*)bpy;
-
-            while (n > 8 && *lpx == *lpy)
-            {
-                lpx++;
-                lpy++;
-                n -= 8;
-            }
-
-            bpx = (byte*)lpx;
-            bpy = (byte*)lpy;
-
-        BYTECOMPARISON:
-            while (n > 0 && *bpx == *bpy)
-            {
-                bpx++;
-                bpy++;
-                n--;
-            }
-
-            if (n != 0)
-                return *bpx - *bpy;
-            return 0;
         }
 
         /// <summary>
@@ -182,7 +113,7 @@ namespace Voron.Util
                     break;
             }
 
-            if (n <= 2048)
+            if (n <= 128)
             {
                 int count = n / 32;
                 n -= count * 32;
@@ -214,6 +145,5 @@ namespace Voron.Util
 
             StdLib.memcpy(dest, src, n);
         }
-
     }
 }
