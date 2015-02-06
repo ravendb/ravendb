@@ -23,6 +23,11 @@ class metricsIndexBatchSize extends viewModelBase {
         this.modelPolling();
     }
 
+    detached() {
+        super.detached();
+        window.onresize = null; // FIX nvd3 event attached globally
+    }
+
     modelPolling() {
         return this.fetchStats().then(() => {
             this.appendData();
@@ -40,7 +45,7 @@ class metricsIndexBatchSize extends viewModelBase {
                 y: batchInfos[i].TotalDocumentSize,
                 size: batchInfos[i].TotalDocumentSize
             }
-            var match = values.first(e => e.x.getTime() == item.x.getTime() && e.y == item.y);
+            var match = values.first(e => e.x.getTime() === item.x.getTime() && e.y === item.y);
             if (!match) {
                 values.push(item);
             }

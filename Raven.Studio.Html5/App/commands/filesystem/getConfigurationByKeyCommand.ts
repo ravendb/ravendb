@@ -1,6 +1,5 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import pagedResultSet = require("common/pagedResultSet");
 
 class getConfigurationByKeyCommand extends commandBase {
 
