@@ -179,6 +179,7 @@ class metrics extends viewModelBase {
 
     attached() {
         this.createKeyboardShortcut("esc", nv.tooltip.cleanup, "body");
+        this.updateHelpLink('QCVU81');
         $("#metricsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
         $("#metricsContainer").scroll(() => this.graphScrolled());
         this.refresh();
@@ -190,6 +191,7 @@ class metrics extends viewModelBase {
         });
         $("#visibleIndexesSelector").multiselect();
         this.svg = d3.select("#indexPerformanceGraph");
+       
     }
 
     createNotifications(): Array<changeSubscription> {
