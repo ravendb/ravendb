@@ -13,7 +13,24 @@ namespace Voron.Util
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Compare(byte* bpx, byte* bpy, int n)
         {
-            return StdLib.memcmp(bpx, bpy, n);     
+            switch (n)
+            {
+                case 0: return 0;
+                case 1: return *bpx - *bpy;
+                case 2:
+                    {
+                        int v = *bpx - *bpy;
+                        if (v != 0)
+                            return v;
+
+                        bpx++;
+                        bpy++;
+
+                        return *bpx - *bpy;
+                    }
+             
+                default: return StdLib.memcmp(bpx, bpy, n);
+            }
         }
 
         /// <summary>
