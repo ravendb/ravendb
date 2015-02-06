@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -51,72 +52,72 @@ namespace Voron.Util
         /// </summary>
         public unsafe static void Copy(byte* dest, byte* src, int n)
         {
-            SMALLTABLE:
+        SMALLTABLE:
             switch (n)
             {
-                case 0:
-                    return;
-                case 1:
-                    *dest = *src;
-                    return;
-                case 2:
-                    *(short*)dest = *(short*)src;
-                    return;
-                case 3:
-                    *(dest + 2) = *(src + 2);
-                    goto case 2;
-                case 4:
-                    *(int*)dest = *(int*)src;
-                    return;
-                case 5:
-                    *(dest + 4) = *(src + 4);
-                    goto case 4;
-                case 6:
-                    *(short*)(dest + 4) = *(short*)(src + 4);
-                    goto case 4;
-                case 7:
-                    *(short*)(dest + 4) = *(short*)(src + 4);
-                    *(dest + 6) = *(src + 6);
-                    goto case 4;
-                case 8:
+                case 16:
                     *(long*)dest = *(long*)src;
+                    *(long*)(dest + 8) = *(long*)(src + 8);
                     return;
-                case 9:
-                    *(dest + 8) = *(src + 8);
-                    goto case 8;
-                case 10:
-                    *(short*)(dest + 8) = *(short*)(src + 8);
-                    goto case 8;
-                case 11:
-                    *(short*)(dest + 8) = *(short*)(src + 8);
-                    *(dest + 10) = *(src + 10);
-                    goto case 8;
-                case 12:
-                    *(long*)dest = *(long*)src;
-                    *(int*)(dest + 8) = *(int*)(src + 8);
-                    return;
-                case 13:                    
-                    *(dest + 12) = *(src + 12);
-                    goto case 12;
-                case 14:
-                    *(short*)(dest + 12) = *(short*)(src + 12);
-                    goto case 12;
                 case 15:
                     *(short*)(dest + 12) = *(short*)(src + 12);
                     *(dest + 14) = *(src + 14);
                     goto case 12;
-                case 16:
+                case 14:
+                    *(short*)(dest + 12) = *(short*)(src + 12);
+                    goto case 12;
+                case 13:
+                    *(dest + 12) = *(src + 12);
+                    goto case 12;
+                case 12:
                     *(long*)dest = *(long*)src;
-                    *(long*)(dest + 8) = *(long*)(src + 8);
+                    *(int*)(dest + 8) = *(int*)(src + 8);
+                    return;
+                case 11:
+                    *(short*)(dest + 8) = *(short*)(src + 8);
+                    *(dest + 10) = *(src + 10);
+                    goto case 8;
+                case 10:
+                    *(short*)(dest + 8) = *(short*)(src + 8);
+                    goto case 8;
+                case 9:
+                    *(dest + 8) = *(src + 8);
+                    goto case 8;
+                case 8:
+                    *(long*)dest = *(long*)src;
+                    return;
+                case 7:
+                    *(short*)(dest + 4) = *(short*)(src + 4);
+                    *(dest + 6) = *(src + 6);
+                    goto case 4;
+                case 6:
+                    *(short*)(dest + 4) = *(short*)(src + 4);
+                    goto case 4;
+                case 5:
+                    *(dest + 4) = *(src + 4);
+                    goto case 4;
+                case 4:
+                    *(int*)dest = *(int*)src;
+                    return;
+                case 3:
+                    *(dest + 2) = *(src + 2);
+                    goto case 2;
+                case 2:
+                    *(short*)dest = *(short*)src;
+                    return;
+                case 1:
+                    *dest = *src;
+                    return;
+                case 0:
                     return;
                 default:
                     break;
             }
 
-            if (n <= 128)
+            if (n <= 512)
             {
                 int count = n / 32;
-                n -= count * 32;
+                n -= (n / 32) * 32;
 
                 while (count > 0)
                 {
@@ -138,12 +139,12 @@ namespace Voron.Util
                     src += 16;
                     dest += 16;
                     n -= 16;
-                }                
+                }
 
                 goto SMALLTABLE;
             }
 
-            StdLib.memcpy(dest, src, n);
+            BulkCopy(dest, src, n);
         }
     }
 }
