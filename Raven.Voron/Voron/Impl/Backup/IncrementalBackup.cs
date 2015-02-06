@@ -257,7 +257,7 @@ namespace Voron.Impl.Backup
 											input.CopyTo(output);
 										}
 
-										var pager = new Win32MemoryMapPager(jounalFileName);
+                                        var pager = env.Options.OpenPager(jounalFileName);
 										toDispose.Add(pager);
 
 										if (long.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out journalNumber) == false)
@@ -265,7 +265,7 @@ namespace Voron.Impl.Backup
 											throw new InvalidOperationException("Cannot parse journal file number");
 										}
 
-										var recoveryPager = new Win32MemoryMapPager(Path.Combine(tempDir, StorageEnvironmentOptions.JournalRecoveryName(journalNumber)));
+                                        var recoveryPager = env.Options.CreateScratchPager(Path.Combine(tempDir, StorageEnvironmentOptions.JournalRecoveryName(journalNumber)));
 										toDispose.Add(recoveryPager);
 
 										var reader = new JournalReader(pager, recoveryPager, 0, lastTxHeader);

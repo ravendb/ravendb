@@ -1,8 +1,13 @@
-﻿<section data-bind="with: backupSetup">
+﻿<div id="periodicExportPage">
+    <div data-bind="visible: isForbidden" class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+    </div>
+
     <div data-bind="visible: unsupported()">
         <div class="alert alert-danger">Too many periodic export types found. This isn't a supported scenario for the UI.</div>
     </div>
-    <div data-bind="visible: !unsupported()">
+
+    <div data-bind="visible: !unsupported() && !isForbidden()">
         <form data-bind="submit: $root.saveChanges.bind($root)" id="save-periodic-backup-form" class="form-horizontal" role="form">
             
             <div class="panel panel-default">
@@ -127,7 +132,13 @@
                                 <select class="form-control" data-bind="enable: $root.usingGlobal() == false, options: availablePeriodicExports, optionsText: 'label', optionsValue: 'value', value: type"></select>
                             </div>
                             <div class="col-sm-4">
-                                <input type="text" required class="form-control" data-bind="value: mainValue, enable: $root.usingGlobal() == false, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }" />
+                                <input type="text" required class="form-control" data-bind="value: mainValue, enable: $root.usingGlobal() == false, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }"/>
+                                <div data-bind="visible: isGlaceirVault">
+                                    <a href="http://docs.aws.amazon.com/amazonglacier/latest/dev/creating-vaults.html">Vault Name Restrictions and Limitations</a>
+                                </div>
+                                <div data-bind="visible: isS3Bucket">
+                                    <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html">Bucket Name Restrictions and Limitations</a>
+                                </div>
                             </div>
                             <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
                                 <input type="text" disabled="disabled" class="form-control" data-bind="value: $root.globalBackupSetup().mainValue, attr: { placeholder: mainPlaceholder }" />
@@ -213,4 +224,4 @@
             </div>   
         </form>
     </div>
-</section>
+</div>

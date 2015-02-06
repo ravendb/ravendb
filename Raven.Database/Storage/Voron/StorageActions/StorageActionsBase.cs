@@ -85,6 +85,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
+		protected StructureReader<T> LoadStruct<T>(TableOfStructures<T> table, Slice key, WriteBatch writeBatch, out ushort version)
+		{
+			var read = table.ReadStruct(Snapshot, key, writeBatch);
+			if (read == null)
+			{
+				version = 0;
+				return null;
+			}
+
+			version = read.Version;
+			return read.Reader;
+		}
+
         protected BufferPoolMemoryStream CreateStream()
         {
             return new BufferPoolMemoryStream(bufferPool);

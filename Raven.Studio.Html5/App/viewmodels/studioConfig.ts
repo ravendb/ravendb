@@ -54,6 +54,11 @@ class studioConfig extends viewModelBase {
         return deffered;
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('4J5OUB');
+    }
+
     attached() {
         var self = this;
         $(window).bind('storage', (e: any) => {

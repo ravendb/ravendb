@@ -8,17 +8,23 @@ import appUrl = require("common/appUrl");
 import configurationSettings = require("models/configurationSettings");
 import getConfigurationSettingsCommand = require("commands/getConfigurationSettingsCommand");
 import deleteLocalPeriodicExportSetupCommand = require("commands/deleteLocalPeriodicExportSetupCommand");
+import database = require("models/database");
 
 class periodicExport extends viewModelBase {
-
     backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
     globalBackupSetup = ko.observable<periodicExportSetup>();
     isSaveEnabled: KnockoutComputed<boolean>;
-
     exportDisabled = ko.observable<boolean>(false);
 
     usingGlobal = ko.observable<boolean>(false);
     hasGlobalValues = ko.observable<boolean>(false);
+    isForbidden = ko.observable<boolean>(false);
+    
+
+    constructor() {
+        super();
+        this.activeDatabase.subscribe((db: database) => this.isForbidden(!db.isAdminCurrentTenant()));
+    }
 
     canActivate(args: any): any {
         super.canActivate(args);
@@ -26,20 +32,26 @@ class periodicExport extends viewModelBase {
         this.globalBackupSetup(new periodicExportSetup);
 
         var deferred = $.Deferred();
+
         var db = this.activeDatabase();
-        if (db) {
+        this.isForbidden(!db.isAdminCurrentTenant());
+        if (db.isAdminCurrentTenant()) {
             $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db))
                 .done(() => {
                     this.updateExportDisabledFlag();
                     deferred.resolve({ can: true });
                 })
                 .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+        } else {
+            deferred.resolve({ can: true });
         }
+
         return deferred;
     }
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink('OU78CB');
         
         this.dirtyFlag = new ko.DirtyFlag([this.backupSetup, this.usingGlobal]);
 

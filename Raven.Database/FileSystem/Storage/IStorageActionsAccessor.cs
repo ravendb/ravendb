@@ -34,6 +34,8 @@ namespace Raven.Database.FileSystem.Storage
 
         IEnumerable<FileHeader> GetFilesAfter(Guid etag, int take);
 
+		IEnumerable<FileHeader> GetFilesStartingWith(string namePrefix, int start, int take);
+
         void Delete(string filename);
        
         void UpdateFileMetadata(string filename, RavenJObject metadata);
@@ -71,5 +73,7 @@ namespace Raven.Database.FileSystem.Storage
         IList<string> GetConfigNamesStartingWithPrefix(string prefix, int start, int take, out int total);
 
         Etag GetLastEtag();
+
+		bool IsNested { get; set; }
     }
 }

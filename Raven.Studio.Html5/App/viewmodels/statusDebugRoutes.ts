@@ -3,15 +3,15 @@ import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
-
+import shell = require('viewmodels/shell');
 
 class statusDebugRoutes extends viewModelBase {
     data = ko.observable<string>();
     editor: AceAjax.Editor;
+    isGlobalAdmin = shell.isGlobalAdmin;
 
     constructor() {
         super();
-
         aceEditorBindingHandler.install();
     }
 
@@ -33,10 +33,15 @@ class statusDebugRoutes extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        return this.fetchRoutes();
+        this.updateHelpLink('JHZ574');
+
+        if (this.isGlobalAdmin()) {
+            this.fetchRoutes();
+            this.activeDatabase.subscribe(() => this.fetchRoutes());
+        }
     }
 
-    fetchRoutes(): JQueryPromise<any> {
+    private fetchRoutes(): JQueryPromise<any> {
         return new getStatusDebugRoutesCommand()
             .execute()
             .done((results: any) =>

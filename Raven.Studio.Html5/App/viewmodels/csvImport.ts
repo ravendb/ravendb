@@ -10,6 +10,11 @@ class csvImport extends viewmodelBase {
         this.hasFileSelected(true);
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('CX96R3');
+    }
+
     importCsv() {
         if (!this.isImporting()) {
             this.isImporting(true);

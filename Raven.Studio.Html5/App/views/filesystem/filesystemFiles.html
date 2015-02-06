@@ -1,7 +1,7 @@
 ﻿<ul class="breadcrumb">
     <li>
         <h3>
-            <a href="#filesystems">
+            <a href="#resources">
                 File Systems
             </a>
         </h3>
@@ -20,27 +20,25 @@
     <div class="row">
         <div class="col-md-2">
             <div class="btn-toolbar" role="toolbar">
-
                 <div class="btn-group">
-                    <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: createFolder" title="Create folder">
+                    <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: createFolder, enable: inRevisionsFolder() == false" title="Create folder">
                         <span>New Folder</span>
                     </button>
                 </div>
 
-                <div class="btn-group">
+                <div class="btn-group" data-bind="visible: inRevisionsFolder() == false">
                     <span class="btn btn-primary btn-file" title="Upload files">
                         <i class="fa fa-upload"></i>
                         <input id="upload" name="upload" type="file" multiple="multiple" data-bind="value: uploadFiles, fileUpload: { files: uploadFiles, directory: selectedFolder, uploads: uploadQueue, before: expandUploadQueuePanel, success: uploadSuccess.bind($data), fail: uploadFailed.bind($data) }" />
                     </span>
                 </div>
-
             </div>
             <span><br/></span>
-            <div id="filesTree" data-bind="tree: {selectedNode: selectedFolder, addedNode: addedFolder, currentLevelNodes: currentLevelSubdirectories}" />
+            <div id="filesTree" data-bind="tree: {selectedNode: selectedFolder, addedNode: addedFolder, currentLevelNodes: currentLevelSubdirectories}" ></div>
         </div>
         <div class="col-md-10">
             <div class="btn-toolbar" role="toolbar">
-                <div class="btn-group">
+                <div class="btn-group" data-bind="style: { visibility : hasFiles() ? 'visible' : 'hidden' }">
                     <button type="button" class="btn btn-link" style="margin-left: 10px;" data-bind="click: toggleSelectAll" title="Select all or none">
                         <img data-bind="attr: { src: isSelectAll() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
                     </button>
@@ -59,7 +57,7 @@
                 <span></span>
             </div>
             <div class="files-select" data-bind="visible: selectedFilesIndices().length > 0">
-                You have selected <strong data-bind="text: $root.selectedFilesIndices().length"></strong> files.
+                You have selected <strong data-bind="text: $root.selectedFilesIndices().length"></strong> <span data-bind="text: $root.selectedFilesText"></span>.
             </div>
             <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, dynamicHeightTargetSelector: '#uploadQueueContainer', gridSelector: '#filesGrid', contextMenuOptions: ['Delete'] }"></div>
         </div>

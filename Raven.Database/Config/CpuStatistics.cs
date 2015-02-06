@@ -9,15 +9,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Threading;
-
+using NLog.Internal;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
+using ConfigurationManager = System.Configuration.ConfigurationManager;
 
 namespace Raven.Database.Config
 {
 	public static class CpuStatistics
 	{
-		private const int NotificationThreshold = 80;
+		private const int HighNotificationThreshold = 80;
+        private const int LowNotificationThreshold = 60;
 
 		private const int NumberOfItemsInQueue = 5;
 
@@ -27,33 +29,80 @@ namespace Raven.Database.Config
 
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-		private static volatile bool domainUnloadOccured;
-
+	    private static bool errorGettingCpuStats;
 		private static int nextWriteIndex;
+        private static readonly ManualResetEventSlim _domainUnload = new ManualResetEventSlim();
+	    private static bool dynamicLoadBalancding;
 
-		static CpuStatistics()
+	    static CpuStatistics()
 		{
-			var searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor WHERE Name='_Total'");
+	        if (bool.TryParse(ConfigurationManager.AppSettings["Raven/DynamicLoadBalancing"], out dynamicLoadBalancding) && 
+                dynamicLoadBalancding == false)
+		        return; // disabled, so we avoid it
+	        dynamicLoadBalancding = true;
 
-			AppDomain.CurrentDomain.DomainUnload += (sender, args) => domainUnloadOccured = true;
+		    AppDomain.CurrentDomain.DomainUnload += (sender, args) => _domainUnload.Set();
 
 			new Thread(() =>
 			{
-				while (true)
-				{
-					if (domainUnloadOccured)
-						return;
+			    try
+			    {
+                    ManagementObjectSearcher searcher;
+                    try
+			        {
+                        searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor WHERE Name='_Total'");
+			        }
+			        catch (Exception e)
+			        {
+			            Log.WarnException("Could not get the CPU statistics, automatic CPU thorttling disabled!", e);
+			            return;
+			        }
+			        while (true)
+			        {
+			            if (_domainUnload.Wait(1000))
+			                return;
 
-					var totalUsage = searcher
-						.Get()
-						.Cast<ManagementObject>()
-						.Select(x => int.Parse(x["PercentProcessorTime"].ToString()))
-						.FirstOrDefault();
-
-					HandleCpuUsage(totalUsage);
-
-					Thread.Sleep(TimeSpan.FromSeconds(1));
-				}
+                        int totalUsage;
+                        try
+			            {
+			                totalUsage = searcher
+			                    .Get()
+			                    .Cast<ManagementObject>()
+			                    .Select(x => int.Parse(x["PercentProcessorTime"].ToString()))
+			                    .FirstOrDefault();
+			                errorGettingCpuStats = false;
+			            }
+			            catch (Exception e)
+			            {
+			                if (errorGettingCpuStats)
+			                {
+                                Log.WarnException("Repeatedly cannot get CPU usage from system, assuming temporary issue, will try again in a few minutes", 
+                                    e);
+			                    if (_domainUnload.Wait(7*60*1000))
+			                        return;
+			                }
+			                else
+			                {
+                                Log.WarnException("Could not get current CPU usage from system, will try again later", e);
+			                }
+			                errorGettingCpuStats = true;
+                            continue;
+			            }
+			            try
+			            {
+			                HandleCpuUsage(totalUsage);
+			            }
+			            catch (Exception e)
+			            {
+			                Log.WarnException("Failed to notify handlers about CPU usage, aborting CPU throttling", e);
+			                return;
+			            }
+			        }
+			    }
+			    catch (Exception e)
+			    {
+			        Log.ErrorException("Errpr handling CPU statistics during automatic CPU throttling, aborting automatic thorttling!", e);
+			    }
 			})
 			{
 				IsBackground = true,
@@ -70,17 +119,23 @@ namespace Raven.Database.Config
 			if (previousWriteIndex < NumberOfItemsInQueue - 1) // waiting for queue to fill up
 				return;
 
+            nextWriteIndex = 0;
+
 			var average = LastUsages.Average();
-			if (average >= NotificationThreshold)
+		    if (average < 0)
+		        return; // there was an error in getting the CPU stats, ignoring
+
+			if (average >= HighNotificationThreshold)
 				RunCpuUsageHandlers(handler => handler.HandleHighCpuUsage());
-			else
+			else if(average < LowNotificationThreshold)
 				RunCpuUsageHandlers(handler => handler.HandleLowCpuUsage());
 
-			nextWriteIndex = 0;
 		}
 
 		public static void RegisterCpuUsageHandler(ICpuUsageHandler handler)
 		{
+		    if (dynamicLoadBalancding == false)
+		        return;
 			CpuUsageHandlers.Add(new WeakReference<ICpuUsageHandler>(handler));
 		}
 
@@ -99,7 +154,8 @@ namespace Raven.Database.Config
 					}
 					catch (Exception e)
 					{
-						Log.Error("Failure to process CPU usage notification (cpu usage handler - " + handler + ")", e);
+						Log.Error("Failure to process CPU usage notification (cpu usage handler - " + handler + "), handler will be removed", e);
+                        inactiveHandlers.Add(highCpuUsageHandler);
 					}
 				}
 				else

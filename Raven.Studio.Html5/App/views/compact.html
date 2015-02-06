@@ -9,6 +9,7 @@
             <form class="form-horizontal" role="form" data-bind="submit: startDbCompact">
                 <div class="panel panel-default" data-bind="with: dbCompactOptions">
                     <div class="panel-heading panel-info">
+                        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                         <button type="submit" class="btn btn-primary" data-bind="disable: $parent.isBusy">
                             <i class="fa fa-hdd-o"></i>
                             <span>Start Compaction</span>
@@ -50,6 +51,7 @@
             <form class="form-horizontal" role="form" data-bind="submit: startFsCompact">
                 <div class="panel panel-default" data-bind="with: fsCompactOptions">
                     <div class="panel-heading panel-info">
+                        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                         <button type="submit" class="btn btn-primary" data-bind="disable: $parent.isBusy">
                             <i class="fa fa-hdd-o"></i>
                             <span>Start Compaction</span>

@@ -52,7 +52,7 @@ class editTransformer extends viewModelBase {
 
     activate(transformerToEditName: string) {
         super.activate(transformerToEditName);
-
+        this.updateHelpLink('S467UO');
         if (transformerToEditName) {
             this.isEditingExistingTransformer(true);
         } else {

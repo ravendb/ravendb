@@ -1,5 +1,9 @@
-﻿<section>
-    <form class="quotas-settings-form form-horizontal" role="form" data-bind="submit: $root.saveChanges.bind($root)">
+﻿<div id="quotasPage">
+    <div data-bind="visible: isForbidden" class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+    </div>
+
+    <form class="quotas-settings-form form-horizontal" role="form" data-bind="submit: $root.saveChanges.bind($root), visible: isForbidden() == false">
         <div class="panel panel-default">
             <div class="panel-heading">
                 <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
@@ -92,4 +96,4 @@
             </div>
         </div>
     </form>
-</section>
+</div>

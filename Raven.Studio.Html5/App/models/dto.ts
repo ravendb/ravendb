@@ -273,6 +273,11 @@ interface userInfoDto {
     AccessTokenBody: string;
 }
 
+interface serverConfigsDto {
+    IsGlobalAdmin: boolean;
+    CanExposeConfigOverTheWire: boolean;
+}
+
 interface logDto {
     TimeStamp: string;
     Message: string;
@@ -833,11 +838,6 @@ interface histogramDataDto {
     Percentiles: any;
 }
 
-interface fileSystemDto {
-    Name: string;
-    Disabled: boolean;
-}
-
 interface statusDebugDocrefsDto {
     TotalCount: number;
     Results: Array<string>;
@@ -1011,12 +1011,19 @@ interface changesApiEventDto {
     Value?: any;
 }
 
-interface databaseDto {
-    Name: string;
-    Disabled: boolean;
-    Bundles: string[];
+interface databaseDto extends tenantDto {
     IndexingDisabled: boolean;
     RejectClientsEnabled: boolean;
+}
+
+interface tenantDto {
+    Name: string;
+    Disabled: boolean;
+    Bundles: Array<string>;
+    IsAdminCurrentTenant: boolean;
+}
+
+interface fileSystemDto extends tenantDto {
 }
 
 interface customFunctionsDto {
@@ -1218,4 +1225,11 @@ interface destinationInformationDto {
     DatabaseName: string;
     ServerInstanceId: string;
     LastDocumentEtag: string;
+}
+
+enum ResponseCodes {
+    Forbidden = 403,
+    NotFound = 404,
+    PreconditionFailed = 412,
+    InternalServerError = 500
 }

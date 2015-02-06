@@ -14,10 +14,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using Mono.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
-using Raven.Database.Config.Settings;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins.Catalogs;
@@ -224,6 +222,8 @@ namespace Raven.Database.Config
 
 			// HTTP settings
 			HostName = ravenSettings.HostName.Value;
+
+			ExposeConfigOverTheWire = ravenSettings.ExposeConfigOverTheWire.Value;
 
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
 			{
@@ -609,6 +609,13 @@ namespace Raven.Database.Config
 		/// Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward.
 		/// </summary>
 		public int Port { get; set; }
+
+		/// <summary>
+		/// Allow to get config information over the wire.
+		/// Applies to endpoints: /debug/config, /debug...
+		/// Default: Open. You can set it to AdminOnly.
+		/// </summary>
+		public string ExposeConfigOverTheWire { get; set; }
 
 		/// <summary>
 		/// Determine the value of the Access-Control-Allow-Origin header sent by the server. 
@@ -1149,6 +1156,9 @@ namespace Raven.Database.Config
 
             if (string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
                 Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "Databases", tenantId);
+
+            if (string.IsNullOrEmpty(Settings["Raven/Voron/TempPath"]) == false)
+                Settings["Raven/Voron/TempPath"] = Path.Combine(Settings["Raven/Voron/TempPath"], "Databases", tenantId, "VoronTemp");
         }
 
         public void CustomizeValuesForFileSystemTenant(string tenantId)

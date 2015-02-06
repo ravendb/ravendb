@@ -23,6 +23,7 @@ class statusDebugDocrefs extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink('JHZ574');
         this.columns().columns([
             new customColumnParams({ Header: "Id", Binding: "Id", DefaultWidth: 300 }),
         ]);

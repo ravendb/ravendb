@@ -49,6 +49,7 @@ class sqlReplications extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink('J9VD59');
     }
 
     compositionComplete() {

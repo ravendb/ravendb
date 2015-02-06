@@ -92,6 +92,11 @@ class restore extends viewModelBase {
         return deferred;
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('FT7RV6');
+    }
+
     startDbRestore() {
         this.isBusy(true);
         var self = this;

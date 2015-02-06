@@ -61,7 +61,7 @@ namespace Raven.Database.FileSystem.Controllers
         public HttpResponseMessage NonGeneratedConfigNames()
         {
 			var searchPattern = new Regex("^(sync|deleteOp|raven\\/synchronization\\/sources|conflicted|renameOp)", RegexOptions.IgnoreCase);
-
+            
 			List<string> configs = null;
 			Storage.Batch(accessor =>
 			{
@@ -73,7 +73,7 @@ namespace Raven.Database.FileSystem.Controllers
 			});
 
 			return GetMessageWithObject(configs)
-					   .WithNoCache();
+                       .WithNoCache();
         }
 
 		[HttpGet]

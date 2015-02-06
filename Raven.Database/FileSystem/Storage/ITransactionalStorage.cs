@@ -24,5 +24,7 @@ namespace Raven.Database.FileSystem.Storage
         void Restore(FilesystemRestoreRequest restoreRequest, Action<string> output);
 
         void Compact(InMemoryRavenConfiguration configuration, Action<string> output);
+
+		IDisposable DisableBatchNesting();
     }
 }

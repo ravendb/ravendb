@@ -12,7 +12,11 @@ using System.Linq;
 using System.Text;
 
 using Microsoft.Isam.Esent.Interop;
+
+using Mono.CSharp;
+
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Plugins;
@@ -29,6 +33,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 {
     public class StorageActionsAccessor : IStorageActionsAccessor
     {
+	    private static ILog log = LogManager.GetCurrentClassLogger();
 		private readonly JET_DBID database;
 		private readonly Session session;
 		private readonly TableColumnsCache tableColumnsCache;
@@ -53,9 +58,17 @@ namespace Raven.Database.FileSystem.Storage.Esent
 				transaction = new Transaction(session);
 				Api.JetOpenDatabase(session, databaseName, null, out database, OpenDatabaseGrbit.None);
 			}
-			catch (Exception)
+			catch (Exception original)
 			{
-				Dispose();
+				log.WarnException("Could not create accessor", original);
+				try
+				{
+					Dispose();
+				}
+				catch (Exception e)
+				{
+					log.WarnException("Could not properly dispose accessor after exception in ctor.", e);
+				}
 				throw;
 			}
 		}
@@ -107,7 +120,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 				usage.Dispose();
 			if (files != null)
 				files.Dispose();
-			if (Equals(database, JET_DBID.Nil) == false)
+			if (Equals(database, JET_DBID.Nil) == false && session != null)
 				Api.JetCloseDatabase(session, database, CloseDatabaseGrbit.None);
 			if (transaction != null)
 				transaction.Dispose();
@@ -411,7 +424,47 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			return result;
 		}
 
-        private readonly byte[] lastEtag;
+	    public IEnumerable<FileHeader> GetFilesStartingWith(string namePrefix, int start, int take)
+	    {
+			Api.JetSetCurrentIndex(session, Files, "by_name");
+
+			Api.MakeKey(session, Files, namePrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Files, SeekGrbit.SeekGE) == false)
+			{
+				yield break;
+			}
+
+			Api.MakeKey(session, Files, namePrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.PartialColumnEndLimit);
+			try
+			{
+				Api.JetMove(session, Files, start, MoveGrbit.MoveKeyNE);
+			}
+			catch (EsentNoCurrentRecordException)
+			{
+				yield break;
+			}
+
+			if (Api.TrySetIndexRange(session, Files, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit))
+			{
+				var fetchedCount = 0;
+
+				do
+				{
+					var file = new FileHeader(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode), RetrieveMetadata())
+					             {
+						             TotalSize = GetTotalSize(), 
+									 UploadedSize = BitConverter.ToInt64(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
+					             };
+
+					fetchedCount++;
+
+					yield return file;
+				}
+				while (Api.TryMoveNext(session, Files) && fetchedCount < take);
+			}
+	    }
+
+	    private readonly byte[] lastEtag;
 
         public Etag GetLastEtag()
         {
@@ -424,7 +477,9 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			return Etag.Parse(val);
         }
 
-		public void Delete(string filename)
+	    public bool IsNested { get; set; }
+
+	    public void Delete(string filename)
 		{
 			Api.JetSetCurrentIndex(session, Usage, "by_name_and_pos");
 			Api.MakeKey(session, Usage, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);

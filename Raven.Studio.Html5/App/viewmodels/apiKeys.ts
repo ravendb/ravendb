@@ -38,7 +38,7 @@ class apiKeys extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('9CGJ4Y');
         this.dirtyFlag = new ko.DirtyFlag([this.apiKeys]);
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }

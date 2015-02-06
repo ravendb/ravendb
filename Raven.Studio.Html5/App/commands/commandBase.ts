@@ -202,7 +202,7 @@ class commandBase {
                 if (currentDb != null && currentDb.name == dbBeingUpdated) {
                     router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated)));
                 }
-            } else if (request.status == 412 && oauthContext.apiKey()) {
+            } else if (request.status == ResponseCodes.PreconditionFailed && oauthContext.apiKey()) {
                 this.handleOAuth(ajaxTask, request, originalArguments);
             } else {
                 ajaxTask.reject(request, status, error);
@@ -223,7 +223,7 @@ class commandBase {
                 grant_type: 'client_credentials'
             }
         }).fail((request, status, error) => {
-                if (request.status != 412) {
+                if (request.status != ResponseCodes.PreconditionFailed) {
                     task.reject(request, status, error);
                 } else {
                     var wwwAuth:string = request.getResponseHeader('WWW-Authenticate');

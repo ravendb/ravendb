@@ -48,6 +48,12 @@
 
 
             <div class="col-sm-12 form-group">
+                <!-- ko if: rolledbackTransactionPerformed() == false -->
+                <label class="col-sm-12  control-label" data-bind="visible: !!lastAlert()">
+                    Simulation Error:
+                </label>
+                <pre class="col-sm-offset-2 col-sm-10" data-bind="visible: !!lastAlert(), text: lastAlert"></pre>
+                <!-- /ko -->
                 <!-- ko if: rolledbackTransactionPerformed -->
                 <label class="col-sm-4  control-label">
                     Test Transaction Status:

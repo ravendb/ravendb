@@ -11,6 +11,7 @@ class statusDebugChanges extends viewModelBase {
         super.activate(args);
 
         this.activeDatabase.subscribe(() => this.fetchStatusDebugChanges());
+        this.updateHelpLink('JHZ574');
         return this.fetchStatusDebugChanges();
     }
 

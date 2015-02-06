@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Json.Linq;
-using System.Linq;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.Security.OAuth
 {
