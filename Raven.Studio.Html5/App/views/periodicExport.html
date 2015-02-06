@@ -3,13 +3,13 @@
         <h4 class="page-header text-info">You are not authorized to view this page!</h4>
     </div>
 
-    <div data-bind="visible: unsupported()">
+    <div data-bind="visible: backupSetup().unsupported()">
         <div class="alert alert-danger">Too many periodic export types found. This isn't a supported scenario for the UI.</div>
     </div>
 
-    <div data-bind="visible: !unsupported() && !isForbidden()">
+    <div data-bind="visible: !backupSetup().unsupported() && !isForbidden(), with: backupSetup">
         <form data-bind="submit: $root.saveChanges.bind($root)" id="save-periodic-backup-form" class="form-horizontal" role="form">
-            
+
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
@@ -23,7 +23,7 @@
                     </span>
                 </div>
                 <div class="panel-body">
-                    
+
                     <div class="form-group" data-bind="visible: $root.hasGlobalValues">
                         <div class="col-md-4">
                             <strong>Property</strong>
@@ -32,7 +32,7 @@
                             <strong>Effective value</strong>
                         </div>
                         <div class="col-md-4">
-                           <strong>Global value</strong>
+                            <strong>Global value</strong>
                         </div>
                     </div>
                     <div class="form-group">
@@ -90,7 +90,7 @@
                                 </div>
                             </div>
                         </div>
-                
+
                         <div class="form-group" data-bind="if: onDiskExportEnabled, visible: onDiskExportEnabled">
                             <label for="onDiskLocation" class="col-sm-4 control-label">File System Folder:</label>
                             <div class="col-sm-4">
@@ -100,7 +100,7 @@
                                 <input type="text" disabled="disabled" placeholder="full path" class="form-control" data-bind="value: $root.globalBackupSetup().localFolderName" />
                             </div>
                         </div>
-                
+
                         <div class="form-group">
                             <label for="serverUpload" class="col-sm-4 control-label">Upload to remote server:</label>
                             <div class="col-sm-4">
@@ -132,7 +132,7 @@
                                 <select class="form-control" data-bind="enable: $root.usingGlobal() == false, options: availablePeriodicExports, optionsText: 'label', optionsValue: 'value', value: type"></select>
                             </div>
                             <div class="col-sm-4">
-                                <input type="text" required class="form-control" data-bind="value: mainValue, enable: $root.usingGlobal() == false, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }"/>
+                                <input type="text" required class="form-control" data-bind="value: mainValue, enable: $root.usingGlobal() == false, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }" />
                                 <div data-bind="visible: isGlaceirVault">
                                     <a href="http://docs.aws.amazon.com/amazonglacier/latest/dev/creating-vaults.html">Vault Name Restrictions and Limitations</a>
                                 </div>
@@ -221,7 +221,7 @@
                         </div>
                     </div>
                 </div>
-            </div>   
+            </div>
         </form>
     </div>
 </div>
