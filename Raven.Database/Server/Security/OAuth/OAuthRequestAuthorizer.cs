@@ -15,7 +15,7 @@ namespace Raven.Database.Server.Security.OAuth
 	{
         public bool TryAuthorize(RavenBaseApiController controller, bool hasApiKey, bool ignoreDbAccess, out HttpResponseMessage msg)
 		{
-			var isGetRequest = IsGetRequest(controller.InnerRequest.Method.Method, controller.InnerRequest.RequestUri.AbsolutePath);
+			var isGetRequest = IsGetRequest(controller);
 			var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
 				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.All ||
 				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin ||

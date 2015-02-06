@@ -92,7 +92,7 @@ namespace Raven.Database.Server.Security.Windows
 				}
 			}
 
-			bool isGetRequest = IsGetRequest(controller.InnerRequest.Method.Method, controller.InnerRequest.RequestUri.AbsolutePath);
+            bool isGetRequest = IsGetRequest(controller);
 			switch (server.SystemConfiguration.AnonymousUserAccessMode)
 			{
 				case AnonymousUserAccessMode.Admin:
