@@ -1,9 +1,8 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getPeriodicExportSetupCommand = require("commands/getPeriodicExportSetupCommand");
-import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import savePeriodicExportSetupCommand = require("commands/savePeriodicExportSetupCommand");
 import document = require("models/document");
-import deleteDocumentCommand = require('commands/deleteDocumentCommand');
+import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 import periodicExportSetup = require("models/periodicExportSetup");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
@@ -24,6 +23,7 @@ class globalConfigPeriodicExport extends viewModelBase {
 
         var deferred = $.Deferred();
         var db = appUrl.getSystemDatabase();
+
         if (db) {
             $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db))
                 .done(() => deferred.resolve({ can: true }))
@@ -46,6 +46,16 @@ class globalConfigPeriodicExport extends viewModelBase {
         });
     }
 
+    attached() {
+        $("#onDiskHint").popover({
+            html: true,
+            
+            trigger: "hover",
+            content: "Database name will be appended to path in target configuration. <br /><br />" + 
+                "For value: <code>C:\\exports\\</code> target path will be: <code>C:\\exports\\{databaseName}</code>"
+        });
+    }
+
     fetchPeriodicExportSetup(db): JQueryPromise<any> {
         var deferred = $.Deferred();
         new getPeriodicExportSetupCommand(db, true)
@@ -60,7 +70,7 @@ class globalConfigPeriodicExport extends viewModelBase {
 
     fetchPeriodicExportAccountsSettings(db): JQueryPromise<any> {
         var deferred = $.Deferred();
-        return new getGlobalSettingsCommand(db)
+        new getGlobalSettingsCommand(db)
             .execute()
             .done((doc: document) => {
                 this.settingsDocument(doc);
@@ -78,7 +88,7 @@ class globalConfigPeriodicExport extends viewModelBase {
         var db = appUrl.getSystemDatabase();
         if (db) {
             if (deleteConfig) {
-                new deleteDocumentCommand('Raven/Global/Backup/Periodic/Setup', appUrl.getSystemDatabase())
+                new deleteDocumentCommand("Raven/Global/Backup/Periodic/Setup", appUrl.getSystemDatabase())
                     .execute();
                 this.deleteSettings(db);
             } else {
@@ -86,7 +96,7 @@ class globalConfigPeriodicExport extends viewModelBase {
                 saveTask.done((resultArray) => {
                     var newEtag = resultArray[0].ETag;
                     this.backupSetup().setEtag(newEtag);
-                    this.settingsDocument().__metadata['@etag'] = newEtag;
+                    this.settingsDocument().__metadata["@etag"] = newEtag;
                     this.dirtyFlag().reset(); // Resync Changes
                 });
             }
@@ -95,20 +105,24 @@ class globalConfigPeriodicExport extends viewModelBase {
 
     private deleteSettings(db: database) {
         var settingsDocument = this.settingsDocument();
-        settingsDocument['@metadata'] = this.settingsDocument().__metadata;
-        settingsDocument['@metadata']['@etag'] = this.settingsDocument().__metadata['@etag'];
-        var doc = new document(settingsDocument.toDto(true));
+        settingsDocument["@metadata"] = this.settingsDocument().__metadata;
+        settingsDocument["@metadata"]["@etag"] = this.settingsDocument().__metadata["@etag"];
+        var copyOfSettings = settingsDocument.toDto(true);
 
-        delete doc["Settings"]['Raven/AWSAccessKey'];
-        delete doc["Settings"]['Raven/AzureStorageAccount'];
-        delete doc["SecuredSettings"]['Raven/AWSSecretKey'];
-        delete doc["SecuredSettings"]['Raven/AzureStorageKey'];
+        delete copyOfSettings["Settings"]["Raven/AWSAccessKey"];
+        delete copyOfSettings["Settings"]["Raven/AzureStorageAccount"];
+        delete copyOfSettings["SecuredSettings"]["Raven/AWSSecretKey"];
+        delete copyOfSettings["SecuredSettings"]["Raven/AzureStorageKey"];
+
+        var doc = new document(copyOfSettings);
 
         this.backupSetup(new periodicExportSetup());
+        this.backupSetup().fromDatabaseSettingsDto(copyOfSettings);
         
         var saveTask = new saveGlobalSettingsCommand(db, doc).execute();
         saveTask.done((saveResult: databaseDocumentSaveDto) => {
-            this.settingsDocument().__metadata['@etag'] = saveResult.ETag;
+            this.backupSetup().setEtag(saveResult.ETag);
+            this.settingsDocument().__metadata["@etag"] = saveResult.ETag;
             this.dirtyFlag().reset(); //Resync Changes
         });
     }

@@ -57,7 +57,12 @@
                         <div class="form-group" data-bind="if: onDiskExportEnabled, visible: onDiskExportEnabled">
                             <label for="onDiskLocation" class="col-sm-3 control-label">File System Folder:</label>
                             <div class="col-sm-3">
-                                <input type="text" id="onDiskLocation" placeholder="full path" required class="form-control" data-bind="value: localFolderName, valueUpdate: 'afterkeydown'" />
+                                <input type="text" id="onDiskLocation" placeholder="full path" required class="form-control" data-bind="value: localFolderName, valueUpdate: 'afterkeydown'"/>
+                            </div>
+                            <div class="col-sm-6">
+                                <span id="onDiskHint" class="help-cursor" data-placement="auto left" data-original-title="Note" data-trigger="hover">
+                                    <i class="fa fa-info-circle text-info"></i>
+                                </span>
                             </div>
                         </div>
                 

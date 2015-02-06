@@ -71,8 +71,8 @@ class globalConfigQuotas extends viewModelBase {
         var db = appUrl.getSystemDatabase();
         if (db) {
             var settingsDocument = this.settingsDocument();
-            settingsDocument['@metadata'] = this.settingsDocument().__metadata;
-            settingsDocument['@metadata']['@etag'] = this.settingsDocument().__metadata['@etag'];
+            settingsDocument["@metadata"] = this.settingsDocument().__metadata;
+            settingsDocument["@metadata"]["@etag"] = this.settingsDocument().__metadata["@etag"];
             var doc = new document(settingsDocument.toDto(true));
 
             if (deleteConfig) {
@@ -94,7 +94,7 @@ class globalConfigQuotas extends viewModelBase {
 
             var saveTask = new saveGlobalSettingsCommand(db, doc).execute();
             saveTask.done((saveResult: databaseDocumentSaveDto) => {
-                this.settingsDocument().__metadata['@etag'] = saveResult.ETag;
+                this.settingsDocument().__metadata["@etag"] = saveResult.ETag;
                 this.dirtyFlag().reset(); //Resync Changes
             });
         }

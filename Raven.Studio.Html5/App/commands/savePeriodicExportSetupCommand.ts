@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import periodicExportSetup = require("models/periodicExportSetup");
-import appUrl = require("common/appUrl");
 
 class savePeriodicExportSetupCommand extends commandBase {
 

@@ -16,7 +16,6 @@ class saveGlobalSettingsCommand extends commandBase {
         this.reportInfo("Saving Global Settings...");
 
         var jQueryOptions: JQueryAjaxSettings = {
-            dataType: undefined
         };
 
         if (this.document.__metadata.etag) {

@@ -1,12 +1,12 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import saveDatabaseSettingsCommand = require("commands/saveDatabaseSettingsCommand");
-import getConfigurationSettingsCommand = require('commands/getConfigurationSettingsCommand');
+import getConfigurationSettingsCommand = require("commands/getConfigurationSettingsCommand");
 import document = require("models/document");
 import database = require("models/database");
 import appUrl = require("common/appUrl");
-import configurationSetting = require('models/configurationSetting');
-import configurationSettings = require('models/configurationSettings');
+import configurationSetting = require("models/configurationSetting");
+import configurationSettings = require("models/configurationSettings");
 
 class quotas extends viewModelBase {
     settingsDocument = ko.observable<document>();
@@ -53,7 +53,7 @@ class quotas extends viewModelBase {
                 this.maxNumberOfDocs = result.results["Raven/Quotas/Documents/HardLimit"];
                 this.warningThresholdForDocs = result.results["Raven/Quotas/Documents/SoftLimit"];
 
-                this.usingGlobal(this.maximumSize.globalExists() && this.maximumSize.localExists() == false);
+                this.usingGlobal(this.maximumSize.isUsingGlobal());
                 this.hasGlobalValues(this.maximumSize.globalExists());
 
                 var divideBy1024 = (x: KnockoutObservable<any>) => {
@@ -85,8 +85,8 @@ class quotas extends viewModelBase {
         var db = this.activeDatabase();
         if (db) {
             var settingsDocument = this.settingsDocument();
-            settingsDocument['@metadata'] = this.settingsDocument().__metadata;
-            settingsDocument['@metadata']['@etag'] = this.settingsDocument().__metadata['@etag'];
+            settingsDocument["@metadata"] = this.settingsDocument().__metadata;
+            settingsDocument["@metadata"]["@etag"] = this.settingsDocument().__metadata["@etag"];
             var doc = new document(settingsDocument.toDto(true));
             if (this.usingGlobal()) {
                 delete doc["Settings"]["Raven/Quotas/Size/HardLimitInKB"]; 
@@ -102,7 +102,7 @@ class quotas extends viewModelBase {
             
             var saveTask = new saveDatabaseSettingsCommand(db, doc).execute();
             saveTask.done((saveResult: databaseDocumentSaveDto) => {
-                this.settingsDocument().__metadata['@etag'] = saveResult.ETag;
+                this.settingsDocument().__metadata["@etag"] = saveResult.ETag;
                 this.dirtyFlag().reset(); //Resync Changes
             });
         }

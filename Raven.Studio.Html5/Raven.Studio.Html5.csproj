@@ -86,6 +86,7 @@
     <TypeScriptCompile Include="App\commands\resetSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveDatabaseSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteLocalPeriodicExportSetupCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />

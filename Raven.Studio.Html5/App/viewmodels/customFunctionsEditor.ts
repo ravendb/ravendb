@@ -1,11 +1,9 @@
-﻿import ace = require("ace/ace");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
-import viewModelBase = require('viewmodels/viewModelBase');
+﻿import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
 import saveCustomFunctionsCommand = require("commands/saveCustomFunctionsCommand");
-import getGlobalCustomFunctionsCommand = require('commands/getGlobalCustomFunctionsCommand');
+import getGlobalCustomFunctionsCommand = require("commands/getGlobalCustomFunctionsCommand");
 import customFunctions = require("models/customFunctions");
-import execJs = require("common/execJs");
 import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
 
@@ -35,8 +33,8 @@ class customFunctionsEditor extends viewModelBase {
     attached() {
         $("#customFunctionsExample").popover({
             html: true,
-            trigger: 'hover',
-            content: 'Examples:<pre>exports.greet = <span class="code-keyword">function</span>(name) {<br/>    <span class="code-keyword">return</span> <span class="code-string">"Hello " + name + "!"</span>;<br/>}</pre>',
+            trigger: "hover",
+            content: "Examples:<pre>exports.greet = <span class=\"code-keyword\">function</span>(name) {<br/>    <span class=\"code-keyword\">return</span> <span class=\"code-string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
         });
     }
 
@@ -48,13 +46,13 @@ class customFunctionsEditor extends viewModelBase {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
 
-        $("#customFunctionsEditor").on('DynamicHeightSet', () => this.docEditor.resize());
+        $("#customFunctionsEditor").on("DynamicHeightSet", () => this.docEditor.resize());
         this.fetchCustomFunctions();
     }
 
     detached() {
         super.detached();
-        $("#customFunctionsEditor").off('DynamicHeightSet');
+        $("#customFunctionsEditor").off("DynamicHeightSet");
     }
 
     fetchCustomFunctions() {

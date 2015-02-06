@@ -1,14 +1,12 @@
-﻿import ace = require("ace/ace");
-import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
-import viewModelBase = require('viewmodels/viewModelBase');
+﻿import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getCustomFunctionsCommand = require("commands/getCustomFunctionsCommand");
-import deleteDocumentCommand = require('commands/deleteDocumentCommand');
+import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 import saveCustomFunctionsCommand = require("commands/saveCustomFunctionsCommand");
 import customFunctions = require("models/customFunctions");
-import execJs = require("common/execJs");
 import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
-import appUrl = require('common/appUrl');
+import appUrl = require("common/appUrl");
 
 class globalConfigCustomFunctions extends viewModelBase {
 
@@ -36,8 +34,8 @@ class globalConfigCustomFunctions extends viewModelBase {
     attached() {
         $("#customFunctionsExample").popover({
             html: true,
-            trigger: 'hover',
-            content: 'Examples:<pre>exports.greet = <span class="code-keyword">function</span>(name) {<br/>    <span class="code-keyword">return</span> <span class="code-string">"Hello " + name + "!"</span>;<br/>}</pre>',
+            trigger: "hover",
+            content: "Examples:<pre>exports.greet = <span class=\"code-keyword\">function</span>(name) {<br/>    <span class=\"code-keyword\">return</span> <span class=\"code-string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
         });
     }
 
@@ -50,13 +48,13 @@ class globalConfigCustomFunctions extends viewModelBase {
         }
 
         this.docEditor.resize();
-        $("#customFunctionsEditor").on('DynamicHeightSet', () => this.docEditor.resize());
+        $("#customFunctionsEditor").on("DynamicHeightSet", () => this.docEditor.resize());
         this.fetchCustomFunctions();
     }
 
     detached() {
         super.detached();
-        $("#customFunctionsEditor").off('DynamicHeightSet');
+        $("#customFunctionsEditor").off("DynamicHeightSet");
     }
 
     fetchCustomFunctions() {
@@ -66,7 +64,7 @@ class globalConfigCustomFunctions extends viewModelBase {
             this.activated(true);
             this.dirtyFlag().reset();
         }).fail((xhr) => {
-            if (xhr.status == 404) {
+            if (xhr.status === 404) {
                 this.activated(false);
             }
         });
@@ -78,7 +76,7 @@ class globalConfigCustomFunctions extends viewModelBase {
 
     syncChanges(deleteConfig: boolean) {
         if (deleteConfig) {
-            new deleteDocumentCommand('Raven/Global/Javascript/Functions', appUrl.getSystemDatabase())
+            new deleteDocumentCommand("Raven/Global/Javascript/Functions", appUrl.getSystemDatabase())
                 .execute();
         } else {
             var annotations = this.docEditor.getSession().getAnnotations();

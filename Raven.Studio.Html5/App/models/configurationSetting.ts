@@ -12,6 +12,12 @@ class configurationSetting {
         this.globalValue(dto.GlobalValue);
     }
 
+    isUsingGlobal() {
+        var g = this.globalExists();
+        var l = this.localExists();
+        return g && !l;
+    }
+
     copyFromGlobal() {
         if (this.globalExists()) {
             this.localExists(false);
