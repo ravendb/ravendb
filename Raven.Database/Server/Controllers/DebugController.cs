@@ -20,6 +20,7 @@ using Raven.Abstractions.Util;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
+using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -218,7 +219,7 @@ namespace Raven.Database.Server.Controllers
 					var msg = sw.GetStringBuilder().ToString();
 					return new HttpResponseMessage(HttpStatusCode.OK)
 					{
-						Content = new StringContent(msg)
+                        Content = new MultiGetSafeStringContent(msg)
 						{
 							Headers =
 							{

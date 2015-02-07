@@ -407,7 +407,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var resMsg = new HttpResponseMessage(code)
 			{
-				Content = new StringContent(msg)
+                Content = new MultiGetSafeStringContent(msg),
 			};
 
 			WriteETag(etag, resMsg);
