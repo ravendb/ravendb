@@ -11,6 +11,7 @@ namespace Raven.Database.Impl
 {
 	public interface IUuidGenerator
 	{
+        long LastDocumentTransactionEtag { get; }
 		Etag CreateSequentialUuid(UuidType type);
 	}
 }
