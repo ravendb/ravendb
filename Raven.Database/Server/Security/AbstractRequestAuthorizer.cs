@@ -53,8 +53,9 @@ namespace Raven.Database.Server.Security
 		            return true;
                 case "POST":
 		            var absolutePath = controller.InnerRequest.RequestUri.AbsolutePath;
-		            return (absolutePath.EndsWith("/multi_get", StringComparison.Ordinal) ||
-		                    absolutePath.EndsWith("/multi_get/", StringComparison.Ordinal));
+				    return absolutePath.EndsWith("/queries", StringComparison.Ordinal) ||
+				           absolutePath.EndsWith("/multi_get", StringComparison.Ordinal) ||
+				           absolutePath.EndsWith("/multi_get/", StringComparison.Ordinal);
                 default:
 		            return false;
 		    }

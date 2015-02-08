@@ -398,8 +398,26 @@ task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 
 task UpdateLiveTest {
+@'
+	<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Maintenance work</title>
+</head>
+<body>
+  <h1>Maintenance work</h1>
+  <h3>We are deploying a new Live-Test insance, using the new latest build.</h3>
+</body>
+</html>
+'@ | out-file "$build_dir\Output\Web\app_offline.htm" -Encoding UTF8 
+
 	Remove-Item "C:\Sites\RavenDB 3\Web\bin" -Force -Recurse -ErrorAction SilentlyContinue
-	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB 3\Web" -Recurse -ErrorAction SilentlyContinue
+	mkdir "C:\Sites\RavenDB 3\Web\bin" -ErrorAction SilentlyContinue
+	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB 3\Web\" -Recurse -ErrorAction SilentlyContinue
+
+	Remove-Item "$build_dir\Output\Web\app_offline.htm"
 }
 
 task Upload {
