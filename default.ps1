@@ -398,7 +398,8 @@ task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 
 task UpdateLiveTest {
-	@"<!doctype html>
+@'
+	<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -409,7 +410,8 @@ task UpdateLiveTest {
   <h1>Maintenance work</h1>
   <h3>We are deploying a new Live-Test insance, using the new latest build.</h3>
 </body>
-</html>" | out-file "$build_dir\Output\Web\app_offline.htm" 
+</html>
+'@ | out-file "$build_dir\Output\Web\app_offline.htm" -Encoding UTF8 
 
 	Remove-Item "C:\Sites\RavenDB 3\Web\bin" -Force -Recurse -ErrorAction SilentlyContinue
 	mkdir "C:\Sites\RavenDB 3\Web\bin" -ErrorAction SilentlyContinue
