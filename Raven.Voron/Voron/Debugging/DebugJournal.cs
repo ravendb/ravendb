@@ -12,7 +12,7 @@ using Voron.Util.Conversion;
 
 namespace Voron.Debugging
 {
-    public class DebugJournal : IDisposable
+    public unsafe class DebugJournal : IDisposable
     {
         public abstract class BaseActivityEntry
         {
@@ -191,30 +191,39 @@ namespace Voron.Debugging
                         ms.Dispose();
                     }
                 }
-                else
+                else if (Value is Slice)
                 {
                     var value = Value as Slice;
-                    if (value != null)
-                    {
-                        var slice = value;
-                        var array = new byte[slice.Size];
-                        slice.CopyTo(array);
 
-                        entryValue = array;
-                    }
-					else if (Value != null && (Value.GetType().IsPrimitive || Value is String))
-					{
-					    entryValue = Encoding.UTF8.GetBytes(Value.ToString());
-					}
-					else if (Value == Stream.Null || Value == null)
-                    {
-                        // do nothing
-                    }
-                    else
-                    {
-                        throw new NotSupportedException(string.Format("Given value type is not supported ({0}).", Value.GetType()));
-                    }
+                    var slice = value;
+                    var array = new byte[slice.Size];
+                    slice.CopyTo(array);
+
+                    entryValue = array;
                 }
+				else if (Value != null && (Value.GetType().IsPrimitive || Value is String))
+				{
+					entryValue = Encoding.UTF8.GetBytes(Value.ToString());
+				}
+				else if (Value is IStructure)
+				{
+					var structure = (IStructure) Value;
+
+					var structBytes = new byte[structure.GetSize()];
+
+					fixed (byte* p = structBytes)
+						structure.Write(p);
+
+					entryValue = structBytes;
+				}
+				else if (Value == Stream.Null || Value == null)
+				{
+					// do nothing
+				}
+				else
+				{
+					throw new NotSupportedException(string.Format("Given value type is not supported ({0}).", Value.GetType()));
+				}
 
                 var line = string.Format("{0},{1},{2},{3},{4}", ActionType, TransactionId, TreeName, Key, Convert.ToBase64String(entryValue));
 				Debug.Assert(line.Count(x => x == ',') == 4);
@@ -227,7 +236,9 @@ namespace Voron.Debugging
                 long? length;
                 if (Value is Stream && Value != Stream.Null)
                     length = ((Stream)Value).Length;
-                else return ToCsv();
+				else if (Value is IStructure)
+					length = ((IStructure) Value).GetSize();
+				else return ToCsv();
 
                 return string.Format("{0},{1},{2},{3},{4}", ActionType, TransactionId, TreeName, Key, length);
             }
@@ -595,8 +606,14 @@ namespace Voron.Debugging
                     var delta = EndianBitConverter.Little.ToInt64(buffer, 0);
                     tx.ReadTree(activityEntry.TreeName).Increment(activityEntry.Key, delta);
                     break;
+				case DebugActionType.AddStruct:
+					tx.ReadTree(activityEntry.TreeName).Add(activityEntry.Key, activityEntry.ValueStream);
+					break;
+				case DebugActionType.RenameTree:
+					_env.RenameTree(tx, activityEntry.TreeName, activityEntry.Key.ToString());
+					break;
                 default: //precaution against newly added action types
-                    throw new InvalidOperationException("unsupported tree action type");
+					throw new InvalidOperationException("unsupported tree action type: " + activityEntry.ActionType);
             }
         }
 

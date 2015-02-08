@@ -102,6 +102,7 @@ namespace Raven.Database.Actions
 	        {
 		        list.AddRange(lastIndexedEtag.ToByteArray());
 	        }
+            list.AddRange(BitConverter.GetBytes(UuidGenerator.LastDocumentTransactionEtag));
 
             var indexEtag = Etag.Parse(Encryptor.Current.Hash.Compute16(list.ToArray()));
 

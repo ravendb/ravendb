@@ -71,7 +71,7 @@ class copyIndexDialog extends dialogViewModelBase {
                 new getIndexDefinitionCommand(indexDto.Name, this.db)
                     .execute()
                     .fail((request, status, error) => {
-                        if (request.status === 404) {
+                        if (request.status === ResponseCodes.NotFound) {
                             new saveIndexDefinitionCommand(indexDto, indexPriority.normal, this.db)
                                 .execute()
                                 .done(() => {

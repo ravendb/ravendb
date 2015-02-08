@@ -146,7 +146,8 @@ namespace Raven.Client.Connection
 					.JsonDeserialization<Dictionary<string, Dictionary<string, string[]>>>(),
 				ScoreExplanations = (json.Value<RavenJObject>("ScoreExplanations") ?? new RavenJObject())
 				.JsonDeserialization<Dictionary<string, string>>(),
-				TimingsInMilliseconds = (json.Value<RavenJObject>("TimingsInMilliseconds") ?? new RavenJObject()).JsonDeserialization<Dictionary<string, double>>()
+				TimingsInMilliseconds = (json.Value<RavenJObject>("TimingsInMilliseconds") ?? new RavenJObject()).JsonDeserialization<Dictionary<string, double>>(),
+				LastQueryTime = json.Value<DateTime>("LastQueryTime")
 			};
 
 			result.ResultSize = numberOfCharactersRead;

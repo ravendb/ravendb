@@ -1,5 +1,4 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/database");
 
 class getLicenseStatusCommand extends commandBase {
 

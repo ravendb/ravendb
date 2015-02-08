@@ -23,6 +23,11 @@ class metricsIndexBatchSize extends viewModelBase {
         this.modelPolling();
     }
 
+    detached() {
+        super.detached();
+        window.onresize = null; // FIX nvd3 event attached globally
+    }
+
     modelPolling() {
         return this.fetchStats().then(() => {
             this.appendData();
@@ -40,7 +45,7 @@ class metricsIndexBatchSize extends viewModelBase {
                 y: batchInfos[i].TotalDocumentSize,
                 size: batchInfos[i].TotalDocumentSize
             }
-            var match = values.first(e => e.x.getTime() == item.x.getTime() && e.y == item.y);
+            var match = values.first(e => e.x.getTime() === item.x.getTime() && e.y === item.y);
             if (!match) {
                 values.push(item);
             }
@@ -64,7 +69,7 @@ class metricsIndexBatchSize extends viewModelBase {
                     .tickFormat(function (d) { return d3.time.format('%H:%M:%S')(new Date(d)); });
 
                 chart.yAxis
-                    .axisLabel('batch size')
+                    .axisLabel('batch size [bytes]')
                     .tickFormat(d3.format(',f'));
 
                 nv.utils.windowResize(function () { chart.update() });

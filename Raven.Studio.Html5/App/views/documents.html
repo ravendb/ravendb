@@ -23,6 +23,7 @@
     </div>
     <div class="col-md-10">
         <div class="btn-toolbar" role="toolbar">
+            <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
             <div class="btn-group">
                 <button type="button" class="btn btn-link" style="margin-left: 10px;" data-bind="click: toggleSelectAll, visible: hasDocuments" title="Select all or none">
                     <img data-bind="attr: { src: hasAllDocumentsSelected() ? 'content/images/checked.png' : hasAnyDocumentsSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }" />
@@ -66,13 +67,13 @@
             </div>
         </div>
         <div class="documents-select" data-bind="with: selectedCollection, visible: hasAnyDocumentsSelected() && !hasAllDocumentsSelected() && isAnyDocumentsAutoSelected()">
-            <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: $root.selectedDocumentIndices().length"></strong> documents.
+            <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: $root.selectedDocumentIndices().length"></strong> <span data-bind="text: $root.selectedDocumentsText"></span>.
             <span class="select-link" data-bind="click: $root.selectAll.bind($root)">
                 Select all <strong data-bind="text: documentCount"></strong> documents in <span data-bind="text: name"></span>
             </span>
         </div>
         <div class="documents-select" data-bind="with: selectedCollection, visible: hasAllDocumentsSelected() && isAllDocumentsAutoSelected()">
-            You have selected <strong data-bind="text: $root.selectedDocumentIndices().length"></strong> documents in
+            You have selected <strong data-bind="text: $root.selectedDocumentIndices().length"></strong> <span data-bind="text: $root.selectedDocumentsText"></span> in
             <span data-bind="text: name"></span>.
             <span class="select-link" data-bind="click: $root.selectNone.bind($root)">
                 Clear selection

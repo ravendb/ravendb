@@ -230,6 +230,8 @@ class aceEditorBindingHandler {
             $(element).off('keyup', aceFocusElement);
             $(element).off('focus', aceFocusElement);
             $(element).resizable("destroy");
+            aceEditor.getSession().setUseWorker(false);
+            aceEditor.destroy();
         });
 
         // Keep track of the editor for this element.

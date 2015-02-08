@@ -7,6 +7,11 @@ class statusDebugWebSocket extends viewModelBase {
 
     results = ko.observable<string>("");
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('JHZ574');
+    }
+
     test() {
         if ("WebSocket" in window) {
             var getTokenTask = new getSingleAuthTokenCommand(this.activeDatabase()).execute();

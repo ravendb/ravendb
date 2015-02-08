@@ -92,6 +92,8 @@ class visualizer extends viewModelBase {
             this.indexName(args.index);
         }
 
+        this.updateHelpLink('RNXYCB');
+
         this.editIndexUrl = ko.computed(() => {
             return appUrl.forEditIndex(this.indexName(), this.activeDatabase());
         });

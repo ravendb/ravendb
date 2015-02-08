@@ -7,7 +7,9 @@
 		MultiAdd,
 		MultiDelete,
 		CreateTree,
+		RenameTree,
 		Increment,
+		AddStruct,
 
         TransactionStart,
         TransactionCommit,

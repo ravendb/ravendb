@@ -27,6 +27,7 @@ import indexReplaceDocument = require("models/indexReplaceDocument");
 import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
 import saveScriptedIndexesCommand = require("commands/saveScriptedIndexesCommand");
 import deleteIndexCommand = require("commands/deleteIndexCommand");
+import cancelSideBySizeConfirm = require("viewmodels/cancelSideBySizeConfirm");
 
 class editIndex extends viewModelBase { 
 
@@ -125,6 +126,7 @@ class editIndex extends viewModelBase {
         else {
             this.priority(indexPriority.normal);
         }
+        this.updateHelpLink('CQ5AYO');
 
         this.initializeDirtyFlag();
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
@@ -285,6 +287,21 @@ class editIndex extends viewModelBase {
             });
 
             dialog.show(deleteViewModel);
+        }
+    }
+
+    cancelSideBySideIndex() {
+        var indexName = this.loadedIndexName();
+        if (indexName) {
+            var db = this.activeDatabase();
+            var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([indexName], db);
+            cancelSideBySideIndexViewModel.cancelTask.done(() => {
+                //prevent asking for unsaved changes
+                this.dirtyFlag().reset(); // Resync Changes
+                router.navigate(appUrl.forIndexes(db));
+            });
+
+            dialog.show(cancelSideBySideIndexViewModel);
         }
     }
 

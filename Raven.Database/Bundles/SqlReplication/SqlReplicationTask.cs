@@ -188,7 +188,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					var sqlReplicationStatistics = statistics.GetOrDefault(x.Name);
 					if (sqlReplicationStatistics == null)
 						return true;
-					return SystemTime.UtcNow >= sqlReplicationStatistics.LastErrorTime;
+					return SystemTime.UtcNow >= sqlReplicationStatistics.SuspendUntil;
 				}) // have error or the timeout expired
 						.ToList();
 
@@ -250,7 +250,7 @@ namespace Raven.Database.Bundles.SqlReplication
 							}
 
 							latestEtag = Etag.Max(latestEtag, lastBatchEtag);
-							SaveNewReplicationStatus(localReplicationStatus, latestEtag);
+							SaveNewReplicationStatus(localReplicationStatus);
 						}
 						else // no point in waiting if we just saved a new doc
 						{
@@ -288,7 +288,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 								var deletedDocs = deletedDocsByConfig[replicationConfig];
 								var docsToReplicate = itemsToReplicate
-									.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
+									.Where(x => lastReplicatedEtag.CompareTo(x.Etag) < 0) // haven't replicate the etag yet
 									.Where(document =>
 									{
 										var info = Database.Documents.GetRecentTouchesFor(document.Key);
@@ -368,13 +368,15 @@ namespace Raven.Database.Bundles.SqlReplication
 							}
 							else
 							{
-								destEtag.LastDocEtag = currentLatestEtag = currentLatestEtag ?? destEtag.LastDocEtag;
+								var lastDocEtag = destEtag.LastDocEtag;
+								if (currentLatestEtag != null && EtagUtil.IsGreaterThan(currentLatestEtag, lastDocEtag))
+									lastDocEtag = currentLatestEtag;
+
+								destEtag.LastDocEtag = lastDocEtag;
 							}
-							latestEtag = Etag.Max(latestEtag, currentLatestEtag);
 						}
 
-						latestEtag = Etag.Max(latestEtag, lastBatchEtag);
-						SaveNewReplicationStatus(localReplicationStatus, latestEtag);
+						SaveNewReplicationStatus(localReplicationStatus);
 					}
 					finally
 					{
@@ -410,7 +412,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus, Etag latestEtag)
+		private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus)
 		{
 			int retries = 5;
 			while (retries > 0)
@@ -517,10 +519,11 @@ namespace Raven.Database.Bundles.SqlReplication
 		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<ReplicatedDoc> docs, out int countOfReplicatedItems)
 		{
 			countOfReplicatedItems = 0;
-			var scriptResult = ApplyConversionScript(cfg, docs);
+            var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
+			var scriptResult = ApplyConversionScript(cfg, docs, replicationStats);
 			if (scriptResult.Data.Count == 0)
 				return true;
-			var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
+			
 			countOfReplicatedItems = scriptResult.Data.Sum(x => x.Value.Count);
 			try
 			{
@@ -550,17 +553,24 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 				else
 				{
-					var totalSeconds = (SystemTime.UtcNow - replicationStatistics.LastErrorTime).TotalSeconds;
-					newTime = SystemTime.UtcNow.AddSeconds(Math.Max(60 * 15, Math.Min(5, totalSeconds + 5)));
+                    if (replicationStatistics.LastErrorTime == DateTime.MinValue)
+                    {
+                        newTime = SystemTime.UtcNow.AddSeconds(5);
+                    }
+                    else
+                    {
+                        // double the fallback time (but don't cross 15 minutes)
+                        var totalSeconds = (SystemTime.UtcNow - replicationStatistics.LastErrorTime).TotalSeconds;
+                        newTime = SystemTime.UtcNow.AddSeconds(Math.Min(60*15, Math.Max(5, totalSeconds*2)));
+                    }
 				}
 				replicationStats.RecordWriteError(e, Database, countOfReplicatedItems, newTime);
 				return false;
 			}
 		}
 
-		private ConversionScriptResult ApplyConversionScript(SqlReplicationConfig cfg, IEnumerable<ReplicatedDoc> docs)
+		private ConversionScriptResult ApplyConversionScript(SqlReplicationConfig cfg, IEnumerable<ReplicatedDoc> docs, SqlReplicationStatistics replicationStats)
 		{
-			var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
 			var result = new ConversionScriptResult();
 			foreach (var replicatedDoc in docs)
 			{
@@ -596,10 +606,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
 						return result;
 					}
-					catch (Exception e)
+					catch (Exception diffExceptionName)
 					{
-						replicationStats.RecordScriptError(Database);
-						log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + replicatedDoc.Key, e);
+						replicationStats.RecordScriptError(Database, diffExceptionName);
+						log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + replicatedDoc.Key, diffExceptionName);
 					}
 				}
 			}
@@ -623,7 +633,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 			try
 			{
-				var stats = new SqlReplicationStatistics(sqlReplication.Name);
+				var stats = new SqlReplicationStatistics(sqlReplication.Name, false);
 
 				var jsonDocument = Database.Documents.Get(strDocumentId, null);
 				JsonDocument.EnsureIdInMetadata(jsonDocument);
@@ -640,10 +650,10 @@ namespace Raven.Database.Bundles.SqlReplication
 								   SerializedSizeOnDisk = jsonDocument.SerializedSizeOnDisk
 	                           }
                            };
-				var scriptResult = ApplyConversionScript(sqlReplication, docs);
+				var scriptResult = ApplyConversionScript(sqlReplication, docs, stats);
 
 				var connectionsDoc = Database.Documents.Get(ConnectionsDocumentName, null);
-				var sqlReplicationConnections = connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>();
+				var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections();
 
 				if (PrepareSqlReplicationConfig(sqlReplication, sqlReplication.Name, stats, sqlReplicationConnections, false, false))
 				{

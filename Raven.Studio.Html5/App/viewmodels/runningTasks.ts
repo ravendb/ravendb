@@ -91,6 +91,7 @@ class runningTasks extends viewModelBase {
             ko.observable<number>(360)
         ];
         this.registerColumnResizing();
+        this.updateHelpLink('2KH22A');
         return this.fetchTasks();
     }
 

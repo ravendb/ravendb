@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Diagnostics;
+using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 namespace Raven.Tests.Storage.Voron
@@ -305,7 +307,7 @@ namespace Raven.Tests.Storage.Voron
 			{
 				storage.Batch(accessor => accessor.Indexing.AddIndex(101, true));
 
-				var etag = new Etag(Guid.NewGuid().ToString());
+				var etag = new Etag().Setup(UuidType.ScheduledReductions, 2);
 				var date = DateTime.Now.AddDays(1);
 
 				storage.Batch(accessor => accessor.Indexing.UpdateLastReduced(101, etag, date));

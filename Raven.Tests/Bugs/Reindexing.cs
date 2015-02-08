@@ -32,10 +32,7 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 				}
 
-				using (var session = store.OpenSession())
-				{
-					session.Query<object>("test").Customize(x => x.WaitForNonStaleResults()).ToList();
-				}
+                WaitForIndexing(store);
 
 				Assert.Equal(1, store.SystemDatabase.Statistics.Indexes.First(x=>x.Id == test).IndexingAttempts);
 
@@ -55,10 +52,7 @@ namespace Raven.Tests.Bugs
 
 				store.SystemDatabase.SpinBackgroundWorkers();
 
-				using (var session = store.OpenSession())
-				{
-					session.Query<object>("test").Customize(x => x.WaitForNonStaleResults()).ToList();
-				}
+				WaitForIndexing(store);
 
 				Assert.Equal(2, store.SystemDatabase.Statistics.Indexes.First(x => x.Id == test1).IndexingAttempts);
 			}

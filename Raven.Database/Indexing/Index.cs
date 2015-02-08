@@ -1106,8 +1106,7 @@ namespace Raven.Database.Indexing
 			private readonly OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers;
 			private readonly List<string> reduceKeys;
 			private bool hasMultipleIndexOutputs;
-			private bool alreadyPagedItemsRecorded = false;
-
+		    private int alreadyScannedForDuplicates;
 			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, List<string> reduceKeys = null)
 			{
 				this.parent = parent;
@@ -1262,9 +1261,6 @@ namespace Raven.Database.Indexing
 
 			private void RecordAlreadyPagedItemsInPreviousPage(int start, TopDocs search, IndexSearcher indexSearcher)
 			{
-				if (alreadyPagedItemsRecorded)
-					return;
-
 				if (start == 0)
 					return;
 
@@ -1303,9 +1299,9 @@ namespace Raven.Database.Indexing
 
 				if (fieldsToFetch.IsDistinctQuery)
 				{
-					for (int i = 0; alreadySeenProjections.Count < start && i < search.ScoreDocs.Length; i++)
+                    for (; alreadySeenProjections.Count < start && alreadyScannedForDuplicates < search.ScoreDocs.Length; alreadyScannedForDuplicates++)
 					{
-						var scoreDoc = search.ScoreDocs[i];
+                        var scoreDoc = search.ScoreDocs[alreadyScannedForDuplicates];
 						var document = indexSearcher.Doc(scoreDoc.Doc);
 						var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc);
 
@@ -1315,8 +1311,6 @@ namespace Raven.Database.Indexing
 						}
 					}
 				}
-
-				alreadyPagedItemsRecorded = true;
 			}
 
 			private bool IsSortingQuery(IndexQuery query)

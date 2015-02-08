@@ -63,6 +63,11 @@ namespace Raven.Abstractions.Data
 		public string[] StaleIndexes { get; set; }
 
 		/// <summary>
+		/// The concurrency level that RavenDB is currently using
+		/// </summary>
+		public int CurrentNumberOfParallelTasks { get; set; }
+
+		/// <summary>
 		/// Current value of items that will be processed by index (map) in single batch.
 		/// </summary>
 		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }

@@ -1,10 +1,7 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require("viewmodels/shell");
-import database = require("models/database");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
 import appUrl = require("common/appUrl");
-import monitorRestoreCommand = require("commands/monitorRestoreCommand");
 import performanceTestRequest = require("models/performanceTestRequest");
 import performanceTestResultWrapped = require("models/performanceTestResultWrapped");
 import ioTestCommand = require("commands/ioTestCommand");
@@ -62,6 +59,11 @@ class ioTest extends viewModelBase {
             .always(() => deffered.resolve({ can: true }));
 
         return deffered;
+    }
+
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('ZL2H8E');
     }
 
     onIoTestCompleted(result: diskPerformanceResultWrappedDto) {
@@ -188,6 +190,11 @@ class ioTest extends viewModelBase {
                 })
                 .always(() => this.isBusy(false));
         });
+    }
+
+    detached() {
+        super.detached();
+        window.onresize = null; // FIX nvd3 event attached globally
     }
 }
 

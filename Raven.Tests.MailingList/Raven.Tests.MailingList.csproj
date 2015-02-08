@@ -399,6 +399,7 @@
     <Compile Include="StringIsNullOrEmpty.cs" />
     <Compile Include="SubObjectProperty.cs" />
     <Compile Include="SuggestAsync.cs" />
+    <Compile Include="SuggestionFail.cs" />
     <Compile Include="SumTests.cs" />
     <Compile Include="Tamir.cs" />
     <Compile Include="tcoonfield.cs" />

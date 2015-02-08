@@ -33,6 +33,7 @@ class reporting extends viewModelBase {
 
     activate(indexToActivateOrNull: string) {
         super.activate(indexToActivateOrNull);
+        this.updateHelpLink('O3EA1R');
 
         this.fetchIndexes().done(() => this.selectInitialIndex(indexToActivateOrNull));
         this.selectedIndexName.subscribe(() => this.resetSelections());

@@ -10,15 +10,17 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem;
 using Raven.Database.Extensions;
 using Raven.Tests.Common.Util;
-using Xunit.Extensions;
-using Xunit;
 
-namespace Raven.Tests.FileSystem.Encryption
+using Xunit;
+using Xunit.Extensions;
+
+namespace Raven.Tests.FileSystem.Bundles.Encryption
 {
 	public class EncryptedFileSystemBackupRestore : FileSystemEncryptionTest
 	{

@@ -13,7 +13,6 @@ import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm
 import messagePublisher = require("common/messagePublisher");
 
 class databaseSettings extends viewModelBase {
-   
     document = ko.observable<document>();
     documentText = ko.observable<string>().extend({ required: true });
     metadataText = ko.observable<string>("{}").extend({ required: true });
@@ -25,12 +24,15 @@ class databaseSettings extends viewModelBase {
     isEditingEnabled = ko.observable<boolean>(false);
     isEditingMetadata = ko.observable<boolean>(false);
     leavePageDeffered :JQueryPromise<any>;
+    isForbidden = ko.observable<boolean>(false);
 
     static containerId ="#databaseSettingsContainer";
 
     constructor() {
         super();
+        this.activeDatabase.subscribe((db: database) => this.isForbidden(db.isAdminCurrentTenant() == false));
         aceEditorBindingHandler.install();
+
         this.document.subscribe(doc => {
             if (doc) {
                 var docDto: any = doc.toDto();
@@ -39,12 +41,14 @@ class databaseSettings extends viewModelBase {
                 this.documentText(docText);
             }
         });
+
         this.isEditingMetadata.subscribe(()=> {
             if (this.docEditor) {
                 var text = this.isEditingMetadata() ? this.metadataText() : this.documentText();
                 this.docEditor.getSession().setValue(text);
             }
         });
+
         this.text = ko.computed({
             read: () => {
                 return this.isEditingMetadata() ? this.metadataText() : this.documentText();
@@ -60,18 +64,26 @@ class databaseSettings extends viewModelBase {
     canActivate(args) {
         super.canActivate(args);
         var deferred = $.Deferred();
-        var db = this.activeDatabase();
-        this.fetchDatabaseSettings(db)
-            .done(()=> {
-                deferred.resolve({ can: true });
-            })
-            .fail(() => deferred.resolve({ redirect: appUrl.forStatus(db) }));
+
+        var db: database = this.activeDatabase();
+        this.isForbidden(db.isAdminCurrentTenant() == false);
+        if (db.isAdminCurrentTenant()) {
+            this.fetchDatabaseSettings(db)
+                .done(() => deferred.resolve({ can: true }))
+                .fail((response: JQueryXHR) => {
+                    messagePublisher.reportError("Error fetching database document!", response.responseText, response.statusText);
+                    deferred.resolve({ redirect: appUrl.forStatus(db) });
+                });
+        } else {
+            deferred.resolve({ can: true });
+        }
+
         return deferred;
     }
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('3QMLGH');
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText], false, jsonUtil.newLineNormalizingHashFunction);
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
     }
@@ -181,7 +193,7 @@ class databaseSettings extends viewModelBase {
     private fetchDatabaseSettings(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
         return new getDatabaseSettingsCommand(db, reportFetchProgress)
             .execute()
-            .done((document: document) => { this.document(document); });
+            .done((document: document) => this.document(document));
     }
 
     private getDatabaseSettingsDocumentId(db: database) {

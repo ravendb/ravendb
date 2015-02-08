@@ -231,14 +231,27 @@ namespace Raven.Database.Util
 
 	    internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
 		{
-			return requestManager.GetRecentRequests(databaseName).Select(x => new
+			return requestManager.GetRecentRequests(databaseName).Select(x =>
 			{
-				Uri = x.RequestUri,
-				Method = x.HttpMethod,
-				StatusCode = x.ResponseStatusCode,
-				RequestHeaders = x.Headers.Value.Select(k => new { Name = k.Key, Values = k.Value }),
-				ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
-				AdditionalInfo = x.CustomInfo ?? string.Empty
+				var dic = new Dictionary<String, String>();
+				foreach (var httpHeader in x.Headers.Value)
+				{
+					dic[httpHeader.Key] = httpHeader.Value.First();
+				}
+				dic.Remove("Authorization");
+				dic.Remove("Proxy-Authorization");
+				dic.Remove("WWW-Authenticate");
+				dic.Remove("Proxy-Authenticate");
+				
+				return new
+				{
+					Uri = x.RequestUri,
+					Method = x.HttpMethod,
+					StatusCode = x.ResponseStatusCode,
+					RequestHeaders = dic.Select(z=>new{Name = z.Key, Values= new[]{z.Value}}),
+					ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
+					AdditionalInfo = x.CustomInfo ?? string.Empty
+				};
 			});
 		}
 

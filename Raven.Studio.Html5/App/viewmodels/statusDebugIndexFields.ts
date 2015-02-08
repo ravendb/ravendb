@@ -1,8 +1,7 @@
 import getStatusDebugIndexFieldsCommand = require("commands/getStatusDebugIndexFieldsCommand");
-import appUrl = require("common/appUrl");
-import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import messagePublisher = require("common/messagePublisher");
 
 
 class statusDebugIndexFields extends viewModelBase {
@@ -26,6 +25,11 @@ class statusDebugIndexFields extends viewModelBase {
         $("#statusDebugIndexFieldsEditor").on('DynamicHeightSet', () => this.editor.resize());
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('JHZ574');
+    }
+
     detached() {
         super.detached();
         $("#statusDebugIndexFieldsEditor").off('DynamicHeightSet');
@@ -46,9 +50,8 @@ class statusDebugIndexFields extends viewModelBase {
         if (db) {
             return new getStatusDebugIndexFieldsCommand(db, this.indexStr())
                 .execute()
-                .done((results: statusDebugIndexFieldsDto) => this.result(results));
-                
-            //TODO: how do we handle failure? 
+                .done((results: statusDebugIndexFieldsDto) => this.result(results))
+                .fail(response => messagePublisher.reportError("Failed to compute index fields.", response.responseText, response.statusText));
         }
 
         return null;

@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions;
+﻿using System.Security.Principal;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -8,6 +9,8 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
@@ -613,16 +616,10 @@ namespace Raven.Database.Server.Controllers
                 }
                 catch (Exception e)
                 {
-                    string exceptionMessage = e.Message;
-                    var aggregateException = e as AggregateException;
-                    if (aggregateException != null)
-                    {
-                        exceptionMessage = aggregateException.ExtractSingleInnerException().Message;
-                    }
-                    var msg = "Could not open database named: " + tenantId + Environment.NewLine + exceptionMessage;
+	                var msg = "Could not open database named: " + tenantId + Environment.NewLine + e;
 
                     Logger.WarnException(msg, e);
-                    throw new HttpException(503, msg, e);
+                    throw new HttpException(503, msg,e);
                 }
 
                 landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
@@ -638,7 +635,7 @@ namespace Raven.Database.Server.Controllers
 
 	    public override string TenantName
 	    {
-            get { return DatabaseName;}
+            get { return DatabaseName; }
 	    }
 
 	    public override void MarkRequestDuration(long duration)
@@ -659,5 +656,116 @@ namespace Raven.Database.Server.Controllers
 	            return values.All(x => string.IsNullOrEmpty(x) == false && (x[0] != '1' && x[0] != '2'));
 	        }
 	    }
+
+		protected class TenantData
+		{
+			public string Name { get; set; }
+			public bool Disabled { get; set; }
+			public string[] Bundles { get; set; }
+			public bool IsAdminCurrentTenant { get; set; }
+		}
+
+		protected UserInfo GetUserInfo()
+		{
+			var principal = User;
+			if (principal == null || principal.Identity == null || principal.Identity.IsAuthenticated == false)
+			{
+				var anonymous = new UserInfo
+				{
+					Remark = "Using anonymous user",
+					IsAdminGlobal = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
+				};
+				return anonymous;
+			}
+
+			var windowsPrincipal = principal as WindowsPrincipal;
+			if (windowsPrincipal != null)
+			{
+				var windowsUser = new UserInfo
+				{
+					Remark = "Using windows auth",
+					User = windowsPrincipal.Identity.Name,
+					IsAdminGlobal = windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
+				};
+
+				windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Database);
+
+				return windowsUser;
+			}
+
+			var principalWithDatabaseAccess = principal as PrincipalWithDatabaseAccess;
+			if (principalWithDatabaseAccess != null)
+			{
+				var windowsUserWithDatabase = new UserInfo
+				{
+					Remark = "Using windows auth",
+					User = principalWithDatabaseAccess.Identity.Name,
+					IsAdminGlobal =
+						principalWithDatabaseAccess.IsAdministrator(
+							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+					IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),
+					Databases =
+						principalWithDatabaseAccess.AdminDatabases.Concat(
+							principalWithDatabaseAccess.ReadOnlyDatabases)
+												   .Concat(principalWithDatabaseAccess.ReadWriteDatabases)
+												   .Select(db => new DatabaseInfo
+												   {
+													   Database = db,
+													   IsAdmin = principal.IsAdministrator(db)
+												   }).ToList(),
+					AdminDatabases = principalWithDatabaseAccess.AdminDatabases,
+					ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
+					ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
+				};
+
+				windowsUserWithDatabase.IsAdminCurrentDb = windowsUserWithDatabase.IsAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
+
+				return windowsUserWithDatabase;
+			}
+
+			var oAuthPrincipal = principal as OAuthPrincipal;
+			if (oAuthPrincipal != null)
+			{
+				var oAuth = new UserInfo
+				{
+					Remark = "Using OAuth",
+					User = oAuthPrincipal.Name,
+					IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+					IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Database),
+					Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
+											  .Select(db => new DatabaseInfo
+											  {
+												  Database = db.TenantId,
+												  IsAdmin = principal.IsAdministrator(db.TenantId)
+											  }).ToList(),
+					AccessTokenBody = oAuthPrincipal.TokenBody,
+				};
+
+				return oAuth;
+			}
+
+			var unknown = new UserInfo
+			{
+				Remark = "Unknown auth",
+				Principal = principal
+			};
+
+			return unknown;
+		}
+
+		protected bool CanExposeConfigOverTheWire()
+		{
+			if (SystemConfiguration.ExposeConfigOverTheWire == "AdminOnly" && SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
+			{
+				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+				var user = authorizer.GetUser(this);
+				if (user == null || user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
 	}
 }

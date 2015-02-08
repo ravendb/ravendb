@@ -186,7 +186,8 @@ namespace Raven.Database.Indexing
 			protected override void Dispose(bool disposing)
 			{
 				base.Dispose(disposing);
-				stream.Close();
+			    if (stream != null)
+			        stream.Close();
 				GC.SuppressFinalize(this);
 			}
 

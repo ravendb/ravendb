@@ -1,9 +1,5 @@
-﻿import app = require("durandal/app");
-import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+﻿import viewModelBase = require("viewmodels/viewModelBase");
 import generalUtils = require("common/generalUtils");
-import database = require("models/database");
-import appUrl = require("common/appUrl");
 import getSqlReplicationPerfStatsCommand = require("commands/getSqlReplicationPerfStatsCommand");
 import d3 = require("d3/d3");
 import nv = require('nvd3');
@@ -362,7 +358,7 @@ class sqlReplicationPerfStats extends viewModelBase {
             .style("text-anchor", "end")
             .text(d => d);
 
-        this.legendWidth = d3.max(<any>$(".legend text"), (d: any) => d.getBBox().width) + 40;
+        this.legendWidth = d3.max(<any>$(".legend text"), (d: any) => d.getBBox().width) + 40 || 0;
 
         this.svg.select('.legend_bg')
             .attr('y', -6)

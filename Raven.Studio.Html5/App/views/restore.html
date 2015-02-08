@@ -10,6 +10,7 @@
             <form class="form-horizontal" role="form" data-bind="submit: startDbRestore">
                 <div class="panel panel-default" data-bind="with: dbRestoreOptions">
                     <div class="panel-heading panel-info">
+                        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                         <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
                             <i class="fa fa-cloud-download"></i>
                             <span>Restore Database</span>
@@ -81,6 +82,7 @@
             <form class="form-horizontal" role="form" data-bind="submit: startFsRestore">
                 <div class="panel panel-default" data-bind="with: fsRestoreOptions">
                     <div class="panel-heading panel-info">
+                        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                         <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
                             <i class="fa fa-cloud-download"></i>
                             <span>Restore Filesystem</span>

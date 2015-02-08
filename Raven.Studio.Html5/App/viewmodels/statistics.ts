@@ -17,6 +17,7 @@ class statistics extends viewModelBase {
     attached() {
         this.statsSubscription = this.refreshStatsObservable.throttle(3000).subscribe((e) => this.fetchStats());
         this.fetchStats();
+        this.updateHelpLink('H6GYYL');
     }
 
     detached() {

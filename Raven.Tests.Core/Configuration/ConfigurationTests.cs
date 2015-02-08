@@ -97,6 +97,7 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.NumberOfItemsToExecuteReduceInSingleStep.Value, actual => actual.NumberOfItemsToExecuteReduceInSingleStep);
 			configurationComparer.Assert(expected => expected.NewIndexInMemoryMaxMb.Value, actual => actual.NewIndexInMemoryMaxBytes);
 			configurationComparer.Assert(expected => expected.HostName.Value, actual => actual.HostName);
+			configurationComparer.Assert(expected => expected.ExposeConfigOverTheWire.Value, actual => actual.ExposeConfigOverTheWire);
 			configurationComparer.Assert(expected => expected.AccessControlMaxAge.Value, actual => actual.AccessControlMaxAge);
 			configurationComparer.Assert(expected => expected.AccessControlAllowMethods.Value, actual => actual.AccessControlAllowMethods);
 			configurationComparer.Assert(expected => expected.AccessControlRequestHeaders.Value, actual => actual.AccessControlRequestHeaders);
@@ -159,6 +160,7 @@ namespace Raven.Tests.Core.Configuration
 			Assert.Empty(inMemoryConfiguration.ActiveBundles);
 			Assert.Equal("*", stronglyTypedConfiguration.Port.Value);
 			Assert.True(inMemoryConfiguration.Port >= 8080);
+			Assert.Equal("Open", inMemoryConfiguration.ExposeConfigOverTheWire);
 			Assert.True(inMemoryConfiguration.CreateAnalyzersDirectoryIfNotExisting);
 			Assert.True(inMemoryConfiguration.CreatePluginsDirectoryIfNotExisting);
 			Assert.Equal(null, inMemoryConfiguration.Storage.Esent.JournalsStoragePath);

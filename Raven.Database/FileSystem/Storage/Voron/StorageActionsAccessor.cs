@@ -35,7 +35,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
         private readonly Reference<WriteBatch> writeBatch;
 	    private readonly OrderedPartCollection<AbstractFileCodec> fileCodecs;
 
-	    public StorageActionsAccessor(TableStorage storage, Reference<WriteBatch> writeBatch, SnapshotReader snapshot, IdGenerator generator, IBufferPool bufferPool, OrderedPartCollection<AbstractFileCodec> fileCodecs)
+	    public StorageActionsAccessor(TableStorage storage, Reference<WriteBatch> writeBatch, Reference<SnapshotReader> snapshot, IdGenerator generator, IBufferPool bufferPool, OrderedPartCollection<AbstractFileCodec> fileCodecs)
             : base(snapshot, generator, bufferPool)
         {
             this.storage = storage;
@@ -336,7 +336,40 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }
         }
 
-        public void Delete(string filename)
+	    public IEnumerable<FileHeader> GetFilesStartingWith(string namePrefix, int start, int take)
+	    {
+			if (string.IsNullOrEmpty(namePrefix))
+				throw new ArgumentNullException("namePrefix");
+			if (start < 0)
+				throw new ArgumentException("must have zero or positive value", "start");
+			if (take < 0)
+				throw new ArgumentException("must have zero or positive value", "take");
+
+			if (take == 0)
+				yield break;
+
+		    using (var iterator = storage.Files.Iterate(Snapshot, writeBatch.Value))
+		    {
+				iterator.RequiredPrefix = namePrefix.ToLowerInvariant();
+				if (iterator.Seek(iterator.RequiredPrefix) == false || iterator.Skip(start) == false)
+					yield break;
+
+				var fetchedCount = 0;
+				do
+				{
+					var key = iterator.CurrentKey.ToString();
+
+					ushort version;
+					var file = LoadFileByKey(key, out version);
+					
+					fetchedCount++;
+
+					yield return ConvertToFile(file);
+				} while (iterator.MoveNext() && fetchedCount < take);
+		    }
+	    }
+
+	    public void Delete(string filename)
         {
             DeleteUsage(filename);
             DeleteFile(filename);
@@ -416,7 +449,9 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }
         }
 
-        public int GetFileCount()
+	    public bool IsNested { get; set; }
+
+	    public int GetFileCount()
         {
             var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
             return Convert.ToInt32(storage.GetEntriesCount(fileCount));

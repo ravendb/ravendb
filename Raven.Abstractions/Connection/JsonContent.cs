@@ -21,12 +21,18 @@ namespace Raven.Abstractions.Connection
 	{
 		private static readonly Encoding DefaultEncoding = new UTF8Encoding(false);
 
-		public JsonContent(RavenJToken data = null)
-		{
-			Data = data;
-		}
+	    public JsonContent(RavenJToken data = null)
+	    {
+	        Data = data;
+	        if (data != null)
+	        {
+	            Headers.ContentType = string.IsNullOrEmpty(Jsonp) ?
+	                new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"} :
+	                new MediaTypeHeaderValue("application/javascript") {CharSet = "utf-8"};
+	        }
+	    }
 
-		public RavenJToken Data { get; set; }
+	    public RavenJToken Data { get; set; }
 
 		public string Jsonp { get; set; }
 
@@ -36,11 +42,6 @@ namespace Raven.Abstractions.Connection
 		{
 		    if (HasNoData())
 		        return new CompletedTask<bool>(true);
-
-			if (string.IsNullOrEmpty(Jsonp))
-				Headers.ContentType = new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"};
-			else
-				Headers.ContentType = new MediaTypeHeaderValue("application/javascript") {CharSet = "utf-8"};
 
 			var writer = new StreamWriter(stream, DefaultEncoding);
 			if (string.IsNullOrEmpty(Jsonp) == false)

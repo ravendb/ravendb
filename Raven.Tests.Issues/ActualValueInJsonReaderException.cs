@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Server.WebApi;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -18,7 +19,7 @@ namespace Raven.Tests.Issues
             var responseMesage = new HttpResponseMessage
             {
                 ReasonPhrase = "<>,./:",
-                Content = new StringContent("<>,./:")
+                Content = new MultiGetSafeStringContent("<>,./:")
             };
 
             var responseException = ErrorResponseException.FromResponseMessage(responseMesage, true);

@@ -27,6 +27,7 @@ import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
+import helpBindingHandler = require("common/helpBindingHandler");
 import changesApi = require("common/changesApi");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
@@ -44,6 +45,7 @@ import getFileSystemsCommand = require("commands/filesystem/getFileSystemsComman
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
 import getSystemDocumentCommand = require("commands/getSystemDocumentCommand");
+import getServerConfigsCommand = require("commands/getServerConfigsCommand");
 
 import recentErrors = require("viewmodels/recentErrors");
 import enterApiKey = require("viewmodels/enterApiKey");
@@ -51,13 +53,17 @@ import latestBuildReminder = require("viewmodels/latestBuildReminder");
 import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
+
 class shell extends viewModelBase {
     private router = router;
 
     renewOAuthTokenTimeoutId: number;
-
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
     showLogOutButton: KnockoutComputed<boolean>;
+    static isGlobalAdmin = ko.observable<boolean>(false);
+    static canExposeConfigOverTheWire = ko.observable<boolean>(false);
+    maxResourceNameWidth: KnockoutComputed<string>;
+    isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ rateLimit: 100 });
 
     static databases = ko.observableArray<database>();
     listedResources: KnockoutComputed<resource[]>;
@@ -92,8 +98,6 @@ class shell extends viewModelBase {
         var canCnt = this.canShowCountersNavbar();
         return canDb || canFs || canCnt;
     });
-
-    isActiveResourceDisabled: KnockoutComputed<boolean>;
 
     static resources = ko.computed(() => {
         var result = [].concat(shell.databases(), shell.fileSystems());
@@ -151,6 +155,7 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
+        helpBindingHandler.install();
 
         this.isSystemConnected = ko.computed(() => {
             var activeDb = this.activeDatabase();
@@ -173,11 +178,6 @@ class shell extends viewModelBase {
             return !!activeCs ? activeCs.disabled() : false;
         });
 
-        this.isActiveResourceDisabled = ko.computed(() => {
-            var activeRs = this.lastActivatedResource();
-            return !!activeRs ? activeRs.disabled() : false;
-        });
-
         this.listedResources = ko.computed(() => {
             var currentResource = this.lastActivatedResource();
             if (!!currentResource) {
@@ -185,6 +185,8 @@ class shell extends viewModelBase {
             }
             return shell.resources();
         });
+
+        this.clientBuildVersion.subscribe(v => viewModelBase.clientVersion("3.0." + v.BuildVersion));
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -216,6 +218,7 @@ class shell extends viewModelBase {
             { route: "filesystems/search", title: "Search", moduleId: "viewmodels/filesystem/search", nav: true, hash: this.appUrls.filesystemSearch },
             { route: "filesystems/synchronization*details", title: "Synchronization", moduleId: "viewmodels/filesystem/synchronization", nav: true, hash: this.appUrls.filesystemSynchronization },
             { route: "filesystems/status*details", title: "Status", moduleId: "viewmodels/filesystem/status", nav: true, hash: this.appUrls.filesystemStatus },
+            { route: "filesystems/settings*details", title: "Settings", moduleId: "viewmodels/filesystem/settings", nav: true, hash: this.appUrls.filesystemSettings },
             { route: "filesystems/configuration", title: "Configuration", moduleId: "viewmodels/filesystem/configuration", nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: "filesystems/edit", title: "Edit File", moduleId: "viewmodels/filesystem/filesystemEditFile", nav: false },
             { route: ["", "counterstorages"], title: "Counter Storages", moduleId: "viewmodels/counter/counterStorages", nav: true, hash: this.appUrls.couterStorages },
@@ -248,6 +251,37 @@ class shell extends viewModelBase {
                 this.onLogOut();
             }
         });
+
+        this.maxResourceNameWidth = ko.computed(() => {
+            if (this.canShowResourcesNavbar() && !!this.lastActivatedResource()) {
+                var navigationLinksWidth = 50;
+                if (this.canShowDatabaseNavbar()) {
+                    navigationLinksWidth += 804;
+                }
+                else if (this.canShowFileSystemNavbar()) {
+                    navigationLinksWidth += 600;
+                }
+                else if (this.canShowCountersNavbar()) {
+                    navigationLinksWidth += 600; //todo: calculate
+                }
+
+                var brandWidth = this.getWidth("brand");
+                var logOutWidth = this.getWidth("logOut");
+                var continueTestWidth = this.getWidth("continueTest");
+                var featureNameWidth = this.getWidth("featureName");
+
+                var freeSpace = $(window).width() - (navigationLinksWidth + brandWidth + logOutWidth + continueTestWidth + featureNameWidth);
+                var maxWidth = Math.floor(freeSpace);
+                return maxWidth + "px";
+            }
+            return "1px";
+        });
+
+        $(window).resize(() => self.lastActivatedResource.valueHasMutated());
+    }
+
+    private getWidth(tag: string): number {
+        return $("#" + tag).length > 0 ? $("#" + tag).width() : 0;
     }
 
     private destroyChangesApi() {
@@ -325,8 +359,10 @@ class shell extends viewModelBase {
             if (match && match.length == 2) {
                 oauthContext.apiKey(match[1]);
                 apiKeyLocalStorage.setValue(match[1]);
-                window.location.hash = "#";
             }
+            var splittedHash = hash.split("&#api-key");
+            var url = (splittedHash.length == 1) ? "#resources" : splittedHash[0];
+            window.location.href = url;
         } else {
             var apiKeyFromStorage = apiKeyLocalStorage.get();
             if (apiKeyFromStorage) {
@@ -475,7 +511,7 @@ class shell extends viewModelBase {
                 getSystemDocumentTask.done((dto: databaseDocumentDto) => {
                     var existingResource = resourceObservableArray.first((rs: resource) => rs.name == receivedResourceName);
 
-                    if (existingResource == null) { // new database
+                    if (existingResource == null) { // new resource
                         existingResource = this.createNewResource(resourceType, receivedResourceName, dto);
                         resourceObservableArray.unshift(existingResource);
                     } else {
@@ -517,13 +553,13 @@ class shell extends viewModelBase {
         var newResource = null;
 
         if (resourceType == logTenantType.Database) {
-            newResource = new database(resourceName, dto.Disabled);
+            newResource = new database(resourceName, true, dto.Disabled);
         }
         else if (resourceType == logTenantType.Filesystem) {
-            newResource = new filesystem(resourceName, dto.Disabled);
+            newResource = new filesystem(resourceName, true, dto.Disabled);
         }
         else if (resourceType == logTenantType.CounterStorage) {
-            newResource = new counterStorage(resourceName, dto.Disabled);
+            newResource = new counterStorage(resourceName, true, dto.Disabled);
         }
 
         return newResource;
@@ -548,26 +584,14 @@ class shell extends viewModelBase {
         shell.databases(databases.concat([this.systemDatabase]));
     }
 
-    private static fileSystemsLoaded(fileSystems: filesystem[]) {
-        shell.fileSystems(fileSystems);
-    }
-
-    private counterStoragesLoaded(results: counterStorage[]) {
-        shell.counterStorages(results);
-    }
-
     launchDocEditor(docId?: string, docsList?: pagedList) {
         var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null, this.activeDatabase());
         this.navigate(editDocUrl);
     }
 
-    static loadFileSystems() {
-        return new getFileSystemsCommand()
-            .execute()
-            .done((results: filesystem[]) => shell.fileSystemsLoaded(results));
-    }
+    loadDatabases(): JQueryPromise<any>{
+        var deferred = $.Deferred();
 
-    connectToRavenServer() {
         this.databasesLoadedTask = new getDatabasesCommand()
             .execute()
             .fail(result => this.handleRavenConnectionFailure(result))
@@ -579,15 +603,57 @@ class shell extends viewModelBase {
                 this.fetchLicenseStatus();
                 this.fetchSystemDatabaseAlerts();
                 router.activate();
-            });
+            })
+            .always(() => deferred.resolve());
 
-        var fileSystemsLoadedTask: JQueryPromise<any> = shell.loadFileSystems();
+        return deferred;
+    }
 
-        var counterStoragesLoadedTask: JQueryPromise < any> = new getCounterStoragesCommand()
+    loadFileSystems(): JQueryPromise<any>{
+        var deferred = $.Deferred();
+
+        new getFileSystemsCommand()
             .execute()
-            .done((results: counterStorage[]) => this.counterStoragesLoaded(results));
+            .done((results: filesystem[]) => shell.fileSystems(results))
+            .always(() => deferred.resolve());
 
-        $.when(this.databasesLoadedTask, fileSystemsLoadedTask, counterStoragesLoadedTask)
+        return deferred;
+    }
+
+    loadCounterStorages(): JQueryPromise<any> {
+        return $.Deferred().resolve();
+        
+        //TODO: uncomment this for counter storages
+        /*var deferred = $.Deferred();
+
+        new getCounterStoragesCommand()
+            .execute()
+            .done((results: counterStorage[]) => shell.counterStorages(results))
+            .always(() => deferred.resolve());
+
+        return deferred;*/
+    }
+
+    loadServerConfig() {
+        var deferred = $.Deferred();
+
+        new getServerConfigsCommand()
+            .execute()
+            .done((serverConfigs: serverConfigsDto) => {
+                shell.isGlobalAdmin(serverConfigs.IsGlobalAdmin);
+                shell.canExposeConfigOverTheWire(serverConfigs.CanExposeConfigOverTheWire);
+            })
+            .always(() => deferred.resolve());
+
+        return deferred;
+    }
+
+    connectToRavenServer() {
+        var serverConfigsTask: JQueryPromise<any> = this.loadServerConfig();
+        var databasesLoadedTask: JQueryPromise<any> = this.loadDatabases();
+        var fileSystemsLoadedTask: JQueryPromise<any> = this.loadFileSystems();
+        var counterStoragesLoadedTask: JQueryPromise<any> = this.loadCounterStorages();
+        $.when(serverConfigsTask, databasesLoadedTask, fileSystemsLoadedTask, counterStoragesLoadedTask)
             .always(() => {
                 var locationHash = window.location.hash;
                 if (appUrl.getFileSystem()) { //filesystems section
@@ -752,7 +818,7 @@ class shell extends viewModelBase {
             this.currentConnectedResource = fs;
         }
 
-        if (!fs.disabled() && fs.isLicensed() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('filesystems')())) {
+        if (!fs.disabled() && (shell.currentResourceChangesApi() == null || !this.appUrls.isAreaActive('filesystems')())) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
             shell.currentResourceChangesApi(new changesApi(fs, 5000));
             shell.changeSubscriptionArray = [
@@ -763,7 +829,7 @@ class shell extends viewModelBase {
 
     private updateCsChangesApi(cs: counterStorage) {
         if (this.currentConnectedResource.name != cs.name || this.currentConnectedResource.name == cs.name && cs.disabled()) {
-            // disconnect from the current filesystem changes api and set the current connected filesystem
+            // disconnect from the current filesystem changes api and set the current connected
             shell.disconnectFromResourceChangesApi();
             this.currentConnectedResource = cs;
         }
@@ -793,7 +859,7 @@ class shell extends viewModelBase {
         if (db && !db.disabled() && db.isLicensed()) {
             new getDatabaseStatsCommand(db)
                 .execute()
-                .done(result => db.statistics(result));
+                .done((result: databaseStatisticsDto) => db.saveStatistics(result));
         }
     }
 
@@ -801,7 +867,7 @@ class shell extends viewModelBase {
         if (fs && !fs.disabled() && fs.isLicensed()) {
             new getFileSystemStatsCommand(fs)
                 .execute()
-                .done(result=> fs.statistics(result));
+                .done((result: filesystemStatisticsDto) => fs.saveStatistics(result));
         }
     }
 
@@ -893,7 +959,7 @@ class shell extends viewModelBase {
 
     showApiKeyDialog() {
         var dialog = new enterApiKey();
-        return app.showDialog(dialog).then(() => window.location.href = "#");
+        return app.showDialog(dialog).then(() => window.location.href = "#resources");
     }
 
     showErrorsDialog() {

@@ -179,6 +179,7 @@ class metrics extends viewModelBase {
 
     attached() {
         this.createKeyboardShortcut("esc", nv.tooltip.cleanup, "body");
+        this.updateHelpLink('QCVU81');
         $("#metricsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
         $("#metricsContainer").scroll(() => this.graphScrolled());
         this.refresh();
@@ -189,6 +190,8 @@ class metrics extends viewModelBase {
             this.redrawGraph();
         });
         $("#visibleIndexesSelector").multiselect();
+        this.svg = d3.select("#indexPerformanceGraph");
+       
     }
 
     createNotifications(): Array<changeSubscription> {
@@ -223,6 +226,23 @@ class metrics extends viewModelBase {
         });
     }
 
+    showHideNoData(show: boolean) {
+        if (show) {
+            var metricsContainer = $("#metricsContainer");
+            this.svg.append('text')
+                .attr('class', 'no_data')
+                .text('No data available')
+                .attr('fill', 'black')
+                .attr('text-anchor', 'middle')
+                .attr('x', metricsContainer.width() / 2)
+                .attr('y', 50);
+            this.svg.select('.controlls').style('display', 'none');
+        } else {
+            this.svg.select('.no_data').remove();
+            this.svg.select('.controlls').style('display', null);
+        }
+    }
+
     refresh() {
         var mapTask = this.fetchMapJsonData();
         var reduceTask = this.fetchReduceJsonData();
@@ -232,12 +252,7 @@ class metrics extends viewModelBase {
                 var oldAllIndexes = this.allIndexNames();
 
                 if (oldAllIndexes.length == 0) {
-                    if (mapResult.length > 0 && reduceResult.length > 0) {
-                        // we have to trim data to match common start date
-                        var mapMinDate = d3.min(mapResult, r => r.StartedAtDate);
-                        var reduceMinDate = d3.min(reduceResult, r => r.StartedAtDate);
-                        this.edgeDate = d3.max([mapMinDate, reduceMinDate]);
-                    } else if (mapResult.length > 0) {
+                    if (mapResult.length > 0) {
                         this.edgeDate = d3.min(mapResult, r => r.StartedAtDate);
                     } else if (reduceResult.length > 0) {
                         this.edgeDate = d3.min(reduceResult, r => r.StartedAtDate);
@@ -410,6 +425,10 @@ class metrics extends viewModelBase {
             + self.margin.left
             + self.margin.right
             + 10; // add few more extra pixels
+
+        totalWidthWithMargins = Math.max(totalWidthWithMargins, this.width);
+        
+
         var totalHeight =
             self.selectedMapIndexNames().length * (self.yBarHeight + self.yBarMargin * 2)
             + self.margin.between
@@ -526,6 +545,7 @@ class metrics extends viewModelBase {
         this.updateMapOperations();
         this.updateReduceOperations();
         this.updateGaps(gapsFinder.gapsPositions);
+        this.showHideNoData(this.rawMapJsonData.length == 0 && this.rawReduceJsonData.length == 0);
     }
 
     private updateGroupNames(controllsEnter: D3.Selection, totalWidth: number) {
@@ -1029,8 +1049,18 @@ class metrics extends viewModelBase {
         var html = '<div data-bind="template: { name : \'' + templateName + '\' }"></div>';
         var clickLocation = d3.mouse(container);
         nv.tooltip.show([clickLocation[0], clickLocation[1]], html, 'n', 0, container, "selectable-tooltip");
-        var node = $(".nvtooltip")[0];
+        var tool = $(".nvtooltip");
+        var node = tool[0];
         ko.applyBindings({ data: data, tooltipClose: nv.tooltip.cleanup }, node);
+
+        var drag = d3.behavior.drag()
+            .on('drag', function () {
+                var o = tool.offset();
+                tool.offset({ top: o.top + d3.event.dy, left: o.left + d3.event.dx });
+            });
+
+        d3.select('.nvtooltip').call(drag);
+
     }
 
     private indexStatClicked(data: indexNameAndMapPerformanceStats) {

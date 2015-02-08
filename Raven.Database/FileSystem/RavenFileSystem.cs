@@ -2,6 +2,9 @@
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
+using System.Threading;
+
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Streams;
@@ -40,6 +43,10 @@ namespace Raven.Database.FileSystem
 	    private readonly TransportState transportState;
         private readonly MetricsCountersManager metricsCounters;
 
+		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
+
+		private volatile bool disposed;
+
         private Historian historian;
 
         public string Name { get; private set;}
@@ -72,7 +79,7 @@ namespace Raven.Database.FileSystem
             search = new IndexStorage(name, systemConfiguration);
 
             conflictArtifactManager = new ConflictArtifactManager(storage, search);
-            storageOperationsTask = new StorageOperationsTask(storage, search, notificationPublisher); 
+            storageOperationsTask = new StorageOperationsTask(storage, DeleteTriggers, search, notificationPublisher); 
 
 			AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
@@ -133,17 +140,50 @@ namespace Raven.Database.FileSystem
             }
         }
 
+		public IDisposable DisableAllTriggersForCurrentThread()
+		{
+			if (disposed)
+				return new DisposableAction(() => { });
+
+			bool old = disableAllTriggers.Value;
+			disableAllTriggers.Value = true;
+			return new DisposableAction(() =>
+			{
+				if (disposed)
+					return;
+
+				try
+				{
+					disableAllTriggers.Value = old;
+				}
+				catch (ObjectDisposedException)
+				{
+				}
+			});
+		}
+
 		private void InitializeTriggersExceptIndexCodecs()
 		{
 			FileCodecs.OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			PutTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			DeleteTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			ReadTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
-		
 
 		private void SecondStageInitialization()
 		{
 			FileCodecs
 				.OfType<IRequiresFileSystemInitialization>()
 				.Apply(initialization => initialization.SecondStageInit());
+
+			PutTriggers.Apply(initialization => initialization.SecondStageInit());
+
+			DeleteTriggers.Apply(initialization => initialization.SecondStageInit());
+
+			ReadTriggers.Apply(initialization => initialization.SecondStageInit());
 		}
 
 		/// <summary>
@@ -153,6 +193,15 @@ namespace Raven.Database.FileSystem
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractFileCodec> FileCodecs { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractFilePutTrigger> PutTriggers { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractFileDeleteTrigger> DeleteTriggers { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractFileReadTrigger> ReadTriggers { get; set; }
 
 	    public ITransactionalStorage Storage
 		{
@@ -229,8 +278,13 @@ namespace Raven.Database.FileSystem
 
 		public void Dispose()
 		{
+			if (disposed)
+				return;
+
 			AppDomain.CurrentDomain.ProcessExit -= ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload -= ShouldDispose;
+
+			disposed = true;
 
 			synchronizationTask.Dispose();
 			storage.Dispose();

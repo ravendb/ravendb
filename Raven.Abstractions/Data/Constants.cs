@@ -54,6 +54,7 @@ namespace Raven.Abstractions.Data
 		public const string MemoryLimitForProcessing_BackwardCompatibility = "Raven/MemoryLimitForIndexing";
 		public const string MemoryLimitForProcessing = "Raven/MemoryLimitForProcessing";
         public const string RunInMemory = "Raven/RunInMemory";
+	    public const string ExposeConfigOverTheWire = "Raven/ExposeConfigOverTheWire";
 
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
@@ -184,7 +185,6 @@ namespace Raven.Abstractions.Data
 
 
 		// General
-
 		public const string RavenDatabasesPrefix = "Raven/Databases/";
 
         public static partial class FileSystem
@@ -194,6 +194,11 @@ namespace Raven.Abstractions.Data
             public const string IndexStorageDirectory = "Raven/FileSystem/IndexStoragePath";
             public const string MaximumSynchronizationInterval = "Raven/FileSystem/MaximumSynchronizationInterval";
             public const string Storage = "Raven/FileSystem/Storage";
+
+	        public static class Versioning
+	        {
+				public const string ChangesToRevisionsAllowed = "Raven/FileSystem/Versioning/ChangesToRevisionsAllowed";
+	        }
         }
 
 		// Subscriptions
