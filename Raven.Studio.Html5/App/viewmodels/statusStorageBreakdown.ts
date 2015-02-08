@@ -8,12 +8,12 @@ class statusStorageOnDisk extends viewModelBase {
     data = ko.observable<string[]>();
     isGlobalAdmin = shell.isGlobalAdmin;
 
-    activate(args) {
+    activate(args): any {
         super.activate(args);
         
         if (this.isGlobalAdmin()) {
-            this.fetchData();
             this.activeDatabase.subscribe(() => this.fetchData());
+            return this.fetchData();
         }
     }
 

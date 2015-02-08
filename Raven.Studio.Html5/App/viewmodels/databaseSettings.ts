@@ -11,6 +11,7 @@ import jsonUtil = require("common/jsonUtil");
 import viewModelBase = require("viewmodels/viewModelBase");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
 import messagePublisher = require("common/messagePublisher");
+import shell = require('viewmodels/shell');
 
 class databaseSettings extends viewModelBase {
     document = ko.observable<document>();
@@ -30,7 +31,6 @@ class databaseSettings extends viewModelBase {
 
     constructor() {
         super();
-        this.activeDatabase.subscribe((db: database) => this.isForbidden(db.isAdminCurrentTenant() == false));
         aceEditorBindingHandler.install();
 
         this.document.subscribe(doc => {
@@ -65,9 +65,9 @@ class databaseSettings extends viewModelBase {
         super.canActivate(args);
         var deferred = $.Deferred();
 
-        var db: database = this.activeDatabase();
-        this.isForbidden(db.isAdminCurrentTenant() == false);
-        if (db.isAdminCurrentTenant()) {
+        this.isForbidden(shell.isGlobalAdmin() == false);
+        if (this.isForbidden() == false) {
+            var db: database = this.activeDatabase();
             this.fetchDatabaseSettings(db)
                 .done(() => deferred.resolve({ can: true }))
                 .fail((response: JQueryXHR) => {
