@@ -11,6 +11,7 @@ using System.Web.Http;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.FileSystem.Util;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -26,7 +27,7 @@ namespace Raven.Database.FileSystem.Controllers
 		private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
-		[Route("fs/{fileSystemName}/config")]
+		[RavenRoute("fs/{fileSystemName}/config")]
         public HttpResponseMessage Get()
 		{
 			string[] names = null;
@@ -37,7 +38,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/config")]
+        [RavenRoute("fs/{fileSystemName}/config")]
         public HttpResponseMessage Get(string name)
 		{
 			try
@@ -56,21 +57,27 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
         [HttpGet]
-        [Route("fs/{fileSystemName}/config/non-generated")]
+        [RavenRoute("fs/{fileSystemName}/config/non-generated")]
         public HttpResponseMessage NonGeneratedConfigNames()
         {
-            IEnumerable<string> configs = null;
-            Storage.Batch(accessor => { configs = accessor.GetConfigNames(Paging.Start, Paging.PageSize).ToList(); });
+			var searchPattern = new Regex("^(sync|deleteOp|raven\\/synchronization\\/sources|conflicted|renameOp)", RegexOptions.IgnoreCase);
             
-            var searchPattern = new Regex("^(sync|deleteOp|raven\\/synchronization\\/sources|conflicted|renameOp)", RegexOptions.IgnoreCase);
-            configs = configs.Where((c) => !searchPattern.IsMatch(c)).AsEnumerable();
+			List<string> configs = null;
+			Storage.Batch(accessor =>
+			{
+				configs = accessor
+					.GetConfigNames(Paging.Start, int.MaxValue)
+					.Where(config => !searchPattern.IsMatch(config))
+					.Take(Paging.PageSize)
+					.ToList();
+			});
 
-            return this.GetMessageWithObject(configs)
+			return GetMessageWithObject(configs)
                        .WithNoCache();
         }
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/config/search")]
+        [RavenRoute("fs/{fileSystemName}/config/search")]
         public HttpResponseMessage ConfigNamesStartingWith(string prefix)
 		{
 			if (prefix == null)
@@ -96,7 +103,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPut]
-        [Route("fs/{fileSystemName}/config")]
+        [RavenRoute("fs/{fileSystemName}/config")]
 		public async Task<HttpResponseMessage> Put(string name)
 		{
             var json = await ReadJsonAsync();
@@ -112,7 +119,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpDelete]
-        [Route("fs/{fileSystemName}/config")]
+        [RavenRoute("fs/{fileSystemName}/config")]
         public HttpResponseMessage Delete(string name)
 		{
 			ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.DeleteConfig(name)),

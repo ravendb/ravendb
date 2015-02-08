@@ -1,5 +1,7 @@
 using System;
+using System.Net;
 using Raven.Database.Config;
+using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi;
 
 namespace Raven.Database.Server.Security
@@ -42,12 +44,39 @@ namespace Raven.Database.Server.Security
 		{
 		}
 
-		public static bool IsGetRequest(string httpMethod, string requestPath)
+		public static bool IsGetRequest(RavenBaseApiController controller)
 		{
-			return (httpMethod == "GET" || httpMethod == "HEAD") ||
-				   httpMethod == "POST" && (requestPath == "/multi_get/" || requestPath == "/multi_get");
+            switch (controller.InnerRequest.Method.Method)
+		    {
+                case "GET":
+                case "HEAD":
+		            return true;
+                case "POST":
+		            var absolutePath = controller.InnerRequest.RequestUri.AbsolutePath;
+				    return absolutePath.EndsWith("/queries", StringComparison.Ordinal) ||
+				           absolutePath.EndsWith("/multi_get", StringComparison.Ordinal) ||
+				           absolutePath.EndsWith("/multi_get/", StringComparison.Ordinal);
+                default:
+		            return false;
+		    }
 		}
 
 		public abstract void Dispose();
+
+	    public static bool IsGetRequest(HttpListenerRequest request)
+	    {
+            switch (request.HttpMethod)
+            {
+                case "GET":
+                case "HEAD":
+                    return true;
+                case "POST":
+                    var absolutePath = request.Url.AbsolutePath;
+                    return (absolutePath.EndsWith("/multi_get", StringComparison.Ordinal) ||
+                            absolutePath.EndsWith("/multi_get/", StringComparison.Ordinal));
+                default:
+                    return false;
+            }
+	    }
 	}
 }

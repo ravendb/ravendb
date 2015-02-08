@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -10,25 +9,19 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using ICSharpCode.NRefactory.CSharp;
-
-using Lucene.Net.Messages;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Database.Bundles.SqlReplication;
-using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
-using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.Connections;
-using Raven.Database.Server.Security;
+using Raven.Database.Server.WebApi;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using IOExtensions = Raven.Database.Extensions.IOExtensions;
@@ -39,8 +32,8 @@ namespace Raven.Database.Server.Controllers
 	public class DebugController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("debug/enable-query-timing")]
-		[Route("databases/{databaseName}/debug/enable-query-timing")]
+		[RavenRoute("debug/enable-query-timing")]
+		[RavenRoute("databases/{databaseName}/debug/enable-query-timing")]
 		public HttpResponseMessage EnableQueryTiming()
 		{
 			var time = SystemTime.UtcNow + TimeSpan.FromMinutes(5);
@@ -49,8 +42,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("debug/disable-query-timing")]
-		[Route("databases/{databaseName}/debug/disable-query-timing")]
+		[RavenRoute("debug/disable-query-timing")]
+		[RavenRoute("databases/{databaseName}/debug/disable-query-timing")]
 		public HttpResponseMessage DisableQueryTiming()
 		{
 			Database.WorkContext.ShowTimingByDefaultUntil = null;
@@ -58,16 +51,16 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("debug/prefetch-status")]
-		[Route("databases/{databaseName}/debug/prefetch-status")]
+		[RavenRoute("debug/prefetch-status")]
+		[RavenRoute("databases/{databaseName}/debug/prefetch-status")]
 		public HttpResponseMessage PrefetchingQueueStatus()
 		{
 			return GetMessageWithObject(DebugInfoProvider.GetPrefetchingQueueStatusForDebug(Database));
 		}
 
 		[HttpPost]
-		[Route("debug/format-index")]
-		[Route("databases/{databaseName}/debug/format-index")]
+		[RavenRoute("debug/format-index")]
+		[RavenRoute("databases/{databaseName}/debug/format-index")]
 		public async Task<HttpResponseMessage> FormatIndex()
 		{
 			var array = await ReadJsonArrayAsync();
@@ -95,8 +88,8 @@ namespace Raven.Database.Server.Controllers
         /// </remarks>
         /// <returns></returns>
         [HttpGet]
-        [Route("debug/sql-replication-perf-stats")]
-        [Route("databases/{databaseName}/debug/sql-replication-perf-stats")]
+        [RavenRoute("debug/sql-replication-perf-stats")]
+        [RavenRoute("databases/{databaseName}/debug/sql-replication-perf-stats")]
         public HttpResponseMessage SqlReplicationPerfStats()
         {
             var now = SystemTime.UtcNow;
@@ -105,7 +98,7 @@ namespace Raven.Database.Server.Controllers
             var sqlReplicationTask = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
             if (sqlReplicationTask == null)
             {
-                return GetMessageWithString("Unable to find sql replication task. Maybe it is not enabled?", HttpStatusCode.BadRequest);
+                return GetMessageWithString("Unable to find SQL Replication task. Maybe it is not enabled?", HttpStatusCode.BadRequest);
             }
 
             var stats = from nameAndStatsManager in sqlReplicationTask.SqlReplicationMetricsCounters
@@ -136,8 +129,8 @@ namespace Raven.Database.Server.Controllers
         /// </remarks>
         /// <returns></returns>
         [HttpGet]
-        [Route("debug/replication-perf-stats")]
-        [Route("databases/{databaseName}/debug/replication-perf-stats")]
+        [RavenRoute("debug/replication-perf-stats")]
+        [RavenRoute("databases/{databaseName}/debug/replication-perf-stats")]
         public HttpResponseMessage ReplicationPerfStats()
         {
             var now = SystemTime.UtcNow;
@@ -175,8 +168,8 @@ namespace Raven.Database.Server.Controllers
         /// <param name="format"></param>
         /// <returns></returns>
 		[HttpGet]
-		[Route("debug/indexing-perf-stats")]
-		[Route("databases/{databaseName}/debug/indexing-perf-stats")]
+		[RavenRoute("debug/indexing-perf-stats")]
+		[RavenRoute("databases/{databaseName}/debug/indexing-perf-stats")]
 		public HttpResponseMessage IndexingPerfStats(string format = "json")
         {
             var now = SystemTime.UtcNow;
@@ -226,7 +219,7 @@ namespace Raven.Database.Server.Controllers
 					var msg = sw.GetStringBuilder().ToString();
 					return new HttpResponseMessage(HttpStatusCode.OK)
 					{
-						Content = new StringContent(msg)
+                        Content = new MultiGetSafeStringContent(msg)
 						{
 							Headers =
 							{
@@ -241,34 +234,44 @@ namespace Raven.Database.Server.Controllers
 
 
 		[HttpGet]
-		[Route("debug/indexing-batch-stats")]
-		[Route("databases/{databaseName}/debug/indexing-batch-stats")]
+		[RavenRoute("debug/indexing-batch-stats")]
+		[RavenRoute("databases/{databaseName}/debug/indexing-batch-stats")]
 		public HttpResponseMessage IndexingBatchStats()
 		{
-			var indexingBatchInfos = Database.Statistics.IndexingBatchInfo;
+			var indexingBatches = Database.WorkContext.LastActualIndexingBatchInfo.ToArray();
 
-			return GetMessageWithObject(indexingBatchInfos);
+			return GetMessageWithObject(indexingBatches);
 		}
 
 		[HttpGet]
-		[Route("debug/plugins")]
-		[Route("databases/{databaseName}/debug/plugins")]
+		[RavenRoute("debug/reducing-batch-stats")]
+		[RavenRoute("databases/{databaseName}/debug/reducing-batch-stats")]
+		public HttpResponseMessage ReducingBatchStats()
+		{
+			var reducingBatches = Database.WorkContext.LastActualReducingBatchInfo.ToArray();
+
+			return GetMessageWithObject(reducingBatches);
+		}
+
+		[HttpGet]
+		[RavenRoute("debug/plugins")]
+		[RavenRoute("databases/{databaseName}/debug/plugins")]
 		public HttpResponseMessage Plugins()
 		{
 			return GetMessageWithObject(Database.PluginsInfo);
 		}
 
 		[HttpGet]
-		[Route("debug/changes")]
-		[Route("databases/{databaseName}/debug/changes")]
+		[RavenRoute("debug/changes")]
+		[RavenRoute("databases/{databaseName}/debug/changes")]
 		public HttpResponseMessage Changes()
 		{
 			return GetMessageWithObject(Database.TransportState.DebugStatuses);
 		}
 
 		[HttpGet]
-		[Route("debug/sql-replication-stats")]
-		[Route("databases/{databaseName}/debug/sql-replication-stats")]
+		[RavenRoute("debug/sql-replication-stats")]
+		[RavenRoute("databases/{databaseName}/debug/sql-replication-stats")]
 		public HttpResponseMessage SqlReplicationStats()
 		{
 			var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
@@ -298,24 +301,29 @@ namespace Raven.Database.Server.Controllers
 
 
 		[HttpGet]
-		[Route("debug/metrics")]
-		[Route("databases/{databaseName}/debug/metrics")]
+		[RavenRoute("debug/metrics")]
+		[RavenRoute("databases/{databaseName}/debug/metrics")]
 		public HttpResponseMessage Metrics()
 		{
 			return GetMessageWithObject(Database.CreateMetrics());
 		}
 
 		[HttpGet]
-		[Route("debug/config")]
-		[Route("databases/{databaseName}/debug/config")]
+		[RavenRoute("debug/config")]
+		[RavenRoute("databases/{databaseName}/debug/config")]
 		public HttpResponseMessage Config()
 		{
+			if (CanExposeConfigOverTheWire() == false)
+			{
+				return GetEmptyMessage(HttpStatusCode.Forbidden);
+			}
+
 			return GetMessageWithObject(DebugInfoProvider.GetConfigForDebug(Database));
 		}
 
 		[HttpGet]
-		[Route("debug/docrefs")]
-		[Route("databases/{databaseName}/debug/docrefs")]
+		[RavenRoute("debug/docrefs")]
+		[RavenRoute("databases/{databaseName}/debug/docrefs")]
 		public HttpResponseMessage DocRefs(string id)
 		{
 			var op = GetQueryStringValue("op") == "from" ? "from" : "to";
@@ -340,8 +348,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("debug/d0crefs-t0ps")]
-		[Route("databases/{databaseName}/debug/d0crefs-t0ps")]
+		[RavenRoute("debug/d0crefs-t0ps")]
+		[RavenRoute("databases/{databaseName}/debug/d0crefs-t0ps")]
 		public HttpResponseMessage DocRefsTops()
 		{
 			var sp = Stopwatch.StartNew();
@@ -361,8 +369,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("debug/index-fields")]
-		[Route("databases/{databaseName}/debug/index-fields")]
+		[RavenRoute("debug/index-fields")]
+		[RavenRoute("databases/{databaseName}/debug/index-fields")]
 		public async Task<HttpResponseMessage> IndexFields()
 		{
 			var indexStr = await ReadStringAsync();
@@ -378,8 +386,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("debug/list")]
-		[Route("databases/{databaseName}/debug/list")]
+		[RavenRoute("debug/list")]
+		[RavenRoute("databases/{databaseName}/debug/list")]
 		public HttpResponseMessage List(string id)
 		{
 			var listName = id;
@@ -400,8 +408,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("debug/list-all")]
-		[Route("databases/{databaseName}/debug/list-all")]
+		[RavenRoute("debug/list-all")]
+		[RavenRoute("databases/{databaseName}/debug/list-all")]
 		public HttpResponseMessage ListAll(string id)
 		{
 			var listName = id;
@@ -419,16 +427,16 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("debug/queries")]
-		[Route("databases/{databaseName}/debug/queries")]
+		[RavenRoute("debug/queries")]
+		[RavenRoute("databases/{databaseName}/debug/queries")]
 		public HttpResponseMessage Queries()
 		{
 			return GetMessageWithObject(Database.WorkContext.CurrentlyRunningQueries);
 		}
 
 		[HttpGet]
-		[Route("debug/suggest-index-merge")]
-		[Route("databases/{databaseName}/debug/suggest-index-merge")]
+		[RavenRoute("debug/suggest-index-merge")]
+		[RavenRoute("databases/{databaseName}/debug/suggest-index-merge")]
 		public HttpResponseMessage IndexMerge()
 		{
 			var mergeIndexSuggestions = Database.WorkContext.IndexDefinitionStorage.ProposeIndexMergeSuggestions();
@@ -436,8 +444,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("debug/sl0w-d0c-c0unts")]
-		[Route("databases/{databaseName}/debug/sl0w-d0c-c0unts")]
+		[RavenRoute("debug/sl0w-d0c-c0unts")]
+		[RavenRoute("databases/{databaseName}/debug/sl0w-d0c-c0unts")]
 		public HttpResponseMessage SlowDocCounts()
 		{
 			DebugDocumentStats stat = null;
@@ -451,106 +459,24 @@ namespace Raven.Database.Server.Controllers
 
 		[HttpGet]
 		[HttpPost]
-		[Route("debug/user-info")]
-		[Route("databases/{databaseName}/debug/user-info")]
+		[RavenRoute("debug/user-info")]
+		[RavenRoute("databases/{databaseName}/debug/user-info")]
 		public HttpResponseMessage UserInfo()
 		{
-			var principal = User;
-			if (principal == null || principal.Identity == null || principal.Identity.IsAuthenticated == false)
-			{
-				var anonymous = new UserInfo
-				{
-					Remark = "Using anonymous user",
-					IsAdminGlobal = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
-				};
-				return GetMessageWithObject(anonymous);
-			}
-
-			var windowsPrincipal = principal as WindowsPrincipal;
-			if (windowsPrincipal != null)
-			{
-				var windowsUser = new UserInfo
-				{
-					Remark = "Using windows auth",
-					User = windowsPrincipal.Identity.Name,
-					IsAdminGlobal = windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
-				};
-
-				windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Database);
-
-				return GetMessageWithObject(windowsUser);
-			}
-
-			var principalWithDatabaseAccess = principal as PrincipalWithDatabaseAccess;
-			if (principalWithDatabaseAccess != null)
-			{
-				var windowsUserWithDatabase = new UserInfo
-				{
-					Remark = "Using windows auth",
-					User = principalWithDatabaseAccess.Identity.Name,
-					IsAdminGlobal =
-						principalWithDatabaseAccess.IsAdministrator(
-							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
-					IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),
-					Databases =
-						principalWithDatabaseAccess.AdminDatabases.Concat(
-							principalWithDatabaseAccess.ReadOnlyDatabases)
-												   .Concat(principalWithDatabaseAccess.ReadWriteDatabases)
-												   .Select(db => new DatabaseInfo
-												   {
-													   Database = db,
-													   IsAdmin = principal.IsAdministrator(db)
-												   }).ToList(),
-					AdminDatabases = principalWithDatabaseAccess.AdminDatabases,
-					ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
-					ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
-				};
-
-				windowsUserWithDatabase.IsAdminCurrentDb = windowsUserWithDatabase.IsAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
-
-				return GetMessageWithObject(windowsUserWithDatabase);
-			}
-
-			var oAuthPrincipal = principal as OAuthPrincipal;
-			if (oAuthPrincipal != null)
-			{
-				var oAuth = new UserInfo
-				{
-					Remark = "Using OAuth",
-					User = oAuthPrincipal.Name,
-					IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
-					IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Database),
-					Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
-											  .Select(db => new DatabaseInfo
-											  {
-												  Database = db.TenantId,
-												  IsAdmin = principal.IsAdministrator(db.TenantId)
-											  }).ToList(),
-					AccessTokenBody = oAuthPrincipal.TokenBody,
-				};
-
-				return GetMessageWithObject(oAuth);
-			}
-
-			var unknown = new UserInfo
-			{
-				Remark = "Unknown auth",
-				Principal = principal
-			};
-
-			return GetMessageWithObject(unknown);
+			var userInfo = GetUserInfo();
+			return GetMessageWithObject(userInfo);
 		}
 
 		[HttpGet]
-		[Route("debug/tasks")]
-		[Route("databases/{databaseName}/debug/tasks")]
+		[RavenRoute("debug/tasks")]
+		[RavenRoute("databases/{databaseName}/debug/tasks")]
 		public HttpResponseMessage Tasks()
 		{
 			return GetMessageWithObject(DebugInfoProvider.GetTasksForDebug(Database));
 		}
 
 		[HttpGet]
-		[Route("debug/routes")]
+		[RavenRoute("debug/routes")]
 		[Description(@"Output the debug information for all the supported routes in Raven Server.")]
 		public HttpResponseMessage Routes()
 		{
@@ -609,24 +535,29 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("debug/currently-indexing")]
-		[Route("databases/{databaseName}/debug/currently-indexing")]
+		[RavenRoute("debug/currently-indexing")]
+		[RavenRoute("databases/{databaseName}/debug/currently-indexing")]
 		public HttpResponseMessage CurrentlyIndexing()
 		{
 			return GetMessageWithObject(DebugInfoProvider.GetCurrentlyIndexingForDebug(Database));
 		}
 
 		[HttpGet]
-		[Route("debug/request-tracing")]
-		[Route("databases/{databaseName}/debug/request-tracing")]
+		[RavenRoute("debug/request-tracing")]
+		[RavenRoute("databases/{databaseName}/debug/request-tracing")]
 		public HttpResponseMessage RequestTracing()
 		{
+			if (CanExposeConfigOverTheWire() == false)
+			{
+				return GetEmptyMessage(HttpStatusCode.Forbidden);
+			}
+
 			return GetMessageWithObject(DebugInfoProvider.GetRequestTrackingForDebug(RequestManager, DatabaseName));
 		}
 
 		[HttpGet]
-		[Route("debug/identities")]
-		[Route("databases/{databaseName}/debug/identities")]
+		[RavenRoute("debug/identities")]
+		[RavenRoute("databases/{databaseName}/debug/identities")]
 		public HttpResponseMessage Identities()
 		{
 			var start = GetStart();
@@ -644,10 +575,15 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("databases/{databaseName}/debug/info-package")]
-		[Route("debug/info-package")]
+		[RavenRoute("databases/{databaseName}/debug/info-package")]
+		[RavenRoute("debug/info-package")]
 		public HttpResponseMessage InfoPackage()
 		{
+			if (CanExposeConfigOverTheWire() == false)
+			{
+				return GetEmptyMessage(HttpStatusCode.Forbidden);
+			}
+
 			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 			try
 			{
@@ -680,8 +616,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("databases/{databaseName}/debug/transactions")]
-		[Route("debug/transactions")]
+		[RavenRoute("databases/{databaseName}/debug/transactions")]
+		[RavenRoute("debug/transactions")]
 		public HttpResponseMessage Transactions()
 		{
 			return GetMessageWithObject(new

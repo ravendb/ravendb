@@ -4,12 +4,8 @@ import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 
 class recentErrors extends dialogViewModelBase {
-
-    resizerSelector = ".dialogResizer";
-   
     constructor(private errors: KnockoutObservableArray<alertArgs>) {
         super();
-        var x = alertType.danger;
     }
 
     attached() {
@@ -17,7 +13,6 @@ class recentErrors extends dialogViewModelBase {
         if (this.errors().length > 0) {
             $("#errorDetailsCollapse0").collapse("show");
         }
-
         this.registerResizing("recentErrorsResize");
     }
 
@@ -50,7 +45,6 @@ class recentErrors extends dialogViewModelBase {
     getWarningAlertType() {
         return alertType.warning;
     }
-
 }
 
 export = recentErrors; 

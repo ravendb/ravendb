@@ -4,10 +4,16 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.WindowsRuntime;
 using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Lucene.Net.Util;
+using Raven.Database.Config;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
@@ -15,212 +21,83 @@ namespace Raven.Database.Indexing
 {
     internal static class IndexedTerms
     {
-        public static void ReadEntriesForFieldsFromTermVectors(
-            IndexSearcherHolder.IndexSearcherHoldingState state,
-            HashSet<string> fieldsToRead,
-            HashSet<int> docIds,
-            Func<string,string, double> convert,
-            Action<string, string, double, int> onTermFound)
+        private readonly static ConditionalWeakTable<IndexReader, CachedIndexedTerms> _termsCachePerReader =
+            new ConditionalWeakTable<IndexReader, CachedIndexedTerms>();
+
+        private class CachedIndexedTerms : ILowMemoryHandler
         {
-            var reader = state.IndexSearcher.IndexReader;
-
-            foreach (var docId in docIds)
+            public ConcurrentDictionary<string, FieldCacheInfo> Results = new ConcurrentDictionary<string, FieldCacheInfo>();
+            public CachedIndexedTerms()
             {
-                foreach (var field in fieldsToRead)
-                {
-                    var termFreqVector = reader.GetTermFreqVector(docId, field);
-                    if (termFreqVector == null)
-                        continue;
+                MemoryStatistics.RegisterLowMemoryHandler(this);
+            }
 
-                    foreach (var term in termFreqVector.GetTerms())
+            public void HandleLowMemory()
+            {
+                Results.Clear();
+            }
+        }
+
+        private class FieldCacheInfo
+        {
+            public Dictionary<string,int[]> Results;
+            public bool Done;
+        }
+
+        public static Dictionary<string, int[]> GetTermsAndDocumenstFor(IndexReader reader, int docBase, string field)
+        {
+            var termsCachePerField = _termsCachePerReader.GetOrCreateValue(reader);
+            FieldCacheInfo info;
+            if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)
+            {
+                return info.Results;
+            }
+            info = termsCachePerField.Results.GetOrAdd(field, new FieldCacheInfo());
+            lock (info)
+            {
+                if (info.Done)
+                    return info.Results;
+                info.Results = FillCache(reader, docBase, field);
+                info.Done = true;
+                return info.Results;
+            }
+        }
+
+        private static Dictionary<string, int[]> FillCache(IndexReader reader, int docBase, string field)
+        {
+            using (var termDocs = reader.TermDocs())
+            {
+                var items = new Dictionary<string, int[]>();
+                var docsForTerm = new List<int>();
+
+                using (var termEnum = reader.Terms(new Term(field)))
+                {
+                    do
                     {
-                        if (LowPrecisionNumber(field, term))
+                        if (termEnum.Term == null || field != termEnum.Term.Field)
+                            break;
+
+                        Term term = termEnum.Term;
+                        if (LowPrecisionNumber(term.Field, term.Text))
                             continue;
-                        onTermFound(field, term, convert(field, term), docId);
-                    }
-                }
-            }
-        }
 
-        public static void ReadEntriesForFields(
-                IndexSearcherHolder.IndexSearcherHoldingState state,
-                HashSet<string> fieldsToRead,
-                HashSet<int> docIds,
-                Func<Term, double> convert,
-                Action<Term, double, int> onTermFound)
-        {
-            var reader = state.IndexSearcher.IndexReader;
-
-            var readFromCache = new Dictionary<string, HashSet<int>>();
-
-            state.Lock.EnterReadLock();
-            try
-            {
-                EnsureFieldsAreInCache(state, fieldsToRead, reader);
-
-                foreach (var field in fieldsToRead)
-                {
-                    var read = new HashSet<int>();
-                    readFromCache[field] = read;
-                    foreach (var docId in docIds)
-                    {
-                        foreach (var val in state.GetFromCache(field, docId))
+                        var totalDocCountIncludedDeletes = termEnum.DocFreq();
+                        termDocs.Seek(termEnum.Term);
+                        while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
                         {
-                            read.Add(docId);
-
-                            double converted;
-                            if (val.Val == null)
-                            {
-                                val.Val = converted = convert(val.Term);
-                            }
-                            else
-                            {
-                                converted = val.Val.Value;
-                            }
-                            onTermFound(val.Term, converted, docId);
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                if (state.Lock.IsReadLockHeld)
-                    state.Lock.ExitReadLock();
-            }
-        }
-
-        public static void ReadEntriesForFieldsFromTermVectors(
-            IndexSearcherHolder.IndexSearcherHoldingState state,
-            HashSet<string> fieldsToRead,
-            HashSet<int> docIds,
-            Action<string,string, int> onTermFound)
-        {
-            var reader = state.IndexSearcher.IndexReader;
-
-            foreach (var docId in docIds)
-            {
-                foreach (var field in fieldsToRead)
-                {
-                    var termFreqVector = reader.GetTermFreqVector(docId, field);
-                    if (termFreqVector == null)
-                        continue;
-
-                    foreach (var term in termFreqVector.GetTerms())
-                    {
-                        if(LowPrecisionNumber(field, term))
-                            continue;
-                        onTermFound(field, term, docId);
-                    }
-                }
-            }
-        }
-
-        public static void ReadEntriesForFields(
-              IndexSearcherHolder.IndexSearcherHoldingState state,
-              HashSet<string> fieldsToRead,
-              HashSet<int> docIds,
-              Action<Term, int> onTermFound)
-        {
-            var reader = state.IndexSearcher.IndexReader;
-
-            state.Lock.EnterReadLock();
-            try
-            {
-                EnsureFieldsAreInCache(state, fieldsToRead, reader);
-
-                foreach (var field in fieldsToRead)
-                {
-                    foreach (var docId in docIds)
-                    {
-                        foreach (var term in state.GetTermsFromCache(field, docId))
-                        {
-                            onTermFound(term, docId);
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                if (state.Lock.IsReadLockHeld)
-                    state.Lock.ExitReadLock();
-            }
-        }
-
-        public static void PreFillCache(IndexSearcherHolder.IndexSearcherHoldingState state, string[] fieldsToRead,
-            IndexReader reader)
-        {
-            state.Lock.EnterWriteLock();
-            try
-            {
-                if (fieldsToRead.All(state.IsInCache))
-                    return;
-                FillCache(state, fieldsToRead, reader);
-            }
-            finally
-            {
-                state.Lock.ExitWriteLock();
-            }
-        }
-
-        private static void EnsureFieldsAreInCache(IndexSearcherHolder.IndexSearcherHoldingState state, HashSet<string> fieldsToRead, IndexReader reader)
-        {
-            if (fieldsToRead.All(state.IsInCache))
-                return;
-
-            state.Lock.ExitReadLock();
-            state.Lock.EnterWriteLock();
-            try
-            {
-                var fieldsNotInCache = fieldsToRead.Where(field => state.IsInCache(field) == false).ToList();
-                if (fieldsToRead.Count > 0)
-                    FillCache(state, fieldsNotInCache, reader);
-            }
-            finally
-            {
-                state.Lock.ExitWriteLock();
-            }
-            state.Lock.EnterReadLock();
-        }
-
-        private static void FillCache(IndexSearcherHolder.IndexSearcherHoldingState state, IEnumerable<string> fieldsToRead,IndexReader reader)
-        {
-            foreach (var field in fieldsToRead)
-            {
-	            var items = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>[reader.MaxDoc];
-                using (var termDocs = reader.TermDocs())
-                {
-                    using (var termEnum = reader.Terms(new Term(field)))
-                    {
-                        do
-                        {
-                            if (termEnum.Term == null || field != termEnum.Term.Field)
-                                break;
-
-                            Term term = termEnum.Term;
-                            if (LowPrecisionNumber(term.Field, term.Text))
+                            var curDoc = termDocs.Doc;
+                            totalDocCountIncludedDeletes -= 1;
+                            if (reader.IsDeleted(curDoc))
                                 continue;
 
-
-                            var totalDocCountIncludedDeletes = termEnum.DocFreq();
-                            termDocs.Seek(termEnum.Term);
-
-                            while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
-                            {
-                                totalDocCountIncludedDeletes -= 1;
-                                if (reader.IsDeleted(termDocs.Doc))
-                                    continue;
-								if(items[termDocs.Doc] == null)
-									items[termDocs.Doc] = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>();
-
-	                            items[termDocs.Doc].AddLast(new IndexSearcherHolder.IndexSearcherHoldingState.CacheVal
-	                            {
-		                            Term = termEnum.Term
-	                            });
-                            }
-                        } while (termEnum.Next());
-                    }
+                            docsForTerm.Add(curDoc + docBase);
+                        }
+                        docsForTerm.Sort();
+                        items[term.Text] = docsForTerm.ToArray();
+                        docsForTerm.Clear();
+                    } while (termEnum.Next());
                 }
-	            state.SetInCache(field, items);
+                return items;
             }
         }
 

@@ -16,6 +16,7 @@ using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.FileSystem.Synchronization.Multipart;
 using Raven.Database.FileSystem.Util;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -33,7 +34,7 @@ namespace Raven.Database.FileSystem.Controllers
 			new ConcurrentDictionary<Guid, ReaderWriterLockSlim>();
 
         [HttpPost]
-        [Route("fs/{fileSystemName}/synchronization/ToDestinations")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/ToDestinations")]
         public async Task<HttpResponseMessage> ToDestinations(bool forceSyncingAll)
         {
             var result = await SynchronizationTask.SynchronizeDestinationsAsync(forceSyncingAll);
@@ -42,7 +43,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPost]
-        [Route("fs/{fileSystemName}/synchronization/ToDestination")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/ToDestination")]
         public async Task<HttpResponseMessage> ToDestination(string destination, bool forceSyncingAll)
         {
             var result = await SynchronizationTask.SynchronizeDestinationAsync(destination + "/fs/" + this.FileSystemName, forceSyncingAll);
@@ -51,7 +52,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
 		[HttpPost]
-        [Route("fs/{fileSystemName}/synchronization/start/{*filename}")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/start/{*filename}")]
         public async Task<HttpResponseMessage> Start(string filename)
 		{
             var canonicalFilename = FileHeader.Canonize(filename);
@@ -66,7 +67,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPost]
-        [Route("fs/{fileSystemName}/synchronization/MultipartProceed")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/MultipartProceed")]
         public async Task<HttpResponseMessage> MultipartProceed(string fileSystemName)
 		{
 			if (!Request.Content.IsMimeMultipartContent())
@@ -77,8 +78,8 @@ namespace Raven.Database.FileSystem.Controllers
 
             var tempFileName = RavenFileNameHelper.DownloadingFileName(canonicalFilename);
 
-            var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
+            var sourceServerInfo = ReadInnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+            var sourceFileETag = Guid.Parse(GetHeader(Constants.MetadataEtagField).Trim('\"'));
 
             var report = new SynchronizationReport(canonicalFilename, sourceFileETag, SynchronizationType.ContentUpdate);
 
@@ -102,7 +103,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                 Storage.Batch(accessor => StartupProceed(canonicalFilename, accessor));
 
-                RavenJObject sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
+                RavenJObject sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
                 var localMetadata = GetLocalMetadata(canonicalFilename);
                 if (localMetadata != null)
@@ -269,7 +270,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 						Log.Debug("Conflict automatically resolved by choosing current version of the file {0}", fileName);
 
-						throw new ConflictResolvedInFavourOfCurrentVersion();
+						throw new ConflictResolvedInFavourOfCurrentVersionException();
 				}
 			}
 
@@ -300,16 +301,16 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPost]
-        [Route("fs/{fileSystemName}/synchronization/UpdateMetadata/{*fileName}")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/UpdateMetadata/{*fileName}")]
         public HttpResponseMessage UpdateMetadata(string fileSystemName, string fileName)
 		{
             bool isConflictResolved = false;
 
             var canonicalFilename = FileHeader.Canonize(fileName);
 
-			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+            var sourceServerInfo = ReadInnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
             // REVIEW: (Oren) It works, but it seems to me it is not an scalable solution. 
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
+            var sourceFileETag = Guid.Parse(GetHeader(Constants.MetadataEtagField).Trim('\"'));
 
             Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName,
 					  sourceFileETag, sourceServerInfo);
@@ -331,7 +332,7 @@ namespace Raven.Database.FileSystem.Controllers
                 Storage.Batch(accessor => StartupProceed(canonicalFilename, accessor));
 
                 var localMetadata = GetLocalMetadata(canonicalFilename);
-                var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
+                var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
                 AssertConflictDetection(canonicalFilename, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
 
@@ -384,13 +385,13 @@ namespace Raven.Database.FileSystem.Controllers
 
 
 		[HttpDelete]
-        [Route("fs/{fileSystemName}/synchronization")]
+        [RavenRoute("fs/{fileSystemName}/synchronization")]
         public HttpResponseMessage Delete(string fileSystemName, string fileName)
 		{
             var canonicalFilename = FileHeader.Canonize(fileName);
 
-			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
+            var sourceServerInfo = ReadInnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+            var sourceFileETag = Guid.Parse(GetHeader(Constants.MetadataEtagField).Trim('\"'));
 
             Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceServerInfo);
 
@@ -474,7 +475,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPatch]
-        [Route("fs/{fileSystemName}/synchronization/Rename")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/Rename")]
         public HttpResponseMessage Rename(string fileSystemName, string fileName, string rename)
 		{
             bool isConflictResolved = false;
@@ -482,9 +483,9 @@ namespace Raven.Database.FileSystem.Controllers
             var canonicalFilename = FileHeader.Canonize(fileName);
             var canonicalRename = FileHeader.Canonize(rename);
 
-			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues(Constants.MetadataEtagField).First().Trim('\"'));
-            var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
+            var sourceServerInfo = ReadInnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+            var sourceFileETag = Guid.Parse(GetHeader(Constants.MetadataEtagField).Trim('\"'));
+            var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
 			Log.Debug("Starting to rename a file '{0}' to '{1}' with ETag {2} from {3} because of synchronization", fileName,
 					  rename, sourceFileETag, sourceServerInfo);
@@ -554,11 +555,11 @@ namespace Raven.Database.FileSystem.Controllers
 
 		private static bool ShouldAddExceptionToReport(Exception ex)
 		{
-			return ex is ConflictResolvedInFavourOfCurrentVersion == false;
+			return ex is ConflictResolvedInFavourOfCurrentVersionException == false;
 		}
 
 		[HttpPost]
-        [Route("fs/{fileSystemName}/synchronization/Confirm")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/Confirm")]
         public async Task<HttpResponseMessage> Confirm()
 		{
 			var contentStream = await Request.Content.ReadAsStreamAsync();
@@ -581,7 +582,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/synchronization/Status")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/Status")]
         public HttpResponseMessage Status(string fileName)
 		{
             fileName = FileHeader.Canonize(fileName);
@@ -593,7 +594,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/synchronization/Finished")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/Finished")]
 		public HttpResponseMessage Finished()
 		{
 			ItemsPage<SynchronizationReport> page = null;
@@ -615,7 +616,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/synchronization/Active")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/Active")]
 		public HttpResponseMessage Active()
 		{
             var result = new ItemsPage<SynchronizationDetails>(SynchronizationTask.Queue.Active
@@ -628,7 +629,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/synchronization/Pending")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/Pending")]
 		public HttpResponseMessage Pending()
 		{
             var result = new ItemsPage<SynchronizationDetails>(SynchronizationTask.Queue.Pending
@@ -641,7 +642,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
         [HttpGet]
-        [Route("fs/{fileSystemName}/synchronization/Incoming")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/Incoming")]
         public HttpResponseMessage Incoming()
         {
             var activeIncoming = SynchronizationTask.IncomingQueue;
@@ -656,7 +657,7 @@ namespace Raven.Database.FileSystem.Controllers
 
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/synchronization/Conflicts")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/Conflicts")]
 		public HttpResponseMessage Conflicts()
 		{
 			ItemsPage<ConflictItem> page = null;
@@ -676,7 +677,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPatch]
-        [Route("fs/{fileSystemName}/synchronization/ResolveConflict/{*filename}")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/ResolveConflict/{*filename}")]
         public HttpResponseMessage ResolveConflict(string filename, ConflictResolutionStrategy strategy)
 		{
             var canonicalFilename = FileHeader.Canonize(filename);
@@ -730,7 +731,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPost]
-		[Route("fs/{fileSystemName}/synchronization/ResolutionStrategyFromServerResolvers")]
+		[RavenRoute("fs/{fileSystemName}/synchronization/ResolutionStrategyFromServerResolvers")]
 		public async Task<HttpResponseMessage> ResolutionStrategyFromServerResolvers()
 		{
 			var conflict = await ReadJsonObjectAsync<ConflictItem>();
@@ -739,7 +740,7 @@ namespace Raven.Database.FileSystem.Controllers
             if (localMetadata == null)
 				throw new InvalidOperationException(string.Format("Could not find the medatada of the file: {0}", conflict.FileName));
 
-			var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
+			var sourceMetadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
 			ConflictResolutionStrategy strategy;
 
@@ -752,7 +753,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPatch]
-        [Route("fs/{fileSystemName}/synchronization/applyConflict/{*fileName}")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/applyConflict/{*fileName}")]
 		public async Task<HttpResponseMessage> ApplyConflict(string filename, long remoteVersion, string remoteServerId, string remoteServerUrl)
 		{
             var canonicalFilename = FileHeader.Canonize(filename);
@@ -808,7 +809,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/synchronization/LastSynchronization")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/LastSynchronization")]
 		public HttpResponseMessage LastSynchronization(Guid from)
 		{
 			SourceSynchronizationInformation lastEtag = null;
@@ -821,7 +822,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPost]
-        [Route("fs/{fileSystemName}/synchronization/IncrementLastETag")]
+        [RavenRoute("fs/{fileSystemName}/synchronization/IncrementLastETag")]
 		public HttpResponseMessage IncrementLastETag(Guid sourceServerId, string sourceFileSystemUrl, Guid sourceFileETag)
 		{
 			try
@@ -975,15 +976,25 @@ namespace Raven.Database.FileSystem.Controllers
 			Log.Debug("Saved last synchronized file ETag {0} from {1} ({2})", lastSourceEtag, sourceServer.FileSystemUrl, sourceServer.Id);
 		}
 
-		protected override RavenJObject GetFilteredMetadataFromHeaders(HttpHeaders headers)
-		{
-			var result = base.GetFilteredMetadataFromHeaders(headers);
 
-			if (headers.Contains(Constants.RavenLastModified))
+	    protected override RavenJObject GetFilteredMetadataFromHeaders(IEnumerable<KeyValuePair<string, IEnumerable<string>>> headers)
+	    {
+	        string lastModifed = null;
+
+			var result = base.GetFilteredMetadataFromHeaders(headers.Select(h =>
+			{
+			    if ( lastModifed == null && h.Key == Constants.RavenLastModified)
+			    {
+			        lastModifed = h.Value.First();
+			    }
+			    return h;
+			}));
+
+            if (lastModifed != null)
 			{
 				// this is required to resolve conflicts based on last modification date
 
-				result.Add(Constants.RavenLastModified, headers.GetValues(Constants.RavenLastModified).First());
+                result.Add(Constants.RavenLastModified, lastModifed);
 			}
 
 			return result;

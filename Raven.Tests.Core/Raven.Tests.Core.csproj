@@ -123,7 +123,9 @@
     <Compile Include="Indexing\MultiMap.cs" />
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
+    <Compile Include="Replication\IndexReplication.cs" />
     <Compile Include="Replication\ManualConflictResolution.cs" />
+    <Compile Include="Replication\TransformerReplication.cs" />
     <Compile Include="Session\Advanced.cs" />
     <Compile Include="Shard\Sharding.cs" />
     <Compile Include="Smuggler\SmugglerApiTests.cs" />
@@ -132,6 +134,7 @@
     <Compile Include="Utils\Entities\Headquater.cs" />
     <Compile Include="Utils\Entities\TShirt.cs" />
     <Compile Include="Utils\Entities\TShirtType.cs" />
+    <Compile Include="Utils\Etag.cs" />
     <Compile Include="Utils\Indexes\CameraCost.cs" />
     <Compile Include="Utils\Indexes\Events_SpatialIndex.cs" />
     <Compile Include="Utils\Entities\ISearchable.cs" />
@@ -183,6 +186,10 @@
     <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
       <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>
       <Name>Raven.Smuggler</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
+      <Project>{14F2D508-8E06-407B-9451-97E99538E26B}</Project>
+      <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

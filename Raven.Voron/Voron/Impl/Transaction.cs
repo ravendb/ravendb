@@ -11,6 +11,7 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Trees;
+using Voron.Util;
 
 namespace Voron.Impl
 {
@@ -29,7 +30,6 @@ namespace Voron.Impl
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
 
 		private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>();
-		private readonly IDictionary<Tree, RecentlyFoundPages> _recentlyFoundPages = new Dictionary<Tree, RecentlyFoundPages>();
 
 		internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
@@ -128,24 +128,46 @@ namespace Voron.Impl
 			        _overflowPagesInTransaction += (numberOfPages - 1);
 		        }
 
-			    var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
-			   
-				var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
-				StdLib.memcpy(dest, page.Base, numberOfPages*AbstractPager.PageSize);
+			    WritePageDirect(page, numberOfPages);
 
-			    _allocatedPagesInTransaction++;
-				
-				_dirtyPages.Add(page.PageNumber);
-                page.Dirty = true;
-
-				if (numberOfPages > 1)
-					_dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPages - 1);
-			    
-			    _scratchPagesTable[page.PageNumber] = pageFromScratchBuffer;
-				_transactionPages.Add(pageFromScratchBuffer);
-			
-				_state.NextPageNumber = transactionHeader->NextPageNumber;
+			    _state.NextPageNumber = transactionHeader->NextPageNumber;
 			}
+		}
+
+		internal void WriteDirect(Page[] pages, long nextPageNumber)
+		{
+			for (int i = 0; i < pages.Length; i++)
+			{
+				int numberOfPages = 1;
+				var page = pages[i];
+				if (page.IsOverflow)
+				{
+					numberOfPages = (page.OverflowSize / AbstractPager.PageSize) + (page.OverflowSize % AbstractPager.PageSize == 0 ? 0 : 1);
+					i += numberOfPages;
+					_overflowPagesInTransaction += (numberOfPages - 1);
+				}
+
+				WritePageDirect(page, numberOfPages);				
+			}
+		}
+
+		private void WritePageDirect(Page page, int numberOfPagesIncludingOverflow)
+		{
+			var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPagesIncludingOverflow);
+
+			var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
+            MemoryUtils.Copy(dest, page.Base, numberOfPagesIncludingOverflow * AbstractPager.PageSize);
+
+			_allocatedPagesInTransaction++;
+
+			_dirtyPages.Add(page.PageNumber);
+			page.Dirty = true;
+
+			if (numberOfPagesIncludingOverflow > 1)
+				_dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPagesIncludingOverflow - 1);
+
+			_scratchPagesTable[page.PageNumber] = pageFromScratchBuffer;
+			_transactionPages.Add(pageFromScratchBuffer);
 		}
 
 		private void InitTransactionHeader()
@@ -219,7 +241,7 @@ namespace Voron.Impl
 
 			var newPage = AllocatePage(1, PageFlags.None, num); // allocate new page in a log file but with the same number
 
-			StdLib.memcpy(newPage.Base, page.Base, AbstractPager.PageSize);
+            MemoryUtils.Copy(newPage.Base, page.Base, AbstractPager.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
 			newPage.LastMatch = page.LastMatch;
 
@@ -350,6 +372,8 @@ namespace Voron.Impl
 
 			foreach (var tree in Trees)
 			{
+			    if (tree == null)
+			        continue;
 				tree.State.InWriteTransaction = false;
 				var treeState = tree.State;
 				if (treeState.IsModified)
@@ -451,7 +475,7 @@ namespace Voron.Impl
 
 		internal void FreePage(long pageNumber)
 		{
-			Debug.Assert(pageNumber >= 2);
+			Debug.Assert(pageNumber >= 0);
 			_freeSpaceHandling.FreePage(this, pageNumber);
 
 			_freedPages.Add(pageNumber);
@@ -549,29 +573,6 @@ namespace Voron.Impl
 		{
 			return _freedPages;
 		} 
-
-		internal RecentlyFoundPages GetRecentlyFoundPages(Tree tree)
-		{
-			RecentlyFoundPages pages;
-			if (_recentlyFoundPages.TryGetValue(tree, out pages))
-				return pages;
-
-			return null;
-		}
-
-		internal void ClearRecentFoundPages(Tree tree)
-	    {
-	        _recentlyFoundPages.Remove(tree);
-	    }
-
-		internal void AddRecentlyFoundPage(Tree tree, RecentlyFoundPages.FoundPage foundPage)
-		{
-			RecentlyFoundPages pages;
-		    if (_recentlyFoundPages.TryGetValue(tree, out pages) == false)
-		        _recentlyFoundPages[tree] = pages = new RecentlyFoundPages(Flags == TransactionFlags.Read ? 8 : 2);
-
-			pages.Add(foundPage);
-		}
 
 		internal void AddTree(string name, Tree tree)
 	    {

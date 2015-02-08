@@ -2,7 +2,7 @@
 <ul class="breadcrumb">
     <li>
         <h3>
-            <a href="#filesystems">
+            <a href="#resources">
                 File Systems
             </a>
         </h3>
@@ -11,7 +11,7 @@
         <a data-bind="text: name, attr: { href: $parent.appUrls.filesystemFiles }"></a>
     </li>
     <li class="active">
-        <span>Settings</span>
+        <span>Search</span>
     </li>
 </ul>
 
@@ -23,12 +23,12 @@
                 <div class="row" style="padding: 0 10px 0 10px">
                     <div class="input-group col-lg-12">
                         <input type="text" class="form-control" data-bind="value: searchText" placeholder="E.g. __fileName:MyFile* AND __directoryName:/subfolder" />
-                        <span class="input-group-addon" style="width: 30px">
-                            <a href="#" data-bind="click: clear"><i class="fa fa-times"></i></a>
-                        </span>
-                        <span class="input-group-addon" style="width: 30px">
-                            <a href="#" data-bind="click: search"><i class="fa fa-search"></i></a>
-                        </span>
+                        <a class="input-group-addon" style="width: 30px" href="#" data-bind="click: clear">
+                           <i class="fa fa-times"></i>
+                        </a>
+                        <a href="#" data-bind="click: search" class="input-group-addon" style="width: 30px">
+                            <i class="fa fa-search"></i>
+                        </a>
                     </div>
                 </div>
             </form>
@@ -46,8 +46,7 @@
             </div>
         </div>
 
-
-        <div class="panel-body">
+        <div class="panel-body" style="position: relative">
             <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', contextMenuOptions: [], selectionEnabled: false }"></div>
         </div>
 

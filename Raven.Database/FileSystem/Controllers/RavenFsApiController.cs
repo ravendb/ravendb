@@ -73,7 +73,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 result = await RequestManager.HandleActualRequest(this,controllerContext, async () =>
                 {
-                    RequestManager.SetThreadLocalState(InnerHeaders, FileSystemName);
+                    RequestManager.SetThreadLocalState(ReadInnerHeaders, FileSystemName);
                     return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
                 }, httpException => GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable));
             }
@@ -313,7 +313,7 @@ namespace Raven.Database.FileSystem.Controllers
 		protected HttpResponseException BadRequestException(string message)
 		{
 			return
-				new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest) {Content = new StringContent(message)});
+                new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new MultiGetSafeStringContent(message) });
 		}
 
 		protected HttpResponseException ConcurrencyResponseException(ConcurrencyException concurrencyException)
@@ -416,7 +416,7 @@ namespace Raven.Database.FileSystem.Controllers
         private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
 			// Raven internal headers
-			"Raven-Server-Build",
+            Constants.RavenServerBuild,
 			"Non-Authoritative-Information",
 			"Raven-Timer-Request",
 
@@ -495,7 +495,7 @@ namespace Raven.Database.FileSystem.Controllers
 
         protected static readonly IList<string> ReadOnlyHeaders = new List<string> { Constants.LastModified, Constants.MetadataEtagField }.AsReadOnly();
 
-        protected virtual RavenJObject GetFilteredMetadataFromHeaders(HttpHeaders headers)
+        protected virtual RavenJObject GetFilteredMetadataFromHeaders(IEnumerable<KeyValuePair<string, IEnumerable<string>>> headers)
         {            
             return headers.FilterHeadersToObject();
         }

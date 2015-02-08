@@ -1,12 +1,19 @@
 class periodicExportSetup {
 
+    onDiskExportEnabled = ko.observable<boolean>(false);
+    remoteUploadEnabled = ko.observable<boolean>(false);
+
+    localFolderName = ko.observable<string>();
+
     unsupported = ko.observable<boolean>(false);
     disabled = ko.observable<boolean>(true);
 
     type = ko.observable<string>();
     mainValue = ko.observable<string>();
 
-    awsAccessKey = ko.observable<string>();
+    mainValueCustomValidity: KnockoutObservable<string>;
+
+    awsAccessKey = ko.observable<string>(); 
     awsSecretKey = ko.observable<string>();
     awsRegionEndpoint = ko.observable<string>();
 
@@ -30,7 +37,6 @@ class periodicExportSetup {
     private TU_DAYS = "days";
 
     availablePeriodicExports = [
-        { label: "File System Folder:", value: this.FILE_SYSTEM },
         { label: "Glacier Vault Name:", value: this.GLACIER_VAULT },
         { label: "S3 Bucket Name:", value: this.S3_BUCKET },
         { label: "Azure Storage Container:", value: this.AZURE_STORAGE }
@@ -46,16 +52,148 @@ class periodicExportSetup {
     ];
     availableIntervalUnits = [this.TU_MINUTES, this.TU_HOURS, this.TU_DAYS];
 
+	mainPlaceholder = ko.computed(() => {
+		switch(this.type()) {
+			case this.GLACIER_VAULT:
+				return 'vault name only e.g. myvault';
+			case this.S3_BUCKET:
+				return 'bucket name only e.g. mybucket';
+			case this.AZURE_STORAGE:
+				return 'container name only e.g. mycontainer';
+		}
+	}, this);
+
     additionalAwsInfoRequired = ko.computed(() => {
-        return jQuery.inArray(
-            this.type(), [this.GLACIER_VAULT, this.S3_BUCKET]
+        var type = this.type();
+        return this.remoteUploadEnabled() && jQuery.inArray(
+            type, [this.GLACIER_VAULT, this.S3_BUCKET]
             ) !== -1;
     }, this);
 
+    isGlaceirVault = ko.computed(() => this.remoteUploadEnabled() && this.type() == this.GLACIER_VAULT)
+    isS3Bucket = ko.computed(() => this.remoteUploadEnabled() && this.type() == this.S3_BUCKET)
 
     additionalAzureInfoRequired = ko.computed(() => {
-        return this.type() === this.AZURE_STORAGE;
+        var type = this.type();
+        return this.remoteUploadEnabled() && type === this.AZURE_STORAGE;
     }, this);
+
+    constructor() {
+        this.mainValueCustomValidity = ko.computed(() => {
+            var mainValue = this.mainValue();
+            switch (this.type()) {
+                case this.GLACIER_VAULT:
+                    return this.validateGlacierVaultName(mainValue);
+                case this.S3_BUCKET:
+                    return this.validateS3Bucket(mainValue);
+                case this.AZURE_STORAGE:
+                    return this.validateAzureContainerNAme(mainValue);
+            }
+
+            return '';
+        });
+    }
+
+    /*
+    Names can be between 1 and 255 characters long.
+
+    Allowed characters are a-z, A-Z, 0-9, '_' (underscore), '-' (hyphen), and '.' (period).
+    */
+    validateGlacierVaultName(vaultName: string): string {
+        if (vaultName == null || vaultName.length < 1 || vaultName.length > 255) {
+            return 'Vault name must be at least 1 and no more than 255 characters long.';
+        }
+        var regEx = /^[A-Za-z0-9_\.-]+$/; 
+
+        if (!regEx.test(vaultName)) {
+            return 'Allowed characters are a-z, A-Z, 0-9, \'_\' (underscore), \'-\' (hyphen), and \'.\' (period).';
+        }
+
+        return '';
+    }
+
+    /*
+    Bucket names must :
+        - be at least 3 and no more than 63 characters long.
+        - be a series of one or more labels. 
+            Adjacent labels are separated by a single period (.). 
+            Bucket names can contain lowercase letters, numbers, and hyphens. 
+            Each label must start and end with a lowercase letter or a number.
+        - not be formatted as an IP address (e.g., 192.168.5.4).
+    */
+    validateS3Bucket(bucketName: string): string {
+
+        if (bucketName == null || bucketName.length < 3 || bucketName.length > 63) {
+            return 'Bucket name must be at least 3 and no more than 63 characters long';
+        }
+
+        if (bucketName[0] == '.') {
+            return 'Bucket name cannot start with a period (.)';
+        }
+
+        if (bucketName[bucketName.length - 1] == '.') {
+            return 'Bucket name cannot end with a period (.)';
+        }
+
+        if (bucketName.indexOf("..") > -1) {
+            return 'There can be only one period between labels';
+        }
+
+        var labels = bucketName.split(".");
+        var labelRegExp = /^[a-z0-9-]+$/;
+        var validLabel = label => {
+            if (label == null || label.length == 0) {
+                return false;
+            }
+            if (labelRegExp.test(label) == false) {
+                return false;
+            }
+            if (label[0] == '-' || label[label.length - 1] == '-') {
+                return false;
+            }
+            
+            return true;
+        };
+        if (labels.some(l => !validLabel(l))) {
+            return 'Bucket name is invalid';
+        }
+        
+        var ipRegExp = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
+        if (ipRegExp.test(bucketName)) {
+            return 'Bucket name must not be formatted as an IP address (e.g., 192.168.5.4).';
+        }
+
+        return '';
+    }
+
+    /*
+    Container names must:
+        - start with a letter or number, and can contain only letters, numbers, and the dash (-) character.
+        - every dash (-) character must be immediately preceded and followed by a letter or number; 
+        - consecutive dashes are not permitted in container names.
+        - all letters in a container name must be lowercase.
+        - container names must be from 3 through 63 characters long.
+    */
+    validateAzureContainerNAme(containerName: string): string {
+        if (containerName == null || containerName.length < 3 || containerName.length > 63) {
+            return 'Container name must be at least 3 and no more than 63 characters long';
+        }
+
+        var regExp = /^[a-z0-9-]+$/;
+        if (!regExp.test(containerName)) {
+            return 'Allowed characters are a-z,0-9 and \'-\' (hyphen).';
+        }
+        if (containerName[0] == '-' || containerName[containerName.length - 1] == '-') {
+            return 'Container name must start and end with a letter or number';
+        }
+
+        var twoDashes = /--/;
+        if (twoDashes.test(containerName)) {
+            return 'Consecutive dashes are not permitted in container names';
+        }
+
+        return '';
+    }
 
     fromDto(dto: periodicExportSetupDto) {
         this.awsRegionEndpoint(dto.AwsRegionEndpoint);
@@ -80,14 +218,14 @@ class periodicExportSetup {
             S3BucketName: this.prepareMainValue(this.S3_BUCKET),
             AwsRegionEndpoint: this.awsRegionEndpoint(),
             AzureStorageContainer: this.prepareMainValue(this.AZURE_STORAGE),
-            LocalFolderName: this.prepareMainValue(this.FILE_SYSTEM),
+            LocalFolderName: this.onDiskExportEnabled()? this.localFolderName() : null,
             IntervalMilliseconds: this.convertToMilliseconds(this.incrementalBackupInterval(), this.incrementalBackupIntervalUnit()),
             FullBackupIntervalMilliseconds: this.convertToMilliseconds(this.fullBackupInterval(), this.fullBackupIntervalUnit()),
         };
     }
 
     private prepareMainValue(expectedType: string): string {
-        return ((this.type() === expectedType) ? this.mainValue() : null);
+        return ((this.type() === expectedType && this.remoteUploadEnabled()) ? this.mainValue() : null);
     }
 
     private convertToMilliseconds(value, unit): number {
@@ -131,9 +269,8 @@ class periodicExportSetup {
     private setupTypeAndMainValue(dto: periodicExportSetupDto) {
         var count = 0;
         if (dto.LocalFolderName) {
-            count += 1;
-            this.type(this.FILE_SYSTEM);
-            this.mainValue(dto.LocalFolderName);
+            this.localFolderName(dto.LocalFolderName);
+            this.onDiskExportEnabled(true);
         }
         if (dto.GlacierVaultName) {
             count += 1;
@@ -149,6 +286,9 @@ class periodicExportSetup {
             count += 1;
             this.type(this.AZURE_STORAGE);
             this.mainValue(dto.AzureStorageContainer);
+        }
+        if (count > 0) {
+            this.remoteUploadEnabled(true);
         }
         this.unsupported(count > 1);
     }

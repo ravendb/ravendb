@@ -1,7 +1,7 @@
 ﻿<ul class="breadcrumb">
     <li>
         <h3>
-            <a href="#filesystems">
+            <a href="#resources">
                 File Systems
             </a>
         </h3>
@@ -10,13 +10,14 @@
         <a data-bind="text: name, attr: { href: $parent.appUrls.filesystemFiles }"></a>
     </li>
     <li class="active">
-        <span>Settings</span>
+        <span>Status</span>
     </li>
 </ul>
 
 <div class="filesystems-page">
      <button class="btn btn-primary" data-bind="click: synchronizeNow" title="Sync Now (Alt+S)" accesskey="S"><i class="fa fa-refresh"></i> Sync Now</button>
     
+    <button class="btn btn-danger" data-bind="click: resetIndex" title="Reset index"><i class="fa fa-undo"></i> Reset index</button>
     <br />
     <br />
 

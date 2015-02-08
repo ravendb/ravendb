@@ -159,6 +159,8 @@
     <Compile Include="CanReduceAndTransform.cs" />
     <Compile Include="CanRetrieveFacetCountsOfQueryResults.cs" />
     <Compile Include="CanRetrieveFacetCountsOfQueryResults2.cs" />
+    <Compile Include="CanSupportDynamicArrayProperties.cs" />
+    <Compile Include="CanTransformWithDynamicFields3.cs" />
     <Compile Include="chad.cs" />
     <Compile Include="ChangeTrackingDoesntWorkForDecimalsWithSmallChanges.cs" />
     <Compile Include="Chirea.cs" />
@@ -205,6 +207,7 @@
     <Compile Include="FailingIndex.cs" />
     <Compile Include="FailingProjection.cs" />
     <Compile Include="Failing_lucene_query_where_in_tests.cs" />
+    <Compile Include="Fail_test.cs" />
     <Compile Include="FilteredIndexTest.cs" />
     <Compile Include="FirstOrDefaultNullableDate.cs" />
     <Compile Include="FormOpensByDateAndMediaSourceAndVersionTest.cs" />
@@ -331,6 +334,7 @@
     <Compile Include="PhilJones\PhilJones.cs" />
     <Compile Include="PhilJones\PhilJones88.cs" />
     <Compile Include="PhilJones\Projections.cs" />
+    <Compile Include="RavenArrayQueryInputTests.cs" />
     <Compile Include="RavenDB252.cs" />
     <Compile Include="RavenDB669.cs" />
     <Compile Include="RavenDbBugs.cs" />
@@ -395,6 +399,7 @@
     <Compile Include="StringIsNullOrEmpty.cs" />
     <Compile Include="SubObjectProperty.cs" />
     <Compile Include="SuggestAsync.cs" />
+    <Compile Include="SuggestionFail.cs" />
     <Compile Include="SumTests.cs" />
     <Compile Include="Tamir.cs" />
     <Compile Include="tcoonfield.cs" />

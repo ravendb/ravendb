@@ -31,7 +31,11 @@ namespace Raven.Tests.Bundles.Encryption
 				var db1 = new DatabaseDocument
 				{
 					Id = "Db1",
-					Settings = new Dictionary<string, string> {{"Raven/DataDir", @"~\Databases\Db1"}},
+					Settings = new Dictionary<string, string>
+					{
+						{"Raven/DataDir", @"~\Databases\Db1"},
+						{Constants.ActiveBundles, "Encryption"}
+					},
 					SecuredSettings = new Dictionary<string, string>
 					{
 						{"Raven/Encryption/Key", "arHd5ENxwieUCAGkf4Rns8oPWx3f6npDgAowtIAPox0="},

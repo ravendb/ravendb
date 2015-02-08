@@ -1,8 +1,9 @@
 import resource = require("models/resource");
 import license = require("models/license");
+import databaseStatistics = require("models/databaseStatistics");
 
 class database extends resource {
-    statistics = ko.observable<databaseStatisticsDto>();
+    statistics = ko.observable<databaseStatistics>();
     activeBundles = ko.observableArray<string>();
     isImporting = ko.observable<boolean>(false);
     importStatus = ko.observable<string>('');
@@ -12,13 +13,13 @@ class database extends resource {
     mergedIndexLocalStoragePrefix: string;
     static type = 'database';
 
-    constructor(public name: string, isDisabled: boolean = false, bundles: Array<string> = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false) {
-        super(name, database.type);
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: Array<string> = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false) {
+        super(name, database.type, isAdminCurrentTenant);
         this.disabled(isDisabled);
         this.activeBundles(bundles);
         this.indexingDisabled(isIndexingDisabled);
         this.rejectClientsMode(isRejectClientsMode);
-        this.itemCount = ko.computed(() => this.statistics() ? this.statistics().CountOfDocuments : 0);
+        this.itemCount = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocuments() : 0);
         this.itemCountText = ko.computed(() => {
             var itemCount = this.itemCount();
             var text = itemCount.toLocaleString() + ' document';
@@ -57,6 +58,18 @@ class database extends resource {
     static getNameFromUrl(url: string) {
         var index = url.indexOf("databases/");
         return (index > 0) ? url.substring(index + 10) : "";
+    }
+
+    saveStatistics(dto: databaseStatisticsDto) {
+        this.statistics(new databaseStatistics(dto));
+    }
+
+    isBundleActive(bundleName: string) {
+        if (!!bundleName) {
+            var bundle = this.activeBundles.first((x: string) => x.toLowerCase() == bundleName.toLowerCase());
+            return !!bundle;
+        }
+        return false;
     }
 }
 

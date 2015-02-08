@@ -1,4 +1,4 @@
-@font-face {
+﻿@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -6620,6 +6620,11 @@ body {
   left: 0;
   right: 0;
 }
+#longTimeoutMessage {
+  background: yellow;
+  font-size: 1em;
+  text-align: center;
+}
 .alert-warning h2 {
   color: white;
 }
@@ -7052,17 +7057,23 @@ body {
   cursor: default;
   text-decoration: line-through;
 }
-.resource-link {
+#tenantNameLink {
   padding-left: 5px;
-  overflow-x: hidden;
-  max-width: 150px;
+}
+.resource-link {
+  display: inline-block;
+  padding-right: 2px;
+  overflow: hidden!important;
+  max-width: 250px;
   -ms-text-overflow: ellipsis;
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.resource-caret {
+  padding-top: 10px;
+}
 .resource-link-disabled {
-  pointer-events: none;
   cursor: default;
 }
 .dropdown-menu {
@@ -7598,6 +7609,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   -webkit-box-sizing: border-box;
   box-sizing: border-box;
   overflow: hidden;
+  white-space: nowrap;
 }
 .ko-grid .ko-grid-row.even {
   background-color: white;
@@ -8336,3 +8348,51 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 #resources-page .resources-container .resource.fs.selected {
   box-shadow: 0 0 20px 0 #7109AA;
 }
+.form-checkbox-control {
+  width: 35px;
+  height: 35px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+.help_link,
+a.global_help_link {
+  color: #152894;
+}
+.help_link:hover,
+a.global_help_link:hover {
+  color: #0f1c67;
+}
+.help_link:focus,
+a.global_help_link:focus {
+  color: #152894;
+}
+.global_help_link {
+  float: right;
+  margin-top: 5px;
+}
+.breadcrumb .global_help_link {
+  float: right;
+  margin-top: 10px;
+}
+.negative-margin {
+  margin-top: -10px;
+}
+#indexingPerformance {
+  background-color: white;
+}
+#visualizerContainer {
+  background-color: white;
+}
+.handle {
+  float: left;
+  pointer-events: all;
+  cursor: move;
+  font-size: 14px;
+  font-weight: bold;
+  padding-left: 10px;
+}
+.tight {
+  margin-top: 3px;
+  margin-bottom: 3px;
+}
+/*# sourceMappingURL=app.css.map */

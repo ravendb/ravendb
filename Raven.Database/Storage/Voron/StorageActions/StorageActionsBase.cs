@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Runtime.InteropServices;
 using System.Text;
 
 using Raven.Abstractions.Util.Encryptors;
@@ -82,6 +83,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				version = read.Version;
 				return stream.ToJObject();
 			}
+		}
+
+		protected StructureReader<T> LoadStruct<T>(TableOfStructures<T> table, Slice key, WriteBatch writeBatch, out ushort version)
+		{
+			var read = table.ReadStruct(Snapshot, key, writeBatch);
+			if (read == null)
+			{
+				version = 0;
+				return null;
+			}
+
+			version = read.Version;
+			return read.Reader;
 		}
 
         protected BufferPoolMemoryStream CreateStream()

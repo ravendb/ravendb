@@ -37,7 +37,7 @@ namespace Raven.Database.Storage
     {
         private const string IndexDefDir = "IndexDefinitions";
 
-        private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         public long currentlyIndexing;
 
         private readonly ConcurrentDictionary<int, AbstractViewGenerator> indexCache =
@@ -223,11 +223,11 @@ namespace Raven.Database.Storage
                                            .ToArray();
             }
         }
+
         public ConcurrentDictionary<int, IndexDefinition> IndexDefinitions
         {
             get { return indexDefinitions; }
         }
-
 
         public string CreateAndPersistIndex(IndexDefinition indexDefinition)
         {
@@ -332,11 +332,11 @@ namespace Raven.Database.Storage
             UpdateTransformerMappingFile();
         }
 
-        public void RemoveIndex(int id)
+        public void RemoveIndex(int id, bool removeByNameMapping = true)
         {
             AbstractViewGenerator ignoredViewGenerator;
             int ignoredId;
-            if (indexCache.TryRemove(id, out ignoredViewGenerator))
+            if (indexCache.TryRemove(id, out ignoredViewGenerator) && removeByNameMapping)
                 indexNameToId.TryRemove(ignoredViewGenerator.Name, out ignoredId);
             IndexDefinition ignoredIndexDefinition;
             IndexDefinitions.TryRemove(id, out ignoredIndexDefinition);
@@ -383,6 +383,11 @@ namespace Raven.Database.Storage
             return null;
         }
 
+		public IEnumerable<TransformerDefinition> GetAllTransformerDefinitions()
+		{
+			return transformDefinitions.Select(definition => definition.Value);
+		}
+
         public IndexMergeResults ProposeIndexMergeSuggestions()
         {
             var indexMerger = new IndexMerger(IndexDefinitions.ToDictionary(x=>x.Key,x=>x.Value));
@@ -419,6 +424,9 @@ namespace Raven.Database.Storage
             var indexDefinition = GetIndexDefinition(indexDef.Name);
             if (indexDefinition != null)
             {
+				if (indexDefinition.IsTestIndex) // always update test indexes
+					return IndexCreationOptions.Update;
+
                 indexDef.IndexId = indexDefinition.IndexId;
                 bool result = indexDefinition.Equals(indexDef);
                 return result
@@ -521,6 +529,25 @@ namespace Raven.Database.Storage
                 return transformCache[id];
             return null;
         }
+
+		internal bool ReplaceIndex(string indexName, string indexToSwapName)
+		{
+			var index = GetIndexDefinition(indexName);
+			var indexToReplace = GetIndexDefinition(indexToSwapName);
+
+			if (index == null) 
+				return false;
+
+			int _;
+			indexNameToId.TryRemove(index.Name, out _);
+
+		    index.IsSideBySideIndex = false;
+			index.Name = indexToReplace != null ? indexToReplace.Name : indexToSwapName;
+			CreateAndPersistIndex(index);
+			AddIndex(index.IndexId, index);
+
+			return true;
+		}
 
         private void UpdateIndexMappingFile()
         {

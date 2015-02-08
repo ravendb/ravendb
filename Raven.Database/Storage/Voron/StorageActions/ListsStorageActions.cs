@@ -29,13 +29,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private readonly IUuidGenerator generator;
 
 		private readonly Reference<WriteBatch> writeBatch;
+		private readonly GeneralStorageActions generalStorageActions;
 
-        public ListsStorageActions(TableStorage tableStorage, IUuidGenerator generator, Reference<SnapshotReader> snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
+		public ListsStorageActions(TableStorage tableStorage, 
+			IUuidGenerator generator, Reference<SnapshotReader> snapshot, 
+			Reference<WriteBatch> writeBatch, 
+			IBufferPool bufferPool,
+			GeneralStorageActions generalStorageActions)
 			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;
 			this.generator = generator;
 			this.writeBatch = writeBatch;
+	        this.generalStorageActions = generalStorageActions;
 		}
 
 		public void Set(string name, string key, RavenJObject data, UuidType type)
@@ -106,6 +112,36 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 					if (end != null && end.CompareTo(etag) <= 0)
 						yield break;
+
+					count++;
+					yield return ReadInternal(etag);
+				}
+				while (iterator.MoveNext() && count < take);
+			}
+		}
+
+		public IEnumerable<ListItem> Read(string name, int start, int take)
+		{
+			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
+
+			using (var iterator = listsByName.MultiRead(Snapshot, CreateKey(name)))
+			{
+				if (!iterator.Seek(Slice.BeforeAllKeys))
+					yield break;
+
+				int count = 0;
+
+				int skipped = 0;
+				while (skipped < start)
+				{
+					if(!iterator.MoveNext())
+						yield break;
+					skipped++;
+				}
+
+				do
+				{
+					var etag = Etag.Parse(iterator.CurrentKey.ToString());
 
 					count++;
 					yield return ReadInternal(etag);
@@ -208,6 +244,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					tableStorage.Lists.Delete(writeBatch.Value, etag.ToString());
 					listsByName.MultiDelete(writeBatch.Value, nameKey, etag.ToString());
 					listsByNameAndKey.Delete(writeBatch.Value, CreateKey(name, key));
+
+					generalStorageActions.MaybePulseTransaction();
 				}
 				while (iterator.MoveNext());
 			}

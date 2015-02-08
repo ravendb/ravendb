@@ -13,14 +13,15 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Queries;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
     public class FacetsController : RavenDbApiController
     {
         [HttpGet]
-        [Route("facets/{*id}")]
-        [Route("databases/{databaseName}/facets/{*id}")]
+        [RavenRoute("facets/{*id}")]
+        [RavenRoute("databases/{databaseName}/facets/{*id}")]
         public async Task<HttpResponseMessage> FacetsGet(string id)
         {
             List<Facet> facets = null;
@@ -62,8 +63,8 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpPost]
-        [Route("facets/{*id}")]
-        [Route("databases/{databaseName}/facets/{*id}")]
+        [RavenRoute("facets/{*id}")]
+        [RavenRoute("databases/{databaseName}/facets/{*id}")]
         public async Task<HttpResponseMessage> FacetsPost(string id)
         {
             List<Facet> facets;
@@ -82,32 +83,43 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpPost]
-        [Route("facets/multisearch")]
-        [Route("databases/{databaseName}/facets/multisearch")]
+        [RavenRoute("facets/multisearch")]
+        [RavenRoute("databases/{databaseName}/facets/multisearch")]
         public async Task<HttpResponseMessage> MultiSearch()
         {
             var str = await ReadStringAsync();
+            
             var facetedQueries = JsonConvert.DeserializeObject<FacetQuery[]>(str);
-
+            
             var results =
                 facetedQueries.Select(
                     facetedQuery =>
                     {
+                        FacetResults facetResults = null;
+
+                        var curFacetEtag = GetFacetsEtag(facetedQuery.IndexName, Encoding.UTF8.GetBytes(facetedQuery.Query.Query + string.Concat(facetedQuery.Facets.Select(x => x.Name).ToArray())));
+
 						if (Database.IndexDefinitionStorage.Contains(facetedQuery.IndexName) == false)
 							throw new IndexDoesNotExistsException(string.Format("Index '{0}' does not exist.", facetedQuery.IndexName));
 
                         if (facetedQuery.FacetSetupDoc != null)
-                            return Database.ExecuteGetTermsQuery(facetedQuery.IndexName, facetedQuery.Query, facetedQuery.FacetSetupDoc,
+                            facetResults =  Database.ExecuteGetTermsQuery(facetedQuery.IndexName, facetedQuery.Query, facetedQuery.FacetSetupDoc,
                                 facetedQuery.PageStart, facetedQuery.PageSize);
                         if (facetedQuery.Facets != null)
-                            return Database.ExecuteGetTermsQuery(facetedQuery.IndexName, facetedQuery.Query, facetedQuery.Facets,
+                            facetResults =  Database.ExecuteGetTermsQuery(facetedQuery.IndexName, facetedQuery.Query, facetedQuery.Facets,
                                 facetedQuery.PageStart,
                                 facetedQuery.PageSize);
+
+                        if (facetResults != null)
+                        {
+                            facetResults.IndexStateEtag = curFacetEtag;
+                            return facetResults;
+                        }
 
                         throw new InvalidOperationException("Missing a facet setup document or a list of facets");
                     }).ToArray();
 
-            return GetMessageWithObject(results);
+            return GetMessageWithObject(results, HttpStatusCode.OK);
         }
 
 		private Task<HttpResponseMessage> ExecuteFacetsQuery(string index, List<Facet> facets, Etag indexEtag)
@@ -130,6 +142,17 @@ namespace Raven.Database.Server.Controllers
                 return GetMessageWithString("No facets found in request", HttpStatusCode.BadRequest);
 
             return null;
+        }
+
+        private Etag GetMultiFacetEtag(string[] indexes, byte[] additionalEtagBytes)
+        {
+            var multiFacetByteArray = new byte[0];
+            foreach (var index in indexes)
+            {
+                multiFacetByteArray = multiFacetByteArray.Concat(Database.Indexes.GetIndexEtag(index, null).ToByteArray()).ToArray();
+            }
+            var etagBytes = Encryptor.Current.Hash.Compute16(multiFacetByteArray.Concat(additionalEtagBytes).ToArray());
+            return Etag.Parse(etagBytes);
         }
 
         private Etag GetFacetsEtag(string index, byte[] additionalEtagBytes)

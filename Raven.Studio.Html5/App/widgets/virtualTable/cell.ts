@@ -9,7 +9,18 @@ class cell {
     static customTemplate = "customTemplate";
 
     constructor(data: any, public templateName: string) {
+        this.update(data);
+    }
+
+    update(data: any) {
+        if (this.isNumber(data)) {
+            data = data.toLocaleString();
+        }
         this.data(data);
+    }
+
+    private isNumber(o) {
+        return typeof o === 'number' && isFinite(o);
     }
 
     reset() {

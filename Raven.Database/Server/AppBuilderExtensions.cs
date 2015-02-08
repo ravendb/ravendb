@@ -6,12 +6,14 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
-using System.Web.UI;
+using System.Web.Http.Routing;
 using Microsoft.Owin;
+
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Logging;
+using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
@@ -29,9 +31,10 @@ namespace Owin
 {
 	public static class AppBuilderExtensions
 	{
-	    private const string HostOnAppDisposing = "host.OnAppDisposing";
+		private const string HostOnAppDisposing = "host.OnAppDisposing";
 
-	    public static IAppBuilder UseRavenDB(this IAppBuilder app)
+
+		public static IAppBuilder UseRavenDB(this IAppBuilder app)
 		{
 			return UseRavenDB(app, new RavenConfiguration());
 		}
@@ -59,7 +62,7 @@ namespace Owin
 				// This is a katana specific key (i.e. not a standard OWIN key) to be notified
 				// when the host in being shut down. Works both in HttpListener and SystemWeb hosting
 				// Until owin spec is officially updated, there is no other way to know the host
- 				// is shutting down / disposing
+				// is shutting down / disposing
 				var appDisposing = app.Properties[HostOnAppDisposing] as CancellationToken?;
 				if (appDisposing.HasValue)
 				{
@@ -67,58 +70,77 @@ namespace Owin
 				}
 			}
 
-            AssemblyExtractor.ExtractEmbeddedAssemblies();
+			AssemblyExtractor.ExtractEmbeddedAssemblies(options.SystemDatabase.Configuration);
 
 #if DEBUG
 			app.UseInterceptor();
 #endif
 
-            app.Use((context, func) => UpgradeToWebSockets(options, context, func));
-            
-            app.UseWebApi(CreateHttpCfg(options));
+			app.Use((context, func) => UpgradeToWebSockets(options, context, func));
+
+			app.UseWebApi(CreateHttpCfg(options));
 
 
 			return app;
 		}
 
-        private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
-        {
-            var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
-            if (accept == null)
-            {
-                // Not a websocket request
-                await next();
-                return;
-            }
-            
-            WebSocketsTransport webSocketsTrasport = WebSocketTransportFactory.CreateWebSocketTransport(options, context);
-            
-            if (webSocketsTrasport != null)
-            {
-                if (await webSocketsTrasport.TrySetupRequest())
-                    accept(null, webSocketsTrasport.Run);
-            }
-        }
-        
+		private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
+		{
+			var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
+			if (accept == null)
+			{
+				// Not a websocket request
+				await next();
+				return;
+			}
+
+			WebSocketsTransport webSocketsTrasport = WebSocketTransportFactory.CreateWebSocketTransport(options, context);
+
+			if (webSocketsTrasport != null)
+			{
+				if (await webSocketsTrasport.TrySetupRequest())
+					accept(null, webSocketsTrasport.Run);
+			}
+		}
 
 		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
 		{
 			var cfg = new HttpConfiguration();
+
 			cfg.Properties[typeof(DatabasesLandlord)] = options.DatabaseLandlord;
-            cfg.Properties[typeof(FileSystemsLandlord)] = options.FileSystemLandlord;
+			cfg.Properties[typeof(FileSystemsLandlord)] = options.FileSystemLandlord;
 			cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
 			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
+			cfg.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad] = new SemaphoreSlim(options.SystemDatabase.Configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
+            cfg.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad] = options.SystemDatabase.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 			cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
-
-			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
+			cfg.Services.Replace(typeof(IAssembliesResolver), new RavenAssemblyResolver());
 			cfg.Filters.Add(new RavenExceptionFilterAttribute());
-			cfg.MapHttpAttributeRoutes();
+
+			cfg.MessageHandlers.Add(new ThrottlingHandler(options.SystemDatabase.Configuration.MaxConcurrentServerRequests));
+			cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
+
+			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
+
+			if (RouteCacher.TryAddRoutesFromCache(cfg) == false)
+				AddRoutes(cfg);
+
+			cfg.EnsureInitialized();
+
+			RouteCacher.CacheRoutesIfNecessary(cfg);
+
+			return cfg;
+		}
+
+		private static void AddRoutes(HttpConfiguration cfg)
+		{
+			cfg.MapHttpAttributeRoutes(new RavenInlineConstraintResolver());
 
 			cfg.Routes.MapHttpRoute(
 				"RavenFs", "fs/{controller}/{action}",
-				new {id = RouteParameter.Optional});
+				new { id = RouteParameter.Optional });
 
 			cfg.Routes.MapHttpRoute(
 				"API Default", "{controller}/{action}",
@@ -127,18 +149,9 @@ namespace Owin
 			cfg.Routes.MapHttpRoute(
 				"Database Route", "databases/{databaseName}/{controller}/{action}",
 				new { id = RouteParameter.Optional });
-
-			cfg.MessageHandlers.Add(new ThrottlingHandler(options.SystemDatabase.Configuration.MaxConcurrentServerRequests));
-			cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
-
-			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
-			cfg.EnsureInitialized();
-			return cfg;
 		}
 
-        
-
-		private class MyAssemblyResolver : IAssembliesResolver
+		private class RavenAssemblyResolver : IAssembliesResolver
 		{
 			public ICollection<Assembly> GetAssemblies()
 			{
@@ -154,14 +167,61 @@ namespace Owin
 			{
 				var context = hostContext as IOwinContext;
 
-				if (context != null)
+                if (context != null)
 				{
-					if (context.Request.Uri.LocalPath.EndsWith("bulkInsert", StringComparison.OrdinalIgnoreCase) ||
-                        context.Request.Uri.LocalPath.EndsWith("studio-tasks/loadCsvFile", StringComparison.OrdinalIgnoreCase) ||
-						context.Request.Uri.LocalPath.EndsWith("studio-tasks/import", StringComparison.OrdinalIgnoreCase) ||
-						context.Request.Uri.LocalPath.EndsWith("replication/replicateDocs", StringComparison.OrdinalIgnoreCase) ||
-						context.Request.Uri.LocalPath.EndsWith("replication/replicateAttachments", StringComparison.OrdinalIgnoreCase))
-						return false;
+                    var pathString = context.Request.Path;
+				    if (pathString.HasValue)
+				    {
+                        var localPath = pathString.Value;
+				        var length = localPath.Length;
+				        if (length < 10)
+				            return true;
+				        var prev = localPath[length - 2];
+				        switch (localPath[length-1])
+				        {
+				            case 't':
+                            case 'T':
+				                switch (prev)
+				                {
+                                    case 'R':
+                                    case 'r':
+                                        return (
+                                            localPath.EndsWith("bulkInsert", StringComparison.OrdinalIgnoreCase) ||
+                                            localPath.EndsWith("studio-tasks/import", StringComparison.OrdinalIgnoreCase)
+                                            ) == false;
+                                    default:
+				                        return true;
+				                        
+				                }
+                            case 'e':
+                            case 'E':
+				                switch (prev)
+				                {
+                                    case 'l':
+                                    case 'L':
+                                        return localPath.EndsWith("studio-tasks/loadCsvFile", StringComparison.OrdinalIgnoreCase) == false;
+                                    default:
+				                        return true;
+				                }    
+                            case 's':
+                            case 'S':
+				                switch (prev)
+				                {
+                                    case 'T':
+                                    case 't':
+                                        return localPath.EndsWith("replication/replicateAttachments", StringComparison.OrdinalIgnoreCase) == false;
+                                    case 'o':
+                                    case 'O':
+                                        if (localPath[length - 4] == '/')
+				                        return true;
+				                        return localPath.EndsWith("replication/replicateDocs", StringComparison.OrdinalIgnoreCase) == false;
+                                    default:
+				                        return true;
+				                }
+                            default:
+				                return true;
+				        }
+				    }
 				}
 
 				return true;
@@ -169,27 +229,28 @@ namespace Owin
 
 			public bool UseBufferedOutputStream(HttpResponseMessage response)
 			{
-                var content = response.Content;
-			    var compressedContent = content as GZipToJsonAndCompressHandler.CompressedContent;
-			    if (compressedContent != null && response.StatusCode != HttpStatusCode.NoContent)
-                    return ShouldBuffer(compressedContent.OriginalContent);
-			    return ShouldBuffer(content);
+				var content = response.Content;
+				var compressedContent = content as GZipToJsonAndCompressHandler.CompressedContent;
+				if (compressedContent != null && response.StatusCode != HttpStatusCode.NoContent)
+					return ShouldBuffer(compressedContent.OriginalContent);
+				return ShouldBuffer(content);
 			}
 
-		    private bool ShouldBuffer(HttpContent content)
-		    {
-		        return (content is IEventsTransport ||
-		                content is StreamsController.StreamQueryContent ||
-		                content is StreamContent ||
-		                content is PushStreamContent ||
-		                content is JsonContent ||
-		                content is MultiGetController.MultiGetContent) == false;
-		    }
+			private bool ShouldBuffer(HttpContent content)
+			{
+				return (content is IEventsTransport ||
+						content is StreamsController.StreamQueryContent ||
+						content is StreamContent ||
+						content is PushStreamContent ||
+						content is JsonContent ||
+						content is MultiGetController.MultiGetContent) == false;
+			}
 		}
 
 		private class InterceptMiddleware : OwinMiddleware
 		{
-			public InterceptMiddleware(OwinMiddleware next) : base(next)
+			public InterceptMiddleware(OwinMiddleware next)
+				: base(next)
 			{
 			}
 

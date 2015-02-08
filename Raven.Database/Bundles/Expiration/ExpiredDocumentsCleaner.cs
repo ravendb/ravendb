@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Database;
@@ -26,7 +27,6 @@ namespace Raven.Bundles.Expiration
 	{
 		public const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
-		private Timer timer;
 		public DocumentDatabase Database { get; set; }
 
 		private volatile bool executing;
@@ -55,8 +55,8 @@ namespace Raven.Bundles.Expiration
 			var deleteFrequencyInSeconds = database.Configuration.GetConfigurationValue<int>("Raven/Expiration/DeleteFrequencySeconds") ?? 300;
 			logger.Info("Initialized expired document cleaner, will check for expired documents every {0} seconds",
 						deleteFrequencyInSeconds);
-			timer = new Timer(TimerCallback, null, TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
 
+			database.TimerManager.NewTimer(TimerCallback, TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
 		}
 
 		private void TimerCallback(object state)
@@ -68,7 +68,7 @@ namespace Raven.Bundles.Expiration
 			try
 			{
 				DateTime currentTime = SystemTime.UtcNow;
-				string nowAsStr = currentTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
+				string nowAsStr = currentTime.GetDefaultRavenFormat();
 				logger.Debug("Trying to find expired documents to delete");
 				var query = "Expiry:[* TO " + nowAsStr + "]";
 
@@ -132,8 +132,6 @@ namespace Raven.Bundles.Expiration
 		/// <filterpriority>2</filterpriority>
 		public void Dispose()
 		{
-			if (timer != null)
-				timer.Dispose();
 		}
 	}
 }

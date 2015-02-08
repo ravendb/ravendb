@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Abstractions.Indexing;
 
 namespace Raven.Client.Linq
 {
@@ -114,6 +115,10 @@ namespace Raven.Client.Linq
 		{
 			return (IRavenQueryable<TSource>)Queryable.Skip(source, count);
 		}
+        public static IRavenQueryable<TSource> Take<TSource>(this IRavenQueryable<TSource> source, int count)
+        {
+            return (IRavenQueryable<TSource>)Queryable.Take(source, count);
+        } 
 
 		/// <summary>
 		/// Implementation of the Contains ANY operator

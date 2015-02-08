@@ -32,6 +32,18 @@ namespace Raven.Abstractions.Smuggler
         {
             public string Key;
             public RavenJObject Metadata;
+
+            [JsonIgnore]
+            public bool IsTombstone
+            {
+                get 
+                {
+                    if ( Metadata.ContainsKey( Constants.RavenDeleteMarker ))
+                        return Metadata[Constants.RavenDeleteMarker].Value<bool>();
+
+                    return false;
+                }
+            }
         }
 
         public SmugglerFilesOptions Options { get; private set; }
@@ -74,13 +86,13 @@ namespace Raven.Abstractions.Smuggler
                     ReadLastEtagsFromFile(result);
                 }
 
-                result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravenfs-incremental-dump");
+                result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-0", CultureInfo.InvariantCulture) + ".ravenfs-incremental-dump");
                 if (File.Exists(result.FilePath))
                 {
                     var counter = 1;
                     while (true)
                     {
-                        result.FilePath = Path.Combine(Path.GetDirectoryName(result.FilePath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravenfs-incremental-dump");
+                        result.FilePath = Path.Combine(Path.GetDirectoryName(result.FilePath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + "-" + counter + ".ravenfs-incremental-dump");
 
                         if (File.Exists(result.FilePath) == false)
                             break;
@@ -165,6 +177,8 @@ namespace Raven.Abstractions.Smuggler
                         while (await files.MoveNextAsync())
                         {
                             var file = files.Current;
+                            if (file.IsTombstone)
+                                continue;
 
                             var tempLastEtag = file.Etag;
                             if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
@@ -328,10 +342,16 @@ namespace Raven.Abstractions.Smuggler
                         // For each entry in the metadata file.                        
                         var container = serializer.Deserialize<FileContainer>(new StringReader(json));
 
+                        var header = new FileHeader(container.Key, container.Metadata);
+                        if (header.IsTombstone)
+                            continue;
+
                         var entry = filesLookup[container.Key];
                         using (var dataStream = entry.Open())
                         {
-                            var header = new FileHeader(container.Key, container.Metadata);
+	                        if (Options.StripReplicationInformation) 
+								container.Metadata = Operations.StripReplicationInformationFromMetadata(container.Metadata);
+                                                        
                             await Operations.PutFiles(header, dataStream, entry.Length);
                         }
 
@@ -416,10 +436,15 @@ namespace Raven.Abstractions.Smuggler
                     while (await files.MoveNextAsync())
                     {
                         var file = files.Current;
+                        if (file.IsTombstone)
+                            continue; // Skip if the file has been deleted.
 
                         var tempLastEtag = file.Etag;
                         if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
                             break;
+
+						if (Options.StripReplicationInformation)
+							file.Metadata = Operations.StripReplicationInformationFromMetadata(file.Metadata);
 
                         var downloadedFile = await Operations.DownloadFile(file);
                         await Operations.PutFiles( file, downloadedFile, file.TotalSize.Value );

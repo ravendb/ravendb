@@ -1,10 +1,7 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require("viewmodels/shell");
-import database = require("models/database");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import getStatusDebugConfigCommand = require("commands/getStatusDebugConfigCommand");
 import appUrl = require("common/appUrl");
-import monitorRestoreCommand = require("commands/monitorRestoreCommand");
 import performanceTestRequest = require("models/performanceTestRequest");
 import performanceTestResultWrapped = require("models/performanceTestResultWrapped");
 import ioTestCommand = require("commands/ioTestCommand");
@@ -64,6 +61,11 @@ class ioTest extends viewModelBase {
         return deffered;
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('ZL2H8E');
+    }
+
     onIoTestCompleted(result: diskPerformanceResultWrappedDto) {
         this.testResult(new performanceTestResultWrapped(result)); 
 
@@ -112,7 +114,8 @@ class ioTest extends viewModelBase {
                     .axisLabel('ms')
                     .tickFormat(d3.format(',.2f'));
 
-                nv.utils.windowResize(function () { chart.update() });
+                $(window).on('resize.ioTest', (e) => chart.update());
+
                 return chart;
             }, (chart) => {
                 this.overTimeLatencyChart = chart;
@@ -175,7 +178,7 @@ class ioTest extends viewModelBase {
         var diskTestParams = this.ioTestRequest.toDto();
 
         require(["commands/ioTestCommand"], ioTestCommand => {
-            this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams);
+            this.lastCommand = new ioTestCommand(appUrl.getSystemDatabase(), diskTestParams); 
             this.lastCommand
                 .execute()
                 .done(() => {
@@ -187,6 +190,11 @@ class ioTest extends viewModelBase {
                 })
                 .always(() => this.isBusy(false));
         });
+    }
+
+    detached() {
+        super.detached();
+        window.onresize = null; // FIX nvd3 event attached globally
     }
 }
 

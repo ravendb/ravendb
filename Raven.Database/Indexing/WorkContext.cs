@@ -6,14 +6,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
-using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
@@ -34,6 +31,7 @@ namespace Raven.Database.Indexing
 		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.OrdinalIgnoreCase);
 
 		private readonly SizeLimitedConcurrentSet<IndexingBatchInfo> lastActualIndexingBatchInfo = new SizeLimitedConcurrentSet<IndexingBatchInfo>(25);
+		private readonly SizeLimitedConcurrentSet<ReducingBatchInfo> lastActualReducingBatchInfo = new SizeLimitedConcurrentSet<ReducingBatchInfo>(25);
 		private readonly ConcurrentQueue<IndexingError> indexingErrors = new ConcurrentQueue<IndexingError>();
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
@@ -90,6 +88,16 @@ namespace Raven.Database.Indexing
 		public IndexingError[] Errors
 		{
 			get { return indexingErrors.ToArray(); }
+		}
+
+		public int CurrentNumberOfParallelTasks
+		{
+			get
+			{
+				var currentNumberOfParallelTasks = Configuration.MaxNumberOfParallelProcessingTasks*BackgroundTaskExecuter.Instance.MaxNumberOfParallelProcessingTasksRatio;
+				var numberOfParallelTasks = Math.Min((int)currentNumberOfParallelTasks, Configuration.MaxNumberOfParallelProcessingTasks);
+				return Math.Max(numberOfParallelTasks, 1);
+			}
 		}
 
 		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
@@ -232,9 +240,23 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void AddError(int index, string indexName, string key, string error )
+		public void AddError(int index, string indexName, string key, Exception exception)
 		{
-            AddError(index, indexName, key, error, "Unknown");
+			AddError(index, indexName, key, exception, "Unknown");
+		}
+
+		public void AddError(int index, string indexName, string key, Exception exception, string component)
+		{
+			var aggregateException = exception as AggregateException;
+			if (aggregateException != null)
+				exception = aggregateException.ExtractSingleInnerException();
+
+			AddError(index, indexName, key, exception != null ? exception.Message : "Unknown message", component);
+		}
+
+		public void AddError(int index, string indexName, string key, string error)
+		{
+			AddError(index, indexName, key, error, "Unknown");
 		}
 
 		public void AddError(int index, string indexName, string key, string error, string component)
@@ -330,18 +352,38 @@ namespace Raven.Database.Indexing
 		[CLSCompliant(false)]
         public MetricsCountersManager MetricsCounters { get; private set; }
 
-		public void ReportIndexingBatchStarted(int documentsCount, long documentsSize, List<string> indexesToWorkOn, out IndexingBatchInfo indexingBatchInfo)
+		public IndexingBatchInfo ReportIndexingBatchStarted(int documentsCount, long documentsSize, List<string> indexesToWorkOn)
 		{
-			indexingBatchInfo = new IndexingBatchInfo
+			return new IndexingBatchInfo
 			{
 				IndexesToWorkOn = indexesToWorkOn,
 				TotalDocumentCount = documentsCount,
 				TotalDocumentSize = documentsSize,
 				StartedAt = SystemTime.UtcNow,
-				PerformanceStats = new ConcurrentDictionary<string, IndexingPerformanceStats>()
+				PerformanceStats = new ConcurrentDictionary<string, IndexingPerformanceStats>(),
 			};
+		}
 
-			lastActualIndexingBatchInfo.Add(indexingBatchInfo);
+		public void ReportIndexingBatchCompleted(IndexingBatchInfo batchInfo)
+		{
+			batchInfo.BatchCompleted();
+			lastActualIndexingBatchInfo.Add(batchInfo);
+		}
+
+		public ReducingBatchInfo ReportReducingBatchStarted(List<string> indexesToWorkOn)
+		{
+			return new ReducingBatchInfo
+			{
+				IndexesToWorkOn = indexesToWorkOn,
+				StartedAt = SystemTime.UtcNow,
+				PerformanceStats = new ConcurrentDictionary<string, ReducingPerformanceStats[]>()
+			};
+		}
+
+		public void ReportReducingBatchCompleted(ReducingBatchInfo batchInfo)
+		{
+			batchInfo.BatchCompleted();
+			lastActualReducingBatchInfo.Add(batchInfo);
 		}
 
 		public ConcurrentSet<FutureBatchStats> FutureBatchStats
@@ -352,6 +394,11 @@ namespace Raven.Database.Indexing
 		public SizeLimitedConcurrentSet<IndexingBatchInfo> LastActualIndexingBatchInfo
 		{
 			get { return lastActualIndexingBatchInfo; }
+		}
+
+		public SizeLimitedConcurrentSet<ReducingBatchInfo> LastActualReducingBatchInfo
+		{
+			get { return lastActualReducingBatchInfo; }
 		}
 
 		public DocumentDatabase Database { get; set; }

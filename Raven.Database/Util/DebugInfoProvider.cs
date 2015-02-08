@@ -10,8 +10,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Management;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Bundles.Replication.Utils;
@@ -38,7 +40,10 @@ namespace Raven.Database.Util
                 databaseName = Constants.SystemDatabase;
 
             var jsonSerializer = new JsonSerializer { Formatting = Formatting.Indented };
-            jsonSerializer.Converters.Add(new EtagJsonConverter());
+			foreach (var jsonConverter in Default.Converters)
+			{
+				jsonSerializer.Converters.Add(jsonConverter);
+			}
 
             if (database.StartupTasks.OfType<ReplicationTask>().Any())
             {
@@ -226,14 +231,27 @@ namespace Raven.Database.Util
 
 	    internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
 		{
-			return requestManager.GetRecentRequests(databaseName).Select(x => new
+			return requestManager.GetRecentRequests(databaseName).Select(x =>
 			{
-				Uri = x.RequestUri,
-				Method = x.HttpMethod,
-				StatusCode = x.ResponseStatusCode,
-				RequestHeaders = x.Headers.AllKeys.Select(k => new { Name = k, Values = x.Headers.GetValues(k) }),
-				ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
-				AdditionalInfo = x.CustomInfo ?? string.Empty
+				var dic = new Dictionary<String, String>();
+				foreach (var httpHeader in x.Headers.Value)
+				{
+					dic[httpHeader.Key] = httpHeader.Value.First();
+				}
+				dic.Remove("Authorization");
+				dic.Remove("Proxy-Authorization");
+				dic.Remove("WWW-Authenticate");
+				dic.Remove("Proxy-Authenticate");
+				
+				return new
+				{
+					Uri = x.RequestUri,
+					Method = x.HttpMethod,
+					StatusCode = x.ResponseStatusCode,
+					RequestHeaders = dic.Select(z=>new{Name = z.Key, Values= new[]{z.Value}}),
+					ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
+					AdditionalInfo = x.CustomInfo ?? string.Empty
+				};
 			});
 		}
 
@@ -297,13 +315,11 @@ namespace Raven.Database.Util
 		{
 			var result = new List<object>();
 
-			int group = -1;
-
 			foreach (var prefetchingBehavior in database.IndexingExecuter.PrefetchingBehaviors)
 			{
-				group++;
-
 				var prefetcherDocs = prefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
+				var futureBatches = prefetchingBehavior.DebugGetDocumentsInFutureBatches();
+
 				var compareToCollection = new Dictionary<Etag, int>();
 
 				for (int i = 1; i < prefetcherDocs.Length; i++)
@@ -313,25 +329,27 @@ namespace Raven.Database.Util
 				{
 				    result.Add(new
 				    {
-                        ForIndexingGroup = group,
+						AdditionaInfo = prefetchingBehavior.AdditionalInfo,
                         HasCorrectlyOrderedEtags = false,
                         IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
-                        EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key)
+                        EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key),
+						FutureBatches = futureBatches
 				    });
 				}
 				else
 				{
-                    var elementsToTake = Math.Min(5, prefetcherDocs.Count());
-                    var etagsWithKeysTail = Enumerable.Range(0, elementsToTake).Select(
-                        i => prefetcherDocs[prefetcherDocs.Count() - elementsToTake + i]).ToDictionary(x => x.Etag, x => x.Key);
+                    var prefetcherDocsToTake = Math.Min(5, prefetcherDocs.Count());
+                    var etagsWithKeysTail = Enumerable.Range(0, prefetcherDocsToTake).Select(
+                        i => prefetcherDocs[prefetcherDocs.Count() - prefetcherDocsToTake + i]).ToDictionary(x => x.Etag, x => x.Key);
 
                     result.Add(new
                     {
-                        ForIndexingGroup = group,
+                        AdditionaInfo = prefetchingBehavior.AdditionalInfo,
                         HasCorrectlyOrderedEtags = true,
                         EtagsWithKeysHead = prefetcherDocs.Take(5).ToDictionary(x => x.Etag, x => x.Key),
                         EtagsWithKeysTail = etagsWithKeysTail,
-                        EtagsWithKeysCount = prefetcherDocs.Count()
+                        EtagsWithKeysCount = prefetcherDocs.Count(),
+						FutureBatches = futureBatches
                     });
 				}
 			}

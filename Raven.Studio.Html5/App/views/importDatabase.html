@@ -14,7 +14,7 @@
             </span>
             <br />
             <br />
-            <p data-bind="text: importStatus"></p>
+            <p data-bind="text: importStatus, visible: $root.isUploading || isImporting()"></p>
             <br />
             <div class="progress progress-striped active" data-bind="visible: isImporting">
                 <div class="progress-bar" role="progressbar" style="width: 100%"></div>
@@ -48,6 +48,15 @@
                     <label class="col-sm-2 control-label">Batch size</label>
                     <div class="col-sm-2">
                         <input class="form-control" type="number" min="0" data-bind="value: batchSize" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-5">
+                        <div class="checkbox">
+                            <label>
+                                <input type="checkbox" data-bind="checked: stripReplicationInformation"> Strip replication information
+                            </label>
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">

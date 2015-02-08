@@ -94,6 +94,7 @@ namespace Raven.Client.Document
 			ShouldAggressiveCacheTrackChanges = true;
 			ShouldSaveChangesForceAggressiveCacheCheck = true;
 			IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
+			AcceptGzipContent = true;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
@@ -538,7 +539,7 @@ namespace Raven.Client.Document
 			var jsonSerializer = new JsonSerializer
 			{
 				DateParseHandling = DateParseHandling.None,
-				ObjectCreationHandling = ObjectCreationHandling.Replace,
+				ObjectCreationHandling = ObjectCreationHandling.Auto,
 				ContractResolver = JsonContractResolver,
 				TypeNameHandling = TypeNameHandling.Auto,
 				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
@@ -553,7 +554,8 @@ namespace Raven.Client.Document
 						new JsonNumericConverter<double>(double.TryParse),
 						new JsonNumericConverter<short>(short.TryParse),
 						new JsonMultiDimensionalArrayConverter(),
-						new JsonDynamicConverter()
+						new JsonDynamicConverter(),
+						new JsonLinqEnumerableConverter()
 					}
 			};
 
@@ -645,6 +647,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		public bool PreserveDocumentPropertiesNotFoundOnModel { get; set; }
 
+		public bool AcceptGzipContent { get; set; }
+
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 
 		private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
@@ -692,6 +696,16 @@ namespace Raven.Client.Document
 			return false;
 		}
 
+		internal SortOptions? GetDefaultSortOption(Type type)
+		{
+			if (type == null)
+				return null;
+
+			var nonNullableType = (Nullable.GetUnderlyingType(type) ?? type);
+
+			return GetDefaultSortOption(nonNullableType.Name);
+		}
+
 		public SortOptions GetDefaultSortOption(string typeName)
 		{
 			switch (typeName)
@@ -711,10 +725,10 @@ namespace Raven.Client.Document
 				case "String":
 					return SortOptions.String;
 				default:
-			        SortOptions value;
-			        return customDefaultSortOptions.TryGetValue(typeName, out value)
-						       ? value
-						       : SortOptions.String;
+					SortOptions value;
+					return customDefaultSortOptions.TryGetValue(typeName, out value)
+							   ? value
+							   : SortOptions.String;
 			}
 		}
 

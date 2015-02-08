@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Globalization;
+using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Abstractions.Data
 {
@@ -28,46 +30,45 @@ namespace Raven.Abstractions.Data
 		private RavenJObject metadata;
 
 		/// <summary>
-		/// Gets or sets the document data as json.
+		/// Document data or projection as json.
 		/// </summary>
-		/// <value>The data as json.</value>
 		public RavenJObject DataAsJson
 		{
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get { return dataAsJson ?? (dataAsJson = new RavenJObject()); }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			set { dataAsJson = value; }
 		}
 
 		/// <summary>
-		/// Gets or sets the metadata for the document
-		/// </summary>
-		/// <value>The metadata.</value>
-		public RavenJObject Metadata
+		/// Metadata for the document
+		/// </summary>		
+        public RavenJObject Metadata
 		{
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get { return metadata ?? (metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase)); }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			set { metadata = value; }
 		}
 
 		/// <summary>
-		/// Gets or sets the key for the document
+		/// Key for the document
 		/// </summary>
-		/// <value>The key.</value>
 		public string Key { get; set; }
 
 		/// <summary>
-		/// Gets or sets a value indicating whether this document is non authoritative (modified by uncommitted transaction).
+		/// Indicates whether this document is non authoritative (modified by uncommitted transaction).
 		/// </summary>
 		public bool? NonAuthoritativeInformation { get; set; }
 
 		/// <summary>
-		/// Gets or sets the etag.
+		/// Current document etag.
 		/// </summary>
-		/// <value>The etag.</value>
 		public Etag Etag { get; set; }
 
 		/// <summary>
-		/// Gets or sets the last modified date for the document
+		/// Last modified date for the document
 		/// </summary>
-		/// <value>The last modified.</value>
 		public DateTime? LastModified { get; set; }
 
 		/// <summary>
@@ -90,7 +91,6 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Translate the json document to a <see cref = "RavenJObject" />
 		/// </summary>
-		/// <returns></returns>
 		public RavenJObject ToJson()
 		{
 			DataAsJson.EnsureCannotBeChangeAndEnableSnapshotting();
@@ -102,7 +102,7 @@ namespace Raven.Abstractions.Data
 			if (LastModified != null)
 			{
 				metadata[Constants.LastModified] = LastModified.Value;
-				metadata[Constants.RavenLastModified] = LastModified.Value.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
+                metadata[Constants.RavenLastModified] = LastModified.Value.GetDefaultRavenFormat();
 			}
 			if (Etag != null)
 				metadata["@etag"] = Etag.ToString();
@@ -119,5 +119,18 @@ namespace Raven.Abstractions.Data
 		{
 			return Key;
 		}
+
+        public static void EnsureIdInMetadata(IJsonDocumentMetadata doc)
+        {
+            if (doc == null || doc.Metadata == null)
+                return;
+
+            if (doc.Metadata.IsSnapshot)
+            {
+                doc.Metadata = (RavenJObject)doc.Metadata.CreateSnapshot();
+            }
+
+            doc.Metadata["@id"] = doc.Key;
+        }
 	}
 }

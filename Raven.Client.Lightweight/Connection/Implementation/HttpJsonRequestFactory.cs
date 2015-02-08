@@ -47,7 +47,9 @@ namespace Raven.Client.Connection
 
 		internal readonly HttpMessageHandler httpMessageHandler;
 
-	    private SimpleCache cache;
+		internal readonly bool acceptGzipContent;
+
+		private SimpleCache cache;
 
 		internal int NumOfCachedRequests;
 
@@ -62,14 +64,14 @@ namespace Raven.Client.Connection
 			if (RequestTimeout != null)
 				createHttpJsonRequestParams.Timeout = RequestTimeout.Value;
 
-			var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
+            var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
 			{
 				ShouldCacheRequest =
 					createHttpJsonRequestParams.AvoidCachingRequest == false && 
 					createHttpJsonRequestParams.Convention.ShouldCacheRequest(createHttpJsonRequestParams.Url)
 			};
 
-			if (request.ShouldCacheRequest && createHttpJsonRequestParams.Method == "GET" && !DisableHttpCaching)
+			if (request.ShouldCacheRequest && !DisableHttpCaching)
 			{
 				var cachedRequestDetails = ConfigureCaching(createHttpJsonRequestParams.Url, request.AddHeader);
 				request.CachedRequestDetails = cachedRequestDetails.CachedRequest;
@@ -157,10 +159,11 @@ namespace Raven.Client.Connection
 		/// default ctor
 		/// </summary>
 		/// <param name="maxNumberOfCachedRequests"></param>
-		public HttpJsonRequestFactory(int maxNumberOfCachedRequests, HttpMessageHandler httpMessageHandler = null)
+		public HttpJsonRequestFactory(int maxNumberOfCachedRequests, HttpMessageHandler httpMessageHandler = null, bool acceptGzipContent = true)
 		{
 			this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
 			this.httpMessageHandler = httpMessageHandler;
+			this.acceptGzipContent = acceptGzipContent;
 			httpClientCache = new HttpClientCache();
 
 		    ResetCache();

@@ -25,15 +25,14 @@ namespace Raven.Database.Plugins.Builtins
 		   out ulong lpTotalNumberOfBytes,
 		   out ulong lpTotalNumberOfFreeBytes);
 
-		private Timer checkTimer;
 		private RavenDbServer server;
 
 		const double FreeThreshold = 0.15;
 
-		public void Execute(RavenDbServer server)
+		public void Execute(RavenDbServer ravenDbServer)
 		{
-			this.server = server;
-			checkTimer = new Timer(ExecuteCheck, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(30));
+			server = ravenDbServer;
+			server.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(30));
 		}
 
 		private void ExecuteCheck(object state)
@@ -49,7 +48,8 @@ namespace Raven.Database.Plugins.Builtins
 			server.Options.DatabaseLandlord.ForAllDatabases(database =>
 			{
 				pathsToCheck.Add(database.Configuration.IndexStoragePath);
-				pathsToCheck.Add(database.Configuration.JournalsStoragePath);
+				pathsToCheck.Add(database.Configuration.Storage.Esent.JournalsStoragePath);
+				pathsToCheck.Add(database.Configuration.Storage.Voron.JournalsStoragePath);
 				pathsToCheck.Add(database.Configuration.DataDirectory);
 			});
 
@@ -57,7 +57,8 @@ namespace Raven.Database.Plugins.Builtins
 			{
 				pathsToCheck.Add(filesystem.Configuration.FileSystem.DataDirectory);
 				pathsToCheck.Add(filesystem.Configuration.FileSystem.IndexStoragePath);
-				pathsToCheck.Add(filesystem.Configuration.JournalsStoragePath);
+				pathsToCheck.Add(filesystem.Configuration.Storage.Esent.JournalsStoragePath);
+				pathsToCheck.Add(filesystem.Configuration.Storage.Voron.JournalsStoragePath);
 			});
 
 			var roots = pathsToCheck.Where(path => path != null && Path.IsPathRooted(path) && path.StartsWith("\\\\") == false).Select(Path.GetPathRoot).ToList();
@@ -103,8 +104,6 @@ namespace Raven.Database.Plugins.Builtins
 
 		public void Dispose()
 		{
-			if (checkTimer != null)
-				checkTimer.Dispose();
 		}
 	}
 }

@@ -42,34 +42,33 @@ namespace Raven.Abstractions.Data
 		public bool IsDistinct { get; set; }
 
 		/// <summary>
-		/// Gets or sets the query.
+		/// Actual query that will be performed (Lucene syntax).
 		/// </summary>
-		/// <value>The query.</value>
 		public string Query { get; set; }
 
 		/// <summary>
-		/// Gets or sets the total size.
+		/// For internal use only.
 		/// </summary>
-		/// <value>The total size.</value>
 		public Reference<int> TotalSize { get; private set; }
 
+		/// <summary>
+		/// For internal use only.
+		/// </summary>
 		public Dictionary<string, SortOptions> SortHints { get; set; } 
 
         /// <summary>
-        /// Additional query inputs
+        /// Parameters that will be passed to transformer (if specified).
         /// </summary>
         public Dictionary<string, RavenJToken> TransformerParameters { get; set; }
 
 		/// <summary>
-		/// Gets or sets the start of records to read.
+		/// Number of records that should be skipped.
 		/// </summary>
-		/// <value>The start.</value>
 		public int Start { get; set; }
 
 		/// <summary>
-		/// Gets or sets the size of the page.
+		/// Maximum number of records that will be retrieved.
 		/// </summary>
-		/// <value>The size of the page.</value>
 		public int PageSize
 		{
 			get { return pageSize; }
@@ -81,101 +80,102 @@ namespace Raven.Abstractions.Data
 		}
 
 		/// <summary>
-		/// Gets or sets the fields to fetch.
+		/// Array of fields that will be fetched.
+		/// <para>Fetch order:</para>
+		/// <para>1. Stored index fields</para>
+		/// <para>2. Document</para>
 		/// </summary>
-		/// <value>The fields to fetch.</value>
 		public string[] FieldsToFetch { get; set; }
 
 		/// <summary>
-		/// Gets or sets the fields to sort by
+		/// Array of fields containing sorting information.
 		/// </summary>
-		/// <value>The sorted fields.</value>
 		public SortedField[] SortedFields { get; set; }
 
 		/// <summary>
-		/// Gets or sets the cutoff date
+		/// Used to calculate index staleness. Index will be considered stale if modification date of last indexed document is greater than this value.
 		/// </summary>
-		/// <value>The cutoff.</value>
 		public DateTime? Cutoff { get; set; }
 
 		/// <summary>
-		/// Get or sets the WaitForNonStaleResultsAsOfNow
+		/// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
 		/// </summary>
 		public bool WaitForNonStaleResultsAsOfNow { get; set; }
-
 		
 		/// <summary>
-		/// Get or sets the WaitForNonStaleResults
+		/// CAUTION. Used by IDocumentSession ONLY. It will have NO effect if used with IDatabaseCommands or IAsyncDatabaseCommands.
 		/// </summary>
 		public bool WaitForNonStaleResults { get; set; }
 
 		/// <summary>
-		/// Gets or sets the cutoff etag
+		/// Gets or sets the cutoff etag.
+		/// <para>Cutoff etag is used to check if the index has already process a document with the given</para>
+		/// <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
+		/// <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
+		/// <para>can work without it.</para>
+		/// <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
+		/// <para>etag belong to is actually considered for the results. </para>
+		/// <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
+		/// <para>Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is </para>
+		/// <para>considered to be an acceptable tradeoff.</para>
+		/// <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
+		/// <para>use the Cutoff date option, instead.</para>
 		/// </summary>
-		/// <remarks>
-		/// Cutoff etag is used to check if the index has already process a document with the given
-		/// etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between
-		/// machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and 
-		/// can work without it.
-		/// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this
-		/// etag belong to is actually considered for the results. 
-		/// What it does it guarantee that the document has been mapped, but not that the mapped values has been reduce. 
-		/// Since map/reduce queries, by their nature,tend to be far less susceptible to issues with staleness, this is 
-		/// considered to be an acceptable tradeoff.
-		/// If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and 
-		/// use the Cutoff date option, instead.
-		/// </remarks>
 		public Etag CutoffEtag { get; set; }
 
 		/// <summary>
-		/// The default field to use when querying directly on the Lucene query
+		/// Default field to use when querying directly on the Lucene query
 		/// </summary>
 		public string DefaultField { get; set; }
 
 		/// <summary>
 		/// Changes the default operator mode we use for queries.
-		/// When set to Or a query such as 'Name:John Age:18' will be interpreted as:
-		///  Name:John OR Age:18
-		/// When set to And the query will be interpreted as:
-		///	 Name:John AND Age:18
+		/// <para>When set to Or a query such as 'Name:John Age:18' will be interpreted as:</para>
+		/// <para> Name:John OR Age:18</para>
+		/// <para>When set to And the query will be interpreted as:</para>
+		///	<para> Name:John AND Age:18</para>
 		/// </summary>
 		public QueryOperator DefaultOperator { get; set; }
 
 		/// <summary>
-        /// If set to true, this property will send multiple index entries from the same document (assuming the index project them)
-        /// to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be 
-        /// called just once for each document in the result set
+        /// If set to <c>true</c>, this property will send multiple index entries from the same document (assuming the index project them)
+		/// <para>to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be </para>
+		/// <para>called just once for each document in the result set</para>
 		/// </summary>
         public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
 
 		/// <summary>
-		/// Gets or sets the number of skipped results.
+		/// For internal use only.
 		/// </summary>
-		/// <value>The skipped results.</value>
 		public Reference<int> SkippedResults { get; set; }
 
 		/// <summary>
-		/// Whatever we should get the raw index queries
+		/// Whatever we should get the raw index entries.
 		/// </summary>
 		public bool DebugOptionGetIndexEntries { get; set; }
 
         /// <summary>
-        /// Gets or sets the options to highlight the fields
+        /// Array of fields containing highlighting information.
         /// </summary>
         public HighlightedField[] HighlightedFields { get; set; }
 
         /// <summary>
-        /// Gets or sets the highlighter pre tags
+        /// Array of highlighter pre tags that will be applied to highlighting results.
         /// </summary>
 	    public string[] HighlighterPreTags { get; set; }
 
         /// <summary>
-        /// Gets or sets the highlighter post tags
+		/// Array of highlighter post tags that will be applied to highlighting results.
         /// </summary>
 	    public string[] HighlighterPostTags { get; set; }
 
         /// <summary>
-        /// Gets or sets the results transformer
+        /// Highligter key name.
+        /// </summary>
+	    public string HighlighterKeyName { get; set; }
+
+        /// <summary>
+        /// Name of transformer to use on query results.
         /// </summary>
 	    public string ResultsTransformer { get; set; }
 
@@ -258,6 +258,7 @@ namespace Raven.Abstractions.Data
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
 				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
+			SortHints.ApplyIfNotNull(hint => path.AppendFormat("&SortHint{2}{0}={1}", Uri.EscapeDataString(hint.Key), hint.Value, hint.Key.StartsWith("-") ? string.Empty : "-"));
 
             if (string.IsNullOrEmpty(ResultsTransformer) == false)
             {
@@ -289,6 +290,11 @@ namespace Raven.Abstractions.Data
 		    HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
             HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
             HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
+
+			if (string.IsNullOrEmpty(HighlighterKeyName) == false)
+			{
+				path.AppendFormat("&highlighterKeyName={0}", Uri.EscapeDataString(HighlighterKeyName));
+			}
 
 			if(DebugOptionGetIndexEntries)
 				path.Append("&debug=entries");
@@ -348,7 +354,8 @@ namespace Raven.Abstractions.Data
                    Start == other.Start && 
                    Equals(IsDistinct, other.IsDistinct) && 
                    Equals(FieldsToFetch, other.FieldsToFetch) && 
-                   Equals(SortedFields, other.SortedFields) && 
+                   Equals(SortedFields, other.SortedFields) &&
+				   Equals(SortHints, other.SortHints) && 
                    Cutoff.Equals(other.Cutoff) && 
 				   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
 				   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
@@ -359,7 +366,8 @@ namespace Raven.Abstractions.Data
                    DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) && 
                    Equals(HighlightedFields, other.HighlightedFields) && 
                    Equals(HighlighterPreTags, other.HighlighterPreTags) && 
-                   Equals(HighlighterPostTags, other.HighlighterPostTags) && 
+                   Equals(HighlighterPostTags, other.HighlighterPostTags) &&
+				   Equals(HighlighterKeyName, other.HighlighterKeyName) && 
                    String.Equals(ResultsTransformer, other.ResultsTransformer) && 
 				   ShowTimings == other.ShowTimings &&
                    DisableCaching.Equals(other.DisableCaching);
@@ -384,6 +392,7 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (SortedFields != null ? SortedFields.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (SortHints != null ? SortHints.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Cutoff.GetHashCode();
                 hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
@@ -394,6 +403,7 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (HighlightedFields != null ? HighlightedFields.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPreTags != null ? HighlighterPreTags.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPostTags != null ? HighlighterPostTags.GetHashCode() : 0);
+				hashCode = (hashCode * 397) ^ (HighlighterKeyName != null ? HighlighterKeyName.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (ResultsTransformer != null ? ResultsTransformer.GetHashCode() : 0);
 				hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
                 hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();

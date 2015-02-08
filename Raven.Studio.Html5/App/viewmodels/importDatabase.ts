@@ -11,6 +11,7 @@ class importDatabase extends viewModelBase {
     filters = ko.observableArray<filterSettingDto>();
     batchSize = ko.observable(1024);
     includeExpiredDocuments = ko.observable(true);
+    stripReplicationInformation = ko.observable(false);
     transformScript = ko.observable<string>();
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
@@ -33,6 +34,7 @@ class importDatabase extends viewModelBase {
             trigger: 'hover',
             content: 'Transform scripts are written in JavaScript. <br /><br/>Example:<pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br /><span class="code-keyword">if</span> (company) {<br />&nbsp;&nbsp;&nbsp;company.Orders = { <br /> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Count: <span class="code-keyword">this</span>.Count,<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Total: <span class="code-keyword">this</span>.Total<br />&nbsp;&nbsp;&nbsp;}<br /><br />&nbsp;&nbsp;&nbsp;PutDocument(<span class="code-keyword">this</span>.Company, company);<br />}</pre>',
         });
+        this.updateHelpLink('YD9M1R');
     }
 
     canDeactivate(isClose) {
@@ -113,7 +115,7 @@ class importDatabase extends viewModelBase {
             importItemTypes.push(ImportItemType.RemoveAnalyzers);
         }
                 
-        new importDatabaseCommand(formData, this.batchSize(), this.includeExpiredDocuments(), importItemTypes, this.filters(), this.transformScript(), this.activeDatabase())
+        new importDatabaseCommand(formData, this.batchSize(), this.includeExpiredDocuments(), this.stripReplicationInformation(), importItemTypes, this.filters(), this.transformScript(), this.activeDatabase())
             .execute()
             .done((result: operationIdDto) => {
                 var operationId = result.OperationId;
@@ -147,7 +149,7 @@ class importDatabase extends viewModelBase {
             if (!!result.LastProgress) {
                 db.importStatus("Processing uploaded file, " + result.LastProgress.toLocaleLowerCase());
             }
-            setTimeout(() => this.waitForOperationToComplete(db, operationId), 500);
+            setTimeout(() => this.waitForOperationToComplete(db, operationId), 1000);
         }
     }
 }

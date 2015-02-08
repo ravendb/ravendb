@@ -32,10 +32,10 @@ namespace Raven.Abstractions.Data
 		}
 
 		/// <summary>
-		/// Gets or sets the field.
+		/// Index field name for sorting.
 		/// </summary>
-		/// <value>The field.</value>
 		public string Field { get; set; }
+
 		/// <summary>
 		/// Gets or sets a value indicating whether this <see cref="SortedField"/> is descending.
 		/// </summary>

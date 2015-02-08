@@ -4,12 +4,17 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
+using Raven.Database.Plugins;
+using Raven.Database.Server.WebApi.Attributes;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -29,21 +34,70 @@ namespace Raven.Database.FileSystem.Controllers
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/files")]
+        [RavenRoute("fs/{fileSystemName}/files")]
         public HttpResponseMessage Get()
 		{
-            int results;
-            var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
+			var list = new List<FileHeader>();
 
-            var list = new List<FileHeader>();
-            Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
+			var startsWith = GetQueryStringValue("startsWith");
+			if (string.IsNullOrEmpty(startsWith) == false)
+			{
+				var matches = GetQueryStringValue("matches");
 
-            return this.GetMessageWithObject(list, HttpStatusCode.OK)
-                       .WithNoCache();
+				var endsWithSlash = startsWith.EndsWith("/") || startsWith.EndsWith("\\");
+				startsWith = FileHeader.Canonize(startsWith);
+				if (endsWithSlash) 
+					startsWith += "/";
+
+				Storage.Batch(accessor =>
+				{
+					var actualStart = 0;
+					var filesToSkip = Paging.Start;
+					int fileCount, matchedFiles = 0, addedFiles = 0;
+
+					do
+					{
+						fileCount = 0;
+						
+						foreach (var file in accessor.GetFilesStartingWith(startsWith, actualStart, Paging.PageSize))
+						{
+							fileCount++;
+
+							var keyTest = file.FullPath.Substring(startsWith.Length);
+
+							if (WildcardMatcher.Matches(matches, keyTest) == false)
+								continue;
+
+                            if (FileSystem.ReadTriggers.CanReadFile(FileHeader.Canonize(file.FullPath), file.Metadata, ReadOperation.Load) == false) 
+                                continue;
+
+							matchedFiles++;
+
+							if (matchedFiles <= filesToSkip)
+								continue;
+
+							list.Add(file);
+							addedFiles++;
+						}
+
+						actualStart += Paging.PageSize;
+					}
+					while (fileCount > 0 && addedFiles < Paging.PageSize && actualStart > 0 && actualStart < int.MaxValue);
+				});
+			}
+			else
+			{
+				int results;
+				var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
+				Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
+			}
+
+			return GetMessageWithObject(list)
+				.WithNoCache();
 		}
 
 		[HttpGet]
-        [Route("fs/{fileSystemName}/files/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files/{*name}")]
         public HttpResponseMessage Get(string name)
 		{
             name = FileHeader.Canonize(name);
@@ -79,7 +133,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpDelete]
-        [Route("fs/{fileSystemName}/files/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Delete(string name)
 		{
             name = FileHeader.Canonize(name);
@@ -140,7 +194,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpHead]
-        [Route("fs/{fileSystemName}/files/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Head(string name)
 		{
             name = FileHeader.Canonize(name);
@@ -172,7 +226,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
         [HttpGet]
-        [Route("fs/{fileSystemName}/files/metadata")]
+        [RavenRoute("fs/{fileSystemName}/files/metadata")]
         public HttpResponseMessage Metadata([FromUri] string[] fileNames)
         {
             if (fileNames == null || fileNames.Length == 0)
@@ -191,12 +245,12 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
 		[HttpPost]
-        [Route("fs/{fileSystemName}/files/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Post(string name)
 		{
             name = FileHeader.Canonize(name);
 
-            var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
+            var headers = this.GetFilteredMetadataFromHeaders(ReadInnerHeaders);
 
             Historian.UpdateLastModified(headers);
             Historian.Update(name, headers);
@@ -229,7 +283,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPatch]
-        [Route("fs/{fileSystemName}/files/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Patch(string name, string rename)
 		{
             name = FileHeader.Canonize(name);
@@ -286,7 +340,7 @@ namespace Raven.Database.FileSystem.Controllers
 		}
 
 		[HttpPut]
-        [Route("fs/{fileSystemName}/files/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files/{*name}")]
 		public async Task<HttpResponseMessage> Put(string name, string uploadId = null, bool preserveTimestamps = false)
 		{                     
 			try
@@ -295,7 +349,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                 name = FileHeader.Canonize(name);
 
-                var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
+                var headers = this.GetFilteredMetadataFromHeaders(ReadInnerHeaders);
                 if (preserveTimestamps)
                 {
                     if (!headers.ContainsKey(Constants.RavenCreationDate))
@@ -306,10 +360,11 @@ namespace Raven.Database.FileSystem.Controllers
                             throw new InvalidOperationException("Preserve Timestamps requires that the client includes the Raven-Creation-Date header.");
                     }
 
-                    if ( InnerHeaders.Contains(Constants.RavenLastModified))
+                    var lastModified = GetHeader(Constants.RavenLastModified);
+                    if ( lastModified != null)
                     {
                         DateTimeOffset when;
-                        if (!DateTimeOffset.TryParse(InnerHeaders.GetValues(Constants.RavenLastModified).First(), out when))
+                        if (!DateTimeOffset.TryParse(lastModified, out when))
                             when = DateTimeOffset.UtcNow;
 
                         Historian.UpdateLastModified(headers, when);
@@ -333,8 +388,8 @@ namespace Raven.Database.FileSystem.Controllers
                 long? size = -1;
                 ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor =>
                 {
+					AssertPutOperationNotVetoed(name, headers);
                     AssertFileIsNotBeingSynced(name, accessor, true);
-                    StorageOperationsTask.IndicateFileToDelete(name);
 
                     var contentLength = Request.Content.Headers.ContentLength;
                     var sizeHeader = GetHeader("RavenFS-size");
@@ -353,7 +408,16 @@ namespace Raven.Database.FileSystem.Controllers
                         size = sizeForParse;
                     }
 
+					FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(name, headers));
+
+	                using (FileSystem.DisableAllTriggersForCurrentThread())
+	                {
+						StorageOperationsTask.IndicateFileToDelete(name);
+	                }
+
                     accessor.PutFile(name, size, headers);
+
+					FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(name, size, headers));
 
                     Search.Index(name, headers);                  
                 }));
@@ -361,13 +425,13 @@ namespace Raven.Database.FileSystem.Controllers
                 log.Debug("Inserted a new file '{0}' with ETag {1}", name, headers.Value<Guid>(Constants.MetadataEtagField));
 
                 using (var contentStream = await Request.Content.ReadAsStreamAsync())
-                using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, contentStream, name))
+                using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, FileSystem.PutTriggers, contentStream, name, headers))
                 {
                     await readFileToDatabase.Execute();                
    
-                    if ( readFileToDatabase.TotalSizeRead != size )
+                    if (readFileToDatabase.TotalSizeRead != size)
                     {
-                        Storage.Batch(accessor => StorageOperationsTask.IndicateFileToDelete(name));
+                        StorageOperationsTask.IndicateFileToDelete(name);
                         throw new HttpResponseException(HttpStatusCode.BadRequest);
                     }                        
 
@@ -413,10 +477,21 @@ namespace Raven.Database.FileSystem.Controllers
 				throw;
 			}
 
-            return GetEmptyMessage(HttpStatusCode.Created);
+			return GetEmptyMessage(HttpStatusCode.Created);
 		}
 
-		private void StartSynchronizeDestinationsInBackground()
+	    private void AssertPutOperationNotVetoed(string name, RavenJObject headers)
+	    {
+			var vetoResult = FileSystem.PutTriggers
+				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(name, headers) })
+				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+		    if (vetoResult != null)
+		    {
+			    throw new OperationVetoedException("PUT vetoed on file " + name + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+		    }
+	    }
+
+	    private void StartSynchronizeDestinationsInBackground()
 		{
 			Task.Factory.StartNew(async () => await SynchronizationTask.SynchronizeDestinationsAsync(), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
 		}
@@ -426,18 +501,26 @@ namespace Raven.Database.FileSystem.Controllers
 			private readonly byte[] buffer;
 			private readonly BufferPool bufferPool;
 			private readonly string filename;
+
+			private readonly RavenJObject headers;
+
 			private readonly Stream inputStream;
 			private readonly ITransactionalStorage storage;
+
+			private readonly OrderedPartCollection<AbstractFilePutTrigger> putTriggers;
+
 			private readonly IHashEncryptor md5Hasher;
 			public int TotalSizeRead;
 			private int pos;
 
-			public ReadFileToDatabase(BufferPool bufferPool, ITransactionalStorage storage, Stream inputStream, string filename)
+			public ReadFileToDatabase(BufferPool bufferPool, ITransactionalStorage storage, OrderedPartCollection<AbstractFilePutTrigger> putTriggers, Stream inputStream, string filename, RavenJObject headers)
 			{
 				this.bufferPool = bufferPool;
 				this.inputStream = inputStream;
 				this.storage = storage;
+				this.putTriggers = putTriggers;
 				this.filename = filename;
+				this.headers = headers;
 				buffer = bufferPool.TakeBuffer(StorageConstants.MaxPageSize);
 			    md5Hasher = Encryptor.Current.CreateHash();
 			}
@@ -453,24 +536,30 @@ namespace Raven.Database.FileSystem.Controllers
 			{
 				while (true)
 				{
-					var totalSizeRead = await inputStream.ReadAsync(buffer);
+					var read = await inputStream.ReadAsync(buffer);
 
-					TotalSizeRead += totalSizeRead;
+					TotalSizeRead += read;
 
-					if (totalSizeRead == 0) // nothing left to read
+					if (read == 0) // nothing left to read
 					{
-						storage.Batch(accessor => accessor.CompleteFileUpload(filename));
-					    FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
+						FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
+						headers["Content-MD5"] = FileHash;
+						storage.Batch(accessor =>
+						{
+							accessor.CompleteFileUpload(filename);
+							putTriggers.Apply(trigger => trigger.AfterUpload(filename, headers));
+						});
 						return; // task is done
 					}
 
 					ConcurrencyAwareExecutor.Execute(() => storage.Batch(accessor =>
 					{
-						var hashKey = accessor.InsertPage(buffer, totalSizeRead);
-						accessor.AssociatePage(filename, hashKey, pos, totalSizeRead);
+						var hashKey = accessor.InsertPage(buffer, read);
+						accessor.AssociatePage(filename, hashKey, pos, read);
+						putTriggers.Apply(trigger => trigger.OnUpload(filename, headers, hashKey, pos, read));
 					}));
 
-					md5Hasher.TransformBlock(buffer, 0, totalSizeRead);
+					md5Hasher.TransformBlock(buffer, 0, read);
 
 					pos++;
 				}

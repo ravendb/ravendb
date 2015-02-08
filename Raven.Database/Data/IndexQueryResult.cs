@@ -12,10 +12,12 @@ namespace Raven.Database.Data
 	public class IndexQueryResult : IEquatable<IndexQueryResult>
 	{
 		public string Key { get; set; }
+		public string ReduceVal { get; set; }
 		public RavenJObject Projection { get; set; }
 
 		public float Score { get; set; }
 	    public Dictionary<string, string[]> Highligtings { get; set; }
+		public string HighlighterKey { get; set; }
 		public string ScoreExplanation { get; set; }
 
 		public bool Equals(IndexQueryResult other)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Lucene.Net.Index;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using System.Linq;
@@ -97,6 +98,18 @@ namespace Raven.Database.Queries
 						if (abstractViewGenerator == null) // there is no matching view generator
 						{
 							explain(indexName, () => "There is no matching view generator. Maybe the index in the process of being deleted?");
+							return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
+						}
+
+						if (indexDefinitionKvp.Value == null)
+						{
+							explain(indexName, () => "Index id " + indexDefinitionKvp.Key + " is null, probably bad upgrade?");
+							return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
+						}
+
+						if (indexDefinitionKvp.Value.IsTestIndex)
+						{
+							explain(indexName, () => "Cannot select a test index for dynamic query");
 							return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
 						}
 
@@ -217,7 +230,8 @@ namespace Raven.Database.Queries
 								var normalizedFieldName = DynamicQueryMapping.ReplaceInvalidCharactersForFields(sortedField.Field);
 							    if (normalizedFieldName.EndsWith("_Range"))
 							        normalizedFieldName = normalizedFieldName.Substring(0, normalizedFieldName.Length - "_Range".Length);
-							    if (normalizedFieldName.StartsWith(Constants.RandomFieldName))
+							    if (normalizedFieldName.StartsWith(Constants.RandomFieldName) ||
+									normalizedFieldName.StartsWith(Constants.CustomSortFieldName))
 							        continue; // virtual field that we don't sort by
 
 							    // if the field is not in the output, then we can't sort on it. 

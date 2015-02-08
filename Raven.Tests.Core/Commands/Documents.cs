@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -17,10 +19,30 @@ namespace Raven.Tests.Core.Commands
 {
     public class Documents : RavenCoreTestBase
     {
+	    [Fact]
+	    public void CanCancelPutDocument()
+	    {
+		    var random = new Random();
+		    var largeArray = new byte[1024*1024*2]; 
+			//2mb - document large enough for PUT to take a while, so
+			//we will be able to cancel the operation BEFORE the PUT completes
+			random.NextBytes(largeArray);
+			var largeDocument = new { Data = largeArray };
+
+		    var cts = new CancellationTokenSource();
+		    using (var store = GetDocumentStore())
+		    {
+			    var ravenJObject = RavenJObject.FromObject(largeDocument);
+				cts.Cancel();
+				var putTask = store.AsyncDatabaseCommands.PutAsync("test/1", null, ravenJObject, new RavenJObject(), cts.Token);								
+				Assert.True(putTask.IsCanceled);
+		    }
+	    }
+		
         [Fact]
         public async Task CanPutGetUpdateAndDeleteDocument()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(databaseName: "CanPutGetUpdateAndDeleteDocument1"))
             {
                 var putResult = await store.AsyncDatabaseCommands.PutAsync(
                     "companies/1",
@@ -45,6 +67,7 @@ namespace Raven.Tests.Core.Commands
                 var documents = await store.AsyncDatabaseCommands.GetDocumentsAsync(0, 25);
                 Assert.Equal(2, documents.Length);
 
+                WaitForUserToContinueTheTest(store);
                 var metadata = await store.AsyncDatabaseCommands.HeadAsync("companies/1");
                 RavenJToken value = null;
                 Assert.NotNull(metadata);
@@ -54,7 +77,7 @@ namespace Raven.Tests.Core.Commands
                 await store.AsyncDatabaseCommands.DeleteAsync("companies/1", putResult.ETag);
                 Assert.Null(await store.AsyncDatabaseCommands.GetAsync("companies/1"));
 
-                await store.AsyncDatabaseCommands.DeleteDocumentAsync("users/2");
+                await store.AsyncDatabaseCommands.DeleteAsync("users/2", null);
                 Assert.Null(await store.AsyncDatabaseCommands.GetAsync("users/2"));
             }
         }

@@ -1,5 +1,9 @@
 ﻿<div class="panel panel-default form-horizontal" role="form">
-    <div class="panel-heading"></div>
+    <div class="panel-heading">
+        Studio config
+        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
+        <div class="clearfix"></div>
+    </div>
     <div class="panel-body">
         <div class="form-group">
             <div class="col-md-4 control-label">Warn when using System Database</div>
@@ -13,6 +17,22 @@
                     <ul class="dropdown-menu" role="menu">
                         <li><a href="#" data-bind="click: setSystemDatabaseWarning.bind($root, true)">On</a></li>
                         <li><a href="#" data-bind="click: setSystemDatabaseWarning.bind($root, false)">Off</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-md-4 control-label">Disable event source</div>
+            <div class="col-md-8">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                        <span data-bind="visible: disableEventSource">Yes</span>
+                        <span data-bind="visible: !disableEventSource()">No</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="#" data-bind="click: setEventSourceDisabled.bind($root, true)">Yes</a></li>
+                        <li><a href="#" data-bind="click: setEventSourceDisabled.bind($root, false)">No</a></li>
                     </ul>
                 </div>
             </div>

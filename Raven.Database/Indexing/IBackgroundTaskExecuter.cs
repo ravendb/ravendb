@@ -6,10 +6,9 @@ namespace Raven.Database.Indexing
 {
 	public interface IBackgroundTaskExecuter
 	{
+		double MaxNumberOfParallelProcessingTasksRatio { get; }
 		IList<TResult> Apply<T, TResult>(WorkContext context, IEnumerable<T> source, Func<T, TResult> func)
 			where TResult : class;
-
-		void Repeat(IRepeatedAction action);
 
 		void ExecuteAll<T>(WorkContext context, IList<T> source, Action<T, long> action);
 
@@ -18,10 +17,4 @@ namespace Raven.Database.Indexing
 		void ExecuteAllInterleaved<T>(WorkContext context, IList<T> result, Action<T> action);
 	}
 
-	public interface IRepeatedAction
-	{
-		TimeSpan RepeatDuration { get; }
-		bool IsValid { get; }
-		void Execute();
-	}
 }

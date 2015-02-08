@@ -42,7 +42,9 @@ namespace Raven.Abstractions.OAuth
 				var stream = await response.GetResponseStreamWithHttpDecompression();
 				using (var reader = new StreamReader(stream))
 				{
-					CurrentOauthToken = reader.ReadToEnd();
+                    var currentOauthToken = reader.ReadToEnd();
+                    CurrentOauthToken = currentOauthToken;
+                    CurrentOauthTokenWithBearer = "Bearer " + currentOauthToken;
 					return (Action<HttpClient>)(SetAuthorization);
 				}
 	        }
@@ -72,8 +74,10 @@ namespace Raven.Abstractions.OAuth
                 using (var stream = response.GetResponseStreamWithHttpDecompression())
                 using (var reader = new StreamReader(stream))
                 {
-                    CurrentOauthToken = "Bearer " + reader.ReadToEnd();
-                    return request => SetHeader(request.Headers, "Authorization", CurrentOauthToken);
+                    var currentOauthToken = reader.ReadToEnd();
+                    CurrentOauthToken = currentOauthToken;
+                    CurrentOauthTokenWithBearer = "Bearer " + currentOauthToken;
+                    return request => SetHeader(request.Headers, "Authorization", CurrentOauthTokenWithBearer);
                 }
             }
         }

@@ -131,7 +131,10 @@ namespace Raven.Client.Embedded
             }
 
             _inner.SetListeners(Listeners);
-            _inner.Initialize();
+
+			Configuration.PostInit();
+            _inner.Initialize();	        
+
             return this;
         }
 
@@ -334,6 +337,17 @@ namespace Raven.Client.Embedded
         }
 
         public DocumentSessionListeners Listeners { get; private set; }
+
+		public IAsyncReliableSubscriptions AsyncSubscriptions
+		{
+			get { return Inner.AsyncSubscriptions; }
+		}
+
+	    public IReliableSubscriptions Subscriptions
+	    {
+			get { return Inner.Subscriptions; }
+	    }
+
         public void SetListeners(DocumentSessionListeners listeners)
         {
             this.Listeners = listeners;

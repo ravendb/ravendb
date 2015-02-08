@@ -11,7 +11,7 @@ class getOperationAlertsCommand extends commandBase {
     execute(): JQueryPromise<alert[]> {
         var url = "/operation/alerts";
         
-        return this.query<alert[]>(url, null, this.db, (result:alertDto[]) => result.map(a => new alert(a)));
+        return this.query<alert[]>(url, null, this.db, (result: alertDto[]) => result.map(a => new alert(a)));
     }
 }
 

@@ -90,6 +90,7 @@ namespace Raven.Database
 
 		public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
 		{
+			TimerManager = new ResourceTimerManager();
 			DocumentLock = new PutSerialLock();
 			Name = configuration.DatabaseName;
 			Configuration = configuration;
@@ -153,6 +154,7 @@ namespace Raven.Database
 					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
 					Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
 					Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
+					Subscriptions = new SubscriptionActions(this, Log);
 					Patches = new PatchActions(this, recentTouches, uuidGenerator, Log);
 					Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
 					Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
@@ -163,7 +165,8 @@ namespace Raven.Database
 					CompleteWorkContextSetup();
 
 					prefetcher = new Prefetcher(workContext);
-					indexingExecuter = new IndexingExecuter(workContext, prefetcher);
+					IndexReplacer = new IndexReplacer(this);
+					indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
 
 					RaiseIndexingWiringComplete();
 
@@ -174,9 +177,17 @@ namespace Raven.Database
 
 					Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
 				}
-				catch (Exception)
+				catch (Exception e)
 				{
-					Dispose();
+					Log.ErrorException("Could not create database", e);
+					try
+					{
+						Dispose();
+					}
+					catch (Exception ex)
+					{
+						Log.FatalException("Failed to disposed when already getting an error during ctor", ex);
+					}
 					throw;
 				}
 			}
@@ -325,6 +336,8 @@ namespace Raven.Database
 
 		public NotificationActions Notifications { get; private set; }
 
+		public SubscriptionActions Subscriptions { get; private set; }
+
 		public PatchActions Patches { get; private set; }
 
 		public Prefetcher Prefetcher
@@ -342,6 +355,10 @@ namespace Raven.Database
 
 		[CLSCompliant(false)]
 		public ReducingExecuter ReducingExecuter { get; private set; }
+
+		public ResourceTimerManager TimerManager { get; private set; }
+
+		public IndexReplacer IndexReplacer { get; private set; }
 
 		public string ServerUrl
 		{
@@ -370,25 +387,25 @@ namespace Raven.Database
 			get
 			{
 				var triggerInfos = PutTriggers.Select(x => new TriggerInfo
-			{
-				Name = x.ToString(),
-				Type = "Put"
-			})
-				   .Concat(DeleteTriggers.Select(x => new TriggerInfo
-		{
-			Name = x.ToString(),
-			Type = "Delete"
-		}))
-				   .Concat(ReadTriggers.Select(x => new TriggerInfo
-			{
-				Name = x.ToString(),
-				Type = "Read"
-			}))
-				   .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
 				{
 					Name = x.ToString(),
-					Type = "Index Update"
-				})).ToList();
+					Type = "Put"
+				})
+				   .Concat(DeleteTriggers.Select(x => new TriggerInfo
+					{
+						Name = x.ToString(),
+						Type = "Delete"
+					}))
+				   .Concat(ReadTriggers.Select(x => new TriggerInfo
+					{
+						Name = x.ToString(),
+						Type = "Read"
+					}))
+				   .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
+						{
+							Name = x.ToString(),
+							Type = "Index Update"
+						})).ToList();
 
 				var extensions = Configuration.ReportExtensions(
 					typeof(IStartupTask),
@@ -407,10 +424,10 @@ namespace Raven.Database
 					typeof(AbstractBackgroundTask),
 					typeof(IAlterConfiguration)).ToList();
 				return new PluginsInfo
-		{
-			Triggers = triggerInfos,
-			Extensions = extensions,
-		};
+							{
+								Triggers = triggerInfos,
+								Extensions = extensions,
+							};
 			}
 		}
 
@@ -420,10 +437,10 @@ namespace Raven.Database
 			{
 				var result = new DatabaseStatistics
 				{
+					CurrentNumberOfParallelTasks = workContext.CurrentNumberOfParallelTasks,
 					StorageEngine = TransactionalStorage.FriendlyName,
 					CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
 					CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
-					IndexingBatchInfo = workContext.LastActualIndexingBatchInfo.ToArray(),
 					InMemoryIndexingQueueSizes = prefetcher.GetInMemoryIndexingQueueSizes(PrefetchingUser.Indexer),
 					Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
 					CountOfIndexes = IndexStorage.Indexes.Length,
@@ -446,20 +463,20 @@ namespace Raven.Database
 
 					result.StaleIndexes = IndexStorage.Indexes.Where(indexId => IndexStorage.IsIndexStale(indexId, LastCollectionEtags))
 					.Select(indexId =>
-					{
-						Index index = IndexStorage.GetIndexInstance(indexId);
-						return index == null ? null : index.PublicName;
-					}).ToArray();
+		{
+			Index index = IndexStorage.GetIndexInstance(indexId);
+			return index == null ? null : index.PublicName;
+		}).ToArray();
 
 					result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-					{
-						Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-						if (indexInstance == null)
-							return null;
-						x.Name = indexInstance.PublicName;
-						x.SetLastDocumentEtag(result.LastDocEtag);
-						return x;
-					})
+		{
+			Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+			if (indexInstance == null)
+				return null;
+			x.Name = indexInstance.PublicName;
+			x.SetLastDocumentEtag(result.LastDocEtag);
+			return x;
+		})
 						.Where(x => x != null)
 						.ToArray();
 				});
@@ -473,11 +490,12 @@ namespace Raven.Database
 							IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
 							index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
 							index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
+							index.IsTestIndex = indexDefinition.IsTestIndex;
 							index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
 							if (indexDefinition != null)
 								index.LockMode = indexDefinition.LockMode;
 
-							index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToList();
+							index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
 							IndexSearcher searcher;
 							using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
 								index.DocsCount = searcher.IndexReader.NumDocs();
@@ -734,6 +752,9 @@ namespace Raven.Database
 			if (workContext != null)
 				exceptionAggregator.Execute(workContext.Dispose);
 
+			if (TimerManager != null)
+				exceptionAggregator.Execute(TimerManager.Dispose);
+
 			try
 			{
 				exceptionAggregator.ThrowIfNeeded();
@@ -840,6 +861,7 @@ namespace Raven.Database
 
 				TransportState.OnIdle();
 				IndexStorage.RunIdleOperations();
+				IndexReplacer.ReplaceIndexes(IndexDefinitionStorage.Indexes);
 				Tasks.ClearCompletedPendingTasks();
 			}
 			finally
@@ -867,7 +889,7 @@ namespace Raven.Database
 			workContext.StartWork();
 			indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 
-			ReducingExecuter = new ReducingExecuter(workContext);
+			ReducingExecuter = new ReducingExecuter(workContext, IndexReplacer);
 
 			reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}

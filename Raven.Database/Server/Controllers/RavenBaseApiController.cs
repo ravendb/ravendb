@@ -65,29 +65,47 @@ namespace Raven.Database.Server.Controllers
 		{
 			get
 			{
-				var headers = new Headers();
-				foreach (var header in InnerRequest.Headers)
-				{
-					if (header.Value.Count() == 1)
-						headers.Add(header.Key, header.Value.First());
-					else
-						headers.Add(header.Key, header.Value.ToList());
-				}
-
-				if (InnerRequest.Content == null)
-					return headers;
-
-				foreach (var header in InnerRequest.Content.Headers)
-				{
-					if (header.Value.Count() == 1)
-						headers.Add(header.Key, header.Value.First());
-					else
-						headers.Add(header.Key, header.Value.ToList());
-				}
-
-				return headers;
+			    HttpRequestMessage message = InnerRequest;
+			    return CloneRequestHttpHeaders(message.Headers, message.Content == null ? null : message.Content.Headers);
 			}
 		}
+
+        public static HttpHeaders CloneRequestHttpHeaders( HttpRequestHeaders httpRequestHeaders, HttpContentHeaders httpContentHeaders)
+        {
+            var headers = new Headers();
+            foreach (var header in httpRequestHeaders)
+            {
+                 headers.Add(header.Key, header.Value);
+            }
+
+            if (httpContentHeaders == null)
+                return headers;
+
+            foreach (var header in httpContentHeaders)
+            {
+                headers.Add(header.Key, header.Value);
+            }
+
+            return headers; 
+        }
+
+        public IEnumerable<KeyValuePair<string,IEnumerable<string>>> ReadInnerHeaders
+        {
+            get
+            {
+                foreach (var header in InnerRequest.Headers)
+                {
+                    yield return new KeyValuePair<string, IEnumerable<string>>(header.Key, header.Value);
+                }
+
+                if (InnerRequest.Content == null)
+                    yield break;                
+                foreach (var header in InnerRequest.Content.Headers)
+                {
+                    yield return new KeyValuePair<string, IEnumerable<string>>(header.Key, header.Value);
+                }
+            }
+        }
 
 		public new IPrincipal User { get; set; }
 
@@ -95,13 +113,16 @@ namespace Raven.Database.Server.Controllers
 
 		protected virtual void InnerInitialization(HttpControllerContext controllerContext)
 		{
-			this.request = controllerContext.Request;
-			this.User = controllerContext.RequestContext.Principal;
+			request = controllerContext.Request;
+			User = controllerContext.RequestContext.Principal;
 
-            this.landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
-            this.fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
-            this.countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
-            this.requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
+            landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
+            fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
+            countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
+            requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
+			maxNumberOfThreadsForDatabaseToLoad = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
+            maxSecondsForTaskToWaitForDatabaseToLoad = (int)controllerContext.Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
+            //MaxSecondsForTaskToWaitForDatabaseToLoad
 		}
 
 		public async Task<T> ReadJsonObjectAsync<T>()
@@ -196,14 +217,22 @@ namespace Raven.Database.Server.Controllers
 
 		internal Etag EtagHeaderToEtag()
 		{
-			var responseHeader = GetHeader("If-None-Match");
-			if (string.IsNullOrEmpty(responseHeader))
-				return Etag.InvalidEtag;
+		    try
+		    {
+		        var responseHeader = GetHeader("If-None-Match");
+		        if (string.IsNullOrEmpty(responseHeader))
+		            return Etag.InvalidEtag;
 
-			if (responseHeader[0] == '\"')
-				return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
+		        if (responseHeader[0] == '\"')
+		            return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
 
-			return Etag.Parse(responseHeader);
+		        return Etag.Parse(responseHeader);
+		    }
+		    catch (Exception e)
+		    {
+		        Console.WriteLine(e.Message);
+                return Etag.InvalidEtag;
+		    }
 		}
 
 		public string GetQueryStringValue(string key)
@@ -378,7 +407,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var resMsg = new HttpResponseMessage(code)
 			{
-				Content = new StringContent(msg)
+                Content = new MultiGetSafeStringContent(msg),
 			};
 
 			WriteETag(etag, resMsg);
@@ -450,16 +479,20 @@ namespace Raven.Database.Server.Controllers
 
 		public string GetHeader(string key)
 		{
-			if (InnerHeaders.Contains(key) == false)
-				return null;
-			return InnerHeaders.GetValues(key).FirstOrDefault();
+		    IEnumerable<string> values;
+		    if (InnerRequest.Headers.TryGetValues(key, out values) ||
+                (InnerRequest.Content != null && InnerRequest.Content.Headers.TryGetValues(key, out values)))
+		        return values.FirstOrDefault();
+		    return null;
 		}
 
 		public List<string> GetHeaders(string key)
 		{
-			if (InnerHeaders.Contains(key) == false)
-				return null;
-			return InnerHeaders.GetValues(key).ToList();
+            IEnumerable<string> values;
+            if (InnerRequest.Headers.TryGetValues(key, out values) ||
+                InnerRequest.Content.Headers.TryGetValues(key, out values))
+                return values.ToList();
+            return null;
 		}
 
 		public bool HasCookie(string key)
@@ -485,20 +518,28 @@ namespace Raven.Database.Server.Controllers
 			var filePath = Path.Combine(ravenPath, docPath);
 			if (File.Exists(filePath))
 				return WriteFile(filePath);
-			filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../Raven.Studio.Html5/", docPath);
+			
+            filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../Raven.Studio.Html5/", docPath);
 			if (File.Exists(filePath))
 				return WriteFile(filePath);
+
+		    filePath = Path.Combine(this.SystemConfiguration.EmbeddedFilesDirectory, docPath);
+		    if (File.Exists(filePath))
+		        return WriteFile(filePath);
 
             filePath = Path.Combine("~/../../../../Raven.Studio.Html5", docPath);
             if (File.Exists(filePath))
                 return WriteFile(filePath);
 
-
 			if (string.IsNullOrEmpty(zipPath) == false)
 			{
 			    var fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, zipPath + ".zip");
+
 				if (File.Exists(fullZipPath) == false)
 					fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bin", zipPath + ".zip");
+
+			    if (File.Exists(fullZipPath) == false)
+			        fullZipPath = Path.Combine(this.SystemConfiguration.EmbeddedFilesDirectory, zipPath + ".zip");
 
 				if (File.Exists(fullZipPath))
 				{
@@ -660,7 +701,7 @@ namespace Raven.Database.Server.Controllers
 
 	    protected void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
         {
-            AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion, msg);
+            AddHeader(Constants.RavenServerBuild, DocumentDatabase.BuildVersion, msg);
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
@@ -703,9 +744,9 @@ namespace Raven.Database.Server.Controllers
         {
             get
             {
-                if (Configuration == null)
+                if (Configuration == null || landlord != null)
                     return landlord;
-                return (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
+                return landlord = (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
             }
         }
 
@@ -742,6 +783,28 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
+		private SemaphoreSlim maxNumberOfThreadsForDatabaseToLoad;
+        private int maxSecondsForTaskToWaitForDatabaseToLoad;
+        public SemaphoreSlim MaxNumberOfThreadsForDatabaseToLoad
+		{
+			get
+			{
+				if (Configuration == null)
+					return maxNumberOfThreadsForDatabaseToLoad;
+				return (SemaphoreSlim)Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
+			}
+		}
+        public int MaxSecondsForTaskToWaitForDatabaseToLoad
+        {
+            get
+            {
+                if (Configuration == null)
+                {
+                    return maxSecondsForTaskToWaitForDatabaseToLoad;
+                }
+                return (int)Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
+            }
+        }
         #endregion
     }
 }

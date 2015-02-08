@@ -7,17 +7,28 @@ using System;
 
 namespace Raven.Database.DiskIO
 {
-    public class PerformanceTestRequest
+    public abstract class AbstractPerformanceTestRequest
     {
+        public abstract string TestType { get; }
         public string Path { get; set; }
         public long FileSize { get; set; }
+        
+    }
+
+    public class GenericPerformanceTestRequest : AbstractPerformanceTestRequest
+    {
+        public const string Mode = "generic";
+
+        public override string TestType { get { return Mode; } }
+
         public OperationType OperationType { get; set; }
         public BufferingType BufferingType { get; set; }
+        public int TimeToRunInSeconds { get; set; }
         public bool Sequential { get; set; }
         public int ThreadCount { get; set; }
-        public int TimeToRunInSeconds { get; set; }
         public int? RandomSeed { get; set; }
         private int chunkSize;
+
         public int ChunkSize
         {
             get { return chunkSize; }
@@ -31,11 +42,11 @@ namespace Raven.Database.DiskIO
             }
         }
 
-        public PerformanceTestRequest()
+        public GenericPerformanceTestRequest()
         {
-            chunkSize = 4*1024;
+            chunkSize = 4 * 1024;
             Sequential = false;
-            FileSize = 1024*1024*1024;
+            FileSize = 1024 * 1024 * 1024;
             BufferingType = BufferingType.None;
             TimeToRunInSeconds = 30;
             ThreadCount = Environment.ProcessorCount;
@@ -51,6 +62,17 @@ namespace Raven.Database.DiskIO
             get { return BufferingType == BufferingType.ReadAndWrite; }
         }
 
+    }
+
+    public class BatchPerformanceTestRequest : AbstractPerformanceTestRequest
+    {
+        public const string Mode = "batch";
+
+        public override string TestType { get { return Mode; } }
+        public int NumberOfDocuments { get; set; }
+        public int SizeOfDocuments { get; set; }
+        public int NumberOfDocumentsInBatch { get; set; }
+        public int WaitBetweenBatches { get; set; }
     }
 
     public enum OperationType

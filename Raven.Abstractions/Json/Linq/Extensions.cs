@@ -221,7 +221,9 @@ namespace Raven.Json.Linq
 
         public static bool CompareRavenJArrayData(this ICollection<DocumentsChanges> docChanges, RavenJArray selfArray, RavenJArray otherArray, string fieldArrName)
         {
-            IEnumerable<RavenJToken> differences = selfArray.Length < otherArray.Length ? otherArray.Except(selfArray) : selfArray.Except(otherArray);
+            IEnumerable<RavenJToken> differences = selfArray.Length < otherArray.Length ? 
+				otherArray.Except(selfArray, RavenJTokenEqualityComparer.Default) :
+				selfArray.Except(otherArray, RavenJTokenEqualityComparer.Default);
             if(!differences.Any())
                 return true;
 

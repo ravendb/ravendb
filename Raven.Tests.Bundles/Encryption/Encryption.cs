@@ -6,6 +6,7 @@
 using Raven.Client.Document;
 using Raven.Server;
 using Raven.Tests.Common;
+using Raven.Tests.Common.Util;
 
 namespace Raven.Tests.Bundles.Encryption
 {
@@ -13,10 +14,10 @@ namespace Raven.Tests.Bundles.Encryption
 	{
 		private readonly string path;
 		protected readonly DocumentStore documentStore;
-		private RavenDbServer ravenDbServer;
+		protected RavenDbServer ravenDbServer;
 		private bool closed = false;
 
-		public Encryption()
+		protected Encryption()
 		{
 			path = NewDataPath();
 			CreateServer();
@@ -37,7 +38,7 @@ namespace Raven.Tests.Bundles.Encryption
 		protected void AssertPlainTextIsNotSavedInDatabase(params string[] plaintext)
 		{
 			Close();
-			TestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, s => true);
+			EncryptionTestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, s => true);
 		}
 
 		protected void RecycleServer()

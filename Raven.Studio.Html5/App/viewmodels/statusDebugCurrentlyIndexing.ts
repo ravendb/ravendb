@@ -12,15 +12,16 @@ class statusDebugCurrentlyIndexing extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('JHZ574');
         this.activeDatabase.subscribe(() => this.fetchCurrentlyIndexing());
         return this.fetchCurrentlyIndexing();
     }
 
     modelPolling() {
         if (this.autoRefresh()) {
-            this.fetchCurrentlyIndexing();
+            return this.fetchCurrentlyIndexing();
         }
+        return $.Deferred().resolve();
     }
 
     toggleAutoRefresh() {

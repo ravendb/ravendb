@@ -136,7 +136,7 @@ namespace Raven.Client.Connection
 	    /// <summary>
 	    /// Should execute the operation using the specified operation URL
 	    /// </summary>
-	    public virtual bool ShouldExecuteUsing(OperationMetadata operationMetadata, OperationMetadata primaryOperation, int currentRequest, string method, bool primary, Exception error)
+	    public virtual bool ShouldExecuteUsing(OperationMetadata operationMetadata, OperationMetadata primaryOperation, int currentRequest, string method, bool primary, Exception error, CancellationToken token)
 	    {
 	        if (primary == false)
 	            AssertValidOperation(method, error);
@@ -155,6 +155,7 @@ namespace Raven.Client.Connection
 	            {
 	                for (int i = 0; i < 3; i++)
 	                {
+						token.ThrowCancellationIfNotDefault();
 	                    try
 	                    {
 	                        var r = await TryOperationAsync<object>(async metadata =>
@@ -162,10 +163,10 @@ namespace Raven.Client.Connection
 	                            var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), "GET", metadata.Credentials, conventions);
 		                        using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
 		                        {
-			                        await request.ReadResponseJsonAsync().ConfigureAwait(false);
+			                        await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 		                        }
 		                        return null;
-	                        }, operationMetadata, primaryOperation, avoidThrowing: true).ConfigureAwait(false);
+	                        }, operationMetadata, primaryOperation, true, token).ConfigureAwait(false);
 	                        if (r.Success)
 	                        {
 	                            ResetFailureCount(operationMetadata.Url);
@@ -176,7 +177,7 @@ namespace Raven.Client.Connection
 	                    {
 	                        return; // disposed, nothing to do here
 	                    }
-                        await Task.Delay(DelayTimeInMiliSec).ConfigureAwait(false);
+                        await Task.Delay(DelayTimeInMiliSec, token).ConfigureAwait(false);
 	                }
 	            });
 
@@ -272,12 +273,18 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public virtual int GetReadStripingBase()
+		public virtual int GetReadStripingBase(bool increment)
 		{
-			return Interlocked.Increment(ref readStripingBase);
+            return increment ? Interlocked.Increment(ref readStripingBase) : readStripingBase;
 		}
-		
-        public async Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation)
+
+		public async Task<T> ExecuteWithReplicationAsync<T>(string method, 
+			string primaryUrl, 
+			OperationCredentials primaryCredentials, 
+			int currentRequest, 
+			int currentReadStripingBase, 
+			Func<OperationMetadata, Task<T>> operation, 
+			CancellationToken token = default (CancellationToken))
         {
             var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
             var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials);
@@ -293,18 +300,18 @@ namespace Raven.Client.Connection
                 if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
                 {
                     // if it is failing, ignore that, and move to the master or any of the replicas
-                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, currentRequest, method, false, error: null))
+                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, currentRequest, method, false, null,token))
                     {
-                        operationResult = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true).ConfigureAwait(false);
+                        operationResult = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true, token).ConfigureAwait(false);
                         if (operationResult.Success)
                             return operationResult.Result;
                     }
                 }
             }
 
-            if (ShouldExecuteUsing(primaryOperation,primaryOperation, currentRequest, method, true, error: null))
+            if (ShouldExecuteUsing(primaryOperation,primaryOperation, currentRequest, method, true, null,token))
             {
-                operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0)
+                operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
                     .ConfigureAwait(false);
 
                 if (operationResult.Success)
@@ -313,7 +320,7 @@ namespace Raven.Client.Connection
                 IncrementFailureCount(primaryOperation.Url);
                 if (!operationResult.WasTimeout && IsFirstFailure(primaryOperation.Url))
                 {
-                    operationResult = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0).ConfigureAwait(false);
+                    operationResult = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0, token).ConfigureAwait(false);
 
                     if (operationResult.Success)
                         return operationResult.Result;
@@ -323,12 +330,14 @@ namespace Raven.Client.Connection
 
             for (var i = 0; i < localReplicationDestinations.Count; i++)
             {
+				token.ThrowCancellationIfNotDefault();
+
                 var replicationDestination = localReplicationDestinations[i];
-                if (ShouldExecuteUsing(replicationDestination, primaryOperation, currentRequest, method, false, operationResult.Error) == false)
+                if (ShouldExecuteUsing(replicationDestination, primaryOperation, currentRequest, method, false, operationResult.Error,token) == false)
                     continue;
 
                 var hasMoreReplicationDestinations = localReplicationDestinations.Count > i + 1;
-                operationResult = await TryOperationAsync(operation, replicationDestination, primaryOperation, !operationResult.WasTimeout && hasMoreReplicationDestinations).ConfigureAwait(false);
+                operationResult = await TryOperationAsync(operation, replicationDestination, primaryOperation, !operationResult.WasTimeout && hasMoreReplicationDestinations, token).ConfigureAwait(false);
 
                 if (operationResult.Success)
                     return operationResult.Result;
@@ -336,7 +345,7 @@ namespace Raven.Client.Connection
                 IncrementFailureCount(replicationDestination.Url);
                 if (!operationResult.WasTimeout && IsFirstFailure(replicationDestination.Url))
                 {
-                    operationResult = await TryOperationAsync(operation, replicationDestination, primaryOperation, hasMoreReplicationDestinations).ConfigureAwait(false);
+                    operationResult = await TryOperationAsync(operation, replicationDestination, primaryOperation, hasMoreReplicationDestinations, token).ConfigureAwait(false);
 
                     // tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1).ConfigureAwait(false);
                     if (operationResult.Success)
@@ -359,15 +368,21 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 	        public Exception Error;
 	    }
 
+		protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
+			OperationMetadata primaryOperationMetadata, bool avoidThrowing)
+		{
+ 			return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, default(CancellationToken));
+		}
+
         protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
-            OperationMetadata primaryOperationMetadata, bool avoidThrowing)
+            OperationMetadata primaryOperationMetadata, bool avoidThrowing, CancellationToken cancellationToken)
         {
             var tryWithPrimaryCredentials = IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;
             bool shouldTryAgain = false;
 
             try
             {
-
+				cancellationToken.ThrowCancellationIfNotDefault(); //canceling the task here potentially will stop the recursion
                 var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata).ConfigureAwait(false);
                 ResetFailureCount(operationMetadata.Url);
                 return new AsyncOperationResult<T>
@@ -416,7 +431,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                     throw;
                 }
             }
-            return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing);
+            return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, cancellationToken);
         }
 
 		public bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode)

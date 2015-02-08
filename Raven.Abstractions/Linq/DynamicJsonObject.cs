@@ -40,7 +40,7 @@ namespace Raven.Abstractions.Linq
                 (
                     from item in inner
                     where item.Key[0] != '$'
-                    select new KeyValuePair<string, object>(item.Key, TransformToValue(item.Value))
+                    select new KeyValuePair<object, object>(TransformToValue(item.Key), TransformToValue(item.Value))
                 )
                 .Cast<object>().GetEnumerator();
         }

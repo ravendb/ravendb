@@ -39,14 +39,12 @@ namespace Raven.Tests.Issues
             {
                 var urlsTried = new List<string>();
 
-                var webException = (WebException)Assert.Throws<AggregateException>(() =>
+                var webException = (WebException)Assert.Throws<AggregateException>(() => 
+					replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
                 {
-                    replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
-                    {
-                        urlsTried.Add(url.Url);
-                        throw new WebException("Timeout", WebExceptionStatus.Timeout);
-                    }).Wait();
-                }).ExtractSingleInnerException();
+	                urlsTried.Add(url.Url);
+	                throw new WebException("Timeout", WebExceptionStatus.Timeout);
+                }).Wait()).ExtractSingleInnerException();
 
                 Assert.Equal(2, urlsTried.Count);
                 Assert.Equal("http://localhost:1", urlsTried[0]);
@@ -74,14 +72,12 @@ namespace Raven.Tests.Issues
             {
                 var urlsTried = new List<string>();
 
-                var webException = (WebException) Assert.Throws<AggregateException>(() =>
+                var webException = (WebException) Assert.Throws<AggregateException>(() => 
+					replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
                 {
-                    replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
-                    {
-                        urlsTried.Add(url.Url);
-                        throw new WebException("Timeout", WebExceptionStatus.Timeout);
-                    }).Wait();
-                }).ExtractSingleInnerException();
+	                urlsTried.Add(url.Url);
+	                throw new WebException("Timeout", WebExceptionStatus.Timeout);
+                }).Wait()).ExtractSingleInnerException();
 
                 Assert.Equal(2, urlsTried.Count);
                 Assert.Equal("http://localhost:3", urlsTried[0]); // striped
@@ -112,9 +108,9 @@ namespace Raven.Tests.Issues
                 var aggregateException = Assert.Throws<AggregateException>(() =>
                     replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
                     {
-                        urlsTried.Add(url.Url);
+	                    urlsTried.Add(url.Url);
 
-                        return new CompletedTask<int>(new WebException("Timeout", WebExceptionStatus.Timeout));
+	                    return new CompletedTask<int>(new WebException("Timeout", WebExceptionStatus.Timeout));
                     }).Wait()
                 );
 
@@ -149,9 +145,9 @@ namespace Raven.Tests.Issues
                 var aggregateException = Assert.Throws<AggregateException>(() =>
                     replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
                     {
-                        urlsTried.Add(url.Url);
+	                    urlsTried.Add(url.Url);
 
-                        return new CompletedTask<int>(new WebException("Timeout", WebExceptionStatus.Timeout));
+	                    return new CompletedTask<int>(new WebException("Timeout", WebExceptionStatus.Timeout));
                     }).Wait()
                 );
 

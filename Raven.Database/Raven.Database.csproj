@@ -72,6 +72,16 @@
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
+    <OutputPath>bin\Profiling\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;NET_4_0 NET45</DefineConstants>
+    <Optimize>true</Optimize>
+    <NoWarn>1607, 1591</NoWarn>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Esent.Interop">
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
@@ -223,9 +233,34 @@
     <Compile Include="Actions\NotificationActions.cs" />
     <Compile Include="Actions\PatchActions.cs" />
     <Compile Include="Actions\QueryActions.cs" />
+    <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Config\CpuStatistics.cs" />
+    <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideDeletingFilesTrigger.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\Plugins\HideVersionedFilesFromIndexingTrigger.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningDeleteTrigger.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\Plugins\VersioningPutTrigger.cs" />
+    <Compile Include="FileSystem\Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="FileSystem\Plugins\AbstractFileDeleteTrigger.cs" />
+    <Compile Include="FileSystem\Plugins\AbstractFileReadTrigger.cs" />
+    <Compile Include="FileSystem\Plugins\AbstractFilePutTrigger.cs" />
+    <Compile Include="FileSystem\Plugins\TriggerExtensions.cs" />
+    <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
+    <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
+    <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />
+    <Compile Include="Server\WebApi\ MultiGetSafeStringContent.cs" />
+    <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
+    <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
     <Compile Include="DiskIO\DiskPerformanceTester.cs" />
     <Compile Include="DiskIO\PerformanceTestRequest.cs" />
+    <Compile Include="FileSystem\Bundles\Encryption\Plugin\FileEncryption.cs" />
+    <Compile Include="FileSystem\Plugins\AbstractFileCodec.cs" />
+    <Compile Include="FileSystem\Plugins\IRequiresFileSystemInitialization.cs" />
+    <Compile Include="FileSystem\Storage\Esent\Schema\IFileSystemSchemaUpdate.cs" />
+    <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From03To04.cs" />
+    <Compile Include="Indexing\IndexReplacer.cs" />
+    <Compile Include="Impl\Generators\JsonCodeGenerator.cs" />
     <Compile Include="Plugins\Builtins\CheckFreeDiskSpace.cs" />
     <Compile Include="Plugins\Builtins\CheckIncrementalBackupStatus.cs" />
     <Compile Include="Plugins\Builtins\PurgeOutdatedTombstones.cs" />
@@ -244,6 +279,7 @@
     <Compile Include="Server\Connections\HttpTracePushContent.cs" />
     <Compile Include="Server\Connections\WebSocketsRequestParser.cs" />
     <Compile Include="Server\Connections\WebSocketRequest.cs" />
+    <Compile Include="Server\Controllers\GeneratorsController.cs" />
     <Compile Include="Server\Controllers\HttpTraceController.cs" />
     <Compile Include="Server\Connections\ILogsTransport.cs" />
     <Compile Include="Server\Connections\LogPushContent.cs" />
@@ -263,14 +299,33 @@
     <Compile Include="FileSystem\Synchronization\Conflictuality\Resolvers\RemoteFileSynchronizationConflictResolver.cs" />
     <Compile Include="FileSystem\Synchronization\Conflictuality\Resolvers\LocalFileSynchronizationConflictResolver.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationConfig.cs" />
+    <Compile Include="Server\Controllers\SubscriptionsController.cs" />
     <Compile Include="Server\IgnoreSslCertificateErrorsMode.cs" />
     <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
+    <Compile Include="Server\WebApi\RouteCacher.cs" />
+    <Compile Include="Server\WebApi\RavenRouteCollectionRoute .cs" />
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
+    <Compile Include="Smuggler\SmugglerJintHelper.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
+    <Compile Include="Storage\Voron\Impl\TableOfStructures.cs" />
+    <Compile Include="Storage\Voron\Schema\Updates\From11To12.cs" />
     <Compile Include="Storage\Voron\Schema\Updates\From10To11.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\DocumentReferencesFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\IndexingWorkStatsFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\LastIndexedStatsFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\MappedResultFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ReduceKeyCountFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ReduceKeyTypeFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ReduceResultFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ReducingWorkStatsFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\ScheduledReductionFields.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StructureSchemas\TaskFields.cs" />
+    <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
+    <Compile Include="Util\ResourceTimerManager.cs" />
+    <Compile Include="Util\StopwatchScope.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />
@@ -640,7 +695,6 @@
     <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
     <Compile Include="Linq\PrivateExtensions\DynamicEnumerable.cs" />
     <Compile Include="Linq\StringLiteralExpression.cs" />
-    <Compile Include="Plugins\ILicenseProvider.cs" />
     <Compile Include="Plugins\PluginsStatus.cs" />
     <Compile Include="Queries\MoreLikeThisQueryRunner.cs" />
     <Compile Include="Queries\MoreLikeThisQueryExtensions.cs" />

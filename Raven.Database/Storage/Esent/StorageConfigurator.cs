@@ -33,15 +33,15 @@ namespace Raven.Database.Storage.Esent
 		{
 			path = Path.GetFullPath(path);
 			var logsPath = path;
-			var configuredLogsPath = Configuration.Settings["Raven/Esent/LogsPath"] ?? Configuration.Settings[Constants.RavenTxJournalPath] ?? Configuration.JournalsStoragePath;
+			var configuredLogsPath = Configuration.Storage.Esent.JournalsStoragePath;
 			if (string.IsNullOrEmpty(configuredLogsPath) == false)
 			{
 				logsPath = configuredLogsPath.ToFullPath();
 			}
-			var circularLog = GetValueFromConfiguration("Raven/Esent/CircularLog", true);
-			var logFileSizeInMb = GetValueFromConfiguration("Raven/Esent/LogFileSize", 64);
+            var circularLog = GetValueFromConfiguration(Constants.Esent.CircularLog, true);
+            var logFileSizeInMb = GetValueFromConfiguration(Constants.Esent.LogFileSize, 64);
 			logFileSizeInMb = Math.Max(1, logFileSizeInMb / 4);
-			var maxVerPages = GetValueFromConfiguration("Raven/Esent/MaxVerPages", 512);
+            var maxVerPages = GetValueFromConfiguration(Constants.Esent.MaxVerPages, 512);
 			
 			var maxVerPagesResult = TranslateToSizeInVersionPages(maxVerPages, 1024 * 1024);
 
@@ -58,14 +58,14 @@ namespace Raven.Database.Storage.Esent
 				SystemDirectory = Path.Combine(logsPath, "system"),
 				LogFileDirectory = Path.Combine(logsPath, "logs"),
 				MaxVerPages = maxVerPagesResult,
-				PreferredVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration("Raven/Esent/PreferredVerPages", (int)(maxVerPagesResult * 0.85)), 1024 * 1024),
+                PreferredVerPages = TranslateToSizeInVersionPages(GetValueFromConfiguration(Constants.Esent.PreferredVerPages, (int)(maxVerPagesResult * 0.85)), 1024 * 1024),
 				BaseName = BaseName,
 				EventSource = EventSource,
-				LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/LogBuffers", 8192), 1024),
+                LogBuffers = TranslateToSizeInDatabasePages(GetValueFromConfiguration(Constants.Esent.LogBuffers, 8192), 1024),
 				LogFileSize = (logFileSizeInMb * 1024),
 				MaxSessions = MaxSessions,
-				MaxCursors = GetValueFromConfiguration("Raven/Esent/MaxCursors", 2048),
-				DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration("Raven/Esent/DbExtensionSize", 8), 1024 * 1024),
+                MaxCursors = GetValueFromConfiguration(Constants.Esent.MaxCursors, 2048),
+				DbExtensionSize = TranslateToSizeInDatabasePages(GetValueFromConfiguration(Constants.Esent.DbExtensionSize, 8), 1024 * 1024),
 				AlternateDatabaseRecoveryDirectory = path
 			};
 
@@ -94,7 +94,7 @@ namespace Raven.Database.Storage.Esent
 		public void LimitSystemCache()
 		{
 			var defaultCacheSize = Environment.Is64BitProcess ? Math.Min(1024, (MemoryStatistics.TotalPhysicalMemory / 4)) : 256;
-			int cacheSizeMaxInMegabytes = GetValueFromConfiguration("Raven/Esent/CacheSizeMax", defaultCacheSize);
+            int cacheSizeMaxInMegabytes = GetValueFromConfiguration(Constants.Esent.CacheSizeMax, defaultCacheSize);
 			int cacheSizeMax = TranslateToSizeInDatabasePages(cacheSizeMaxInMegabytes, 1024 * 1024);
 			if (SystemParameters.CacheSizeMax > cacheSizeMax)
 			{

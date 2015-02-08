@@ -1,4 +1,4 @@
-import getStatusDebugMetricsCommand = require("commands/getStatusDebugMetricsCommand");
+import getDebugMetricsCommand = require("commands/getDebugMetricsCommand");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
@@ -65,7 +65,7 @@ class statusDebugMetrics extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('JHZ574');
         this.activeDatabase.subscribe(() => this.fetchStatusDebugMetrics());
         return this.fetchStatusDebugMetrics();
     }
@@ -73,7 +73,7 @@ class statusDebugMetrics extends viewModelBase {
     fetchStatusDebugMetrics(): JQueryPromise<statusDebugMetricsDto> {
         var db = this.activeDatabase();
         if (db) {
-            return new getStatusDebugMetricsCommand(db)
+            return new getDebugMetricsCommand(db)
                 .execute()
                 .done((results: statusDebugMetricsDto) => this.data(results));
         }

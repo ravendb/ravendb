@@ -39,6 +39,14 @@ namespace Raven.Database.Server.Security
 		        }
 		    }
 
+			bool allowAdminAnonymousAccessForCommercialUse;
+			bool.TryParse(database.Configuration.Settings["Raven/Licensing/AllowAdminAnonymousAccessForCommercialUse"], out allowAdminAnonymousAccessForCommercialUse);
+
+            if (ValidateLicense.CurrentLicense.IsCommercial && database.Configuration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin && allowAdminAnonymousAccessForCommercialUse == false)
+			{
+				throw new InvalidOperationException("Your 'Raven/AnonymousAccess' is set to '" + AnonymousUserAccessMode.Admin + "', which disables all user authentication on server. If you are aware of the consequences of this, please change the 'Raven/Licensing/AllowAdminAnonymousAccessForCommercialUse' to 'true'.");
+			}
+
 		    if (Authentication.IsEnabled == false && database.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
 		    {
                 throw new InvalidOperationException("Cannot set Raven/AnonymousAccess to '" + database.Configuration.AnonymousUserAccessMode+"' without a valid license.\r\n" +

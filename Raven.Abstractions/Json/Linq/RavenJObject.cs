@@ -10,6 +10,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
 using Raven.Abstractions.Data;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Json.Linq
 {
@@ -126,12 +127,15 @@ namespace Raven.Json.Linq
 		/// <value></value>
 		public RavenJToken this[string propertyName]
 		{
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get
 			{
 				RavenJToken ret;
 				Properties.TryGetValue(propertyName, out ret);
 				return ret;
 			}
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
 			set { Properties[propertyName] = value; }
 		}
 
@@ -353,7 +357,7 @@ namespace Raven.Json.Linq
 			Properties.EnsureSnapshot(msg);
 		}
 
-		public override IEnumerable<RavenJToken> Values()
+	    public override IEnumerable<RavenJToken> Values()
 		{
 			return Properties.Values;
 		}
@@ -367,7 +371,7 @@ namespace Raven.Json.Linq
 		{
 			if (reader.TokenType == JsonToken.None)
 			{
-				if (!await reader.ReadAsync())
+				if (!await reader.ReadAsync().ConfigureAwait(false))
 					throw new Exception("Error reading RavenJObject from JsonReader.");
 			}
 
@@ -375,7 +379,7 @@ namespace Raven.Json.Linq
 				throw new Exception(
 					"Error reading RavenJObject from JsonReader. Current JsonReader item is not an object: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
 
-			if (await reader.ReadAsync() == false)
+			if (await reader.ReadAsync().ConfigureAwait(false) == false)
 				throw new Exception("Unexpected end of json object");
 
 			string propName = null;
@@ -395,7 +399,7 @@ namespace Raven.Json.Linq
 					case JsonToken.StartObject:
 						if (!string.IsNullOrEmpty(propName))
 						{
-							var val = await RavenJObject.LoadAsync(reader);
+							var val = await LoadAsync(reader).ConfigureAwait(false);
 							o[propName] = val; // TODO: Assert when o.Properties.ContainsKey and its value != val
 							propName = null;
 						}
@@ -409,7 +413,7 @@ namespace Raven.Json.Linq
 					case JsonToken.StartArray:
 						if (!string.IsNullOrEmpty(propName))
 						{
-							var val = await RavenJArray.LoadAsync(reader);
+							var val = await RavenJArray.LoadAsync(reader).ConfigureAwait(false);
 							o[propName] = val; // TODO: Assert when o.Properties.ContainsKey and its value != val
 							propName = null;
 						}
@@ -435,7 +439,7 @@ namespace Raven.Json.Linq
 						}
 						break;
 				}
-			} while (await reader.ReadAsync());
+			} while (await reader.ReadAsync().ConfigureAwait(false));
 
 			throw new Exception("Error reading RavenJObject from JsonReader.");
 		}

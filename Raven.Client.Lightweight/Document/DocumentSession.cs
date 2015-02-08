@@ -434,7 +434,9 @@ namespace Raven.Client.Document
             var ravenQueryStatistics = new RavenQueryStatistics();
             var highlightings = new RavenQueryHighlightings();
             var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, DatabaseCommands, null, isMapReduce);
-            return new RavenQueryInspector<T>(ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, null, this, DatabaseCommands, null, isMapReduce);
+            var inspector = new RavenQueryInspector<T>();
+            inspector.Init(ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, null, this, DatabaseCommands, null, isMapReduce);
+            return inspector;
         }
 
         /// <summary>
@@ -627,7 +629,7 @@ namespace Raven.Client.Document
         {
             using (enumerator)
             {
-                var queryOperation = ((DocumentQuery<T>)query).InitializeQueryOperation(null);
+                var queryOperation = ((DocumentQuery<T>)query).InitializeQueryOperation();
                 queryOperation.DisableEntitiesTracking = true;
                 while (enumerator.MoveNext())
                 {
@@ -834,6 +836,11 @@ namespace Raven.Client.Document
         IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName, bool isMapReduce)
         {
             throw new NotSupportedException();
+        }
+
+        public RavenQueryInspector<S> CreateRavenQueryInspector<S>()
+        {
+            return new RavenQueryInspector<S>();
         }
 
         internal Lazy<T> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval)

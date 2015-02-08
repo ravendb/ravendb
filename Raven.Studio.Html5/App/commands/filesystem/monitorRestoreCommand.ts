@@ -2,9 +2,10 @@ import deleteDocumentCommand = require("commands/deleteDocumentCommand");
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import appUrl = require("common/appUrl");
 
 class monitorRestoreCommand extends commandBase {
-    private db: database = new database("<system>");
+    private db: database = appUrl.getSystemDatabase();
 
     constructor(private parentPromise: JQueryDeferred<any>, private filesystemName: string, private updateRestoreStatus: (restoreStatusDto) => void) {
         super();
@@ -17,21 +18,18 @@ class monitorRestoreCommand extends commandBase {
                 setTimeout(() => this.execute(), 1000);
             })
             .done((restoreStatus: restoreStatusDto)=> {
-                var lastMessage = restoreStatus.Messages.last();
-                var isRestoreFinished =
-                    lastMessage.contains("The new filesystem was created") ||
-                    lastMessage.contains("Restore Canceled") ||
-                    lastMessage.contains("A filesystem name must be supplied if the restore location does not contain a valid") ||
-                    lastMessage.contains("Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name");
-
-                restoreStatus.IsRunning = !isRestoreFinished;
                 this.updateRestoreStatus(restoreStatus);
 
-                if (!isRestoreFinished) {
+                if (restoreStatus.State == "Running") {
                     setTimeout(() => this.execute(), 1000);
                 } else {
-                    this.reportSuccess("Filesystem was successfully restored!");
-                    this.parentPromise.resolve();
+                    if (restoreStatus.State == "Completed") {
+                        this.reportSuccess("Filesystem was successfully restored!");
+                        this.parentPromise.resolve();
+                    } else {
+                        this.reportError("Filesystem wasn't restored!");
+                        this.parentPromise.reject();
+                    }
                 }
             });
         return this.parentPromise;

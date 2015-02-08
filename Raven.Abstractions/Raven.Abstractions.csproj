@@ -28,6 +28,7 @@
     <NoWarn>1591</NoWarn>
     <DocumentationFile>bin\Debug\Raven.Abstractions.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -40,12 +41,25 @@
     <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
     <NoWarn>1591</NoWarn>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
+    <OutputPath>bin\Profiling\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
+    <Optimize>true</Optimize>
+    <NoWarn>1591</NoWarn>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="ICSharpCode.NRefactory">
@@ -140,13 +154,14 @@
     <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\AbstractRestoreRequest.cs" />
     <Compile Include="Data\BulkOperationOptions.cs" />
+    <Compile Include="Data\CompactStatus.cs" />
     <Compile Include="Data\DatabaseOperationsStatus.cs" />
+    <Compile Include="Data\EtagJsonConverter.cs" />
     <Compile Include="Data\FilesystemRestoreRequest.cs" />
     <Compile Include="Data\FilesystemBackupRequest.cs" />
     <Compile Include="Data\EsentStorageStats.cs" />
     <Compile Include="Data\IndexingBatchInfo.cs" />
     <Compile Include="Data\AdminStatistics.cs" />
-    <Compile Include="Data\AggregationData.cs" />
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
@@ -168,6 +183,8 @@
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\PrefetchingUser.cs" />
     <Compile Include="Data\QueryHeaderInformation.cs" />
+    <Compile Include="Data\ReduceType.cs" />
+    <Compile Include="Data\ReducingBatchInfo.cs" />
     <Compile Include="Data\ReplicationInfoStatus.cs" />
     <Compile Include="Data\DatabaseRestoreRequest.cs" />
     <Compile Include="Data\RestoreInProgress.cs" />
@@ -214,6 +231,9 @@
     <Compile Include="Data\StorageStats.cs" />
     <Compile Include="Data\StreamResult.cs" />
     <Compile Include="Data\StringDistanceTypes.cs" />
+    <Compile Include="Data\SubscriptionCriteria.cs" />
+    <Compile Include="Data\SubscriptionConfig.cs" />
+    <Compile Include="Data\SubscriptionConnectionOptions.cs" />
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TaskBasedOperationState.cs" />
@@ -224,10 +244,15 @@
     <Compile Include="Data\VoronActiveTransaction.cs" />
     <Compile Include="Data\VoronStorageStats.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
+    <Compile Include="Exceptions\ClientNotSupportedException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
     <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
     <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionClosedException.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionInUseException.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistExeption.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />
     <Compile Include="Exceptions\IndexCompilationException.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />
@@ -248,6 +273,7 @@
     <Compile Include="Default.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\MemberInfoExtensions.cs" />
+    <Compile Include="Extensions\RavenDateTimeExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="FileSystem\ConfigurationSearchResults.cs" />
     <Compile Include="FileSystem\FileHeader.cs" />
@@ -255,9 +281,11 @@
     <Compile Include="FileSystem\SearchResults.cs" />
     <Compile Include="Indexing\IndexLockMode.cs" />
     <Compile Include="Indexing\IndexMergeResults.cs" />
+    <Compile Include="Indexing\IndexReplaceDocument.cs" />
     <Compile Include="Indexing\MergeSuggestions.cs" />
     <Compile Include="Indexing\TransformerDefinition.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
+    <Compile Include="Json\JsonLinqEnumerableConverter.cs" />
     <Compile Include="Json\JsonTextReaderAsync.cs" />
     <Compile Include="Indexing\FieldTermVector.cs" />
     <Compile Include="Indexing\SpatialOptions.cs" />
@@ -317,7 +345,6 @@
     <Compile Include="MEF\PartMetadata.cs" />
     <Compile Include="Data\QueryResult.cs" />
     <Compile Include="Indexing\SortOptions.cs" />
-    <Compile Include="MissingFromBCL\WinRTCompetability.cs" />
     <Compile Include="OAuth\AbstractAuthenticator.cs" />
     <Compile Include="OAuth\BasicAuthenticator.cs" />
     <Compile Include="OAuth\SecuredAuthenticator.cs" />
@@ -357,7 +384,7 @@
     <Compile Include="Replication\ReplicationDocument.cs" />
     <Compile Include="Replication\ReplicationStatistics.cs" />
     <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
-    <Compile Include="Smuggler\Data\ExportDataResult.cs" />
+    <Compile Include="Smuggler\Data\OperationState.cs" />
     <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />
     <Compile Include="Smuggler\Data\ExportFilesResult.cs" />
     <Compile Include="Smuggler\Data\Tombstone.cs" />
@@ -394,7 +421,6 @@
     <Compile Include="Util\Encryptors\IEncryptor.cs" />
     <Compile Include="Util\EscapingHelper.cs" />
     <Compile Include="Util\EtagUtil.cs" />
-    <Compile Include="Util\GenericUtil.cs" />
     <Compile Include="Util\IAsyncEnumerator.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\IndexPrettyPrinter.cs" />

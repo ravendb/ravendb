@@ -531,7 +531,7 @@ namespace Voron.Impl.Journal
 
 							using (ForceFlushingPagesOlderThan(oldestActiveTransaction))
 							{
-								ApplyLogsToDataFile(oldestActiveTransaction, token, transaction, allowToFlushOverwrittenPages: false);
+								ApplyLogsToDataFile(oldestActiveTransaction, token, transaction, false);
 							}
 						}
 
@@ -573,35 +573,41 @@ namespace Voron.Impl.Journal
 
 						FreeScratchPages(unusedJournals, txw ?? transaction);
 
-						if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
-							DateTime.Now - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit)
-						{
-							_waj._dataPager.Sync();
-
-							UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
-
-							foreach (var toDelete in _journalsToDelete.Values)
-							{
-								if (_waj._env.Options.IncrementalBackupEnabled == false)
-									toDelete.DeleteOnClose = true;
-
-								toDelete.Release();
-							}
-
-							_journalsToDelete.Clear();
-							_totalWrittenButUnsyncedBytes = 0;
-							_lastDataFileSyncTime = DateTime.Now;
-						}
-
 						if (txw != null)
 							txw.Commit();
 					}
+					
+					if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
+						DateTime.UtcNow - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit)
+					{
+						SyncDataFile(oldestActiveTransaction);
+					}
+
 				}
 				finally
 				{
 					if(lockTaken)
 						Monitor.Exit(_flushingLock);
 				}
+			}
+
+			internal void SyncDataFile(long oldestActiveTransaction)
+			{
+				_waj._dataPager.Sync();
+
+				UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
+
+				foreach (var toDelete in _journalsToDelete.Values)
+				{
+					if (_waj._env.Options.IncrementalBackupEnabled == false)
+						toDelete.DeleteOnClose = true;
+
+					toDelete.Release();
+				}
+
+				_journalsToDelete.Clear();
+				_totalWrittenButUnsyncedBytes = 0;
+				_lastDataFileSyncTime = DateTime.UtcNow;
 			}
 
 			public Dictionary<long, int> writtenPages = new Dictionary<long, int>();
@@ -780,6 +786,34 @@ namespace Voron.Impl.Journal
 						Monitor.Exit(_flushingLock);
 				});
 			}
+
+			internal void DeleteCurrentAlreadyFlushedJournal()
+			{
+				if (_waj._env.Options.IncrementalBackupEnabled)
+					return;
+
+				if (_waj._files.Count == 0)
+					return;
+
+				if (_waj._files.Count != 1)
+					throw new InvalidOperationException("Cannot delete current journal because there is more journals being in use");
+
+				var current = _waj._files.First();
+
+				if (current.Number != _lastSyncedJournal)
+					throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile.Number, _lastSyncedJournal));
+
+				if(_waj._env.NextWriteTransactionId - 1 != _lastSyncedTransactionId)
+					throw new InvalidOperationException();
+					
+				_waj._files = _waj._files.RemoveFront(1);
+				_waj.CurrentFile = null;
+
+				current.DeleteOnClose = true;
+				current.Release();
+
+				_waj._headerAccessor.Modify(header => _waj._updateLogInfo(header));
+			}
 		}
 
 		public void WriteToJournal(Transaction tx, int pageCount)
@@ -812,7 +846,7 @@ namespace Voron.Impl.Journal
 				CurrentFile = null;
 		}
 
-		private byte*[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager,uint previousTransactionCrc)
+		private IntPtr[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager,uint previousTransactionCrc)
 		{
 			// numberOfPages include the tx header page, which we don't compress
 			var dataPagesCount = numberOfPages - 1;
@@ -834,7 +868,7 @@ namespace Voron.Impl.Journal
 				var txPage = txPages[index];
 				var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
 				var count = txPage.NumberOfPages * AbstractPager.PageSize;
-				StdLib.memcpy(write, scratchPage, count);
+                MemoryUtils.BulkCopy(write, scratchPage, count);
 				write += count;
 			}
 
@@ -848,7 +882,7 @@ namespace Voron.Impl.Journal
 				StdLib.memset(compressionBuffer + len, 0, remainder);
 		    }
 
-			var pages = new byte*[compressedPages + 1];
+			var pages = new IntPtr[compressedPages + 1];
 
 			var txHeaderBase = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPages[0].ScratchFileNumber, txPages[0].PositionInScratchBuffer);
 			var txHeader = (TransactionHeader*)txHeaderBase;
@@ -858,10 +892,10 @@ namespace Voron.Impl.Journal
 			txHeader->UncompressedSize = sizeInBytes;
 			txHeader->PreviousTransactionCrc = previousTransactionCrc;
 
-			pages[0] = txHeaderBase;
+			pages[0] = new IntPtr(txHeaderBase);
 			for (int index = 0; index < compressedPages; index++)
 			{
-				pages[index + 1] = compressionBuffer + (index * AbstractPager.PageSize);
+				pages[index + 1] = new IntPtr(compressionBuffer + (index * AbstractPager.PageSize));
 			}
 
 			txHeader->Crc = Crc.Value(compressionBuffer, 0, compressedPages * AbstractPager.PageSize);

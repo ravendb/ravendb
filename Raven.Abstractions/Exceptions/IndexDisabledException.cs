@@ -62,9 +62,8 @@ namespace Raven.Abstractions.Exceptions
 		}
 
 		/// <summary>
-		/// Gets or sets the information about the index failure 
+		/// Information about the index failure .
 		/// </summary>
-		/// <value>The information.</value>
 		public IndexFailureInformation Information { get; set; }
 	}
 }

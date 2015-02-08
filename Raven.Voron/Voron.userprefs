@@ -1,26 +1,16 @@
-﻿<Properties>
+﻿<Properties StartupItem="Voron.Tryout/Voron.Tryout.csproj">
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Voron.Tryout/Program.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Voron/Platform/Posix/PosixPageFileBackedMemoryMapPager.cs">
     <Files>
-      <File FileName="Voron.Tryout/Program.cs" Line="20" Column="27" />
-      <File FileName="Voron/Platform/Posix/NativeMethods.cs" Line="96" Column="25" />
-      <File FileName="Voron/Platform/Posix/PosixPageFileBackedMemoryMapPager.cs" Line="187" Column="1" />
-      <File FileName="Voron/Platform/Posix/PosixMemoryMapPager.cs" Line="24" Column="23" />
-      <File FileName="Voron/StorageEnvironmentOptions.cs" Line="183" Column="1" />
-      <File FileName="Voron/Platform/Posix/PosixJournalWriter.cs" Line="29" Column="47" />
+      <File FileName="Voron/Impl/Backup/FullBackup.cs" Line="27" Column="27" />
+      <File FileName="Voron/Platform/Posix/PosixPageFileBackedMemoryMapPager.cs" Line="17" Column="17" />
+      <File FileName="Voron/Platform/Posix/AllowBuildOnWindows.cs" Line="13" Column="13" />
     </Files>
-    <Pads>
-      <Pad Id="ProjectPad">
-        <State expanded="True">
-          <Node name="Voron.Tests" selected="True" />
-          <Node name="Voron.Tryout" expanded="True" />
-        </State>
-      </Pad>
-    </Pads>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore>
       <Breakpoint file="/home/ayende/ravendb/Raven.Voron/Voron/StorageEnvironmentOptions.cs" line="183" column="1" />
+      <Breakpoint file="/home/hr/work/ravendb/Raven.Voron/Voron/Platform/Posix/PosixMemoryMapPager.cs" line="93" column="1" />
     </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />

@@ -86,7 +86,6 @@ interface databaseStatisticsDto {
     Errors: serverErrorDto[];
     InMemoryIndexingQueueSizes: number[];
     Indexes: indexStatisticsDto[];
-    IndexingBatchInfo: indexingBatchInfoDto[];
     LastAttachmentEtag: string;
     LastDocEtag: string;
     Prefetches: any[];
@@ -117,6 +116,7 @@ interface indexStatisticsDto {
     Performance: indexPerformanceDto[];
     DocsCount: number;
     IsInvalidIndex: boolean;
+    IsTestIndex: boolean;
 }
 
 interface indexingBatchInfoDto {
@@ -125,18 +125,85 @@ interface indexingBatchInfoDto {
     TotalDocumentCount: number;
     TotalDocumentSize: number;
     StartedAt: string; // ISO date string.
-    TotalDuration: string;
-    PerformanceStats: indexPerformanceDto[];
+    StartedAtDate?: Date;
+    TotalDurationMs: number;
+    PerfStats: indexNameAndMapPerformanceStats[];  
+}
+
+interface indexNameAndMapPerformanceStats {
+    indexName: string;
+    stats: indexPerformanceDto;
+    CacheThreadCount?: number;
 }
 
 interface indexPerformanceDto {
     Operation: string;
-    OutputCount: number;
-    InputCount: number;
     ItemsCount: number;
-    Duration: string;
+    InputCount: number;
+    OutputCount: number;
     Started: string; // Date
+    Completed: string; // Date
+    Duration: string;
     DurationMilliseconds: number;
+    Operations: basePerformanceStatsDto[];
+    WaitingTimeSinceLastBatchCompleted: string;
+}
+
+interface reducingBatchInfoDto {
+    IndexesToWorkOn: string[];
+    StartedAt: string; // ISO date string.
+    StartedAtDate?: Date;
+    TotalDurationMs: number;
+    TimeSinceFirstReduceInBatchCompletedMs: number;
+    PerfStats: indexNameAndReducingPerformanceStats[];
+}
+
+interface indexNameAndReducingPerformanceStats {
+    indexName: string;
+    stats: reducePerformanceStatsDto;
+    parent?: reducingBatchInfoDto;
+}
+
+interface reducePerformanceStatsDto {
+    ReduceType?: string;
+    LevelStats: reduceLevelPeformanceStatsDto[];
+}
+
+interface reduceLevelPeformanceStatsDto {
+    Level: number;
+    ItemsCount: number;
+    InputCount: number;
+    OutputCount: number;
+    Started: string; // ISO date string
+    Completed: string; // Date
+    Duration: string;
+    DurationMs: number;
+    Operations: basePerformanceStatsDto[];
+    parent?: indexNameAndReducingPerformanceStats;
+    CacheThreadCount?: number;
+}
+
+interface basePerformanceStatsDto {
+    DurationMs: number;
+    CacheWidth?: number;
+    CacheCumulativeSum?: number;
+    CacheIsSingleThread?: boolean;
+}
+
+interface performanceStatsDto extends basePerformanceStatsDto {
+    Name: string;
+    ParallelParent?: parallelBatchStatsDto;
+}
+
+interface parallelPefromanceStatsDto extends basePerformanceStatsDto {
+    NumberOfThreads: number;
+    BatchedOperations: parallelBatchStatsDto[];
+}
+
+interface parallelBatchStatsDto {
+    StartDelay: number;
+    Operations: performanceStatsDto[];
+    Parent?: parallelPefromanceStatsDto;
 }
 
 interface apiKeyDto extends documentDto {
@@ -204,6 +271,11 @@ interface userInfoDto {
     ReadOnlyDatabases: string[];
     ReadWriteDatabases: string[];
     AccessTokenBody: string;
+}
+
+interface serverConfigsDto {
+    IsGlobalAdmin: boolean;
+    CanExposeConfigOverTheWire: boolean;
 }
 
 interface logDto {
@@ -287,6 +359,8 @@ interface indexDefinitionDto {
     Map: string;
     Maps: string[];
     Reduce: string;
+    IsTestIndex: boolean;
+    IsSideBySideIndex: boolean;
     IsMapReduce: boolean;
     IsCompiled: boolean;
     Stores: any;
@@ -373,6 +447,7 @@ interface replicationDestinationDto {
     IgnoredClient: boolean;
     Disabled: boolean;
     ClientVisibleUrl: string;
+    SkipIndexReplication: boolean;
 }
 
 interface replicationsDto {
@@ -520,6 +595,7 @@ interface restoreRequestDto {
 interface databaseRestoreRequestDto extends restoreRequestDto {
     DatabaseName: string;
     DatabaseLocation: string;
+    DisableReplicationDestinations: boolean;
 }
 
 interface filesystemRestoreRequestDto extends restoreRequestDto {
@@ -529,7 +605,12 @@ interface filesystemRestoreRequestDto extends restoreRequestDto {
 
 interface restoreStatusDto {
     Messages: string[];
-    IsRunning: boolean;
+    State: string;
+}
+
+interface compactStatusDto {
+    Messages: string[];
+    State: string;
 }
 
 interface sqlReplicationTableDto {
@@ -675,6 +756,17 @@ interface patchDto extends documentDto {
     Values: Array<patchValueDto>;
 }
 
+interface statusStorageOnDiskDto {
+    TransactionalStorageAllocatedSize: number;
+    TransactionalStorageAllocatedSizeHumaneSize: string;
+    TransactionalStorageUsedSize: number;
+    TransactionalStorageUsedSizeHumaneSize: string;
+    IndexStorageSize: number;
+    IndexStorageSizeHumane: string;
+    TotalDatabaseSize: number;
+    TotalDatabaseSizeHumane: string;
+}
+
 interface statusDebugChangesDto {
     Id: string;
     Connected: boolean;
@@ -722,11 +814,6 @@ interface histogramDataDto {
     Mean: number;
     Stdev: number;
     Percentiles: any;
-}
-
-interface fileSystemDto {
-    Name: string;
-    Disabled: boolean;
 }
 
 interface statusDebugDocrefsDto {
@@ -902,12 +989,19 @@ interface changesApiEventDto {
     Value?: any;
 }
 
-interface databaseDto {
-    Name: string;
-    Disabled: boolean;
-    Bundles: string[];
+interface databaseDto extends tenantDto {
     IndexingDisabled: boolean;
     RejectClientsEnabled: boolean;
+}
+
+interface tenantDto {
+    Name: string;
+    Disabled: boolean;
+    Bundles: Array<string>;
+    IsAdminCurrentTenant: boolean;
+}
+
+interface fileSystemDto extends tenantDto {
 }
 
 interface customFunctionsDto {
@@ -1031,18 +1125,6 @@ interface replicationTopologyConnectionDto {
     StoredServerId: string;
 }
 
-interface stringLinkDto {
-    source: string;
-    target: string;
-}
-
-interface replicationTopologyLinkDto extends stringLinkDto {
-    left: boolean;
-    right: boolean;
-    toRightPayload?: replicationTopologyConnectionDto;
-    toLeftPayload?: replicationTopologyConnectionDto;
-}
-
 interface runningTaskDto {
     Id: number;
     TaskStatus: string;
@@ -1069,13 +1151,20 @@ interface fileSystemSettingsDto {
 interface performanceTestRequestDto {
     Path: string;
     FileSize: number;
-    OperationType: string;
-    BufferingType: string;
-    Sequential: boolean;
-    ThreadCount: number;
-    TimeToRunInSeconds: number;
+    TestType: string;
+
+    OperationType?: string;
+    BufferingType?: string;
+    Sequential?: boolean;
+    ThreadCount?: number;
+    TimeToRunInSeconds?: number;
     RandomSeed?: number;
-    ChunkSize: number;
+    ChunkSize?: number;
+
+    NumberOfDocuments?: number;
+    SizeOfDocuments?: number;
+    NumberOfDocumentsInBatch?: number;
+    WaitBetweenBatches?: number;
 }
 
 interface diskPerformanceResultDto {
@@ -1087,10 +1176,38 @@ interface diskPerformanceResultDto {
     WriteLatency: histogramDataDto;
     TotalRead: number;
     TotalWrite: number;
+    TotalTimeMs: number;
 }
 
 interface diskPerformanceResultWrappedDto {
     Result: diskPerformanceResultDto;
     Request: performanceTestRequestDto;
     DebugMsgs: string[];
+}
+
+interface indexReplaceDocumentDto extends documentDto {
+    IndexToReplace: string;
+    MinimumEtagBeforeReplace?: string;
+    ReplaceTimeUtc?: string;
+}
+
+interface replicationExplanationForDocumentDto {
+    Key: string;
+    Etag: string;
+    Destination: destinationInformationDto;
+    Message: string;
+}
+
+interface destinationInformationDto {
+    Url: string;
+    DatabaseName: string;
+    ServerInstanceId: string;
+    LastDocumentEtag: string;
+}
+
+enum ResponseCodes {
+    Forbidden = 403,
+    NotFound = 404,
+    PreconditionFailed = 412,
+    InternalServerError = 500
 }

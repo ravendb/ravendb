@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 
@@ -34,6 +33,8 @@ namespace Raven.Database.FileSystem.Storage
         IEnumerable<FileHeader> ReadFiles(int start, int size);
 
         IEnumerable<FileHeader> GetFilesAfter(Guid etag, int take);
+
+		IEnumerable<FileHeader> GetFilesStartingWith(string namePrefix, int start, int take);
 
         void Delete(string filename);
        
@@ -72,5 +73,7 @@ namespace Raven.Database.FileSystem.Storage
         IList<string> GetConfigNamesStartingWithPrefix(string prefix, int start, int take, out int total);
 
         Etag GetLastEtag();
+
+		bool IsNested { get; set; }
     }
 }

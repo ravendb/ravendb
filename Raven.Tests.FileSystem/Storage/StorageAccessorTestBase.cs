@@ -2,15 +2,21 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
+using System.Threading;
 
+using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
+using Raven.Abstractions.Data;
 
 namespace Raven.Tests.FileSystem.Storage
 {
     public abstract class StorageAccessorTestBase : IDisposable
     {
+		private static int pathCount;
+
         private readonly IList<string> pathsToDelete;
 
         private readonly IList<ITransactionalStorage> storages;
@@ -33,16 +39,17 @@ namespace Raven.Tests.FileSystem.Storage
             storages = new List<ITransactionalStorage>();
         }
 
-        protected string NewDataPath(string prefix = null)
-        {
-            if (prefix != null)
-                prefix = prefix.Replace("<", "").Replace(">", "");
+		protected string NewDataPath(string prefix = null, bool forceCreateDir = false)
+		{
+			if (prefix != null)
+				prefix = prefix.Replace("<", "").Replace(">", "");
 
-            var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", Guid.NewGuid().ToString("N")));
-            Directory.CreateDirectory(newDataDir);
-            pathsToDelete.Add(newDataDir);
-            return newDataDir;
-        }
+			var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", Interlocked.Increment(ref pathCount)));
+			if (forceCreateDir && Directory.Exists(newDataDir) == false)
+				Directory.CreateDirectory(newDataDir);
+			pathsToDelete.Add(newDataDir);
+			return newDataDir;
+		}
 
         protected ITransactionalStorage NewTransactionalStorage(string requestedStorage, bool runInMemory = true, string path = null)
         {
@@ -56,7 +63,7 @@ namespace Raven.Tests.FileSystem.Storage
 				},
 				Settings = new NameValueCollection
 				           {
-					           {"Raven/RunInMemory", runInMemory.ToString() }
+					           { Constants.RunInMemory, runInMemory.ToString() }
 				           }
 			};
 
@@ -75,7 +82,7 @@ namespace Raven.Tests.FileSystem.Storage
             }
 
             storages.Add(storage);
-            storage.Initialize();
+			storage.Initialize(new OrderedPartCollection<AbstractFileCodec>());
 
             return storage;
         }

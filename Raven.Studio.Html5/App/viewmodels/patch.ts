@@ -18,6 +18,7 @@ import executePatchConfirm = require('viewmodels/executePatchConfirm');
 import savePatchCommand = require('commands/savePatchCommand');
 import executePatchCommand = require("commands/executePatchCommand");
 import virtualTable = require("widgets/virtualTable/viewModel");
+import evalByQueryCommand = require("commands/evalByQueryCommand");
 
 class patch extends viewModelBase {
 
@@ -48,7 +49,9 @@ class patch extends viewModelBase {
         aceEditorBindingHandler.install();
     }
 
-    activate() {
+    activate(navigationArgs) {
+        super.activate(navigationArgs);
+        this.updateHelpLink('QGGJR5');
         this.patchDocument(patchDocument.empty());
         this.isExecuteAllowed = ko.computed(() => ((this.patchDocument().script()) && (this.beforePatch())) ? true : false);
         this.keyOfTestedDocument = ko.computed(() => {
@@ -132,9 +135,16 @@ class patch extends viewModelBase {
             .execute()
             .always(() => NProgress.done())
             .done((colls: collection[]) => {
+                var currentlySelectedCollection:collection = null;
+
+                if (this.patchDocument().selectedItem()) {
+                    var selected = this.patchDocument().selectedItem();
+                    currentlySelectedCollection = this.collections.first(c => c.name === selected);
+                }
+
                 this.collections(colls);
                 if (this.collections().length > 0) {
-                    this.setSelectedCollection(this.collections().first());
+                    this.setSelectedCollection(currentlySelectedCollection || this.collections().first());
                 }
             });
     }
@@ -258,7 +268,38 @@ class patch extends viewModelBase {
     }
 
     executePatchOnAll() {
-        this.confirmAndExecutePatch(this.currentCollectionPagedItems().getAllCachedItems().map(doc => doc.__metadata.id));
+        var confirmExec = new executePatchConfirm();
+        confirmExec.viewTask.done(() => this.executePatchByIndex());
+        app.showDialog(confirmExec);
+    }
+
+    private executePatchByIndex() {
+        var index = null;
+        var query = null;
+        switch (this.patchDocument().patchOnOption()) {
+            case "Collection":
+                index = "Raven/DocumentsByEntityName";
+                query = "Tag:" + this.patchDocument().selectedItem();
+                break;
+            case "Index":
+                index = this.patchDocument().selectedItem();
+                query = this.patchDocument().query();
+                break;
+        }
+
+        var values = {};
+
+        var patchDtos = this.patchDocument().parameters().map(param => {
+            var dto = param.toDto();
+            values[dto.Key] = dto.Value;
+        });
+
+        var patch = {
+            Script: this.patchDocument().script(),
+            Values: values
+        };
+
+        new evalByQueryCommand(index, query, JSON.stringify(patch), this.activeDatabase()).execute();
     }
 
     private confirmAndExecutePatch(keys: string[]) {

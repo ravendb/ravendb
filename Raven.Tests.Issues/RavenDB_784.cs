@@ -1,5 +1,5 @@
 ﻿using System.Threading;
-
+using Raven.Abstractions.Data;
 using Raven.Tests.Common;
 
 namespace Raven.Tests.Issues

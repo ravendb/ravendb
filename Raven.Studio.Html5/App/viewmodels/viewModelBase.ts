@@ -14,6 +14,8 @@ import uploadItem = require("models/uploadItem");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
 import confirmationDialog = require("viewmodels/confirmationDialog");
+import saveDocumentCommand = require("commands/saveDocumentCommand");
+import document = require("models/document");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -29,11 +31,17 @@ class viewModelBase {
 
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
-    private notifications: Array<changeSubscription> = [];
+    notifications: Array<changeSubscription> = [];
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
     public static isConfirmedUsingSystemDatabase: boolean = false;
     dirtyFlag = new ko.DirtyFlag([]);
 
+    currentHelpLink = ko.observable<string>().subscribeTo('globalHelpLink', true);
+
+    //holds full studio version eg. 3.0.3528
+    static clientVersion = ko.observable<string>();
+
+    static hasContinueTestOption = ko.observable<boolean>(false);
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
      * Possible return values: boolean, promise<boolean>, {redirect: 'some/other/route'}, promise<{redirect: 'some/other/route'}>
@@ -94,6 +102,7 @@ class viewModelBase {
         window.addEventListener("beforeunload", this.beforeUnloadListener, false);
 
         ko.postbox.publish("SetRawJSONUrl", "");
+        this.updateHelpLink(null); // clean link
     }
 
     /*
@@ -200,27 +209,34 @@ class viewModelBase {
         router.navigate(url, options);
     }
 
-    modelPolling() {
+    modelPolling(): JQueryPromise<any> {
+        return null;
     }
 
-    forceModelPolling() {
-        this.modelPolling();
+    pollingWithContinuation() {
+        var poolPromise = this.modelPolling();
+        if (poolPromise) {
+            poolPromise.always(() => {
+                viewModelBase.modelPollingHandle = setTimeout(() => {
+                    viewModelBase.modelPollingHandle = null;
+                    this.pollingWithContinuation();
+                    }, 5000);
+            });
+        }
     }
 
     modelPollingStart() {
-        this.modelPolling();
         // clear previous pooling handle (if any)
         if (viewModelBase.modelPollingHandle) {
             this.modelPollingStop();
-            viewModelBase.modelPollingHandle = null;
         }
-        viewModelBase.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
-        this.activeDatabase.subscribe(() => this.forceModelPolling());
-        this.activeFilesystem.subscribe(() => this.forceModelPolling());
+        this.pollingWithContinuation();
+       
     }
 
     modelPollingStop() {
-        clearInterval(viewModelBase.modelPollingHandle);
+        clearTimeout(viewModelBase.modelPollingHandle);
+        viewModelBase.modelPollingHandle = null;
     }
 
     confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['No', 'Yes'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
@@ -296,6 +312,23 @@ class viewModelBase {
 
     public RemoveNotification(subscription: changeSubscription) {
         this.notifications.remove(subscription);
+    }
+
+    public continueTest() {
+        var doc = document.empty();
+        new saveDocumentCommand("Debug/Done", doc, this.activeDatabase(), false)
+            .execute()
+            .done(() => viewModelBase.hasContinueTestOption(false));
+    }
+
+    public updateHelpLink(hash: string = null) {
+        if (hash) {
+            var version = viewModelBase.clientVersion();
+            var href = "http://ravendb.net/l/" + hash + "/" + version + "/";
+            ko.postbox.publish('globalHelpLink', href);
+        } else {
+            ko.postbox.publish('globalHelpLink', null);
+        }
     }
 }
 

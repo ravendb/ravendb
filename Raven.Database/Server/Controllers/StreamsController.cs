@@ -6,7 +6,6 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Security.Authentication.ExtendedProtection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +17,7 @@ using Raven.Abstractions.Util;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -29,8 +29,8 @@ namespace Raven.Database.Server.Controllers
 	public class StreamsController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("streams/docs")]
-		[Route("databases/{databaseName}/streams/docs")]
+		[RavenRoute("streams/docs")]
+		[RavenRoute("databases/{databaseName}/streams/docs")]
 		public HttpResponseMessage StreamDocsGet()
 		{
 			var start = GetStart();
@@ -78,7 +78,7 @@ namespace Raven.Database.Server.Controllers
 							Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, doc =>
 							{
 								timeout.Delay();
-								doc.WriteTo(writer);
+								doc.ToJson().WriteTo(writer);
                                 writer.WriteRaw(Environment.NewLine);
 							});
 						else
@@ -106,8 +106,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("streams/query/{*id}")]
-		[Route("databases/{databaseName}/streams/query/{*id}")]
+		[RavenRoute("streams/query/{*id}")]
+		[RavenRoute("databases/{databaseName}/streams/query/{*id}")]
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
 			var cts = new CancellationTokenSource();
@@ -124,21 +124,18 @@ namespace Raven.Database.Server.Controllers
 
 			try
 			{
-				var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts);
+				var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts);                  
 				queryOp.Init();
-				msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout,
-					mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) {CharSet = "utf-8"});
 
+                msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout, mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
 				msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
 				msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
 				msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
 				msg.Headers.Add("Raven-Index", queryOp.Header.Index);
 				msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
-				msg.Headers.Add(
-					"Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+				msg.Headers.Add("Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.GetDefaultRavenFormat());
 
-
-				if (IsCsvDownloadRequest(InnerRequest))
+                if ( IsCsvDownloadRequest(InnerRequest))
 				{
 					msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
 				}
@@ -153,8 +150,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("streams/query/{*id}")]
-		[Route("databases/{databaseName}/streams/query/{*id}")]
+		[RavenRoute("streams/query/{*id}")]
+		[RavenRoute("databases/{databaseName}/streams/query/{*id}")]
 		public async Task<HttpResponseMessage> SteamQueryPost(string id)
 		{
 			var postedQuery = await ReadStringAsync();
@@ -244,6 +241,7 @@ namespace Raven.Database.Server.Controllers
 
 			private readonly Stream stream;
 			private StreamWriter writer;
+            private bool doIncludeId;
 
 			public ExcelOutputWriter(Stream stream)
 			{
@@ -273,9 +271,26 @@ namespace Raven.Database.Server.Controllers
 			{
 				if (properties == null)
 				{
-					GetPropertiesAndWriteCsvHeader(result);
+					GetPropertiesAndWriteCsvHeader(result, out doIncludeId);
 					Debug.Assert(properties != null);
 				}
+
+                if ( doIncludeId )
+                {
+                    RavenJToken token;
+                    if (result.TryGetValue("@metadata", out token))
+                    {
+                        var metadata = token as RavenJObject;
+                        if (metadata != null)
+                        {
+                            if (metadata.TryGetValue("@id", out token))
+                            {
+                                OutputCsvValue(token.Value<string>());                               
+                            }
+                            writer.Write(',');
+                        }
+                    }
+                }
 
 				foreach (var property in properties)
 				{
@@ -289,11 +304,11 @@ namespace Raven.Database.Server.Controllers
 
 							case JTokenType.Array:
 							case JTokenType.Object:
-								OutputCsvValue(token.ToString(Formatting.None));
+                                OutputCsvValue(token.ToString(Formatting.None));
 								break;
 
 							default:
-								OutputCsvValue(token.Value<string>());
+                                OutputCsvValue(token.Value<string>());
 								break;
 						}
 					}
@@ -311,18 +326,35 @@ namespace Raven.Database.Server.Controllers
 		        writer.WriteLine(exception.ToString());
 		    }
 
-		    private void GetPropertiesAndWriteCsvHeader(RavenJObject result)
+            private void GetPropertiesAndWriteCsvHeader(RavenJObject result, out bool includeId)
 			{
+                includeId = false;
 				properties = DocumentHelpers.GetPropertiesFromJObject(result,
 					parentPropertyPath: "",
 					includeNestedProperties: true,
 					includeMetadata: false,
 					excludeParentPropertyNames: true).ToList();
 
+                RavenJToken token;
+                if (result.TryGetValue("@metadata", out token))
+                {
+                    var metadata = token as RavenJObject;
+                    if (metadata != null)
+                    {
+                        if (metadata.TryGetValue("@id", out token))
+                        {
+                            OutputCsvValue("@id");
+                            writer.Write(',');
+
+                            includeId = true;
+                        }
+                    }
+                }
+
 				foreach (var property in properties)
 				{
-					OutputCsvValue(property);
-					writer.Write(',');
+                    OutputCsvValue(property);
+                    writer.Write(',');
 				}
 				writer.WriteLine();
 			}

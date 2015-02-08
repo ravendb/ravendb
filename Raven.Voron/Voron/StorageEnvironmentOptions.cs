@@ -13,6 +13,7 @@ using Voron.Impl.Paging;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
+using Mono.Unix.Native;
 
 namespace Voron
 {
@@ -58,6 +59,8 @@ namespace Voron
 
 		public long MaxScratchBufferSize { get; set; }
 
+		public long MaxNumberOfPagesInMergedTransaction { get; set; }
+
 		public bool OwnsPagers { get; set; }
 
 		public bool ManualFlushing { get; set; }
@@ -92,6 +95,8 @@ namespace Voron
 			MaxScratchBufferSize = 512 * 1024 * 1024;
 
 			ScratchBufferOverflowTimeout = 5000;
+
+			MaxNumberOfPagesInMergedTransaction = 1024*128;// Ends up being 512 MB
 
 			OwnsPagers = true;
 			IncrementalBackupEnabled = false;
@@ -172,6 +177,14 @@ namespace Voron
 			{
 				get { return _tempPath; }
 			}
+
+            public override IVirtualPager OpenPager(string filename)
+            {
+                if (RunningOnPosix)
+                    return new PosixMemoryMapPager(filename);
+
+                return new Win32MemoryMapPager(filename);
+            }
 
 			public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
 			{
@@ -299,7 +312,7 @@ namespace Voron
 			{
 				_instanceId = Interlocked.Increment(ref _counter);
 				if (RunningOnPosix)
-					_dataPager = new PosixPageFileBackedMemoryMapPager("_data.pager", InitialFileSize);
+					_dataPager = new PosixTempMemoryMapPager("_data.pager", InitialFileSize);
 				else
 					_dataPager = new Win32PageFileBackedMemoryMappedPager("data.pager", InitialFileSize);
 			}
@@ -340,6 +353,7 @@ namespace Voron
 				{
 					Marshal.FreeHGlobal(headerSpace.Value);
 				}
+				_headers.Clear();
 			}
 
 			public override bool TryDeleteJournal(long number)
@@ -355,6 +369,8 @@ namespace Voron
 
 			public unsafe override bool ReadHeader(string filename, FileHeader* header)
 			{
+				if(Disposed)
+					throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
 				IntPtr ptr;
 				if (_headers.TryGetValue(filename, out ptr) == false)
 				{
@@ -366,21 +382,31 @@ namespace Voron
 
 			public override unsafe void WriteHeader(string filename, FileHeader* header)
 			{
+				if (Disposed)
+					throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
+
 				IntPtr ptr;
 				if (_headers.TryGetValue(filename, out ptr) == false)
 				{
 					ptr = Marshal.AllocHGlobal(sizeof(FileHeader));
 					_headers[filename] = ptr;
 				}
-				StdLib.memcpy((byte*)ptr, (byte*)header, sizeof(FileHeader));
+                MemoryUtils.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
 			}
 
 			public override IVirtualPager CreateScratchPager(string name)
 			{
 				if (RunningOnPosix)
-					return new PosixPageFileBackedMemoryMapPager(name, InitialFileSize);
+					return new PosixTempMemoryMapPager(name, InitialFileSize);
 				return new Win32PageFileBackedMemoryMappedPager(name, InitialFileSize);
 			}
+
+            public override IVirtualPager OpenPager(string filename)
+            {
+                if (RunningOnPosix)
+                    return new PosixMemoryMapPager(filename);
+                return new Win32MemoryMapPager(filename);
+            }
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
 			{
@@ -418,6 +444,8 @@ namespace Voron
 		public abstract IVirtualPager CreateScratchPager(string name);
 
 		public abstract IVirtualPager OpenJournalPager(long journalNumber);
+
+        public abstract IVirtualPager OpenPager(string filename);
 
 		public static bool RunningOnPosix
 		{

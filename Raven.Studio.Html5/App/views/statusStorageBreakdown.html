@@ -1,0 +1,24 @@
+﻿<section>
+    <div data-bind="visible: isGlobalAdmin() == false" class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this section!</h4>
+    </div>
+
+    <div data-bind="visible: isGlobalAdmin" class="panel-group">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" href="#storageBreakdown">Detailed storage breakdown</a>
+                </h4>
+            </div>
+            <div class="panel-collapse collapse in" id="storageBreakdown" data-bind="with: data">
+                <div class="panel-body">
+                    <pre>
+                    <!-- ko foreach: $parent -->
+                        <span data-bind="html: $data"></span><br />
+                    <!-- /ko -->
+                    </pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

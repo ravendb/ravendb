@@ -1,13 +1,17 @@
 ﻿<ul class="breadcrumb">
+    <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
     <li>
         <h3>
-            <a href="#databases">
+            <a href="#resources">
                 Databases
             </a>
         </h3>
     </li>
     <li data-bind="with: activeDatabase">
         <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
+    </li>
+    <li class="active">
+        <span>Status</span>
     </li>
     <li class="active">
         <span data-bind="text: currentRouteTitle"></span>
@@ -18,7 +22,7 @@
     <div class="row">
 		<div class="col-md-2">
 			<ul class="nav nav-list nav-pills nav-stacked" data-bind="foreach: router.navigationModel">
-				<li data-bind="css: { active: isActive }">
+				<li data-bind="css: { active: isActive }, visible: $parent.routeIsVisible($data)">
 					<a data-bind="attr: { href: hash }, text: title"></a>
 				</li>
 			</ul>

@@ -2,11 +2,15 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Embedded
 {
@@ -14,7 +18,9 @@ namespace Raven.Database.Embedded
     // when requested by the client.
     internal class ResponseStream : Stream
     {
-        private bool _disposed;
+	    private readonly ILog log = LogManager.GetCurrentClassLogger();
+
+        private volatile bool _disposed;
         private bool _aborted;
         private Exception _abortException;
         private ConcurrentQueue<byte[]> _bufferedData;
@@ -25,16 +31,25 @@ namespace Raven.Database.Embedded
         private object _signalReadLock;
 
         private Action _onFirstWrite;
-        private bool _firstWrite;
 
-        internal ResponseStream(Action onFirstWrite)
+	    private readonly bool _enableLogging;
+
+	    private bool _firstWrite;
+
+	    private bool _wroteZero;
+
+	    private Guid _id;
+
+	    internal ResponseStream(Action onFirstWrite, bool enableLogging)
         {
             if (onFirstWrite == null)
             {
                 throw new ArgumentNullException("onFirstWrite");
             }
             _onFirstWrite = onFirstWrite;
-            _firstWrite = true;
+			_enableLogging = enableLogging;
+	        _firstWrite = true;
+	        _id = Guid.NewGuid();
 
             _readLock = new SemaphoreSlim(1, 1);
             _writeLock = new SemaphoreSlim(1, 1);
@@ -235,22 +250,31 @@ namespace Raven.Database.Embedded
         public override void Write(byte[] buffer, int offset, int count)
         {
             VerifyBuffer(buffer, offset, count, allowEmpty: true);
-            CheckDisposed();
 
             _writeLock.Wait();
             try
             {
-                FirstWrite();
+				CheckDisposed();
                 if (count == 0)
                 {
+	                _wroteZero = true;
+					FirstWrite();
                     return;
                 }
+
+				Debug.Assert(_wroteZero == false);
+
                 // Copies are necessary because we don't know what the caller is going to do with the buffer afterwards.
-                byte[] internalBuffer = new byte[count];
+                var internalBuffer = new byte[count];
                 Buffer.BlockCopy(buffer, offset, internalBuffer, 0, count);
+
+				if (_enableLogging)
+					log.Info("ResponseStream ({0}). Write. Content: {1}", _id, Encoding.UTF8.GetString(internalBuffer));
+
                 _bufferedData.Enqueue(internalBuffer);
 
                 SignalDataAvailable();
+				FirstWrite();
             }
             finally
             {
@@ -354,15 +378,26 @@ namespace Raven.Database.Embedded
         [SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed", MessageId = "_readLock", Justification = "Data can still be read unless we get aborted.")]
         protected override void Dispose(bool disposing)
         {
+			if (_disposed)
+				return;
+
             if (disposing)
             {
-                // Prevent race with WaitForDataAsync
-                lock (_signalReadLock)
-                {
-                    // Throw for further writes, but not reads.  Allow reads to drain the buffered data and then return 0 for further reads.
-                    _disposed = true;
-                    _readWaitingForData.TrySetResult(null);
-                }
+	            _writeLock.Wait();
+	            try
+	            {
+					// Prevent race with WaitForDataAsync
+					lock (_signalReadLock)
+					{
+						// Throw for further writes, but not reads.  Allow reads to drain the buffered data and then return 0 for further reads.
+						_disposed = true;
+						_readWaitingForData.TrySetResult(null);
+					}
+	            }
+	            finally
+	            {
+		            _writeLock.Release();
+	            }
             }
 
             base.Dispose(disposing);

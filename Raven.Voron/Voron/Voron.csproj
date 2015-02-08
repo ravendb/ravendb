@@ -14,8 +14,6 @@
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
-    <ProductVersion>12.0.0</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -27,7 +25,6 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -45,10 +42,18 @@
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
+    <OutputPath>bin\Profiling\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Mono.Posix">
-      <HintPath>..\..\SharedLibs\Mono.Posix.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
@@ -59,6 +64,8 @@
     <Compile Include="Exceptions\InvalidJournalFlushRequest.cs" />
     <Compile Include="Exceptions\ScratchBufferSizeLimitException.cs" />
     <Compile Include="Exceptions\VoronUnrecoverableErrorException.cs" />
+    <Compile Include="Impl\Backup\MinimalIncrementalBackup.cs" />
+    <Compile Include="Impl\Compaction\StorageCompaction.cs" />
     <Compile Include="Impl\PagePosition.cs" />
     <Compile Include="Impl\Scratch\PageFromScratchBuffer.cs" />
     <Compile Include="Impl\Scratch\ScratchBufferFile.cs" />
@@ -77,6 +84,7 @@
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
     <Compile Include="Impl\Journal\ShipppedTransactionsApplicator.cs" />
     <Compile Include="Impl\Journal\TransactionToShip.cs" />
+    <Compile Include="Platform\Posix\AllowBuildOnWindows.cs" />
     <Compile Include="Platform\Posix\PosixHelper.cs" />
     <Compile Include="Platform\Posix\PosixJournalWriter.cs" />
     <Compile Include="Platform\Posix\PosixMemoryMapPager.cs" />
@@ -85,6 +93,10 @@
     <Compile Include="PrefixedSlice.cs" />
     <Compile Include="SliceComparisonMethods.cs" />
     <Compile Include="SliceWriter.cs" />
+    <Compile Include="StructReadResult.cs" />
+    <Compile Include="Structure.cs" />
+    <Compile Include="StructureReader.cs" />
+    <Compile Include="StructureSchema.cs" />
     <Compile Include="Trees\PageIterator.cs" />
     <Compile Include="Trees\PrefixInfoSection.cs" />
     <Compile Include="Trees\PrefixNodeHeader.cs" />
@@ -169,12 +181,13 @@
     <Compile Include="Platform\Win32\Win32MemoryMapPager.cs" />
     <Compile Include="Platform\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
     <Compile Include="Platform\Win32\Win32NativeFileMethods.cs" />
-    <Compile Include="Platform\Posix\PosixPageFileBackedMemoryMapPager.cs" />
+    <Compile Include="Platform\Posix\PosixTempMemoryMapPager.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Util\Conversion\readme.txt" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="packages.config" />
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

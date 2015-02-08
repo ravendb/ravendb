@@ -54,9 +54,12 @@
             <label class="btn btn-default" data-bind="click: setFilterTypeCompactFilesystem, visible: compactFilesystemCount() > 0">
                 <input type="radio" name="options" id="option9"> <span data-bind="text: 'Compact filesystem (' + compactFilesystemCount() + ')'"></span>
             </label>
-            <label class="btn btn-default" data-bind="click: setFilterTypeIoTest, visible: ioTestCount() > 0">
-                <input type="radio" name="options" id="option10"> <span data-bind="text: 'IO test (' + ioTestCount() + ')'"></span>
-            </label>
+	        <label class="btn btn-default" data-bind="click: setFilterTypeIoTest, visible: ioTestCount() > 0">
+		        <input type="radio" name="options" id="option10"> <span data-bind="text: 'IO test (' + ioTestCount() + ')'"></span>
+	        </label>
+			<label class="btn btn-default" data-bind="click: setFilterTypeNewIndexPrecomputedBatch, visible: newIndexPrecomputedBatchCount() > 0">
+				<input type="radio" name="options" id="option11"> <span data-bind="text: 'New Index (' + newIndexPrecomputedBatchCount() + ')'"></span>
+			</label>
         </div>
         <form class="form-inline" style="display: inline-block; vertical-align: middle;">
             <input type="text" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
@@ -110,7 +113,7 @@
             </span>
             <div style="white-space: nowrap" data-bind="foreach: filteredAndSortedTasks, delegatedHandler: 'click'">
                 <div style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectTask" data-bind="visible: IsVisible, css: { warning: TaskStatus === 'Canceled', danger: TaskStatus === 'Faulted', 'selected': $data === $parent.selectedTask() }">
-                    <div class="column" style="width: 40px"><button  data-bind="visible: Killable, click: $root.taskKill.bind($root, $data)" class="btn btn-default"><i class="fa fa-bolt"></i></button></div>
+                    <div class="column" style="width: 40px"><button  data-bind="visible: Killable, click: $root.taskKill.bind($root, $data)" class="btn btn-link negative-margin"><i class="fa fa-bolt"></i></button></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'px' }, text: TaskType"></div> 
                     <div class="column" data-bind="style: { width: $root.columnWidths[1]() + 'px' }, text: TimeStampText, attr: { title: TimeStampText }"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[2]() + 'px' }, text: TaskStatus"></div>
@@ -121,39 +124,46 @@
         </div>
     </div>
     <div class="log-details panel panel-default">
-        <div class="col-md-11">
-            <div class="row">
+        <form class="form-horizontal" role="form">
+            <div class="form-group">
                 <label class="col-md-2 text-right control-label">Type</label>
                 <div class="col-md-10" data-bind="with: selectedTask">
                     <p class="form-control-static" data-bind="text: TaskType"></p>
                 </div>
             </div>
-            <div class="row">
+            <div class="form-group">
                 <label class="col-md-2 text-right control-label">Started</label>
                 <div class="col-md-10" data-bind="with: selectedTask">
                     <p class="form-control-static" data-bind="text: TimeStampText"></p>
                 </div>
             </div>
-            <div class="row">
+            <div class="form-group">
                 <label class="col-md-2 text-right control-label">Status</label>
                 <div class="col-md-10" data-bind="with: selectedTask">
                     <p class="form-control-static" data-bind="text: TaskStatus"></p>
                 </div>
             </div>
-            <div class="row">
+            <div class="form-group">
                 <label class="col-md-2 text-right control-label">Payload</label>
                 <div class="col-md-10" data-bind="with: selectedTask">
                     <p class="form-control-static" data-bind="text: Payload"></p>
                 </div>
             </div>
-            <div class="row">
+            <div class="form-group">
                 <label class="col-md-2 text-right control-label">Exception</label>
                 <div class="col-md-10" data-bind="with: selectedTask">
-                    <p class="form-control-static" data-bind="text: ExceptionText"></p>
+                    <p class="form-control-static">
+                        <!-- ko ifnot: noExceptionText -->
+                        <span data-bind="text: ExceptionText"></span>
+                        <!-- /ko -->
+                        <!-- ko if: noExceptionText -->
+                        <span>-</span>
+                        <!-- /ko -->
+                    </p>
                 </div>
             </div>
             <div class="clearfix"></div>
-        </div>
+        </form>
         <div class="clearfix"></div>
     </div>
 </section>

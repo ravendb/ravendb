@@ -38,6 +38,8 @@ namespace Raven.Abstractions.Smuggler
         string CreateIncrementalKey();
         Task<ExportFilesDestinations> GetIncrementalExportKey();
         Task PutIncrementalExportKey(ExportFilesDestinations destinations);
-        
+
+	    RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata);
+
     }
 }

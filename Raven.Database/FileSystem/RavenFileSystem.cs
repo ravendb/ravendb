@@ -1,17 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
-using Raven.Abstractions.Data;
-using System.Collections.Specialized;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
+using System.Threading;
+
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
-using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Notifications;
 using Raven.Database.Util;
@@ -20,7 +21,6 @@ using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.FileSystem.Synchronization.Conflictuality;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
-using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper.Unmanaged;
 using System.Runtime.InteropServices;
@@ -43,48 +43,61 @@ namespace Raven.Database.FileSystem
 	    private readonly TransportState transportState;
         private readonly MetricsCountersManager metricsCounters;
 
+		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
+
+		private volatile bool disposed;
+
         private Historian historian;
 
         public string Name { get; private set;}
 
 		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, string name, TransportState receivedTransportState = null)
 		{
-		    this.Name = name;
+			ExtensionsState = new AtomicDictionary<object>();
+
+		    Name = name;
 			this.systemConfiguration = systemConfiguration;
-            this.transportState = receivedTransportState ?? new TransportState();
 
-            this.storage = CreateTransactionalStorage(systemConfiguration);
+			systemConfiguration.Container.SatisfyImportsOnce(this);
 
-            this.sigGenerator = new SigGenerator();
-            this.fileLockManager = new FileLockManager();			        
+            transportState = receivedTransportState ?? new TransportState();
+
+            storage = CreateTransactionalStorage(systemConfiguration);
+
+            sigGenerator = new SigGenerator();
+            fileLockManager = new FileLockManager();			        
    
-            this.BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
-            this.conflictDetector = new ConflictDetector();
-            this.conflictResolver = new ConflictResolver(storage, new CompositionContainer(systemConfiguration.Catalog));
+            BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
+            conflictDetector = new ConflictDetector();
+            conflictResolver = new ConflictResolver(storage, new CompositionContainer(systemConfiguration.Catalog));
 
-            this.notificationPublisher = new NotificationPublisher(transportState);
-            this.synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, systemConfiguration);
+            notificationPublisher = new NotificationPublisher(transportState);
+            synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, systemConfiguration);
 
-            this.metricsCounters = new MetricsCountersManager();
+            metricsCounters = new MetricsCountersManager();
 
-            this.search = new IndexStorage(name, systemConfiguration);
-            this.conflictArtifactManager = new ConflictArtifactManager(storage, search);
-            this.storageOperationsTask = new StorageOperationsTask(storage, search, notificationPublisher); 
+            search = new IndexStorage(name, systemConfiguration);
+
+            conflictArtifactManager = new ConflictArtifactManager(storage, search);
+            storageOperationsTask = new StorageOperationsTask(storage, DeleteTriggers, search, notificationPublisher); 
 
 			AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
 		}        
 
-        public void Initialize ()
+        public void Initialize()
         {
-            this.storage.Initialize();
+            storage.Initialize(FileCodecs);
 
             var replicationHiLo = new SynchronizationHiLo(storage);
             var sequenceActions = new SequenceActions(storage);
             var uuidGenerator = new UuidGenerator(sequenceActions);
-            this.historian = new Historian(storage, replicationHiLo, uuidGenerator);
+            historian = new Historian(storage, replicationHiLo, uuidGenerator);
 
-            this.search.Initialize(this);
+            search.Initialize(this);
+
+			InitializeTriggersExceptIndexCodecs();
+			SecondStageInitialization();
         }
 
         public static bool IsRemoteDifferentialCompressionInstalled
@@ -93,8 +106,8 @@ namespace Raven.Database.FileSystem
             {
                 try
                 {
-                    var _rdcLibrary = new RdcLibrary();
-                    Marshal.ReleaseComObject(_rdcLibrary);
+                    var rdcLibrary = new RdcLibrary();
+                    Marshal.ReleaseComObject(rdcLibrary);
 
                     return true;
                 }
@@ -107,15 +120,88 @@ namespace Raven.Database.FileSystem
 
         internal static ITransactionalStorage CreateTransactionalStorage(InMemoryRavenConfiguration configuration)
         {
+            // We select the most specific.
             var storageType = configuration.FileSystem.DefaultStorageTypeName;
+            if (storageType == null) // We choose the system wide if not defined.
+                storageType = configuration.DefaultStorageTypeName;
+
+			if (storageType != null)
+				storageType = storageType.ToLowerInvariant();
+
             switch (storageType)
             {
                 case InMemoryRavenConfiguration.VoronTypeName:
-					return new Storage.Voron.TransactionalStorage(configuration);
-                default:
-					return new Storage.Esent.TransactionalStorage(configuration);
+                    return new Storage.Voron.TransactionalStorage(configuration);
+                case InMemoryRavenConfiguration.EsentTypeName:
+                    return new Storage.Esent.TransactionalStorage(configuration);
+                
+                default: // We choose esent by default.
+                    return new Storage.Esent.TransactionalStorage(configuration);
             }
         }
+
+		public IDisposable DisableAllTriggersForCurrentThread()
+		{
+			if (disposed)
+				return new DisposableAction(() => { });
+
+			bool old = disableAllTriggers.Value;
+			disableAllTriggers.Value = true;
+			return new DisposableAction(() =>
+			{
+				if (disposed)
+					return;
+
+				try
+				{
+					disableAllTriggers.Value = old;
+				}
+				catch (ObjectDisposedException)
+				{
+				}
+			});
+		}
+
+		private void InitializeTriggersExceptIndexCodecs()
+		{
+			FileCodecs.OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			PutTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			DeleteTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			ReadTriggers.Init(disableAllTriggers).OfType<IRequiresFileSystemInitialization>().Apply(initialization => initialization.Initialize(this));
+		}
+
+		private void SecondStageInitialization()
+		{
+			FileCodecs
+				.OfType<IRequiresFileSystemInitialization>()
+				.Apply(initialization => initialization.SecondStageInit());
+
+			PutTriggers.Apply(initialization => initialization.SecondStageInit());
+
+			DeleteTriggers.Apply(initialization => initialization.SecondStageInit());
+
+			ReadTriggers.Apply(initialization => initialization.SecondStageInit());
+		}
+
+		/// <summary>
+		///     This is used to hold state associated with this instance by external extensions
+		/// </summary>
+		public AtomicDictionary<object> ExtensionsState { get; private set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractFileCodec> FileCodecs { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractFilePutTrigger> PutTriggers { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractFileDeleteTrigger> DeleteTriggers { get; set; }
+
+		[ImportMany]
+		public OrderedPartCollection<AbstractFileReadTrigger> ReadTriggers { get; set; }
 
 	    public ITransactionalStorage Storage
 		{
@@ -192,8 +278,13 @@ namespace Raven.Database.FileSystem
 
 		public void Dispose()
 		{
+			if (disposed)
+				return;
+
 			AppDomain.CurrentDomain.ProcessExit -= ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload -= ShouldDispose;
+
+			disposed = true;
 
 			synchronizationTask.Dispose();
 			storage.Dispose();
@@ -226,7 +317,7 @@ namespace Raven.Database.FileSystem
 	    {
 	        var fsStats = new FileSystemStats
 	        {
-	            Name = this.Name,
+	            Name = Name,
 	            Metrics = CreateMetrics(),
 	            ActiveSyncs = SynchronizationTask.Queue.Active.ToList(),
 	            PendingSyncs = SynchronizationTask.Queue.Pending.ToList(),

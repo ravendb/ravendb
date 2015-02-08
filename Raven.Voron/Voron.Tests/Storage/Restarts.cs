@@ -11,6 +11,40 @@ namespace Voron.Tests.Storage
     public class Restarts
     {
         [Fact]
+        public void DataIsKeptAfterRestart_OnDisk()
+        {
+            if (Directory.Exists("test.data"))
+                Directory.Delete("test.data", true);
+            using (var pager = StorageEnvironmentOptions.ForPath("test.data"))
+            {
+                pager.OwnsPagers = false;
+                using (var env = new StorageEnvironment(pager))
+                {
+                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        tx.State.Root.Add("test/1", new MemoryStream());
+                        tx.Commit();
+                    }
+                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        tx.State.Root.Add("test/2", new MemoryStream());
+                        tx.Commit();
+                    }
+                }
+
+                using (var env = new StorageEnvironment(pager))
+                {
+                    using (var tx = env.NewTransaction(TransactionFlags.Read))
+                    {
+                        Assert.NotNull(tx.State.Root.Read("test/1"));
+                        Assert.NotNull(tx.State.Root.Read("test/2"));
+                        tx.Commit();
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public void DataIsKeptAfterRestart()
         {
             using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnly())

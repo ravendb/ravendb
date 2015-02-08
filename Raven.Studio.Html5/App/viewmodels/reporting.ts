@@ -15,6 +15,7 @@ class reporting extends viewModelBase {
     hasSelectedIndex = ko.computed(() => this.selectedIndexName() && this.selectedIndexName().length > 0);
     editSelectedIndexUrl = ko.computed(() => this.hasSelectedIndex() ? appUrl.forEditIndex(this.selectedIndexName(), this.activeDatabase()) : null);
     availableFields = ko.observableArray<string>();
+    sortOptions = ko.observableArray<any>();
     selectedField = ko.observable<string>();
     selectedFieldLabel = ko.computed(() => this.selectedField() ? this.selectedField() : "Select a field");
     addedValues = ko.observableArray<facet>();
@@ -32,6 +33,7 @@ class reporting extends viewModelBase {
 
     activate(indexToActivateOrNull: string) {
         super.activate(indexToActivateOrNull);
+        this.updateHelpLink('O3EA1R');
 
         this.fetchIndexes().done(() => this.selectInitialIndex(indexToActivateOrNull));
         this.selectedIndexName.subscribe(() => this.resetSelections());
@@ -48,7 +50,10 @@ class reporting extends viewModelBase {
     fetchIndexDefinition(indexName: string) {
         new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
-            .done((dto: indexDefinitionContainerDto) => this.availableFields(dto.Index.Fields));
+            .done((dto: indexDefinitionContainerDto) => {
+                this.sortOptions(dto.Index.SortOptions);
+                this.availableFields(dto.Index.Fields);
+            });
     }
 
     selectInitialIndex(indexToActivateOrNull: string) {
@@ -79,8 +84,29 @@ class reporting extends viewModelBase {
         this.availableFields([]);
     }
 
+    mapSortToType(sort: string) {
+        switch (sort) {
+            case 'Int':
+                return "System.Int32";
+            case 'Float':
+                return "System.Single";
+            case 'Long':
+                return 'System.Int64';
+            case 'Double':
+                return "System.Double";
+            case 'Short':
+                return 'System.Int16';
+            case 'Byte':
+                return 'System.Byte';
+            default: 
+                return 'System.String';
+        }
+    }
+
     addValue(fieldName: string) {
-        var val = facet.fromNameAndAggregation(this.selectedField(), fieldName);
+        var sortOps = this.sortOptions();
+        var sortOption = (fieldName in sortOps) ? sortOps[fieldName] : "String";
+        var val = facet.fromNameAndAggregation(this.selectedField(), fieldName, this.mapSortToType(sortOption));
         this.addedValues.push(val);
     }
 

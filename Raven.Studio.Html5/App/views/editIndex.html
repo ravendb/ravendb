@@ -1,7 +1,8 @@
 ﻿<ul class="breadcrumb">
+    <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
     <li>
         <h3>
-            <a href="#databases">
+            <a href="#resources">
                 Databases
             </a>
         </h3>
@@ -20,12 +21,33 @@
 <section id="editIndex">
     <div class="btn-toolbar">
         <div class="btn-group">
-            <button class="btn btn-primary" data-bind="click: save, enable: $root.isSaveEnabled()" title="Save the index (Alt+S)" accesskey="S">
+            <button class="btn btn-primary" data-bind="click: save, visible: !editedIndex().isSideBySideIndex(), enable: $root.isSaveEnabled()" title="Save the index (Alt+S)" accesskey="S">
                 <i class="fa fa-save"></i>
             </button>
+            <button type="button"  data-bind="visible: !editedIndex().isSideBySideIndex()"class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                <span class="caret"></span>
+                <span class="sr-only">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu"  role="menu">
+                <li>
+                    <a title="Replaces current index when specified condition is met" href="#" data-bind="visible: !editedIndex().isSideBySideIndex() && !editedIndex().isTestIndex(), click: replaceIndex">
+                        <i class="fa fa-reply fa-fw"></i> Side-by-side indexing
+                    </a>
+                </li>
+                <li>
+                    <a title="Create test index based on limited data set" href="#" data-bind="visible: !editedIndex().isTestIndex() && !editedIndex().isSideBySideIndex(), click: tryIndex">
+                        <i class="fa fa-eyedropper fa-fw"></i> Try index
+                    </a>
+                </li>
+                <li>
+                    <a href="#" title="Saves test index as persistent" data-bind="visible: editedIndex().isTestIndex(), click: makePermanent">
+                        <i class="fa fa-save"></i> Make permanent
+                    </a>
+                </li>
+            </ul>
         </div>
 
-        <div class="btn-group">
+        <div class="btn-group" data-bind="visible: !editedIndex().isSideBySideIndex()">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" accesskey="A">
                 <i class="fa fa-plus"></i>
                 Add
@@ -40,7 +62,7 @@
             </ul>
         </div>
 
-        <div class="btn-group">
+        <div class="btn-group" data-bind="visible: !editedIndex().isSideBySideIndex()">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                 <span data-bind="text: priorityLabel"></span>
                 <span class="caret"></span>
@@ -54,7 +76,7 @@
             </ul>
         </div>
         
-        <div class="btn-group">
+        <div class="btn-group" data-bind="visible: !editedIndex().isSideBySideIndex()">
             <button class="btn btn-default" title="Format maps and reduce" data-bind="click: formatIndex">
                 <i class="fa fa-magic"></i>
             </button>
@@ -77,21 +99,28 @@
             <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes" data-bind="click: refreshIndex">
                 <i class="fa fa-refresh"></i>
             </button>
-            <button class="btn btn-danger" title="Delete index" data-bind="click: deleteIndex">
+            <button class="btn btn-danger" title="Delete index" data-bind="visible: !editedIndex().isSideBySideIndex(), click: deleteIndex">
                 <i class="fa fa-trash-o"></i>
             </button>
+             <button class="btn btn-danger" title="Cancel side-by-side index" data-bind="visible: editedIndex().isSideBySideIndex(), click: cancelSideBySideIndex">
+                <i class="fa fa-undo"></i>
+            </button>
+            
         </div>
     </div>
 
     <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
         <br />
         <form class="form-horizontal" role="form" data-bind="with: editedIndex">
+            
+            <div class="alert alert-warning" data-bind="visible: isTestIndex()" role="alert">This is test index which operates on limited data set. Press &quot;Make permanent&quot; to override the original index.</div>
+
             <div class="form-group">
                 <label for="indexName" class="col-md-1 control-label"  title=" index name (Alt+I)">Name</label>
                 <div class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <input type="text" class="form-control" id="indexName" placeholder="Index name" accesskey="I" data-bind="value: name, valueUpdate: 'afterkeyup'" />
+                            <input type="text" class="form-control" id="indexName" placeholder="Index name" accesskey="I" data-bind="value: name, valueUpdate: 'afterkeyup', enable: !isTestIndex() && !isSideBySideIndex()" />
                         </div>
                     </div>
                 </div>
@@ -104,7 +133,7 @@
                 <div data-bind="foreach: maps" class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <pre id="indexEditor" class="form-control map" data-bind="aceEditor: { code: $data, allowResize: true, getFocus: true, lang:'ace/mode/ravenMapLinq', completer:$root.indexAutoCompleter.indexMapCompleter, typeName:'map', completerHostObject:$root.indexAutoCompleter}"></pre>
+                            <pre id="indexEditor" class="form-control map" data-bind="aceEditor: { readOnly: $parent.isSideBySideIndex(), code: $data, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', completer: $root.indexAutoCompleter.indexMapCompleter, typeName: 'map', completerHostObject: $root.indexAutoCompleter }"></pre>
                         </div>
                         <button type="button" class="close pull-left" data-bind="visible: $index() !== 0 || $root.hasMultipleMaps(), click: $root.removeMap.bind($root, $index())" aria-hidden="true" title="Remove this map from the index">
                             <i class="fa fa-times"></i>
@@ -121,7 +150,7 @@
                 <div class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <pre class="form-control map" data-bind="aceEditor: { code: reduce, allowResize: true, lang:'ace/mode/ravenReduceLinq',completer:$root.indexAutoCompleter.indexReduceCompleter, typeName:'reduce', completerHostObject:$root.indexAutoCompleter }"></pre>
+                            <pre class="form-control map" data-bind="aceEditor: { readOnly: isSideBySideIndex(), code: reduce, allowResize: true, lang: 'ace/mode/ravenReduceLinq', completer: $root.indexAutoCompleter.indexReduceCompleter, typeName: 'reduce', completerHostObject: $root.indexAutoCompleter }"></pre>
                         </div>
                         <button type="button" class="close pull-left" data-bind="click: $root.removeReduce.bind($root)" aria-hidden="true" title="Remove the Reduce function from the index">
                             <i class="fa fa-times"></i>
@@ -138,7 +167,7 @@
                         <div class="panel panel-default">
                             <div class="panel-heading">
                                 <div class="col-md-11">
-                                    <input name="fieldName" type="text" class="form-control" placeholder="FieldName" data-bind="attr: { id:'fieldName' + $index() }, value: name, valueUpdate: 'afterkeydown'" autocomplete="off" />
+                                    <input name="fieldName" type="text" class="form-control" placeholder="FieldName" data-bind="enable: !$parent.isSideBySideIndex(), attr: { id:'fieldName' + $index() }, value: name, valueUpdate: 'afterkeydown'" autocomplete="off" />
                                     <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'fieldName' + $index(),foreach: fieldNameAutocompletes">
                                         <li role="presentation" data-bind="click: $parent.setName.bind($parent,$data)">
                                             <a role="menuitem" tabindex="-1" href="#">
@@ -156,30 +185,30 @@
                                 <div class="col-md-6 fieldControl">
                                     <label class="control-label col-md-5 fieldControl">Storage</label>
                                     <div class="col-md-7 fieldControl">
-                                        <select class="form-control fieldControl" data-bind="options: ['Yes', 'No'], value: stores"></select>
+                                        <select class="form-control fieldControl" data-bind="options: ['Yes', 'No'], value: stores, enable: !$parent.isSideBySideIndex()"></select>
                                     </div>
                                     <label class="control-label col-md-5 fieldControl">Sort</label>
                                     <div class="col-md-7 fieldControl">
-                                        <select class="form-control fieldControl" data-bind="options: ['None', 'String', 'Int', 'Float', 'Long', 'Double', 'Short', 'Custom', 'Byte', 'StringVal'], value: sort"></select>
+                                        <select class="form-control fieldControl" data-bind="options: ['None', 'String', 'Int', 'Float', 'Long', 'Double', 'Short', 'Custom', 'Byte', 'StringVal'], value: sort, enable: !$parent.isSideBySideIndex()"></select>
                                     </div>
                                     <label class="control-label col-md-5 fieldControl">TermVector</label>
                                     <div class="col-md-7 fieldControl">
-                                        <select class="form-control fieldControl" data-bind="options: ['No', 'Yes', 'WithPositions', 'WithOffsets', 'WithPositionsAndOffsets'], value: termVector"></select>
+                                        <select class="form-control fieldControl" data-bind="options: ['No', 'Yes', 'WithPositions', 'WithOffsets', 'WithPositionsAndOffsets'], value: termVector, enable: !$parent.isSideBySideIndex()"></select>
                                     </div>
                                 </div>
                                 <div class="col-md-6 fieldControl">
                                     <label class="control-label col-md-5 fieldControl">Indexing</label>
                                     <div class="col-md-7 fieldControl">
-                                        <select class="form-control fieldControl" data-bind="options: ['No', 'Analyzed', 'NotAnalyzed', 'Default'], value: indexing"></select>
+                                        <select class="form-control fieldControl" data-bind="options: ['No', 'Analyzed', 'NotAnalyzed', 'Default'], value: indexing, enable: !$parent.isSideBySideIndex()"></select>
                                     </div>
                                     <label class="control-label col-md-5 fieldControl" data-bind="visible: indexing() === 'Analyzed'">Analyzer</label>
                                     <div class="col-md-7 fieldControl" data-bind="visible: indexing() === 'Analyzed'">
-                                        <input type="text" class="form-control fieldControl" data-bind="value: analyzer, valueUpdate: 'afterkeyup', attr: { title: analyzer }" />
+                                        <input type="text" class="form-control fieldControl" data-bind="value: analyzer, valueUpdate: 'afterkeyup', attr: { title: analyzer }, enable: !$parent.isSideBySideIndex()" />
                                     </div>
                                     <label class="control-label col-md-5  fieldControl" title="The suggestion distance algorithm"  >Suggestion</label>
                                     <div class="col-md-7 fieldControl">
-                                        <select class="form-control  fieldControl" data-bind="options: ['None', 'Default', 'Levenshtein', 'JaroWinkler', 'NGram'], value: suggestionDistance"></select>
-                                        <input type="number" class="form-control  fieldControl" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0" data-bind="numericValue: suggestionAccuracy, valueUpdate: 'afterkeyup', visible: suggestionDistance() !== 'None'" />
+                                        <select class="form-control  fieldControl" data-bind="options: ['None', 'Default', 'Levenshtein', 'JaroWinkler', 'NGram'], value: suggestionDistance, enable: !$parent.isSideBySideIndex()"></select>
+                                        <input type="number" class="form-control  fieldControl" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0" data-bind="numericValue: suggestionAccuracy, valueUpdate: 'afterkeyup',enable: !$parent.isSideBySideIndex(), visible: suggestionDistance() !== 'None'" />
                                     </div>
                                 </div>
                             </div>
@@ -197,7 +226,7 @@
                         <div class="panel panel-default">
                             <div class="panel-heading">
                                 <div class="col-md-11">
-                                    <input type="text" class="form-control" data-bind="value: name, valueUpdate: 'afterkeyup'" placeholder="spatial field name" />
+                                    <input type="text" class="form-control" data-bind="enable: !$parent.isSideBySideIndex(), value: name, valueUpdate: 'afterkeyup'" placeholder="spatial field name" />
                                 </div>
                                 <div>
                                     <button type="button" class="close" data-bind="click: $root.removeSpatialField.bind($root, $index())" title="Remove this spatial field from the index">
@@ -210,41 +239,41 @@
                                 <div class="col-md-6">
                                     <label class="control-label col-md-3">Type</label>
                                     <div class="col-md-9">
-                                        <select class="form-control" data-bind="options: ['Geography', 'Cartesian'], value: type"></select>
+                                        <select class="form-control" data-bind="options: ['Geography', 'Cartesian'], value: type, enable: !$parent.isSideBySideIndex()"></select>
                                     </div>
                                     <label class="control-label col-md-3">Strategy</label>
                                     <div class="col-md-9">
-                                        <select class="form-control" data-bind="options: availableStrategies, value: strategy"></select>
+                                        <select class="form-control" data-bind="options: availableStrategies, value: strategy, enable: !$parent.isSideBySideIndex()"></select>
                                     </div>
                                     <label class="control-label col-md-3">Min X</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" data-bind="numericValue: minX, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
+                                        <input type="number" class="form-control" data-bind="numericValue: minX, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates, enable: !$parent.isSideBySideIndex()" />
                                     </div>
                                     <label class="control-label col-md-3">Max X</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" data-bind="numericValue: maxX, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
+                                        <input type="number" class="form-control" data-bind="numericValue: maxX, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates, enable: !$parent.isSideBySideIndex()" />
                                     </div>
                                     <label class="control-label col-md-3">Precision</label>
                                     <div class="col-md-9">
-                                        <p class="form-control-static" style="white-space: nowrap" data-bind="text: precision"></p>
+                                        <p class="form-control-static" style="white-space: nowrap" data-bind="text: precision, enable: !$parent.isSideBySideIndex()"></p>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="control-label col-md-7" data-bind="visible: canSpecifyUnits">Circle Radius Units</label>
                                     <div class="col-md-5" data-bind="visible: canSpecifyUnits">
-                                        <select class="form-control" data-bind="options: ['Kilometers', 'Miles'], value: circleRadiusUnits"></select>
+                                        <select class="form-control" data-bind="options: ['Kilometers', 'Miles'], value: circleRadiusUnits, enable: !$parent.isSideBySideIndex()"></select>
                                     </div>
                                     <label class="control-label col-md-7" data-bind="visible: canSpecifyTreeLevel">Max Tree Level</label>
                                     <div class="col-md-5" data-bind="visible: canSpecifyTreeLevel">
-                                        <input type="number" class="form-control" data-bind="numericValue: maxTreeLevel, valueUpdate: 'afterkeyup'" />
+                                        <input type="number" class="form-control" data-bind="numericValue: maxTreeLevel, valueUpdate: 'afterkeyup', enable: !$parent.isSideBySideIndex()" />
                                     </div>
                                     <label class="control-label col-md-7">Min Y</label>
                                     <div class="col-md-5">
-                                        <input type="number" class="form-control" data-bind="numericValue: minY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
+                                        <input type="number" class="form-control" data-bind="numericValue: minY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates() && !$parent.isSideBySideIndex()" />
                                     </div>
                                     <label class="control-label col-md-7">Max Y</label>
                                     <div class="col-md-5">
-                                        <input type="number" class="form-control" data-bind="numericValue: maxY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates" />
+                                        <input type="number" class="form-control" data-bind="numericValue: maxY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates() && !$parent.isSideBySideIndex()" />
                                     </div>
                                 </div>
                             </div>
@@ -256,7 +285,7 @@
 
                 <label class="col-sm-1 control-label">Max Index Outputs Per Document</label>
                 <div class="col-md-2">
-                    <input class="form-control" required type="number" data-bind="numericValue: maxIndexOutputsPerDocument, valueUpdate: 'afterkeyup'" min="0" />
+                    <input class="form-control" required type="number" data-bind="numericValue: maxIndexOutputsPerDocument, valueUpdate: 'afterkeyup', enable: !isSideBySideIndex()" min="0" />
                 </div>
                 <div class="col-md-1">
                     <button type="button" class="close pull-left" data-bind="click: $root.removeMaxIndexOutputs.bind($root)" aria-hidden="true" title="Nullify Max Index Outputs Per Document And Hide The Control">
@@ -273,7 +302,7 @@
                 <div class="col-sm-11" data-bind="with: $root.scriptedIndex">
                     <div class="row">
                         <div class="col-md-11">
-                            <pre class="form-control map" data-bind="aceEditor: { code: indexScript, allowResize: true, lang: 'ace/mode/javascript', completer: $root.scriptedIndexCompleter, completerHostObject: $root.scriptedIndexCompleter, typeName: 'map' }"></pre>
+                            <pre class="form-control map" data-bind="aceEditor: { readOnly: $parent.isSideBySideIndex(), code: indexScript, allowResize: true, lang: 'ace/mode/javascript', completer: $root.scriptedIndexCompleter, completerHostObject: $root.scriptedIndexCompleter, typeName: 'map' }"></pre>
                         </div>
                     </div>
                 </div>
@@ -287,7 +316,7 @@
                 <div class="col-sm-11" data-bind="with: $root.scriptedIndex">
                     <div class="row">
                         <div class="col-md-11">
-                            <pre class="form-control map" data-bind="aceEditor: { code: deleteScript, allowResize: true, lang: 'ace/mode/javascript', completer: $root.scriptedIndexCompleter, completerHostObject: $root.scriptedIndexCompleeter, typeName: 'map' }"></pre>
+                            <pre class="form-control map" data-bind="aceEditor: { readOnly: $parent.isSideBySideIndex(), code: deleteScript, allowResize: true, lang: 'ace/mode/javascript', completer: $root.scriptedIndexCompleter, completerHostObject: $root.scriptedIndexCompleeter, typeName: 'map' }"></pre>
                         </div>
                     </div>
                 </div>

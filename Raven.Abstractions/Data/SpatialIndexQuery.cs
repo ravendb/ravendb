@@ -23,8 +23,21 @@ namespace Raven.Abstractions.Data
 			       ")";
 		}
 
+		/// <summary>
+		/// Shape in WKT format.
+		/// </summary>
 		public string QueryShape { get; set; }
+
+		/// <summary>
+		/// Spatial relation (Within, Contains, Disjoint, Intersects, Nearby)
+		/// </summary>
 		public SpatialRelation SpatialRelation { get; set; }
+
+		/// <summary>
+		/// A measure of acceptable error of the shape as a fraction. This effectively
+		/// inflates the size of the shape but should not shrink it.
+		/// </summary>
+		/// <value>Default value is 0.025</value>
 		public double DistanceErrorPercentage { get; set; }
 
 		/// <summary>
@@ -38,7 +51,6 @@ namespace Raven.Abstractions.Data
 			get { return spatialFieldName; }
 			set { spatialFieldName = value; }
 		}
-
 
 	    /// <summary>
 		/// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
@@ -56,6 +68,7 @@ namespace Raven.Abstractions.Data
 		    HighlighterPreTags = query.HighlighterPreTags;
 		    HighlighterPostTags = query.HighlighterPostTags;
 		    HighlightedFields = query.HighlightedFields;
+			HighlighterKeyName = query.HighlighterKeyName;
 	        TransformerParameters = query.TransformerParameters;
 		    ResultsTransformer = query.ResultsTransformer;
 		    DefaultOperator = query.DefaultOperator;

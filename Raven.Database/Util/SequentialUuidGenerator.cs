@@ -21,6 +21,7 @@ namespace Raven.Database.Util
 		private long sequentialUuidCounterScheduledReductions;
 		private long sequentialUuidCounterIndexing;
 		private long sequentialUuidDocumentReferences;
+		private long sequentialUuidSubscriptions;
 
 		public long EtagBase
 		{
@@ -30,6 +31,11 @@ namespace Raven.Database.Util
 				Array.Reverse(ticksAsBytes);
 			}
 		}
+
+	    public long LastDocumentTransactionEtag
+	    {
+	        get { return Interlocked.Read(ref sequentialUuidCounterMappedResults); }
+	    }
 
 	
 		public Etag CreateSequentialUuid(UuidType type)
@@ -66,6 +72,9 @@ namespace Raven.Database.Util
 					break;
 				case UuidType.DocumentReferences:
 					increment = Interlocked.Increment(ref sequentialUuidDocumentReferences);
+					break;
+				case UuidType.Subscriptions:
+					increment = Interlocked.Increment(ref sequentialUuidSubscriptions);
 					break;
 				default:
 					throw new ArgumentOutOfRangeException("type", "Cannot understand: " + type);

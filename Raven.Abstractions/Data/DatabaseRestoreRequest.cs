@@ -5,12 +5,26 @@
 //-----------------------------------------------------------------------
 namespace Raven.Abstractions.Data
 {
-    public class DatabaseRestoreRequest : AbstractRestoreRequest
+	public class DatabaseRestoreRequest : AbstractRestoreRequest
 	{
+		/// <summary>
+		/// Indicates what should be the name of database after restore. If null then name will be read from 'Database.Document' found in backup.
+		/// </summary>
 		public string DatabaseName { get; set; }
 
-        public string DatabaseLocation { get; set; }
+		/// <summary>
+		/// Path to the directory of a new database. If null then default location will be assumed.
+		/// </summary>
+		public string DatabaseLocation { get; set; }
 
+		/// <summary>
+		/// Indicates if all replication destinations should disabled after restore (only when Replication bundle is activated).
+		/// </summary>
 		public bool DisableReplicationDestinations { get; set; }
+
+		/// <summary>
+		/// Indicates if restored database should have new Id generated. By default it will be the same.
+		/// </summary>
+		public bool GenerateNewDatabaseId { get; set; }
 	}
 }

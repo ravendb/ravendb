@@ -43,7 +43,7 @@ namespace Raven.Bundles.LiveTest
 		private static void EnsureVoronIsSetAsStorageEngineAndIsRunningInMemory(RavenJObject settings)
 		{
 			settings["Raven/StorageEngine"] = InMemoryRavenConfiguration.VoronTypeName;
-			settings["Raven/RunInMemory"] = true;
+            settings[Constants.RunInMemory] = true;
 		}
 
 		private static void EnsureQuotasBundleActivated(RavenJObject settings)

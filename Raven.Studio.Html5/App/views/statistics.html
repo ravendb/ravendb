@@ -1,48 +1,51 @@
 ﻿<section data-bind="if: stats, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-    <form class="form-horizontal" role="form">
+    <form class="form-horizontal col-md-10" role="form">
 		<div class="form-group">
 			<label class="col-md-2 control-label">Storage Engine</label>
 			<div class="col-md-10">
 				<p class="form-control-static" data-bind="text: stats().StorageEngine"></p>
 			</div>
 		</div><div class="form-group">
-            <label class="col-md-2 control-label">Last document Etag</label>
+            <label class="col-md-2 control-label">Last Document Etag</label>
             <div class="col-md-10">
                 <p class="form-control-static" data-bind="text: stats().LastDocEtag"></p>
             </div>
         </div>
         <div class="form-group">
-            <label class="col-md-2 control-label">Last attachment etag</label>
+            <label class="col-md-2 control-label">Last Attachment Etag</label>
             <div class="col-md-10">
                 <p class="form-control-static" data-bind="text: stats().LastAttachmentEtag"></p>
             </div>
         </div>
         <div class="form-group">
-            <label class="col-md-2 control-label">Index count</label>
+            <label class="col-md-2 control-label">Index Count</label>
             <div class="col-md-10">
                 <p class="form-control-static" data-bind="text: stats().CountOfIndexes"></p>
             </div>
         </div>
         <div class="form-group">
-            <label class="col-md-2 control-label">Document count</label>
+            <label class="col-md-2 control-label">Document Count</label>
             <div class="col-md-10">
                 <p class="form-control-static" data-bind="text: stats().CountOfDocumentsLocale"></p>
             </div>
         </div>
         <div class="form-group">
-            <label class="col-md-2 control-label">Stale indexes</label>
-            <ul class="col-md-10 list-unstyled" data-bind="foreach: stats().StaleIndexes">
+            <label class="col-md-2 control-label">Stale Indexes</label>
+            <ul class="col-md-10 list-unstyled" style="margin-top: 8px" data-bind="visible: noStaleIndexes">
+                <li>-</li>
+            </ul>
+            <ul class="col-md-10 list-unstyled" style="margin-top: 8px" data-bind="foreach: stats().StaleIndexes, visible: noStaleIndexes() == false">
                 <li data-bind="text: $data"></li>
             </ul>
         </div>
         <div class="form-group">
-            <label class="col-md-2 control-label">Index batch size</label>
+            <label class="col-md-2 control-label">Index Batch Size</label>
             <div class="col-md-10">
                 <p class="form-control-static" data-bind="text: stats().CurrentNumberOfItemsToIndexInSingleBatchLocale"></p>
             </div>
         </div>
         <div class="form-group">
-            <label class="col-md-2 control-label">Reduce batch size</label>
+            <label class="col-md-2 control-label">Reduce Batch Size</label>
             <div class="col-md-10">
                 <p class="form-control-static" data-bind="text: stats().CurrentNumberOfItemsToReduceInSingleBatchLocale"></p>
             </div>

@@ -42,8 +42,8 @@ namespace Raven.Database.Server.Tenancy
     {
 		private bool initialized;
         private readonly DocumentDatabase systemDatabase;
-        private const string FILESYSTEMS_PREFIX = "Raven/FileSystems/";
-        public override string ResourcePrefix { get { return FILESYSTEMS_PREFIX; } }
+
+        public override string ResourcePrefix { get { return Constants.FileSystem.Prefix; } }
 
         public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
 
@@ -70,7 +70,7 @@ namespace Raven.Database.Server.Tenancy
             {
                 if (notification.Id == null)
                     return;
-                const string ravenDbPrefix = FILESYSTEMS_PREFIX;
+                const string ravenDbPrefix = Constants.FileSystem.Prefix;
                 if (notification.Id.StartsWith(ravenDbPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
                     return;
 
@@ -90,7 +90,7 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, "Raven/FileSystem/DataDir", this.SystemConfiguration);
+            return CreateConfiguration(tenantId, document, Constants.FileSystem.DataDirectory, this.SystemConfiguration);
         }
 
         protected InMemoryRavenConfiguration CreateConfiguration(
@@ -107,7 +107,7 @@ namespace Raven.Database.Server.Tenancy
 	        SetupTenantConfiguration(config);
 
 	        config.CustomizeValuesForFileSystemTenant(tenantId);
-	        config.Settings["Raven/FileSystem/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
+            config.Settings[Constants.FileSystem.Storage] = parentConfiguration.FileSystem.DefaultStorageTypeName;
 
 	        foreach (var setting in document.Settings)
 	        {
@@ -115,6 +115,10 @@ namespace Raven.Database.Server.Tenancy
 	        }
 	        Unprotect(document);
 
+			foreach (var securedSetting in document.SecuredSettings)
+			{
+				config.Settings[securedSetting.Key] = securedSetting.Value;
+			}
 
 	        config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
 	        config.FileSystemName = tenantId;
@@ -175,7 +179,7 @@ namespace Raven.Database.Server.Tenancy
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
             {
-                jsonDocument = systemDatabase.Documents.Get(FILESYSTEMS_PREFIX + tenantId, null);
+                jsonDocument = systemDatabase.Documents.Get(Constants.FileSystem.Prefix + tenantId, null);
             }
 
             if (jsonDocument == null || jsonDocument.Metadata == null ||
@@ -184,7 +188,7 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
-            if (document.Settings.Keys.Contains("Raven/FileSystem/DataDir") == false)
+            if (document.Settings.Keys.Contains(Constants.FileSystem.DataDirectory) == false)
                 throw new InvalidOperationException("Could not find Raven/FileSystem/DataDir");
 
 			if (document.Disabled && !ignoreDisabledFileSystem)
@@ -229,7 +233,7 @@ namespace Raven.Database.Server.Tenancy
             {
 				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
-				AssertLicenseParameters();
+				AssertLicenseParameters(config);
 				var fs = new RavenFileSystem(config, tenantId, transportState);
                 fs.Initialize();
 
@@ -247,7 +251,7 @@ namespace Raven.Database.Server.Tenancy
             return true;
         }
 
-        private void AssertLicenseParameters()
+        private void AssertLicenseParameters(InMemoryRavenConfiguration config)
         {
 			string maxFileSystmes;
 			if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfFileSystems", out maxFileSystmes))
@@ -258,7 +262,7 @@ namespace Raven.Database.Server.Tenancy
 
                     int nextPageStart = 0;
                     var fileSystems =
-                        systemDatabase.Documents.GetDocumentsWithIdStartingWith(FILESYSTEMS_PREFIX, null, null, 0,
+                        systemDatabase.Documents.GetDocumentsWithIdStartingWith(Constants.FileSystem.Prefix, null, null, 0,
                             numberOfAllowedFileSystems, CancellationToken.None, ref nextPageStart).ToList();
                     if (fileSystems.Count >= numberOfAllowedFileSystems)
                         throw new InvalidOperationException(
@@ -272,6 +276,17 @@ namespace Raven.Database.Server.Tenancy
 	        {
 				throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
 	        }
+
+			foreach (var bundle in config.ActiveBundles.Where(bundle => bundle != "PeriodicExport"))
+			{
+				string value;
+				if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))
+				{
+					bool active;
+					if (bool.TryParse(value, out active) && active == false)
+						throw new InvalidOperationException("Your license does not allow the use of the " + bundle + " bundle.");
+				}
+			}
         }
 
 	    protected override DateTime LastWork(RavenFileSystem resource)
@@ -296,5 +311,14 @@ namespace Raven.Database.Server.Tenancy
                 action(value.Result);
             }
         }
+
+	    public bool IsFileSystemLoaded(string tenantName)
+	    {
+			Task<RavenFileSystem> dbTask;
+			if (ResourcesStoresCache.TryGetValue(tenantName, out dbTask) == false)
+				return false;
+
+			return dbTask != null && dbTask.Status == TaskStatus.RanToCompletion;
+	    }
     }
 }

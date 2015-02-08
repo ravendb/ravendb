@@ -1,0 +1,73 @@
+﻿<section>
+    <div class="panel-group">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" href="#storageSpaceUsed">Space used</a>
+                </h4>
+            </div>
+            <div class="panel-collapse collapse in"  id="storageSpaceUsed"  data-bind="with: onDiskStats">
+                <div class="panel-body">
+                    <div class="form-horizontal" role="form">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Transactional storage used size</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: TransactionalStorageUsedSizeHumaneSize"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Transactional storage allocated size</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: TransactionalStorageAllocatedSizeHumaneSize"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Index storage size</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: IndexStorageSizeHumane"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Total database size</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: TotalDatabaseSizeHumane"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default" data-bind="visible: isConfigForbidden() == false">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" href="#onDiskPaths">Paths</a>
+                </h4>
+            </div>
+            <div class="panel-collapse collapse in" id="onDiskPaths" data-bind="with: config">
+                <div class="panel-body">
+                    <div class="form-horizontal" role="form">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Transactional logs location:</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: $root.journalsStoragePath()"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Data location:</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: DataDirectory"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Indexes location:</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: IndexStoragePath"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

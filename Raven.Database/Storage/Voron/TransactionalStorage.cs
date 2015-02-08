@@ -25,7 +25,8 @@ using Raven.Json.Linq;
 
 using Voron;
 using Voron.Impl;
-
+using Voron.Impl.Compaction;
+using VoronConstants = Voron.Impl.Constants;
 using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
 
@@ -60,6 +61,9 @@ namespace Raven.Storage.Voron
 			this.configuration = configuration;
 			this.onCommit = onCommit;
 			this.onStorageInaccessible = onStorageInaccessible;
+
+			RecoverFromFailedCompact(configuration.DataDirectory);
+
 			documentCacher = new DocumentCacher(configuration);
 			exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
             bufferPool = new BufferPool(configuration.Storage.Voron.MaxBufferPoolSize * 1024 * 1024 * 1024, int.MaxValue); // 2GB max buffer size (voron limit)
@@ -204,10 +208,18 @@ namespace Raven.Storage.Voron
 
                 action(storageActionsAccessor);
                 storageActionsAccessor.SaveAllTasks();
+				storageActionsAccessor.ExecuteBeforeStorageCommit();
 
-                tableStorage.Write(writeBatchRef.Value);
+				tableStorage.Write(writeBatchRef.Value);
 
-	            return storageActionsAccessor.ExecuteOnStorageCommit;
+	            try
+	            {
+		            return storageActionsAccessor.ExecuteOnStorageCommit;
+	            }
+	            finally
+	            {
+					storageActionsAccessor.ExecuteAfterStorageCommit();
+	            }
             }
             finally
             {
@@ -272,8 +284,7 @@ namespace Raven.Storage.Voron
                 filePathFolder.Create();
 
 		    var tempPath = configuration.Storage.Voron.TempPath;
-			var txJournalPath = configuration.Settings[Abstractions.Data.Constants.RavenTxJournalPath];
-			var journalPath = string.IsNullOrEmpty(txJournalPath) ? configuration.JournalsStoragePath : txJournalPath;
+		    var journalPath = configuration.Storage.Voron.JournalsStoragePath;
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = configuration.Storage.Voron.AllowIncrementalBackups;
 		    options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
@@ -366,10 +377,108 @@ namespace Raven.Storage.Voron
 		}
         public bool SupportsDtc { get { return false; } }
 
-	    public void Compact(InMemoryRavenConfiguration configuration)
+	    public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
 	    {
-            throw new NotSupportedException("Voron storage does not support compaction");
+			if (ravenConfiguration.RunInMemory)
+				throw new InvalidOperationException("Cannot compact in-memory running Voron storage");
+
+			tableStorage.Dispose();
+
+			var sourcePath = ravenConfiguration.DataDirectory;
+			var compactPath = Path.Combine(ravenConfiguration.DataDirectory, "Voron.Compaction");
+
+			if (Directory.Exists(compactPath))
+				Directory.Delete(compactPath, true);
+
+			RecoverFromFailedCompact(sourcePath);
+
+			var sourceOptions = CreateStorageOptionsFromConfiguration(ravenConfiguration);
+		    var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions) StorageEnvironmentOptions.ForPath(compactPath);
+
+	        output("Executing storage compaction");
+
+	        StorageCompaction.Execute(sourceOptions, compactOptions,
+	                                  x => output(string.Format("Copied {0} of {1} records in '{2}' tree. Copied {3} of {4} trees.", x.CopiedTreeRecords, x.TotalTreeRecordsCount, x.TreeName, x.CopiedTrees, x.TotalTreeCount)));
+	        
+		    var sourceDir = new DirectoryInfo(sourcePath);
+		    var sourceFiles = new List<FileInfo>();
+		    
+		    foreach (var pattern in new [] { "*.journal", "headers.one", "headers.two", VoronConstants.DatabaseFilename})
+		    {
+			    sourceFiles.AddRange(sourceDir.GetFiles(pattern));
+		    }
+
+		    var compactionBackup = Path.Combine(sourcePath, "Voron.Compaction.Backup");
+
+		    if (Directory.Exists(compactionBackup))
+		    {
+                Directory.Delete(compactionBackup, true);
+		        output("Removing existing compaction backup directory");
+		    }
+			    
+
+		    Directory.CreateDirectory(compactionBackup);
+
+	        output("Backing up original data files");
+		    foreach (var file in sourceFiles)
+		    {
+			    File.Move(file.FullName, Path.Combine(compactionBackup, file.Name));
+		    }
+
+		    var compactedFiles = new DirectoryInfo(compactPath).GetFiles();
+
+	        output("Moving compacted files into target location");
+			foreach (var file in compactedFiles)
+			{
+				File.Move(file.FullName, Path.Combine(sourcePath, file.Name));
+			}
+
+	        output("Deleting original data backup");
+
+			Directory.Delete(compactionBackup, true);
+			Directory.Delete(compactPath, true);
 	    }
+
+		private static void RecoverFromFailedCompact(string sourcePath)
+		{
+			var compactionBackup = Path.Combine(sourcePath, "Voron.Compaction.Backup");
+
+			if (Directory.Exists(compactionBackup) == false) // not in the middle of compact op, we are good
+				return;
+			
+			if (File.Exists(Path.Combine(sourcePath, VoronConstants.DatabaseFilename)) &&
+				File.Exists(Path.Combine(sourcePath, "headers.one")) &&
+				File.Exists(Path.Combine(sourcePath, "headers.two")) &&
+				Directory.EnumerateFiles(sourcePath, "*.journal").Any() == false) // after a successful compaction there is no journal file
+			{
+				// we successfully moved new files and crashed before we could remove the old backup
+				// just complete the op and we are good (committed)
+				Directory.Delete(compactionBackup, true);
+			}
+			else
+			{
+				// just undo the op and we are good (rollback)
+
+				var sourceDir = new DirectoryInfo(sourcePath);
+
+				foreach (var pattern in new[] { "*.journal", "headers.one", "headers.two", VoronConstants.DatabaseFilename })
+				{
+					foreach (var file in sourceDir.GetFiles(pattern))
+					{
+						File.Delete(file.FullName);
+					}
+				}
+
+				var backupFiles = new DirectoryInfo(compactionBackup).GetFiles();
+
+				foreach (var file in backupFiles)
+				{
+					File.Move(file.FullName, Path.Combine(sourcePath, file.Name));
+				}
+
+				Directory.Delete(compactionBackup, true);
+			}
+		}
 
 		public Guid ChangeId()
 		{

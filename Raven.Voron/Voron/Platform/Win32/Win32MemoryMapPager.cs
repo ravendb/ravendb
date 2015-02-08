@@ -39,8 +39,8 @@ namespace Voron.Platform.Win32
 
 		public Win32MemoryMapPager(string file,
 			long? initialFileSize = null,
-		                           Win32NativeFileAttributes options = Win32NativeFileAttributes.Normal,
-		                           Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
+								   Win32NativeFileAttributes options = Win32NativeFileAttributes.Normal,
+								   Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
 		{
 			Win32NativeMethods.SYSTEM_INFO systemInfo;
 			Win32NativeMethods.GetSystemInfo(out systemInfo);
@@ -53,8 +53,8 @@ namespace Voron.Platform.Win32
 				: MemoryMappedFileAccess.ReadWrite;
 
 			_handle = Win32NativeFileMethods.CreateFile(file, access,
-			                                            Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
-			                                            Win32NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);
+														Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
+														Win32NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);
 			if (_handle.IsInvalid)
 			{
 				int lastWin32ErrorCode = Marshal.GetLastWin32Error();
@@ -71,9 +71,9 @@ namespace Voron.Platform.Win32
 
 			_totalAllocationSize = _fileInfo.Length;
 
-			if (_access.HasFlag(Win32NativeFileAccess.GenericWrite) || 
-			    _access.HasFlag(Win32NativeFileAccess.GenericAll) ||
-			    _access.HasFlag(Win32NativeFileAccess.FILE_GENERIC_WRITE))
+			if (_access.HasFlag(Win32NativeFileAccess.GenericWrite) ||
+				_access.HasFlag(Win32NativeFileAccess.GenericAll) ||
+				_access.HasFlag(Win32NativeFileAccess.FILE_GENERIC_WRITE))
 			{
 				var fileLength = _fileStream.Length;
 				if (fileLength == 0 && initialFileSize.HasValue)
@@ -110,10 +110,7 @@ namespace Voron.Platform.Win32
 
 			var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
 
-			if (newLengthAfterAdjustment < _totalAllocationSize)
-				throw new ArgumentException("Cannot set the length to less than the current length");
-
-			if (newLengthAfterAdjustment == _totalAllocationSize)
+			if (newLengthAfterAdjustment <= _totalAllocationSize)
 				return;
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
@@ -176,7 +173,7 @@ namespace Voron.Platform.Win32
 			var newMappingBaseAddress = Win32MemoryMapNativeMethods.MapViewOfFileEx(mmf.SafeMemoryMappedFileHandle.DangerousGetHandle(),
 				Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write,
 				offset.High, offset.Low,
-				new UIntPtr((ulong)allocationSize), 
+				new UIntPtr((ulong)allocationSize),
 				baseAddress);
 
 			var hasMappingSucceeded = newMappingBaseAddress != null && newMappingBaseAddress != (byte*)0;
@@ -244,7 +241,7 @@ namespace Voron.Platform.Win32
 		{
 			ThrowObjectDisposedIfNeeded();
 
-			return (pagerState ?? PagerState).MapBase + (pageNumber*PageSize);
+			return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
 		}
 
 		public override void Sync()
@@ -279,20 +276,22 @@ namespace Voron.Platform.Win32
 		{
 			ThrowObjectDisposedIfNeeded();
 
-			int toCopy = pagesToWrite*PageSize;
-			StdLib.memcpy(PagerState.MapBase + pagePosition*PageSize, start.Base, toCopy);
+			int toCopy = pagesToWrite * PageSize;
+            MemoryUtils.BulkCopy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
 
 			return toCopy;
 		}
 
 		public override void Dispose()
 		{
-		    if (Disposed)
-		        return;
+			if (Disposed)
+				return;
 
-			_fileStream.Dispose();
-			_handle.Close();
-			if (DeleteOnClose)
+			if (_fileStream != null)
+				_fileStream.Dispose();
+			if (_handle != null)
+				_handle.Close();
+			if (DeleteOnClose && _fileInfo != null)
 				_fileInfo.Delete();
 
 			base.Dispose();

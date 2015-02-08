@@ -43,8 +43,8 @@ namespace Raven.Tests.Issues
 
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
-			configuration.Settings["Raven/Esent/CircularLog"] = "false";
-			configuration.Settings["Raven/Voron/AllowIncrementalBackups"] = "true"; //for now all tests run under Voron - so this is needed
+            configuration.Settings[Constants.Esent.CircularLog] = "false";
+            configuration.Settings[Constants.Voron.AllowIncrementalBackups] = "true"; //for now all tests run under Voron - so this is needed
 			configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
 		}
 
@@ -110,8 +110,8 @@ namespace Raven.Tests.Issues
 				{
 					Settings =
 				{
-					{"Raven/Esent/CircularLog", "false"},
-					{"Raven/Voron/AllowIncrementalBackups", "true"}
+					{Constants.Esent.CircularLog, "false"},
+					{Constants.Voron.AllowIncrementalBackups, "true"}
 				}
 
 				}, new DatabaseRestoreRequest
@@ -128,7 +128,7 @@ namespace Raven.Tests.Issues
 					DataDirectory = DataDir,
 					Settings =
 					{
-						{"Raven/Esent/CircularLog", "false"}
+						{Constants.Esent.CircularLog, "false"}
 					}
 				}))
 				{

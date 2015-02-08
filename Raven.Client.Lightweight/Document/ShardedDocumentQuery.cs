@@ -80,7 +80,7 @@ namespace Raven.Client.Document
 			foreach (var dbCmd in ShardDatabaseCommands)
 			{
 				ClearSortHints(dbCmd);
-				shardQueryOperations.Add(InitializeQueryOperation(dbCmd.OperationsHeaders.Add));
+				shardQueryOperations.Add(InitializeQueryOperation());
 			}
 
 			ExecuteActualQuery();
@@ -109,6 +109,7 @@ namespace Raven.Client.Document
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
 				isDistinct = isDistinct,
+                allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
 				rootTypes = {typeof(T)},
@@ -130,7 +131,13 @@ namespace Raven.Client.Document
 				disableEntitiesTracking = disableEntitiesTracking,
 				disableCaching = disableCaching,
 				showQueryTimings = showQueryTimings,
-				shouldExplainScores = shouldExplainScores
+				shouldExplainScores = shouldExplainScores,
+                resultsTransformer = resultsTransformer,
+                transformerParameters = transformerParameters,
+                defaultOperator = defaultOperator,
+                highlighterKeyName = highlighterKeyName,
+                lastEquality = lastEquality
+                
 			};
 			return documentQuery;
 		}
@@ -256,7 +263,7 @@ namespace Raven.Client.Document
 				}
 
 				ExecuteBeforeQueryListeners();
-				queryOperation = InitializeQueryOperation((s, s1) => ShardDatabaseCommands.ForEach(cmd => cmd.OperationsHeaders.Set(s, s1)));
+				queryOperation = InitializeQueryOperation();
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);

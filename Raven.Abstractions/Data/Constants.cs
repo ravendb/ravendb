@@ -3,15 +3,15 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
-	public static class Constants
+    public static partial class Constants
 	{
 		static Constants()
 		{
-			InDatabaseKeyVerificationDocumentContents = new RavenJObject
+			InResourceKeyVerificationDocumentContents = new RavenJObject
 			{
 				{"Text", "The encryption is correct."}
 			};
-			InDatabaseKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
+			InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
 
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
@@ -19,7 +19,8 @@ namespace Raven.Abstractions.Data
 		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
 
 		public const string RavenShardId = "Raven-Shard-Id";
-		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
+        // turned into CurrentOperationContext.RavenAuthenticatedUser.Value
+        //public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
 		public const string LastModified = "Last-Modified";
         public const string CreationDate = "Creation-Date";
         public const string RavenCreationDate = "Raven-Creation-Date";
@@ -27,6 +28,7 @@ namespace Raven.Abstractions.Data
 		public const string SystemDatabase = "<system>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
 		public const string RandomFieldName = "__random";
+		public const string CustomSortFieldName = "__customSort";
 		public const string NullValueNotAnalyzed = "[[NULL_VALUE]]";
 		public const string EmptyStringNotAnalyzed = "[[EMPTY_STRING]]";
 		public const string NullValue = "NULL_VALUE";
@@ -51,11 +53,16 @@ namespace Raven.Abstractions.Data
 
 		public const string MemoryLimitForProcessing_BackwardCompatibility = "Raven/MemoryLimitForIndexing";
 		public const string MemoryLimitForProcessing = "Raven/MemoryLimitForProcessing";
+        public const string RunInMemory = "Raven/RunInMemory";
+	    public const string ExposeConfigOverTheWire = "Raven/ExposeConfigOverTheWire";
 
 		// Server
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
 		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
+	    public const string MaxConcurrentRequestsForDatabaseDuringLoad = "Raven/MaxConcurrentRequestsForDatabaseDuringLoad";
+        public const string MaxSecondsForTaskToWaitForDatabaseToLoad = "Raven/MaxSecondsForTaskToWaitForDatabaseToLoad";
 	    public const string RejectClientsModeEnabled = "Raven/RejectClientsModeEnabled";
+	    public const string RavenServerBuild = "Raven-Server-Build";
 
 		// Indexing
 		public const string RavenPrefetchingDurationLimit = "Raven/Prefetching/DurationLimit";
@@ -63,10 +70,11 @@ namespace Raven.Abstractions.Data
 		public const string BulkImportBatchTimeout = "Raven/BulkImport/BatchTimeout";
 		public const int BulkImportDefaultTimeoutInMs = 60000;
 	    public const string IndexingDisabled = "Raven/IndexingDisabled";
+		public const string MaxNumberOfItemsToProcessInTestIndexes = "Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes";
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
-		public const string RavenLogsPath = "Raven/Esent/LogsPath";
+		public const string RavenEsentLogsPath = "Raven/Esent/LogsPath";
         public const string RavenTxJournalPath = "Raven/TransactionJournalsPath";
 		public const string RavenIndexPath = "Raven/IndexStoragePath";
 
@@ -84,8 +92,8 @@ namespace Raven.Abstractions.Data
 		public const string EncryptionKeyBitsPreferenceSetting = "Raven/Encryption/KeyBitsPreference";
 		public const string EncryptIndexes = "Raven/Encryption/EncryptIndexes";
 
-		public const string InDatabaseKeyVerificationDocumentName = "Raven/Encryption/Verification";
-		public static readonly RavenJObject InDatabaseKeyVerificationDocumentContents;
+		public const string InResourceKeyVerificationDocumentName = "Raven/Encryption/Verification";
+		public static readonly RavenJObject InResourceKeyVerificationDocumentContents;
 
 		public const int DefaultGeneratedEncryptionKeyLength = 256/8;
 		public const int MinimumAcceptableEncryptionKeyLength = 64/8;
@@ -104,6 +112,8 @@ namespace Raven.Abstractions.Data
 		public const string SizeSoftLimitInKB = "Raven/Quotas/Size/SoftMarginInKB";
 
 		//Replications
+	    public const string RavenIndexAndTransformerReplicationLatencyInSec = "Raven/Replication/IndexAndTransformerReplicationLatency"; //in seconds
+	    public const int DefaultRavenIndexAndTransformerReplicationLatencyInSec = 600;
 		public const string RavenReplicationSource = "Raven-Replication-Source";
 		public const string RavenReplicationVersion = "Raven-Replication-Version";
 		public const string RavenReplicationHistory = "Raven-Replication-History";
@@ -147,16 +157,11 @@ namespace Raven.Abstractions.Data
         public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
 		public const string NextPageStart = "Next-Page-Start";
 
-#if DEBUG
-		public const int EnterLockTimeout = 10000;
-#endif
-		/// <summary>
-		/// if no encoding information in headers of incoming request, this encoding is assumed
-		/// </summary>
-		public const string DefaultRequestEncoding = "UTF-8";
-
-	    public const string AssembliesDirectoryName = "Assemblies";
-
+        /// <summary>
+        /// if no encoding information in headers of incoming request, this encoding is assumed
+        /// </summary>
+        public const string DefaultRequestEncoding = "UTF-8";
+        
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 		
 		//Counters
@@ -180,7 +185,45 @@ namespace Raven.Abstractions.Data
 
 
 		// General
-
 		public const string RavenDatabasesPrefix = "Raven/Databases/";
+
+        public static partial class FileSystem
+        {
+			public const string Prefix = "Raven/FileSystems/";
+            public const string DataDirectory = "Raven/FileSystem/DataDir";
+            public const string IndexStorageDirectory = "Raven/FileSystem/IndexStoragePath";
+            public const string MaximumSynchronizationInterval = "Raven/FileSystem/MaximumSynchronizationInterval";
+            public const string Storage = "Raven/FileSystem/Storage";
+
+	        public static class Versioning
+	        {
+				public const string ChangesToRevisionsAllowed = "Raven/FileSystem/Versioning/ChangesToRevisionsAllowed";
+	        }
+        }
+
+		// Subscriptions
+		public const string RavenSubscriptionsPrefix = "Raven/Subscriptions/";
+        
+        public static partial class Esent
+        {
+            public const string CircularLog = "Raven/Esent/CircularLog";
+            public const string CacheSizeMax = "Raven/Esent/CacheSizeMax";
+            public const string MaxVerPages = "Raven/Esent/MaxVerPages";
+            public const string PreferredVerPages = "Raven/Esent/PreferredVerPages";
+            public const string LogFileSize = "Raven/Esent/LogFileSize";
+            public const string LogBuffers = "Raven/Esent/LogBuffers";
+            public const string MaxCursors = "Raven/Esent/MaxCursors";
+            public const string DbExtensionSize = "Raven/Esent/DbExtensionSize";
+        }
+
+        public static partial class Voron
+        {
+            public const string AllowIncrementalBackups = "Raven/Voron/AllowIncrementalBackups";
+            public const string InitialFileSize = "Raven/Voron/InitialFileSize";
+            public const string TempPath = "Raven/Voron/TempPath";
+            public const string MaxBufferPoolSize = "Raven/Voron/MaxBufferPoolSize";
+            public const string InitialSize = "Raven/Voron/InitialSize";
+            public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
+        }
 	}
 }

@@ -214,6 +214,7 @@
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogManagerLoggingDisabedTests.cs" />
     <Compile Include="Abstractions\Logging\LogProviders\NLogLogProviderLoggingEnabledTests.cs" />
     <Compile Include="Abstractions\Logging\LogManagerTests.cs" />
+    <Compile Include="AllExceptionsAreSerializaable.cs" />
     <Compile Include="Bugs\AccessingHostPropertyOnUri.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AdHocProjections.cs" />
@@ -230,6 +231,7 @@
     <Compile Include="Bugs\AvoidRaceConditionWhenWeLoadTheDataNotPatched.cs" />
     <Compile Include="Bugs\BackwardCompatibility.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
+    <Compile Include="Bugs\Caching\CachingOfPostQueries.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
     <Compile Include="Bugs\CanDeserializeWhenWeHaveLastModifiedTwiceInMetadata.cs" />
     <Compile Include="Bugs\CannotChangeId.cs" />
@@ -271,6 +273,7 @@
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
+    <Compile Include="Json\JsonCodeGeneratorTests.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />
@@ -587,7 +590,6 @@
     <Compile Include="Indexes\WithNullableDateTime.cs" />
     <Compile Include="InflectorTests.cs" />
     <Compile Include="Json\SupportForJsonPropertyAttribute.cs" />
-    <Compile Include="LicenseProviderPluginTest.cs" />
     <Compile Include="Linq\OfTypeSupport2.cs" />
     <Compile Include="Linq\ListIndexOf.cs" />
     <Compile Include="Linq\FlagsEnum.cs" />
@@ -614,6 +616,7 @@
     <Compile Include="PreFetching.cs" />
     <Compile Include="Properties\TestAssemblyInfo.cs" />
     <Compile Include="Queries\CommentsInQueries.cs" />
+    <Compile Include="Querying\CachingOfLongQueries.cs" />
     <Compile Include="Querying\SkipDuplicates.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
     <Compile Include="ResultsTransformer\TransformerParametersToResultTransformer.cs" />
@@ -623,6 +626,12 @@
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
     <Compile Include="Smuggler\SmugglerBetweenTests.cs" />
     <Compile Include="Security\ReplicationWithMixedSecurity.cs" />
+    <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
+    <Compile Include="Smuggler\SmugglerIdentitiesTests.cs" />
+    <Compile Include="Smuggler\SmugglerTransformScriptsTests.cs" />
+    <Compile Include="Sorting\SortByDynamicFields.cs" />
+    <Compile Include="Sorting\CustomSorting.cs" />
+    <Compile Include="Sorting\SortByNumberOfCharactersFromEnd.cs" />
     <Compile Include="Spatial\BoundingBoxIndexTests.cs" />
     <Compile Include="Spatial\CartesianTests.cs" />
     <Compile Include="Spatial\Clustering.cs" />
@@ -646,6 +655,7 @@
     <Compile Include="Spatial\SimonBartlett.cs" />
     <Compile Include="Spatial\Spatial.cs" />
     <Compile Include="Spatial\ShapeConverterTests.cs" />
+    <Compile Include="Spatial\SpatialSorting.cs" />
     <Compile Include="Spatial\SpatialTest2.cs" />
     <Compile Include="Bugs\spokeypokey.cs" />
     <Compile Include="Bugs\Stacey\Aspects.cs" />
@@ -968,7 +978,7 @@
       <Name>Raven.Tests.Common</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
-      <Project>{1B88473F-743B-4F6B-8E5E-97BB816E6C68}</Project>
+      <Project>{14f2d508-8e06-407b-9451-97e99538e26b}</Project>
       <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">

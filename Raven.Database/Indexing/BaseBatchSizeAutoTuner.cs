@@ -237,10 +237,11 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public void HandleOutOfMemory()
 		{
-			var newNumberOfItemsToProcess = InitialNumberOfItems;
+			var newNumberOfItemsToProcess = Math.Min(InitialNumberOfItems, NumberOfItemsToProcessInSingleBatch);
 			if (IsProcessingUsingTooMuchMemory) //if using too much memory, decrease number of items in each batch
 				newNumberOfItemsToProcess /= 4;
-
+			else
+				newNumberOfItemsToProcess /= 2; // we hit OOME so we should rapidly decrease batch size even when process is not using too much memory
 
 			// first thing to do, reset the number of items per batch
 			NumberOfItemsToProcessInSingleBatch = newNumberOfItemsToProcess > 0 ? newNumberOfItemsToProcess : 1;

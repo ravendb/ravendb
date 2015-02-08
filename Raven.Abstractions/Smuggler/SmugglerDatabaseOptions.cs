@@ -18,15 +18,15 @@ namespace Raven.Abstractions.Smuggler
 {
     public class SmugglerDatabaseOptions : SmugglerOptions<RavenConnectionStringOptions>
 	{
-        public const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
+        public new const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
 	    private int chunkSize;
-
 	   
 	    private long? totalDocumentSizeInChunkLimitInBytes;
 
         public SmugglerDatabaseOptions()
 		{
 			Filters = new List<FilterSetting>();
+            ConfigureDefaultFilters();
 		    ChunkSize = int.MaxValue;
             OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
             Timeout = TimeSpan.FromSeconds(30);
@@ -36,6 +36,34 @@ namespace Raven.Abstractions.Smuggler
 	        ExportDeletions = false;
 		    TotalDocumentSizeInChunkLimitInBytes = DefaultDocumentSizeInChunkLimitInBytes;
 		}
+
+        private void ConfigureDefaultFilters()
+        {
+            // filter out encryption verification key document to enable import to encrypted db from encrypted db.
+            Filters.Add(new FilterSetting
+             {
+                 Path = "@metadata.@id",
+                 ShouldMatch = false,
+                 Values = {Constants.InResourceKeyVerificationDocumentName}
+             });
+        }
+
+
+        private string continuationFile;
+        private bool useContinuationFile = false;
+        public string ContinuationToken 
+        {
+            get { return continuationFile; }
+            set
+            {
+                useContinuationFile = !string.IsNullOrWhiteSpace(value);
+                continuationFile = value;
+            }
+        }
+        public bool UseContinuationFile
+        {
+            get { return useContinuationFile; }
+        }
 
         /// <summary>
 		/// Limit total size of documents in each chunk
@@ -89,7 +117,6 @@ namespace Raven.Abstractions.Smuggler
         /// </summary>
         [Obsolete("Use RavenFS instead.")]
         public Etag StartAttachmentsDeletionEtag { get; set; }
-
 
 
 		/// <summary>
@@ -179,6 +206,10 @@ namespace Raven.Abstractions.Smuggler
         public int MaxStepsForTransformScript { get; set; }
 
         public bool WaitForIndexing { get; set; }
+
+		public bool StripReplicationInformation { get; set; }
+
+        public bool SkipConflicted { get; set; }
     }
 
  

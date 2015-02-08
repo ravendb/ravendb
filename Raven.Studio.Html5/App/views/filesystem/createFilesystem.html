@@ -1,7 +1,7 @@
-﻿<div class="col-md-12">
+﻿<div class="col-md-7">
     <div class="form-group">
         <label for="databaseName">Name</label>
-        <input data-bind="value: fileSystemName, valueUpdate: 'afterkeydown', hasfocus: fileSystemNameFocus, customValidity: nameCustomValidityError" type="text" class="form-control" id="filesystemName" autocomplete="off" placeholder="File System Name">
+        <input data-bind="value: fileSystemName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" type="text" class="form-control" id="filesystemName" autocomplete="off" placeholder="File System Name">
     </div>
     <div class="panel-group" id="accordion">
         <div class="panel panel-default">
@@ -33,5 +33,18 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+<div class="col-md-5">
+    <div>
+        <label>Bundles</label>
+    </div>
+    <div class="btn-group-vertical" data-toggle="buttons-checkbox">
+        <button type="button" class="btn btn-default" data-bind="click: toggleEncryptionBundle, css: { 'license-inactive': !isBundleActive('encryption') }">
+            <i data-bind="css: { 'fa-check': isEncryptionBundleEnabled }" class="fa fa-fw"></i> Encryption
+        </button>
+         <button type="button" class="btn btn-default" data-bind="click: toggleVersioningBundle, css: { 'license-inactive': !isBundleActive('versioning') }">
+            <i data-bind="css: { 'fa-check': isVersioningBundleEnabled }" class="fa fa-fw"></i> Versioning
+        </button>
     </div>
 </div>

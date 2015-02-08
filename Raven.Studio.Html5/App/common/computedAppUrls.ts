@@ -2,6 +2,8 @@
 interface computedAppUrls {
     adminSettings: KnockoutComputed<string>;
 
+    hasApiKey: KnockoutComputed<string>;
+
     resources: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
@@ -18,14 +20,14 @@ interface computedAppUrls {
     reporting: KnockoutComputed<string>;
     tasks: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
+    indexPerformance: KnockoutComputed<string>;
     indexStats: KnockoutComputed<string>;
+    indexBatchSize: KnockoutComputed<string>;
+    indexPrefetches: KnockoutComputed<string>;
     replicationPerfStats: KnockoutComputed<string>;
     sqlReplicationPerfStats: KnockoutComputed<string>;
-    metrics: KnockoutComputed<string>;
-    metricsIndexing: KnockoutComputed<string>;
-    metricsRequests: KnockoutComputed<string>;
-    metricsIndexBatchSize: KnockoutComputed<string>;
-    metricsPrefetches: KnockoutComputed<string>;
+    requestsCount: KnockoutComputed<string>;
+    requestsTracing: KnockoutComputed<string>;
     settings: KnockoutComputed<string>;
     logs: KnockoutComputed<string>;
     runningTasks: KnockoutComputed<string>;
@@ -53,13 +55,17 @@ interface computedAppUrls {
     statusDebugQueries: KnockoutComputed<string>;
     statusDebugTasks: KnockoutComputed<string>;
     statusDebugRoutes: KnockoutComputed<string>;
-    statusDebugRequestTracing: KnockoutComputed<string>;
     statusDebugSqlReplication: KnockoutComputed<string>;
     statusDebugIndexFields: KnockoutComputed<string>;
-    statusDebugSlowDocCounts: KnockoutComputed<string>;
     statusDebugIdentities: KnockoutComputed<string>;
     statusDebugWebSocket: KnockoutComputed<string>;
+    statusDebugPersistAutoIndex: KnockoutComputed<string>;
+    statusDebugExplainReplication: KnockoutComputed<string>;
     infoPackage: KnockoutComputed<string>;
+
+    statusStorageOnDisk: KnockoutComputed<string>;
+    statusStorageBreakdown: KnockoutComputed<string>;
+    statusStorageCollections: KnockoutComputed<string>;
 
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
@@ -69,8 +75,11 @@ interface computedAppUrls {
     filesystemSearch: KnockoutComputed<string>;
     filesystemSynchronization: KnockoutComputed<string>;
     filesystemStatus: KnockoutComputed<string>;
+    filesystemSettings: KnockoutComputed<string>;
     filesystemSynchronizationDestinations: KnockoutComputed<string>;
     filesystemConfiguration: KnockoutComputed<string>;
+
+    filesystemVersioning: KnockoutComputed<string>;
 
     couterStorages:KnockoutComputed<string>;
     counterStorageCounters: KnockoutComputed<string>;

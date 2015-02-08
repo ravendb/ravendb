@@ -20,6 +20,7 @@ class scriptedIndex extends document {
 
         this.subscribeToObservable(this.indexScript);
         this.subscribeToObservable(this.deleteScript);
+        this.indexName.subscribe(v => this.__metadata.id = scriptedIndex.PREFIX + v);
     }
 
     static emptyForIndex(indexName: string): scriptedIndex {
@@ -67,7 +68,7 @@ class scriptedIndex extends document {
                     message = "Please fill out this field.";
                 }
                 textarea.setCustomValidity(message);
-                setTimeout(()=> {
+                setTimeout(() => {
                     var annotations = currentEditor.getSession().getAnnotations();
                     var isErrorExists = false;
                     for (var i = 0; i < annotations.length; i++) {

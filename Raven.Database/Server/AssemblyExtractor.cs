@@ -14,6 +14,7 @@ using Lucene.Net.Documents;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Database.Config;
 
 namespace Raven.Database.Server
 {
@@ -22,15 +23,26 @@ namespace Raven.Database.Server
         private const string AssemblySuffix = ".dll";
 
         private const string CompressedAssemblySuffix = AssemblySuffix + ".zip";
+        
+        public static string GetExtractedAssemblyLocationFor(Type type, InMemoryRavenConfiguration configuration)
+        {
+            if (File.Exists(type.Assembly.Location))
+                return type.Assembly.Location;
 
-        public static void ExtractEmbeddedAssemblies()
+            var name = type.Assembly.GetName().Name;
+
+            return Path.Combine(configuration.AssembliesDirectory, name + AssemblySuffix);
+        }
+
+        public static void ExtractEmbeddedAssemblies(InMemoryRavenConfiguration configuration)
         {
             var assemblies = new HashSet<string> { 
                 typeof(Field).Assembly.GetName().Name 
             };
 
+            var assemblyLocation = configuration.AssembliesDirectory;
+
             var assembly = Assembly.GetExecutingAssembly();
-            var assemblyLocation = Path.Combine(Path.GetDirectoryName(assembly.Location), Constants.AssembliesDirectoryName + "\\");
             var assembliesToExtract = FindAssembliesToExtract(assembly, assemblies);
 
           
@@ -85,8 +97,17 @@ namespace Raven.Database.Server
                         throw new InvalidOperationException("Could not extract assembly " + assemblyToExtract.Key + " from resources.");
 
                     var assemblyPath = Path.Combine(location, assemblyToExtract.Value.Name + AssemblySuffix);
-                    if (File.Exists(assemblyPath))
-                        File.Delete(assemblyPath);
+	                if (File.Exists(assemblyPath))
+	                {
+		                try
+		                {
+			                File.Delete(assemblyPath);
+		                }
+		                catch (Exception)
+		                {
+			                continue; // probably busy for some reason, ignoring
+		                }
+	                }
 
                     if (assemblyToExtract.Value.Compressed)
                     {

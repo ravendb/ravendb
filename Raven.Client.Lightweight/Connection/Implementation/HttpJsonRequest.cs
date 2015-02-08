@@ -12,7 +12,6 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -34,6 +33,9 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public class HttpJsonRequest : IDisposable
 	{
+	    public const int MinimumServerVersion = 3000;
+	    public const int CustomBuildVersion = 13;
+
 		internal readonly string Url;
 		internal readonly string Method;
 
@@ -66,7 +68,7 @@ namespace Raven.Client.Connection
 		private string operationUrl;
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
-
+        
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -77,74 +79,61 @@ namespace Raven.Client.Connection
 			CreateHttpJsonRequestParams requestParams,
 			HttpJsonRequestFactory factory)
 		{
-			try
+			_credentials = requestParams.DisableAuthentication == false ? requestParams.Credentials : null;
+			disabledAuthRetries = requestParams.DisableAuthentication;
+
+			Url = requestParams.Url;
+			Method = requestParams.Method;
+		    
+
+			if (requestParams.Timeout.HasValue)
 			{
-				_credentials = requestParams.DisableAuthentication == false ? requestParams.Credentials : null;
-				disabledAuthRetries = requestParams.DisableAuthentication;
-
-				Url = requestParams.Url;
-				Method = requestParams.Method;
-
-				if (requestParams.Timeout.HasValue)
-				{
-					Timeout = requestParams.Timeout.Value;
-				}
-				else
-				{
-					Timeout = TimeSpan.FromSeconds(100); // default HttpClient timeout
+				Timeout = requestParams.Timeout.Value;
+			}
+			else
+			{
+				Timeout = TimeSpan.FromSeconds(100); // default HttpClient timeout
 #if DEBUG
-					if (Debugger.IsAttached)
-					{
-						Timeout = TimeSpan.FromMinutes(5);
-					}
+				if (Debugger.IsAttached)
+				{
+					Timeout = TimeSpan.FromMinutes(5);
+				}
 #endif
-				}
-
-				this.factory = factory;
-				owner = requestParams.Owner;
-				conventions = requestParams.Convention;
-
-				if (factory.httpMessageHandler != null) 
-					recreateHandler = () => factory.httpMessageHandler;
-				else
-				{
-					recreateHandler = () => new WebRequestHandler
-					{
-						UseDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false,
-						Credentials = _credentials != null ? _credentials.Credentials : null,
-					};
-				}
-
-				httpClient = factory.httpClientCache.GetClient(Timeout, _credentials, recreateHandler);
-
-				if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
-				{
-					if (Method == "POST" || Method == "PUT" || Method == "PATCH" || Method == "EVAL")
-					{
-						httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
-						httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
-					}
-
-					httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
-				}
-
-				headers.Add("Raven-Client-Version", ClientVersion);
-				WriteMetadata(requestParams.Metadata);
-				requestParams.UpdateHeaders(headers);
 			}
-			catch (Exception)
+
+			this.factory = factory;
+			owner = requestParams.Owner;
+			conventions = requestParams.Convention;
+
+			if (factory.httpMessageHandler != null) 
+				recreateHandler = () => factory.httpMessageHandler;
+			else
 			{
-				throw;
+				recreateHandler = () => new WebRequestHandler
+				{
+					UseDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false,
+					Credentials = _credentials != null ? _credentials.Credentials : null,
+				};
 			}
+
+			httpClient = factory.httpClientCache.GetClient(Timeout, _credentials, recreateHandler);
+
+			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
+			{
+				if (Method == "POST" || Method == "PUT" || Method == "PATCH" || Method == "EVAL")
+				{
+					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
+					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
+				}
+
+				if (factory.acceptGzipContent)
+					httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+			}
+
+			headers.Add("Raven-Client-Version", ClientVersion);
+			WriteMetadata(requestParams.Metadata);
+			requestParams.UpdateHeaders(headers);
 		}
-
-		//public void DisableAuthentication()
-		//{
-		//	throw new NotImplementedException();
-
-		//	disableAuthentication();
-		//	disabledAuthRetries = true;
-		//}
 
 		public void RemoveAuthorizationHeader()
 		{
@@ -186,13 +175,13 @@ namespace Raven.Client.Connection
             return await ReadJsonInternalAsync().ConfigureAwait(false); 
 		}
 
-        private async Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage, bool readErrorString = true)
+        private Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage, bool readErrorString = true)
 		{
 			if (isRequestSentToServer && Debugger.IsAttached == false)
 				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
 			isRequestSentToServer = true;
 
-			return await RunWithAuthRetry(async () =>
+			return RunWithAuthRetry(async () =>
 			{
 				try
 				{
@@ -200,6 +189,7 @@ namespace Raven.Client.Connection
 					CopyHeadersToHttpRequestMessage(requestMessage);
                     Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
 					SetResponseHeaders(Response);
+				    AssertServerVersionSupported();
 					ResponseStatusCode = Response.StatusCode;
 				}
 				finally
@@ -209,10 +199,26 @@ namespace Raven.Client.Connection
 
 				// throw the conflict exception
                 return await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString).ConfigureAwait(false);
-            }).ConfigureAwait(false);
+            });
 		}
 
-		private async Task<T> RunWithAuthRetry<T>(Func<Task<T>> requestOperation)
+	    private void AssertServerVersionSupported()
+	    {
+	        var serverBuildString = ResponseHeaders[Constants.RavenServerBuild];
+	        int serverBuild;
+
+            // server doesn't return Raven-Server-Build in case of requests failures, thus we firstly check for header presence 
+            if (string.IsNullOrEmpty(serverBuildString) == false && int.TryParse(serverBuildString, out serverBuild))
+            {
+                if (serverBuild < MinimumServerVersion && serverBuild != CustomBuildVersion)
+                {
+                    throw new ServerVersionNotSuppportedException(string.Format("Server version {0} is not supported. Use server with build >= {1}", serverBuildString, MinimumServerVersion));
+                }
+            } 
+           
+	    }
+
+	    private async Task<T> RunWithAuthRetry<T>(Func<Task<T>> requestOperation)
 		{
 			int retries = 0;
 			while (true)
@@ -631,12 +637,13 @@ namespace Raven.Client.Connection
 			return await RunWithAuthRetry(async () =>
 			{
 				var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
-				Response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead);
+				Response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
 				SetResponseHeaders(Response);
+                AssertServerVersionSupported();
 
 			    await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true).ConfigureAwait(false);
 
-				var stream = await Response.Content.ReadAsStreamAsync();
+				var stream = await Response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 				var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());
 				observableLineStream.Start();
 				return (IObservable<string>)observableLineStream;
@@ -656,50 +663,50 @@ namespace Raven.Client.Connection
             return WriteAsync(JsonExtensions.ToJObject(data));           
         }
 
-        public async Task WriteAsync(RavenJToken tokenToWrite)
+        public Task WriteAsync(RavenJToken tokenToWrite)
         {
             writeCalled = true;
-	        await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+	        return SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 	        {
 		        Content = new JsonContent(tokenToWrite),
 		        Headers =
 		        {
 			        TransferEncodingChunked = true
 		        }
-	        }).ConfigureAwait(false);
+	        });
         }
 
-		public async Task WriteAsync(Stream streamToWrite)
+		public Task WriteAsync(Stream streamToWrite)
 		{
 			postedStream = streamToWrite;
 			writeCalled = true;
 
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+			return SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
 				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression, disposeStream: false).SetContentType(headers)
-			}).ConfigureAwait(false);
+			});
 		}
 
-		public async Task WriteAsync(HttpContent content)
+		public Task WriteAsync(HttpContent content)
 		{
 			writeCalled = true;
 
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+			return SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
 				Content = content,
 				Headers =
 				{
 					TransferEncodingChunked = true,
 				}
-			}).ConfigureAwait(false);
+			});
 		}
 
-		public async Task WriteAsync(string data)
+		public Task WriteAsync(string data)
 		{
 			postedData = data;
 			writeCalled = true;
 
-			await SendRequestInternal(() =>
+			return SendRequestInternal(() =>
 			{
 				var request = new HttpRequestMessage(new HttpMethod(Method), Url)
 				{
@@ -707,45 +714,30 @@ namespace Raven.Client.Connection
 				};
 				request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
 				return request;
-			}).ConfigureAwait(false);
+			});
 		}
-
-		public async Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
+        
+		public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
 		{
-            Response = await RunWithAuthRetry(async () =>
-            {
-
-                var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url)
-                {
-                    Content = new CompressedStringContent(data, factory.DisableRequestCompression),
-                };
-
-                CopyHeadersToHttpRequestMessage(rawRequestMessage);
-
-                var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead)
-                    .ConfigureAwait(false);
-
-                if (response.IsSuccessStatusCode == false &&
-                    (response.StatusCode == HttpStatusCode.PreconditionFailed ||
-                    response.StatusCode == HttpStatusCode.Forbidden ||
-                    response.StatusCode == HttpStatusCode.Unauthorized))
-                {
-                    throw new ErrorResponseException(response, "Failed request");
-                }
-                return response;
-            }).ConfigureAwait(false);
-
-
-            ResponseStatusCode = Response.StatusCode;
-
-            return Response;
+			return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression));
 		}
 
-		public async Task<HttpResponseMessage> ExecuteRawResponseAsync()
+		public Task<HttpResponseMessage> ExecuteRawResponseAsync()
+		{
+			return ExecuteRawResponseInternalAsync(null);
+		}
+
+		private async Task<HttpResponseMessage> ExecuteRawResponseInternalAsync(HttpContent content)
 		{
             Response = await RunWithAuthRetry(async () =>
 		    {
                 var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+
+			    if (content != null)
+			    {
+				    rawRequestMessage.Content = content;
+			    }
+
                 CopyHeadersToHttpRequestMessage(rawRequestMessage);
 
                 var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);

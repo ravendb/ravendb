@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 
@@ -40,9 +41,9 @@ namespace Raven.Client.Connection
         /// </summary>
         DateTime GetFailureLastCheck(string operationUrl);
 
-        int GetReadStripingBase();
+        int GetReadStripingBase(bool increment);
 
-        Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation);
+        Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token = default (CancellationToken));
 
         void ForceCheck(string primaryUrl, bool shouldForceCheck);
 

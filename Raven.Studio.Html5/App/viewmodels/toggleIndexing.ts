@@ -12,6 +12,11 @@ class toggleIndexing extends viewModelBase {
         this.getIndexStatus();
     }
 
+    activate(args) {
+        super.activate(args);
+        this.updateHelpLink('VXOPAN');
+    }
+
     disableIndexing() {
         new stopIndexingCommand(this.activeDatabase())
             .execute()

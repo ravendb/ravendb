@@ -46,7 +46,6 @@ class copyDocuments extends dialogViewModelBase {
         dialog.close(this);
     }
 
-
     detached() {
         super.detached();
         this.unregisterResizing("copyDocumentsResize");

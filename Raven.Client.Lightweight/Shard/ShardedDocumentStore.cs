@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -369,5 +370,51 @@ namespace Raven.Client.Shard
 																return (object)null;
 															});
 		}
+        /// <summary>
+        /// Executes the index creation against each of the shards Async.
+        /// </summary>
+        public override Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
+        {
+            var list = ShardStrategy.Shards.Values.Select(x => x.AsyncDatabaseCommands).ToList();
+            return ShardStrategy.ShardAccessStrategy.ApplyAsync(list,new ShardRequestData(), (commands, i) =>
+            {
+                var tcs = new TaskCompletionSource<bool>();
+
+                try
+                {
+                    indexCreationTask.ExecuteAsync(commands, Conventions)
+                                     .ContinueWith(t => tcs.SetResult(true));
+                }
+                catch (Exception e)
+                {
+                    tcs.SetException(e);
+                }
+
+                return tcs.Task;
+            });
+        }
+
+        public override Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask)
+        {
+            var list = ShardStrategy.Shards.Values.Select(x => x.AsyncDatabaseCommands).ToList();
+            return ShardStrategy.ShardAccessStrategy.ApplyAsync(list,
+                                                            new ShardRequestData()
+                                                            , (commands, i) =>
+                                                            {
+                                                                var tcs = new TaskCompletionSource<bool>();
+
+                                                                try
+                                                                {
+                                                                    transformerCreationTask.ExecuteAsync(commands, Conventions)
+                                                                        .ContinueWith(t => tcs.SetResult(true));
+                                                                }
+                                                                catch (Exception e)
+                                                                {
+                                                                    tcs.SetException(e);
+                                                                }
+
+                                                                return tcs.Task;
+                                                            });
+        }
 	}
 }

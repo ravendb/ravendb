@@ -7,24 +7,22 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Web;
-
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util.Streams;
-using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage.Exceptions;
 using Raven.Database.FileSystem.Storage.Voron.Impl;
 using Raven.Database.FileSystem.Synchronization.Rdc;
 using Raven.Database.FileSystem.Util;
+using Raven.Database.Storage.Voron;
 using Raven.Json.Linq;
 
 using Voron;
 using Voron.Impl;
 using RavenConstants = Raven.Abstractions.Data.Constants;
 
-using System.Diagnostics;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
 
@@ -35,12 +33,14 @@ namespace Raven.Database.FileSystem.Storage.Voron
         private readonly TableStorage storage;
 
         private readonly Reference<WriteBatch> writeBatch;
+	    private readonly OrderedPartCollection<AbstractFileCodec> fileCodecs;
 
-        public StorageActionsAccessor(TableStorage storage, Reference<WriteBatch> writeBatch, SnapshotReader snapshot, IdGenerator generator, IBufferPool bufferPool)
+	    public StorageActionsAccessor(TableStorage storage, Reference<WriteBatch> writeBatch, Reference<SnapshotReader> snapshot, IdGenerator generator, IBufferPool bufferPool, OrderedPartCollection<AbstractFileCodec> fileCodecs)
             : base(snapshot, generator, bufferPool)
         {
             this.storage = storage;
             this.writeBatch = writeBatch;
+	        this.fileCodecs = fileCodecs;
         }
 
         public void Dispose()
@@ -86,22 +86,35 @@ namespace Raven.Database.FileSystem.Storage.Voron
                 return page.Value<int>("id");
             }
 
-            var newId = IdGenerator.GetNextIdForTable(storage.Pages);
-            var newKey = CreateKey(newId);
+            var newPageId = IdGenerator.GetNextIdForTable(storage.Pages);
+            var newPageKey = CreateKey(newPageId);
 
             var newPage = new RavenJObject
                    {
-                       {"id", newId},
+                       {"id", newPageId},
                        {"page_strong_hash", hashKey.Strong},
                        {"page_weak_hash", hashKey.Weak},
                        {"usage_count", 1}
                    };
 
-            storage.Pages.Add(writeBatch.Value, newKey, newPage, 0);
-            pageData.Add(writeBatch.Value, newKey, buffer, 0);
-            pageByKey.Add(writeBatch.Value, key, newKey);
+            storage.Pages.Add(writeBatch.Value, newPageKey, newPage, 0);
 
-            return newId;
+			var dataStream = CreateStream();
+
+			using (var finalDataStream = fileCodecs.Aggregate((Stream)new UndisposableStream(dataStream),
+				(current, codec) => codec.EncodePage(current)))
+			{
+				finalDataStream.Write(buffer, 0, size);
+				finalDataStream.Flush();
+			}
+
+			dataStream.Position = 0;
+
+			pageData.Add(writeBatch.Value, newPageKey, dataStream, 0);
+
+            pageByKey.Add(writeBatch.Value, key, newPageKey);
+
+            return newPageId;
         }
 
         public void PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false)
@@ -199,8 +212,13 @@ namespace Raven.Database.FileSystem.Storage.Voron
             if (result == null)
                 return -1;
 
-            result.Reader.Read(buffer, 0, buffer.Length);
-            return result.Reader.Length;
+			using (var stream = result.Reader.AsStream())
+			{
+				using (var decodedStream = fileCodecs.Aggregate(stream, (current, codec) => codec.DecodePage(current)))
+				{
+					return decodedStream.Read(buffer, 0, buffer.Length);
+				}
+			}
         }
 
         public FileHeader ReadFile(string filename)
@@ -318,7 +336,40 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }
         }
 
-        public void Delete(string filename)
+	    public IEnumerable<FileHeader> GetFilesStartingWith(string namePrefix, int start, int take)
+	    {
+			if (string.IsNullOrEmpty(namePrefix))
+				throw new ArgumentNullException("namePrefix");
+			if (start < 0)
+				throw new ArgumentException("must have zero or positive value", "start");
+			if (take < 0)
+				throw new ArgumentException("must have zero or positive value", "take");
+
+			if (take == 0)
+				yield break;
+
+		    using (var iterator = storage.Files.Iterate(Snapshot, writeBatch.Value))
+		    {
+				iterator.RequiredPrefix = namePrefix.ToLowerInvariant();
+				if (iterator.Seek(iterator.RequiredPrefix) == false || iterator.Skip(start) == false)
+					yield break;
+
+				var fetchedCount = 0;
+				do
+				{
+					var key = iterator.CurrentKey.ToString();
+
+					ushort version;
+					var file = LoadFileByKey(key, out version);
+					
+					fetchedCount++;
+
+					yield return ConvertToFile(file);
+				} while (iterator.MoveNext() && fetchedCount < take);
+		    }
+	    }
+
+	    public void Delete(string filename)
         {
             DeleteUsage(filename);
             DeleteFile(filename);
@@ -398,7 +449,9 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }
         }
 
-        public int GetFileCount()
+	    public bool IsNested { get; set; }
+
+	    public int GetFileCount()
         {
             var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
             return Convert.ToInt32(storage.GetEntriesCount(fileCount));

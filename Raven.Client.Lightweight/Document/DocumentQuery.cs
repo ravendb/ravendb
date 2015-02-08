@@ -93,14 +93,16 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+        public IDocumentQuery<T> SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
 	    {
 	        SetTransformerParameters(queryInputs);
+            return this;
 	    }
 
-		public void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
+        public IDocumentQuery<T> SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
 	    {
 	        this.transformerParameters = transformerParameters;
+            return this;
 	    }
 
 		public bool IsDistinct { get { return isDistinct; } }
@@ -154,7 +156,6 @@ namespace Raven.Client.Document
 				rootTypes = {typeof(T)},
 				defaultField = defaultField,
 				beforeQueryExecutionAction = beforeQueryExecutionAction,
-				afterQueryExecutedCallback = afterQueryExecutedCallback,
 				highlightedFields = new List<HighlightedField>(highlightedFields),
 				highlighterPreTags = highlighterPreTags,
 				highlighterPostTags = highlighterPostTags,
@@ -167,6 +168,7 @@ namespace Raven.Client.Document
                 defaultOperator = defaultOperator,
 				shouldExplainScores = shouldExplainScores
 			};
+			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
 		}
 
@@ -211,6 +213,15 @@ namespace Raven.Client.Document
 			RandomOrdering();
 			return this;
 		}
+
+        /// <summary>
+        /// Order the search results randomly
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.CustomSortUsing(string typeName, bool descending)
+        {
+            CustomSortUsing(typeName, descending);
+            return this;
+        }
 
 		/// <summary>
 		/// Order the search results randomly using the specified seed
@@ -770,6 +781,24 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng)
+        {
+            OrderBy(string.Format("{0};{1};{2}", Constants.DistanceFieldName, lat, lng));
+            return this;
+        }
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng, string sortedFieldName)
+        {
+            OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat, lng, sortedFieldName));
+            return this;
+        }
+        
 		/// <summary>
 		/// Order the results by the specified fields
 		/// The fields are the names of the fields to sort, defaulting to sorting by ascending.
@@ -795,7 +824,8 @@ namespace Raven.Client.Document
 			for (int index = 0; index < orderByfields.Length; index++)
 			{
 				var fld = orderByfields[index];
-				sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].ReturnType));
+				if (theSession != null)
+					sortByHints.Add(new KeyValuePair<string, SortOptions?>(fld, theSession.Conventions.GetDefaultSortOption(propertySelectors[index].ReturnType)));
 			}
 			return this;
 		}
@@ -825,7 +855,8 @@ namespace Raven.Client.Document
             for (int index = 0; index < orderByfields.Length; index++)
             {
                 var fld = orderByfields[index];
-                sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].ReturnType));
+	            if (theSession != null)
+		            sortByHints.Add(new KeyValuePair<string, SortOptions?>(fld, theSession.Conventions.GetDefaultSortOption(propertySelectors[index].ReturnType)));
             }
             return this;
 		}
@@ -850,6 +881,17 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
+			string fieldName,
+			string fieldKeyName, 
+			int fragmentLength, 
+			int fragmentCount, 
+			out FieldHighlightings highlightings)
+		{
+			this.Highlight(fieldName, fieldKeyName, fragmentLength, fragmentCount, out highlightings);
+			return this;
+		}
+
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
 			Expression<Func<T, TValue>> propertySelector, 
 			int fragmentLength, 
@@ -869,6 +911,17 @@ namespace Raven.Client.Document
 			out FieldHighlightings fieldHighlightings)
 		{
 			this.Highlight(this.GetMemberQueryPath(propertySelector), fragmentLength, fragmentCount, out fieldHighlightings);
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
+			Expression<Func<T, TValue>> propertySelector,
+			Expression<Func<T, TValue>> keyPropertySelector, 
+			int fragmentLength, 
+			int fragmentCount,
+			out FieldHighlightings fieldHighlightings)
+		{
+			this.Highlight(this.GetMemberQueryPath(propertySelector), this.GetMemberQueryPath(keyPropertySelector), fragmentLength, fragmentCount, out fieldHighlightings);
 			return this;
 		}
 

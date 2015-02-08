@@ -19,11 +19,13 @@ class runningTasks extends viewModelBase {
     static TypeRestoreFilesystem = "RestoreFilesystem";
     static TypeCompactDatabase = "CompactDatabase";
     static TypeCompactFilesystem = "CompactFilesystem";
-    static TypeIoTest = "IoTest";
+	static TypeIoTest = "IoTest";
+	static TypeNewIndexPrecomputedBatch = "NewIndexPrecomputedBatch";
     
     allTasks = ko.observableArray<runningTaskDto>();
     filterType = ko.observable<string>(null);
     selectedTask = ko.observable<runningTaskDto>();
+    noExceptionText = ko.computed(() => !!this.selectedTask() && !!this.selectedTask().ExceptionText);
 
     suggestionQueryCount: KnockoutComputed<number>;
     bulkInsertCount: KnockoutComputed<number>;
@@ -34,7 +36,8 @@ class runningTasks extends viewModelBase {
     restoreFilesystemCount: KnockoutComputed<number>;
     compactDatabaseCount: KnockoutComputed<number>;
     compactFilesystemCount: KnockoutComputed<number>;
-    ioTestCount: KnockoutComputed<number>;
+	ioTestCount: KnockoutComputed<number>;
+	newIndexPrecomputedBatchCount: KnockoutComputed<number>;
 
     searchText = ko.observable("");
     searchTextThrottled: KnockoutObservable<string>;
@@ -57,7 +60,8 @@ class runningTasks extends viewModelBase {
         this.restoreFilesystemCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeRestoreFilesystem));
         this.compactDatabaseCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeCompactDatabase));
         this.compactFilesystemCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeCompactFilesystem));
-        this.ioTestCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeIoTest));
+		this.ioTestCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeIoTest));
+		this.newIndexPrecomputedBatchCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeNewIndexPrecomputedBatch));
 
         this.searchTextThrottled = this.searchText.throttle(200);
         this.activeDatabase.subscribe(() => this.fetchTasks());
@@ -88,6 +92,7 @@ class runningTasks extends viewModelBase {
             ko.observable<number>(360)
         ];
         this.registerColumnResizing();
+        this.updateHelpLink('2KH22A');
         return this.fetchTasks();
     }
 
@@ -251,7 +256,11 @@ class runningTasks extends viewModelBase {
 
     setFilterTypeIoTest() {
         this.filterType(runningTasks.TypeIoTest);
-    }
+	}
+
+	setFilterTypeNewIndexPrecomputedBatch() {
+		this.filterType(runningTasks.TypeNewIndexPrecomputedBatch);
+	}
 
     updateCurrentNowTime() {
         this.now(moment());

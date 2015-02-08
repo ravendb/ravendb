@@ -1,14 +1,17 @@
-﻿using Raven.Abstractions;
+﻿using System.Security.Principal;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 using System;
@@ -23,7 +26,6 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
-
 
 namespace Raven.Database.Server.Controllers
 {
@@ -58,7 +60,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				result = await RequestManager.HandleActualRequest(this, controllerContext, async () =>
 				{
-                    RequestManager.SetThreadLocalState(InnerHeaders, DatabaseName);
+                    RequestManager.SetThreadLocalState(ReadInnerHeaders, DatabaseName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
 				}, httpException =>
 				{
@@ -105,6 +107,43 @@ namespace Raven.Database.Server.Controllers
 			AddRavenHeader(result, sp);
 
 			return result;
+		}
+
+		protected ReplicationDocument GetReplicationDocument(out HttpResponseMessage erroResponseMessage)
+		{
+			JsonDocument replicationDestinationsDocument;
+			erroResponseMessage = null;
+			try
+			{
+				replicationDestinationsDocument = Database.Documents.Get(Constants.RavenReplicationDestinations, null);
+			}
+			catch (Exception e)
+			{
+				const string errorMessage = "Something very wrong has happened, was unable to retrieve replication destinations.";
+				Log.ErrorException(errorMessage, e);
+				erroResponseMessage = GetMessageWithObject(new { Message = errorMessage + " Check server logs for more details." }, HttpStatusCode.InternalServerError);
+				return null;
+			}
+
+			if (replicationDestinationsDocument == null)
+			{
+				erroResponseMessage = GetMessageWithObject(new { Message = "Replication destinations not found. Perhaps no replication is configured? Nothing to do in this case..." }, HttpStatusCode.NotFound);
+				return null;
+			}
+
+			var replicationDocument = replicationDestinationsDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
+
+			if (replicationDocument.Destinations.Count != 0) 
+				return replicationDocument;
+
+			erroResponseMessage = GetMessageWithObject(new
+			{
+				Message = @"Replication document found, but no destinations configured for index replication. 
+																Maybe all replication destinations have SkipIndexReplication flag equals to true?  
+																Nothing to do in this case..."
+			},
+				HttpStatusCode.NoContent);
+			return null;
 		}
 
 		protected override void InnerInitialization(HttpControllerContext controllerContext)
@@ -161,17 +200,21 @@ namespace Raven.Database.Server.Controllers
             get { return DatabasesLandlord.SystemConfiguration; }
         }
 
+	    private DocumentDatabase _currentDb;
 		public DocumentDatabase Database
 		{
 			get
 			{
+			    if (_currentDb != null)
+			        return _currentDb;
+
 				var database = DatabasesLandlord.GetDatabaseInternal(DatabaseName);
 				if (database == null)
 				{
 					throw new InvalidOperationException("Could not find a database named: " + DatabaseName);
 				}
 
-				return database.Result;
+                return _currentDb = database.Result;
 			}
 		}
 
@@ -242,6 +285,7 @@ namespace Raven.Database.Server.Controllers
 				HighlightedFields = GetHighlightedFields().ToArray(),
 				HighlighterPreTags = GetQueryStringValues("preTags"),
 				HighlighterPostTags = GetQueryStringValues("postTags"),
+				HighlighterKeyName = GetQueryStringValue("highlighterKeyName"),
 				ResultsTransformer = GetQueryStringValue("resultsTransformer"),
 				TransformerParameters = ExtractTransformerParameters(),
 				ExplainScores = GetExplainScores(),
@@ -308,11 +352,22 @@ namespace Raven.Database.Server.Controllers
 		{
 			var result = new Dictionary<string, SortOptions>();
 
+			// backward compatibility
 			foreach (var header in InnerRequest.Headers.Where(pair => pair.Key.StartsWith("SortHint-")))
 			{
 				SortOptions sort;
 				Enum.TryParse(GetHeader(header.Key), true, out sort);
-				result.Add(Uri.UnescapeDataString(header.Key), sort);
+				result[Uri.UnescapeDataString(header.Key)] = sort;
+			}
+
+			foreach (var pair in InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key.StartsWith("SortHint-", StringComparison.OrdinalIgnoreCase)))
+			{
+				var key = pair.Key;
+				var value = pair.Value != null ? Uri.UnescapeDataString(pair.Value) : null;
+
+				SortOptions sort;
+				Enum.TryParse(value, true, out sort);
+				result[Uri.UnescapeDataString(key)] = sort;
 			}
 
 			return result;
@@ -400,7 +455,12 @@ namespace Raven.Database.Server.Controllers
 		protected bool GetOverwriteExisting()
 		{
 			bool result;
-			bool.TryParse(GetQueryStringValue("overwriteExisting"), out result);
+			if (!bool.TryParse(GetQueryStringValue("overwriteExisting"), out result))
+            {
+                // Check legacy key.
+                bool.TryParse(GetQueryStringValue("checkForUpdates"), out result);         
+            }
+
 			return result;
 		}
 
@@ -509,7 +569,7 @@ namespace Raven.Database.Server.Controllers
             }
             catch (Exception e)
             {
-                var msg = "Could not open database named: " + tenantId;
+                var msg = "Could not open database named: " + tenantId + " "  + e.Message;
                 Logger.WarnException(msg, e);
                 throw new HttpException(503, msg, e);
             }
@@ -517,13 +577,31 @@ namespace Raven.Database.Server.Controllers
             {
                 try
                 {
-                    if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
-                    {
-                        var msg = "The database " + tenantId +
-                                  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.";
-                        Logger.Warn(msg);
-                        throw new TimeoutException(msg);
-                    }
+					int TimeToWaitForDatabaseToLoad = MaxSecondsForTaskToWaitForDatabaseToLoad;
+					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
+					{
+						if (MaxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
+						{
+							var msg = string.Format("The database {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.", tenantId);
+							Logger.Warn(msg);
+							throw new TimeoutException(msg);
+						}
+
+						try
+						{
+							if (resourceStoreTask.Wait(TimeSpan.FromSeconds(TimeToWaitForDatabaseToLoad)) == false)
+							{
+								var msg = string.Format("The database {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, database loading continues.", tenantId, TimeToWaitForDatabaseToLoad);
+								Logger.Warn(msg);
+								throw new TimeoutException(msg);
+							}
+						}
+						finally
+						{
+							MaxNumberOfThreadsForDatabaseToLoad.Release();
+						}
+					}
+
                     var args = new BeforeRequestWebApiEventArgs()
                     {
                         Controller = this,
@@ -531,22 +609,17 @@ namespace Raven.Database.Server.Controllers
                         TenantId = tenantId,
                         Database = resourceStoreTask.Result
                     };
+
                     rm.OnBeforeRequest(args);
                     if (args.IgnoreRequest)
                         return false;
                 }
                 catch (Exception e)
                 {
-                    string exceptionMessage = e.Message;
-                    var aggregateException = e as AggregateException;
-                    if (aggregateException != null)
-                    {
-                        exceptionMessage = aggregateException.ExtractSingleInnerException().Message;
-                    }
-                    var msg = "Could not open database named: " + tenantId + Environment.NewLine + exceptionMessage;
+	                var msg = "Could not open database named: " + tenantId + Environment.NewLine + e;
 
                     Logger.WarnException(msg, e);
-                    throw new HttpException(503, msg, e);
+                    throw new HttpException(503, msg,e);
                 }
 
                 landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
@@ -562,7 +635,7 @@ namespace Raven.Database.Server.Controllers
 
 	    public override string TenantName
 	    {
-            get { return DatabaseName;}
+            get { return DatabaseName; }
 	    }
 
 	    public override void MarkRequestDuration(long duration)
@@ -583,5 +656,116 @@ namespace Raven.Database.Server.Controllers
 	            return values.All(x => string.IsNullOrEmpty(x) == false && (x[0] != '1' && x[0] != '2'));
 	        }
 	    }
+
+		protected class TenantData
+		{
+			public string Name { get; set; }
+			public bool Disabled { get; set; }
+			public string[] Bundles { get; set; }
+			public bool IsAdminCurrentTenant { get; set; }
+		}
+
+		protected UserInfo GetUserInfo()
+		{
+			var principal = User;
+			if (principal == null || principal.Identity == null || principal.Identity.IsAuthenticated == false)
+			{
+				var anonymous = new UserInfo
+				{
+					Remark = "Using anonymous user",
+					IsAdminGlobal = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
+				};
+				return anonymous;
+			}
+
+			var windowsPrincipal = principal as WindowsPrincipal;
+			if (windowsPrincipal != null)
+			{
+				var windowsUser = new UserInfo
+				{
+					Remark = "Using windows auth",
+					User = windowsPrincipal.Identity.Name,
+					IsAdminGlobal = windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
+				};
+
+				windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Database);
+
+				return windowsUser;
+			}
+
+			var principalWithDatabaseAccess = principal as PrincipalWithDatabaseAccess;
+			if (principalWithDatabaseAccess != null)
+			{
+				var windowsUserWithDatabase = new UserInfo
+				{
+					Remark = "Using windows auth",
+					User = principalWithDatabaseAccess.Identity.Name,
+					IsAdminGlobal =
+						principalWithDatabaseAccess.IsAdministrator(
+							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+					IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),
+					Databases =
+						principalWithDatabaseAccess.AdminDatabases.Concat(
+							principalWithDatabaseAccess.ReadOnlyDatabases)
+												   .Concat(principalWithDatabaseAccess.ReadWriteDatabases)
+												   .Select(db => new DatabaseInfo
+												   {
+													   Database = db,
+													   IsAdmin = principal.IsAdministrator(db)
+												   }).ToList(),
+					AdminDatabases = principalWithDatabaseAccess.AdminDatabases,
+					ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
+					ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
+				};
+
+				windowsUserWithDatabase.IsAdminCurrentDb = windowsUserWithDatabase.IsAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
+
+				return windowsUserWithDatabase;
+			}
+
+			var oAuthPrincipal = principal as OAuthPrincipal;
+			if (oAuthPrincipal != null)
+			{
+				var oAuth = new UserInfo
+				{
+					Remark = "Using OAuth",
+					User = oAuthPrincipal.Name,
+					IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+					IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Database),
+					Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
+											  .Select(db => new DatabaseInfo
+											  {
+												  Database = db.TenantId,
+												  IsAdmin = principal.IsAdministrator(db.TenantId)
+											  }).ToList(),
+					AccessTokenBody = oAuthPrincipal.TokenBody,
+				};
+
+				return oAuth;
+			}
+
+			var unknown = new UserInfo
+			{
+				Remark = "Unknown auth",
+				Principal = principal
+			};
+
+			return unknown;
+		}
+
+		protected bool CanExposeConfigOverTheWire()
+		{
+			if (SystemConfiguration.ExposeConfigOverTheWire == "AdminOnly" && SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
+			{
+				var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+				var user = authorizer.GetUser(this);
+				if (user == null || user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
 	}
 }

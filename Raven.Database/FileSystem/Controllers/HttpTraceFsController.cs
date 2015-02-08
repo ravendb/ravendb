@@ -2,13 +2,14 @@
 using System.Net.Http.Headers;
 using System.Web.Http;
 using Raven.Database.Server.Connections;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
     public class HttpTraceFsController : RavenFsApiController
     {
         [HttpGet]
-        [Route("fs/{fileSystemName}/traffic-watch/events")]
+        [RavenRoute("fs/{fileSystemName}/traffic-watch/events")]
         public HttpResponseMessage HttpTrace()
         {
             var traceTransport = new HttpTracePushContent(this);

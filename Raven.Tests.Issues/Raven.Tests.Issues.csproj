@@ -116,11 +116,17 @@
     <Compile Include="BulkInsertClient.cs" />
     <Compile Include="BulkInsertDatabaseUrl.cs" />
     <Compile Include="BulkInsertTests.cs" />
+    <Compile Include="RavenDB-3150.cs" />
+    <Compile Include="RavenDB3075.cs" />
+    <Compile Include="RavenDB_2627.cs" />
+    <Compile Include="RavenDB_2867.cs" />
+    <Compile Include="RavenDB_2879.cs" />
     <Compile Include="RavenDB-2716.cs" />
     <Compile Include="RavenDB-2717.cs" />
     <Compile Include="RavenDB-2913.cs" />
     <Compile Include="RavenDB2854.cs" />
     <Compile Include="RavenDB_1344 .cs" />
+    <Compile Include="RavenDB_1733.cs" />
     <Compile Include="RavenDB_2115.cs" />
     <Compile Include="RavenDB_2699.cs" />
     <Compile Include="DatabaseConfiguration.cs" />
@@ -230,7 +236,6 @@
     <Compile Include="RavenDB_1517.cs" />
     <Compile Include="RavenDB_1520.cs" />
     <Compile Include="RavenDB_1533.cs" />
-    <Compile Include="RavenDB_1537.cs" />
     <Compile Include="RavenDB_1538.cs" />
     <Compile Include="RavenDB_1539.cs" />
     <Compile Include="RavenDB_1540.cs" />
@@ -250,7 +255,6 @@
     <Compile Include="RavenDB_1666.cs" />
     <Compile Include="RavenDB_1716.cs" />
     <Compile Include="RavenDB_1717.cs" />
-    <Compile Include="RavenDB_1733.cs" />
     <Compile Include="RavenDB_1735.cs" />
     <Compile Include="RavenDB_1749.cs" />
     <Compile Include="RavenDB_1760.cs" />
@@ -303,7 +307,6 @@
     <Compile Include="RavenDB_2576.cs" />
     <Compile Include="RavenDB_2586.cs" />
     <Compile Include="RavenDB_2604.cs" />
-    <Compile Include="RavenDB_2605.cs" />
     <Compile Include="RavenDB_2609.cs" />
     <Compile Include="RavenDB_2607.cs" />
     <Compile Include="RavenDB_2615.cs" />
@@ -312,7 +315,6 @@
     <Compile Include="RavenDB_2672.cs" />
     <Compile Include="RavenDB_2719.cs" />
     <Compile Include="RavenDB_2762 .cs" />
-    <Compile Include="RavenDB_2764.cs" />
     <Compile Include="RavenDB_2710.cs" />
     <Compile Include="RavenDB_2767.cs" />
     <Compile Include="RavenDB_2779.cs" />
@@ -326,11 +328,25 @@
     <Compile Include="RavenDB_2909.cs" />
     <Compile Include="RavenDB_2911.cs" />
     <Compile Include="RavenDB_2936.cs" />
+    <Compile Include="RavenDB_2944.cs" />
     <Compile Include="RavenDB_295.cs" />
     <Compile Include="RavenDB_2955.cs" />
+    <Compile Include="RavenDB_2974.cs" />
+    <Compile Include="RavenDB_2984.cs" />
     <Compile Include="RavenDB_299.cs" />
+    <Compile Include="RavenDB_2994.cs" />
+    <Compile Include="RavenDB_3008.cs" />
     <Compile Include="RavenDB_301.cs" />
+    <Compile Include="RavenDB_3013.cs" />
     <Compile Include="RavenDB_302.cs" />
+    <Compile Include="RavenDB_3042.cs" />
+    <Compile Include="RavenDB_3071.cs" />
+    <Compile Include="RavenDB_3082.cs" />
+    <Compile Include="RavenDB_3109.cs" />
+    <Compile Include="RavenDB_3117.cs" />
+    <Compile Include="RavenDB_3145.cs" />
+    <Compile Include="RavenDB_3166.cs" />
+    <Compile Include="RavenDB_3193.cs" />
     <Compile Include="Ravendb_334.cs" />
     <Compile Include="RavenDB_349.cs" />
     <Compile Include="RavenDB_367.cs" />
@@ -375,7 +391,6 @@
     <Compile Include="RavenDB_863.cs" />
     <Compile Include="RavenDB_863_2.cs" />
     <Compile Include="RavenDB_868.cs" />
-    <Compile Include="RavenDB_895.cs" />
     <Compile Include="RavenDB_967.cs" />
     <Compile Include="RavenDB_993.cs" />
     <Compile Include="RavenDB_2344.cs" />
@@ -387,7 +402,6 @@
     <Compile Include="RDBQA_17.cs" />
     <Compile Include="RDBQA_18.cs" />
     <Compile Include="RDBQA_4.cs" />
-    <Compile Include="RDBQA_6.cs" />
     <Compile Include="RDBQA_7.cs" />
     <Compile Include="RDBQA_9.cs" />
     <Compile Include="RDoc_56.cs" />
@@ -395,7 +409,10 @@
     <Compile Include="RDoc_76.cs" />
     <Compile Include="ReplicationAlerts.cs" />
     <Compile Include="ReplicationBehavior.cs" />
+    <Compile Include="RavenDB_3096.cs" />
     <Compile Include="SlowIndex.cs" />
+    <Compile Include="RavenDB_3113.cs" />
+    <Compile Include="RavenDB_3106.cs" />
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
   </ItemGroup>
   <ItemGroup>

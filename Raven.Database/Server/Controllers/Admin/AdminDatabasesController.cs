@@ -3,11 +3,10 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Commercial;
 using Raven.Database.Extensions;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -17,7 +16,7 @@ namespace Raven.Database.Server.Controllers.Admin
 	public class AdminDatabasesController : BaseAdminController
 	{
 		[HttpGet]
-		[Route("admin/databases/{*id}")]
+		[RavenRoute("admin/databases/{*id}")]
 		public HttpResponseMessage DatabasesGet(string id)
 		{
 			if (IsSystemDatabase(id))
@@ -44,7 +43,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPut]
-		[Route("admin/databases/{*id}")]
+		[RavenRoute("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasesPut(string id)
 		{
 			if (IsSystemDatabase(id))
@@ -64,14 +63,15 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				return GetMessageWithString(error, HttpStatusCode.BadRequest);
 			}
-
 			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
-			if (dbDoc.Settings.ContainsKey("Bundles") && dbDoc.Settings["Bundles"].Contains("Encryption"))
+			
+			string bundles;			
+			if (dbDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.Contains("Encryption"))
 			{
-				if (!dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
+				if (dbDoc.SecuredSettings == null || !dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
 				    !dbDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
 				{
-					return GetMessageWithString(string.Format("Failed to create '{0}' database, because of not valid encryption configuration.", id), HttpStatusCode.BadRequest);
+					return GetMessageWithString(string.Format("Failed to create '{0}' database, because of invalid encryption configuration.", id), HttpStatusCode.BadRequest);
 				}
 			}
 
@@ -81,8 +81,8 @@ namespace Raven.Database.Server.Controllers.Admin
 			var json = RavenJObject.FromObject(dbDoc);
 			json.Remove("Id");
 
-			var metadata = (etag != null) ? InnerHeaders.FilterHeadersToObject() : new RavenJObject();
-			var docKey = "Raven/Databases/" + id;
+			var metadata = (etag != null) ? ReadInnerHeaders.FilterHeadersToObject() : new RavenJObject();
+			var docKey = Constants.RavenDatabasesPrefix + id;
 			var putResult = Database.Documents.Put(docKey, etag, json, metadata, null);
 
 			return (etag == null) ? GetEmptyMessage() : GetMessageWithObject(putResult);
@@ -90,7 +90,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 
 		[HttpDelete]
-		[Route("admin/databases/{*id}")]
+		[RavenRoute("admin/databases/{*id}")]
 		public HttpResponseMessage DatabasesDelete(string id)
 		{
 			bool result;
@@ -106,7 +106,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpDelete]
-		[Route("admin/databases/batch-delete")]
+		[RavenRoute("admin/databases/batch-delete")]
 		public HttpResponseMessage DatabasesBatchDelete()
 		{
 			string[] databasesToDelete = GetQueryStringValues("ids");
@@ -133,7 +133,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPost]
-		[Route("admin/databases/{*id}")]
+		[RavenRoute("admin/databases/{*id}")]
 		public HttpResponseMessage DatabaseToggleDisable(string id, bool isSettingDisabled)
 		{
 			var message = ToggeleDatabaseDisabled(id, isSettingDisabled);
@@ -146,7 +146,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
         [HttpPost]
-        [Route("admin/databases/toggle-indexing/{*id}")]
+        [RavenRoute("admin/databases/toggle-indexing/{*id}")]
         public HttpResponseMessage DatabaseToggleIndexingDisable(string id, bool isSettingIndexingDisabled)
         {
             var message = ToggeleDatabaseIndexingDisabled(id, isSettingIndexingDisabled);
@@ -159,7 +159,7 @@ namespace Raven.Database.Server.Controllers.Admin
         }
 
         [HttpPost]
-        [Route("admin/databases/toggle-reject-clients/{*id}")]
+        [RavenRoute("admin/databases/toggle-reject-clients/{*id}")]
         public HttpResponseMessage DatabaseToggleRejectClientsEnabled(string id, bool isRejectClientsEnabled)
         {
             var message = ToggleRejectClientsEnabled(id, isRejectClientsEnabled);
@@ -172,7 +172,7 @@ namespace Raven.Database.Server.Controllers.Admin
         }
         
 		[HttpPost]
-		[Route("admin/databases/batch-toggle-disable")]
+		[RavenRoute("admin/databases/batch-toggle-disable")]
 		public HttpResponseMessage DatabaseBatchToggleDisable(bool isSettingDisabled)
 		{
 			string[] databasesToToggle = GetQueryStringValues("ids");
@@ -215,8 +215,12 @@ namespace Raven.Database.Server.Controllers.Admin
 				IOExtensions.DeleteDirectory(configuration.DataDirectory);
 				if (configuration.IndexStoragePath != null)
 					IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
-				if (configuration.JournalsStoragePath != null)
-					IOExtensions.DeleteDirectory(configuration.JournalsStoragePath);
+
+				if (configuration.Storage.Esent.JournalsStoragePath != null)
+					IOExtensions.DeleteDirectory(configuration.Storage.Esent.JournalsStoragePath);
+
+				if (configuration.Storage.Voron.JournalsStoragePath != null)
+					IOExtensions.DeleteDirectory(configuration.Storage.Voron.JournalsStoragePath);
 			}
 
 			return new MessageWithStatusCode();

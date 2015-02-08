@@ -155,11 +155,4 @@ namespace Raven.Database.Storage
 		public int Count { get; set; }
 		public string Key { get; set; }
 	}
-
-	public enum ReduceType
-	{
-		None = 0,
-		SingleStep = 1,
-		MultiStep = 2,
-	}
 }

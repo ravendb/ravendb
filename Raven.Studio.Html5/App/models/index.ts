@@ -29,8 +29,14 @@ class index {
     isErrored = ko.observable(false);
     isDisabled = ko.observable(false);
     isInvalid = ko.observable(false);
+    isTestIndex = ko.observable(false);
     editUrl: KnockoutComputed<string>;
     queryUrl: KnockoutComputed<string>;
+
+    willReplaceIndex = ko.observable<string>();
+    willBeReplacedByIndex = ko.observable<string>();
+
+    isSideBySideIndex = ko.computed(() => this.willReplaceIndex() != null);
 
     static priorityNormal = "Normal";
     static priorityIdle = "Idle";
@@ -40,6 +46,11 @@ class index {
     static priorityIdleForced = "Idle,Forced";
     static priorityDisabledForced = "Disabled,Forced";
     static priorityAbandonedForced = "Abandoned,Forced";
+
+
+    static SideBySideIndexPrefix = "ReplacementOf/";
+
+    static TestIndexPrefix = "Test/";
 
     constructor(dto: indexStatisticsDto) {
         this.createdTimestamp = dto.CreatedTimestamp;
@@ -64,12 +75,13 @@ class index {
         this.reduceIndexingSuccesses = dto.ReduceIndexingSuccesses;
         this.touchCount = dto.TouchCount;
         this.isInvalid(dto.IsInvalidIndex);
+        this.isTestIndex(dto.IsTestIndex);
 
         this.isAbandoned(this.priority && this.priority.indexOf(index.priorityAbandoned) !== -1);
         this.isDisabled(this.priority && this.priority.indexOf(index.priorityDisabled) !== -1);
         this.isErrored(this.priority && this.priority.indexOf(index.priorityErrored) !== -1);
         this.isIdle(this.priority && this.priority.indexOf(index.priorityIdle) !== -1);
-        this.editUrl = appUrl.forCurrentDatabase().editIndex(encodeURIComponent(this.name));
+        this.editUrl = appUrl.forCurrentDatabase().editIndex(this.name);
         this.queryUrl = appUrl.forCurrentDatabase().query(this.name);
     }
 

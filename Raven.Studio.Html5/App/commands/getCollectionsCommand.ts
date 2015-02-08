@@ -3,13 +3,14 @@ import database = require("models/database");
 import collection = require("models/collection");
 import getIndexTermsCommand = require("commands/getIndexTermsCommand");
 import getCollectionsCountCommand = require("commands/getCollectionsCountCommand");
+import getCachedCollectionsCount = require("commands/getCachedCollectionsCount");
 
 class getCollectionsCommand extends commandBase {
 
     /**
 	* @param ownerDb The database the collections will belong to.
 	*/
-    constructor(private ownerDb: database) {
+    constructor(private ownerDb: database, private previousValues: collection[]=[], private lastQueryDate: KnockoutObservable<string> = null) {
         super();
 
         if (!this.ownerDb) {
@@ -30,12 +31,36 @@ class getCollectionsCommand extends commandBase {
 
         new getIndexTermsCommand("Raven/DocumentsByEntityName", "Tag", this.ownerDb)
             .execute()
-            .done((terms: string[]) => {
-                var collections = terms.map(term => new collection(term, this.ownerDb, 0));
-                new getCollectionsCountCommand(collections, this.ownerDb)
-                    .execute()
-                    .done(result => task.resolve(result))
-                    .fail(result => task.reject(result));
+            .done((terms: string[], status, xhr) => {
+
+                if (this.previousValues.length > 0 && this.lastQueryDate()) {
+
+                    var collections = this.previousValues.filter(v => !v.isAllDocuments && !v.isSystemDocuments).map(v => new collection(v.name, this.ownerDb, v.documentCount()));
+                    // apply optimalization fetch only changes, based on last query time. 
+                    new getCachedCollectionsCount(this.ownerDb, this.lastQueryDate())
+                        .execute()
+                        .done((counts: Array<{ CollectionName: string; Count: number}>) => {
+                            counts.forEach(countData => {
+                                var c = collections.first(p => p.name == countData.CollectionName);
+                                if (c) {
+                                    c.documentCount(countData.Count);
+                                } else {
+                                    collections.push(new collection(countData.CollectionName, this.ownerDb, countData.Count));
+                                }
+                            });
+                            task.resolve(collections);
+                        })
+                        .fail(result => task.reject(result));
+                } else {
+                    var collections = terms.map(term => new collection(term, this.ownerDb, 0));
+                    new getCollectionsCountCommand(collections, this.ownerDb)
+                        .execute()
+                        .done(result => task.resolve(result))
+                        .fail(result => task.reject(result));
+                }
+                if (this.lastQueryDate != null) {
+                    this.lastQueryDate(xhr.getResponseHeader('Date'));
+                }
             })
             .fail((response) => {
                 this.reportError("Can't fetch collection names");

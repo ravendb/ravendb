@@ -78,10 +78,10 @@ namespace Raven.Tests.FileSystem.Storage
             }
         }
 
-        [Theory(Skip = "currently failing because")]
+        [Theory]
         [PropertyData("Storages")]
         public async Task CanRestoreIncrementalBackupToDifferentFilesystem(string requestedStorage)
-        {            
+        {
             using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig:config =>
             {
                 config.Settings["Raven/Esent/CircularLog"] = "false";
@@ -125,7 +125,7 @@ namespace Raven.Tests.FileSystem.Storage
 
 		[Theory]
 		[PropertyData("Storages")]
-		public async Task RavenDB_2824_ShouldThrowWhenTryingToUseTheSameIncrementalBackupLocationForDifferentFS(string requestedStorage)
+        public async Task RavenDB_2824_ShouldThrowWhenTryingToUseTheSameIncrementalBackupLocationForDifferentFS(string requestedStorage)
 	    {
 			using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
 			{
@@ -145,7 +145,7 @@ namespace Raven.Tests.FileSystem.Storage
 				WaitForBackup(store.AsyncFilesCommands, true);
 			}
 
-			using (var store = (FilesStore)NewStore(index: 1, requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
+            using (var store = (FilesStore)NewStore(index: 1, requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
 			{
 				config.Settings["Raven/Esent/CircularLog"] = "false";
 				config.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
@@ -165,10 +165,11 @@ namespace Raven.Tests.FileSystem.Storage
 			}
 	    }
 
-        [Fact]
-        public async Task RavenDB2950_EvenIfTheIndexIsCorruptedItShouldDisposeCorrectly ()
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task RavenDB_2950_EvenIfTheIndexIsCorruptedItShouldDisposeCorrectly(string requestedStorage)
         {
-            using (var store = (FilesStore)NewStore(runInMemory: false))
+            using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false))
             {
                 var server = this.GetServer();
 

@@ -1,8 +1,9 @@
 ﻿<div id="queryContainer" class="no-outline" tabindex="0">
     <ul class="breadcrumb">
+        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <li>
             <h3>
-                <a href="#databases">
+                <a href="#resources">
                     Databases
                 </a>
             </h3>
@@ -46,6 +47,10 @@
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
             <button class="btn btn-primary" title="Run the query (Alt+R)" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
+            <button class="btn btn-default" title="Toggle cache enabled" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable">
+                <!--Cache <i class="fa" data-bind="css: { 'fa-lock': !isCacheDisable(), 'fa-unlock': isCacheDisable() }, title: { }"></i>-->
+                <span data-bind="text: isCacheDisable()?'Enable cache':'Disable cache'"></span>
+            </button>
             <div class="btn-group">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-trigger="hover" data-placement="bottom" data-bind="enable: hasSelectedIndex">
                     <i class="fa fa-plus"></i> Add <span class="caret"></span>
@@ -74,7 +79,7 @@
             <button type="button" class="btn btn-default" data-bind="click: selectColumns" title="Choose columns...">
                 <i class="fa fa-table"></i>
             </button>
-            <a href="#" target="_blank" data-bind="attr: { href: exportUrl }, visible: hasSelectedIndex" class="btn btn-default" title="Export CSV" download>
+            <a href="#" target="_blank" data-bind="attr: { href: exportUrl }, visible: isStaticIndexSelected" class=" btn btn-default" title="Export CSV" download>
                 <i class="fa fa-file-excel-o"></i>
             </a>
             <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, visible: isIndexMapReduce" title="Map-Reduce visualizer">
@@ -133,6 +138,7 @@
         </div>
     </div>
     <br />
+    <div class="alert alert-warning" data-bind="visible: isTestIndex()" role="alert">This is test index which operates on limited data set.</div>
 
     <form class="form-horizontal" role="form" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
         <div class="form-group">
@@ -141,7 +147,7 @@
                     Query
                     <i class="fa fa-info-circle text-info"></i>
                 </span>
-                <a target="_blank" class="control-label-additional-link" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
+                <a target="_blank" class="label control-label-additional-link" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
             </label>
             <div class="col-md-11">
                 <div class="row">
@@ -239,8 +245,8 @@
                 <li class="list-group-item"><a data-bind="text:$data.id, attr:{href:$data.href}"></a></li>
             </ul>-->
         <div class="form-group">
-            <div class="form-group" data-bind="if:(!!$root.queryStats() && $root.queryStats().IsStale == true)">
-                <span class="col-md-offset-1 text-danger">Index Is Stale, possibly not all results presented</span>
+            <div class="form-group" data-bind="if:(isTestIndex() == false && !!$root.queryStats() && $root.queryStats().IsStale == true)">
+                <span class="col-md-offset-1 text-danger">Index is stale, possibly not all results presented</span>
             </div>
         </div>
         <div class="form-group">
@@ -250,7 +256,7 @@
                 </label>
                 <div class="col-md-11 query-results">
                     <div id="queryResultsPanel" class="panel panel-default">
-                        <div class="panel-body" data-bind="visible:isLoading() === true">
+                        <div class="panel-body" data-bind="visible: isLoading">
                             <span>Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
                         </div>
                         <div class="panel-body">

@@ -16,6 +16,8 @@ using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Database.Server.WebApi;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.Controllers
@@ -25,8 +27,8 @@ namespace Raven.Database.Server.Controllers
 		private static ThreadLocal<bool> recursive = new ThreadLocal<bool>(() => false);
 
 		[HttpPost]
-		[Route("multi_get")]
-		[Route("databases/{databaseName}/multi_get")]
+		[RavenRoute("multi_get")]
+		[RavenRoute("databases/{databaseName}/multi_get")]
 		public async Task<HttpResponseMessage> MultiGet()
 		{
 			if (recursive.Value)
@@ -142,12 +144,29 @@ namespace Raven.Database.Server.Controllers
 					writer.WriteEndObject();
 					writer.WritePropertyName("Result");
 
-					var jsonContent = (JsonContent)result.Content;
+                    var jsonContent = result.Content as JsonContent;
 
-					if (jsonContent.Data != null)
+					if (jsonContent != null && jsonContent.Data != null)
 						jsonContent.Data.WriteTo(writer, Default.Converters);
-
-					writer.WriteEndObject();
+					else
+					{
+					    var stringContent = result.Content as MultiGetSafeStringContent;
+					    if (stringContent != null)
+					    {
+					        writer.WriteStartObject();
+					        writer.WritePropertyName("Error");
+					        writer.WriteValue(stringContent.Content);
+					        writer.WriteEndObject();
+					    }
+					    else
+					    {
+                            writer.WriteStartObject();
+                            writer.WritePropertyName("Error");
+					        writer.WriteValue("Content not valid for multi_get " + result.Content);
+                            writer.WriteEndObject();
+					    }
+					}
+				    writer.WriteEndObject();
 				}
 
 				writer.WriteEndArray();

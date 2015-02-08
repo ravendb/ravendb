@@ -56,9 +56,9 @@ task Compile -depends Init, CompileHtml5 {
 	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount }
 	
-	# if ($commit -ne "0000000000000000000000000000000000000000") {
-		# exec { &"$tools_dir\GitLink.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
-	# }
+	if ($commit -ne "0000000000000000000000000000000000000000") {
+		exec { &"$tools_dir\GitLink.Custom.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
+	}
 }
 
 task CompileHtml5 {
@@ -391,11 +391,34 @@ task DoRelease -depends DoReleasePart1, `
 	Write-Host "Done building RavenDB"
 }
 
-task UploadStable -depends Stable, DoRelease, Upload, UploadNuget
+task UploadStable -depends Stable, DoRelease, Upload, UploadNuget, UpdateLiveTest
 
 task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 
 task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
+
+task UpdateLiveTest {
+@'
+	<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Maintenance work</title>
+</head>
+<body>
+  <h1>Maintenance work</h1>
+  <h3>We are deploying a new Live-Test insance, using the new latest build.</h3>
+</body>
+</html>
+'@ | out-file "$build_dir\Output\Web\app_offline.htm" -Encoding UTF8 
+
+	Remove-Item "C:\Sites\RavenDB 3\Web\bin" -Force -Recurse -ErrorAction SilentlyContinue
+	mkdir "C:\Sites\RavenDB 3\Web\bin" -ErrorAction SilentlyContinue
+	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB 3\Web\" -Recurse -ErrorAction SilentlyContinue
+
+	Remove-Item "$build_dir\Output\Web\app_offline.htm"
+}
 
 task Upload {
 	Write-Host "Starting upload"
@@ -510,6 +533,7 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 	@("Raven.Database.???", "Raven.Abstractions.???") `
 		 |% { Copy-Item "$base_dir\Raven.Database\bin\$global:configuration\$_" $nuget_dir\RavenDB.Database\lib\net45 }
 	Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Database\lib\net45
+	Copy-Item $base_dir\NuGet\readme.txt $nuget_dir\RavenDB.Database\ -Recurse
 	
 	New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Server.nuspec $nuget_dir\RavenDB.Server\RavenDB.Server.nuspec
@@ -521,6 +545,7 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
+	Copy-Item $base_dir\NuGet\readme.txt $nuget_dir\RavenDB.Embedded\ -Recurse
 	
 	# Client packages
 	@("Authorization", "UniqueConstraints") | Foreach-Object { 

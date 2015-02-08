@@ -233,6 +233,7 @@ class editDocument extends viewModelBase {
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
+        this.updateHelpLink('M72H1R');
 
         this.lodaedDocumentName(this.userSpecifiedId());
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId],false, jsonUtil.newLineNormalizingHashFunction);
@@ -383,9 +384,12 @@ class editDocument extends viewModelBase {
                 }
 
                 var newTokenValue = curToken.value
-                    .replace(/(\\n|\\r\\n)/g, '\\\\r\\\\n')
-                    .replace(/(\n|\r\n)/g, '\\r\\n')
-                    .replace(/(\\t)/g, '\\\\t')
+                    //.replace(/(\\n|\\r\\n)/g, '\\\\r\\\\n')
+                    //.replace(/(\n|\r\n)/g, '\\r\\n')
+                    //.replace(/(\\t)/g, '\\\\t')
+                    //.replace(/(\t)/g, '\\t');                    
+                    .replace(/(\r\n)/g, '\\r\\n')
+                    .replace(/(\n)/g, '\\n')
                     .replace(/(\t)/g, '\\t');
                 text += newTokenValue;
                 //text += curToken.value.replace(/(\n|\r\n)/g, '\\r\\n');

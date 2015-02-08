@@ -4,34 +4,42 @@ import saveDatabaseSettingsCommand = require("commands/saveDatabaseSettingsComma
 import document = require("models/document");
 import database = require("models/database");
 import appUrl = require("common/appUrl");
+import shell = require('viewmodels/shell');
 
 class quotas extends viewModelBase {
     settingsDocument = ko.observable<document>();
-
     maximumSize = ko.observable<number>();
     warningLimitThreshold = ko.observable<number>();
     maxNumberOfDocs = ko.observable<number>();
     warningThresholdForDocs = ko.observable<number>();
- 
     isSaveEnabled: KnockoutComputed<boolean>;
+    isForbidden = ko.observable<boolean>(false);
+
+    constructor() {
+        super();
+    }
 
     canActivate(args: any): any {
         super.canActivate(args);
-
         var deferred = $.Deferred();
-        var db = this.activeDatabase();
-        if (db) {
+
+        this.isForbidden(shell.isGlobalAdmin() == false);
+        if (this.isForbidden() == false) {
+            var db = this.activeDatabase();
             // fetch current quotas from the database
             this.fetchQuotas(db)
                 .done(() => deferred.resolve({ can: true }))
                 .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+        } else {
+            deferred.resolve({ can: true });
         }
+
         return deferred;
     }
 
     activate(args) {
         super.activate(args);
-
+        this.updateHelpLink('594W7T');
         this.initializeDirtyFlag();
 
         this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty() === true);

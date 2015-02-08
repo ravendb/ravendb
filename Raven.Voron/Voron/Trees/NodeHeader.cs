@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Voron.Trees
 {
@@ -71,9 +72,9 @@ namespace Voron.Trees
             if (node->Flags == (NodeFlags.PageRef))
             {
                 var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
-                StdLib.memcpy(dest, overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
+                MemoryUtils.Copy(dest, overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
             }
-			StdLib.memcpy(dest, (byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
+            MemoryUtils.Copy(dest, (byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }
 
 		public static int GetDataSize(Transaction tx, NodeHeader* node)

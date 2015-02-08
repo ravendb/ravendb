@@ -42,8 +42,8 @@ namespace Raven.Client.Document
 				return replicas; // if the etag is empty, nothing to do
 
 			var asyncDatabaseCommands = (AsyncServerClient)documentStore.AsyncDatabaseCommands;
-			if (database != null)
-				asyncDatabaseCommands = (AsyncServerClient)asyncDatabaseCommands.ForDatabase(database);
+		    database = database ?? documentStore.DefaultDatabase;
+            asyncDatabaseCommands = (AsyncServerClient)asyncDatabaseCommands.ForDatabase(database);
 
 			asyncDatabaseCommands.ForceReadFromMaster();
 
@@ -67,7 +67,12 @@ namespace Raven.Client.Document
 
             var sp = Stopwatch.StartNew();
 
-			var tasks = destinationsToCheck.Select(url => WaitForReplicationFromServerAsync(url, database, etag, cts.Token)).ToArray();
+			var sourceCommands = documentStore.AsyncDatabaseCommands.ForDatabase(database ?? documentStore.DefaultDatabase);
+			var sourceUrl = documentStore.Url.ForDatabase(database ?? documentStore.DefaultDatabase);
+			var sourceStatistics = await sourceCommands.GetStatisticsAsync(cts.Token);
+			var sourceDbId = sourceStatistics.DatabaseId.ToString();
+
+			var tasks = destinationsToCheck.Select(url => WaitForReplicationFromServerAsync(url, sourceUrl, sourceDbId, etag, cts.Token)).ToArray();
 
 		    try
 		    {
@@ -100,13 +105,13 @@ namespace Raven.Client.Document
 		    }
 		}
 
-		private async Task WaitForReplicationFromServerAsync(string url, string database, Etag etag, CancellationToken cancellationToken)
+		private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, CancellationToken cancellationToken)
 		{
 		    while (true)
 		    {
 		        cancellationToken.ThrowIfCancellationRequested();
 
-		        var etags = await GetReplicatedEtagsFor(url, database);
+				var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId);
 
 		        var replicated = etag.CompareTo(etags.DocumentEtag) <= 0 || etag.CompareTo(etags.AttachmentEtag) <= 0;
 
@@ -117,11 +122,11 @@ namespace Raven.Client.Document
 		    }
 		}
 
-	    private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string database)
+	    private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string sourceUrl, string sourceDbId)
 		{
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
 				null,
-				destinationUrl.LastReplicatedEtagFor(documentStore.Url.ForDatabase(database ?? documentStore.DefaultDatabase)),
+				destinationUrl.LastReplicatedEtagFor(sourceUrl, sourceDbId),
 				"GET",
 				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials), 
 				documentStore.Conventions);

@@ -133,7 +133,12 @@ namespace Raven.Tests.MailingList
 
             public AgencyCountry[] Countries
             {
-                get { return _countries.ToArray(); }
+	            get
+	            {
+		            if (_countries == null)
+			            return new AgencyCountry[0];
+		            return _countries.ToArray();
+	            }
                 set
                 {
                     _countries = new List<AgencyCountry>(value);

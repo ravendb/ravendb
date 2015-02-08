@@ -6,6 +6,7 @@ using System.Web.Http;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Security;
+using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -13,8 +14,8 @@ namespace Raven.Database.Server.Controllers
 	public class ChangesController : RavenDbApiController
 	{
         [HttpGet]
-		[Route("changes/config")]
-		[Route("databases/{databaseName}/changes/config")]
+		[RavenRoute("changes/config")]
+		[RavenRoute("databases/{databaseName}/changes/config")]
         public HttpResponseMessage GetChangeConfig()
         {
             var value = GetQueryStringValue("value");
@@ -127,8 +128,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("changes/events")]
-		[Route("databases/{databaseName}/changes/events")]
+		[RavenRoute("changes/events")]
+		[RavenRoute("databases/{databaseName}/changes/events")]
 		public HttpResponseMessage GetChangesEvents()
 		{
 			var eventsTransport = new ChangesPushContent(this);

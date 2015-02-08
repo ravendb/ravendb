@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -50,7 +51,7 @@ namespace Raven.Database.FileSystem.Extensions
 			return metadata;
 		}
 
-        public static T ValueOrDefault<T>(this HttpHeaders self, string name, T @default)
+        public static T ValueOrDefault<T>(this IEnumerable<KeyValuePair<string, IEnumerable<string>>> self, string name, T @default)
         {
             try
             {
@@ -62,9 +63,10 @@ namespace Raven.Database.FileSystem.Extensions
             }
         }
 
-		public static T Value<T>(this HttpHeaders self, string name)
-		{
-			var value = self.GetValues(name).First();            
+        public static T Value<T>(this IEnumerable<KeyValuePair<string, IEnumerable<string>>> self, string name)
+        {
+            string value = self.FirstOrDefault(x => x.Key.Equals(name)).Value.FirstOrDefault();
+            
 			return new JsonSerializer().Deserialize<T>(new JsonTextReader(new StringReader(value)));
 		}
 

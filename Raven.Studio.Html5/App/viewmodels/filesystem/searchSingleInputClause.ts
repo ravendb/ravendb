@@ -17,6 +17,10 @@ class searchSingleInputClause extends searchDialogViewModel {
 
         this.close();
     }
+
+    enabled(): boolean {
+        return this.checkRequired(true);
+    }
 }
 
 export = searchSingleInputClause;

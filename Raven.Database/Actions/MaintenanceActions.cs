@@ -90,7 +90,7 @@ namespace Raven.Database.Actions
             bool enableIncrementalBackup;
             if (incrementalBackup &&
                 TransactionalStorage is Raven.Storage.Esent.TransactionalStorage &&
-                (bool.TryParse(Database.Configuration.Settings["Raven/Esent/CircularLog"], out enableIncrementalBackup) == false || enableIncrementalBackup))
+                (bool.TryParse(Database.Configuration.Settings[Constants.Esent.CircularLog], out enableIncrementalBackup) == false || enableIncrementalBackup))
             {
                 throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
             }

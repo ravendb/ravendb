@@ -6,6 +6,7 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Voron.Util
 {
@@ -140,6 +141,33 @@ namespace Voron.Util
 		{
 		    return Extend(0, data, offset, count);
 		}
+
+	    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+	    public static uint Value(string s, uint prevVal)
+	    {
+	        fixed (char* ptr = s)
+	        {
+	            return Extend(prevVal, (byte*) ptr, 0, sizeof(char)*s.Length);
+	        }
+	    }
+
+
+	    public static uint Value(byte[] data)
+	    {
+            fixed (byte* p = data)
+            {
+                return Value(p, 0, data.Length);
+            }
+	        
+	    }
+
+	    public static uint ValueByPreviousCrc(byte[] data, uint previousCrcValue)
+	    {
+            fixed (byte* p = data)
+            {
+                return Extend(previousCrcValue, p, 0, data.Length); 
+            }
+	    }
 
 	    private readonly static uint[] Table_0 = new uint[256]
 			{

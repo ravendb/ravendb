@@ -34,16 +34,5 @@ namespace Raven.Abstractions.Util
 
             return location;
         }
-
-        public static string GetExtractedAssemblyLocationFor(Type type, Assembly executingAssembly)
-        {
-            if (File.Exists(type.Assembly.Location))
-                return type.Assembly.Location;
-
-            var path = Path.GetDirectoryName(executingAssembly.Location);
-            var name = type.Assembly.GetName().Name;
-
-            return Path.Combine(path, Constants.AssembliesDirectoryName, name + ".dll");
-        }
     }
 }

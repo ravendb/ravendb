@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
@@ -62,11 +63,11 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Get the facets as per the specified facet document with the given start and pageSize
 		/// </summary>
-		Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize);
+		Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken));
 
 		/// <summary>
 		/// Get the facet results as per the specified facets with the given start and pageSize
 		/// </summary>
-		Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize);
+		Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken));
 	}
 }

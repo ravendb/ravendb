@@ -21,8 +21,10 @@ class createDatabase extends viewModelBase {
     logsCustomValidityError: KnockoutComputed<string>;
     databaseIndexesPath = ko.observable('');
     indexesCustomValidityError: KnockoutComputed<string>;
-    databaseNameFocus = ko.observable(true);
+    databaseTempPath = ko.observable('');
+    tempCustomValidityError: KnockoutComputed<string>;
     storageEngine = ko.observable('');
+    tempPathVisible = ko.computed(() => "voron" == this.storageEngine());
     private maxNameLength = 200;
 
     isCompressionBundleEnabled = ko.observable(false);
@@ -75,10 +77,15 @@ class createDatabase extends viewModelBase {
             var errorMessage: string = this.isPathLegal(newPath, "Indexes");
             return errorMessage;
         });
+
+        this.tempCustomValidityError = ko.computed(() => {
+            var newPath = this.databaseIndexesPath();
+            var errorMessage: string = this.isPathLegal(newPath, "Temp");
+            return errorMessage;
+        });
     }
 
     attached() {
-        this.databaseNameFocus(true);
     }
 
     deactivate() {
@@ -108,7 +115,7 @@ class createDatabase extends viewModelBase {
 
         this.creationTaskStarted = true;
         dialog.close(this.parent);
-        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogsPath(), this.databaseIndexesPath(), this.storageEngine(),
+        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogsPath(), this.databaseIndexesPath(), this.databaseTempPath(), this.storageEngine(),
             this.isIncrementalBackupChecked(), this.alertTimeout(), this.alertRecurringTimeout());
     }
 

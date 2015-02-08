@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Directory = System.IO.Directory;
@@ -53,10 +54,27 @@ namespace Raven.Database.Backup
 
 		private static void EnsureDirectoryExists(string dir)
 		{
-			if (Directory.Exists(dir) == false)
-				Directory.CreateDirectory(dir);
 			var tempPath = Path.Combine(dir, Guid.NewGuid().ToString());
-			File.WriteAllText(tempPath, "testing that we can write to this directory");
+			var retries = 5;
+			while (true)
+			{
+				if (Directory.Exists(dir) == false)
+					Directory.CreateDirectory(dir);
+				try
+				{
+					File.WriteAllText(tempPath, "testing that we can write to this directory");
+					break;
+				}
+				catch (UnauthorizedAccessException e)
+				{
+					if (retries-- < 0)
+						throw new InvalidOperationException("Cannot write to " + dir, e);
+					Thread.Sleep(25);
+					// sometimes it looks like the directory creation didn't "take", but if we 
+					// wait, we can see that this is actually working.
+					Directory.CreateDirectory(dir);
+				}
+			}
 			File.Delete(tempPath);
 		}
 
@@ -104,7 +122,6 @@ namespace Raven.Database.Backup
 		private void FileCopy(string src, string dest, long size, ProgressNotifier notifier)
 		{
 			var buffer = new byte[16 * 1024];
-			var initialSize = size;
 			using (var srcStream = File.Open(src,FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
 			{
 				if (File.Exists(dest))

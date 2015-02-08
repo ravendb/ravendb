@@ -34,7 +34,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
 					coltyp = JET_coltyp.DateTime,
 					grbit = ColumndefGrbit.ColumnMaybeNull,
 				}, null, 0, out columnid);
-
+			    int rows = 0;
 				if (Api.TryMoveFirst(session, tbl))
 				{
 					do
@@ -45,6 +45,12 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
 							Api.SetColumn(session, tbl, createdAt, SystemTime.UtcNow);
 							update.Save();
 						}
+                        if (rows++ % 10000 == 0)
+                        {
+                            output("Processed " + (rows) + " rows in lists");
+                            Api.JetCommitTransaction(session, CommitTransactionGrbit.LazyFlush);
+                            Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
+                        }
 					} while (Api.TryMoveNext(session, tbl));
 				}
 

@@ -127,10 +127,10 @@ namespace Raven.Smuggler
 			var filteredIdentities = identities.Where(x =>
 			{
 				if ("Raven/Etag".Equals(x.Key, StringComparison.InvariantCultureIgnoreCase))
-					return true;
+					return false;
 
 				if ("IndexId".Equals(x.Key, StringComparison.InvariantCultureIgnoreCase) && operateOnTypes.HasFlag(ItemType.Indexes))
-					return true;
+					return false;
 
 				if (operateOnTypes.HasFlag(ItemType.Documents))
 					return true;
@@ -236,6 +236,9 @@ namespace Raven.Smuggler
 								if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
 									continue;
 
+								if (databaseOptions.StripReplicationInformation) 
+									document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
+
 								var metadata = document.Value<RavenJObject>("@metadata");
 								var id = metadata.Value<string>("@id");
 								var etag = Etag.Parse(metadata.Value<string>("@etag"));
@@ -283,6 +286,9 @@ namespace Raven.Smuggler
 											continue;
 										if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
 											continue;
+
+										if (databaseOptions.StripReplicationInformation)
+											document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
 
 										bulkInsertOperation.Store(document, metadata, id);
 										totalCount++;
@@ -359,6 +365,9 @@ namespace Raven.Smuggler
 				ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachments.Length, totalCount);
 				foreach (var attachmentInformation in attachments)
 				{
+					if (databaseOptions.StripReplicationInformation)
+						attachmentInformation.Metadata = StripReplicationInformationFromMetadata(attachmentInformation.Metadata);
+
 					ShowProgress("Downloading attachment: {0}", attachmentInformation.Key);
 
 					var attachment = await exportStore.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
@@ -454,6 +463,18 @@ namespace Raven.Smuggler
 		private static void ShowProgress(string format, params object[] args)
 		{
 			Console.WriteLine(format, args);
+		}
+
+		public static RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+		{
+			if (metadata != null)
+			{
+				metadata.Remove(Constants.RavenReplicationHistory);
+				metadata.Remove(Constants.RavenReplicationSource);
+				metadata.Remove(Constants.RavenReplicationVersion);
+			}
+
+			return metadata;
 		}
 	}
 }

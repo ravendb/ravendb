@@ -1,7 +1,8 @@
 ﻿<div id="patchContainer" class="no-outline" tabindex="0"> <!-- tabindex = 0 to that it can receive focus and catch keyboard shortcuts -->
     <div class="btn-toolbar" role="toolbar">
+        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <div class="btn-group">
-             <button type="button" class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
+            <button type="button" class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
                 <!-- ko with: patchDocument -->
                 <span data-bind="text: patchOnOption"></span>
                 <!-- /ko -->

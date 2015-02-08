@@ -49,10 +49,10 @@ namespace Raven.Database.Bundles.PeriodicExports
 					return;
 
 				if (incrementalBackupTimer != null)
-					incrementalBackupTimer.Dispose();
+					Database.TimerManager.ReleaseTimer(incrementalBackupTimer);
 
 				if (fullBackupTimer != null)
-					fullBackupTimer.Dispose();
+					Database.TimerManager.ReleaseTimer(fullBackupTimer);
 
 				ReadSetupValuesFromDocument();
 			};
@@ -93,7 +93,8 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 						var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastBackup;
 						var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
-						incrementalBackupTimer = new Timer(state => TimerCallback(false), null, nextBackup, interval);
+
+						incrementalBackupTimer = Database.TimerManager.NewTimer(state => TimerCallback(false), nextBackup, interval);
 					}
 					else
 					{
@@ -107,14 +108,13 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 						var timeSinceLastBackup = SystemTime.UtcNow - exportStatus.LastFullBackup;
 						var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
-						fullBackupTimer = new Timer(state => TimerCallback(true), null, nextBackup, interval);
+
+						fullBackupTimer = Database.TimerManager.NewTimer(state => TimerCallback(true), nextBackup, interval);
 					}
 					else
 					{
 						logger.Warn("Full periodic export interval is set to zero or less, full periodic export is now disabled");
 					}
-
-
 				}
 				catch (Exception ex)
 				{
@@ -351,9 +351,10 @@ namespace Raven.Database.Bundles.PeriodicExports
 			if (azureStorageAccount == Constants.DataCouldNotBeDecrypted ||
 				azureStorageKey == Constants.DataCouldNotBeDecrypted)
 			{
-				throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
+				throw new InvalidOperationException("Could not decrypt the Azure access settings, if you are running on IIS, make sure that load user profile is set to true.");
 			}
-			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, false))
+
+			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey))
 			{
 				client.PutContainer(localExportConfigs.AzureStorageContainer);
 				using (var fileStream = File.OpenRead(backupPath))

@@ -6,18 +6,20 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Web;
 
 using Microsoft.Isam.Esent.Interop;
 
+using Mono.CSharp;
+
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.MEF;
 using Raven.Database.Extensions;
-using Raven.Database.FileSystem.Extensions;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage.Exceptions;
 using Raven.Database.FileSystem.Synchronization.Rdc;
 using Raven.Database.FileSystem.Util;
@@ -31,10 +33,12 @@ namespace Raven.Database.FileSystem.Storage.Esent
 {
     public class StorageActionsAccessor : IStorageActionsAccessor
     {
+	    private static ILog log = LogManager.GetCurrentClassLogger();
 		private readonly JET_DBID database;
 		private readonly Session session;
 		private readonly TableColumnsCache tableColumnsCache;
-		private Table config;
+	    private readonly OrderedPartCollection<AbstractFileCodec> fileCodecs;
+	    private Table config;
 		private Table details;
 
 		private Table files;
@@ -43,19 +47,28 @@ namespace Raven.Database.FileSystem.Storage.Esent
 		private Transaction transaction;
 		private Table usage;
 
-		public StorageActionsAccessor(TableColumnsCache tableColumnsCache, JET_INSTANCE instance, string databaseName)
+		public StorageActionsAccessor(TableColumnsCache tableColumnsCache, JET_INSTANCE instance, string databaseName, OrderedPartCollection<AbstractFileCodec> fileCodecs)
 		{
             this.lastEtag = new Guid("ffffffff-ffff-ffff-ffff-ffffffffffff").TransformToValueForEsentSorting();
 			this.tableColumnsCache = tableColumnsCache;
+			this.fileCodecs = fileCodecs;
 			try
 			{
 				session = new Session(instance);
 				transaction = new Transaction(session);
 				Api.JetOpenDatabase(session, databaseName, null, out database, OpenDatabaseGrbit.None);
 			}
-			catch (Exception)
+			catch (Exception original)
 			{
-				Dispose();
+				log.WarnException("Could not create accessor", original);
+				try
+				{
+					Dispose();
+				}
+				catch (Exception e)
+				{
+					log.WarnException("Could not properly dispose accessor after exception in ctor.", e);
+				}
 				throw;
 			}
 		}
@@ -107,7 +120,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 				usage.Dispose();
 			if (files != null)
 				files.Dispose();
-			if (Equals(database, JET_DBID.Nil) == false)
+			if (Equals(database, JET_DBID.Nil) == false && session != null)
 				Api.JetCloseDatabase(session, database, CloseDatabaseGrbit.None);
 			if (transaction != null)
 				transaction.Dispose();
@@ -150,7 +163,16 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			{
 				Api.SetColumn(session, Pages, tableColumnsCache.PagesColumns["page_strong_hash"], key.Strong);
 				Api.SetColumn(session, Pages, tableColumnsCache.PagesColumns["page_weak_hash"], key.Weak);
-				Api.JetSetColumn(session, Pages, tableColumnsCache.PagesColumns["data"], buffer, size, SetColumnGrbit.None, null);
+
+				using (var columnStream = new ColumnStream(session, Pages, tableColumnsCache.PagesColumns["data"]))
+				{
+					using (Stream stream = new BufferedStream(columnStream))
+					using (var finalStream = fileCodecs.Aggregate(stream, (current, codec) => codec.EncodePage(current)))
+					{
+						finalStream.Write(buffer, 0, size);
+						finalStream.Flush();
+					}
+				}
 
 				try
 				{
@@ -269,10 +291,13 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			if (Api.TrySeek(session, Pages, SeekGrbit.SeekEQ) == false)
 				return -1;
 
-			int size;
-			Api.JetRetrieveColumn(session, Pages, tableColumnsCache.PagesColumns["data"], buffer, buffer.Length, out size,
-			                      RetrieveColumnGrbit.None, null);
-			return size;
+			using (Stream stream = new BufferedStream(new ColumnStream(session, Pages, tableColumnsCache.PagesColumns["data"])))
+			{
+				using (var decodedStream = fileCodecs.Aggregate(stream, (bytes, codec) => codec.DecodePage(bytes)))
+				{
+					return decodedStream.Read(buffer, 0, buffer.Length);
+				}
+			}
 		}
 
         public FileHeader ReadFile(string filename)
@@ -399,7 +424,47 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			return result;
 		}
 
-        private readonly byte[] lastEtag;
+	    public IEnumerable<FileHeader> GetFilesStartingWith(string namePrefix, int start, int take)
+	    {
+			Api.JetSetCurrentIndex(session, Files, "by_name");
+
+			Api.MakeKey(session, Files, namePrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Files, SeekGrbit.SeekGE) == false)
+			{
+				yield break;
+			}
+
+			Api.MakeKey(session, Files, namePrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.PartialColumnEndLimit);
+			try
+			{
+				Api.JetMove(session, Files, start, MoveGrbit.MoveKeyNE);
+			}
+			catch (EsentNoCurrentRecordException)
+			{
+				yield break;
+			}
+
+			if (Api.TrySetIndexRange(session, Files, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit))
+			{
+				var fetchedCount = 0;
+
+				do
+				{
+					var file = new FileHeader(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode), RetrieveMetadata())
+					             {
+						             TotalSize = GetTotalSize(), 
+									 UploadedSize = BitConverter.ToInt64(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
+					             };
+
+					fetchedCount++;
+
+					yield return file;
+				}
+				while (Api.TryMoveNext(session, Files) && fetchedCount < take);
+			}
+	    }
+
+	    private readonly byte[] lastEtag;
 
         public Etag GetLastEtag()
         {
@@ -412,7 +477,9 @@ namespace Raven.Database.FileSystem.Storage.Esent
 			return Etag.Parse(val);
         }
 
-		public void Delete(string filename)
+	    public bool IsNested { get; set; }
+
+	    public void Delete(string filename)
 		{
 			Api.JetSetCurrentIndex(session, Usage, "by_name_and_pos");
 			Api.MakeKey(session, Usage, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);

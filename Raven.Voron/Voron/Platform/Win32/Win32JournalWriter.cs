@@ -50,7 +50,7 @@ namespace Voron.Platform.Win32
 
 		}
 
-		public void WriteGather(long position, byte*[] pages)
+		public void WriteGather(long position, IntPtr[] pages)
 		{
 			if (Disposed)
 				throw new ObjectDisposedException("Win32JournalWriter");
@@ -70,7 +70,7 @@ namespace Voron.Platform.Win32
 				else
 					_segments[i].Buffer = pages[i];
 			}
-			_segments[pages.Length].Buffer = null; // null terminating
+			_segments[pages.Length].Buffer = IntPtr.Zero; // null terminating
 
 			var operationCompleted = WriteFileGather(_handle, _segments, (uint) pages.Length*4096, IntPtr.Zero, _nativeOverlapped);
 
@@ -95,7 +95,7 @@ namespace Voron.Platform.Win32
 			}
 		}
 
-		private void EnsureSegmentsSize(byte*[] pages)
+		private void EnsureSegmentsSize(IntPtr[] pages)
 		{
 			if (_segmentsSize >= pages.Length + 1)
 				return;
@@ -178,7 +178,14 @@ namespace Voron.Platform.Win32
 
 			if (DeleteOnClose)
 			{
-				File.Delete(_filename);
+				try
+				{
+					File.Delete(_filename);
+				}
+				catch (Exception)
+				{
+					// if we can't delete, nothing that we can do here.
+				}
 			}
 		}
 
@@ -206,7 +213,7 @@ namespace Voron.Platform.Win32
 		[StructLayout(LayoutKind.Explicit, Size = 8)]
 		public struct FileSegmentElement
 		{
-			[FieldOffset(0)] public byte* Buffer;
+			[FieldOffset(0)] public IntPtr Buffer;
 			[FieldOffset(0)] public UInt64 Alignment;
 		}
 	}

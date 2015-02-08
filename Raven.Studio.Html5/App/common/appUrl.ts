@@ -28,6 +28,9 @@ class appUrl {
 	// Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
         adminSettings: ko.computed(() => appUrl.forAdminSettings()),
+
+        hasApiKey: ko.computed(() => appUrl.forHasApiKey()),
+
         resources: ko.computed(() => appUrl.forResources()),
         documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
@@ -44,14 +47,16 @@ class appUrl {
         reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
-        indexStats: ko.computed(() => appUrl.forIndexStats(appUrl.currentDatabase())),
         replicationPerfStats: ko.computed(() => appUrl.forReplicationPerfStats(appUrl.currentDatabase())),
         sqlReplicationPerfStats: ko.computed(() => appUrl.forSqlReplicationPerfStats(appUrl.currentDatabase())),
-        metrics: ko.computed(() => appUrl.forMetrics(appUrl.currentDatabase())),
-        metricsIndexing: ko.computed(() => appUrl.forMetricsIndexing(appUrl.currentDatabase())),
-        metricsRequests: ko.computed(() => appUrl.forMetricsRequests(appUrl.currentDatabase())),
-        metricsIndexBatchSize: ko.computed(() => appUrl.forMetricsIndexBatchSize(appUrl.currentDatabase())),
-        metricsPrefetches: ko.computed(() => appUrl.forMetricsPrefetches(appUrl.currentDatabase())),
+
+        requestsCount: ko.computed(() => appUrl.forRequestsCount(appUrl.currentDatabase())),
+        requestsTracing: ko.computed(() => appUrl.forRequestsTracing(appUrl.currentDatabase())),
+        indexPerformance: ko.computed(() => appUrl.forIndexPerformance(appUrl.currentDatabase())),
+        indexStats: ko.computed(() => appUrl.forIndexStats(appUrl.currentDatabase())),
+        indexBatchSize: ko.computed(() => appUrl.forIndexBatchSize(appUrl.currentDatabase())),
+        indexPrefetches: ko.computed(() => appUrl.forIndexPrefetches(appUrl.currentDatabase())),
+
         settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase())),
         logs: ko.computed(() => appUrl.forLogs(appUrl.currentDatabase())),
         runningTasks: ko.computed(() => appUrl.forRunningTasks(appUrl.currentDatabase())),
@@ -80,13 +85,17 @@ class appUrl {
         statusDebugQueries: ko.computed(() => appUrl.forStatusDebugQueries(appUrl.currentDatabase())),
         statusDebugTasks: ko.computed(() => appUrl.forStatusDebugTasks(appUrl.currentDatabase())),
         statusDebugRoutes: ko.computed(() => appUrl.forStatusDebugRoutes(appUrl.currentDatabase())),
-        statusDebugRequestTracing: ko.computed(() => appUrl.forStatusDebugRequestTracing(appUrl.currentDatabase())),
         statusDebugSqlReplication: ko.computed(() => appUrl.forStatusDebugSqlReplication(appUrl.currentDatabase())),
         statusDebugIndexFields: ko.computed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
-        statusDebugSlowDocCounts: ko.computed(() => appUrl.forStatusDebugSlowDocCounts(appUrl.currentDatabase())),
         statusDebugIdentities: ko.computed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
         statusDebugWebSocket: ko.computed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
+        statusDebugPersistAutoIndex: ko.computed(() => appUrl.forStatusDebugPersistAutoIndex(appUrl.currentDatabase())),
+        statusDebugExplainReplication: ko.computed(() => appUrl.forStatusDebugExplainReplication(appUrl.currentDatabase())),
         infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
+
+        statusStorageOnDisk: ko.computed(() => appUrl.forStatusStorageOnDisk(appUrl.currentDatabase())),
+        statusStorageBreakdown: ko.computed(() => appUrl.forStatusStorageBreakdown(appUrl.currentDatabase())),
+        statusStorageCollections: ko.computed(() => appUrl.forStatusStorageCollections(appUrl.currentDatabase())),
 
         isAreaActive: (routeRoot: string) => ko.computed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
@@ -96,8 +105,11 @@ class appUrl {
         filesystemSearch: ko.computed(() => appUrl.forFilesystemSearch(appUrl.currentFilesystem())),
         filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
         filesystemStatus: ko.computed(() => appUrl.forFilesystemStatus(appUrl.currentFilesystem())),
+        filesystemSettings: ko.computed(() => appUrl.forFilesystemSettings(appUrl.currentFilesystem())),
         filesystemSynchronizationDestinations: ko.computed(() => appUrl.forFilesystemSynchronizationDestinations(appUrl.currentFilesystem())),
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
+
+        filesystemVersioning: ko.computed(() => appUrl.forFilesystemVersioning(appUrl.currentFilesystem())),
 
         couterStorages: ko.computed(() => appUrl.forCounterStorages()),
         counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(appUrl.currentCounterStorage())),
@@ -151,28 +163,16 @@ class appUrl {
         return "#admin/settings/windowsAuth";
     }
 
-    static forBackupDatabase(): string {
-        return "#admin/settings/backupDatabase";
+    static forBackup(): string {
+        return "#admin/settings/backup";
     }
 
-    static forCompactDatabase(): string {
-        return "#admin/settings/compactDatabase";
+    static forCompact(): string {
+        return "#admin/settings/compact";
     }
 
-    static forRestoreDatabase(): string {
-        return "#admin/settings/restoreDatabase";
-    }
-
-    static forBackupFilesystem(): string {
-        return "#admin/settings/backupFilesystem";
-    }
-
-    static forCompactFilesystem(): string {
-        return "#admin/settings/compactFilesystem";
-    }
-
-    static forRestoreFilesystem(): string {
-        return "#admin/settings/restoreFilesystem";
+    static forRestore(): string {
+        return "#admin/settings/restore";
     }
 
     static forAdminLogs(): string {
@@ -197,6 +197,10 @@ class appUrl {
 
     static forResources(): string {
         return "#resources";
+    }
+
+    static forHasApiKey(): string {
+        return "#has-api-key";
     }
 
     static forCounterStorages(): string {
@@ -250,10 +254,6 @@ class appUrl {
         return "#databases/status?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forIndexStats(db: database): string {
-        return "#databases/status/indexStats?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forReplicationPerfStats(db: database): string {
         return "#databases/status/replicationPerfStats?" + appUrl.getEncodedDbPart(db);
     }
@@ -262,24 +262,28 @@ class appUrl {
         return "#databases/status/sqlReplicationPerfStats?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forMetrics(db: database): string {
-        return "#databases/status/metrics?" + appUrl.getEncodedDbPart(db);
+    static forRequestsCount(db: database): string {
+        return "#databases/status/requests?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forMetricsRequests(db: database): string {
-        return "#databases/status/metrics?" + appUrl.getEncodedDbPart(db);
+    static forRequestsTracing(db: database): string {
+        return "#databases/status/requests/tracing?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forMetricsIndexing(db: database): string {
-        return "#databases/status/metrics/indexing?" + appUrl.getEncodedDbPart(db);
+    static forIndexPerformance(db: database): string {
+        return "#databases/status/indexing?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forMetricsIndexBatchSize(db: database): string {
-        return "#databases/status/metrics/indexBatchSize?" + appUrl.getEncodedDbPart(db);
+    static forIndexStats(db: database): string {
+        return "#databases/status/indexing/stats?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forMetricsPrefetches(db: database): string {
-        return "#databases/status/metrics/prefetches?" + appUrl.getEncodedDbPart(db);
+    static forIndexBatchSize(db: database): string {
+        return "#databases/status/indexing/batchSize?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forIndexPrefetches(db: database): string {
+        return "#databases/status/indexing/prefetches?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebug(db: database): string {
@@ -318,8 +322,8 @@ class appUrl {
         return "#databases/status/debug/routes?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forStatusDebugRequestTracing(db): string {
-        return "#databases/status/debug/requestTracing?" + appUrl.getEncodedDbPart(db);
+    static forRequestTracing(db): string {
+        return "#databases/status/requests/tracking?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugSqlReplication(db: database): string {
@@ -330,10 +334,6 @@ class appUrl {
         return "#databases/status/debug/indexFields?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forStatusDebugSlowDocCounts(db: database): string {
-        return "#databases/status/debug/slowDocCounts?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forStatusDebugIdentities(db: database): string {
         return "#databases/status/debug/identities?" + appUrl.getEncodedDbPart(db);
     }
@@ -342,8 +342,28 @@ class appUrl {
         return "#databases/status/debug/webSocket?" + appUrl.getEncodedDbPart(db);
     }
 
+    static forStatusDebugPersistAutoIndex(db: database): string {
+        return "#databases/status/debug/persist?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugExplainReplication(db: database): string {
+        return "#databases/status/debug/explainReplication?" + appUrl.getEncodedDbPart(db);
+    }
+
     static forInfoPackage(db: database): string {
         return '#databases/status/infoPackage?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusStorageOnDisk(db: database): string {
+        return '#databases/status/storage?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusStorageBreakdown(db: database): string {
+        return '#databases/status/storage/storageBreakdown?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusStorageCollections(db: database): string {
+        return '#databases/status/storage/collections?' + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {
@@ -377,14 +397,6 @@ class appUrl {
     static forVisualizer(db: database, index: string = null): string {
         var url = "#databases/status/visualizer?" + appUrl.getEncodedDbPart(db);
         if (index) { 
-            url += "&index=" + index;
-        }
-        return url;
-    }
-
-    static forIndexingPerfStats(db: database, index: string = null): string {
-        var url = "#databases/status/metrics/indexing?" + appUrl.getEncodedDbPart(db);
-        if (index) {
             url += "&index=" + index;
         }
         return url;
@@ -620,9 +632,19 @@ class appUrl {
         return "#filesystems/status?" + filesystemPart;
     }
 
+    static forFilesystemSettings(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/settings?" + filesystemPart;
+    }
+
     static forFilesystemConfiguration(fs: filesystem): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs);
         return "#filesystems/configuration?" + filesystemPart;
+    }
+
+    static forFilesystemVersioning(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/settings?" + filesystemPart;
     }
 
     static forFilesystemConfigurationWithKey(fs: filesystem, key: string): string {
@@ -685,6 +707,7 @@ class appUrl {
     static getSystemDatabase(): database {
         var db = new database("<system>");
         db.isSystem = true;
+        db.isVisible(false);
         return db;
     }
 
@@ -842,17 +865,22 @@ class appUrl {
     public static mapUnknownRoutes(router: DurandalRouter) {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
             var queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
-            messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
-            
-            var fragment = instruction.fragment;
-            var appUrls: computedAppUrls = appUrl.currentDbComputeds;
-            var newLoationHref;
-            if (fragment.indexOf("admin/settings") == 0) { //admin settings section
-                newLoationHref = appUrls.adminSettings();
+
+            if (instruction.fragment == "has-api-key") {
+                location.reload();
             } else {
-                newLoationHref = appUrls.resourcesManagement();
+                messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
+
+                var fragment = instruction.fragment;
+                var appUrls: computedAppUrls = appUrl.currentDbComputeds;
+                var newLoationHref;
+                if (fragment.indexOf("admin/settings") == 0) { //admin settings section
+                    newLoationHref = appUrls.adminSettings();
+                } else {
+                    newLoationHref = appUrls.resourcesManagement();
+                }
+                location.href = newLoationHref;
             }
-            location.href = newLoationHref;
         });
     }
 }

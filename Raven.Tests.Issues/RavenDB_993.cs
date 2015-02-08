@@ -28,17 +28,17 @@ namespace Raven.Tests.Issues
 			var path1 = NewDataPath();
 			var path2 = NewDataPath();
 
-			var databasePath1 = Path.Combine(path1, "Northwind");
-			var databasePath2 = Path.Combine(path2, "Northwind");
+			var databasePath1 = Path.Combine(path1, "Northwind1");
+			var databasePath2 = Path.Combine(path2, "Northwind2");
 
 			using (var server1 = GetNewServer(8079, dataDirectory: path1, runInMemory: false, activeBundles: "replication"))
 			using (var server2 = GetNewServer(8078, dataDirectory: path2, runInMemory: false, activeBundles: "replication"))
-			using (var store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false))
-			using (var store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false))
+			using (var store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind1", runInMemory: false, ensureDatabaseExists: false))
+			using (var store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind2", runInMemory: false, ensureDatabaseExists: false))
 			{
 				store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 																   {
-																	   Id = "Northwind",
+																	   Id = "Northwind1",
 																	   Settings =
 																	   {
 																		   { "Raven/ActiveBundles", "replication" }, 
@@ -48,7 +48,7 @@ namespace Raven.Tests.Issues
 
 				store2.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 																   {
-																	   Id = "Northwind",
+																	   Id = "Northwind2",
 																	   Settings =
 																	   {
 																		   { "Raven/ActiveBundles", "replication" }, 
@@ -56,8 +56,8 @@ namespace Raven.Tests.Issues
 																	   }
 																   });
 
-				var db1Url = store1.Url + "/databases/Northwind";
-				var db2Url = store2.Url + "/databases/Northwind";
+				var db1Url = store1.Url + "/databases/Northwind1";
+				var db2Url = store2.Url + "/databases/Northwind2";
 
 				SetupReplication(store1.DatabaseCommands, db2Url);
 
@@ -81,17 +81,17 @@ namespace Raven.Tests.Issues
 			var path1 = NewDataPath();
 			var path2 = NewDataPath();
 
-			var databasePath1 = Path.Combine(path1, "Northwind");
-			var databasePath2 = Path.Combine(path2, "Northwind");
+			var databasePath1 = Path.Combine(path1, "Northwind1");
+			var databasePath2 = Path.Combine(path2, "Northwind2");
 
 			using (var server1 = GetNewServer(8079, dataDirectory: path1, runInMemory: false, activeBundles: "replication"))
 			using (var server2 = GetNewServer(8078, dataDirectory: path2, runInMemory: false, activeBundles: "replication"))
-			using (var store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false))
-			using (var store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false))
+			using (var store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind1", runInMemory: false, ensureDatabaseExists: false))
+			using (var store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind2", runInMemory: false, ensureDatabaseExists: false))
 			{
 				store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 				{
-					Id = "Northwind",
+					Id = "Northwind1",
 					Settings =
 																	   {
 																		   { "Raven/ActiveBundles", "replication" }, 
@@ -101,7 +101,7 @@ namespace Raven.Tests.Issues
 
 				store2.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 				{
-					Id = "Northwind",
+					Id = "Northwind2",
 					Settings =
 																	   {
 																		   { "Raven/ActiveBundles", "" }, 
@@ -109,8 +109,8 @@ namespace Raven.Tests.Issues
 																	   }
 				});
 
-				var db1Url = store1.Url + "/databases/Northwind";
-				var db2Url = store2.Url + "/databases/Northwind";
+				var db1Url = store1.Url + "/databases/Northwind1";
+				var db2Url = store2.Url + "/databases/Northwind2";
 
 				SetupReplication(store1.DatabaseCommands, db2Url);
 
@@ -132,14 +132,14 @@ namespace Raven.Tests.Issues
 		public void DestinationServerDownTest()
 		{
 			var path1 = NewDataPath();
-			var databasePath1 = Path.Combine(path1, "Northwind");
+			var databasePath1 = Path.Combine(path1, "Northwind1");
 
 			using (var server1 = GetNewServer(8079, dataDirectory: path1, runInMemory: false, activeBundles: "replication"))
-			using (var store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false))
+			using (var store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind1", runInMemory: false, ensureDatabaseExists: false))
 			{
 				store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 																   {
-																	   Id = "Northwind",
+																	   Id = "Northwind1",
 																	   Settings =
 																	   {
 																		   { "Raven/ActiveBundles", "replication" }, 
@@ -147,7 +147,7 @@ namespace Raven.Tests.Issues
 																	   }
 																   });
 
-				var db1Url = store1.Url + "/databases/Northwind";
+				var db1Url = store1.Url + "/databases/Northwind1";
 
 				SetupReplication(store1.DatabaseCommands, "http://localhost:8078/databases/Northwind");
 
@@ -170,14 +170,14 @@ namespace Raven.Tests.Issues
 		public void InvalidUrlTest()
 		{
 			var path1 = NewDataPath();
-			var databasePath1 = Path.Combine(path1, "Northwind");
+			var databasePath1 = Path.Combine(path1, "Northwind1");
 
 			using (var server1 = GetNewServer(8079, dataDirectory: path1, runInMemory: false, activeBundles: "replication"))
-			using (var store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false))
+			using (var store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind1", runInMemory: false, ensureDatabaseExists: false))
 			{
 				store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 				                                                   {
-					                                                   Id = "Northwind", 
+					                                                   Id = "Northwind1", 
 																	   Settings =
 																	   {
 																		   { "Raven/ActiveBundles", "replication" }, 
@@ -185,7 +185,7 @@ namespace Raven.Tests.Issues
 																	   }
 				                                                   });
 
-				var db1Url = store1.Url + "/databases/Northwind";
+				var db1Url = store1.Url + "/databases/Northwind1";
 
 				SetupReplication(store1.DatabaseCommands, "http://localhost:8078/databases/Northwind");
 

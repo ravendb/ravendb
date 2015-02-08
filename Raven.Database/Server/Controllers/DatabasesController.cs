@@ -6,7 +6,9 @@ using System.Threading;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -15,7 +17,7 @@ namespace Raven.Database.Server.Controllers
 	public class DatabasesController : RavenDbApiController
 	{
 	    [HttpGet]
-		[Route("databases")]
+		[RavenRoute("databases")]
 		public HttpResponseMessage Databases(bool getAdditionalData = false)
 		{
 			if (EnsureSystemDatabase() == false)
@@ -37,48 +39,43 @@ namespace Raven.Database.Server.Controllers
 
 			var start = GetStart();
 			var nextPageStart = start; // will trigger rapid pagination
-			var databases = Database.Documents.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, start,
+			var databases = Database.Documents.GetDocumentsWithIdStartingWith(Constants.RavenDatabasesPrefix, null, null, start,
 										GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
 
-			var databasesData = databases
-				.Select(database =>
-				{
-					var bundles = new string[]{};
-					var settings = database.Value<RavenJObject>("Settings");
-					if (settings != null)
-					{
-						var activeBundles = settings.Value<string>("Raven/ActiveBundles");
-						if (activeBundles != null)
-						{
-							bundles = activeBundles.Split(';');
-						}
-					}
-
-					return new
-					{
-						Name = database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty),
-						Disabled = database.Value<bool>("Disabled"),
-                        IndexingDisabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"),Constants.IndexingDisabled),
-                        RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.RejectClientsModeEnabled),
-						Bundles = bundles
-					};
-				}).ToList();
-
+			var databasesData = GetDatabasesData(databases);
 			var databasesNames = databasesData.Select(databaseObject => databaseObject.Name).ToArray();
 
 			List<string> approvedDatabases = null;
-			if (DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
+			if (SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
-				var user = User;
+                var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+
+                HttpResponseMessage authMsg;
+                if (authorizer.TryAuthorize(this, out authMsg) == false)
+                    return authMsg;
+
+			    var user = authorizer.GetUser(this);
 				if (user == null)
-					return null;
+					return authMsg;
 
-				if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false)
+				if (user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
-					var authorizer = (MixedModeRequestAuthorizer)this.ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
-
 					approvedDatabases = authorizer.GetApprovedResources(user, this, databasesNames);
 				}
+
+				databasesData.ForEach(x =>
+				{
+					var principalWithDatabaseAccess = user as PrincipalWithDatabaseAccess;
+					if (principalWithDatabaseAccess != null)
+					{
+						var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode);
+						x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
+					}
+					else
+					{
+						x.IsAdminCurrentTenant = user.IsAdministrator(x.Name);
+					}
+				});
 			}
 
 			var lastDocEtag = Etag.Empty;
@@ -100,6 +97,41 @@ namespace Raven.Database.Server.Controllers
 			WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
 			return responseMessage;
 		}
+
+		private List<DatabaseData> GetDatabasesData(IEnumerable<RavenJToken> databases)
+		{
+			return databases
+				.Select(database =>
+				{
+					var bundles = new string[] {};
+					var settings = database.Value<RavenJObject>("Settings");
+					if (settings != null)
+					{
+						var activeBundles = settings.Value<string>("Raven/ActiveBundles");
+						if (activeBundles != null)
+						{
+							bundles = activeBundles.Split(';');
+						}
+					}
+
+					return new DatabaseData
+					{
+						Name = database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty),
+						Disabled = database.Value<bool>("Disabled"),
+						IndexingDisabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.IndexingDisabled),
+						RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.RejectClientsModeEnabled),
+						Bundles = bundles,
+						IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
+					};
+				}).ToList();
+		}
+
+		private class DatabaseData : TenantData
+		{
+			public bool IndexingDisabled { get; set; }
+			public bool RejectClientsEnabled { get; set; }
+		}
+
         /// <summary>
         /// Gets a boolean value out of the setting object.
         /// </summary>
@@ -122,8 +154,8 @@ namespace Raven.Database.Server.Controllers
 	    }
 
 	    [HttpGet]
-		[Route("database/size")]
-		[Route("databases/{databaseName}/database/size")]
+		[RavenRoute("database/size")]
+		[RavenRoute("databases/{databaseName}/database/size")]
 		public HttpResponseMessage DatabaseSize()
 		{
 			var totalSizeOnDisk = Database.GetTotalSizeOnDisk();
@@ -135,8 +167,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("database/storage/sizes")]
-		[Route("databases/{databaseName}/database/storage/sizes")]
+		[RavenRoute("database/storage/sizes")]
+		[RavenRoute("databases/{databaseName}/database/storage/sizes")]
 		public HttpResponseMessage DatabaseStorageSizes()
 		{
 			var indexStorageSize = Database.GetIndexStorageSizeOnDisk();

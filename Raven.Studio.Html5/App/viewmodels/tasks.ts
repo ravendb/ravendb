@@ -14,8 +14,8 @@ class tasks extends viewModelBase {
     constructor() {
         super();
 
-        this.isOnSystemDatabase = ko.computed(() => this.activeDatabase() && this.activeDatabase().isSystem);
-        this.isOnUserDatabase = ko.computed(() => this.activeDatabase() && !this.isOnSystemDatabase());
+        this.isOnSystemDatabase = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().isSystem);
+        this.isOnUserDatabase = ko.computed(() => !!this.activeDatabase() && !this.isOnSystemDatabase());
         this.appUrls = appUrl.forCurrentDatabase();
 
         var importDatabaseUrl = ko.computed(() => appUrl.forImportDatabase(this.activeDatabase()));
@@ -24,14 +24,16 @@ class tasks extends viewModelBase {
         var sampleDataUrl = ko.computed(() => appUrl.forSampleData(this.activeDatabase()));
         var csvImportUrl = ko.computed(() => appUrl.forCsvImport(this.activeDatabase()));
 
-        this.router = durandalRouter.createChildRouter()
-            .map([
+        var routeArray: DurandalRouteConfiguration[] = [
             { route: ['databases/tasks', 'databases/tasks/importDatabase'], moduleId: 'viewmodels/importDatabase', title: 'Import Database', nav: true, hash: importDatabaseUrl },
             { route: 'databases/tasks/exportDatabase', moduleId: 'viewmodels/exportDatabase', title: 'Export Database', nav: true, hash: exportDatabaseUrl },
-            { route: 'databases/tasks/toggleIndexing', moduleId: 'viewmodels/toggleIndexing', title: 'Toggle Indexing', nav: true, hash: toggleIndexingUrl },
+            { route: 'databases/tasks/toggleIndexing', moduleId: 'viewmodels/toggleIndexing', title: 'Toggle Indexing', nav: this.activeDatabase().isAdminCurrentTenant(), hash: toggleIndexingUrl },
             { route: 'databases/tasks/sampleData', moduleId: 'viewmodels/createSampleData', title: 'Create Sample Data', nav: true, hash: sampleDataUrl },
             { route: 'databases/tasks/csvImport', moduleId: 'viewmodels/csvImport', title: 'CSV Import', nav: true, hash: csvImportUrl }
-            ])
+        ];
+
+        this.router = durandalRouter.createChildRouter()
+            .map(routeArray)
             .buildNavigationModel();
 
         appUrl.mapUnknownRoutes(this.router);

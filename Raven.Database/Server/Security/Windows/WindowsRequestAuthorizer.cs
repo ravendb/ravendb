@@ -74,7 +74,7 @@ namespace Raven.Database.Server.Security.Windows
 			if (userCreated)
 			{
 				user = (PrincipalWithDatabaseAccess)controller.User;
-				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = controller.User.Identity.Name;
+				CurrentOperationContext.RavenAuthenticatedUser.Value = controller.User.Identity.Name;
 				CurrentOperationContext.User.Value = controller.User;
 
 				// admins always go through
@@ -92,7 +92,7 @@ namespace Raven.Database.Server.Security.Windows
 				}
 			}
 
-			bool isGetRequest = IsGetRequest(controller.InnerRequest.Method.Method, controller.InnerRequest.RequestUri.AbsolutePath);
+            bool isGetRequest = IsGetRequest(controller);
 			switch (server.SystemConfiguration.AnonymousUserAccessMode)
 			{
 				case AnonymousUserAccessMode.Admin:
@@ -168,7 +168,7 @@ namespace Raven.Database.Server.Security.Windows
 			var dbUsersIsAllowedAccessTo = requiredUsers
 				.Where(data => controller.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
 				.SelectMany(source => source.Databases)
-				.Concat(requiredGroups.Where(data => controller.User.IsInRole(data.Name)).SelectMany(x => x.Databases))
+				.Concat(requiredGroups.Where(windowsGroup => controller.User.IsInRole(windowsGroup.Name)).SelectMany(x => x.Databases))
 				.ToList();
 
             var user = UpdateUserPrincipal(controller, dbUsersIsAllowedAccessTo);

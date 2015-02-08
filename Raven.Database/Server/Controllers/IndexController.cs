@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -10,34 +10,35 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
-using Lucene.Net.Documents;
+using JetBrains.Annotations;
+using Lucene.Net.Search;
+using Mono.CSharp;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.MEF;
-using Raven.Client.Indexes;
+using Raven.Abstractions.Replication;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
-using Raven.Database.Linq;
-using Raven.Database.Linq.PrivateExtensions;
-using Raven.Database.Plugins;
 using Raven.Database.Queries;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Enum = System.Enum;
 
 namespace Raven.Database.Server.Controllers
 {
 	public class IndexController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("indexes")]
-		[Route("databases/{databaseName}/indexes")]
+		[RavenRoute("indexes")]
+		[RavenRoute("databases/{databaseName}/indexes")]
 		public HttpResponseMessage IndexesGet()
 		{
 			var namesOnlyString = GetQueryStringValue("namesOnly");
@@ -52,8 +53,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexGet(string id)
 		{
             using (var cts = new CancellationTokenSource())
@@ -76,9 +77,30 @@ namespace Raven.Database.Server.Controllers
             }
 		}
 
+		
+
+		[HttpPost]
+		[RavenRoute("indexes/last-queried")]
+		[RavenRoute("databases/{databaseName}/indexes/last-queried")]
+		public HttpResponseMessage IndexUpdateLastQueried([FromBody] Dictionary<string, DateTime> lastQueriedByIndexId)
+		{
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				foreach (var timestamp in lastQueriedByIndexId)
+				{
+					var indexInstance = Database.IndexStorage.GetIndexInstance(timestamp.Key);
+					if (indexInstance == null) continue;
+					indexInstance.MarkQueried(timestamp.Value);
+				}
+			});
+			return GetEmptyMessage();
+		}
+
+
+
 		[HttpPut]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public async Task<HttpResponseMessage> IndexPut(string id)
 		{
 			var index = id;
@@ -115,8 +137,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpHead]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexHead(string id)
 		{
 			var index = id;
@@ -126,14 +148,14 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public async Task<HttpResponseMessage >IndexPost(string id)
 		{
 			var index = id;
 			if ("forceWriteToDisk".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
 			{
-				Database.IndexStorage.ForceWriteToDisk(index);
+                Database.IndexStorage.ForceWriteToDiskAndWriteInMemoryIndexToDiskIfNecessary(index);
 				return GetEmptyMessage();
 			}
 
@@ -163,8 +185,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpReset]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexReset(string id)
 		{
 			var index = id;
@@ -173,8 +195,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpDelete]
-		[Route("indexes/{*id}")]
-		[Route("databases/{databaseName}/indexes/{*id}")]
+		[RavenRoute("indexes/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexDelete(string id)
 		{
 			var index = id;
@@ -183,8 +205,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("indexes/set-priority/{*id}")]
-		[Route("databases/{databaseName}/indexes/set-priority/{*id}")]
+		[RavenRoute("indexes/set-priority/{*id}")]
+		[RavenRoute("databases/{databaseName}/indexes/set-priority/{*id}")]
 		public HttpResponseMessage SetPriority(string id)
 		{
 			var index = id;
@@ -205,8 +227,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-        [Route("c-sharp-index-definition/{*fullIndexName}")]
-		[Route("databases/{databaseName}/c-sharp-index-definition/{*fullIndexName}")]
+        [RavenRoute("c-sharp-index-definition/{*fullIndexName}")]
+		[RavenRoute("databases/{databaseName}/c-sharp-index-definition/{*fullIndexName}")]
 		public HttpResponseMessage GenerateCSharpIndexDefinition(string fullIndexName)
 		{
 			var indexDefinition = Database.Indexes.GetIndexDefinition(fullIndexName);
@@ -299,7 +321,12 @@ namespace Raven.Database.Server.Controllers
                     keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, startsWith, sourceId, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
 						.ToList();
 				});
-
+			    var keyToSearch = GetQueryStringValue("contains");
+                if (!String.IsNullOrEmpty(keyToSearch))
+                    return GetMessageWithObject(new
+                    {
+                        Results = keys.Contains(keyToSearch)
+                    });
 				return GetMessageWithObject(new
 				{
 					keys.Count,
@@ -417,8 +444,9 @@ namespace Raven.Database.Server.Controllers
 	    }
 
 	    private QueryResultWithIncludes PerformQueryAgainstExistingIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg, CancellationToken token)
-		{
+	    {
 			indexEtag = Database.Indexes.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
+
 			if (MatchEtag(indexEtag))
 			{
 				Database.IndexStorage.MarkCachedQuery(index);
@@ -428,6 +456,8 @@ namespace Raven.Database.Server.Controllers
 
 			var queryResult = Database.Queries.Query(index, indexQuery, token);
 			indexEtag = Database.Indexes.GetIndexEtag(index, queryResult.ResultEtag, indexQuery.ResultsTransformer);
+
+			Database.IndexStorage.SetLastQueryTime(queryResult.IndexName, queryResult.LastQueryTime);
 			return queryResult;
 		}
 
@@ -436,6 +466,8 @@ namespace Raven.Database.Server.Controllers
 			string entityName;
 			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
 
+			if (index.Contains("UserIndex"))
+				Debugger.Launch();
 			if (dynamicIndexName != null && Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
 				indexEtag = Database.Indexes.GetIndexEtag(dynamicIndexName, null, indexQuery.ResultsTransformer);
@@ -478,6 +510,7 @@ namespace Raven.Database.Server.Controllers
 							? Database.Indexes.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag, indexQuery.ResultsTransformer)
 							: Etag.InvalidEtag;
 
+			Database.IndexStorage.SetLastQueryTime(queryResult.IndexName, queryResult.LastQueryTime);
 			return queryResult;
 		}
 
@@ -530,9 +563,8 @@ namespace Raven.Database.Server.Controllers
 			if (indexDefinition == null)
 				return GetMessageWithString("Cannot find index : " + index, HttpStatusCode.NotFound);
 			
-			var definition = indexDefinition.Clone();
-			definition.LockMode = indexLockMode;
-			Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
+			indexDefinition.LockMode = indexLockMode;
+			Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
 
 			return GetEmptyMessage();
 		}
@@ -610,9 +642,9 @@ namespace Raven.Database.Server.Controllers
 		private HttpResponseMessage GetIndexEntries(string index)
 		{
 			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
-			var reduceKeysArray = GetQueryStringValue("reduceKeys");
+		    var reduceKeys = GetQueryStringValues("reduceKeys").Select(x => x.Trim()).ToList();
 
-			if (string.IsNullOrEmpty(indexQuery.Query) == false && string.IsNullOrEmpty(reduceKeysArray) == false)
+			if (string.IsNullOrEmpty(indexQuery.Query) == false && reduceKeys.Count > 0)
 			{
 				return GetMessageWithObject(new
 				{
@@ -620,11 +652,8 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			List<string> reduceKeys = null;
-
-			if (string.IsNullOrEmpty(reduceKeysArray) == false)
+			if (reduceKeys.Count > 0)
 			{
-                reduceKeys = reduceKeysArray.Split(',').Select(x => x.Trim()).ToList();
                 // overwrite indexQueryPagining as __reduce_key field is not indexed, and we don't have simple method to obtain column alias
 			    indexQuery.Start = 0;
 			    indexQuery.PageSize = int.MaxValue;
@@ -716,5 +745,7 @@ namespace Raven.Database.Server.Controllers
 			stats.SetLastDocumentEtag(lastEtag);
 			return GetMessageWithObject(stats);
 		}
+
+
 	}
 }

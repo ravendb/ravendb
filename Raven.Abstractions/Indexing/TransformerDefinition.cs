@@ -3,10 +3,18 @@ namespace Raven.Abstractions.Indexing
     public class TransformerDefinition
     {
         /// <summary>
-        /// Gets or sets the translator function
+        /// Projection function.
         /// </summary>
         public string TransformResults { get; set; }
+
+		/// <summary>
+		/// Transformer identifier (internal).
+		/// </summary>
         public int TransfomerId { get; set; }
+
+		/// <summary>
+		/// Transformer name.
+		/// </summary>
         public string Name { get; set; }
 
         public bool Equals(TransformerDefinition other)

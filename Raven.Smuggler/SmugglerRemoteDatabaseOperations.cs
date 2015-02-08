@@ -18,9 +18,9 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Data;
+using Raven.Database.Smuggler;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using Raven.Smuggler.Imports;
 
 namespace Raven.Smuggler
 {
@@ -68,7 +68,7 @@ namespace Raven.Smuggler
 
 		public Task DeleteDocument(string key)
 		{
-			return Store.AsyncDatabaseCommands.DeleteDocumentAsync(key);
+			return Store.AsyncDatabaseCommands.DeleteAsync(key, null);
 		}
 
         [Obsolete("Use RavenFS instead.")]
@@ -189,7 +189,7 @@ namespace Raven.Smuggler
 			return buildNumber.ProductVersion;
 		}
 
-		public void PurgeTombstones(ExportDataResult result)
+		public void PurgeTombstones(OperationState result)
 		{
 			throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
 		}
@@ -261,7 +261,19 @@ namespace Raven.Smuggler
 			return new CompletedTask<RavenJObject>(jintHelper.Transform(transformScript, document));
 		}
 
-		public void Initialize(SmugglerDatabaseOptions databaseOptions)
+	    public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+	    {
+			if (metadata != null)
+			{
+				metadata.Remove(Constants.RavenReplicationHistory);
+				metadata.Remove(Constants.RavenReplicationSource);
+				metadata.Remove(Constants.RavenReplicationVersion);
+			}
+
+		    return metadata;
+	    }
+
+	    public void Initialize(SmugglerDatabaseOptions databaseOptions)
 		{
 			Options = databaseOptions;
 			jintHelper.Initialize(databaseOptions);

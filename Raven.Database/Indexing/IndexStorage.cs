@@ -99,9 +99,17 @@ namespace Raven.Database.Indexing
 				BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(documentDatabase.WorkContext,
 					indexDefinitionStorage.IndexNames, OpenIndexOnStartup);
 			}
-			catch
+			catch(Exception e)
 			{
+				log.WarnException("Could not create index storage", e);
+				try
+				{
 				Dispose();
+				}
+				catch (Exception ex)
+				{
+					log.FatalException("Failed to disposed when already getting an error during ctor", ex);
+				}
 				throw;
 			}
 		}
@@ -200,7 +208,7 @@ namespace Raven.Database.Indexing
 			// 2. If no 'LastEtag' in commitData then we consider it an invalid index
 			// 3. If 'LastEtag' is present (and valid), then resetting to it (if it is lower than lastStoredEtag)
 
-            var commitData = IndexReader.GetCommitUserData(directory);
+			var commitData = IndexReader.GetCommitUserData(directory);
 
 		    if (index.IsMapReduce)
 				CheckMapReduceIndexState(commitData, resetTried);
@@ -990,33 +998,30 @@ namespace Raven.Database.Indexing
 		}
 
 		[CLSCompliant(false)]
-		public void Index(int index,
-			AbstractViewGenerator viewGenerator,
-			IndexingBatch batch,
-			WorkContext context,
-			IStorageActionsAccessor actions,
-			DateTime minimumTimestamp)
+		public IndexingPerformanceStats Index(int index, AbstractViewGenerator viewGenerator, IndexingBatch batch, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp, CancellationToken token)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
 			{
 				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
-				return;
+				return null;
 			}
 			using (EnsureInvariantCulture())
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
-				value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp);
+				var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp, token);
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = value.PublicName,
 					Type = IndexChangeTypes.MapCompleted
 				});
+
+				return performance;
 			}
 		}
 
 		[CLSCompliant(false)]
-		public void Reduce(
+		public IndexingPerformanceStats Reduce(
 			int index,
 			AbstractViewGenerator viewGenerator,
 			IEnumerable<IGrouping<int, object>> mappedResults,
@@ -1030,23 +1035,27 @@ namespace Raven.Database.Indexing
 			if (value == null)
 			{
 				log.Debug("Tried to index on a non existent index {0}, ignoring", index);
-				return;
+				return null;
 			}
 			var mapReduceIndex = value as MapReduceIndex;
 			if (mapReduceIndex == null)
 			{
 				log.Warn("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
-				return;
+				return null;
 			}
 			using (EnsureInvariantCulture())
 			{
 				var reduceDocuments = new MapReduceIndex.ReduceDocuments(mapReduceIndex, viewGenerator, mappedResults, level, context, actions, reduceKeys, inputCount);
-				reduceDocuments.ExecuteReduction();
+
+				var performance = reduceDocuments.ExecuteReduction();
+
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = value.PublicName,
 					Type = IndexChangeTypes.ReduceCompleted
 				});
+
+				return performance;
 			}
 		}
 
@@ -1084,9 +1093,9 @@ namespace Raven.Database.Indexing
 				{
                 value.Flush(value.GetLastEtagFromStats());
 			}
-				catch (Exception)
+				catch (Exception e)
 				{
-					value.IncrementWriteErrors();
+					value.IncrementWriteErrors(e);
 					throw;
 				}
 			}
@@ -1116,15 +1125,21 @@ namespace Raven.Database.Indexing
 
 				isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) || actions.Staleness.IsIndexStale(indexId, null, null);
 
+				if (indexInstance != null && indexInstance.IsTestIndex)
+					isStale = false;
+
 				if (isStale && actions.Staleness.IsIndexStaleByTask(indexId, null) == false && actions.Staleness.IsReduceStale(indexId) == false)
 				{
 					var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexId);
 					if (viewGenerator == null)
 						return;
 
-					var collectionNames = viewGenerator.ForEntityNames.ToList();
-					var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
+					var indexStats = actions.Indexing.GetIndexStats(indexId);
+					if (indexStats == null)
+						return;
 
+					var lastIndexedEtag = indexStats.LastIndexedEtag;
+					var collectionNames = viewGenerator.ForEntityNames.ToList();
 					if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
 						isStale = false;
 				}
@@ -1296,7 +1311,7 @@ namespace Raven.Database.Indexing
 			documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification()
 			{
 				Name = thisItem.Name,
-				Type = IndexChangeTypes.IndexDemotedToIdle
+				Type = IndexChangeTypes.IndexDemotedToAbandoned
 			});
 		}
 
@@ -1336,15 +1351,17 @@ namespace Raven.Database.Indexing
 
 		public void FlushMapIndexes()
 		{
-			foreach (var value in indexes.Values.Where(value => value != null && !value.IsMapReduce))
+			if (indexes == null)
+				return;
+			foreach (var value in indexes.Values.Where(value => value != null &&  !value.IsMapReduce))
 			{
 				try
 				{
-                value.Flush(value.GetLastEtagFromStats());
+        			value.Flush(value.GetLastEtagFromStats());
 			}
-				catch (Exception)
+				catch (Exception e)
 				{
-					value.IncrementWriteErrors();
+					value.IncrementWriteErrors(e);
 					throw;
 		}
 			}
@@ -1352,15 +1369,17 @@ namespace Raven.Database.Indexing
 
 		public void FlushReduceIndexes()
 		{
+			if (indexes == null)
+				return;
 			foreach (var value in indexes.Values.Where(value => value != null && value.IsMapReduce))
 			{
 				try
 				{
-                value.Flush(value.GetLastEtagFromStats());
+                		value.Flush(value.GetLastEtagFromStats());
 			}
-				catch (Exception)
+				catch (Exception e)
 				{
-					value.IncrementWriteErrors();
+					value.IncrementWriteErrors(e);
 					throw;
 		}
 			}
@@ -1398,6 +1417,11 @@ namespace Raven.Database.Indexing
 			GetIndexByName(indexName).MarkQueried();
 		}
 
+		internal void SetLastQueryTime(string indexName,DateTime lastQueryTime)
+		{
+			GetIndexByName(indexName).MarkQueried(lastQueryTime);
+		}
+
 		public DateTime? GetLastQueryTime(int index)
 		{
 			return GetIndexInstance(index).LastQueryTime;
@@ -1413,10 +1437,10 @@ namespace Raven.Database.Indexing
 			return GetIndexInstance(index).GetIndexingPerformance();
 		}
 
-		public void Backup(string directory, string incrementalTag = null)
+		public void Backup(string directory, string incrementalTag = null, Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback = null)
 		{
 			Parallel.ForEach(indexes.Values, index =>
-				index.Backup(directory, path, incrementalTag));
+                index.Backup(directory, path, incrementalTag, notifyCallback));
 		}
 
 		public void MergeAllIndexes()
@@ -1430,9 +1454,27 @@ namespace Raven.Database.Indexing
 			return GetIndexInstance(id).IsOnRam;
 		}
 
-		public void ForceWriteToDisk(string index)
+        public void ForceWriteToDiskAndWriteInMemoryIndexToDiskIfNecessary(string indexName)
 		{
-			GetIndexByName(index).ForceWriteToDisk();
+			var index = GetIndexByName(indexName);
+            index.ForceWriteToDisk();
+            index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
 		}
+
+		internal bool ReplaceIndex(string indexName, string indexToReplaceName)
+		{
+			var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
+
+			var success = indexDefinitionStorage.ReplaceIndex(indexName, indexToReplaceName);
+			if (success == false) 
+				return false;
+
+			if (indexToReplace == null)
+				return true;
+
+			documentDatabase.Indexes.DeleteIndex(indexToReplace, removeByNameMapping: false, clearErrors: false);
+
+			return true;
 	}
+}
 }

@@ -5,38 +5,52 @@ import savePeriodicExportSetupCommand = require("commands/savePeriodicExportSetu
 import document = require("models/document");
 import periodicExportSetup = require("models/periodicExportSetup");
 import appUrl = require("common/appUrl");
+import database = require("models/database");
 
 class periodicExport extends viewModelBase {
-
     backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
     isSaveEnabled: KnockoutComputed<boolean>;
     backupStatusDirtyFlag = new ko.DirtyFlag([]);
     backupConfigDirtyFlag = new ko.DirtyFlag([]);
+    isForbidden = ko.observable<boolean>(false);
+
+    constructor() {
+        super();
+        this.activeDatabase.subscribe((db: database) => this.isForbidden(db.isAdminCurrentTenant() == false));
+    }
 
     canActivate(args: any): any {
         super.canActivate(args);
         this.backupSetup(new periodicExportSetup);
-
         var deferred = $.Deferred();
+
         var db = this.activeDatabase();
-        if (db) {
+        this.isForbidden(db.isAdminCurrentTenant() == false);
+        if (db.isAdminCurrentTenant()) {
             $.when(this.fetchPeriodicExportSetup(db), this.fetchPeriodicExportAccountsSettings(db))
                 .done(() => deferred.resolve({ can: true }))
                 .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+        } else {
+            deferred.resolve({ can: true });
         }
+
         return deferred;
     }
 
     activate(args) {
         super.activate(args);
+        this.updateHelpLink('OU78CB');
         
         this.backupStatusDirtyFlag = new ko.DirtyFlag([this.backupSetup().disabled]);
         this.backupConfigDirtyFlag = new ko.DirtyFlag([this.backupSetup]);
         
         var self = this;
         this.isSaveEnabled = ko.computed(() => {
-            return (self.backupConfigDirtyFlag().isDirty()) &&
-                (!self.backupSetup().disabled() || (self.backupSetup().disabled() && self.backupStatusDirtyFlag().isDirty()));
+            var onDisk = self.backupSetup().onDiskExportEnabled();
+            var remote = self.backupSetup().remoteUploadEnabled();
+            var hasAnyOption = onDisk || remote;
+            return (self.backupConfigDirtyFlag().isDirty() && hasAnyOption) &&
+                (!self.backupSetup().disabled() || self.backupConfigDirtyFlag().isDirty());
         });
 
         this.dirtyFlag = new ko.DirtyFlag([this.isSaveEnabled]);

@@ -1,4 +1,6 @@
-﻿using Raven.Client;
+﻿using System.Threading;
+using Raven.Abstractions.Connection;
+using Raven.Client;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -176,12 +178,12 @@ namespace Raven.Tests.Core.ChangesApi
                 throw new NotImplementedException();
             }
 
-            public int GetReadStripingBase()
+            public int GetReadStripingBase(bool increment)
             {
                 throw new NotImplementedException();
             }
 
-            public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, Abstractions.Connection.OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation)
+            public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
             {
                 throw new NotImplementedException();
             }

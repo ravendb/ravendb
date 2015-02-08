@@ -11,9 +11,8 @@ namespace Raven.Abstractions.Data
 	public class SuggestionQueryResult
 	{
 		 /// <summary>
-		/// The suggestions based on the term and dictionary
+		/// Suggestions based on the term and dictionary
 		/// </summary>
-		/// <value>The suggestions.</value>
 		public string[] Suggestions { get; set; } 
 	}
 }

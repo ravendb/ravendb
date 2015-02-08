@@ -120,9 +120,9 @@ namespace Raven.Database.Storage.Voron.Impl
 			writeBatch.MultiDelete(key, value, TableName, expectedVersion);
 		}
 
-		public virtual ushort? ReadVersion(SnapshotReader snapshot, Slice key)
+		public virtual ushort? ReadVersion(SnapshotReader snapshot, Slice key, WriteBatch writeBatch)
 		{
-			return snapshot.ReadVersion(TableName, key);
+			return snapshot.ReadVersion(TableName, key, writeBatch);
 		}
 
 		//for debugging purposes

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using System.Runtime.InteropServices;
@@ -55,14 +56,26 @@ namespace Raven.Abstractions.Extensions
             stream.Write(buffer, 0, buffer.Length);
         }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	    private static void PartialRead(this Stream stream, byte[] buffer, int size)
+	    {
+		    var totalRead = 0;
+			while (totalRead < size)
+		    {
+				var bytesRead = stream.Read(buffer, totalRead, size - totalRead);
+				if(bytesRead == 0 )
+					throw new EndOfStreamException();
+			    totalRead += bytesRead;
+		    }
+	    }
+
         public static long ReadInt64(this Stream stream)
         {
-            var int64Size = Marshal.SizeOf(typeof(long));
-            var buffer = BufferPool.TakeBuffer(int64Size);
+	        var buffer = BufferPool.TakeBuffer(sizeof(long));
 
             try
             {
-                stream.Read(buffer, 0, int64Size);
+                stream.PartialRead(buffer,sizeof(long));
                 return BitConverter.ToInt64(buffer, 0);
             }
             finally
@@ -71,15 +84,29 @@ namespace Raven.Abstractions.Extensions
             }
         }
 
+		public static ulong ReadUInt64(this Stream stream)
+		{
+			var buffer = BufferPool.TakeBuffer(sizeof(ulong));
+
+			try
+			{
+				stream.PartialRead(buffer,sizeof(ulong));
+				return BitConverter.ToUInt64(buffer, 0);
+			}
+			finally
+			{
+				BufferPool.ReturnBuffer(buffer);
+			}
+		}
+
 
         public static int ReadInt32(this Stream stream)
         {
-            var int32Size = Marshal.SizeOf(typeof(int));
-            var buffer = BufferPool.TakeBuffer(int32Size);
+	        var buffer = BufferPool.TakeBuffer(sizeof(int));
 
             try
             {
-                stream.Read(buffer, 0, int32Size);
+                stream.PartialRead(buffer,sizeof(int));
                 return BitConverter.ToInt32(buffer, 0);
             }
             finally
@@ -100,8 +127,8 @@ namespace Raven.Abstractions.Extensions
 
             try
             {
-                var read = stream.Read(buffer, 0, stringLength);
-                return encoding.GetString(buffer, 0, read);
+	            stream.PartialRead(buffer,stringLength);
+				return encoding.GetString(buffer, 0, stringLength);
             }
             finally
             {
@@ -141,13 +168,13 @@ namespace Raven.Abstractions.Extensions
 
         public static Etag ReadEtag(this Stream stream)
         {
-            var buffer = BufferPool.TakeBuffer(16); //etag size is 16 bytes
+	        const int EtagSize = 16;
+            var buffer = BufferPool.TakeBuffer(EtagSize); //etag size is 16 bytes
 
             try
             {
-                stream.Read(buffer, 0, 16);
+	            stream.PartialRead(buffer,EtagSize);
                 return Etag.Parse(buffer);
-
             }
             finally
             {

@@ -38,6 +38,7 @@ class Transformers extends viewModelBase {
     }
 
     attached() {
+        this.updateHelpLink('OWRJLV');
         this.createKeyboardShortcut("Alt+N", () => this.navigate(this.newTransformerUrl()), this.containerSelector);
         ko.postbox.publish("SetRawJSONUrl", appUrl.forTransformersRawData(this.activeDatabase()));
     }

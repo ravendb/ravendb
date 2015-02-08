@@ -88,7 +88,8 @@ namespace Raven.Tests.Issues
             {
                 documentStore.Configuration.DataDirectory = dataDir;
                 documentStore.Configuration.IndexStoragePath = indexesDir;
-                documentStore.Configuration.JournalsStoragePath = jouranlDir;
+                documentStore.Configuration.Storage.Esent.JournalsStoragePath = jouranlDir;
+				documentStore.Configuration.Storage.Voron.JournalsStoragePath = jouranlDir;
             }))
             {
                 using (var sesion = store.OpenSession())
@@ -133,9 +134,11 @@ namespace Raven.Tests.Issues
             {
                 DefaultStorageTypeName = storage,
                 DataDirectory = dataDir,
-                JournalsStoragePath = jouranlDir,
                 IndexStoragePath = indexesDir
             };
+
+			ravenConfiguration.Storage.Esent.JournalsStoragePath = jouranlDir;
+			ravenConfiguration.Storage.Voron.JournalsStoragePath = jouranlDir;
 
             using (var db = new DocumentDatabase(ravenConfiguration))
             {
@@ -207,8 +210,8 @@ namespace Raven.Tests.Issues
                     Settings =
                     {
                         {"Raven/DataDir", "~\\Databases\\db1"},
-                        {"Raven/Esent/CircularLog", "false"},
-                        {"Raven/Voron/AllowIncrementalBackups", "true"}
+                        {Constants.Esent.CircularLog, "false"},
+                        {Constants.Voron.AllowIncrementalBackups, "true"}
                     }
                 });
 
@@ -244,7 +247,6 @@ namespace Raven.Tests.Issues
                         var load = sesion.Load<User>(i+1);
                         if (load == null)
                         {
-                            Debugger.Launch();
                             throw new InvalidOperationException("Cannot find user " + (i+1));
                         }
                         Assert.Equal("User " + i, load.Name);

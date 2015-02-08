@@ -9,6 +9,9 @@ import commandBase = require('commands/commandBase');
 import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import idGenerator = require("common/idGenerator");
+import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
+import changesApiWarnStorage = require("common/changesApiWarnStorage");
+import messagePublisher = require("common/messagePublisher");
 
 class changesApi {
 
@@ -53,7 +56,11 @@ class changesApi {
             this.connect(this.connectWebSocket);
         }
         else if ("EventSource" in window) {
-            this.connect(this.connectEventSource);
+            if (eventSourceSettingStorage.useEventSource()) {
+                this.connect(this.connectEventSource);
+            } else {
+                this.connectToChangesApiTask.reject();
+            }
         }
         else {
             //The browser doesn't support nor websocket nor eventsource
@@ -63,8 +70,10 @@ class changesApi {
         }
     }
 
-    private connect(action: Function, needToReconnect: boolean = false) {
-        this.connectToChangesApiTask = $.Deferred();
+    private connect(action: Function, recoveringFromWebsocketFailure: boolean = false) {
+        if (!recoveringFromWebsocketFailure) {
+            this.connectToChangesApiTask = $.Deferred();
+        }
         var getTokenTask = new getSingleAuthTokenCommand(this.rs).execute();
 
         getTokenTask
@@ -78,7 +87,7 @@ class changesApi {
                     // Connection has closed so try to reconnect every 3 seconds.
                     setTimeout(() => this.connect(action), 3 * 1000);
                 }
-                else if (e.status != 403) { // authorized connection
+                else if (e.status != ResponseCodes.Forbidden) { // authorized connection
                     this.commandBase.reportError(e.responseJSON.Error);
                     this.connectToChangesApiTask.reject();
                 }
@@ -165,25 +174,36 @@ class changesApi {
         var details;
 
         if ("EventSource" in window) {
-            this.connect(this.connectEventSource);
-            warningMessage = "Your server doesn't support the WebSocket protocol!";
-            details = "EventSource API is going to be used instead. However, multi tab usage isn't supported.\r\n" +
-            "WebSockets are only supported on servers running on Windows Server 2012 and equivalent. \r\n" +
-            " If you have issues with WebSockets on Windows Server 2012 and equivalent use Status > Debug > WebSocket to debug.";
+            if (eventSourceSettingStorage.useEventSource()) {
+                this.connect(this.connectEventSource, true);
+                warningMessage = "Your server doesn't support the WebSocket protocol!";
+                details = "EventSource API is going to be used instead. However, multi tab usage isn't supported.\r\n" +
+                "WebSockets are only supported on servers running on Windows Server 2012 and equivalent. \r\n" +
+                " If you have issues with WebSockets on Windows Server 2012 and equivalent use Status > Debug > WebSocket to debug.";
+                if (changesApi.isServerSupportingWebSockets) {
+                    changesApi.isServerSupportingWebSockets = false;
+                    if (changesApiWarnStorage.showChangesApiWarning()) {
+                        this.commandBase.reportWarningWithButton(warningMessage, details, "Don't warn me again", () => {
+                            if (changesApiWarnStorage.showChangesApiWarning()) {
+                                changesApiWarnStorage.setValue(true);
+                                messagePublisher.reportInfo("Disabled notification about WebSocket.");
+                            }
+                        });
+                    }
+                }
+            } else {
+                changesApi.isServerSupportingWebSockets = false;
+                this.connectToChangesApiTask.reject();
+            }
         } else {
             this.connectToChangesApiTask.reject();
             warningMessage = "Changes API is Disabled!";
             details = "Your server doesn't support the WebSocket protocol and your browser doesn't support the EventSource API.\r\n" +
-                "In order to use it, please use a browser that supports the EventSource API.";
-        }
-
-        this.showWarning(warningMessage, details);
-    }
-
-    private showWarning(message: string, details: string) {
-        if (changesApi.isServerSupportingWebSockets) {
-            changesApi.isServerSupportingWebSockets = false;
-            this.commandBase.reportWarning(message, details);
+            "In order to use it, please use a browser that supports the EventSource API.";
+            if (changesApi.isServerSupportingWebSockets) {
+                changesApi.isServerSupportingWebSockets = false;
+                this.commandBase.reportWarning(warningMessage, details);
+            }
         }
     }
 

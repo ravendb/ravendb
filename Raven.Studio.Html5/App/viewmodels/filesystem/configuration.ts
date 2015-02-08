@@ -1,4 +1,6 @@
-﻿import app = require("durandal/app");
+﻿/// <reference path="../../../Scripts/typings/ace/ace.amd.d.ts" />
+
+import app = require("durandal/app");
 import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
@@ -163,11 +165,16 @@ class configuration extends viewModelBase {
     }
 
     enableEditor(enable: boolean) {
-        this.configurationEditor.setReadOnly(!enable);
-        this.configurationEditor.getSession().setUseWorker(enable);
-        if (!enable) {
-            this.configurationKeyText("");
-            this.dirtyFlag().reset();
+
+        if (this.configurationEditor) {
+
+            this.configurationEditor.setReadOnly(!enable);
+            this.configurationEditor.getSession().setUseWorker(enable);
+
+            if (!enable) {
+                this.configurationKeyText("");
+                this.dirtyFlag().reset();
+            }
         }
 
         this.enabled = enable;

@@ -15,10 +15,12 @@ using Raven.Client.Extensions;
 using System.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Tests.Core.Auth;
 using Xunit;
 using Raven.Server;
 using Raven.Database;
 using Raven.Database.Server;
+using Authentication = Raven.Database.Server.Security.Authentication;
 
 namespace Raven.Tests.Core
 {
@@ -78,7 +80,10 @@ namespace Raven.Tests.Core
             string url = documentStore.Url;
             using (server)
             {
-                Process.Start(url); // start the server
+                var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase ?? Constants.SystemDatabase);
+                var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+
+                Process.Start(documentsPage); // start the server
 
                 do
                 {
@@ -184,6 +189,7 @@ namespace Raven.Tests.Core
 
 		public virtual void Dispose()
 		{
+			Authentication.Disable();
 			foreach (var store in createdStores)
 			{
 				store.Dispose();

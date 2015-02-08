@@ -19,9 +19,8 @@ class datePickerBindingHandler {
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
         var options = allBindings().datepickerOptions || {};
-        var dpicker = $(element).datetimepicker();
+        var dpicker = $(element).datetimepicker(options);
 
-        $(element).data("DateTimePicker").setMaxDate(moment(new Date()));
         dpicker.on('dp.change', function (ev) {
             if (options.endDateElement) {
                 $("#" + options.endDateElement).data("DateTimePicker").setMinDate(ev.date);

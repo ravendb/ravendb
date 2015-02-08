@@ -30,13 +30,13 @@ namespace Raven.Client
 		/// <summary>
 		///     Returns the list of document's field highlighting fragments.
 		/// </summary>
-		/// <param name="documentId">The document id.</param>
+		/// <param name="key">The document id, or the map/reduce key field.</param>
 		/// <returns></returns>
-		public string[] GetFragments(string documentId)
+		public string[] GetFragments(string key)
 		{
 			string[] result;
 
-			if (!this.highlightings.TryGetValue(documentId, out result))
+			if (!this.highlightings.TryGetValue(key, out result))
 				return new string[0];
 
 			return result;

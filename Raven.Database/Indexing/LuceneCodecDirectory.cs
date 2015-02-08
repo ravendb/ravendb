@@ -11,12 +11,12 @@ namespace Raven.Database.Indexing
 {
 	public class LuceneCodecDirectory : FSDirectory
 	{
-		private readonly IEnumerable<AbstractIndexCodec> codecs;
+		private readonly List<AbstractIndexCodec> codecs;
 
 		public LuceneCodecDirectory(string path, IEnumerable<AbstractIndexCodec> codecs)
 			: base(new DirectoryInfo(path), null)
 		{
-			this.codecs = codecs ?? Enumerable.Empty<AbstractIndexCodec>();
+			this.codecs = (codecs ?? Enumerable.Empty<AbstractIndexCodec>()).ToList();
 		}
 
 		public override IndexInput OpenInput(string name, int bufferSize)
@@ -186,7 +186,8 @@ namespace Raven.Database.Indexing
 			protected override void Dispose(bool disposing)
 			{
 				base.Dispose(disposing);
-				stream.Close();
+			    if (stream != null)
+			        stream.Close();
 				GC.SuppressFinalize(this);
 			}
 

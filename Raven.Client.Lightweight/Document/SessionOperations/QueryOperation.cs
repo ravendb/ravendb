@@ -21,8 +21,6 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		private readonly string indexName;
 		private readonly IndexQuery indexQuery;
-		private readonly HashSet<KeyValuePair<string, Type>> sortByHints;
-		private readonly Action<string, string> setOperationHeaders;
 		private readonly bool waitForNonStaleResults;
 		private bool disableEntitiesTracking;
 		private readonly TimeSpan timeout;
@@ -50,15 +48,12 @@ namespace Raven.Client.Document.SessionOperations
 		private Stopwatch sp;
 
 		public QueryOperation(InMemoryDocumentSessionOperations sessionOperations, string indexName, IndexQuery indexQuery,
-		                      string[] projectionFields, HashSet<KeyValuePair<string, Type>> sortByHints,
-		                      bool waitForNonStaleResults, Action<string, string> setOperationHeaders, TimeSpan timeout,
+		                      string[] projectionFields, bool waitForNonStaleResults, TimeSpan timeout,
 		                      Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults,
 		                      HashSet<string> includes, bool disableEntitiesTracking)
 		{
 			this.indexQuery = indexQuery;
-			this.sortByHints = sortByHints;
 			this.waitForNonStaleResults = waitForNonStaleResults;
-			this.setOperationHeaders = setOperationHeaders;
 			this.timeout = timeout;
 			this.transformResults = transformResults;
 			this.includes = includes;
@@ -68,7 +63,6 @@ namespace Raven.Client.Document.SessionOperations
 			this.disableEntitiesTracking = disableEntitiesTracking;
 
 			AssertNotQueryById();
-			AddOperationHeaders();
 		}
 
 		private static readonly Regex idOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $",
@@ -283,23 +277,6 @@ namespace Raven.Client.Document.SessionOperations
 			log.Debug("Query returned {0}/{1} {2}results", result.Results.Count,
 											  result.TotalResults, result.IsStale ? "stale " : "");
 			return true;
-		}
-
-		private void AddOperationHeaders()
-		{
-		    if (setOperationHeaders == null)
-		        return;
-
-			foreach (var sortByHint in sortByHints)
-			{
-				if (sortByHint.Value == null)
-					continue;
-
-			    var nonNullableType = (Nullable.GetUnderlyingType(sortByHint.Value) ?? sortByHint.Value);
-			    setOperationHeaders(
-					string.Format("SortHint-{0}", Uri.EscapeDataString(sortByHint.Key.Trim('-'))),
-                    sessionOperations.Conventions.GetDefaultSortOption(nonNullableType.Name).ToString());
-			}
 		}
 	}
 }

@@ -8,5 +8,6 @@ namespace Raven.Database.Indexing
 	public interface IIndexExtension : IDisposable
 	{
 		void OnDocumentsIndexed(IEnumerable<Document> documents, Analyzer searchAnalyzer);
+		string Name { get; }
 	}
 }

@@ -8,6 +8,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Raven.Database.Extensions;
@@ -61,6 +62,8 @@ namespace Raven.Database.Counters
 
             metricsCounters = new CountersMetricsManager();
 			transportState = recievedTransportState ?? new TransportState();
+			Configuration = configuration;
+			ExtensionsState = new AtomicDictionary<object>();
             Initialize();
 		}
 
@@ -74,8 +77,11 @@ namespace Raven.Database.Counters
 		{
 			get { return transportState; }
 		}
+		public AtomicDictionary<object> ExtensionsState { get; private set; }
 
-	    public CounterStorageStats CreateStats()
+		public InMemoryRavenConfiguration Configuration { get; private set; }
+
+		public CounterStorageStats CreateStats()
 	    {
 	        using (var reader = CreateReader())
 	        {
@@ -211,19 +217,19 @@ namespace Raven.Database.Counters
                 ReplicationTask.StartReplication();
 			}
 		}
-
+        
 		private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
 		{
 			bool allowIncrementalBackupsSetting;
-			if (bool.TryParse(settings["Raven/Voron/AllowIncrementalBackups"] ?? "false", out allowIncrementalBackupsSetting) == false)
-				throw new ArgumentException("Raven/Voron/AllowIncrementalBackups settings key contains invalid value");
+            if (bool.TryParse(settings[Constants.Voron.AllowIncrementalBackups] ?? "false", out allowIncrementalBackupsSetting) == false)
+				throw new ArgumentException(Constants.Voron.AllowIncrementalBackups + " settings key contains invalid value");
 
 			var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
 			var filePathFolder = new DirectoryInfo(directoryPath);
 			if (filePathFolder.Exists == false)
 				filePathFolder.Create();
 
-			var tempPath = settings["Raven/Voron/TempPath"];
+            var tempPath = settings[Constants.Voron.TempPath];
 			var journalPath = settings[Constants.RavenTxJournalPath];
 			var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
 			options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;

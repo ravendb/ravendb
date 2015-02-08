@@ -1,19 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Web.Http;
+
+using Raven.Abstractions;
 using Raven.Database.Server.Controllers;
+using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
     public class CounterStorageController : RavenDbApiController
     {
-        [Route("counterStorage/conterStorages")]
+		[RavenRoute("counterStorage/conterStorages")]
         [HttpGet]
         public HttpResponseMessage GetCounterStoragesNames()
         {
@@ -21,7 +21,7 @@ namespace Raven.Database.Counters.Controllers
             return GetMessageWithObject(names);
         }
 
-		[Route("counterStorage/stats")]
+		[RavenRoute("counterStorage/stats")]
 		[HttpGet]
 		public HttpResponseMessage GetCounterStoragesStats()
 		{
