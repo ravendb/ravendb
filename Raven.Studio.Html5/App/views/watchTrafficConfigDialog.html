@@ -28,8 +28,8 @@
                                 </label>
                             </div>
                             <div class="col-sm-9">
-                                <input id="watchedResource" placeholder="Database or FileSystem name" type="text" class="form-control"
-                                       data-bind="enable:watchedResourceMode()=='SingleResourceView', customValidity: nameCustomValidityError, value: resourceName, valueUpdate: 'afterkeydown'" autocomplete="off" />
+                                <input id="watchedResource" placeholder="Database or File System name" type="text" class="form-control"
+                                       data-bind="enable: watchedResourceMode()=='SingleResourceView', customValidity: nameCustomValidityError, value: resourceName, valueUpdate: 'afterkeydown'" autocomplete="off" />
                                 <ul class="dropdown-menu"  role="menu" style="display: none;"
                                     data-bind="autoComplete: '#watchedResource', foreach: resourceAutocompletes">
                                     <li role="presentation" data-bind="click:function(){$root.resourceName($data); }">

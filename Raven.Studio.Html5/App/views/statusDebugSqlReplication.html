@@ -1,4 +1,8 @@
 ﻿<section>
+    <div data-bind="visible: !data() || data().length == 0" class="text-center">
+        <h4 class="page-header text-info">No SQL Replication debug info to display!</h4>
+    </div>
+
     <div id="sqlReplicationStats" class="panel-group" data-bind="foreach: data">
         <div class="sqlStatsPanel panel panel-default">
             <div class="panel-heading">

@@ -50,9 +50,11 @@ class databaseAccess {
         this.readOnly(dto.ReadOnly);
         this.tenantId(dto.TenantId != null ? dto.TenantId : '');
 
-        this.resourceNames = ko.computed(() => 
-            shell.databases().map((db: database) => db.name)
-            .concat(shell.fileSystems().map(fs => fs.name)).concat("*"));
+        this.resourceNames = ko.computed(() => {
+            var allResourceNames = shell.databases().map((db: database) => db.name)
+                .concat(shell.fileSystems().map(fs => fs.name)).concat("*");
+            return allResourceNames.filter((x, i, c) => c.indexOf(x) == i);
+        });
 
         this.searchResults = ko.computed(() => {
             var newResourceName: string = this.tenantId();
