@@ -415,7 +415,7 @@ task UpdateLiveTest {
 
 	Remove-Item "C:\Sites\RavenDB 3\Web\bin" -Force -Recurse -ErrorAction SilentlyContinue
 	mkdir "C:\Sites\RavenDB 3\Web\bin" -ErrorAction SilentlyContinue
-	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB 3\Web\bin" -Recurse -ErrorAction SilentlyContinue
+	Copy-Item "$build_dir\Output\Web\bin" "C:\Sites\RavenDB 3\Web\" -Recurse -ErrorAction SilentlyContinue
 
 	Remove-Item "$build_dir\Output\Web\app_offline.htm"
 }
