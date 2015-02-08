@@ -168,7 +168,7 @@ namespace Raven.Database.Server.Security.Windows
 			var dbUsersIsAllowedAccessTo = requiredUsers
 				.Where(data => controller.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
 				.SelectMany(source => source.Databases)
-				.Concat(requiredGroups.Where(data => controller.User.IsInRole(data.Name)).SelectMany(x => x.Databases))
+				.Concat(requiredGroups.Where(windowsGroup => controller.User.IsInRole(windowsGroup.Name)).SelectMany(x => x.Databases))
 				.ToList();
 
             var user = UpdateUserPrincipal(controller, dbUsersIsAllowedAccessTo);
