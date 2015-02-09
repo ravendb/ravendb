@@ -16,6 +16,7 @@ using Microsoft.Isam.Esent.Interop;
 using Mono.CSharp;
 
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Plugins;
@@ -32,6 +33,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 {
     public class StorageActionsAccessor : IStorageActionsAccessor
     {
+	    private static ILog log = LogManager.GetCurrentClassLogger();
 		private readonly JET_DBID database;
 		private readonly Session session;
 		private readonly TableColumnsCache tableColumnsCache;
@@ -56,9 +58,17 @@ namespace Raven.Database.FileSystem.Storage.Esent
 				transaction = new Transaction(session);
 				Api.JetOpenDatabase(session, databaseName, null, out database, OpenDatabaseGrbit.None);
 			}
-			catch (Exception)
+			catch (Exception original)
 			{
-				Dispose();
+				log.WarnException("Could not create accessor", original);
+				try
+				{
+					Dispose();
+				}
+				catch (Exception e)
+				{
+					log.WarnException("Could not properly dispose accessor after exception in ctor.", e);
+				}
 				throw;
 			}
 		}
@@ -110,7 +120,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 				usage.Dispose();
 			if (files != null)
 				files.Dispose();
-			if (Equals(database, JET_DBID.Nil) == false)
+			if (Equals(database, JET_DBID.Nil) == false && session != null)
 				Api.JetCloseDatabase(session, database, CloseDatabaseGrbit.None);
 			if (transaction != null)
 				transaction.Dispose();

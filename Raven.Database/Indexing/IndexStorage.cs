@@ -1134,9 +1134,12 @@ namespace Raven.Database.Indexing
 					if (viewGenerator == null)
 						return;
 
-					var collectionNames = viewGenerator.ForEntityNames.ToList();
-					var lastIndexedEtag = actions.Indexing.GetIndexStats(indexId).LastIndexedEtag;
+					var indexStats = actions.Indexing.GetIndexStats(indexId);
+					if (indexStats == null)
+						return;
 
+					var lastIndexedEtag = indexStats.LastIndexedEtag;
+					var collectionNames = viewGenerator.ForEntityNames.ToList();
 					if (lastCollectionEtags.HasEtagGreaterThan(collectionNames, lastIndexedEtag) == false)
 						isStale = false;
 				}

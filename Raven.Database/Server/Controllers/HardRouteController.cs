@@ -5,7 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Policy;
 using System.Web.Http;
-
+using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
@@ -24,7 +24,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var msg = new HttpResponseMessage
 			{
-				Content = new StringContent(@"<?xml version='1.0' encoding='utf-8'?>
+                Content = new MultiGetSafeStringContent(@"<?xml version='1.0' encoding='utf-8'?>
 <access-policy>
  <cross-domain-access>
    <policy>

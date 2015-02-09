@@ -313,7 +313,7 @@ namespace Raven.Database.FileSystem.Controllers
 		protected HttpResponseException BadRequestException(string message)
 		{
 			return
-				new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest) {Content = new StringContent(message)});
+                new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new MultiGetSafeStringContent(message) });
 		}
 
 		protected HttpResponseException ConcurrencyResponseException(ConcurrencyException concurrencyException)

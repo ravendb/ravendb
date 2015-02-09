@@ -1,5 +1,9 @@
 ﻿<section>
     <form class="form-horizontal" role="form">
+        <div data-bind="visible: !data() || data().length == 0" class="text-center">
+            <h4 class="page-header text-info">No Tasks debug info to display!</h4>
+        </div>
+
         <!-- ko foreach: data -->
         <div class="form-group">
             <label class="col-md-4 control-label">Id</label>

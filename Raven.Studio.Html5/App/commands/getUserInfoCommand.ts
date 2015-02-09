@@ -3,7 +3,7 @@ import database = require("models/database");
 
 class getUserInfoCommand extends commandBase {
 
-    constructor(private db: database) {
+    constructor(private db: database = null) {
         super();
     }
 

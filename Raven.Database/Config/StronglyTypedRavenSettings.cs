@@ -133,6 +133,8 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/HostName"], (string)null);
 			Port =
 				new StringSetting(settings["Raven/Port"], "*");
+			ExposeConfigOverTheWire =
+				new StringSetting(settings[Constants.ExposeConfigOverTheWire], "Open");
 			HttpCompression =
 				new BooleanSetting(settings["Raven/HttpCompression"], true);
 			AccessControlAllowOrigin =
@@ -233,7 +235,7 @@ namespace Raven.Database.Config
 			TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
 		}
 
-	    private string GetDefaultWebDir()
+		private string GetDefaultWebDir()
 		{
 			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Raven/WebUI");
 		}
@@ -316,6 +318,8 @@ namespace Raven.Database.Config
 		public StringSetting HostName { get; private set; }
 
 		public StringSetting Port { get; private set; }
+
+		public StringSetting ExposeConfigOverTheWire { get; set; }
 
 		public BooleanSetting HttpCompression { get; private set; }
 
@@ -448,6 +452,4 @@ namespace Raven.Database.Config
 			public BooleanSetting UseSsl { get; set; }
 		}
 	}
-
-
 }

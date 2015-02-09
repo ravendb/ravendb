@@ -66,6 +66,7 @@
     <TypeScriptCompile Include="App\commands\getIndexesDefinitionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexMergeSuggestionsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getServerConfigsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\getOperationStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLatestServerBuildVersionCommand.ts" />
@@ -138,6 +139,8 @@
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
+    <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
     <TypeScriptCompile Include="App\models\license.ts" />
     <TypeScriptCompile Include="App\models\databaseCollectionStyleMap.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
@@ -350,6 +353,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemRevisionsCommand.ts" />
     <Content Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getPendingIndexReplacementsCommand.ts" />
     <TypeScriptCompile Include="App\commands\evalByQueryCommand.ts" />

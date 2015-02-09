@@ -288,7 +288,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 								var deletedDocs = deletedDocsByConfig[replicationConfig];
 								var docsToReplicate = itemsToReplicate
-									.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
+									.Where(x => lastReplicatedEtag.CompareTo(x.Etag) < 0) // haven't replicate the etag yet
 									.Where(document =>
 									{
 										var info = Database.Documents.GetRecentTouchesFor(document.Key);
@@ -606,10 +606,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
 						return result;
 					}
-					catch (Exception e)
+					catch (Exception diffExceptionName)
 					{
-						replicationStats.RecordScriptError(Database, e);
-						log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + replicatedDoc.Key, e);
+						replicationStats.RecordScriptError(Database, diffExceptionName);
+						log.WarnException("Could not process SQL Replication script for " + cfg.Name + ", skipping document: " + replicatedDoc.Key, diffExceptionName);
 					}
 				}
 			}
@@ -653,7 +653,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				var scriptResult = ApplyConversionScript(sqlReplication, docs, stats);
 
 				var connectionsDoc = Database.Documents.Get(ConnectionsDocumentName, null);
-				var sqlReplicationConnections = connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>();
+				var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections();
 
 				if (PrepareSqlReplicationConfig(sqlReplication, sqlReplication.Name, stats, sqlReplicationConnections, false, false))
 				{

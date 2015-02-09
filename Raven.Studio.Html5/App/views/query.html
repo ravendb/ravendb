@@ -47,6 +47,10 @@
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
             <button class="btn btn-primary" title="Run the query (Alt+R)" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
+            <button class="btn btn-default" title="Toggle cache enabled" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable">
+                <!--Cache <i class="fa" data-bind="css: { 'fa-lock': !isCacheDisable(), 'fa-unlock': isCacheDisable() }, title: { }"></i>-->
+                <span data-bind="text: isCacheDisable()?'Enable cache':'Disable cache'"></span>
+            </button>
             <div class="btn-group">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-trigger="hover" data-placement="bottom" data-bind="enable: hasSelectedIndex">
                     <i class="fa fa-plus"></i> Add <span class="caret"></span>
@@ -143,7 +147,7 @@
                     Query
                     <i class="fa fa-info-circle text-info"></i>
                 </span>
-                <a target="_blank" class="control-label-additional-link" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
+                <a target="_blank" class="label control-label-additional-link" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
             </label>
             <div class="col-md-11">
                 <div class="row">
@@ -252,7 +256,7 @@
                 </label>
                 <div class="col-md-11 query-results">
                     <div id="queryResultsPanel" class="panel panel-default">
-                        <div class="panel-body" data-bind="visible:isLoading() === true">
+                        <div class="panel-body" data-bind="visible: isLoading">
                             <span>Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
                         </div>
                         <div class="panel-body">

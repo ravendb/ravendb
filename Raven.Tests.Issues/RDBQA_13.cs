@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Database.Server.WebApi;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 
@@ -19,7 +20,7 @@ namespace Raven.Tests.Issues
 
         public static Task<HttpResponseMessage> PatchAsJsonAsync(HttpClient client, string requestUri, string value)
         {
-            var content = new StringContent(value);
+            var content = new MultiGetSafeStringContent(value);
             var request = new HttpRequestMessage(new HttpMethod("PATCH"), requestUri) { Content = content };
 
             return client.SendAsync(request);

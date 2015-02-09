@@ -1,13 +1,10 @@
 ﻿using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Commercial;
 using Raven.Database.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
@@ -85,7 +82,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			json.Remove("Id");
 
 			var metadata = (etag != null) ? ReadInnerHeaders.FilterHeadersToObject() : new RavenJObject();
-			var docKey = "Raven/Databases/" + id;
+			var docKey = Constants.RavenDatabasesPrefix + id;
 			var putResult = Database.Documents.Put(docKey, etag, json, metadata, null);
 
 			return (etag == null) ? GetEmptyMessage() : GetMessageWithObject(putResult);

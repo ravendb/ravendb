@@ -3,7 +3,6 @@ import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 
-
 class statusDebugTasks extends viewModelBase {
     data = ko.observable<taskMetadataDto[]>();
 

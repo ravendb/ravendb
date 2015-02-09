@@ -7,8 +7,7 @@ import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMet
 import explainReplicationCommand = require("commands/explainReplicationCommand");
 
 class statusDebugExplainReplication extends viewModelBase {
-
-    destinations = ko.observable<replicationDestinationDto[]>();
+    destinations = ko.observable<replicationDestinationDto[]>([]);
     selectedDestination = ko.observable<replicationDestinationDto>();
     documentId = ko.observable<string>();
     documentIdSearchResults = ko.observableArray<string>();
@@ -26,8 +25,7 @@ class statusDebugExplainReplication extends viewModelBase {
         var deferred = $.Deferred();
 
         $.when(this.fetchReplicationDestinations())
-            .done(() => deferred.resolve({ can: true }))
-            .fail(() => deferred.resolve({ can: false }));
+            .always(() => deferred.resolve({ can: true }));
 
         return deferred;
     }
@@ -37,13 +35,10 @@ class statusDebugExplainReplication extends viewModelBase {
         this.updateHelpLink('JHZ574');
     }
 
-    fetchReplicationDestinations() {
+    private fetchReplicationDestinations() {
         return new getReplicationsCommand(this.activeDatabase())
             .execute()
-            .done((destinations: replicationsDto) => {
-                this.destinations(destinations.Destinations);
-            });
-        return true;
+            .done((destinations: replicationsDto) => this.destinations(destinations.Destinations));
     }
 
     buttonEnabled = ko.computed(() => {

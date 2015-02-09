@@ -9,22 +9,18 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using ICSharpCode.NRefactory.CSharp;
-
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Database.Bundles.SqlReplication;
-using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
-using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -102,7 +98,7 @@ namespace Raven.Database.Server.Controllers
             var sqlReplicationTask = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
             if (sqlReplicationTask == null)
             {
-                return GetMessageWithString("Unable to find sql replication task. Maybe it is not enabled?", HttpStatusCode.BadRequest);
+                return GetMessageWithString("Unable to find SQL Replication task. Maybe it is not enabled?", HttpStatusCode.BadRequest);
             }
 
             var stats = from nameAndStatsManager in sqlReplicationTask.SqlReplicationMetricsCounters
@@ -223,7 +219,7 @@ namespace Raven.Database.Server.Controllers
 					var msg = sw.GetStringBuilder().ToString();
 					return new HttpResponseMessage(HttpStatusCode.OK)
 					{
-						Content = new StringContent(msg)
+                        Content = new MultiGetSafeStringContent(msg)
 						{
 							Headers =
 							{
@@ -317,6 +313,11 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/debug/config")]
 		public HttpResponseMessage Config()
 		{
+			if (CanExposeConfigOverTheWire() == false)
+			{
+				return GetEmptyMessage(HttpStatusCode.Forbidden);
+			}
+
 			return GetMessageWithObject(DebugInfoProvider.GetConfigForDebug(Database));
 		}
 
@@ -462,90 +463,8 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/debug/user-info")]
 		public HttpResponseMessage UserInfo()
 		{
-			var principal = User;
-			if (principal == null || principal.Identity == null || principal.Identity.IsAuthenticated == false)
-			{
-				var anonymous = new UserInfo
-				{
-					Remark = "Using anonymous user",
-					IsAdminGlobal = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
-				};
-				return GetMessageWithObject(anonymous);
-			}
-
-			var windowsPrincipal = principal as WindowsPrincipal;
-			if (windowsPrincipal != null)
-			{
-				var windowsUser = new UserInfo
-				{
-					Remark = "Using windows auth",
-					User = windowsPrincipal.Identity.Name,
-					IsAdminGlobal = windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
-				};
-
-				windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Database);
-
-				return GetMessageWithObject(windowsUser);
-			}
-
-			var principalWithDatabaseAccess = principal as PrincipalWithDatabaseAccess;
-			if (principalWithDatabaseAccess != null)
-			{
-				var windowsUserWithDatabase = new UserInfo
-				{
-					Remark = "Using windows auth",
-					User = principalWithDatabaseAccess.Identity.Name,
-					IsAdminGlobal =
-						principalWithDatabaseAccess.IsAdministrator(
-							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
-					IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),
-					Databases =
-						principalWithDatabaseAccess.AdminDatabases.Concat(
-							principalWithDatabaseAccess.ReadOnlyDatabases)
-												   .Concat(principalWithDatabaseAccess.ReadWriteDatabases)
-												   .Select(db => new DatabaseInfo
-												   {
-													   Database = db,
-													   IsAdmin = principal.IsAdministrator(db)
-												   }).ToList(),
-					AdminDatabases = principalWithDatabaseAccess.AdminDatabases,
-					ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
-					ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
-				};
-
-				windowsUserWithDatabase.IsAdminCurrentDb = windowsUserWithDatabase.IsAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Database);
-
-				return GetMessageWithObject(windowsUserWithDatabase);
-			}
-
-			var oAuthPrincipal = principal as OAuthPrincipal;
-			if (oAuthPrincipal != null)
-			{
-				var oAuth = new UserInfo
-				{
-					Remark = "Using OAuth",
-					User = oAuthPrincipal.Name,
-					IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
-					IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Database),
-					Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
-											  .Select(db => new DatabaseInfo
-											  {
-												  Database = db.TenantId,
-												  IsAdmin = principal.IsAdministrator(db.TenantId)
-											  }).ToList(),
-					AccessTokenBody = oAuthPrincipal.TokenBody,
-				};
-
-				return GetMessageWithObject(oAuth);
-			}
-
-			var unknown = new UserInfo
-			{
-				Remark = "Unknown auth",
-				Principal = principal
-			};
-
-			return GetMessageWithObject(unknown);
+			var userInfo = GetUserInfo();
+			return GetMessageWithObject(userInfo);
 		}
 
 		[HttpGet]
@@ -628,6 +547,11 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("databases/{databaseName}/debug/request-tracing")]
 		public HttpResponseMessage RequestTracing()
 		{
+			if (CanExposeConfigOverTheWire() == false)
+			{
+				return GetEmptyMessage(HttpStatusCode.Forbidden);
+			}
+
 			return GetMessageWithObject(DebugInfoProvider.GetRequestTrackingForDebug(RequestManager, DatabaseName));
 		}
 
@@ -655,6 +579,11 @@ namespace Raven.Database.Server.Controllers
 		[RavenRoute("debug/info-package")]
 		public HttpResponseMessage InfoPackage()
 		{
+			if (CanExposeConfigOverTheWire() == false)
+			{
+				return GetEmptyMessage(HttpStatusCode.Forbidden);
+			}
+
 			var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 			try
 			{

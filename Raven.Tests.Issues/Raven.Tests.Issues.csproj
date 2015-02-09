@@ -346,6 +346,7 @@
     <Compile Include="RavenDB_3117.cs" />
     <Compile Include="RavenDB_3145.cs" />
     <Compile Include="RavenDB_3166.cs" />
+    <Compile Include="RavenDB_3193.cs" />
     <Compile Include="Ravendb_334.cs" />
     <Compile Include="RavenDB_349.cs" />
     <Compile Include="RavenDB_367.cs" />
@@ -444,7 +445,7 @@
       <Name>Raven.Smuggler</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Bundles\Raven.Tests.Bundles.csproj">
-      <Project>{83ab5b46-5502-40dd-ba5f-83499f19b953}</Project>
+      <Project>{83AB5B46-5502-40DD-BA5F-83499F19B953}</Project>
       <Name>Raven.Tests.Bundles</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">

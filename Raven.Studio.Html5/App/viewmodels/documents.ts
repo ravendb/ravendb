@@ -37,6 +37,7 @@ class documents extends viewModelBase {
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
     currentCustomFunctions = ko.observable<customFunctions>(customFunctions.empty());
     selectedDocumentIndices = ko.observableArray<number>();
+    selectedDocumentsText: KnockoutComputed<string>;
     hasDocuments: KnockoutComputed<boolean>;
     contextName = ko.observable<string>('');
     currentCollection = ko.observable<collection>();
@@ -103,6 +104,17 @@ class documents extends viewModelBase {
             }
             return null;
         });
+
+        this.selectedDocumentsText = ko.computed(() => {
+            if (!!this.selectedDocumentIndices()) {
+                var documentsText = "document";
+                if (this.selectedDocumentIndices().length != 1) {
+                    documentsText += "s";
+                }
+                return documentsText;
+            }
+            return "";
+        });
     }
 
     activate(args) {
@@ -129,8 +141,8 @@ class documents extends viewModelBase {
         // A. Because if the focus isn't on the grid, but on the docs page itself, we still need to catch the shortcuts.
         var docsPageSelector = ".documents-page";
         this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
-        this.createKeyboardShortcut("Ctrl+C,D", () => this.copySelectedDocs(), docsPageSelector);
-        this.createKeyboardShortcut("Ctrl+C,I", () => this.copySelectedDocIds(), docsPageSelector);
+        this.createKeyboardShortcut("Ctrl+C, D", () => this.copySelectedDocs(), docsPageSelector);
+        this.createKeyboardShortcut("Ctrl+C, I", () => this.copySelectedDocIds(), docsPageSelector);
     }
 
     private fetchAlerts() {

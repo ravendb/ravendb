@@ -332,7 +332,7 @@ namespace Raven.Tests.Issues
 
 				var id = store.Subscriptions.Create(new SubscriptionCriteria
 				{
-					BelongsToCollection = "Users"
+					BelongsToAnyCollection = new [] { "Users" }
 				});
 
 				var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions

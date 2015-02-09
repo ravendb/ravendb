@@ -23,7 +23,7 @@ class getDocumentsByEntityNameCommand extends commandBase {
         var documentsTask = $.Deferred();
         this.query(url, args, this.collection.ownerDatabase, resultsSelector)
 			.fail(response => {
-				if (response.status == 500) {
+				if (response.status == ResponseCodes.InternalServerError) {
 					// old style index, probably, try again without the LastModifiedTicks
 					args.sort = "-LastModified";
 					this.query(url, args, this.collection.ownerDatabase, resultsSelector)
