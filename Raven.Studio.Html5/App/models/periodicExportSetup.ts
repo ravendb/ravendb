@@ -13,6 +13,8 @@ class periodicExportSetup {
 
     mainValueCustomValidity: KnockoutObservable<string>;
 
+    remoteFolderName = ko.observable<string>();
+
     awsAccessKey = ko.observable<string>(); 
     awsSecretKey = ko.observable<string>();
     awsRegionEndpoint = ko.observable<string>();
@@ -200,6 +202,7 @@ class periodicExportSetup {
 
         this.setupTypeAndMainValue(dto);
 
+        this.remoteFolderName(dto.RemoteFolderName);
         var incr = this.prepareBackupInterval(dto.IntervalMilliseconds);
         this.incrementalBackupInterval(incr[0]);
         this.incrementalBackupIntervalUnit(incr[1]);
@@ -218,7 +221,8 @@ class periodicExportSetup {
             S3BucketName: this.prepareMainValue(this.S3_BUCKET),
             AwsRegionEndpoint: this.awsRegionEndpoint(),
             AzureStorageContainer: this.prepareMainValue(this.AZURE_STORAGE),
-            LocalFolderName: this.onDiskExportEnabled()? this.localFolderName() : null,
+            LocalFolderName: this.onDiskExportEnabled() ? this.localFolderName() : null,
+            RemoteFolderName: this.remoteUploadEnabled() ? this.remoteFolderName() : null,
             IntervalMilliseconds: this.convertToMilliseconds(this.incrementalBackupInterval(), this.incrementalBackupIntervalUnit()),
             FullBackupIntervalMilliseconds: this.convertToMilliseconds(this.fullBackupInterval(), this.fullBackupIntervalUnit()),
         };

@@ -22,7 +22,7 @@ namespace Raven.Database.Client.Aws
 		{
 		}
 
-		public string UploadArchive(string glacierVaultName, Stream stream, string archiveDescription, int timeoutInSeconds)
+		public string UploadArchive(string glacierVaultName, string remoteFolderName, Stream stream, string archiveDescription, int timeoutInSeconds)
 		{
 			var url = string.Format("{0}/-/vaults/{1}/archives", GetUrl(null), glacierVaultName);
 

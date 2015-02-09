@@ -402,6 +402,7 @@ interface periodicExportSetupDto {
     AwsRegionEndpoint: string;
     AzureStorageContainer: string;
     LocalFolderName: string;
+    RemoteFolderName: string;
     IntervalMilliseconds: number;
     FullBackupIntervalMilliseconds: number;
 }

@@ -321,7 +321,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 			using (var fileStream = File.OpenRead(backupPath))
 			{
 				var key = Path.GetFileName(backupPath);
-				client.PutObject(localExportConfigs.S3BucketName, key, fileStream, new Dictionary<string, string>
+				client.PutObject(localExportConfigs.S3BucketName, CombinePathAndKey(localExportConfigs.RemoteFolderName, key), fileStream, new Dictionary<string, string>
 			                                                                       {
 				                                                                       { "Description", GetArchiveDescription(isFullBackup) }
 			                                                                       }, 60 * 60);
@@ -341,7 +341,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 			using (var client = new RavenAwsGlacierClient(awsAccessKey, awsSecretKey, localExportConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
 			using (var fileStream = File.OpenRead(backupPath))
 			{
-				var archiveId = client.UploadArchive(localExportConfigs.GlacierVaultName, fileStream, GetArchiveDescription(isFullBackup), 60 * 60);
+				var archiveId = client.UploadArchive(localExportConfigs.GlacierVaultName, localExportConfigs.RemoteFolderName, fileStream, GetArchiveDescription(isFullBackup), 60 * 60);
 				logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath), archiveId));
 			}
 		}
@@ -360,7 +360,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 				using (var fileStream = File.OpenRead(backupPath))
 				{
 					var key = Path.GetFileName(backupPath);
-					client.PutBlob(localExportConfigs.AzureStorageContainer, key, fileStream, new Dictionary<string, string>
+					client.PutBlob(localExportConfigs.AzureStorageContainer, CombinePathAndKey(localExportConfigs.RemoteFolderName, key), fileStream, new Dictionary<string, string>
 																							  {
 																								  { "Description", GetArchiveDescription(isFullBackup) }
 																							  });
@@ -372,6 +372,11 @@ namespace Raven.Database.Bundles.PeriodicExports
 						key));
 				}
 			}
+		}
+
+		private string CombinePathAndKey(string path, string fileName)
+		{
+			return string.IsNullOrEmpty(path) == false ? path + "/" + fileName : fileName;
 		}
 
 		private string GetArchiveDescription(bool isFullBackup)
