@@ -591,35 +591,67 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             int initialDepth = writer.Top;
 
             int index = 0;
-            // note that an error in the IEnumerable won't be caught
-            foreach (object value in values)
+            IEnumerator enumerator;
+            try
             {
-                try
-                {
-                    JsonContract valueContract = contract.FinalItemContract ?? GetContractSafe(value);
+                enumerator = values.GetEnumerator();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Could not get enumerator for property: " + member, e);
+            }
 
-                    if (ShouldWriteReference(value, null, valueContract, contract, member))
+            using ( enumerator as IDisposable)
+            {
+                while (true)
+                {
+                    try
                     {
-                        WriteReference(writer, value);
+                        if (enumerator.MoveNext() == false)
+                            break;
                     }
-                    else
+                    catch (Exception e)
                     {
-                        if (CheckForCircularReference(writer, value, null, valueContract, contract, member))
+                        throw new InvalidOperationException("Could not move to next value for property: " + member, e);
+
+                    }
+                    object value;
+                    try
+                    {
+                        value = enumerator.Current;
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Could not get current value for property: " + member, e);
+
+                    }
+                    try
+                    {
+                        JsonContract valueContract = contract.FinalItemContract ?? GetContractSafe(value);
+
+                        if (ShouldWriteReference(value, null, valueContract, contract, member))
                         {
-                            SerializeValue(writer, value, valueContract, null, contract, member);
+                            WriteReference(writer, value);
+                        }
+                        else
+                        {
+                            if (CheckForCircularReference(writer, value, null, valueContract, contract, member))
+                            {
+                                SerializeValue(writer, value, valueContract, null, contract, member);
+                            }
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    if (IsErrorHandled(underlyingList, contract, index, null, writer.ContainerPath, ex))
-                        HandleError(writer, initialDepth);
-                    else
-                        throw;
-                }
-                finally
-                {
-                    index++;
+                    catch (Exception ex)
+                    {
+                        if (IsErrorHandled(underlyingList, contract, index, null, writer.ContainerPath, ex))
+                            HandleError(writer, initialDepth);
+                        else
+                            throw;
+                    }
+                    finally
+                    {
+                        index++;
+                    }
                 }
             }
 
