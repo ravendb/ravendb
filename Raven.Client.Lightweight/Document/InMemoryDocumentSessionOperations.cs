@@ -539,18 +539,13 @@ more responsive application.
         
 		private void RegisterMissingProperties(object o, string key, object value)
 		{
-            var token = value as JToken;
-            if ( token != null )
+            Dictionary<string, object> dictionary;
+            if (EntityToJson.MissingDictionary.TryGetValue(o, out dictionary) == false)
             {
-                Dictionary<string, JToken> dictionary;
-                if (EntityToJson.MissingDictionary.TryGetValue(o, out dictionary) == false)
-                {
-                    EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, JToken>();
-                }
-
-                dictionary[key] = token;
+                EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, object>();
             }
-            else throw new NotImplementedException();
+
+            dictionary[key] = value;
 		}
 
 		/// <summary>
