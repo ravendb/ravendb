@@ -35,6 +35,7 @@ using System.Globalization;
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 #endif
 
@@ -245,10 +246,12 @@ namespace Raven.Imports.Newtonsoft.Json
 
         /// <summary>
         /// Get or set how strings are escaped when writing JSON text.
-        /// </summary>
+        /// </summary>        
         public StringEscapeHandling StringEscapeHandling
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _stringEscapeHandling; }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
                 _stringEscapeHandling = value;

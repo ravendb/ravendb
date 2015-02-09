@@ -33,6 +33,7 @@ using System.Text;
 using System.IO;
 using System.Xml;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
@@ -709,6 +710,7 @@ namespace Raven.Imports.Newtonsoft.Json
             _writer.Write(ws);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureWriteBuffer()
         {
             if (_writeBuffer == null)
