@@ -4,12 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -153,7 +154,7 @@ namespace Raven.Database.Indexing
 
 			var recoverTunerState = ((IndexBatchSizeAutoTuner)autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(maxIndexOutputsPerDoc, containsMapReduceIndexes);
 
-			BackgroundTaskExecuter.Instance.ExecuteAll(context, groupedIndexes, (indexingGroup, i) =>
+			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, groupedIndexes, indexingGroup =>
 			{
 				context.CancellationToken.ThrowIfCancellationRequested();
 
@@ -424,27 +425,30 @@ namespace Raven.Database.Indexing
 
 			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers, context.Database.InFlightTransactionalState);
 
-			var filteredDocs =
-				BackgroundTaskExecuter.Instance.Apply(context, jsonDocs, doc =>
+			var filteredDocs = new ConcurrentQueue<Tuple<JsonDocument, object>>();
+			//context
+			Parallel.ForEach(jsonDocs.Where(x=>x!= null),
+				new ParallelOptions()
 				{
-					var filteredDoc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
-					return filteredDoc == null ? new
+					MaxDegreeOfParallelism = context.CurrentNumberOfParallelTasks
+				}, doc =>
+				{
+					if (doc != null)
 					{
-						Doc = doc,
-						Json = (object)new FilteredDocument(doc)
-					} : new
-					{
-						Doc = filteredDoc,
-						Json = JsonToExpando.Convert(doc.ToJson())
-					};
+						var filteredDoc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
+						filteredDocs.Enqueue(
+							filteredDoc == null ?
+								Tuple.Create(doc, (object) new FilteredDocument(doc)) :
+								Tuple.Create(filteredDoc, JsonToExpando.Convert(doc.ToJson())));
+					}
 				});
 
 			Log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
 
-			var results = new IndexingBatchForIndex[indexesToWorkOn.Count];
-			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
 
-			BackgroundTaskExecuter.Instance.ExecuteAll(context, indexesToWorkOn, (indexToWorkOn, i) =>
+			var results = new ConcurrentQueue<IndexingBatchForIndex>();
+			var actions = new ConcurrentQueue<Action<IStorageActionsAccessor>>();
+			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn, indexToWorkOn =>
 			{
 				var indexName = indexToWorkOn.Index.PublicName;
 				var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexName);
@@ -453,53 +457,54 @@ namespace Raven.Database.Indexing
 
 				var batch = new IndexingBatch(highestETagInBatch);
 
-				foreach (var item in filteredDocs)
+				foreach (var filteredDoc in filteredDocs)
 				{
-					if (defaultPrefetchingBehavior.FilterDocuments(item.Doc) == false)
+					var doc = filteredDoc.Item1;
+					var json = filteredDoc.Item2;
+					if (defaultPrefetchingBehavior.FilterDocuments(doc) == false)
 						continue;
 
 					// did we already indexed this document in this index?
-					var etag = item.Doc.Etag;
+					var etag = doc.Etag;
 					if (etag == null)
 						continue;
 
 					// is the Raven-Entity-Name a match for the things the index executes on?
 					if (viewGenerator.ForEntityNames.Count != 0 &&
-						viewGenerator.ForEntityNames.Contains(item.Doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
+						viewGenerator.ForEntityNames.Contains(doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
 					{
 						continue;
 					}
 
-					batch.Add(item.Doc, item.Json, defaultPrefetchingBehavior.ShouldSkipDeleteFromIndex(item.Doc));
+					batch.Add(doc, json, defaultPrefetchingBehavior.ShouldSkipDeleteFromIndex(doc));
 
 					if (batch.DateTime == null)
-						batch.DateTime = item.Doc.LastModified;
+						batch.DateTime = doc.LastModified;
 					else
-						batch.DateTime = batch.DateTime > item.Doc.LastModified
-											 ? item.Doc.LastModified
-											 : batch.DateTime;
+						batch.DateTime = batch.DateTime > doc.LastModified
+							? doc.LastModified
+							: batch.DateTime;
 				}
 
 				if (batch.Docs.Count == 0)
 				{
 					Log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName,
-							  lastEtag, lastModified);
+						lastEtag, lastModified);
 					// we use it this way to batch all the updates together
-					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified);
+					actions.Enqueue(accessor => accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified));
 					return;
 				}
 				if (Log.IsDebugEnabled)
 				{
 					Log.Debug("Going to index {0} documents in {1}: ({2})", batch.Ids.Count, indexToWorkOn, string.Join(", ", batch.Ids));
 				}
-				results[i] = new IndexingBatchForIndex
+				results.Enqueue(new IndexingBatchForIndex
 				{
 					Batch = batch,
 					IndexId = indexToWorkOn.IndexId,
-                    Index = indexToWorkOn.Index,
+					Index = indexToWorkOn.Index,
 					LastIndexedEtag = indexToWorkOn.LastIndexedEtag
-				};
-
+				});
 			});
 
 			transactionalStorage.Batch(actionsAccessor =>
