@@ -47,6 +47,34 @@ namespace Raven.Tests.Issues
 			}
 		}
 
+		[Fact(Skip = "Requires Windows Azure Development Storage")]
+		public void PutBlobIntoFolder()
+		{
+			var containerName = "testContainer";
+			var blobKey = "folder1/folder2/testKey";
+
+			using (var client = new RavenAzureClient("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="))
+			{
+				client.PutContainer(containerName);
+				client.PutBlob(containerName, blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
+				                                                                                        {
+					                                                                                        { "property1", "value1" }, 
+																											{ "property2", "value2" }
+				                                                                                        });
+				var blob = client.GetBlob(containerName, blobKey);
+				Assert.NotNull(blob);
+
+				using (var reader = new StreamReader(blob.Data))
+					Assert.Equal("123", reader.ReadToEnd());
+
+				var property1 = blob.Metadata.Keys.Single(x => x.Contains("property1"));
+				var property2 = blob.Metadata.Keys.Single(x => x.Contains("property2"));
+
+				Assert.Equal("value1", blob.Metadata[property1]);
+				Assert.Equal("value2", blob.Metadata[property2]);
+			}
+		}
+
 		[Fact(Skip = "Requires Amazon AWS Credentials")]
 		public void PutObject()
 		{
@@ -81,7 +109,7 @@ namespace Raven.Tests.Issues
 
 			using (var client = new RavenAwsGlacierClient("<aws_access_key>", "<aws_secret_key>", "<aws_region_for_bucket>"))
 			{
-				var archiveId = client.UploadArchive(glacierVaultName, new MemoryStream(Encoding.UTF8.GetBytes("321")), "sample description", 60 * 60);
+				var archiveId = client.UploadArchive(glacierVaultName, null, new MemoryStream(Encoding.UTF8.GetBytes("321")), "sample description", 60 * 60);
 
 				Assert.NotNull(archiveId);
 			}

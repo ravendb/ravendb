@@ -341,7 +341,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 			using (var client = new RavenAwsGlacierClient(awsAccessKey, awsSecretKey, localExportConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
 			using (var fileStream = File.OpenRead(backupPath))
 			{
-				var archiveId = client.UploadArchive(localExportConfigs.GlacierVaultName, localExportConfigs.RemoteFolderName, fileStream, GetArchiveDescription(isFullBackup), 60 * 60);
+				var archiveId = client.UploadArchive(localExportConfigs.GlacierVaultName, fileStream, GetArchiveDescription(isFullBackup), 60 * 60);
 				logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath), archiveId));
 			}
 		}
