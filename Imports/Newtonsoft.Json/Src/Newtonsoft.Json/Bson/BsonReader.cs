@@ -513,6 +513,9 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
                     else
                         SetToken(JsonToken.Float, d);
                     break;
+		        case BsonType.RavenDBCustomFloat:
+                    SetToken(JsonToken.Float, ReadSingle());
+                    break;
                 case BsonType.String:
                 case BsonType.Symbol:
                     SetToken(JsonToken.String, ReadLengthString());
@@ -816,6 +819,13 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
                 int charBufferSize = Encoding.UTF8.GetMaxCharCount(MaxCharBytesSize);
                 _charBuffer = new char[charBufferSize];
             }
+        }
+
+         
+        private float ReadSingle()
+        {
+        	MovePosition(4);
+        	return _reader.ReadSingle();
         }
 
         private double ReadDouble()

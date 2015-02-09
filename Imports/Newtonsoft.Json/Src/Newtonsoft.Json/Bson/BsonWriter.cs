@@ -327,7 +327,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         public override void WriteValue(float value)
         {
             base.WriteValue(value);
-            AddValue(value, BsonType.Number);
+            AddValue(value, BsonType.RavenDBCustomFloat);
         }
 
         /// <summary>
