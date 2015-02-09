@@ -45,6 +45,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         Integer = 16,
         TimeStamp = 17,
         Long = 18,
+        NumberDecimal = 19,
         RavenDBCustomFloat = 30,
         MinKey = -1,
         MaxKey = 127

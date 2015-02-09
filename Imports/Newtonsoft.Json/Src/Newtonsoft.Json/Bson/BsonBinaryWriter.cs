@@ -123,6 +123,12 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
                     _writer.Write(Convert.ToDouble(value.Value, CultureInfo.InvariantCulture));
                 }
                     break;
+                case BsonType.NumberDecimal:
+                {
+                    BsonValue value = (BsonValue)t;
+                    _writer.Write(Convert.ToDecimal(value.Value, CultureInfo.InvariantCulture));
+                }
+                    break;
                 case BsonType.String:
                 {
                     BsonString value = (BsonString)t;
@@ -288,6 +294,8 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
 		            return 4;
                 case BsonType.Number:
                     return 8;
+                case BsonType.NumberDecimal:
+                    return 16;
                 case BsonType.String:
                 {
                     BsonString value = (BsonString)t;

@@ -415,7 +415,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         public override void WriteValue(decimal value)
         {
             base.WriteValue(value);
-            AddValue(value, BsonType.Number);
+            AddValue(value, BsonType.NumberDecimal);
         }
 
         /// <summary>
