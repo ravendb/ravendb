@@ -1321,7 +1321,7 @@ namespace Raven.Imports.Newtonsoft.Json
                     {
                         string number = _stringReference.ToString();
 
-                        if (_floatParseHandling == FloatParseHandling.Decimal)
+                        if (_floatParseHandling == FloatParseHandling.Decimal || _floatParseHandling == FloatParseHandling.DecimalWithNaN)
                         {
                             decimal d;
                             if (decimal.TryParse(number, NumberStyles.Number | NumberStyles.AllowExponent, CultureInfo.InvariantCulture, out d))

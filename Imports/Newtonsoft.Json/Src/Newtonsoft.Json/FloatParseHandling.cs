@@ -38,6 +38,12 @@ namespace Raven.Imports.Newtonsoft.Json
         /// <summary>
         /// Floating point numbers are parsed to <see cref="Decimal"/>.
         /// </summary>
-        Decimal = 1
+        Decimal = 1,
+
+        /// <summary>
+        /// Floating point numbers are parsed to <see cref="Decimal"/>, unless 
+        /// we encounter a NaN
+        /// </summary>
+        DecimalWithNaN = 2
     }
 }
