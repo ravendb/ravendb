@@ -1100,22 +1100,38 @@ namespace Raven.Abstractions.Smuggler
 			{
 				IsTransformersSupported = false;
 				IsDocsStreamingSupported = false;
+				IsIdentitiesSmugglingSupported = false;
                 Operations.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
 				return;
 			}
 
+			if (intServerVersion == 25)
+			{
+				Operations.ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+
+				IsTransformersSupported = true;
+				IsDocsStreamingSupported = true;
+				IsIdentitiesSmugglingSupported = false;
+
+				return;
+			}
+
+
 			IsTransformersSupported = true;
 			IsDocsStreamingSupported = true;
+			IsIdentitiesSmugglingSupported = true;
 		}
 
 		private void SetLegacyMode()
 		{
 			IsTransformersSupported = false;
 			IsDocsStreamingSupported = false;
+			IsIdentitiesSmugglingSupported = false;
 			Operations.ShowProgress("Server version is not available. Running in legacy mode which does not support transformers.");
 		}
 
 		public bool IsTransformersSupported { get; private set; }
 		public bool IsDocsStreamingSupported { get; private set; }
+		public bool IsIdentitiesSmugglingSupported { get; private set; }
 	}
 }
