@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
+using Jint.Runtime;
 
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -116,10 +117,7 @@ namespace Raven.Database.Json
 
 		public JsValue ToJsObject(Engine engine, RavenJObject doc, string propertyName = null)
         {
-            var jsObject = new ObjectInstance(engine)
-                           {
-                               Extensible = true
-                           };
+			var jsObject = engine.Object.Construct(Arguments.Empty);
 
             foreach (var prop in doc)
             {
