@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Database.Json;
 using Raven.Json.Linq;
+
 using Xunit;
 
-namespace Raven.Tests.Bundles.ScriptedIndexResults
+namespace Raven.Tests.Patching
 {
 	public class UseX2JsScript: IDisposable
 	{
