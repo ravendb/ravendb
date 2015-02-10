@@ -451,6 +451,17 @@ namespace Raven.Smuggler
 				       };
 			}
 
+			if (intServerVersion == 25)
+			{
+				ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+				return new ServerSupportedFeatures
+				{
+					IsTransformersSupported = true,
+					IsDocsStreamingSupported = true,
+					IsIdentitiesSmugglingSupported = false,
+				};
+			}
+
 			return new ServerSupportedFeatures
 			       {
 				       IsTransformersSupported = true,

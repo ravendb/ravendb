@@ -34,6 +34,8 @@ namespace Raven.Smuggler
 
 		private readonly Func<bool> isTransformersSupported;
 
+		private Func<bool> isIdentitiesSmugglingSupported;
+
 		const int RetriesCount = 5;
 
 		private DocumentStore Store
@@ -48,16 +50,17 @@ namespace Raven.Smuggler
 
 		private readonly SmugglerJintHelper jintHelper = new SmugglerJintHelper();
 
-		public SmugglerDatabaseOptions Options { get; private set; }
+	    public SmugglerDatabaseOptions Options { get; private set; }
 
 		public bool LastRequestErrored { get; set; }
 
-		public SmugglerRemoteDatabaseOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported)
+		public SmugglerRemoteDatabaseOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported, Func<bool> isIdentitiesSmugglingSupported)
 		{
 			this.store = store;
 			this.operation = operation;
 			this.isDocsStreamingSupported = isDocsStreamingSupported;
 			this.isTransformersSupported = isTransformersSupported;
+			this.isIdentitiesSmugglingSupported = isIdentitiesSmugglingSupported;
 		}
 
         [Obsolete("Use RavenFS instead.")]
@@ -300,6 +303,9 @@ namespace Raven.Smuggler
 
 		public async Task<List<KeyValuePair<string, long>>> GetIdentities()
 		{
+			if (isIdentitiesSmugglingSupported() == false)
+				return new List<KeyValuePair<string, long>>();
+
 			int start = 0;
 			const int pageSize = 1024;
 			long totalIdentitiesCount;
@@ -325,8 +331,11 @@ namespace Raven.Smuggler
 			return identities;
 		}
 
-		public  Task SeedIdentityFor(string identityName, long identityValue)
+		public Task SeedIdentityFor(string identityName, long identityValue)
 		{
+			if (isIdentitiesSmugglingSupported() == false)
+				return new CompletedTask();
+
 			if(identityName != null)
 				return Store.AsyncDatabaseCommands.SeedIdentityForAsync(identityName, identityValue);
 

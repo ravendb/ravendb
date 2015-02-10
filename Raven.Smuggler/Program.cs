@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Runtime.Remoting.Messaging;
 using NDesk.Options;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -208,6 +209,8 @@ namespace Raven.Smuggler
                 {
                     case SmugglerMode.Database:
                         {
+							CallContext.LogicalSetData(Constants.Smuggler.CallContext, true);
+
                             try
                             {
                                 databaseOptionSet.Parse(args);
