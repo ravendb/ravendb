@@ -225,5 +225,10 @@ namespace Raven.Abstractions.Data
             public const string InitialSize = "Raven/Voron/InitialSize";
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
         }
+
+	    public static class Smuggler
+	    {
+		    public const string CallContext = "Raven/Smuggler/CallContext";
+	    }
 	}
 }

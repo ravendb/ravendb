@@ -235,6 +235,7 @@
     <Compile Include="IncludeOnDictionary.cs" />
     <Compile Include="IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
     <Compile Include="IndexesIgnoreNewtonsoftJsonPropertyAttributes.cs" />
+    <Compile Include="IndexMerging.cs" />
     <Compile Include="IndexMetadata.cs" />
     <Compile Include="IndexTest.cs" />
     <Compile Include="IndexTest2.cs" />

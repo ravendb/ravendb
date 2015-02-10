@@ -119,7 +119,7 @@ class synchronizationConflicts extends viewModelBase {
 
                     for (var i = 0; i < this.selectedConflicts().length; i++) {
                         var conflict = this.selectedConflicts()[i];
-                        new resolveConflictCommand(conflict, 1, fs).execute().done(() => {
+                        new resolveConflictCommand(conflict, 2, fs).execute().done(() => {
                             this.selectedConflicts.remove(conflict);
                         });
                     }
@@ -143,7 +143,7 @@ class synchronizationConflicts extends viewModelBase {
 
                     for (var i = 0; i < this.selectedConflicts().length; i++) {
                         var conflict = this.selectedConflicts()[i];
-                        new resolveConflictCommand(conflict, 0, fs).execute();
+                        new resolveConflictCommand(conflict, 1, fs).execute();
                     }
                 });
             app.showDialog(resolveConflictViewModel);

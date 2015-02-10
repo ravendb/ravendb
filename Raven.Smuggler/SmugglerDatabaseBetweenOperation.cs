@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using NDesk.Options;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
@@ -156,15 +158,25 @@ namespace Raven.Smuggler
 				return databaseOptions.BatchSize;
 
 			var url = store.Url.ForDatabase(store.DefaultDatabase) + "/debug/config";
-			using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", store.DatabaseCommands.PrimaryCredentials, store.Conventions)))
+			try
 			{
-				var configuration = (RavenJObject)request.ReadResponseJson();
+				using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", store.DatabaseCommands.PrimaryCredentials, store.Conventions)))
+				{
+					var configuration = (RavenJObject)request.ReadResponseJson();
 
-				var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
-				if (maxNumberOfItemsToProcessInSingleBatch <= 0) 
+					var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
+					if (maxNumberOfItemsToProcessInSingleBatch <= 0) 
+						return databaseOptions.BatchSize;
+
+					return Math.Min(databaseOptions.BatchSize, maxNumberOfItemsToProcessInSingleBatch);
+				}
+			}
+			catch (ErrorResponseException e)
+			{
+				if (e.StatusCode == HttpStatusCode.Forbidden) // let it continue with the user defined batch size
 					return databaseOptions.BatchSize;
 
-				return Math.Min(databaseOptions.BatchSize, maxNumberOfItemsToProcessInSingleBatch);
+				throw;
 			}
 		}
 
@@ -449,6 +461,17 @@ namespace Raven.Smuggler
 					       IsDocsStreamingSupported = false,
 						   IsIdentitiesSmugglingSupported = false,
 				       };
+			}
+
+			if (intServerVersion == 25)
+			{
+				ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+				return new ServerSupportedFeatures
+				{
+					IsTransformersSupported = true,
+					IsDocsStreamingSupported = true,
+					IsIdentitiesSmugglingSupported = false,
+				};
 			}
 
 			return new ServerSupportedFeatures
