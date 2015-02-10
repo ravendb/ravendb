@@ -60,11 +60,10 @@ namespace Raven.Client.Document.Batches
 
 		public void HandleResponse(GetResponse response)
 		{
-			if (response.Status != 200 && response.Status != 304)
-			{
-				throw new InvalidOperationException("Got an unexpected response code for the request: " + response.Status + "\r\n" +
-													response.Result);
-			}
+            if (response.RequestHasErrors())
+            {
+                throw new InvalidOperationException("Got an unexpected response code for the request: " + response.Status + "\r\n" + response.Result);
+            }
 
 			var result = (RavenJObject)response.Result;
 			Result = result.JsonDeserialization<FacetResults>();
