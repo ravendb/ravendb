@@ -63,7 +63,7 @@ namespace Raven.Database.Counters.Controllers
 				if (wroteCounter || writer.GetLastEtagFor(serverId) < lastEtag)
                 {
 					//TODO: fix this
-					writer.RecordLastEtagFor(serverId, serverId, lastEtag);
+					writer.RecordLastEtagFor(serverId, lastEtag);
                     writer.Commit();
                 }
 

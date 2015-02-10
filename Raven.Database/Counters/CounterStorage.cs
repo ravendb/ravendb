@@ -38,7 +38,7 @@ namespace Raven.Database.Counters
 
 		private long lastEtag;
 
-		private string ServerId { get; set; }
+		public string ServerId { get; set; }
 
 		public event Action CounterUpdated = () => { };
 
