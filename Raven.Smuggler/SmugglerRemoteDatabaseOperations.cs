@@ -7,8 +7,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -288,16 +289,26 @@ namespace Raven.Smuggler
 				return;
 
 			var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/config";
-			using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
+			try
 			{
-				var configuration = (RavenJObject)request.ReadResponseJson();
+				using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
+				{
+					var configuration = (RavenJObject)request.ReadResponseJson();
 
-				var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
-				if (maxNumberOfItemsToProcessInSingleBatch <= 0) 
+					var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
+					if (maxNumberOfItemsToProcessInSingleBatch <= 0) 
+						return;
+
+					var current = databaseOptions.BatchSize;
+					databaseOptions.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
+				}
+			}
+			catch (ErrorResponseException e)
+			{
+				if (e.StatusCode == HttpStatusCode.Forbidden) // let it continue with the user defined batch size
 					return;
 
-				var current = databaseOptions.BatchSize;
-				databaseOptions.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
+				throw;
 			}
 		}
 
