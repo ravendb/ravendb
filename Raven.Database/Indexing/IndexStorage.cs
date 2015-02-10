@@ -1225,6 +1225,9 @@ namespace Raven.Database.Indexing
 							 CreationDate = stats.CreatedTimestamp
 						 }).ToArray();
 
+				var timeToWaitBeforeMarkingAutoIndexAsIdle = documentDatabase.Configuration.TimeToWaitBeforeMarkingAutoIndexAsIdle;
+				var timeToWaitForIdleMinutes = timeToWaitBeforeMarkingAutoIndexAsIdle.TotalMinutes * 10;
+				
 				for (var i = 0; i < autoIndexesSortedByLastQueryTime.Length; i++)
 				{
 					var thisItem = autoIndexesSortedByLastQueryTime[i];
@@ -1239,8 +1242,6 @@ namespace Raven.Database.Indexing
 
 					if (thisItem.Priority.HasFlag(IndexingPriority.Normal))
 					{
-						var timeToWaitBeforeMarkingAutoIndexAsIdle = documentDatabase.Configuration.TimeToWaitBeforeMarkingAutoIndexAsIdle;
-						var timeToWaitForIdleMinutes = timeToWaitBeforeMarkingAutoIndexAsIdle.TotalMinutes * 10;
 						if (age < timeToWaitForIdleMinutes)
 						{
 							HandleActiveIndex(thisItem, age, lastQuery, accessor, timeToWaitForIdleMinutes);
