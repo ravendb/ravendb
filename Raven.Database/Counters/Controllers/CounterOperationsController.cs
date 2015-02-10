@@ -239,7 +239,8 @@ namespace Raven.Database.Counters.Controllers
 		{
 			using (var reader = Storage.CreateReader())
 			{
-				var prefix = (inputGroupName == null) ? string.Empty : (inputGroupName + Constants.CountersSeperator);
+				//TODO: implement
+				/*var prefix = (inputGroupName == null) ? string.Empty : (inputGroupName + Constants.CountersSeperator);
 				//todo: get only the counter prefixes: foo/bar/
 				var results = (
 					from fullCounterName in reader.GetFullCounterNames(prefix)
@@ -247,7 +248,7 @@ namespace Raven.Database.Counters.Controllers
 					let counterName = fullCounterName.Split(Constants.CountersSeperator)[1]
 					let counter = reader.GetCounterValuesByPrefix(groupName, counterName)
 					/*let overallTotalPositive = counter.CounterValues.Where(x => x.IsPositive).Sum(x => x.Value)
-					let overallTotalNegative = counter.CounterValues.Where(x => !x.IsPositive).Sum(x => x.Value)*/
+					let overallTotalNegative = counter.CounterValues.Where(x => !x.IsPositive).Sum(x => x.Value)#1#
 					select new CounterView
 					{
 						Name = counterName,
@@ -265,9 +266,10 @@ namespace Raven.Database.Counters.Controllers
 							Negative = s.Negative, 
 							Positive = s.Positive, 
 							Name = CounterStorage.Reader.ServerNameFor(s.SourceId)
-						}).ToList()*/
+						}).ToList()#1#
 					}).ToList();
-				return Request.CreateResponse(HttpStatusCode.OK, results);
+				return Request.CreateResponse(HttpStatusCode.OK, results);*/
+				return Request.CreateResponse(HttpStatusCode.OK);
 			}
 		}
 
@@ -281,7 +283,7 @@ namespace Raven.Database.Counters.Controllers
 				if (countersByPrefix == null)
 					return GetMessageWithObject(new {Message = "Specified counter not found within the specified group"}, HttpStatusCode.NotFound);
 
-				var overallTotal = CounterStorage.CalculateOverallTotal(countersByPrefix);
+				var overallTotal = 0;//CounterStorage.CalculateOverallTotal(countersByPrefix);
 				return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
 			}
         }

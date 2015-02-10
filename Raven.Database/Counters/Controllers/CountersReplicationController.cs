@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -13,13 +12,12 @@ namespace Raven.Database.Counters.Controllers
     {
 		[RavenRoute("cs/{counterStorageName}/lastEtag")]
 		[HttpGet]
-		public HttpResponseMessage GetLastEtag(string serverUrl)
+		public HttpResponseMessage GetLastEtag(string serverId)
 		{
 			using (var reader = Storage.CreateReader())
 			{
-				var sourceId = reader.ServerIdFor(serverUrl);
-				var result = reader.GetServerEtags().FirstOrDefault(x => x.ServerId == sourceId) ?? new CounterStorage.ServerEtag();
-				return Request.CreateResponse(HttpStatusCode.OK, result.Etag);
+				var lastEtag = reader.GetLastEtagFor(serverId);
+				return Request.CreateResponse(HttpStatusCode.OK, lastEtag);
 			}
 		}
 
@@ -61,11 +59,11 @@ namespace Raven.Database.Counters.Controllers
 					writer.Store(counter.FullCounterName, counter.CounterValue);
 	            }
 
-				var sendingServerName = replicationMessage.SendingServerName;
-				if (wroteCounter || writer.GetLastEtagFor(sendingServerName) < lastEtag)
+				var serverId = replicationMessage.SendingServerName;
+				if (wroteCounter || writer.GetLastEtagFor(serverId) < lastEtag)
                 {
 					//TODO: fix this
-					writer.RecordLastEtagFor(sendingServerName, sendingServerName, lastEtag);
+					writer.RecordLastEtagFor(serverId, serverId, lastEtag);
                     writer.Commit();
                 }
 

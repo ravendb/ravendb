@@ -18,6 +18,6 @@ namespace Raven.Database.Counters
 
 		public long Value { get; set; }
 
-		public bool IsPositive { get { return Name[Name.Length - 1] == '+'; }}
+		public bool IsPositive { get { return Name[Name.Length - 1] == ValueSign.Positive; } }
 	}
 }

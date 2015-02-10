@@ -3,6 +3,6 @@
 	public class CounterGroup
 	{
 		public string Name { get; set; }
-		public long NumOfCounters { get; set; }
+		public long Count { get; set; }
 	}
 }

@@ -228,7 +228,6 @@ namespace Raven.Database.Counters
 			private readonly Transaction transaction;
 			private readonly Tree serversLastEtag, counters, countersToEtags, countersGroups, etagsToCounters, metadata;
 			private readonly byte[] serverIdBytes = new byte[16];
-			private readonly byte[] signBytes = new byte[sizeof(char)];
 
 			[CLSCompliant(false)]
 			public Reader(Transaction transaction)
@@ -277,7 +276,7 @@ namespace Raven.Database.Counters
 						yield return new CounterGroup
 						{
 							Name = it.CurrentKey.ToString(),
-							NumOfCounters = it.CreateReaderForCurrent().ReadBigEndianInt64()
+							Count = it.CreateReaderForCurrent().ReadLittleEndianInt64()
 						};
 					} while (it.MoveNext());
 				}
@@ -293,7 +292,6 @@ namespace Raven.Database.Counters
 				{
 					Name = fullCounterName,
 					Value = readResult.Reader.ReadLittleEndianInt64(),
-					
 				};
 			}
 
@@ -388,7 +386,7 @@ namespace Raven.Database.Counters
 			public long GetLastEtagFor(string serverId)
 			{
 				var result = serversLastEtag.Read(serverId);
-				return result != null ? result.Reader.ReadBigEndianInt64() : 0;
+				return result != null ? result.Reader.ReadLittleEndianInt64() : 0;
 			}
 
 			public CounterStorageReplicationDocument GetReplicationData()
@@ -448,9 +446,9 @@ namespace Raven.Database.Counters
 				return reader.GetCounterValuesByPrefix(groupName, counterName);
 			}
 
-			public long GetLastEtagFor(string serverName)
+			public long GetLastEtagFor(string serverId)
 			{
-				return reader.GetLastEtagFor(serverName);
+				return reader.GetLastEtagFor(serverId);
 			}
 
 			public void Store(string groupName, string counterName, long delta)
@@ -467,8 +465,8 @@ namespace Raven.Database.Counters
 
 			public void Store(string fullCounterName, CounterValue counterValue)
 			{
-				var sign = counterValue.IsPositive ? ValueSign.Positive : ValueSign.Negative;
 				var serverId = counterValue.ServerId.ToString();
+				var sign = counterValue.IsPositive ? ValueSign.Positive : ValueSign.Negative;
 				Store(serverId, fullCounterName, sign, counterKey =>
 				{
 					EndianBitConverter.Big.CopyBytes(counterValue.Value, tempThrowawayBuffer, 0);
@@ -477,7 +475,7 @@ namespace Raven.Database.Counters
 			}
 
 			// counter name: foo/bar/
-			private void Store(string serverId, string counterName, string sign, Action<Slice> storeAction)
+			private void Store(string serverId, string counterName, char sign, Action<Slice> storeAction)
 			{
 				var fullCounterNameSize = Encoding.UTF8.GetByteCount(counterName);
 				var requiredBufferSize = fullCounterNameSize + 36 + 2;
@@ -486,10 +484,10 @@ namespace Raven.Database.Counters
 				var sliceWriter = new SliceWriter();
 				sliceWriter.WriteString(counterName);
 				sliceWriter.WriteString(serverId);
-				sliceWriter.WriteString("/");
-				sliceWriter.WriteString(sign);
+				sliceWriter.WriteString(Separator);
+				sliceWriter.WriteBigEndian(sign);
 
-				var endOfGroupNameIndex = counterName.IndexOf('/');
+				var endOfGroupNameIndex = counterName.IndexOf(Separator, StringComparison.InvariantCultureIgnoreCase);
 				if (endOfGroupNameIndex == -1)
 					throw new InvalidOperationException("Could not find group name in counter, no separator");
 
@@ -501,7 +499,6 @@ namespace Raven.Database.Counters
 				}
 
 				//save counter full name and its value into the counters tree
-				
 				storeAction(counterKey);
 
 				var readResult = countersToEtag.Read(counterKey);
@@ -541,7 +538,7 @@ namespace Raven.Database.Counters
 				return counterValuesByPrefix.CounterValues.Sum(x => x.IsPositive ? x.Value : -x.Value);
 			}
 
-			public void RecordLastEtagFor(string serverId, string serverName, long lastEtag)
+			public void RecordLastEtagFor(string serverId, long lastEtag)
 			{
 				//TODO: remove server name
 				serversLastEtag.Add(serverId, EndianBitConverter.Big.GetBytes(lastEtag));
@@ -590,8 +587,10 @@ namespace Raven.Database.Counters
 
 		private static string MergeGroupAndName(string groupName, string counterName)
 		{
-			return String.Concat(groupName, "/", counterName, "/");
+			return String.Concat(groupName, Separator, counterName, Separator);
 		}
+
+		private const string Separator = "/";
 
 		public class ServerEtag
 		{
