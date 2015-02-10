@@ -1225,7 +1225,6 @@ namespace Raven.Database.Indexing
 							 CreationDate = stats.CreatedTimestamp
 						 }).ToArray();
 
-				var idleChecks = 0;
 				for (var i = 0; i < autoIndexesSortedByLastQueryTime.Length; i++)
 				{
 					var thisItem = autoIndexesSortedByLastQueryTime[i];
@@ -1246,7 +1245,7 @@ namespace Raven.Database.Indexing
 						{
 							HandleActiveIndex(thisItem, age, lastQuery, accessor, timeToWaitForIdleMinutes);
 						}
-						else if (++idleChecks < 2)
+						else 
 						{
 							// If it's a fairly established query then we need to determine whether there is any activity currently
 							// If there is activity and this has not been queried against 'recently' it needs idling
