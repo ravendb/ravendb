@@ -43,9 +43,14 @@ namespace Raven.Abstractions.Data
 		public string LocalFolderName { get; set; }
 
 		/// <summary>
-		/// Path to remote folder. The value will be prepended to uploaded key.
+		/// Path to remote azure folder.
 		/// </summary>
-		public string RemoteFolderName { get; set; }
+		public string AzureRemoteFolderName { get; set; }
+
+		/// <summary>
+		/// Path to remote azure folder.
+		/// </summary>
+		public string S3RemoteFolderName { get; set; }
 
 		/// <summary>
 		/// Interval between incremental backups in milliseconds. If set to null or 0 then incremental periodic export will be disabled.

@@ -321,7 +321,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 			using (var fileStream = File.OpenRead(backupPath))
 			{
 				var key = Path.GetFileName(backupPath);
-				client.PutObject(localExportConfigs.S3BucketName, CombinePathAndKey(localExportConfigs.RemoteFolderName, key), fileStream, new Dictionary<string, string>
+				client.PutObject(localExportConfigs.S3BucketName, CombinePathAndKey(localExportConfigs.S3RemoteFolderName, key), fileStream, new Dictionary<string, string>
 			                                                                       {
 				                                                                       { "Description", GetArchiveDescription(isFullBackup) }
 			                                                                       }, 60 * 60);
@@ -360,7 +360,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 				using (var fileStream = File.OpenRead(backupPath))
 				{
 					var key = Path.GetFileName(backupPath);
-					client.PutBlob(localExportConfigs.AzureStorageContainer, CombinePathAndKey(localExportConfigs.RemoteFolderName, key), fileStream, new Dictionary<string, string>
+					client.PutBlob(localExportConfigs.AzureStorageContainer, CombinePathAndKey(localExportConfigs.AzureRemoteFolderName, key), fileStream, new Dictionary<string, string>
 																							  {
 																								  { "Description", GetArchiveDescription(isFullBackup) }
 																							  });

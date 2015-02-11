@@ -109,7 +109,7 @@ namespace Raven.Tests.Issues
 
 			using (var client = new RavenAwsGlacierClient("<aws_access_key>", "<aws_secret_key>", "<aws_region_for_bucket>"))
 			{
-				var archiveId = client.UploadArchive(glacierVaultName, null, new MemoryStream(Encoding.UTF8.GetBytes("321")), "sample description", 60 * 60);
+				var archiveId = client.UploadArchive(glacierVaultName, new MemoryStream(Encoding.UTF8.GetBytes("321")), "sample description", 60 * 60);
 
 				Assert.NotNull(archiveId);
 			}
