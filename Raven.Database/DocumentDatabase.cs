@@ -32,6 +32,7 @@ using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
+using Raven.Database.Impl.BackgroundTaskExecuter;
 using Raven.Database.Impl.DTC;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
@@ -88,6 +89,8 @@ namespace Raven.Database
 
 		private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
 
+		private readonly CancellationTokenSource _tpCts = new CancellationTokenSource();
+
 		public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState recievedTransportState = null)
 		{
 			TimerManager = new ResourceTimerManager();
@@ -96,7 +99,7 @@ namespace Raven.Database
 			Configuration = configuration;
 			transportState = recievedTransportState ?? new TransportState();
 			ExtensionsState = new AtomicDictionary<object>();
-
+			
 			using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
 			{
 				Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
@@ -145,6 +148,15 @@ namespace Raven.Database
 				{
 					TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
 
+					MappingThreadPool = new RavenThreadPool(configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Map Thread Pool", new[]
+					{
+						new Action(()=> indexingExecuter.Execute())
+					});
+					ReducingThreadPool = new RavenThreadPool(configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
+					{
+						new Action(()=>ReducingExecuter.Execute())
+					});
+					
 					// Index codecs must be initialized before we try to read an index
 					InitializeIndexCodecTriggers();
 					initializer.InitializeIndexStorage();
@@ -174,6 +186,9 @@ namespace Raven.Database
 					SecondStageInitialization();
 					ExecuteStartupTasks();
 					lastCollectionEtags.InitializeBasedOnIndexingResults();
+					ReducingExecuter = new ReducingExecuter(workContext, IndexReplacer);
+
+					
 
 					Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
 				}
@@ -661,6 +676,7 @@ namespace Raven.Database
 			Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
 
 			EventHandler onDisposing = Disposing;
+			_tpCts.Cancel();
 			if (onDisposing != null)
 			{
 				try
@@ -873,6 +889,9 @@ namespace Raven.Database
 			}
 		}
 
+		public readonly RavenThreadPool MappingThreadPool;
+		public readonly RavenThreadPool ReducingThreadPool;
+
 		public void SpinBackgroundWorkers()
 		{
 			if (backgroundWorkersSpun)
@@ -887,13 +906,12 @@ namespace Raven.Database
 			backgroundWorkersSpun = true;
 
 			workContext.StartWork();
-			indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 
-			ReducingExecuter = new ReducingExecuter(workContext, IndexReplacer);
+			MappingThreadPool.Start();
+			ReducingThreadPool.Start();
 
-			reducingBackgroundTask = Task.Factory.StartNew(ReducingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
-
+		
 		public void StopBackgroundWorkers()
 		{
 			workContext.StopWork();

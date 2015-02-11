@@ -625,6 +625,30 @@ namespace Raven.Database.Server.Controllers
 				PreparedTransactions = Database.TransactionalStorage.GetPreparedTransactions()
 			});
 		}
+
+		[HttpGet]
+		[RavenRoute("databases/{databaseName}/debug/thread-pool")]
+		[RavenRoute("debug/thread-pool")]
+		public HttpResponseMessage ThreadPool()
+		{
+			return GetMessageWithObject(new[]
+			{
+				new
+				{
+					Database.MappingThreadPool.Name,
+					WaitingTasks = Database.MappingThreadPool.GetAllWaitingTasks().Select(x => x.Description),
+					RunningTasks = Database.MappingThreadPool.GetRunningTasks().Select(x => x.Description),
+					ThreadPoolStats = Database.MappingThreadPool.GetThreadPoolStats()
+				},
+				new
+				{
+					Database.MappingThreadPool.Name,
+					WaitingTasks = Database.ReducingThreadPool.GetAllWaitingTasks().Select(x => x.Description),
+					RunningTasks = Database.ReducingThreadPool.GetRunningTasks().Select(x => x.Description),
+					ThreadPoolStats = Database.ReducingThreadPool.GetThreadPoolStats()
+				}
+			});
+		}
 	}
 
 	public class RouteInfo

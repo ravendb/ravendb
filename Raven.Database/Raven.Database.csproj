@@ -248,7 +248,7 @@
     <Compile Include="FileSystem\Plugins\TriggerExtensions.cs" />
     <Compile Include="Impl\BackgroundTaskExecuter\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Impl\BackgroundTaskExecuter\IBackgroundTaskExecuter.cs" />
-    <Compile Include="Impl\BackgroundTaskExecuter\RavenThreadPull.cs" />
+    <Compile Include="Impl\BackgroundTaskExecuter\RavenThreadPool.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />
     <Compile Include="Indexing\Sorting\Custom\IndexEntriesToComparablesGenerator.cs" />

@@ -135,7 +135,7 @@ namespace Raven.Database.Indexing
 
 			var parallelProcessingStart = SystemTime.UtcNow;
 
-			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, partition =>
+			context.Database.ReducingThreadPool.ExecuteBatch(documentsWrapped, (IEnumerator<dynamic> partition) =>
 			{
                 token.ThrowIfCancellationRequested();
 				var parallelStats = new ParallelBatchStats
@@ -253,7 +253,7 @@ namespace Raven.Database.Indexing
 										 .Select(g => new { g.Key, Count = g.Sum(x => x.Value) })
 										 .ToList();
 
-			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, reduceKeyStats, enumerator => context.TransactionalStorage.Batch(accessor =>
+			context.Database.ReducingThreadPool.ExecuteBatch(reduceKeyStats, enumerator => context.TransactionalStorage.Batch(accessor =>
 			{
 				while (enumerator.MoveNext())
 				{
@@ -266,7 +266,7 @@ namespace Raven.Database.Indexing
 			var parallelReductionOperations = new ConcurrentQueue<ParallelBatchStats>();
 			var parallelReductionStart = SystemTime.UtcNow;
 
-			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, changed, enumerator => context.TransactionalStorage.Batch(accessor =>
+			context.Database.ReducingThreadPool.ExecuteBatch(changed, enumerator => context.TransactionalStorage.Batch(accessor =>
 			{
 				var parallelStats = new ParallelBatchStats
 				{

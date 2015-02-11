@@ -373,7 +373,27 @@ namespace Raven.Database.Actions
             {
 				var cts = new CancellationTokenSource();
 
-				var task = Task
+
+				Database.MappingThreadPool.ExecuteBatch(new List<int>{1}, new Action<int>(x=>
+				{
+
+					try
+					{
+						ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes, cts);
+					}
+					catch (Exception ex)
+					{
+						Log.Warn("Could not apply precomputed batch for index " + index, ex);
+					}
+					finally
+					{
+						index.IsMapIndexingInProgress = false;
+						WorkContext.ShouldNotifyAboutWork(() => "Precomputed indexing batch for " + index.PublicName + " is completed");
+						WorkContext.NotifyAboutWork();
+					}
+
+				}));
+				/*var task = Task
 					.Factory
 					.StartNew(() => ApplyPrecomputedBatchForNewIndex(index, generator, index.IsTestIndex == false ? Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch : Database.Configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes, cts), TaskCreationOptions.LongRunning)
 					.ContinueWith(t =>
@@ -400,7 +420,7 @@ namespace Raven.Database.Actions
 							TaskType = TaskActions.PendingTaskType.NewIndexPrecomputedBatch
 				        }, 
 						out id,
-						cts);
+						cts);*/
             }
             catch (Exception)
             {

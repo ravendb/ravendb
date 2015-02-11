@@ -8,6 +8,8 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Config;
+using Raven.Database.Impl.BackgroundTaskExecuter;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
@@ -44,7 +46,8 @@ namespace Raven.Database.Indexing
 			var singleStepReduceKeys = mappedResultsInfo.Where(x => x.OperationTypeToPerform == ReduceType.SingleStep).Select(x => x.ReduceKey).ToArray();
 			var multiStepsReduceKeys = mappedResultsInfo.Where(x => x.OperationTypeToPerform == ReduceType.MultiStep).Select(x => x.ReduceKey).ToArray();
 
-			currentlyProcessedIndexes.TryAdd(indexToWorkOn.IndexId, indexToWorkOn.Index);
+			if (currentlyProcessedIndexes.TryAdd(indexToWorkOn.IndexId, indexToWorkOn.Index) == false)
+				return null;
 
 			var performanceStats = new List<ReducingPerformanceStats>();
 
@@ -72,6 +75,9 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
+				Index _;
+				currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
+
 				var postReducingOperations = new ReduceLevelPeformanceStats
 				{
 					Level = -1,
@@ -113,9 +119,7 @@ namespace Raven.Database.Indexing
 				{
 					LevelStats = new List<ReduceLevelPeformanceStats>{ postReducingOperations }
 				});
-
-				Index _;
-				currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
+				
 			}
 
 			return performanceStats.ToArray();
@@ -330,7 +334,7 @@ namespace Raven.Database.Indexing
 
 				var parallelProcessingStart = SystemTime.UtcNow;
 
-				BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
+				context.Database.ReducingThreadPool.ExecuteBatch(keysToReduce, enumerator =>
 				{
 					var parallelStats = new ParallelBatchStats
 					{
@@ -428,7 +432,7 @@ namespace Raven.Database.Indexing
 
 						parallelOperations.Enqueue(parallelStats);
 					});
-				});
+				}, description: string.Format("Executing reduction for index: {0}", index.Index.PublicName));
 
 				reduceLevelStats.Operations.Add(new ParallelPerformanceStats
 				{
@@ -557,20 +561,29 @@ namespace Raven.Database.Indexing
 			};
 		}
 
+		
         protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
 			ReducingBatchInfo reducingBatchInfo = null;
 
+			int executedPartially = 0;
 	        try
 	        {
 				reducingBatchInfo = context.ReportReducingBatchStarted(indexesToWorkOn.Select(x => x.Index.PublicName).ToList());
 
-		        BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn, index =>
+				context.Database.ReducingThreadPool.ExecuteBatch(indexesToWorkOn, index =>
 		        {
 			        var performanceStats = HandleReduceForIndex(index);
 
-					reducingBatchInfo.PerformanceStats.TryAdd(index.Index.PublicName, performanceStats);
-		        });
+					if (performanceStats != null)
+						reducingBatchInfo.PerformanceStats.TryAdd(index.Index.PublicName, performanceStats);
+
+					if (Thread.VolatileRead(ref executedPartially) == 1)
+					{
+						context.NotifyAboutWork();
+					}
+				}, allowPartialBatchResumption: MemoryStatistics.AvailableMemory > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: "Executing Indexex Reducing");
+				Interlocked.Increment(ref executedPartially);
 	        }
 	        finally
 	        {
