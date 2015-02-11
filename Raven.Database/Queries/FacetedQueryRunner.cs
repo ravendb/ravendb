@@ -327,7 +327,7 @@ namespace Raven.Database.Queries
                                     case FacetAggregation.Count:
                                         continue;
                                     default:
-                                        ApplyAggregation(facet, value, kvp.Value, readerFacetInfo.Reader);
+                                        ApplyAggregation(facet, value, kvp.Value, readerFacetInfo.Reader, readerFacetInfo.DocBase);
                                         break;
                                 }
                             }
@@ -377,7 +377,7 @@ namespace Raven.Database.Queries
 				                            case FacetAggregation.Count:
 				                                continue;
 				                            default:
-                                                ApplyAggregation(facet, facetValue, kvp.Value, readerFacetInfo.Reader);
+                                                ApplyAggregation(facet, facetValue, kvp.Value, readerFacetInfo.Reader, readerFacetInfo.DocBase);
 				                                break;
 				                        }
 				                    }
@@ -586,7 +586,7 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			private void ApplyAggregation(Facet facet, FacetValue value, int[] docsInQuery, IndexReader indexReader)
+			private void ApplyAggregation(Facet facet, FacetValue value, int[] docsInQuery, IndexReader indexReader, int docBase)
 			{
 			    var sortOptionsForFacet = GetSortOptionsForFacet(facet.AggregationField);
 			    switch (sortOptionsForFacet)
@@ -602,7 +602,7 @@ namespace Raven.Database.Queries
                         int[] ints = FieldCache_Fields.DEFAULT.GetInts(indexReader, facet.AggregationField);
 				        foreach (var doc in docsInQuery)
 				        {
-				            var currentVal = ints[doc];
+                            var currentVal = ints[doc - docBase];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
                             {
                                 value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
@@ -628,7 +628,7 @@ namespace Raven.Database.Queries
 						var floats = FieldCache_Fields.DEFAULT.GetFloats(indexReader, facet.AggregationField);
 				        foreach (var doc in docsInQuery)
 				        {
-				            var currentVal = floats[doc];
+                            var currentVal = floats[doc - docBase];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
                             {
                                 value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
@@ -654,7 +654,7 @@ namespace Raven.Database.Queries
 						var longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, facet.AggregationField);
 				        foreach (var doc in docsInQuery)
 				        {
-				            var currentVal = longs[doc];
+                            var currentVal = longs[doc - docBase];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
                             {
                                 value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
@@ -680,7 +680,7 @@ namespace Raven.Database.Queries
 						var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, facet.AggregationField);
 				        foreach (var doc in docsInQuery)
 				        {
-				            var currentVal = doubles[doc];
+                            var currentVal = doubles[doc - docBase];
                             if (facet.Aggregation.HasFlag(FacetAggregation.Max))
                             {
                                 value.Max = Math.Max(value.Max ?? Double.MinValue, currentVal);
