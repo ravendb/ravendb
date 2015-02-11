@@ -4,12 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto.Faceted;
-
+using Rhino.Mocks.Constraints;
 using Xunit;
 using Raven.Client;
 
@@ -438,6 +440,155 @@ namespace Raven.Tests.Faceted
 
 
 				}
+			}
+		}
+
+		[Fact]
+		public void CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new ItemsOrders_All().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new ItemsOrder { Items = new List<string> { "first", "second" }, At = DateTime.Today });
+					session.Store(new ItemsOrder { Items = new List<string> { "first", "second" }, At = DateTime.Today.AddDays(-1) });
+					session.Store(new ItemsOrder { Items = new List<string> { "first", "second" }, At = DateTime.Today });
+					session.Store(new ItemsOrder { Items = new List<string> { "first" }, At = DateTime.Today });
+					session.SaveChanges();
+				}
+
+				var minValue = DateTime.MinValue;
+				var end0 = DateTime.Today.AddDays(-2);
+				var end1 = DateTime.Today.AddDays(-1);
+				var end2 = DateTime.Today;
+
+				WaitForIndexing(store);
+				using (var session = store.OpenSession())
+				{
+					var r = session.Query<ItemsOrder>("ItemsOrders/All")
+						.Where(x => x.At >= end0)
+					   .AggregateBy(x => x.At)
+							.AddRanges(
+								x => x.At >= minValue, // all - 4
+								x => x.At >= end0 && x.At < end1, // 1
+								x => x.At >= end1 && x.At < end2 // 3
+							)
+						 .CountOn(x => x.At)
+					   .ToList();
+
+					var facetResults = r.Results["At"].Values;
+					Assert.Equal(4, facetResults[0].Count);
+					Assert.Equal(1, facetResults[1].Count);
+					Assert.Equal(3, facetResults[2].Count);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts_AndInOperator_AfterOtherWhere()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new ItemsOrders_All().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new ItemsOrder { Items = new List<string> { "first", "second" }, At = DateTime.Today });
+					session.Store(new ItemsOrder { Items = new List<string> { "first", "second" }, At = DateTime.Today.AddDays(-1) });
+					session.Store(new ItemsOrder { Items = new List<string> { "first", "second" }, At = DateTime.Today });
+					session.Store(new ItemsOrder { Items = new List<string> { "first" }, At = DateTime.Today });
+					session.SaveChanges();
+				}
+
+				var items = new List<string> {"second"};
+				var minValue = DateTime.MinValue;
+				var end0 = DateTime.Today.AddDays(-2);
+				var end1 = DateTime.Today.AddDays(-1);
+				var end2 = DateTime.Today;
+
+				WaitForIndexing(store);
+				using (var session = store.OpenSession())
+				{
+					var r = session.Query<ItemsOrder>("ItemsOrders/All")
+						.Where(x => x.At >= end0)
+						.Where(x => x.Items.In(items))
+						.AggregateBy(x => x.At)
+							.AddRanges(
+								x => x.At >= minValue, // all - 3
+								x => x.At >= end0 && x.At < end1, // 1
+								x => x.At >= end1 && x.At < end2 // 2
+							)
+						 .CountOn(x => x.At)
+					   .ToList();
+
+					var facetResults = r.Results["At"].Values;
+					Assert.Equal(3, facetResults[0].Count);
+					Assert.Equal(1, facetResults[1].Count);
+					Assert.Equal(2, facetResults[2].Count);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts_AndInOperator_BeforeOtherWhere()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new ItemsOrders_All().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new ItemsOrder { Items = new List<string> { "first", "second" }, At = DateTime.Today });
+					session.Store(new ItemsOrder { Items = new List<string> { "first", "second" }, At = DateTime.Today.AddDays(-1) });
+					session.Store(new ItemsOrder { Items = new List<string> { "first", "second" }, At = DateTime.Today });
+					session.Store(new ItemsOrder { Items = new List<string> { "first" }, At = DateTime.Today });
+					session.SaveChanges();
+				}
+
+				var items = new List<string> { "second" };
+				var minValue = DateTime.MinValue;
+				var end0 = DateTime.Today.AddDays(-2);
+				var end1 = DateTime.Today.AddDays(-1);
+				var end2 = DateTime.Today;
+
+				WaitForIndexing(store);
+				using (var session = store.OpenSession())
+				{
+					var r = session.Query<ItemsOrder>("ItemsOrders/All")
+						.Where(x => x.Items.In(items))
+						.Where(x => x.At >= end0)
+						.AggregateBy(x => x.At)
+							.AddRanges(
+								x => x.At >= minValue, // all - 3
+								x => x.At >= end0 && x.At < end1, // 1
+								x => x.At >= end1 && x.At < end2 // 2
+							)
+						 .CountOn(x => x.At)
+					   .ToList();
+
+					var facetResults = r.Results["At"].Values;
+					Assert.Equal(3, facetResults[0].Count);
+					Assert.Equal(1, facetResults[1].Count);
+					Assert.Equal(2, facetResults[2].Count);
+				}
+			}
+		}
+
+		public class ItemsOrder
+		{
+			public List<string> Items { get; set; }
+			public DateTime At { get; set; }
+		}
+
+		public class ItemsOrders_All : AbstractIndexCreationTask<ItemsOrder>
+		{
+			public ItemsOrders_All()
+			{
+				Map = orders =>
+					  from order in orders
+					  select new { order.At, order.Items };
 			}
 		}
 	}
