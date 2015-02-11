@@ -4,23 +4,31 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
-using Raven.Database.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Data
 {
-	public static class CommandDataFactory
-	{
-		public static ICommandData CreateCommand(RavenJObject jsonCommand, TransactionInformation transactionInformation)
+    public static class CommandDataFactory
+    {
+        private static readonly char[] IllegalHeaderChars =
+        {
+            '(', ')', '<', '>', '@'
+            , ',', ';', ':', '\\',
+            '/', '[', ']', '?', '=',
+            '{', '}', (char) 9 /*HT*/, (char) 32 /*SP*/
+        };
+
+    public static ICommandData CreateCommand(RavenJObject jsonCommand, TransactionInformation transactionInformation)
 		{
 			var key = jsonCommand["Key"].Value<string>();
 			switch (jsonCommand.Value<string>("Method"))
 			{
 				case "PUT":
-					return new PutCommandData
+					var putCommand = new PutCommandData
 					{
 						Key = key,
 						Etag = GetEtagFromCommand(jsonCommand),
@@ -28,6 +36,16 @@ namespace Raven.Database.Data
 						Metadata = jsonCommand["Metadata"] as RavenJObject,
 						TransactionInformation = transactionInformation
 					};
+			        foreach (var metaDataProp in putCommand.Metadata)
+			        {
+			            var keyFromMetaData = metaDataProp.Key;
+			            char foundCharacter = IllegalHeaderChars.Where(keyFromMetaData.Contains).FirstOrDefault();
+                        if(foundCharacter != 0)
+			            {
+			                throw new InvalidDataException(string.Format("You aren't allowed to use '{0}' in the metadata", foundCharacter));
+			            }
+			        }
+			        return putCommand;
 				case "DELETE":
 					return new DeleteCommandData
 					{
