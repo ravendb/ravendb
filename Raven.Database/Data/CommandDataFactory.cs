@@ -36,15 +36,7 @@ namespace Raven.Database.Data
 						Metadata = jsonCommand["Metadata"] as RavenJObject,
 						TransactionInformation = transactionInformation
 					};
-			        foreach (var metaDataProp in putCommand.Metadata)
-			        {
-			            var keyFromMetaData = metaDataProp.Key;
-			            char foundCharacter = IllegalHeaderChars.Where(keyFromMetaData.Contains).FirstOrDefault();
-                        if(foundCharacter != 0)
-			            {
-			                throw new InvalidDataException(string.Format("You aren't allowed to use '{0}' in the metadata", foundCharacter));
-			            }
-			        }
+			        ValidateMetadataKeys(putCommand.Metadata);
 			        return putCommand;
 				case "DELETE":
 					return new DeleteCommandData
@@ -89,7 +81,20 @@ namespace Raven.Database.Data
 			}
 		}
 
-		private static Etag GetEtagFromCommand(RavenJObject jsonCommand)
+        private static void ValidateMetadataKeys(RavenJObject metaDataProps)
+        {
+            foreach (var metaDataProp in metaDataProps)
+            {
+                foreach (char ch in IllegalHeaderChars)
+                {
+                    if(metaDataProp.Key.IndexOf(ch) == -1)
+                        continue;
+                    throw new InvalidDataException(string.Format("You aren't allowed to use '{0}' in the metadata", foundCharacter));
+                }
+            }
+        }
+
+        private static Etag GetEtagFromCommand(RavenJObject jsonCommand)
 		{
 			return jsonCommand["Etag"] != null && jsonCommand["Etag"].Value<string>() != null ? Etag.Parse(jsonCommand["Etag"].Value<string>()) : null;
 		}
