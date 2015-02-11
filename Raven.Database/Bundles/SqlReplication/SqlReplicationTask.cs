@@ -61,8 +61,6 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private PrefetchingBehavior prefetchingBehavior;
 
-		private Etag lastLatestEtag;
-
 		public void Execute(DocumentDatabase database)
 		{
 			prefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
@@ -231,7 +229,7 @@ namespace Raven.Database.Bundles.SqlReplication
 						}
 
 						latestEtag = Etag.Max(latestEtag, lastBatchEtag);
-						SaveNewReplicationStatus(localReplicationStatus, latestEtag);
+						SaveNewReplicationStatus(localReplicationStatus);
 					}
 					else // no point in waiting if we just saved a new doc
 					{
@@ -263,10 +261,9 @@ namespace Raven.Database.Bundles.SqlReplication
 						try
 						{
 							var lastReplicatedEtag = GetLastEtagFor(localReplicationStatus, replicationConfig);
-
 							var deletedDocs = deletedDocsByConfig[replicationConfig];
 							var docsToReplicate = itemsToReplicate
-								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
+								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) < 0) // haven't replicate the etag yet
                                 .Where(document =>
                                 {
                                     var info = Database.GetRecentTouchesFor(document.Key);
@@ -282,7 +279,6 @@ namespace Raven.Database.Bundles.SqlReplication
                                     }
 	                                return true;
                                 });
-
 							if (deletedDocs.Count >= MaxNumberOfDeletionsToReplicate + 1)
 								docsToReplicate = docsToReplicate.Where(x => EtagUtil.IsGreaterThan(x.Etag, deletedDocs[deletedDocs.Count - 1].Etag) == false);
 
@@ -334,13 +330,15 @@ namespace Raven.Database.Bundles.SqlReplication
 						}
 						else
 						{
-							destEtag.LastDocEtag = currentLatestEtag = currentLatestEtag ?? destEtag.LastDocEtag;
+							var lastDocEtag = destEtag.LastDocEtag;
+							if (currentLatestEtag != null && EtagUtil.IsGreaterThan(currentLatestEtag, lastDocEtag))
+								lastDocEtag = currentLatestEtag;
+
+							destEtag.LastDocEtag = lastDocEtag;
 						}
-						latestEtag = Etag.Max(latestEtag, currentLatestEtag);
 					}
 
-					latestEtag = Etag.Max(latestEtag, lastBatchEtag);
-					SaveNewReplicationStatus(localReplicationStatus, latestEtag);
+					SaveNewReplicationStatus(localReplicationStatus);
 				}
 				finally
 				{
@@ -356,7 +354,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus, Etag latestEtag)
+		private void SaveNewReplicationStatus(SqlReplicationStatus localReplicationStatus)
 		{
 			int retries = 5;
 			while (retries > 0)
@@ -366,8 +364,6 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					var obj = RavenJObject.FromObject(localReplicationStatus);
 					Database.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
-
-					lastLatestEtag = latestEtag;
 					break;
 				}
 				catch (ConcurrencyException)

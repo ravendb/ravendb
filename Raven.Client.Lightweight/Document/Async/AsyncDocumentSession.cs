@@ -562,22 +562,18 @@ namespace Raven.Client.Document.Async
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var highlightings = new RavenQueryHighlightings();
-			return new RavenQueryInspector<T>(
-				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings,
+            var ravenQueryInspector = new RavenQueryInspector<T>();
+		    var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings,
 #if !SILVERLIGHT
  null,
 #endif
- AsyncDatabaseCommands, isMapReduce),
-				ravenQueryStatistics,
-				highlightings,
-				indexName,
-				null,
-				this,
+ AsyncDatabaseCommands, isMapReduce);
+		    ravenQueryInspector.Init(ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, null, this,
 #if !SILVERLIGHT
  null,
 #endif
- AsyncDatabaseCommands,
-				isMapReduce);
+            AsyncDatabaseCommands, isMapReduce);
+            return ravenQueryInspector;
 		}
 
 		/// <summary>
@@ -595,6 +591,11 @@ namespace Raven.Client.Document.Async
 		{
 			return AsyncLuceneQuery<T>(indexName, isMapReduce);
 		}
+
+        public RavenQueryInspector<S> CreateRavenQueryInspector<S>()
+	    {
+	        return new RavenQueryInspector<S>();
+	    }
 
 		protected override string GenerateKey(object entity)
 		{

@@ -157,11 +157,15 @@ namespace Raven.Client.Linq
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
 		{
-			return new RavenQueryInspector<S>(this, ravenQueryStatistics, highlightings, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator
+            var a = queryGenerator.CreateRavenQueryInspector<S>();
+
+		    a.Init(this, ravenQueryStatistics, highlightings, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator
 #if !SILVERLIGHT
-											  , databaseCommands
+ 											  , databaseCommands
 #endif
-											  , asyncDatabaseCommands, isMapReduce);
+ 											  , asyncDatabaseCommands, isMapReduce);
+
+		    return a;
 		}
 
 		IQueryable IQueryProvider.CreateQuery(Expression expression)
@@ -169,7 +173,7 @@ namespace Raven.Client.Linq
 			Type elementType = TypeSystem.GetElementType(expression.Type);
 			try
 			{
-				var makeGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
+                var queryInspectorGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
 				var args = new object[]
 				{
 					this, ravenQueryStatistics, highlightings, indexName, expression, queryGenerator
@@ -179,7 +183,10 @@ namespace Raven.Client.Linq
 					, asyncDatabaseCommands,
 					isMapReduce
 				};
-				return (IQueryable) Activator.CreateInstance(makeGenericType, args);
+                var queryInspectorInstance = Activator.CreateInstance(queryInspectorGenericType);
+			    var methodInfo = queryInspectorGenericType.GetMethod("Init");
+                methodInfo.Invoke(queryInspectorInstance, args);
+                return (IQueryable)queryInspectorInstance;
 			}
 			catch (TargetInvocationException tie)
 			{

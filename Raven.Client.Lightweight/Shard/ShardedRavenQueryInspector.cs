@@ -17,15 +17,9 @@ namespace Raven.Client.Shard
 		private readonly List<IDatabaseCommands> shardDbCommands;
 		private readonly List<IAsyncDatabaseCommands> asyncShardDbCommands;
 
-		public ShardedRavenQueryInspector(IRavenQueryProvider provider,
-		 RavenQueryStatistics queryStats, RavenQueryHighlightings highlightings, string indexName, Expression expression, InMemoryDocumentSessionOperations session, bool isMapReduce,
-			ShardStrategy shardStrategy, 
+		public ShardedRavenQueryInspector(ShardStrategy shardStrategy, 
 			List<IDatabaseCommands> shardDbCommands,
 			 List<IAsyncDatabaseCommands> asyncShardDbCommands)
-			: base(provider, queryStats, highlightings, indexName, expression, session,
-			 null,
-			 null, 
-			 isMapReduce)
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardDbCommands = shardDbCommands;

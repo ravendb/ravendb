@@ -344,18 +344,13 @@ namespace Raven.Client.Shard
 
 		#region Queries
 
-		protected override RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce, RavenQueryProvider<T> provider,
-																			RavenQueryStatistics ravenQueryStatistics,
-																			RavenQueryHighlightings highlightings)
-		{
-#if !SILVERLIGHT
-			return new ShardedRavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, isMapReduce, shardStrategy,
-				 null,
-				 shardDbCommands.Values.ToList());
-#else
-			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, isMapReduce);
-#endif
-		}
+
+        public override RavenQueryInspector<T> CreateRavenQueryInspector<T>()
+        {
+            return new ShardedRavenQueryInspector<T>(shardStrategy,
+                 null,
+                 shardDbCommands.Values.ToList());
+        }
 
 		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce)
 		{
@@ -438,7 +433,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-		#endregion
+        #endregion
 
 		/// <summary>
 		/// Saves all the changes to the Raven server.

@@ -80,6 +80,7 @@ namespace Raven.Database.Config
 			MaxConcurrentServerRequests = ravenSettings.MaxConcurrentServerRequests.Value;
 
 			MaxConcurrentRequestsForDatabaseDuringLoad = ravenSettings.MaxConcurrentRequestsForDatabaseDuringLoad.Value;
+		    MaxSecondsForTaskToWaitForDatabaseToLoad = ravenSettings.MaxSecondsForTaskToWaitForDatabaseToLoad.Value;
 
 			MaxConcurrentMultiGetRequests = ravenSettings.MaxConcurrentMultiGetRequests.Value;
 			if (ConcurrentMultiGetRequests == null)
@@ -243,7 +244,9 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
-		public int MaxConcurrentServerRequests { get; set; }
+	    public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
+
+	    public int MaxConcurrentServerRequests { get; set; }
 
 		public int MaxConcurrentRequestsForDatabaseDuringLoad { get; set; }
 
