@@ -80,6 +80,11 @@ namespace Raven.Database.Bundles.PeriodicExports
 					exportStatus = status == null ? new PeriodicExportStatus() : status.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
 					exportConfigs = document.DataAsJson.JsonDeserialization<PeriodicExportSetup>();
 
+					if (exportConfigs.Disabled)
+					{
+						logger.Info("Periodic export is disabled.");
+						return;
+					}
 
 					awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
 					awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
@@ -132,8 +137,6 @@ namespace Raven.Database.Bundles.PeriodicExports
 			}
 		}
 
-
-
 		private void TimerCallback(bool fullBackup)
 		{
 		    if (currentTask != null)
@@ -163,6 +166,9 @@ namespace Raven.Database.Bundles.PeriodicExports
 							var localBackupConfigs = exportConfigs;
 							var localBackupStatus = exportStatus;
 							if (localBackupConfigs == null)
+								return;
+
+							if (localBackupConfigs.Disabled) 
 								return;
 
 							if (fullBackup == false)
@@ -225,10 +231,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 							try
 							{
-								if (!localBackupConfigs.Disabled)
-								{
-									UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
-								}
+								UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
 							}
 							finally
 							{
