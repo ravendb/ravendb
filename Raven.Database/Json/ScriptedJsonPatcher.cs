@@ -12,6 +12,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using Jint;
 using Jint.Native;
+using Jint.Parser;
 using Jint.Runtime;
 using Jint.Runtime.Environments;
 
@@ -124,6 +125,9 @@ namespace Raven.Database.Json
 					errorMsg += Environment.NewLine + "Debug information: " + Environment.NewLine +
 								string.Join(Environment.NewLine, Debug);
 
+				if (error != null)
+					errorMsg += Environment.NewLine + "Stacktrace:" + Environment.NewLine + error.CallStack;
+
 				var targetEx = errorEx as TargetInvocationException;
 				if (targetEx != null && targetEx.InnerException != null)
 					throw new InvalidOperationException(errorMsg, targetEx.InnerException);
@@ -177,13 +181,9 @@ namespace Raven.Database.Json
 		private Engine CreateEngine(ScriptedPatchRequest patch)
 		{
 			var scriptWithProperLines = NormalizeLineEnding(patch.Script);
-			var wrapperScript = String.Format(@"
-function ExecutePatchScript(docInner){{
-  (function(doc){{
-	{0}
-  }}).apply(docInner);
-}};
-", scriptWithProperLines);
+			// NOTE: we merged few first lines of wrapping script to make sure {0} is at line 0.
+			// This will all us to show proper line number using user lines locations.
+			var wrapperScript = String.Format(@"function ExecutePatchScript(docInner){{ (function(doc){{ {0} }}).apply(docInner); }};", scriptWithProperLines);
 
 			var jintEngine = new Engine(cfg =>
 			{
@@ -192,6 +192,7 @@ function ExecutePatchScript(docInner){{
 #else
 				cfg.AllowDebuggerStatement(false);
 #endif
+				cfg.LimitRecursion(1024);
 				cfg.MaxStatements(maxSteps);
 			});
 
@@ -199,7 +200,10 @@ function ExecutePatchScript(docInner){{
 			AddScript(jintEngine, "Raven.Database.Json.ToJson.js");
 			AddScript(jintEngine, "Raven.Database.Json.RavenDB.js");
 
-			jintEngine.Execute(wrapperScript);
+			jintEngine.Execute(wrapperScript, new ParserOptions
+			{
+				Source = "main.js"
+			});
 
 			return jintEngine;
 		}
@@ -221,7 +225,10 @@ function ExecutePatchScript(docInner){{
 
 		private static void AddScript(Engine jintEngine, string ravenDatabaseJsonMapJs)
 		{
-			jintEngine.Execute(GetFromResources(ravenDatabaseJsonMapJs));
+			jintEngine.Execute(GetFromResources(ravenDatabaseJsonMapJs), new ParserOptions
+			{
+				Source = ravenDatabaseJsonMapJs
+			});
 		}
 
 		protected virtual void CustomizeEngine(Engine engine, ScriptedJsonPatcherOperationScope scope)
@@ -230,15 +237,12 @@ function ExecutePatchScript(docInner){{
 			if (scope.CustomFunctions == null || scope.CustomFunctions.DataAsJson.TryGetValue("Functions", out functions) == false)
 				return;
 
-			engine.Execute(string.Format(@"
-var customFunctions = function() {{ 
-	var exports = {{ }};
-	{0};
+			engine.Execute(string.Format(@"var customFunctions = function() {{  var exports = {{ }}; {0};
 	return exports;
 }}();
 for(var customFunction in customFunctions) {{
 	this[customFunction] = customFunctions[customFunction];
-}};", functions));
+}};", functions), new ParserOptions { Source = "customFunctions.js"});
 		}
 
 		protected virtual void RemoveEngineCustomizations(Engine engine, ScriptedJsonPatcherOperationScope scope)
