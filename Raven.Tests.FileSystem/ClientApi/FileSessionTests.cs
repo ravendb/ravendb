@@ -92,6 +92,48 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
+
+        [Fact]
+        public async Task CopyToNewFile()
+        {
+            using (var store = NewStore())
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test1.file", 128, x =>
+                {
+                    for (byte i = 0; i < 128; i++)
+                        x.WriteByte(i);
+                });
+
+                await session.SaveChangesAsync();
+
+                var file = await session.LoadFileAsync("test1.file");
+                var resultingStream = await session.DownloadAsync(file);
+
+                session.RegisterUpload("test2.file", 128, x =>
+                {
+                    resultingStream.CopyTo(x);
+                });
+
+                await session.SaveChangesAsync();
+
+                var newStream = await session.DownloadAsync("test2.file");
+
+                var ms = new MemoryStream();
+                newStream.CopyTo(ms);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                Assert.Equal(128, ms.Length);
+
+                for (byte i = 0; i < 128; i++)
+                {
+                    int value = ms.ReadByte();
+                    Assert.True(value >= 0);
+                    Assert.Equal(i, (byte)value);
+                }
+            }
+        }
+
         [Fact]
 		public async Task UploadActionWritesIncompleteStream()
         {

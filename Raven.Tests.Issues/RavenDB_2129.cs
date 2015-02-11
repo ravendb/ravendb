@@ -16,13 +16,14 @@ using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 
 using Xunit;
+using Raven.Client.Connection.Async;
 
 namespace Raven.Tests.Issues
 {
 	public class RavenDB_2129 : ReplicationBase
 	{
 		[Fact]
-		public async Task ShouldWork()
+        public async Task ShouldReadFromSecondaryServerWhenPrimaryIsDown()
 		{
 			using (var store1 = CreateStore(configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries))
 			using (var store2 = CreateStore())
@@ -32,7 +33,7 @@ namespace Raven.Tests.Issues
 
 				RunReplication(store1, store2, db: "SomeDB");
 
-				SystemTime.UtcDateTime = () => DateTime.Now.AddMinutes(10); // this will force replication information update when session is opened
+				SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10); // this will force replication information update when session is opened
 
 				using (var session = store1.OpenAsyncSession("SomeDB"))
 				{
