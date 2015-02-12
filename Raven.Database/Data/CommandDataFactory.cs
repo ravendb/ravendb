@@ -85,11 +85,19 @@ namespace Raven.Database.Data
         {
             foreach (var metaDataProp in metaDataProps)
             {
-                foreach (char ch in IllegalHeaderChars)
+                var key = metaDataProp.Key;
+                switch (key[0])
                 {
-                    if(metaDataProp.Key.IndexOf(ch) == -1)
+                    case '@':// @ prefix is already handled elsewhere
                         continue;
-                    throw new InvalidDataException(string.Format("You aren't allowed to use '{0}' in the metadata", ch));
+                    default:
+                        foreach (char ch in IllegalHeaderChars)
+                        {
+                            if (key.IndexOf(ch) == -1)
+                                continue;
+                            throw new InvalidDataException(string.Format("You aren't allowed to use '{0}' in the metadata", ch));
+                        }
+                        break;
                 }
             }
         }
