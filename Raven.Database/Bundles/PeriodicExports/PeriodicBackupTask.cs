@@ -80,6 +80,11 @@ namespace Raven.Database.Bundles.PeriodicExports
 					exportStatus = status == null ? new PeriodicExportStatus() : status.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
 					exportConfigs = document.DataAsJson.JsonDeserialization<PeriodicExportSetup>();
 
+					if (exportConfigs.Disabled)
+					{
+						logger.Info("Periodic export is disabled.");
+						return;
+					}
 
 					awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
 					awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
@@ -132,8 +137,6 @@ namespace Raven.Database.Bundles.PeriodicExports
 			}
 		}
 
-
-
 		private void TimerCallback(bool fullBackup)
 		{
 		    if (currentTask != null)
@@ -165,6 +168,9 @@ namespace Raven.Database.Bundles.PeriodicExports
 							if (localBackupConfigs == null)
 								return;
 
+							if (localBackupConfigs.Disabled) 
+								return;
+
 							if (fullBackup == false)
 							{
 								var currentEtags = dataDumper.Operations.FetchCurrentMaxEtags();
@@ -178,8 +184,10 @@ namespace Raven.Database.Bundles.PeriodicExports
 								}
 							}
 
-							var backupPath = localBackupConfigs.LocalFolderName ??
-											 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
+							var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
+							if (Directory.Exists(backupPath) == false) 
+								Directory.CreateDirectory(backupPath);
+
 							if (fullBackup)
 							{
 								// create filename for full dump
@@ -208,6 +216,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								smugglerOptions.Incremental = true;
 								smugglerOptions.ExportDeletions = true;
 							}
+
                             var exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
 
 							if (fullBackup == false)
@@ -225,10 +234,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 
 							try
 							{
-								if (!localBackupConfigs.Disabled)
-								{
-									UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
-								}
+								UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
 							}
 							finally
 							{
@@ -321,7 +327,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 			using (var fileStream = File.OpenRead(backupPath))
 			{
 				var key = Path.GetFileName(backupPath);
-				client.PutObject(localExportConfigs.S3BucketName, key, fileStream, new Dictionary<string, string>
+				client.PutObject(localExportConfigs.S3BucketName, CombinePathAndKey(localExportConfigs.S3RemoteFolderName, key), fileStream, new Dictionary<string, string>
 			                                                                       {
 				                                                                       { "Description", GetArchiveDescription(isFullBackup) }
 			                                                                       }, 60 * 60);
@@ -360,7 +366,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 				using (var fileStream = File.OpenRead(backupPath))
 				{
 					var key = Path.GetFileName(backupPath);
-					client.PutBlob(localExportConfigs.AzureStorageContainer, key, fileStream, new Dictionary<string, string>
+					client.PutBlob(localExportConfigs.AzureStorageContainer, CombinePathAndKey(localExportConfigs.AzureRemoteFolderName, key), fileStream, new Dictionary<string, string>
 																							  {
 																								  { "Description", GetArchiveDescription(isFullBackup) }
 																							  });
@@ -372,6 +378,11 @@ namespace Raven.Database.Bundles.PeriodicExports
 						key));
 				}
 			}
+		}
+
+		private string CombinePathAndKey(string path, string fileName)
+		{
+			return string.IsNullOrEmpty(path) == false ? path + "/" + fileName : fileName;
 		}
 
 		private string GetArchiveDescription(bool isFullBackup)

@@ -289,10 +289,9 @@ class editSqlReplication extends viewModelBase {
         saveTask.done((saveResult: bulkDocumentDto[]) => {
             var savedDocumentDto: bulkDocumentDto = saveResult[0];
             var sqlReplicationKey = savedDocumentDto.Key.substring(editSqlReplication.sqlReplicationDocumentPrefix.length);
-            this.loadSqlReplication(sqlReplicationKey);
+            this.loadSqlReplication(sqlReplicationKey)
+                .done(() => this.dirtyFlag().reset());
             this.updateUrl(sqlReplicationKey);
-
-            this.dirtyFlag().reset(); //Resync Changes
 
             this.isEditingNewReplication(false);
             this.initialReplicationId = currentDocumentId;
