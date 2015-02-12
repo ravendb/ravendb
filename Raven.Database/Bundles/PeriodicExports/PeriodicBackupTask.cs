@@ -178,8 +178,10 @@ namespace Raven.Database.Bundles.PeriodicExports
 								}
 							}
 
-							var backupPath = localBackupConfigs.LocalFolderName ??
-											 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
+							var backupPath = localBackupConfigs.LocalFolderName ?? Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicExport-Temp");
+							if (Directory.Exists(backupPath) == false) 
+								Directory.CreateDirectory(backupPath);
+
 							if (fullBackup)
 							{
 								// create filename for full dump
@@ -208,6 +210,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 								smugglerOptions.Incremental = true;
 								smugglerOptions.ExportDeletions = true;
 							}
+
                             var exportResult = await dataDumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = backupPath });
 
 							if (fullBackup == false)
