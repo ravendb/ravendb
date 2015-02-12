@@ -89,7 +89,7 @@ namespace Raven.Database.Data
                 {
                     if(metaDataProp.Key.IndexOf(ch) == -1)
                         continue;
-                    throw new InvalidDataException(string.Format("You aren't allowed to use '{0}' in the metadata", foundCharacter));
+                    throw new InvalidDataException(string.Format("You aren't allowed to use '{0}' in the metadata", ch));
                 }
             }
         }
